@@ -16,14 +16,12 @@ interface ServiceMXBean {
     val name: String
 
     /**
-     * Starts a service. A relative order of calling start() on different services during startup is undefined and
-     * cannot be ensured.
+     * Starts a service. Upon successful termination it should set the status of the service to ServiceStatus.Started.
      */
     fun start()
 
     /**
-     * Stops the service. A relative order of calling stop() on different services during finalization is undefined and
-     * cannot be ensured.
+     * Stops the service. Upon successful termination it should set the status of the service to ServiceStatus.Stopped.
      */
     fun stop()
 }

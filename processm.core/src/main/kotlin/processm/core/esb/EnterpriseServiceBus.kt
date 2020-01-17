@@ -1,5 +1,6 @@
 package processm.core.esb
 
+import kotlinx.coroutines.*
 import processm.core.logging.logger
 import java.io.Closeable
 import java.lang.IllegalArgumentException
@@ -28,10 +29,22 @@ class EnterpriseServiceBus : Closeable {
 
     init {
         Runtime.getRuntime().addShutdownHook(thread(false) {
-            close()
+            try {
+                close()
+            } catch (e: Throwable) {
+                // We can't do anything anyway
+                logger().warn("Exception during finalization", e)
+            }
         })
     }
 
+    /**
+     * Registers, possibly concurrently, the given services by calling register() and registering MXBean
+     * for each service. If an exception occurs during registration, the service will not be registered
+     * and the exception is rethrown. If many exceptions occur for many services, the first one is rethrown
+     * and the successive are suppressed.
+     * @see java.lang.Throwable.getSuppressed
+     */
     fun register(vararg services: Service) {
         for (service in services) {
             if (servicesInternal.contains(service)) {
@@ -39,30 +52,36 @@ class EnterpriseServiceBus : Closeable {
             }
         }
 
-        for (service in services)
-            servicesInternal[service] = service
-
         val jmxServer = ManagementFactory.getPlatformMBeanServer()
-
-        // Register the services in individual threads rather than coroutines, as they may block a thread arbitrarily
-        // long, and we do not want to block all threads in the thread pool.
         services.runConcurrent {
             it.register()
             jmxServer.registerMBean(it, ObjectName("$jmxDomain:0=services,name=${it.name}"))
+            synchronized(servicesInternal) {
+                servicesInternal[it] = it
+            }
         }
     }
 
+    /**
+     * Starts, possibly concurrently, all registered services. If an exception occurs during registration,
+     * the service will not be registered and the exception is rethrown. If many exceptions occur for many
+     * services, the first one is rethrown and the successive are suppressed.
+     * @see java.lang.Throwable.getSuppressed
+     */
     fun startAll() {
-        // Start the services in individual threads rather than coroutines, as they may block a thread arbitrarily
-        // long, and we do not want to block all threads in the thread pool.
         servicesInternal.keys.runConcurrent {
-            it.start()
+            if (it.status == ServiceStatus.Stopped)
+                it.start()
         }
     }
 
+    /**
+     * Stops, possibly concurrently, all registered services. If an exception occurs during registration,
+     * the service will not be registered and the exception is rethrown. If many exceptions occur for many
+     * services, the first one is rethrown and the successive are suppressed.
+     * @see java.lang.Throwable.getSuppressed
+     */
     fun stopAll() {
-        // Stop the services in individual threads rather than coroutines, as they may block a thread arbitrarily
-        // long, and we do not want to block all threads in the thread pool.
         servicesInternal.keys.runConcurrent {
             if (it.status == ServiceStatus.Started)
                 it.stop()
@@ -82,38 +101,26 @@ class EnterpriseServiceBus : Closeable {
 
 /**
  * Runs concurrently the given action on all services. This function terminates when all concurrent invocations
- * terminate.
+ * terminate. The exceptions caught in the coroutines are rethrown by this function.
  */
-private fun Array<out Service>.runConcurrent(action: (Service) -> Unit) {
-    this.map {
-        thread {
-            synchronized(it) {
-                try {
-                    action(it)
-                } catch (e: Throwable) {
-                    logger().error("", e)
-                }
-            }
-        }
-    }.forEach { it.join() }
+private fun Array<out Service>.runConcurrent(action: (Service) -> Unit) = runBlocking {
+    // await() ensures that all exceptions thrown in coroutines will be rethrown in the calling thread
+    // (the first-thrown exception will be rethrown, and the remaining will be reported as suppressed exceptions).
+    GlobalScope.async {
+        forEach { launch { synchronized(it) { action(it) } } }
+    }.await()
 }
 
 /**
  * Runs concurrently the given action on all services. This function terminates when all concurrent invocations
- * terminate.
+ * terminate. The exceptions caught in the coroutines are rethrown by this function.
  */
-private fun Iterable<out Service>.runConcurrent(action: (Service) -> Unit) {
-    this.map {
-        thread {
-            synchronized(it) {
-                try {
-                    action(it)
-                } catch (e: Throwable) {
-                    logger().error("", e)
-                }
-            }
-        }
-    }.forEach { it.join() }
+private fun Iterable<Service>.runConcurrent(action: (Service) -> Unit) = runBlocking {
+    // await() ensures that all exceptions thrown in coroutines will be rethrown in the calling thread
+    // (the first-thrown exception will be rethrown, and the remaining will be reported as suppressed exceptions).
+    GlobalScope.async {
+        forEach { launch { synchronized(it) { action(it) } } }
+    }.await()
 }
 
 
