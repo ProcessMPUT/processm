@@ -82,17 +82,50 @@ class EnterpriseServiceBusTest {
 
     @Test
     fun testThrowInRegister() {
-        TODO()
+        val normalService = TestService("myNormalService")
+        val failingService = FailingService("myFailingService", ServiceStatus.Unknown)
+
+        assertFailsWith(IllegalStateException::class) {
+            esb.register(failingService, normalService)
+        }
+
+        assertEquals(1, esb.services.size)
+        assertEquals(normalService, esb.services.first())
     }
 
     @Test
     fun testThrowInStart() {
-        TODO()
+        val normalService = TestService("myNormalService")
+        val failingService = FailingService("myFailingService", ServiceStatus.Started)
+
+        esb.register(failingService, normalService)
+        assertEquals(2, esb.services.size)
+        assertTrue(normalService in esb.services)
+        assertTrue(failingService in esb.services)
+
+        assertFailsWith(IllegalStateException::class) {
+            esb.startAll()
+        }
     }
 
     @Test
     fun testThrowInStop() {
-        TODO()
+        val normalService = TestService("myNormalService")
+        val failingService = FailingService("myFailingService", ServiceStatus.Stopped)
+
+        esb.register(failingService, normalService)
+        assertEquals(2, esb.services.size)
+        assertTrue(normalService in esb.services)
+        assertTrue(failingService in esb.services)
+
+        esb.startAll()
+
+        assertFailsWith(IllegalStateException::class) {
+            esb.stopAll()
+        }
+
+        // prevent exception throw on clean up
+        failingService._when = ServiceStatus.Unknown
     }
 }
 
@@ -111,17 +144,33 @@ open class TestService(override val name: String) : Service {
     override fun stop() {
         status = ServiceStatus.Stopped
     }
-
 }
 
 interface CustomMXBean : Service {
     val myCustomField: Int
 }
 
-class CustomService : TestService, CustomMXBean {
+class CustomService(name: String) : TestService(name), CustomMXBean {
     override val myCustomField: Int
         get() = 1
+}
 
-    constructor(name: String) : super(name) {}
+class FailingService(name: String, var _when: ServiceStatus) : TestService(name) {
+    override fun register() {
+        if (_when == ServiceStatus.Unknown)
+            throw IllegalStateException()
+        super.register()
+    }
 
+    override fun start() {
+        if (_when == ServiceStatus.Started)
+            throw IllegalStateException()
+        super.start()
+    }
+
+    override fun stop() {
+        if (_when == ServiceStatus.Stopped)
+            throw IllegalStateException()
+        super.stop()
+    }
 }
