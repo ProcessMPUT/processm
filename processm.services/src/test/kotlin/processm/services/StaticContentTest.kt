@@ -8,15 +8,27 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
 import java.net.URL
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class StaticContentTest {
     // TODO: configure tests such that this one runs for both: filesystem and JAR-originated resources
     private val baseURI = URL("http://localhost:80/")
     private val baseURIs = URL("https://localhost:443/")
-    private val host = WebServicesHost(emptyArray())
+    private val host = WebServicesHost
+
+    init {
+        host.register()
+    }
+
+    @BeforeTest
+    fun setUp() {
+        host.start()
+    }
+
+    @AfterTest
+    fun cleanUp() {
+        host.stop()
+    }
 
     @Test
     fun GetRootHTML() = runBlocking {
@@ -30,6 +42,9 @@ class StaticContentTest {
                             .build()
                     )
                     setSSLHostnameVerifier(NoopHostnameVerifier())
+                    connectTimeout = 1000
+                    connectionRequestTimeout = 1000
+                    socketTimeout = 1000
                 }
             }
         }

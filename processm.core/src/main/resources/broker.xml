@@ -20,11 +20,11 @@
 
         <persistence-enabled>true</persistence-enabled>
         <!-- this could be ASYNCIO, MAPPED, NIO
-           ASYNCIO: Linux Libaio
+           ASYNCIO: Linux Libaio - requires ActiveMQ Artemis Native Layer library
            MAPPED: mmap files
            NIO: Plain Java Files
        -->
-        <journal-type>ASYNCIO</journal-type>
+        <journal-type>NIO</journal-type>
         <paging-directory>data/paging</paging-directory>
         <bindings-directory>data/bindings</bindings-directory>
         <journal-directory>data/journal</journal-directory>
@@ -106,13 +106,19 @@
             <acceptor name="in-vm">vm://0</acceptor>
         </acceptors>
 
+        <!--
         <management-address>activemq.management</management-address>
+        -->
 
+        <!-- use a specific JMX domain for ActiveMQ Artemis MBeans -->
+        <jmx-domain>org.apache.activemq</jmx-domain>
+
+        <security-enabled>false</security-enabled>
         <security-settings>
             <!--security for management queue-->
-            <security-setting match="activemq.management">
+            <!--<security-setting match="activemq.management">
                 <permission roles="guest" type="manage"/>
-            </security-setting>
+            </security-setting>-->
 
             <!--
             <security-setting match="#">

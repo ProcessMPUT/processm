@@ -7,17 +7,31 @@ import processm.core.logging.exit
 import processm.core.logging.logger
 import java.net.URL
 
-object Artemis : ServiceBus {
-    private val broker = EmbeddedActiveMQ();
-    override val busUrl: URL
-        get() = TODO("broker.activeMQServer.configuration")
+object Artemis : Service {
+    private lateinit var broker: EmbeddedActiveMQ
+
+    override val name = "Artemis"
+
+    override var status = ServiceStatus.Unknown
+        private set
+
+    override fun register() {
+        logger().enter()
+
+        broker = EmbeddedActiveMQ()
+        status = ServiceStatus.Stopped
+
+        logger().exit()
+    }
 
     override fun start() {
         logger().enter()
 
         logger().info("Staring Apache ActiveMQ Artemis broker")
         broker.start()
-        logger().info("Apache ActiveMQ Artemis broker started; acceptors: ${broker.activeMQServer.configuration.acceptorConfigurations.map { it.name }.joinToString(", ")}")
+        status = ServiceStatus.Started
+        val acceptors = broker.activeMQServer.configuration.acceptorConfigurations.map { it.name }.joinToString(", ")
+        logger().info("Apache ActiveMQ Artemis broker started; acceptors: $acceptors")
 
         logger().exit()
     }
@@ -27,6 +41,7 @@ object Artemis : ServiceBus {
 
         logger().info("Stopping Apache ActiveMQ Artemis broker")
         broker.stop()
+        status = ServiceStatus.Stopped
         logger().info("Apache ActiveMQ Artemis broker stopped")
 
         logger().exit()
