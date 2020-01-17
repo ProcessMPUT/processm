@@ -28,7 +28,7 @@
 
     <issueManagement>
         <system>GitLab</system>
-        <url>https://processm.cs.put.poznan.pl:5001</url>
+        <url>https://processm.cs.put.poznan.pl:5000</url>
     </issueManagement>
 
     <modules>
