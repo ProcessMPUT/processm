@@ -3,28 +3,46 @@ package processm.services
 import io.ktor.application.Application
 import io.ktor.network.tls.certificates.generateCertificate
 import io.ktor.server.engine.ApplicationEngineEnvironment
+import io.ktor.server.engine.applicationEngineEnvironment
 import io.ktor.server.engine.commandLineEnvironment
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.netty.NettyApplicationEngine
 import io.ktor.util.KtorExperimentalAPI
 import processm.core.esb.Service
+import processm.core.esb.ServiceStatus
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-class WebServicesHost : Service {
-    private val keyStoreProperty = "ktor.security.ssl.keyStore"
+@UseExperimental(KtorExperimentalAPI::class)
+object WebServicesHost : Service {
+    private const val keyStoreProperty = "ktor.security.ssl.keyStore"
     private val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-    private var engine: NettyApplicationEngine
+    private lateinit var engine: NettyApplicationEngine
+    private lateinit var env: ApplicationEngineEnvironment
 
-    @UseExperimental(KtorExperimentalAPI::class)
-    constructor(args: Array<String>) {
+    override val name = "WebServicesHost"
+
+    override var status = ServiceStatus.Unknown
+        private set
+
+    override fun register() {
         logger().enter()
 
-        var env: ApplicationEngineEnvironment
+        status = ServiceStatus.Stopped
+
+        logger().exit()
+    }
+
+    override fun start() {
+        logger().enter()
+
+        logger().debug("Starting HTTP server")
+
+        val args = emptyArray<String>()
         try {
             env = commandLineEnvironment(args)
         } catch (e: IllegalArgumentException) {
@@ -56,17 +74,9 @@ class WebServicesHost : Service {
             assert(env.config.propertyOrNull(keyStoreProperty) != null)
         }
 
-        logger().debug("Setting up HTTP server")
         engine = embeddedServer(Netty, env)
-
-        logger().exit()
-    }
-
-    override fun start() {
-        logger().enter()
-
-        logger().debug("Starting HTTP server on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}")
         engine.start()
+        status = ServiceStatus.Started
 
         logger().info("HTTP server started on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}")
         logger().exit()
@@ -76,7 +86,9 @@ class WebServicesHost : Service {
         logger().enter()
 
         logger().info("Stopping HTTP server on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}")
-        engine.stop(15, 30, TimeUnit.SECONDS)
+        engine.stop(3, 30, TimeUnit.SECONDS)
+        env.stop()
+        status = ServiceStatus.Stopped
 
         logger().info("HTTP server stopped on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}")
         logger().exit()

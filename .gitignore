@@ -1,7 +1,4 @@
 *.iml
 /.idea/
-/data/
+data/
 target/
-
-
-
