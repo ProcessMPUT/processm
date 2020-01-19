@@ -12,15 +12,14 @@ import java.util.*
 import kotlin.concurrent.thread
 
 object Main {
+    private const val EnvironmentVariablePrefix = "PROCESSM_"
+
     @JvmStatic
     fun main(args: Array<String>) {
         logger().enter()
 
         try {
-            // Load configuration
-            javaClass.classLoader.getResourceAsStream("config.properties").use {
-                Properties().apply { load(it) }.forEach { System.setProperty(it.key as String, it.value as String) }
-            }
+            loadConfiguration()
 
             EnterpriseServiceBus().apply {
                 // TODO: load the list of services from configuration or discover automatically
@@ -33,6 +32,18 @@ object Main {
         }
 
         logger().exit()
+    }
+
+    internal fun loadConfiguration() {
+        // Load from environment variables PROCESSM_* by dropping prefix PROCESSM_
+        System.getenv().filterKeys { it.startsWith(EnvironmentVariablePrefix) }.forEach {
+            System.setProperty(it.key.substring(EnvironmentVariablePrefix.length), it.value)
+        }
+
+        // Load from configuration file, possibly overriding the environment settings
+        javaClass.classLoader.getResourceAsStream("config.properties").use {
+            Properties().apply { load(it) }.forEach { System.setProperty(it.key as String, it.value as String) }
+        }
     }
 }
 
