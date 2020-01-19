@@ -32,14 +32,14 @@
     </issueManagement>
 
     <modules>
-        <module>../processm.core</module>
-        <module>../processm.etl</module>
-        <module>../processm.services</module>
-        <module>../processm.miners</module>
-        <module>../processm.conformance</module>
-        <module>../processm.performance</module>
-        <module>../processm.webui</module>
-        <module>../processm.launcher</module>
+        <module>processm.core</module>
+        <module>processm.etl</module>
+        <module>processm.services</module>
+        <module>processm.miners</module>
+        <module>processm.conformance</module>
+        <module>processm.performance</module>
+        <module>processm.webui</module>
+        <module>processm.launcher</module>
     </modules>
 
     <properties>

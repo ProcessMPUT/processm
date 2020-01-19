@@ -8,7 +8,7 @@
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
         <version>0.1-SNAPSHOT</version>
-        <relativePath>../processm</relativePath>
+        <relativePath>../</relativePath>
     </parent>
 
     <artifactId>services</artifactId>
