@@ -12,8 +12,8 @@ import kotlin.test.*
 
 class StaticContentTest {
     // TODO: configure tests such that this one runs for both: filesystem and JAR-originated resources
-    private val baseURI = URL("http://localhost:80/")
-    private val baseURIs = URL("https://localhost:443/")
+    private val baseURI = URL("http://localhost:2080/")
+    private val baseURIs = URL("https://localhost:2443/")
     private val host = WebServicesHost
 
     init {
