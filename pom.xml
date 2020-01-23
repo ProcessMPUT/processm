@@ -12,7 +12,6 @@
 
     <organization>
         <name>Poznan University of Technology</name>
-        <!-- TODO -->
         <url>http://processm.cs.put.poznan.pl</url>
     </organization>
 
@@ -22,7 +21,7 @@
             <name>ProcessM end-user license agreement</name>
             <url>http://processm.cs.put.poznan.pl/licensing</url>
             <distribution>repo</distribution>
-            <comments></comments>
+            <!--<comments></comments>-->
         </license>
     </licenses>
 
