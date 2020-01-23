@@ -1,4 +1,6 @@
 *.iml
+*.log
+*.log.gz
 /.idea/
 data/
 target/
