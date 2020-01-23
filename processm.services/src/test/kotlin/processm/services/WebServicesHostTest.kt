@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 
 class WebServicesHostTest {
 
-    private val baseURIs = URL("https://localhost:443/")
+    private val baseURIs = URL("https://localhost:2443/")
     val host = WebServicesHost
     val client = HttpClient(Apache) {
         engine {
