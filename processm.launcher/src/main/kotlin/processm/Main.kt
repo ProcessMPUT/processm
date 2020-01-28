@@ -4,22 +4,24 @@ import io.ktor.util.error
 import processm.core.esb.Artemis
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.esb.Hawtio
+import processm.core.helpers.loadConfiguration
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
+import processm.core.persistence.Migrator
 import processm.services.WebServicesHost
 import java.util.*
 import kotlin.concurrent.thread
 
 object Main {
-    private const val EnvironmentVariablePrefix = "PROCESSM_"
-
     @JvmStatic
     fun main(args: Array<String>) {
         logger().enter()
 
         try {
             loadConfiguration()
+
+            Migrator.migrate()
 
             EnterpriseServiceBus().apply {
                 // TODO: load the list of services from configuration or discover automatically
@@ -32,18 +34,6 @@ object Main {
         }
 
         logger().exit()
-    }
-
-    internal fun loadConfiguration() {
-        // Load from environment variables PROCESSM_* by dropping prefix PROCESSM_
-        System.getenv().filterKeys { it.startsWith(EnvironmentVariablePrefix) }.forEach {
-            System.setProperty(it.key.substring(EnvironmentVariablePrefix.length), it.value)
-        }
-
-        // Load from configuration file, possibly overriding the environment settings
-        javaClass.classLoader.getResourceAsStream("config.properties").use {
-            Properties().apply { load(it) }.forEach { System.setProperty(it.key as String, it.value as String) }
-        }
     }
 }
 
