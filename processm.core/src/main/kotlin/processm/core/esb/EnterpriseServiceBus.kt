@@ -1,13 +1,14 @@
 package processm.core.esb
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import processm.core.logging.logger
 import java.io.Closeable
-import java.lang.IllegalArgumentException
 import java.lang.management.ManagementFactory
 import java.util.*
 import javax.management.ObjectName
-import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 
 /**
@@ -24,18 +25,30 @@ class EnterpriseServiceBus : Closeable {
     /**
      *  List of all registered services.
      */
-    val services: Set<Service>
-        get() = Collections.unmodifiableSet(servicesInternal.keys)
+    val services: Set<Service> = Collections.unmodifiableSet(servicesInternal.keys)
 
     init {
         Runtime.getRuntime().addShutdownHook(thread(false) {
             try {
+                logger().info("Shutting down services")
                 close()
             } catch (e: Throwable) {
                 // We can't do anything anyway
                 logger().warn("Exception during finalization", e)
             }
         })
+
+
+    }
+
+    /**
+     * Automatically finds and registers services on classpath.
+     * @see register
+     */
+    fun autoRegister() {
+        logger().debug("Detecting and registering services")
+        val services = ServiceLoader.load(Service::class.java)
+        this.register(*services.toList().toTypedArray())
     }
 
     /**
@@ -43,6 +56,8 @@ class EnterpriseServiceBus : Closeable {
      * for each service. If an exception occurs during registration, the service will not be registered
      * and the exception is rethrown. If many exceptions occur for many services, the first one is rethrown
      * and the successive are suppressed.
+     * Every service can be registered only once.
+     * @param services The array of services to register
      * @see java.lang.Throwable.getSuppressed
      */
     fun register(vararg services: Service) {

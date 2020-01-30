@@ -16,12 +16,13 @@ class ArtemisTest {
 
     private val topic = "TestTopic"
     private val messageCount = 10
+    private val artemis = Artemis()
 
 
     @BeforeTest
     fun setUp() {
-        Artemis.register()
-        Artemis.start()
+        artemis.register()
+        artemis.start()
 
         // Clean up subscriptions remaining from previous (failing) runs of these tests
         val jmsContext = InitialContext()
@@ -41,7 +42,7 @@ class ArtemisTest {
 
     @AfterTest
     fun cleanUp() {
-        Artemis.stop()
+        artemis.stop()
     }
 
     @Test

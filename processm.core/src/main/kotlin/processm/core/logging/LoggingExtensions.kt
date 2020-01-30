@@ -18,8 +18,8 @@ fun Logger.enter() {
 
     val stack = Thread.currentThread().stackTrace
     assert(stack.size > 2) // 0 refers to "getStackTrace", 1 to "enter", and 2 to the calling method
-    assert(stack[0].equals(Thread::getStackTrace.name))
-    assert(stack[1].equals(::enter.name))
+    assert(stack[0].methodName == Thread::getStackTrace.name)
+    assert(stack[1].methodName == ::enter.name)
     this.trace("ENTERING ${stack[2].methodName}")
 }
 
@@ -29,7 +29,7 @@ fun Logger.exit() {
 
     val stack = Thread.currentThread().stackTrace
     assert(stack.size > 2) // 0 refers to "getStackTrace", 1 to "exit", and 2 to the calling method
-    assert(stack[0].equals(Thread::getStackTrace.name))
-    assert(stack[1].equals(::exit.name))
+    assert(stack[0].methodName == Thread::getStackTrace.name)
+    assert(stack[1].methodName == ::exit.name)
     this.trace("EXITING  ${stack[2].methodName}")
 }

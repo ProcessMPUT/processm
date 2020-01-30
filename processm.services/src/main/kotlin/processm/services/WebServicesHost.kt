@@ -18,9 +18,10 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 @UseExperimental(KtorExperimentalAPI::class)
-object WebServicesHost : Service {
-    private const val keyStoreProperty = "ktor.security.ssl.keyStore"
-    private val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+class WebServicesHost : Service {
+    companion object {
+        private const val keyStoreProperty = "ktor.security.ssl.keyStore"
+    }
     private lateinit var engine: NettyApplicationEngine
     private lateinit var env: ApplicationEngineEnvironment
 

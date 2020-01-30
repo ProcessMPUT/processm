@@ -24,8 +24,7 @@ object Main {
             Migrator.migrate()
 
             EnterpriseServiceBus().apply {
-                // TODO: load the list of services from configuration or discover automatically
-                register(Artemis, WebServicesHost, Hawtio)
+                autoRegister()
                 startAll()
             }
 

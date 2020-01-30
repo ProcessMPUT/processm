@@ -6,7 +6,9 @@
 
     <!-- Make sure all compression tasks are finished before exiting JVM. -->
     <!-- TODO: change the class name to DefaultShutdownHook when updating to logback 1.3+ -->
-    <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook" />
+    <!-- TODO: The below directive closes logger immediately after receiving shutdown signal,
+    without waiting for services to stop. Disabled for now. -->
+    <!--<shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook" />-->
 
     <!-- Console logger -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">

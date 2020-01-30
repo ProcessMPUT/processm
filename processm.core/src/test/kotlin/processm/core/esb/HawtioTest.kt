@@ -8,13 +8,13 @@ import kotlin.test.assertTrue
 class HawtioTest {
 
     private val baseURL = URL("http://localhost:8080/hawtio/")
-
+    private val hawtio = Hawtio()
 
     @Test
     fun httpGetTest() {
         try {
-            Hawtio.register()
-            Hawtio.start()
+            hawtio.register()
+            hawtio.start()
 
             val response = baseURL.readText()
             assertTrue(response.startsWith("<!DOCTYPE html>"))
@@ -23,7 +23,7 @@ class HawtioTest {
             logger().error("", e)
             throw e
         } finally {
-            Hawtio.stop()
+            hawtio.stop()
         }
     }
 
