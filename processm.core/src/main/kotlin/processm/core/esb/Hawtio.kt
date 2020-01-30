@@ -6,7 +6,7 @@ import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
 
-object Hawtio : Service {
+class Hawtio : Service {
     private lateinit var hawtio: HawtioMain
 
     override val name = "Hawtio"

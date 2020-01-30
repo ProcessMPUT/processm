@@ -1,13 +1,11 @@
 package processm.core.esb
 
-import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
-import java.net.URL
 
-object Artemis : Service {
+class Artemis : Service {
     private lateinit var broker: EmbeddedActiveMQ
 
     override val name = "Artemis"

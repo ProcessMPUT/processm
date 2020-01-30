@@ -127,6 +127,14 @@ class EnterpriseServiceBusTest {
         // prevent exception throw on clean up
         failingService._when = ServiceStatus.Unknown
     }
+
+    @Test
+    fun autoRegisterTest() {
+        // Verify whether it automatically detected standard services like Artemis
+        val esb = EnterpriseServiceBus()
+        esb.autoRegister()
+        assertTrue(esb.services.any { it is Artemis })
+    }
 }
 
 open class TestService(override val name: String) : Service {

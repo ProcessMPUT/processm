@@ -15,8 +15,8 @@ import kotlin.test.assertTrue
 class WebServicesHostTest {
 
     private val baseURIs = URL("https://localhost:2443/")
-    val host = WebServicesHost
-    val client = HttpClient(Apache) {
+    private val host = WebServicesHost()
+    private val client = HttpClient(Apache) {
         engine {
             customizeClient {
                 setSSLContext(
@@ -38,7 +38,7 @@ class WebServicesHostTest {
     }
 
     @Test
-    fun StartStopStartStop() = runBlocking {
+    fun startStopStartStopTest() = runBlocking {
         for (i in 0..2) {
             host.start()
 
