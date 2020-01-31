@@ -1,13 +1,11 @@
 package processm.core.esb
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import processm.core.logging.logger
 import java.io.Closeable
 import java.lang.management.ManagementFactory
 import java.util.*
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ForkJoinPool
 import javax.management.ObjectName
 import kotlin.concurrent.thread
 
@@ -68,7 +66,7 @@ class EnterpriseServiceBus : Closeable {
         }
 
         val jmxServer = ManagementFactory.getPlatformMBeanServer()
-        services.runConcurrent {
+        services.asIterable().runConcurrent {
             it.register()
             jmxServer.registerMBean(it, ObjectName("$jmxDomain:0=services,name=${it.name}"))
             synchronized(servicesInternal) {
@@ -116,26 +114,31 @@ class EnterpriseServiceBus : Closeable {
 
 /**
  * Runs concurrently the given action on all services. This function terminates when all concurrent invocations
- * terminate. The exceptions caught in the coroutines are rethrown by this function.
+ * terminate. The exceptions caught in individual threads are rethrown by this function.
  */
-private fun Array<out Service>.runConcurrent(action: (Service) -> Unit) = runBlocking {
-    // await() ensures that all exceptions thrown in coroutines will be rethrown in the calling thread
-    // (the first-thrown exception will be rethrown, and the remaining will be reported as suppressed exceptions).
-    GlobalScope.async {
-        forEach { launch { synchronized(it) { action(it) } } }
-    }.await()
-}
-
-/**
- * Runs concurrently the given action on all services. This function terminates when all concurrent invocations
- * terminate. The exceptions caught in the coroutines are rethrown by this function.
- */
-private fun Iterable<Service>.runConcurrent(action: (Service) -> Unit) = runBlocking {
-    // await() ensures that all exceptions thrown in coroutines will be rethrown in the calling thread
-    // (the first-thrown exception will be rethrown, and the remaining will be reported as suppressed exceptions).
-    GlobalScope.async {
-        forEach { launch { synchronized(it) { action(it) } } }
-    }.await()
+private fun Iterable<Service>.runConcurrent(action: (Service) -> Unit) {
+    // DO NOT use coroutines here, as they may be canceled by exceptions in other coroutines in the same scope.
+    // See e.g.,
+    // https://medium.com/the-kotlin-chronicle/coroutine-exceptions-3378f51a7d33
+    // https://kotlinlang.org/docs/reference/coroutines/exception-handling.html
+    // TODO: replace common pool with dedicated one if required
+    val pool = ForkJoinPool.commonPool()
+    val tasks = this.map { pool.submit { synchronized(it) { action(it) } } }
+    val exceptions = tasks.mapNotNull { it.runCatching { get() }.exceptionOrNull() }
+    var exception: Throwable? = null
+    for (e in exceptions) {
+        if (e is ExecutionException) {
+            // collect exceptions from tasks and suppress successive exceptions
+            if (exception === null)
+                exception = e.cause
+            else
+                exception.addSuppressed(e.cause)
+        } else {
+            throw e // throw everything else
+        }
+    }
+    if (exception !== null)
+        throw exception
 }
 
 

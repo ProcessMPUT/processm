@@ -82,15 +82,18 @@ class EnterpriseServiceBusTest {
 
     @Test
     fun testThrowInRegister() {
-        val normalService = TestService("myNormalService")
-        val failingService = FailingService("myFailingService", ServiceStatus.Unknown)
+        val normalService1 = TestService("myNormalService1", 0)
+        val normalService2 = TestService("myNormalService2", 2000)
+        val failingService = FailingService("myFailingService", ServiceStatus.Unknown, 1000)
 
         assertFailsWith(IllegalStateException::class) {
-            esb.register(failingService, normalService)
+            esb.register(normalService1, failingService, normalService2)
         }
 
-        assertEquals(1, esb.services.size)
-        assertEquals(normalService, esb.services.first())
+        assertEquals(2, esb.services.size)
+        assertTrue(esb.services.any { it.name == normalService1.name })
+        assertTrue(esb.services.any { it.name == normalService2.name })
+        assertFalse(esb.services.any { it.name == failingService.name })
     }
 
     @Test
@@ -137,19 +140,22 @@ class EnterpriseServiceBusTest {
     }
 }
 
-open class TestService(override val name: String) : Service {
+open class TestService(override val name: String, val delay: Long = 0) : Service {
     override var status = ServiceStatus.Unknown
         protected set
 
     override fun register() {
+        Thread.sleep(delay)
         status = ServiceStatus.Stopped
     }
 
     override fun start() {
+        Thread.sleep(delay)
         status = ServiceStatus.Started
     }
 
     override fun stop() {
+        Thread.sleep(delay)
         status = ServiceStatus.Stopped
     }
 }
@@ -163,22 +169,28 @@ class CustomService(name: String) : TestService(name), CustomMXBean {
         get() = 1
 }
 
-class FailingService(name: String, var _when: ServiceStatus) : TestService(name) {
+class FailingService(name: String, var _when: ServiceStatus, val failDelay: Long = 0) : TestService(name) {
     override fun register() {
-        if (_when == ServiceStatus.Unknown)
+        if (_when == ServiceStatus.Unknown) {
+            Thread.sleep(failDelay)
             throw IllegalStateException()
+        }
         super.register()
     }
 
     override fun start() {
-        if (_when == ServiceStatus.Started)
+        if (_when == ServiceStatus.Started) {
+            Thread.sleep(failDelay)
             throw IllegalStateException()
+        }
         super.start()
     }
 
     override fun stop() {
-        if (_when == ServiceStatus.Stopped)
+        if (_when == ServiceStatus.Stopped) {
+            Thread.sleep(failDelay)
             throw IllegalStateException()
+        }
         super.stop()
     }
 }
