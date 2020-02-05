@@ -2,6 +2,7 @@ package processm.core.helpers
 
 import java.lang.reflect.Field
 import java.util.*
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -11,6 +12,12 @@ class HelpersTests {
     private val envPropertyValue = "true"
     private val overriddenProperty = "processm.testMode"
     private val overriddenPropertyValue = "true"
+
+    @BeforeTest
+    fun setUp() {
+        System.clearProperty(envProperty)
+        System.clearProperty(overriddenProperty)
+    }
 
     /**
      * Verifies whether configuration from config.properties takes precedence over environment variables.
