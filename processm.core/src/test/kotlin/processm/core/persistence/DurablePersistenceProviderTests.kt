@@ -12,7 +12,8 @@ class DurablePersistenceProviderTests : PersistenceProviderBaseTests() {
 
     init {
         loadConfiguration()
-        DBConnectionPool.getConnection().use{
+        Migrator.migrate()
+        DBConnectionPool.getConnection().use {
             it.createStatement().execute("DELETE FROM durable_storage WHERE urn LIKE 'urn:tests:myclass%'")
         }
     }
