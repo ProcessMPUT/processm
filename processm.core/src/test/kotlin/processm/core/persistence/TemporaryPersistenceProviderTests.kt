@@ -11,9 +11,6 @@ import kotlin.test.assertFailsWith
 class TemporaryPersistenceProviderTests : PersistenceProviderBaseTests() {
     init {
         loadConfiguration()
-        DBConnectionPool.getConnection().use{
-            it.createStatement().execute("DELETE FROM durable_storage WHERE urn LIKE 'urn:tests:myclass%'")
-        }
     }
 
     @Test
@@ -21,7 +18,7 @@ class TemporaryPersistenceProviderTests : PersistenceProviderBaseTests() {
         TemporaryPersistenceProvider().use {
             putGetDeleteTest(it)
 
-            TemporaryPersistenceProvider().use {nested ->
+            TemporaryPersistenceProvider().use { nested ->
                 putGetDeleteTest(nested)
             }
         }
