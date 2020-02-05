@@ -1,18 +1,25 @@
 package processm.core.helpers
 
 import java.util.*
+import processm.core.logging.*
 
 private const val EnvironmentVariablePrefix = "processm_"
-private class Dummy{}
+
+private class Helpers {}
 
 fun loadConfiguration() {
     // Load from environment variables processm_* by replacing _ with .
     System.getenv().filterKeys { it.startsWith(EnvironmentVariablePrefix, true) }.forEach {
-        System.setProperty(it.key.replace("_", "."), it.value)
+        val key = it.key.replace("_", ".")
+        Helpers::class.logger().debug("Setting parameter $key=${it.value} using environment variable ${it.key}")
+        System.setProperty(key, it.value)
     }
 
     // Load from configuration file, possibly overriding the environment settings
-    Dummy::class.java.classLoader.getResourceAsStream("config.properties").use {
-        Properties().apply { load(it) }.forEach { System.setProperty(it.key as String, it.value as String) }
+    Helpers::class.java.classLoader.getResourceAsStream("config.properties").use {
+        Properties().apply { load(it) }.forEach {
+            Helpers::class.logger().debug("Setting parameter ${it.key}=${it.value} using config.properties")
+            System.setProperty(it.key as String, it.value as String)
+        }
     }
 }
