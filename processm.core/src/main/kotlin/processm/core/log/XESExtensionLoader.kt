@@ -7,15 +7,23 @@ import processm.core.log.extension.XesExtensionAttribute
 import processm.core.logging.logger
 import java.io.InputStream
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 import javax.xml.parsers.DocumentBuilderFactory
 
 object XESExtensionLoader {
+    private val loadedExtensions: ConcurrentHashMap<String, Extension> = ConcurrentHashMap()
     private val allowedAttributesNames = listOf("string", "float", "int", "id", "list", "date")
     private val xesWebsiteRegex: Regex =
         "^https?://(www.)?xes-standard.org/(?<ext>[a-z_]+).xesext\$".toRegex(RegexOption.IGNORE_CASE)
 
     internal fun loadExtension(uri: String): Extension? {
         try {
+            // Return stored Extension if in memory
+            val extensionInMemory = loadedExtensions[uri]
+            if (extensionInMemory != null) {
+                return extensionInMemory
+            }
+
             // Stream to read from local resources OR from the Internet
             var stream: InputStream? = null
 
@@ -30,7 +38,9 @@ object XESExtensionLoader {
                 stream = openExternalStream(uri)
             }
 
-            return xmlToObject(stream)
+            // Store new extension in memory
+            val extension = xmlToObject(stream)
+            return loadedExtensions.putIfAbsent(uri, extension) ?: extension
         } catch (e: Exception) {
             logger().warn("Cannot load XES Extension", e)
         }
