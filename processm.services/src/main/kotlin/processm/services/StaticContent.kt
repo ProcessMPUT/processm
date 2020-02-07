@@ -24,7 +24,7 @@ fun Application.main() {
             } else {
                 logger().debug("Serving static content from file system")
                 staticRootFolder =
-                    codeSource.parentFile.parentFile.parentFile.resolve("processm.webui/src/main/resources")
+                    codeSource.parentFile.parentFile.parentFile.resolve("processm.webui/src/main/app")
                 files(".")
                 default("index.html")
             }

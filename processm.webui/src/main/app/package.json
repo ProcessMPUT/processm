@@ -1,0 +1,15 @@
+{
+  "name": "processm-frontend",
+  "version": "0.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://git.processtom.com/processm-team/processm"
+  },
+  "dependencies": {
+    "vue": "^2.6.11"
+  }
+}
