@@ -1,5 +1,6 @@
 package processm.core.log
 
+import io.mockk.Called
 import io.mockk.every
 import io.mockk.spyk
 import io.mockk.verifyOrder
@@ -139,7 +140,7 @@ class XESExtensionLoaderTest {
     fun `xml with invalid tag inside - ignore it in structure`() {
         val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
         val content = """<?xml version="1.0" encoding="UTF-8" ?>
-            <xesextension name="Example" prefix="example" uri="http://example.com/example.xesext">
+            <xesextension name="Example" prefix="example" uri="http://example.com/invalid-mapping-tag.xesext">
                 <event>
                     <int key="level">
                         <INVALID-ALIAS-MAPPING mapping="EN" name="Example level of this event"/>
@@ -148,23 +149,54 @@ class XESExtensionLoaderTest {
             </xesextension>
         """
 
-        every { mock["openExternalStream"]("http://example.com/example.xesext") } returns ByteArrayInputStream(content.toByteArray())
+        every { mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext") } returns ByteArrayInputStream(content.toByteArray())
 
-        val result = mock.loadExtension("http://example.com/example.xesext")!!
+        val result = mock.loadExtension("http://example.com/invalid-mapping-tag.xesext")!!
 
         verifyOrder {
-            mock.loadExtension("http://example.com/example.xesext")
-            mock["openExternalStream"]("http://example.com/example.xesext")
+            mock.loadExtension("http://example.com/invalid-mapping-tag.xesext")
+            mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext")
         }
 
         assertEquals(result.name, "Example")
         assertEquals(result.prefix, "example")
-        assertEquals(result.uri, "http://example.com/example.xesext")
+        assertEquals(result.uri, "http://example.com/invalid-mapping-tag.xesext")
 
         val levelAttr = result.event.getValue("level")
 
         assertEquals(levelAttr.key, "level")
         assertEquals(levelAttr.type, "int")
         assertEquals(levelAttr.aliases.size, 0)
+    }
+
+    @Test
+    fun `load extensions only one and store it in memory to reduce memory usage`() {
+        val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
+        val content = """<?xml version="1.0" encoding="UTF-8" ?>
+            <xesextension name="Once" prefix="once" uri="http://example.com/only-once.xesext">
+                <event>
+                    <int key="level">
+                        <alias mapping="EN" name="Example level of this event"/>
+                    </int>
+                </event>
+            </xesextension>
+        """
+        every { mock["openExternalStream"]("http://example.com/only-once.xesext") } returns ByteArrayInputStream(content.toByteArray())
+
+        mock.loadExtension("http://example.com/only-once.xesext")!!
+        verifyOrder {
+            mock.loadExtension("http://example.com/only-once.xesext")
+            mock["openExternalStream"]("http://example.com/only-once.xesext")
+        }
+
+        val fromMemory = mock.loadExtension("http://example.com/only-once.xesext")!!
+        verifyOrder {
+            mock.loadExtension("http://example.com/only-once.xesext")
+            mock["openExternalStream"]("http://example.com/only-once.xesext")?.wasNot(Called)
+        }
+
+        assertEquals(fromMemory.name, "Once")
+        assertEquals(fromMemory.prefix, "once")
+        assertEquals(fromMemory.uri, "http://example.com/only-once.xesext")
     }
 }
