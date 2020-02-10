@@ -1,18 +1,20 @@
-package processm.core.log
+package processm.core.log.attribute
 
 import kotlin.random.Random
 import kotlin.test.*
 
 internal class RealAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
-    private val attr1: RealAttr = RealAttr(
-        key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-        value = 33.23
-    )
-    private val attr2: RealAttr = RealAttr(
-        key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-        value = 22.00
-    )
+    private val attr1: RealAttr =
+        RealAttr(
+            key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
+            value = 33.23
+        )
+    private val attr2: RealAttr =
+        RealAttr(
+            key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
+            value = 22.00
+        )
 
     @Test
     fun `Field key as String intern() field to reduce memory usage - value and reference are the same`() {
