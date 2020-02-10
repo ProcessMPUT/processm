@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xesextension name="MetaData_LifeCycle" prefix="meta_life" uri="http://www.xes-standard.org/meta_life.xesext">
+	<log>
+		<int key="different_transitions_total"><!--Total number of different transitions in the log-->
+			<alias mapping="EN" name="Total number of different transitions"/>
+		</int>
+		<float key="different_transitions_average"><!--Average number of different transitions per trace-->
+			<alias mapping="EN" name="Average number of different transitions"/>
+		</float>
+		<float key="different_transitions_standard_deviation"><!--Standard deviation of different transitions per trace-->
+			<alias mapping="EN" name="Standard deviation of different transitionsme"/> 
+		</float>
+		<int key="different_transitions_min"><!--Minimum number of different transitions in a trace-->
+			<alias mapping="EN" name="Minimum number of different transitions"/>
+		</int>
+		<int key="different_transitions_max"><!--Maximum number of different transitions in a trace-->
+			<alias mapping="EN" name="Maximum number of different transitions"/>
+		</int>
+		<int key="transition_events_total"><!--Total number of events that are a transition in the log-->
+			<alias mapping="EN" name="Total number of transitions"/>
+		</int>
+		<float key="transition_events_average"><!--Average number of events that are a transition per trace-->
+			<alias mapping="EN" name="Average number of transitions"/>
+		</float>
+		<float key="transition_events_standard_deviation"><!--Standard deviation of events that are a transition per trace-->
+			<alias mapping="EN" name="Standard deviation of transitions"/>
+		</float>
+		<int key="transition_events_min"><!--Minimum number of events that are a transition in a trace-->
+			<alias mapping="EN" name="Minimum number of transitions"/>
+		</int>
+		<int key="transition_events_max"><!--Maximum number of events that are a transition in a trace-->
+			<alias mapping="EN" name="Maximum number of transitions"/>
+		</int>
+	</log>
+</xesextension>
