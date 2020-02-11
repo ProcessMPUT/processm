@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
-class StringAttr(key: String, private val value: String) : Attribute<String>(key) {
-    override fun getValue() = this.value.intern()
+class StringAttr(key: String, value: String) : Attribute<String>(key) {
+    val value: String = value.intern()
+    override fun getValue() = this.value
 }
