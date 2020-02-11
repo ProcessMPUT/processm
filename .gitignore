@@ -4,5 +4,4 @@
 /.idea/
 data/
 target/
-/processm.webui/src/main/app/node_modules/vue/
-/processm.webui/src/main/app/node/
+/processm.webui/src/main/node/
