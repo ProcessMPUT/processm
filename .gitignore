@@ -4,5 +4,6 @@
 /.idea/
 data/
 target/
+processm.core/gen/
 /processm.webui/src/main/node/
 *.DS_Store

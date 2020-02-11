@@ -52,6 +52,7 @@
         <kotlin.code.style>official</kotlin.code.style>
         <junit.jupiter.version>5.6.0</junit.jupiter.version>
         <mockk.version>1.9.3</mockk.version>
+        <antlr4.version>4.8-1</antlr4.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>
@@ -127,6 +128,7 @@
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
                                 <sourceDir>${project.basedir}/src/main/java</sourceDir>
+                                <sourceDir>${project.basedir}/target/generated-sources/antlr4</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
