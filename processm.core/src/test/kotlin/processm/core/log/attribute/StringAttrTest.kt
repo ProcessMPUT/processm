@@ -21,10 +21,4 @@ internal class StringAttrTest {
         assertEquals(attr1.key, attr2.key)
         assertSame(attr1.key, attr2.key)
     }
-
-    @Test
-    fun `Field value as String intern() field to reduce memory usage - value and reference are the same`() {
-        assertEquals(attr1.value, attr2.value)
-        assertSame(attr1.value, attr2.value)
-    }
 }

@@ -9,7 +9,8 @@ CREATE TABLE logs_attributes
     date_value   timestamptz,
     int_value    INT,
     bool_value   BOOLEAN,
-    real_value   REAL
+    real_value   DOUBLE PRECISION,
+    in_list_attr BOOLEAN
 );
 
 SELECT create_hypertable('logs_attributes', 'id', chunk_time_interval => 100000, if_not_exists => TRUE);

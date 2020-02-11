@@ -1,7 +1,7 @@
 CREATE TABLE traces_attributes
 (
     id           BIGSERIAL PRIMARY KEY,
-    trace_id     INTEGER NOT NULL,
+    trace_id     BIGINT NOT NULL,
     parent_id    BIGINT,
     type         TEXT,
     key          TEXT,
@@ -9,7 +9,8 @@ CREATE TABLE traces_attributes
     date_value   timestamptz,
     int_value    INT,
     bool_value   BOOLEAN,
-    real_value   REAL
+    real_value   DOUBLE PRECISION,
+    in_list_attr BOOLEAN
 );
 
 SELECT create_hypertable('traces_attributes', 'id', chunk_time_interval => 100000, if_not_exists => TRUE);
