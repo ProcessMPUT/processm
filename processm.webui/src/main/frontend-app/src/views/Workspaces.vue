@@ -1,16 +1,25 @@
 <template>
   <v-container class="d-flex align-stretch pb-0 px-0" fluid fill-height>
+    <v-row align="stretch" class="ma-0">
+      <v-col cols="12" class="pa-0">
+        <v-tabs-items v-model="currentWorkspace">
+          <v-tab-item v-for="workspace in workspaces" :key="workspace.name">
+            <workspace />
+          </v-tab-item>
+        </v-tabs-items>
+      </v-col>
+    </v-row>
     <v-row align="end" class="ma-0">
-      <v-tabs-items v-model="currentWorkspace">
-        <v-tab-item v-for="workspace in workspaces" :key="workspace.name">
-          <v-card>{{ workspace.content }}</v-card>
-        </v-tab-item>
-      </v-tabs-items>
-
       <v-tabs v-model="currentWorkspace" background-color="primary" show-arrows>
-        <v-tab v-for="workspace in workspaces" :key="workspace.name">{{
-          workspace.name
-        }}</v-tab>
+        <v-tab
+          v-for="workspace in workspaces"
+          :key="workspace.name"
+          v-on="on"
+          >{{ workspace.name }}</v-tab
+        >
+        <v-btn class="ma-1" @click="createWorkspace">
+          <v-icon>mdi-plus</v-icon>
+        </v-btn>
       </v-tabs>
     </v-row>
   </v-container>
@@ -19,19 +28,33 @@
 <script lang="ts">
 import Vue from "vue";
 import Component from "vue-class-component";
+import Workspace from "@/components/Workspace.vue";
 
-@Component
+@Component({
+  components: { Workspace }
+})
 export default class Workspaces extends Vue {
-  currentWorkspace: any = null;
+  private readonly defaultWorkspaces = [
+    { name: "Workspace1", content: "W1" },
+    { name: "Workspace2", content: "W2" }
+  ];
 
-  get workspaces(): Array<any> {
-    return [
-      { name: "Workspace1", content: "Tab 1 Content" },
-      { name: "Workspace2", content: "Tab 2 Content" },
-      { name: "Workspace3", content: "Tab 3 Content" },
-      { name: "Workspace4", content: "Tab 4 Content" },
-      { name: "Workspace5", content: "Tab 5 Content" }
-    ];
+  currentWorkspace = this.defaultWorkspaces[0];
+
+  get workspaces(): Array<object> {
+    return this.defaultWorkspaces;
+  }
+
+  createWorkspace() {
+    const workspaceNumber = this.defaultWorkspaces.length + 1;
+    this.defaultWorkspaces.push({
+      name: `Workspace${workspaceNumber}`,
+      content: `W${workspaceNumber}`
+    });
+  }
+
+  removeWorkspace(workspaceNumber: number) {
+    this.defaultWorkspaces.splice(workspaceNumber - 1, 1);
   }
 }
 </script>
