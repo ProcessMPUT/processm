@@ -2,12 +2,9 @@
   <v-container>
     <v-layout>
       <v-flex xs12>
-        <h1 class="display-1">About Page</h1>
+        <h1 class="display-1">{{ $t("about.page-title") }}</h1>
         <p>
-          Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi
-          obcaecati tempora sunt debitis, minima deleniti ex inventore
-          laboriosam at animi praesentium, quaerat corrupti molestiae recusandae
-          corporis necessitatibus vitae, nam saepe?
+          {{ $t("about.description") }}
         </p>
       </v-flex>
     </v-layout>

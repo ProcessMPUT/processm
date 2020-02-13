@@ -5,7 +5,9 @@
         <v-list-item-avatar>
           <v-icon>menu</v-icon>
         </v-list-item-avatar>
-        <v-list-item-title class="title">Menu</v-list-item-title>
+        <v-list-item-title class="title">
+          {{ $t("navigation.menu") }}
+        </v-list-item-title>
       </v-list-item>
 
       <v-divider></v-divider>
@@ -14,13 +16,15 @@
         <v-list-item-action>
           <v-icon>dashboard</v-icon>
         </v-list-item-action>
-        <v-list-item-content>Workspaces</v-list-item-content>
+        <v-list-item-content>
+          {{ $t("navigation.workspaces") }}
+        </v-list-item-content>
       </v-list-item>
       <v-list-item to="/about" color="primary">
         <v-list-item-action>
           <v-icon>info</v-icon>
         </v-list-item-action>
-        <v-list-item-content>About</v-list-item-content>
+        <v-list-item-content>{{ $t("navigation.about") }}</v-list-item-content>
       </v-list-item>
     </v-list>
   </v-navigation-drawer>

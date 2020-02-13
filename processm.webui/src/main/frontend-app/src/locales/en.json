@@ -1,0 +1,14 @@
+{
+  "navigation": {
+    "menu": "Menu",
+    "workspaces": "Workspaces",
+    "about": "@:about.page-title"
+  },
+  "workspace": {
+    "locked": "Locked"
+  },
+  "about": {
+    "page-title": "About page",
+    "description": "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi obcaecati tempora debitis, minima deleniti ex inventore laboriosam at animi praesentium, quaerat corrupti molestiae recusandae corporis necessitatibus vitae, nam saepe?"
+  }
+}

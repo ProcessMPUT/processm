@@ -1,0 +1,12 @@
+{
+  "navigation": {
+    "workspaces": "Przestrzeń robocza",
+    "about": "@:about.page-title"
+  },
+  "workspace": {
+    "locked": "Zablokowany"
+  },
+  "about": {
+    "page-title": "O aplikacji"
+  }
+}

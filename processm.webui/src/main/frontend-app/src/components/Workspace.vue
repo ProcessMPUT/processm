@@ -24,7 +24,7 @@
             >{{ name }} {{ item.i }}</grid-item
           >
         </grid-layout>
-        <v-switch v-model="locked" label="Locked" />
+        <v-switch v-model="locked" :label="$t('workspace.locked')" />
       </v-col>
     </v-row>
   </v-container>
