@@ -2,7 +2,7 @@ package processm.core.models.causalnet
 
 import processm.core.models.metadata.BasicStatistics
 import processm.core.models.metadata.DefaultMetadataProvider
-import processm.core.models.metadata.FlatDoubleMetadata
+import processm.core.models.metadata.IntMetadata
 import processm.core.models.metadata.ModifiableMetadataHandler
 
 /**
@@ -14,7 +14,7 @@ class ModifiableModelInstance(model: Model, metadataHandler: ModifiableMetadataH
 
     init {
         for (name in BasicStatistics.BASIC_TIME_STATISTICS)
-            addMetadataProvider(DefaultMetadataProvider<FlatDoubleMetadata>(name))
+            addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
     }
 
 }
