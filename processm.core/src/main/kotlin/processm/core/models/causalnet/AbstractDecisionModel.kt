@@ -1,0 +1,48 @@
+package processm.core.models.causalnet
+
+import processm.core.models.causalnet.mock.Event
+
+/**
+ * An abstract class implementing [predictSplit] and [predictJoin] using argmax
+ */
+abstract class AbstractDecisionModel : DecisionModel {
+
+
+    abstract override fun predictSplitProbability(
+        currentNode: ActivityInstance,
+        availableBindings: Iterable<Split>,
+        partialLog: Iterable<Event>
+    ): Map<Split, Double>
+
+
+    override fun predictSplit(
+        currentNode: ActivityInstance,
+        availableBindings: Iterable<Split>,
+        partialLog: Iterable<Event>
+    ): Split {
+        val e = predictSplitProbability(currentNode, availableBindings, partialLog).maxBy { it.value }
+        if (e != null)
+            return e.key
+        else
+            throw IllegalStateException("Invalid probability distribution returned by predictSplitProbability")
+    }
+
+    abstract override fun predictJoinProbability(
+        targetNode: ActivityInstance,
+        availableBindings: Iterable<Join>,
+        partialLog: Iterable<Event>
+    ): Map<Join, Double>
+
+
+    override fun predictJoin(
+        targetNode: ActivityInstance,
+        availableBindings: Iterable<Join>,
+        partialLog: Iterable<Event>
+    ): Join {
+        val e = predictJoinProbability(targetNode, availableBindings, partialLog).maxBy { it.value }
+        if (e != null)
+            return e.key
+        else
+            throw IllegalStateException("Invalid probability distribution returned by predictJoinProbability")
+    }
+}
