@@ -1,4 +1,4 @@
-CREATE EXTENSION timescaledb SCHEMA ${flyway:defaultSchema} CASCADE;
+CREATE EXTENSION IF NOT EXISTS timescaledb SCHEMA ${flyway:defaultSchema} CASCADE;
 
 CREATE TABLE durable_storage(
     urn         VARCHAR(1024) NOT NULL PRIMARY KEY,
