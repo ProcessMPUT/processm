@@ -7,6 +7,7 @@ import org.apache.commons.dbcp2.PoolingDataSource
 import org.apache.commons.pool2.ObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPool
 import org.jetbrains.exposed.sql.Database
+import processm.core.helpers.loadConfiguration
 import java.sql.Connection
 import javax.sql.DataSource
 
@@ -14,6 +15,9 @@ object DBConnectionPool {
     private val connectionPool: ObjectPool<PoolableConnection>
 
     init {
+        loadConfiguration()
+        Migrator.migrate()
+
         // First, we'll create a ConnectionFactory that the
         // pool will use to create Connections.
         // We'll use the DriverManagerConnectionFactory,

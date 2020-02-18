@@ -5,7 +5,6 @@ import processm.core.helpers.loadConfiguration
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
-import processm.core.persistence.Migrator
 
 object Main {
     @JvmStatic
@@ -15,7 +14,7 @@ object Main {
         try {
             loadConfiguration()
 
-            Migrator.migrate()
+            // Migrator.migrate()
 
             EnterpriseServiceBus().apply {
                 autoRegister()

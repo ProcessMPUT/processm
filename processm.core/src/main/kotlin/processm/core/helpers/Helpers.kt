@@ -1,13 +1,29 @@
 package processm.core.helpers
 
+import processm.core.logging.logger
 import java.util.*
-import processm.core.logging.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val EnvironmentVariablePrefix = "processm_"
+private var configurationLoaded = AtomicBoolean(false)
 
 private object Helpers {}
 
-fun loadConfiguration() {
+
+/**
+ * Load system configuration from environment variables and config.properties (in this order) into
+ * system properties. Any variable found in the successive source overwrites its value from the
+ * preceding source.
+ *
+ * @param overwriteIfAlreadyLoaded Should we force reload configuration?
+ * @see System.getProperties
+ */
+fun loadConfiguration(overwriteIfAlreadyLoaded: Boolean = false) {
+    // configurationLoaded.compareAndSet(false, true) returns true for the first run
+    if (!configurationLoaded.compareAndSet(false, true) && !overwriteIfAlreadyLoaded)
+        return
+    assert(configurationLoaded.get())
+
     // Load from environment variables processm_* by replacing _ with .
     System.getenv().filterKeys { it.startsWith(EnvironmentVariablePrefix, true) }.forEach {
         val key = it.key.replace("_", ".")
