@@ -40,7 +40,9 @@ import { GridLayout, GridItem } from "vue-grid-layout";
   components: { GridLayout, GridItem }
 })
 export default class Workspace extends Vue {
-  @Prop(String) readonly name: string = "";
+  @Prop({ default: "" })
+  readonly name!: string;
+
   locked = true;
 
   layout = [
