@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+CREATE EXTENSION IF NOT EXISTS timescaledb SCHEMA current_schema CASCADE;
 
 CREATE TABLE durable_storage(
     urn         VARCHAR(1024) NOT NULL PRIMARY KEY,
