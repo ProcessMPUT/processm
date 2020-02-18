@@ -23,6 +23,7 @@ class HelpersTests {
         System.clearProperty(envProperty)
         System.clearProperty(overriddenProperty)
         setEnv(previousEnv)
+        loadConfiguration(true)
     }
 
     /**
