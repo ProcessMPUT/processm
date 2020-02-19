@@ -34,8 +34,6 @@ object Migrator {
      */
     private fun applyDefaultSchema(conf: FluentConfiguration, url: String) {
         val schema = Regex("defaultSchema=([^&]*)").find(url)?.groupValues?.get(1)
-        if (schema === null)
-            return
-        conf.schemas(schema)
+        conf.schemas(schema ?: "public")
     }
 }

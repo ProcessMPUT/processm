@@ -17,6 +17,7 @@
     <name>ProcessM Core</name>
 
     <properties>
+        <dbname></dbname>
         <dbschema>public</dbschema>
     </properties>
 
@@ -126,7 +127,8 @@
 
                 <executions>
                     <execution>
-                        <id>clean-db</id>
+                        <!-- Called by clean phase - cleans schema given by dbschema property (public is default). -->
+                        <id>clean-schema</id>
                         <phase>clean</phase>
                         <goals>
                             <goal>execute</goal>
@@ -136,6 +138,19 @@
                                 DROP SCHEMA IF EXISTS ${dbschema} CASCADE;
                                 CREATE SCHEMA ${dbschema};
                             </sqlCommand>
+                            <onError>abort</onError>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- Called by TeamCity before tests to prepare database.
+                        Requires property dbname to be set by command line. -->
+                        <id>create-db</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <sqlCommand>CREATE DATABASE ${dbname} OWNER DEFAULT;</sqlCommand>
                             <onError>abort</onError>
                         </configuration>
                     </execution>
