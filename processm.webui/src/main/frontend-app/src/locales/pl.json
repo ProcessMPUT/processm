@@ -4,6 +4,7 @@
     "about": "@:about.page-title"
   },
   "workspace": {
+    "default-name": "Przestrzeń",
     "locked": "Zablokowany"
   },
   "about": {

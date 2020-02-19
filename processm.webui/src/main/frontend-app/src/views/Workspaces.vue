@@ -4,7 +4,7 @@
       <v-col cols="12" class="pa-0">
         <v-tabs-items v-model="currentWorkspaceIndex">
           <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
-            <workspace />
+            <workspace-area />
           </v-tab-item>
         </v-tabs-items>
       </v-col>
@@ -26,7 +26,7 @@
           <v-list flat>
             <v-list-item
               @click.stop="removeWorkspace"
-              :disabled="!(defaultWorkspaces.length > 1)"
+              :disabled="!(workspaces.length > 1)"
             >
               <v-list-item-title>{{ $t("common.remove") }}</v-list-item-title>
             </v-list-item>
@@ -63,54 +63,66 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component } from "vue-property-decorator";
-import Workspace from "@/components/Workspace.vue";
+import { Component, Inject } from "vue-property-decorator";
+import WorkspaceArea from "@/components/WorkspaceArea.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
+import WorkspaceService from "@/services/WorkspaceService";
+import Workspace from "@/models/Workspace";
 
 @Component({
-  components: { Workspace, RenameDialog }
+  components: { WorkspaceArea, RenameDialog }
 })
 export default class Workspaces extends Vue {
-  private readonly defaultWorkspaces = [
-    { index: 1, name: "Workspace1", content: "W1" },
-    { index: 2, name: "Workspace2", content: "W2" }
-  ];
-
+  @Inject() workspaceService!: WorkspaceService;
   workspaceRenamingDialog = false;
   currentWorkspaceIndex = 0;
+  workspaces: Array<Workspace> = [];
+
+  async created() {
+    this.workspaces = await this.workspaceService.getAll();
+  }
 
   get currentWorkspaceName(): string {
-    return this.defaultWorkspaces[this.currentWorkspaceIndex]?.name || "";
+    return this.workspaces[this.currentWorkspaceIndex].name || "";
   }
 
-  get workspaces(): Array<object> {
-    return this.defaultWorkspaces;
-  }
-
-  createWorkspace() {
+  async createWorkspace() {
     const lastWorkspaceIndex =
-      this.defaultWorkspaces.length > 0
-        ? this.defaultWorkspaces[this.defaultWorkspaces.length - 1].index
+      this.workspaces.length > 0
+        ? this.workspaces[this.workspaces.length - 1].id
         : 0;
-    const newWorkspaceIndex = lastWorkspaceIndex + 1;
+    const workspaceName = `${this.$i18n.t(
+      "workspace.default-name"
+    )}${lastWorkspaceIndex + 1}`;
+    const newWorkspace = await this.workspaceService.create(workspaceName);
 
-    this.defaultWorkspaces.push({
-      index: newWorkspaceIndex,
-      name: `Workspace${newWorkspaceIndex}`,
-      content: `W${newWorkspaceIndex}`
-    });
+    this.workspaces.push(newWorkspace);
   }
 
-  removeWorkspace() {
+  async removeWorkspace() {
     const removedWorkspaceIndex = this.currentWorkspaceIndex;
+    const isRemoved = await this.workspaceService.remove(
+      this.workspaces[removedWorkspaceIndex].id
+    );
+
+    if (!isRemoved) {
+      return;
+    }
 
     this.currentWorkspaceIndex = Math.max(0, this.currentWorkspaceIndex - 1);
-    this.defaultWorkspaces.splice(removedWorkspaceIndex, 1);
+    this.workspaces.splice(removedWorkspaceIndex, 1);
   }
 
-  renameWorkspace(newName: string) {
+  async renameWorkspace(newName: string) {
     this.workspaceRenamingDialog = false;
-    this.defaultWorkspaces[this.currentWorkspaceIndex].name = newName;
+
+    const currentWorkspace = this.workspaces[this.currentWorkspaceIndex];
+
+    currentWorkspace.name = newName;
+
+    this.workspaces[
+      this.currentWorkspaceIndex
+    ] = await this.workspaceService.update(currentWorkspace);
   }
 }
 </script>

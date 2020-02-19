@@ -7,6 +7,7 @@ import Vuetify from "vuetify";
 import vuetify from "./plugins/vuetify";
 import "material-design-icons-iconfont/dist/material-design-icons.css";
 import i18n from "./i18n";
+import WorkspaceService from "./services/WorkspaceService";
 
 Vue.config.productionTip = false;
 
@@ -15,5 +16,8 @@ new Vue({
   store,
   vuetify,
   i18n,
+  provide: () => ({
+    workspaceService: new WorkspaceService()
+  }),
   render: h => h(App)
 }).$mount("#app");

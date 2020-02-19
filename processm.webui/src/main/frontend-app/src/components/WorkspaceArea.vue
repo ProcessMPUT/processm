@@ -39,7 +39,7 @@ import { GridLayout, GridItem } from "vue-grid-layout";
 @Component({
   components: { GridLayout, GridItem }
 })
-export default class Workspace extends Vue {
+export default class WorkspaceArea extends Vue {
   @Prop({ default: "" })
   readonly name!: string;
 

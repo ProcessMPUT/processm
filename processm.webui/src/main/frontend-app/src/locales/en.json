@@ -5,6 +5,7 @@
     "about": "@:about.page-title"
   },
   "workspace": {
+    "default-name": "Workspace",
     "locked": "Locked"
   },
   "about": {
