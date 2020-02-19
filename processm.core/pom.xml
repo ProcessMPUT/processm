@@ -16,6 +16,11 @@
 
     <name>ProcessM Core</name>
 
+    <properties>
+        <dbname></dbname>
+        <dbschema>public</dbschema>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.activemq</groupId>
@@ -32,6 +37,10 @@
                 <exclusion>
                     <groupId>org.jboss.slf4j</groupId>
                     <artifactId>slf4j-jboss-logmanager</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jboss.logmanager</groupId>
+                    <artifactId>jboss-logmanager</artifactId>
                 </exclusion>
                 <!-- conflicting outdated servlet api -->
                 <exclusion>
@@ -91,5 +100,64 @@
             <version>${org.jetbrains.exposed.version}</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>sql-maven-plugin</artifactId>
+                <version>1.5</version>
+
+                <dependencies>
+                    <!-- specify the dependent jdbc driver here -->
+                    <dependency>
+                        <groupId>postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>9.1-901-1.jdbc4</version>
+                    </dependency>
+                </dependencies>
+
+                <!-- common configuration shared by all executions -->
+                <configuration>
+                    <driver>org.postgresql.Driver</driver>
+                    <url>${env.processm_core_persistence_connection_URL}</url>
+                    <!--all executions are ignored if -Dmaven.test.skip=true-->
+                    <!--<skip>${maven.test.skip}</skip>-->
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <!-- Called by clean phase - cleans schema given by dbschema property (public is default). -->
+                        <id>clean-schema</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <sqlCommand>
+                                DROP SCHEMA IF EXISTS "${dbschema}" CASCADE;
+                                CREATE SCHEMA "${dbschema}";
+                            </sqlCommand>
+                            <onError>abort</onError>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- Called by TeamCity before tests to prepare database.
+                        Requires property dbname to be set by command line. -->
+                        <id>create-db</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <sqlCommand>CREATE DATABASE "${dbname}" OWNER DEFAULT;</sqlCommand>
+                            <autocommit>true</autocommit>
+                            <onError>abort</onError>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

@@ -6,10 +6,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class DBConnectionPoolTests {
-    init {
-        loadConfiguration()
-    }
-
     @Test
     fun getConnectionTest() {
         DBConnectionPool.getConnection().use {

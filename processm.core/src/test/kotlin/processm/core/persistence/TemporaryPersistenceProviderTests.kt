@@ -1,18 +1,12 @@
 package processm.core.persistence
 
 import kotlinx.serialization.ImplicitReflectionSerializer
-import kotlin.test.Test
-import processm.core.helpers.loadConfiguration
 import java.net.URI
-import kotlin.test.assertEquals
+import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
 @ImplicitReflectionSerializer
 class TemporaryPersistenceProviderTests : PersistenceProviderBaseTests() {
-    init {
-        loadConfiguration()
-    }
-
     @Test
     fun putGetDeleteTest() {
         TemporaryPersistenceProvider().use {

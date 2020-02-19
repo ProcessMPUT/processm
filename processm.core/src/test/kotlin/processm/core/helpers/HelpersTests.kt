@@ -23,6 +23,7 @@ class HelpersTests {
         System.clearProperty(envProperty)
         System.clearProperty(overriddenProperty)
         setEnv(previousEnv)
+        loadConfiguration(true)
     }
 
     /**
@@ -39,7 +40,7 @@ class HelpersTests {
         )
         setEnv(env)
 
-        loadConfiguration()
+        loadConfiguration(true)
         assertEquals(envPropertyValue, System.getProperty(envProperty))
         assertNotEquals(overriddenPropertyValue, System.getProperty(overriddenProperty))
     }
