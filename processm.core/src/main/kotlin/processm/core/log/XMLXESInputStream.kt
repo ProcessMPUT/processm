@@ -35,6 +35,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 when (element.name.localPart) {
                     "log" -> {
                         val logElement = Log()
+                        logElement.features = element.getAttributeByName(QName("xes.features"))?.value
 
                         // Read until has next and not found 'trace' or 'event' element
                         while (reader.hasNext()) {
@@ -120,10 +121,16 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     }
 
     private fun addClassifierToLogElement(log: Log, classifierElement: StartElement) {
+        val classifiers = when (val scope = classifierElement.getAttributeByName(QName("scope"))?.value ?: "event") {
+            "trace" -> log.traceClassifiersInternal
+            "event" -> log.eventClassifiersInternal
+            else -> throw Exception("Illegal <classifier> scope. Expected 'trace' or 'event', found $scope")
+        }
+
         val name = classifierElement.getAttributeByName(QName("name")).value
         val classifier = Classifier(name, classifierElement.getAttributeByName(QName("keys")).value)
 
-        log.classifiersInternal[name] = classifier
+        classifiers[name] = classifier
     }
 
     private fun addGlobalAttributes(map: MutableMap<String, Attribute<*>>, reader: XMLEventReader) {
@@ -290,11 +297,11 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             "float" ->
                 RealAttr(key, this.numberFormatter.parse(value).toDouble())
             "string" ->
-                StringAttr(key, value.intern())
+                StringAttr(key, value)
             "boolean" ->
                 BoolAttr(key, value.toBoolean())
             "id" ->
-                IDAttr(key, value.intern())
+                IDAttr(key, value)
             "int" ->
                 IntAttr(key, value.toLong())
             "list" ->

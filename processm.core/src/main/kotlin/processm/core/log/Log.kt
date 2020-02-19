@@ -8,7 +8,8 @@ class Log : XESElement {
     internal val extensionsInternal: MutableMap<String, Extension> = HashMap()
     internal val traceGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
     internal val eventGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
-    internal val classifiersInternal: MutableMap<String, Classifier> = HashMap()
+    internal val traceClassifiersInternal: MutableMap<String, Classifier> = HashMap()
+    internal val eventClassifiersInternal: MutableMap<String, Classifier> = HashMap()
     override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 
     val extensions: Map<String, Extension>
@@ -17,9 +18,15 @@ class Log : XESElement {
         get() = Collections.unmodifiableMap(traceGlobalsInternal)
     val eventGlobals: Map<String, Attribute<*>>
         get() = Collections.unmodifiableMap(eventGlobalsInternal)
-    val classifiers: Map<String, Classifier>
-        get() = Collections.unmodifiableMap(classifiersInternal)
+    val traceClassifiers: Map<String, Classifier>
+        get() = Collections.unmodifiableMap(traceClassifiersInternal)
+    val eventClassifiers: Map<String, Classifier>
+        get() = Collections.unmodifiableMap(eventClassifiersInternal)
 
+    var features: String? = null
+        internal set(value) {
+            field = value?.intern()
+        }
     var conceptName: String? = null
         internal set(value) {
             field = value?.intern()
