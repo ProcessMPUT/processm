@@ -29,7 +29,7 @@ internal class XMLXESInputStreamTest {
                 <date key="time:timestamp" value="1970-01-01T01:00:00.000+01:00"/>
             </global>
             <classifier name="Event Name" keys="conceptowy:name"/>
-            <classifier name="Department Classifier" keys="org:group"/>
+            <classifier scope="trace" name="Department Classifier" keys="org:group"/>
             <float key="meta_org:resource_events_standard_deviation" value="202.617">
                 <float key="UNKNOWN" value="202.617"/>
             </float>
@@ -146,13 +146,14 @@ internal class XMLXESInputStreamTest {
 
         val receivedLog: Log = iterator.next() as Log
 
-        assertEquals(receivedLog.classifiers.size, 2)
+        assertEquals(receivedLog.eventClassifiers.size, 1)
+        assertEquals(receivedLog.traceClassifiers.size, 1)
 
-        assertEquals(receivedLog.classifiers.getValue("Event Name").name, "Event Name")
-        assertEquals(receivedLog.classifiers.getValue("Event Name").keys, "conceptowy:name")
+        assertEquals(receivedLog.eventClassifiers.getValue("Event Name").name, "Event Name")
+        assertEquals(receivedLog.eventClassifiers.getValue("Event Name").keys, "conceptowy:name")
 
-        assertEquals(receivedLog.classifiers.getValue("Department Classifier").name, "Department Classifier")
-        assertEquals(receivedLog.classifiers.getValue("Department Classifier").keys, "org:group")
+        assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").name, "Department Classifier")
+        assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").keys, "org:group")
     }
 
     @Test
@@ -214,6 +215,24 @@ internal class XMLXESInputStreamTest {
         }
 
         assertEquals(thrown.message, "Illegal <global> scope. Expected 'trace' or 'event', found invalid-scope")
+    }
+
+    @Test
+    fun `XES parser will throw exception when found invalid classifier's scope`() {
+        val content = """<?xml version="1.0" encoding="UTF-8" ?>
+            <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
+                <classifier scope="invalid" name="invalid" keys="concept:name"/>
+            </log>
+        """
+
+        val stream = ByteArrayInputStream(content.toByteArray())
+        val iterator = XMLXESInputStream(stream).iterator()
+
+        val thrown = assertThrows<Exception> {
+            iterator.next()
+        }
+
+        assertEquals(thrown.message, "Illegal <classifier> scope. Expected 'trace' or 'event', found invalid")
     }
 
     @Test
