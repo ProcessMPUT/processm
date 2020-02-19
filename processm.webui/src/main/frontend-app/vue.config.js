@@ -1,6 +1,15 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+const path = require("path");
+const apiMocker = require("mocker-api");
+
 module.exports = {
   transpileDependencies: ["vuetify"],
-  devServer: { port: 8081 },
+  devServer: {
+    port: 8081,
+    before(app) {
+      apiMocker(app, path.resolve("./api-mocker/api.js"));
+    }
+  },
 
   pluginOptions: {
     i18n: {
