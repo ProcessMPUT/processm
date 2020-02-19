@@ -135,8 +135,8 @@
                         </goals>
                         <configuration>
                             <sqlCommand>
-                                DROP SCHEMA IF EXISTS ${dbschema} CASCADE;
-                                CREATE SCHEMA ${dbschema};
+                                DROP SCHEMA IF EXISTS "${dbschema}" CASCADE;
+                                CREATE SCHEMA "${dbschema}";
                             </sqlCommand>
                             <onError>abort</onError>
                         </configuration>
@@ -150,7 +150,7 @@
                             <goal>execute</goal>
                         </goals>
                         <configuration>
-                            <sqlCommand>CREATE DATABASE ${dbname} OWNER DEFAULT;</sqlCommand>
+                            <sqlCommand>CREATE DATABASE "${dbname}" OWNER DEFAULT;</sqlCommand>
                             <autocommit>true</autocommit>
                             <onError>abort</onError>
                         </configuration>
