@@ -1,9 +1,16 @@
 package processm.core.log.attribute
 
-abstract class Attribute<T : Comparable<T>>(key: String) {
+import java.util.*
+import kotlin.collections.HashMap
+
+abstract class Attribute<T : Any>(key: String) {
+    internal val childrenInternal: MutableMap<String, Attribute<*>> = HashMap()
+
     val key: String = key.intern()
     internal abstract fun getValue(): T
+
+    val children: Map<String, Attribute<*>> = Collections.unmodifiableMap(childrenInternal)
 }
 
-val Attribute<*>.value: Comparable<*>
+val Attribute<*>.value: Any
     get() = this.getValue()
