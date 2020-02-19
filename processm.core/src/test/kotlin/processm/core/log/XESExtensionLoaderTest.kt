@@ -149,7 +149,9 @@ class XESExtensionLoaderTest {
             </xesextension>
         """
 
-        every { mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext") } returns ByteArrayInputStream(content.toByteArray())
+        every { mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext") } returns ByteArrayInputStream(
+            content.toByteArray()
+        )
 
         val result = mock.loadExtension("http://example.com/invalid-mapping-tag.xesext")!!
 
@@ -198,5 +200,59 @@ class XESExtensionLoaderTest {
         assertEquals(fromMemory.name, "Once")
         assertEquals(fromMemory.prefix, "once")
         assertEquals(fromMemory.uri, "http://example.com/only-once.xesext")
+    }
+
+    @Test
+    fun `org extension loaded successfully`() {
+        val extension = XESExtensionLoader.org
+
+        assertEquals(extension.name, "Organizational")
+        assertEquals(extension.prefix, "org")
+        assertEquals(extension.uri, "http://www.xes-standard.org/org.xesext")
+    }
+
+    @Test
+    fun `cost extension loaded successfully`() {
+        val extension = XESExtensionLoader.cost
+
+        assertEquals(extension.name, "Cost")
+        assertEquals(extension.prefix, "cost")
+        assertEquals(extension.uri, "http://www.xes-standard.org/cost.xesext")
+    }
+
+    @Test
+    fun `time extension loaded successfully`() {
+        val extension = XESExtensionLoader.time
+
+        assertEquals(extension.name, "Time")
+        assertEquals(extension.prefix, "time")
+        assertEquals(extension.uri, "http://www.xes-standard.org/time.xesext")
+    }
+
+    @Test
+    fun `concept extension loaded successfully`() {
+        val extension = XESExtensionLoader.concept
+
+        assertEquals(extension.name, "Concept")
+        assertEquals(extension.prefix, "concept")
+        assertEquals(extension.uri, "http://www.xes-standard.org/concept.xesext")
+    }
+
+    @Test
+    fun `identity time extension loaded successfully`() {
+        val extension = XESExtensionLoader.identity
+
+        assertEquals(extension.name, "Identity")
+        assertEquals(extension.prefix, "identity")
+        assertEquals(extension.uri, "http://www.xes-standard.org/identity.xesext")
+    }
+
+    @Test
+    fun `lifecycle time extension loaded successfully`() {
+        val extension = XESExtensionLoader.lifecycle
+
+        assertEquals(extension.name, "Lifecycle")
+        assertEquals(extension.prefix, "lifecycle")
+        assertEquals(extension.uri, "http://www.xes-standard.org/lifecycle.xesext")
     }
 }

@@ -5,7 +5,8 @@ CREATE TABLE traces
     "concept:name"  TEXT,
     "cost:total"    REAL,
     "cost:currency" TEXT,
-    "identity:id"   TEXT
+    "identity:id"   TEXT,
+    event_stream    BOOLEAN
 );
 
 SELECT create_hypertable('traces', 'id', chunk_time_interval => 100000, if_not_exists => TRUE);
