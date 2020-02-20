@@ -1,10 +1,10 @@
 {
   "navigation": {
-    "workspaces": "Przestrzeń robocza",
+    "workspaces": "Przestrzenie robocze",
     "about": "@:about.page-title"
   },
   "workspace": {
-    "default-name": "Przestrzeń",
+    "default-name": "Przestrzeń robocza",
     "locked": "Zablokowany"
   },
   "about": {
