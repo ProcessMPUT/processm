@@ -4,7 +4,8 @@ import kotlinx.io.InputStream
 import processm.core.log.attribute.*
 import processm.core.logging.logger
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.*
 import javax.xml.namespace.QName
 import javax.xml.stream.XMLEventReader
@@ -15,7 +16,7 @@ import kotlin.collections.HashMap
 
 class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
-    private val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
+    private val dateFormatter = DateTimeFormatter.ISO_DATE_TIME
     private val exitTags = setOf("trace", "event")
     private val prefixesMapping: HashMap<String, String> = HashMap()
     private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list")
@@ -306,8 +307,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             "list" ->
                 ListAttr(key)
             "date" -> {
-                this.dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
-                DateTimeAttr(key, this.dateFormatter.parse(value))
+                DateTimeAttr(key, Date.from(Instant.from(this.dateFormatter.parse(value))))
             }
             else ->
                 throw Exception("Attribute not recognized. Received $type type.")
