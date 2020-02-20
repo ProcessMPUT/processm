@@ -106,7 +106,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
 
     private fun addExtensionToLogElement(log: Log, extensionElement: StartElement) {
         val prefix = extensionElement.getAttributeByName(QName("prefix")).value
-        val extension: Extension = Extension(
+        val extension = Extension(
             extensionElement.getAttributeByName(QName("name")).value,
             prefix,
             extensionElement.getAttributeByName(QName("uri")).value
@@ -184,7 +184,6 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                                 (attribute as ListAttr).valueInternal.add(this)
                             }
                         } else if (event.isEndElement) {
-                            val xx = event.asEndElement().name.localPart
                             assert(event.asEndElement().name.localPart == "values")
                             break
                         }
