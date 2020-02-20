@@ -6,6 +6,7 @@ import store from "./store";
 import Vuetify from "vuetify";
 import vuetify from "./plugins/vuetify";
 import "material-design-icons-iconfont/dist/material-design-icons.css";
+import "typeface-roboto";
 import i18n from "./i18n";
 import WorkspaceService from "./services/WorkspaceService";
 
