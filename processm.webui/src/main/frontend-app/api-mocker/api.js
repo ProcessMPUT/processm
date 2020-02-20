@@ -13,8 +13,8 @@ const workspaces = [
 ];
 
 const api = {
-  "GET /api/:userId/workspaces": { data: workspaces },
-  "GET /api/:userId/workspaces/:workspaceId": (req, res) => {
+  "GET /api/workspaces": { data: workspaces },
+  "GET /api/workspaces/:workspaceId": (req, res) => {
     const { workspaceId } = req.params;
     const workspace = _.find(workspaces, { id: Number(workspaceId) });
 
@@ -24,7 +24,7 @@ const api = {
 
     return res.json({ data: workspace });
   },
-  "POST /api/:userId/workspaces": (req, res) => {
+  "POST /api/workspaces": (req, res) => {
     const workspace = req.body;
 
     if (!workspace) {
@@ -36,7 +36,7 @@ const api = {
 
     return res.json({ data: workspace });
   },
-  "PATCH /api/:userId/workspaces/:workspaceId": (req, res) => {
+  "PATCH /api/workspaces/:workspaceId": (req, res) => {
     const { workspaceId } = req.params;
     const workspace = _.find(workspaces, { id: Number(workspaceId) });
 
@@ -48,7 +48,7 @@ const api = {
 
     return res.json({ data: workspace });
   },
-  "DELETE /api/:userId/workspaces/:workspaceId": (req, res) => {
+  "DELETE /api/workspaces/:workspaceId": (req, res) => {
     const { workspaceId } = req.params;
     const workspaceExists = _.some(workspaces, { id: Number(workspaceId) });
 

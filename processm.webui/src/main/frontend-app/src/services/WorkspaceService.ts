@@ -2,31 +2,23 @@ import axios from "axios";
 import Workspace from "@/models/Workspace";
 
 export default class WorkspaceService {
-  // this is tmp only
-  private userId = 1;
-
   public async getAll(): Promise<Array<Workspace>> {
-    const response = await axios.get<{ data: Workspace[] }>(
-      `/api/${this.userId}/workspaces`
-    );
+    const response = await axios.get<{ data: Workspace[] }>("/api/workspaces");
 
     return response.data.data;
   }
 
   public async create(name: string): Promise<Workspace> {
-    const response = await axios.post<{ data: Workspace }>(
-      `/api/${this.userId}/workspaces`,
-      {
-        name: name
-      }
-    );
+    const response = await axios.post<{ data: Workspace }>("/api/workspaces", {
+      name: name
+    });
 
     return response.data.data;
   }
 
   public async update(workspace: Workspace): Promise<Workspace> {
     const response = await axios.patch<{ data: Workspace }>(
-      `/api/${this.userId}/workspaces/${workspace.id}`,
+      `/api/workspaces/${workspace.id}`,
       workspace
     );
 
@@ -34,8 +26,8 @@ export default class WorkspaceService {
   }
 
   public async remove(id: number): Promise<boolean> {
-    const response = await axios.delete(`/api/${this.userId}/workspaces/${id}`);
+    const response = await axios.delete(`/api/workspaces/${id}`);
 
-    return response.status == 204;
+    return [204, 404].includes(response.status);
   }
 }
