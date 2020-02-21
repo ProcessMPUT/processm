@@ -9,6 +9,7 @@ import org.apache.commons.pool2.impl.GenericObjectPool
 import org.jetbrains.exposed.sql.Database
 import processm.core.helpers.loadConfiguration
 import java.sql.Connection
+import javax.management.ObjectName
 import javax.sql.DataSource
 
 /**
@@ -18,6 +19,8 @@ import javax.sql.DataSource
  * * JetBrains Exposed [Database]
  */
 object DBConnectionPool {
+    private const val jmxDomain = "processm"
+
     private val connectionPool: ObjectPool<PoolableConnection> by lazy {
         loadConfiguration()
         Migrator.migrate()
@@ -33,7 +36,8 @@ object DBConnectionPool {
         // Next we'll create the PoolableConnectionFactory, which wraps
         // the "real" Connections created by the ConnectionFactory with
         // the classes that implement the pooling functionality.
-        val poolableConnectionFactory = PoolableConnectionFactory(connectionFactory, null)
+        val jmxName = ObjectName("${jmxDomain}:name=DBConnectionPool")
+        val poolableConnectionFactory = PoolableConnectionFactory(connectionFactory, jmxName)
 
         // Now we'll need a ObjectPool that serves as the actual pool of connections.
         // We'll use a GenericObjectPool instance, although any ObjectPool implementation will suffice.

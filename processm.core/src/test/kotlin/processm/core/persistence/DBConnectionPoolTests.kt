@@ -8,15 +8,29 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.lang.management.ManagementFactory
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Semaphore
+import javax.management.ObjectName
 import kotlin.concurrent.thread
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class DBConnectionPoolTests {
+
+    @Test
+    fun jmxTest() {
+        // make sure DBConnectionPool is loaded
+        DBConnectionPool.getConnection().close()
+
+        // verify if JMX interface is up and running
+        val jmxServer = ManagementFactory.getPlatformMBeanServer()
+        val baseName = "processm:name=DBConnectionPool"
+        val bean = jmxServer.queryMBeans(null, null).first {
+            it.objectName.toString().startsWith(baseName)
+        }
+        assertNotNull(bean)
+    }
+
     @Test
     fun getConnectionTest() {
         DBConnectionPool.getConnection().use {
