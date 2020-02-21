@@ -9,13 +9,13 @@ import kotlin.collections.HashMap
  *
  * Captures the log component from the XES metadata structure.
  */
-class Log : XESElement {
+open class Log : XESElement() {
     internal val extensionsInternal: MutableMap<String, Extension> = HashMap()
     internal val traceGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
     internal val eventGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
     internal val traceClassifiersInternal: MutableMap<String, Classifier> = HashMap()
     internal val eventClassifiersInternal: MutableMap<String, Classifier> = HashMap()
-    override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    internal override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 
     /**
      * Extensions declared in the log file.
@@ -52,13 +52,13 @@ class Log : XESElement {
      * Special attribute based on concept:name
      * Standard extension: Concept
      */
-    var conceptName: String? = null
+    override var conceptName: String? = null
         internal set
     /**
      * Special attribute based on identity:id
      * Standard extension: Identity
      */
-    var identityId: String? = null
+    override var identityId: String? = null
         internal set
     /**
      * Special attribute based on lifecycle:model
@@ -68,9 +68,4 @@ class Log : XESElement {
         internal set(value) {
             field = value?.intern()
         }
-    /**
-     * Extra attributes assigned to the log
-     */
-    val attributes: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(attributesInternal)
 }

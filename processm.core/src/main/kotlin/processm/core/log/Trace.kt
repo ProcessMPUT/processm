@@ -8,13 +8,13 @@ import java.util.*
  *
  * Captures the trace component from the XES metadata structure.
  */
-class Trace : XESElement {
+open class Trace : XESElement() {
     override val attributesInternal: MutableMap<String, Attribute<*>> = TreeMap(String.CASE_INSENSITIVE_ORDER)
     /**
      * Special attribute based on concept:name
      * Standard extension: Concept
      */
-    var conceptName: String? = null
+    override var conceptName: String? = null
         internal set
     /**
      * Special attribute based on cost:currency
@@ -32,16 +32,11 @@ class Trace : XESElement {
      * Special attribute based on identity:id
      * Standard extension: Identity
      */
-    var identityId: String? = null
+    override var identityId: String? = null
         internal set
     /**
      * Event stream special tag - true if trace is fake and log contains only events (no trace)
      */
     var isEventStream: Boolean = false
         internal set
-    /**
-     * Extra attributes declared for trace element
-     */
-    val attributes: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(attributesInternal)
 }

@@ -11,10 +11,14 @@ import processm.core.helpers.loadConfiguration
 import java.sql.Connection
 import javax.sql.DataSource
 
+/**
+ * Manages the database connection pool. It provides three access methods:
+ * * JDBC [Connection]
+ * * JDBC [DataSource]
+ * * JetBrains Exposed [Database]
+ */
 object DBConnectionPool {
-    private val connectionPool: ObjectPool<PoolableConnection>
-
-    init {
+    private val connectionPool: ObjectPool<PoolableConnection> by lazy {
         loadConfiguration()
         Migrator.migrate()
 
@@ -33,10 +37,12 @@ object DBConnectionPool {
 
         // Now we'll need a ObjectPool that serves as the actual pool of connections.
         // We'll use a GenericObjectPool instance, although any ObjectPool implementation will suffice.
-        connectionPool = GenericObjectPool(poolableConnectionFactory)
+        val connectionPool = GenericObjectPool(poolableConnectionFactory)
 
         // Set the factory's pool property to the owning pool
         poolableConnectionFactory.pool = connectionPool
+
+        connectionPool
     }
 
     /**
@@ -55,7 +61,7 @@ object DBConnectionPool {
     /**
      * Database object for transactions managed by org.jetbrains.exposed library.
      */
-    val database by lazy {
+    val database: Database by lazy {
         Database.connect(getDataSource())
     }
 }
