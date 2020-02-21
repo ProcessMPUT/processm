@@ -5,17 +5,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
 
-internal class BoolAttrTest {
+internal class IDAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
-    private val attr1: BoolAttr =
-        BoolAttr(
+    private val attr1: IDAttr =
+        IDAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = true
+            value = (1..3).map { allowedStringCharacters.random(Random(120)) }.joinToString("")
         )
-    private val attr2: BoolAttr =
-        BoolAttr(
+    private val attr2: IDAttr =
+        IDAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = false
+            value = (1..3).map { allowedStringCharacters.random(Random(120)) }.joinToString("")
         )
 
     @Test
@@ -25,13 +25,7 @@ internal class BoolAttrTest {
     }
 
     @Test
-    fun `Field value with the correct value`() {
-        assertEquals(attr1.value, true)
-        assertEquals(attr2.getValue(), false)
-    }
-
-    @Test
-    fun `Attribute with 'boolean' as XES tag`() {
-        assertEquals(attr1.xesTag, "boolean")
+    fun `Attribute with 'id' as XES tag`() {
+        assertEquals(attr1.xesTag, "id")
     }
 }
