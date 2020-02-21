@@ -218,8 +218,7 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 log_id = ?
                 AND id > ?
-            ORDER BY id
-            LIMIT 1;
+            ORDER BY id;
             """.trimIndent()
         ).apply {
             setInt(1, logId)
@@ -271,8 +270,7 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 trace_id = ?
                 AND id > ?
-            ORDER BY id
-            LIMIT 1;
+            ORDER BY id;
             """.trimIndent()
         ).apply {
             setLong(1, traceId)
