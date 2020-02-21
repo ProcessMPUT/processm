@@ -56,6 +56,9 @@
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+
+        <groups/>
+        <excludedGroups>performance</excludedGroups>
     </properties>
 
     <repositories>
@@ -189,6 +192,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.22.2</version>
                 <configuration>
+                    <groups>${groups}</groups>
+                    <excludedGroups>${excludedGroups}</excludedGroups>
                     <includes>
                         <include>**/*.java</include>
                         <include>**/*.kt</include>

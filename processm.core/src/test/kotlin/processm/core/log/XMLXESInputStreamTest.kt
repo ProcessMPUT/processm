@@ -1,11 +1,15 @@
 package processm.core.log
 
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertThrows
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
+import processm.core.logging.logger
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -172,7 +176,7 @@ internal class XMLXESInputStreamTest {
             iterator.next()
         }
 
-        assertEquals(thrown.message, "Found unexpected XML tag: invalid-tag")
+        assertEquals(thrown.message, "Found unexpected XML tag: invalid-tag in line 3 column 118")
     }
 
     @Test
@@ -195,7 +199,7 @@ internal class XMLXESInputStreamTest {
             iterator.next()
         }
 
-        assertEquals(thrown.message, "Found unexpected XML tag: foo")
+        assertEquals(thrown.message, "Found unexpected XML tag: foo in line 4 column 52")
     }
 
     @Test
@@ -215,7 +219,10 @@ internal class XMLXESInputStreamTest {
             iterator.next()
         }
 
-        assertEquals(thrown.message, "Illegal <global> scope. Expected 'trace' or 'event', found invalid-scope")
+        assertEquals(
+            thrown.message,
+            "Illegal <global> scope. Expected 'trace' or 'event', found invalid-scope in line 3 column 47"
+        )
     }
 
     @Test
@@ -233,7 +240,10 @@ internal class XMLXESInputStreamTest {
             iterator.next()
         }
 
-        assertEquals(thrown.message, "Illegal <classifier> scope. Expected 'trace' or 'event', found invalid")
+        assertEquals(
+            thrown.message,
+            "Illegal <classifier> scope. Expected 'trace' or 'event', found invalid in line 3 column 81"
+        )
     }
 
     @Test
@@ -352,5 +362,27 @@ internal class XMLXESInputStreamTest {
         assertEquals(receivedEvent.conceptName, "1e consult poliklinisch")
         assertEquals(receivedEvent.lifecycleTransition, "complete")
         assertEquals(receivedEvent.orgGroup, "Radiotherapy")
+    }
+
+    @Test
+    @Tag("performance")
+    fun `Analyze logs from 4TU repository`() {
+        var currentFilePath: String? = null
+        try {
+            File("../xes-logs/").walk().forEach {
+                if (it.canonicalPath.endsWith(".xes.gz")) {
+                    currentFilePath = it.canonicalPath
+                    println(currentFilePath)
+                    val stream = GZIPInputStream(it.absoluteFile.inputStream())
+                    val iterator = XMLXESInputStream(stream).iterator()
+                    while (iterator.hasNext()) {
+                        iterator.next()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            logger().warn("Error in file $currentFilePath", e)
+            throw e
+        }
     }
 }
