@@ -13,7 +13,9 @@ import kotlin.concurrent.thread
  * Enterprise Service Bus.
  */
 class EnterpriseServiceBus : Closeable {
-    private val jmxDomain = "processm"
+    companion object {
+        private const val jmxDomain = "processm"
+    }
 
     /**
      * List of all registered services. Uniqueness is ensured.
@@ -35,8 +37,6 @@ class EnterpriseServiceBus : Closeable {
                 logger().warn("Exception during finalization", e)
             }
         })
-
-
     }
 
     /**
