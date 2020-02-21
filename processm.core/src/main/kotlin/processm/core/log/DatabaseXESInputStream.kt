@@ -8,43 +8,102 @@ import java.sql.ResultSet
 
 class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
     override fun iterator(): Iterator<XESElement> = sequence<XESElement> {
-        val connection = openReadOnlyConnection()
-
-        // Get log structure
-        val log = parseLog(connection, getLogStatement(connection, logId)) ?: return@sequence
-
-        // Return log structure
-        yield(log)
-
-        // Prepare traces statement
-        val tracesExecutedQuery = getTracesStatement(connection, logId).executeQuery()
-        while (tracesExecutedQuery.next()) {
-            val (traceId, trace) = parseTrace(connection, tracesExecutedQuery)
-
-            // Return trace
-            yield(trace)
-
-            // Prepare events statement
-            val eventsExecutedQuery = getEventsStatement(connection, traceId).executeQuery()
-            while (eventsExecutedQuery.next()) {
-                // Return event
-                yield(parseEvent(connection, eventsExecutedQuery))
+        val logs = getLogs(logId)
+        for ((logId, log) in logs) {
+            yield(log)
+            val traces = getTraces(logId)
+            for ((traceId, trace) in traces) {
+                yield(trace)
+                val events = getEvents(traceId)
+                yieldAll(events)
             }
         }
     }.iterator()
 
-    private fun openReadOnlyConnection(): Connection {
-        return DBConnectionPool.getConnection().apply {
-            autoCommit = false
-            prepareStatement("START TRANSACTION READ ONLY").execute()
+    private fun getLogs(logId: Int): Sequence<Pair<Int, Log>> = sequence {
+        var lastLogId: Int = -1
+        var log: Pair<Int, Log>?
+        while (true) {
+            log = null
+            openReadOnlyConnection().use { conn ->
+                // Execute log query
+                getLogStatement(conn, logId, lastLogId).executeQuery().use {
+                    if (it.next()) {
+                        assert(it.isLast)
+                        log = parseLog(conn, it)
+                        lastLogId = log!!.first
+
+                        /*
+                        maxTraceId and maxEventId are collected atomically during the first transaction.
+                        Successive transactions use these values to prevent phantom reads by appending queries with
+                        "WHERE trace_id <= maxTraceId" and "WHERE event_id <= maxEventId", respectively.
+                        This guarantees repeatable reads, assuming that the log is append-only.
+                        */
+                        // TODO: eliminate phantom reads by getting and storing max trace_id and max event_id
+                        val maxTraceId = Long.MAX_VALUE
+                        val maxEventId = Long.MAX_VALUE
+                    }
+                }
+            } // close()
+            if (log === null)
+                break
+            yield(log!!)
         }
     }
 
-    private fun getLogStatement(connection: Connection, logId: Int): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getTraces(logId: Int): Sequence<Pair<Long, Trace>> = sequence {
+        var lastTraceId: Long = -1L
+        var trace: Pair<Long, Trace>?
+        while (true) {
+            trace = null
+            openReadOnlyConnection().use { conn ->
+                // Execute traces query
+                getTracesStatement(conn, logId, lastTraceId).executeQuery().use {
+                    if (it.next()) {
+                        assert(it.isLast)
+                        trace = parseTrace(conn, it)
+                        lastTraceId = trace!!.first
+                    }
+                }
+            } // close()
+            if (trace === null)
+                break
+            yield(trace!!)
+        }
+    }
+
+    private fun getEvents(traceId: Long): Sequence<Event> = sequence {
+        var lastEventId: Long = -1L
+        var event: Pair<Long, Event>?
+        while (true) {
+            event = null
+            openReadOnlyConnection().use { conn ->
+                // Execute events query
+                getEventsStatement(conn, traceId, lastEventId).executeQuery().use {
+                    if (it.next()) {
+                        assert(it.isLast)
+                        event = parseEvent(conn, it)
+                        lastEventId = event!!.first
+                    }
+                }
+            } // close()
+            if (event === null)
+                break
+            yield(event!!.second)
+        }
+    }
+
+    private fun openReadOnlyConnection(): Connection =
+        DBConnectionPool.getConnection().apply {
+            autoCommit = false
+            prepareStatement("START TRANSACTION READ ONLY").execute()
+        }
+
+    private fun getLogStatement(connection: Connection, logId: Int, lastLogId: Int): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
+                id,
                 features,
                 "concept:name",
                 "identity:id",
@@ -53,20 +112,17 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
                 logs
             WHERE
                 id = ?
+                AND id > ?
             LIMIT 1;
-        """.trimIndent()
-            )
-        ) {
+            """.trimIndent()
+        ).apply {
             setInt(1, logId)
-
-            return this
+            setInt(2, lastLogId)
         }
-    }
 
-    private fun getClassifiersStatement(connection: Connection, logId: Int): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getClassifiersStatement(connection: Connection, logId: Int): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 scope,
                 name,
@@ -76,19 +132,14 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 log_id = ?
             ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+            """.trimIndent()
+        ).apply {
             setInt(1, logId)
-
-            return this
         }
-    }
 
-    private fun getExtensionsStatement(connection: Connection, logId: Int): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getExtensionsStatement(connection: Connection, logId: Int): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 name,
                 prefix,
@@ -98,19 +149,14 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 log_id = ?
             ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+            """.trimIndent()
+        ).apply {
             setInt(1, logId)
-
-            return this
         }
-    }
 
-    private fun getGlobalsStatement(connection: Connection, logId: Int): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getGlobalsStatement(connection: Connection, logId: Int): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 id,
                 parent_id,
@@ -128,19 +174,14 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 log_id = ?
             ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+            """.trimIndent()
+        ).apply {
             setInt(1, logId)
-
-            return this
         }
-    }
 
-    private fun getLogAttributesStatement(connection: Connection, logId: Int): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getLogAttributesStatement(connection: Connection, logId: Int): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 id,
                 parent_id,
@@ -157,19 +198,14 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 log_id = ?
             ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+            """.trimIndent()
+        ).apply {
             setInt(1, logId)
-
-            return this
         }
-    }
 
-    private fun getTracesStatement(connection: Connection, logId: Int): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getTracesStatement(connection: Connection, logId: Int, lastTraceId: Long): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 id,
                 "concept:name",
@@ -181,20 +217,18 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
                 traces
             WHERE
                 log_id = ?
-            ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+                AND id > ?
+            ORDER BY id
+            LIMIT 1;
+            """.trimIndent()
+        ).apply {
             setInt(1, logId)
-
-            return this
+            setLong(2, lastTraceId)
         }
-    }
 
-    private fun getTraceAttributesStatement(connection: Connection, traceId: Long): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getTraceAttributesStatement(connection: Connection, traceId: Long): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 id,
                 parent_id,
@@ -211,19 +245,14 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 trace_id = ?
             ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+            """.trimIndent()
+        ).apply {
             setLong(1, traceId)
-
-            return this
         }
-    }
 
-    private fun getEventsStatement(connection: Connection, traceId: Long): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getEventsStatement(connection: Connection, traceId: Long, lastEventId: Long): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 id,
                 "concept:name",
@@ -241,20 +270,18 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
                 events
             WHERE
                 trace_id = ?
-            ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+                AND id > ?
+            ORDER BY id
+            LIMIT 1;
+            """.trimIndent()
+        ).apply {
             setLong(1, traceId)
-
-            return this
+            setLong(2, lastEventId)
         }
-    }
 
-    private fun getEventAttributesStatement(connection: Connection, eventId: Long): PreparedStatement {
-        with(
-            connection.prepareStatement(
-                """
+    private fun getEventAttributesStatement(connection: Connection, eventId: Long): PreparedStatement =
+        connection.prepareStatement(
+            """
             SELECT
                 id,
                 parent_id,
@@ -271,20 +298,12 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             WHERE
                 event_id = ?
             ORDER BY id;
-        """.trimIndent()
-            )
-        ) {
+            """.trimIndent()
+        ).apply {
             setLong(1, eventId)
-
-            return this
         }
-    }
 
-    private fun parseLog(connection: Connection, query: PreparedStatement): Log? {
-        val resultSet = query.executeQuery()
-        if (!resultSet.next())
-            return null
-
+    private fun parseLog(connection: Connection, resultSet: ResultSet): Pair<Int, Log>? {
         with(Log()) {
             features = resultSet.getString("features")
             conceptName = resultSet.getString("concept:name")
@@ -296,8 +315,9 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             parseExtensions(getExtensionsStatement(connection, logId), this)
             parseGlobals(getGlobalsStatement(connection, logId), this)
             parseLogAttributes(getLogAttributesStatement(connection, logId), this)
+            val logId = resultSet.getInt("id")
 
-            return this
+            return Pair(logId, this)
         }
     }
 
@@ -377,7 +397,7 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
         }
     }
 
-    private fun parseEvent(connection: Connection, resultSet: ResultSet): Event {
+    private fun parseEvent(connection: Connection, resultSet: ResultSet): Pair<Long, Event> {
         with(Event()) {
             conceptName = resultSet.getString("concept:name")
             conceptInstance = resultSet.getString("concept:instance")
@@ -390,10 +410,11 @@ class DatabaseXESInputStream(private val logId: Int) : XESInputStream {
             orgGroup = resultSet.getString("org:group")
             orgResource = resultSet.getString("org:resource")
             timeTimestamp = resultSet.getTimestamp("time:timestamp")
+            val eventId = resultSet.getLong("id")
 
             parseTracesEventsAttributes(getEventAttributesStatement(connection, resultSet.getLong("id")), this)
 
-            return this
+            return Pair(eventId, this)
         }
     }
 
