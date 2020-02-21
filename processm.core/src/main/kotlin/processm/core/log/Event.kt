@@ -9,13 +9,13 @@ import kotlin.collections.HashMap
  *
  * Captures the event component from the XES metadata structure.
  */
-class Event : XESElement {
+class Event : XESElement() {
     override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
     /**
      * Special attribute based on concept:name
      * Standard extension: Concept
      */
-    var conceptName: String? = null
+    override var conceptName: String? = null
         internal set
     /**
      * Special attribute based on concept:instance
@@ -39,7 +39,7 @@ class Event : XESElement {
      * Special attribute based on identity:id
      * Standard extension: Identity
      */
-    var identityId: String? = null
+    override var identityId: String? = null
         internal set
     /**
      * Special attribute based on lifecycle:transition
@@ -81,9 +81,4 @@ class Event : XESElement {
      */
     var timeTimestamp: Date? = null
         internal set
-    /**
-     * Extra attributes declared for event
-     */
-    val attributes: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(attributesInternal)
 }
