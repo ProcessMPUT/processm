@@ -1,7 +1,9 @@
 package processm.core.log.attribute
 
 import kotlin.random.Random
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 internal class IntAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
@@ -24,7 +26,12 @@ internal class IntAttrTest {
 
     @Test
     fun `Field value with the correct value`() {
-        assertEquals(attr1.value, 33)
-        assertEquals(attr2.value, 22)
+        assertEquals(attr1.value, 33L)
+        assertEquals(attr2.getValue(), 22L)
+    }
+
+    @Test
+    fun `Attribute with 'int' as XES tag`() {
+        assertEquals(attr1.xesTag, "int")
     }
 }
