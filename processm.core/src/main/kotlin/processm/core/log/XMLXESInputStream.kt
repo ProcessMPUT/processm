@@ -21,7 +21,7 @@ import kotlin.collections.HashMap
 class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     companion object {
         private val exitTags = setOf("trace", "event")
-        private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list")
+        private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list", "id")
         private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
         private val dateFormatter = DateTimeFormatter.ISO_DATE_TIME
     }
