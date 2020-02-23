@@ -6,9 +6,13 @@ import processm.core.log.XESInputStream
 
 /**
  * An extension of [processm.core.log.Log] that supports direct access to underlying traces.
- * @property traces A lazy sequence of trace in this log.
  */
-class Log(val traces: Sequence<Trace>) : BaseLog() {
+class Log(traces: Sequence<Trace> = emptySequence()) : BaseLog() {
+    /**
+     * A lazy sequence of trace in this log.
+     */
+    var traces: Sequence<Trace> = traces
+        internal set
 }
 
 /**
@@ -30,7 +34,7 @@ fun Log.toFlatSequence(): XESInputStream = sequenceOf(this).toFlatSequence()
  * @see processm.core.log.Event
  */
 fun Sequence<Log>.toFlatSequence(): XESInputStream = object : XESInputStream {
-    override fun iterator(): Iterator<XESElement> = sequence<XESElement> {
+    override fun iterator(): Iterator<XESElement> = sequence {
         this@toFlatSequence.forEach {
             yield(it)
             yieldAll(it.traces.toFlatSequence())

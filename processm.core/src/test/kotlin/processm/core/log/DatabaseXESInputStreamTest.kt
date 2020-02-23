@@ -264,14 +264,12 @@ internal class DatabaseXESInputStreamTest {
     private fun setUp(): Int {
         loadIntoDB()
 
-        val connection = DBConnectionPool.getConnection()
-        val response = connection.prepareStatement("""SELECT id FROM logs ORDER BY id DESC LIMIT 1""").executeQuery()
-        response.next()
+        DBConnectionPool.getConnection().use {
+            val response = it.prepareStatement("""SELECT id FROM logs ORDER BY id DESC LIMIT 1""").executeQuery()
+            response.next()
 
-        val logId = response.getInt("id")
-        connection.close()
-
-        return logId
+            return response.getInt("id")
+        }
     }
 
     private fun loadIntoDB() {
