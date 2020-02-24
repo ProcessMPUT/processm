@@ -9,6 +9,7 @@ import "material-design-icons-iconfont/dist/material-design-icons.css";
 import "typeface-roboto";
 import i18n from "./i18n";
 import WorkspaceService from "./services/WorkspaceService";
+import AccountService from "./services/AccountService";
 
 Vue.config.productionTip = false;
 
@@ -18,7 +19,8 @@ new Vue({
   vuetify,
   i18n,
   provide: () => ({
-    workspaceService: new WorkspaceService()
+    workspaceService: new WorkspaceService(),
+    accountService: new AccountService()
   }),
   render: h => h(App)
 }).$mount("#app");

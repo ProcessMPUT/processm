@@ -4,7 +4,7 @@ import VueRouter from "vue-router";
 
 Vue.use(VueRouter);
 
-const isAuthenticated = true;
+const isAuthenticated = false;
 
 const routes = [
   {

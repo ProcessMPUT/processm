@@ -12,6 +12,8 @@ const workspaces = [
   }
 ];
 
+const userSessions = {};
+
 const api = {
   "GET /api/workspaces": { data: workspaces },
   "GET /api/workspaces/:workspaceId": (req, res) => {
@@ -59,6 +61,35 @@ const api = {
     _.remove(workspaces, { id: Number(workspaceId) });
 
     return res.status(204).json();
+  },
+  "POST /api/account/session": (req, res) => {
+    const credentials = req.body;
+
+    if (credentials.password != "pass") {
+      return res.status(401).json();
+    }
+
+    const sessionToken =
+      Math.random()
+        .toString(36)
+        .substring(2, 15) +
+      Math.random()
+        .toString(36)
+        .substring(2, 15);
+
+    _.set(userSessions, sessionToken, credentials.username);
+
+    return res.json({
+      data: { username: credentials.username },
+      token: sessionToken
+    });
+  },
+  "DELETE /api/account/session/:sessionId": (req, res) => {
+    const { sessionId } = req.params;
+
+    return _.unset(userSessions, sessionId)
+      ? res.status(204).json()
+      : res.status(404).json();
   }
 };
 
