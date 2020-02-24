@@ -4,11 +4,8 @@ import org.junit.jupiter.api.assertThrows
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import java.io.ByteArrayInputStream
-import java.io.File
-import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -355,26 +352,5 @@ internal class XMLXESInputStreamTest {
         assertEquals(receivedEvent.conceptName, "1e consult poliklinisch")
         assertEquals(receivedEvent.lifecycleTransition, "complete")
         assertEquals(receivedEvent.orgGroup, "Radiotherapy")
-    }
-
-    @Test
-    fun `combo`() {
-        File("/home/bgorka/Downloads/XES_LOGS/").walk().forEach {
-            if (it.absolutePath.endsWith(".xes.gz")) {
-                println(it)
-                parse(GZIPInputStream(it.absoluteFile.inputStream()))
-            }
-            if (it.absolutePath.endsWith(".xes")) {
-                println(it)
-                parse(it.absoluteFile.inputStream())
-            }
-        }
-    }
-
-    private fun parse(stream: InputStream) {
-        val iterator = XMLXESInputStream(stream).iterator()
-        while (iterator.hasNext()) {
-            iterator.next()
-        }
     }
 }

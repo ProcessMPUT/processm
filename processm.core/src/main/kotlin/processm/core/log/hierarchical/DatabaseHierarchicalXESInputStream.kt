@@ -7,7 +7,27 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 
+/**
+ * Reads a sequence of [Log]s from database, filtered by the given query. Every [Log] has a sequence
+ * of traces associated in property [Log.traces], and every trace has a sequence of events associated
+ * with property [Trace.events]. All sequences can be empty, but none of them will be null.
+ * This implementation ensures certain guarantees:
+ * * All sequences are lazy-evaluated and the references to [XESElement]s are cleared after yielded,
+ * * Repeatable reads are ensured - each time this sequence is evaluated it yields exactly the same attribute values,
+ * * Phantom reads are prevented - each time this sequence is evaluated it yields exactly the same [XESElement]s,
+ * * The resulting view on [XESElement]s is read-only.
+ */
 class DatabaseHierarchicalXESInputStream(private val logId: Int) : LogInputStream {
+    /**
+     * maxLogId, maxTraceId and maxEventId are collected when enumeration of this sequence (or any of its children)
+     * finishes the first time. Successive enumerations use these values to prevent phantom reads by appending
+     * queries with "WHERE log_id <= $maxLogId", "WHERE trace_id <= $maxTraceId" and "WHERE event_id <= $maxEventId",
+     * respectively. This guarantees repeatable reads, assuming that the log is append-only.
+     * */
+    private var maxLogId: Int = -1
+    private var maxTraceId: Long = -1L
+    private var maxEventId: Long = -1L
+
     override fun iterator(): Iterator<Log> = getLogs(logId).map { it.second }.iterator()
 
     private fun getLogs(logId: Int): Sequence<Pair<Int, Log>> = sequence {
@@ -22,22 +42,39 @@ class DatabaseHierarchicalXESInputStream(private val logId: Int) : LogInputStrea
                         assert(it.isLast)
                         log = parseLog(conn, it)
                         lastLogId = log!!.first
-
-                        /*
-                        maxTraceId and maxEventId are collected atomically during the first transaction.
-                        Successive transactions use these values to prevent phantom reads by appending queries with
-                        "WHERE trace_id <= maxTraceId" and "WHERE event_id <= maxEventId", respectively.
-                        This guarantees repeatable reads, assuming that the log is append-only.
-                        */
-                        // TODO: eliminate phantom reads by getting and storing max trace_id and max event_id
-                        val maxTraceId = Long.MAX_VALUE
-                        val maxEventId = Long.MAX_VALUE
+                    } else {
+                        // No more logs. Eliminate phantom reads by getting and storing max trace_id and max event_id.
+                        storeMaxIds(conn, logId)
                     }
                 }
             } // close()
             if (log === null)
                 break
             yield(log!!)
+        }
+    }
+
+    private fun storeMaxIds(connection: Connection, logId: Int) {
+        if (maxLogId >= 0 || maxTraceId >= 0L || maxEventId >= 0L)
+            return
+        connection.prepareStatement(
+            """
+            SELECT 
+                MAX(l.id) AS max_log_id,
+                MAX(t.id) AS max_trace_id,
+                MAX(e.id) AS max_event_id
+            FROM logs l 
+            LEFT JOIN traces t ON l.id = t.log_id 
+            LEFT JOIN events e ON t.id = e.trace_id
+            WHERE l.id = ?
+            """.trimIndent()
+        ).apply {
+            setInt(1, logId)
+        }.executeQuery().use {
+            it.next().let { success -> assert(success) }
+            maxLogId = it.getInt("max_log_id")
+            maxTraceId = it.getLong("max_trace_id")
+            maxEventId = it.getLong("max_event_id")
         }
     }
 
@@ -53,6 +90,9 @@ class DatabaseHierarchicalXESInputStream(private val logId: Int) : LogInputStrea
                         assert(it.isLast)
                         trace = parseTrace(conn, it)
                         lastTraceId = trace!!.first
+                    } else {
+                        // No more traces. Eliminate phantom reads by getting and storing max trace_id and max event_id.
+                        storeMaxIds(conn, logId)
                     }
                 }
             } // close()
@@ -74,6 +114,9 @@ class DatabaseHierarchicalXESInputStream(private val logId: Int) : LogInputStrea
                         assert(it.isLast)
                         event = parseEvent(conn, it)
                         lastEventId = event!!.first
+                    } else {
+                        // No more events. Eliminate phantom reads by getting and storing max trace_id and max event_id.
+                        storeMaxIds(conn, logId)
                     }
                 }
             } // close()
@@ -103,11 +146,13 @@ class DatabaseHierarchicalXESInputStream(private val logId: Int) : LogInputStrea
             WHERE
                 id = ?
                 AND id > ?
+                AND id <= ?
             LIMIT 1;
             """.trimIndent()
         ).apply {
             setInt(1, logId)
             setInt(2, lastLogId)
+            setInt(3, if (maxLogId <= 0) Int.MAX_VALUE else maxLogId)
         }
 
     private fun getClassifiersStatement(connection: Connection, logId: Int): PreparedStatement =
@@ -208,12 +253,14 @@ class DatabaseHierarchicalXESInputStream(private val logId: Int) : LogInputStrea
             WHERE
                 log_id = ?
                 AND id > ?
+                AND id <= ?
             ORDER BY id
             LIMIT 1;
             """.trimIndent()
         ).apply {
             setInt(1, logId)
             setLong(2, lastTraceId)
+            setLong(3, if (maxTraceId <= 0L) Long.MAX_VALUE else maxTraceId)
         }
 
     private fun getTraceAttributesStatement(connection: Connection, traceId: Long): PreparedStatement =
@@ -261,12 +308,14 @@ class DatabaseHierarchicalXESInputStream(private val logId: Int) : LogInputStrea
             WHERE
                 trace_id = ?
                 AND id > ?
+                AND id <= ?
             ORDER BY id
             LIMIT 1;
             """.trimIndent()
         ).apply {
             setLong(1, traceId)
             setLong(2, lastEventId)
+            setLong(3, if (maxEventId <= 0L) Long.MAX_VALUE else maxEventId)
         }
 
     private fun getEventAttributesStatement(connection: Connection, eventId: Long): PreparedStatement =
