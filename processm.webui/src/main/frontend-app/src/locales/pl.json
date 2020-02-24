@@ -14,10 +14,24 @@
     "dialog-title": "Zmień nazwę",
     "new-name-placeholder": "Nowa nazwa"
   },
+  "login-form": {
+    "title": "Panel logowania",
+    "email": "Email",
+    "password": "Hasło",
+    "login": "Zaloguj",
+    "validation": {
+      "email-format": "Nieprawidłowy format adresu email",
+      "password-empty": "Hasło nie może być puste"
+    },
+    "error-box": {
+      "failed": "Nieprawidłowy email lub hasło"
+    }
+  },
   "common": {
     "cancel": "Anuluj",
     "save": "Zapisz",
     "rename": "Zmień nazwę",
-    "remove": "Usuń"
+    "remove": "Usuń",
+    "close": "Zamknij"
   }
 }

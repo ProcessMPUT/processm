@@ -16,10 +16,24 @@
     "dialog-title": "Rename",
     "new-name-placeholder": "New name"
   },
+  "login-form": {
+    "title": "Login form",
+    "email": "Email",
+    "password": "Password",
+    "login": "Login",
+    "validation": {
+      "email-format": "Email must be valid",
+      "password-empty": "Password cannot be empty"
+    },
+    "error-box": {
+      "failed": "Inorrect email or password"
+    }
+  },
   "common": {
     "cancel": "Cancel",
     "save": "Save",
     "rename": "Rename",
-    "remove": "Remove"
+    "remove": "Remove",
+    "close": "Close"
   }
 }
