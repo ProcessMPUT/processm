@@ -17,11 +17,36 @@
     <name>ProcessM Launcher</name>
 
     <dependencies>
+        <!-- Dependencies to processm modules are required in order to detect and load services from these modules -->
         <dependency>
             <groupId>processm</groupId>
             <artifactId>core</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>conformance</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>etl</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>miners</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>performance</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>services</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
-
 </project>
