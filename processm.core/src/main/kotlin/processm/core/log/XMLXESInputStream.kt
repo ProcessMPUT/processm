@@ -41,7 +41,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                     "log" -> parseLog(reader, element)
                     "trace" -> parseTrace(reader)
                     "event" -> parseEvent(reader)
-                    else -> throw Exception("Found unexpected XML tag: ${element.name.localPart}")
+                    else -> throw Exception("Found unexpected XML tag: ${element.name.localPart}in line ${element.location.lineNumber} column ${element.location.columnNumber}")
                 }
                 yield(xesElement)
             }
@@ -77,7 +77,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                                 element.getAttributeByName(QName("scope"))?.value ?: "event") {
                                 "trace" -> it.traceGlobalsInternal
                                 "event" -> it.eventGlobalsInternal
-                                else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope")
+                                else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope in line ${element.location.lineNumber} column ${element.location.columnNumber}")
                             }
 
                         addGlobalAttributes(map, reader)
@@ -88,7 +88,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         }
                     }
                     else -> {
-                        throw Exception("Found unexpected XML tag: ${element.name.localPart}")
+                        throw Exception("Found unexpected XML tag: ${element.name.localPart} in line ${element.location.lineNumber} column ${element.location.columnNumber}")
                     }
                 }
             }
@@ -127,7 +127,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         val classifiers = when (val scope = classifierElement.getAttributeByName(QName("scope"))?.value ?: "event") {
             "trace" -> log.traceClassifiersInternal
             "event" -> log.eventClassifiersInternal
-            else -> throw Exception("Illegal <classifier> scope. Expected 'trace' or 'event', found $scope")
+            else -> throw Exception("Illegal <classifier> scope. Expected 'trace' or 'event', found $scope in line ${classifierElement.location.lineNumber} column ${classifierElement.location.columnNumber}")
         }
 
         val name = classifierElement.getAttributeByName(QName("name")).value
@@ -287,7 +287,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         }
                     }
                     else -> {
-                        throw Exception("Found unexpected XML tag: ${element.name.localPart}")
+                        throw Exception("Found unexpected XML tag: ${element.name.localPart} in line ${element.location.lineNumber} column ${element.location.columnNumber}")
                     }
                 }
             }
