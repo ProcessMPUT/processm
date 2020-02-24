@@ -1,21 +1,26 @@
 package processm.core.models.casualnet
 
-import org.junit.Test
+import kotlin.test.Test
 import processm.core.models.causalnet.*
+import kotlin.test.assertFailsWith
 
 class BindingTest {
     private val a = ActivityInstance(Activity("register request"))
     private val b = ActivityInstance(Activity("examine thoroughly"))
     private val c = ActivityInstance(Activity("examine casually"))
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun emptyJoin() {
-        Join(setOf())
+        assertFailsWith(IllegalArgumentException::class) {
+            Join(setOf())
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun emptySplit() {
-        Split(setOf())
+        assertFailsWith(IllegalArgumentException::class) {
+            Split(setOf())
+        }
     }
 
     @Test
@@ -28,13 +33,17 @@ class BindingTest {
         Split(setOf(Dependency(a, b), Dependency(a, c)))
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun joinWithDifferentTargets() {
-        Join(setOf(Dependency(a, b), Dependency(a, c)))
+        assertFailsWith(IllegalArgumentException::class) {
+            Join(setOf(Dependency(a, b), Dependency(a, c)))
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun splitWithDifferentSources() {
-        Split(setOf(Dependency(b, a), Dependency(c, a)))
+        assertFailsWith(IllegalArgumentException::class) {
+            Split(setOf(Dependency(b, a), Dependency(c, a)))
+        }
     }
 }

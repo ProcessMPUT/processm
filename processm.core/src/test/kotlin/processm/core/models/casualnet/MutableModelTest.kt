@@ -1,11 +1,8 @@
 package processm.core.models.casualnet
 
-import org.junit.Test
 import processm.core.models.causalnet.*
 import java.lang.IllegalArgumentException
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class MutableModelTest {
 
@@ -75,47 +72,59 @@ class MutableModelTest {
         assertFalse { a in mm.joins }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun addDependencyWithUnknownTarget() {
-        val mm = MutableModel()
-        mm.addInstance(a)
-        mm.addDependency(a, b)
+        assertFailsWith(IllegalArgumentException::class) {
+            val mm = MutableModel()
+            mm.addInstance(a)
+            mm.addDependency(a, b)
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun addDependencyWithUnknownSource() {
-        val mm = MutableModel()
-        mm.addInstance(b)
-        mm.addDependency(Dependency(a, b))
+        assertFailsWith(IllegalArgumentException::class) {
+            val mm = MutableModel()
+            mm.addInstance(b)
+            mm.addDependency(Dependency(a, b))
+        }
     }
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun addSplitWithNoInstance() {
-        val mm = MutableModel()
-        mm.addInstance(a)
-        mm.addSplit(Split(setOf(Dependency(a, b))))
+        assertFailsWith(NoSuchElementException::class) {
+            val mm = MutableModel()
+            mm.addInstance(a)
+            mm.addSplit(Split(setOf(Dependency(a, b))))
+        }
     }
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun addSplitWithNoDependency() {
-        val mm = MutableModel()
-        mm.addInstance(a, b)
-        mm.addSplit(Split(setOf(Dependency(a, b))))
+        assertFailsWith(NoSuchElementException::class) {
+            val mm = MutableModel()
+            mm.addInstance(a, b)
+            mm.addSplit(Split(setOf(Dependency(a, b))))
+        }
     }
 
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun addJoinWithNoInstance() {
-        val mm = MutableModel()
-        mm.addInstance(a)
-        mm.addJoin(Join(setOf(Dependency(a, b))))
+        assertFailsWith(NoSuchElementException::class) {
+            val mm = MutableModel()
+            mm.addInstance(a)
+            mm.addJoin(Join(setOf(Dependency(a, b))))
+        }
     }
 
-    @Test(expected = NoSuchElementException::class)
+    @Test
     fun addJoinWithNoDependency() {
-        val mm = MutableModel()
-        mm.addInstance(a, b)
-        mm.addJoin(Join(setOf(Dependency(a, b))))
+        assertFailsWith(NoSuchElementException::class) {
+            val mm = MutableModel()
+            mm.addInstance(a, b)
+            mm.addJoin(Join(setOf(Dependency(a, b))))
+        }
     }
 
     @Test

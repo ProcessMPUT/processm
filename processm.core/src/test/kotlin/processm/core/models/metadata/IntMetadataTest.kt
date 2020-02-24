@@ -1,6 +1,6 @@
 package processm.core.models.metadata
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class IntMetadataTest {
