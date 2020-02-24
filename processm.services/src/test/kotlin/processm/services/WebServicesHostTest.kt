@@ -7,8 +7,8 @@ import kotlinx.coroutines.runBlocking
 import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
-import org.junit.Test
 import java.net.URL
+import kotlin.test.Test
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 

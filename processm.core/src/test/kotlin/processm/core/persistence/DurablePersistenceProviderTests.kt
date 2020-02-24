@@ -1,7 +1,6 @@
 package processm.core.persistence
 
 import kotlinx.serialization.ImplicitReflectionSerializer
-import processm.core.helpers.loadConfiguration
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,8 +10,7 @@ import kotlin.test.assertFailsWith
 class DurablePersistenceProviderTests : PersistenceProviderBaseTests() {
 
     init {
-        loadConfiguration()
-        DBConnectionPool.getConnection().use{
+        DBConnectionPool.getConnection().use {
             it.createStatement().execute("DELETE FROM durable_storage WHERE urn LIKE 'urn:tests:myclass%'")
         }
     }

@@ -1,0 +1,23 @@
+{
+  "navigation": {
+    "workspaces": "Przestrzenie robocze",
+    "about": "@:about.page-title"
+  },
+  "workspace": {
+    "default-name": "Przestrzeń robocza",
+    "locked": "Zablokowany"
+  },
+  "about": {
+    "page-title": "O aplikacji"
+  },
+  "rename-dialog": {
+    "dialog-title": "Zmień nazwę",
+    "new-name-placeholder": "Nowa nazwa"
+  },
+  "common": {
+    "cancel": "Anuluj",
+    "save": "Zapisz",
+    "rename": "Zmień nazwę",
+    "remove": "Usuń"
+  }
+}

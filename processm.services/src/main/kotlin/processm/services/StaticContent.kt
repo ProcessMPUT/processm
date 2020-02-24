@@ -20,11 +20,11 @@ fun Application.main() {
                 logger().debug("Serving static content from JAR")
                 staticBasePackage = "processm.webui"
                 resources(".")
-                defaultResource("index.html")
+                defaultResource("frontend-dist/index.html")
             } else {
                 logger().debug("Serving static content from file system")
                 staticRootFolder =
-                    codeSource.parentFile.parentFile.parentFile.resolve("processm.webui/src/main/resources")
+                    codeSource.parentFile.parentFile.parentFile.resolve("processm.webui/target/classes/frontend-dist")
                 files(".")
                 default("index.html")
             }
