@@ -1,27 +1,38 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Vue from "vue";
 import VueRouter from "vue-router";
-import Workspaces from "../views/Workspaces.vue";
 
 Vue.use(VueRouter);
+
+const isAuthenticated = true;
 
 const routes = [
   {
     path: "/",
-    component: Workspaces
+    component: () => import("@/views/Workspaces.vue")
   },
   {
     path: "/about",
-    name: "About",
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "about" */ "../views/About.vue")
+    component: () => import("@/views/About.vue")
+  },
+  {
+    path: "/login",
+    component: () => import("@/views/Login.vue"),
+    beforeEnter: (_to: any, _from: any, next: any) => {
+      isAuthenticated ? next("/") : next();
+    },
+    meta: { allowUnauthenticated: true }
   }
 ];
 
 const router = new VueRouter({
   routes
+});
+
+router.beforeEach((to, _from, next) => {
+  isAuthenticated || to.matched.some(record => record.meta.allowUnauthenticated)
+    ? next()
+    : next("/login");
 });
 
 export default router;

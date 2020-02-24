@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <app-navigation />
+    <app-navigation v-if="!$route.meta.allowUnauthenticated" />
 
     <v-content>
       <router-view />
