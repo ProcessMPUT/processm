@@ -15,7 +15,10 @@ private object Helpers {}
  * system properties. Any variable found in the successive source overwrites its value from the
  * preceding source.
  *
- * @param overwriteIfAlreadyLoaded Should we force reload configuration?
+ * This function is thread-safe given [overwriteIfAlreadyLoaded]==false and not thread-safe otherwise.
+ *
+ * @param overwriteIfAlreadyLoaded Should we force reload configuration? This parameter is for test-use
+ * only. false is default.
  * @see System.getProperties
  */
 fun loadConfiguration(overwriteIfAlreadyLoaded: Boolean = false) {

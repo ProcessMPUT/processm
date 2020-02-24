@@ -10,4 +10,8 @@ class XMLXESOutputStream(private val output: XMLStreamWriter) : XESOutputStream 
     override fun close() {
         output.close()
     }
+
+    override fun abort() {
+        TODO("not implemented")
+    }
 }

@@ -4,7 +4,8 @@ import kotlinx.io.InputStream
 import processm.core.log.attribute.*
 import processm.core.logging.logger
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.*
 import javax.xml.namespace.QName
 import javax.xml.stream.XMLEventReader
@@ -13,17 +14,21 @@ import javax.xml.stream.events.StartElement
 import javax.xml.stream.events.XMLEvent
 import kotlin.collections.HashMap
 
+/**
+ * Extracts a sequence of [XESElement]s from the underlying stream.
+ * @see XESInputStream
+ */
 class XMLXESInputStream(private val input: InputStream) : XESInputStream {
-    private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
-    private val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
-    private val exitTags = setOf("trace", "event")
+    companion object {
+        private val exitTags = setOf("trace", "event")
+        private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list", "id")
+        private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
+        private val dateFormatter = DateTimeFormatter.ISO_DATE_TIME
+    }
+
     private val prefixesMapping: HashMap<String, String> = HashMap()
-    private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list")
 
     override fun iterator(): Iterator<XESElement> = sequence<XESElement> {
-        val exitTags = setOf("trace", "event")
-        val attributeTags = setOf("string", "date", "boolean", "int", "float", "list")
-
         val xmlInputFactory: XMLInputFactory = XMLInputFactory.newInstance()
         val reader: XMLEventReader = xmlInputFactory.createXMLEventReader(input)
 
@@ -31,70 +36,56 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             val nextEvent: XMLEvent = reader.nextEvent()
 
             if (nextEvent.isStartElement) {
-                var element: StartElement = nextEvent.asStartElement()
+                val element: StartElement = nextEvent.asStartElement()
+                val xesElement = when (element.name.localPart) {
+                    "log" -> parseLog(reader, element)
+                    "trace" -> parseTrace(reader)
+                    "event" -> parseEvent(reader)
+                    else -> throw Exception("Found unexpected XML tag: ${element.name.localPart}")
+                }
+                yield(xesElement)
+            }
+        }
+    }.iterator()
+
+    private fun parseLog(reader: XMLEventReader, _element: StartElement) = Log().also {
+        var element = _element
+        it.features = element.getAttributeByName(QName("xes.features"))?.value
+
+        // Read until have next and do not find 'trace' or 'event' element
+        while (reader.hasNext()) {
+            val event = reader.peek()
+
+            if (event.isStartElement && (event.asStartElement().name.localPart in exitTags)) {
+                break
+            }
+
+            reader.nextEvent()
+            if (event.isStartElement) {
+                element = event.asStartElement()
                 when (element.name.localPart) {
-                    "log" -> {
-                        val logElement = Log()
-                        logElement.features = element.getAttributeByName(QName("xes.features"))?.value
+                    "extension" ->
+                        addExtensionToLogElement(it, element)
+                    "classifier" ->
+                        addClassifierToLogElement(it, element)
+                    "global" -> {
+                        // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
+                        // Scope is optional, default 'event'
 
-                        // Read until has next and not found 'trace' or 'event' element
-                        while (reader.hasNext()) {
-                            val event = reader.peek()
-
-                            if (event.isStartElement && (event.asStartElement().name.localPart in exitTags)) {
-                                break
+                        val map =
+                            when (val scope =
+                                element.getAttributeByName(QName("scope"))?.value ?: "event") {
+                                "trace" -> it.traceGlobalsInternal
+                                "event" -> it.eventGlobalsInternal
+                                else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope")
                             }
 
-                            reader.nextEvent()
-                            if (event.isStartElement) {
-                                element = event.asStartElement()
-                                when (element.name.localPart) {
-                                    "extension" ->
-                                        addExtensionToLogElement(logElement, element)
-                                    "classifier" ->
-                                        addClassifierToLogElement(logElement, element)
-                                    "global" -> {
-                                        // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
-                                        // Scope is optional, default 'event'
-
-                                        val map =
-                                            when (val scope =
-                                                element.getAttributeByName(QName("scope"))?.value ?: "event") {
-                                                "trace" -> logElement.traceGlobalsInternal
-                                                "event" -> logElement.eventGlobalsInternal
-                                                else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope")
-                                            }
-
-                                        addGlobalAttributes(map, reader)
-                                    }
-                                    in attributeTags -> {
-                                        with(parseAttributeTags(element, reader)) {
-                                            logElement.attributesInternal[this.key] = this
-                                        }
-                                    }
-                                    else -> {
-                                        throw Exception("Found unexpected XML tag: ${element.name.localPart}")
-                                    }
-                                }
-                            }
+                        addGlobalAttributes(map, reader)
+                    }
+                    in attributeTags -> {
+                        with(parseAttributeTags(element, reader)) {
+                            it.attributesInternal[this.key] = this
                         }
-
-                        addGeneralMeaningFieldsIntoLog(logElement)
-                        yield(logElement)
-                    }
-                    "trace" -> {
-                        val traceElement = Trace()
-
-                        parseTraceOrEventTag(reader, traceElement)
-                        addGeneralMeaningFieldsIntoTrace(traceElement)
-                        yield(traceElement)
-                    }
-                    "event" -> {
-                        val eventElement = Event()
-
-                        parseTraceOrEventTag(reader, eventElement)
-                        addGeneralMeaningFieldsIntoEvent(eventElement)
-                        yield(eventElement)
                     }
                     else -> {
                         throw Exception("Found unexpected XML tag: ${element.name.localPart}")
@@ -102,11 +93,23 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 }
             }
         }
-    }.iterator()
+
+        addGeneralMeaningFieldsIntoLog(it)
+    }
+
+    private fun parseTrace(reader: XMLEventReader) = Trace().also {
+        parseTraceOrEventTag(reader, it)
+        addGeneralMeaningFieldsIntoTrace(it)
+    }
+
+    private fun parseEvent(reader: XMLEventReader) = Event().also {
+        parseTraceOrEventTag(reader, it)
+        addGeneralMeaningFieldsIntoEvent(it)
+    }
 
     private fun addExtensionToLogElement(log: Log, extensionElement: StartElement) {
         val prefix = extensionElement.getAttributeByName(QName("prefix")).value
-        val extension: Extension = Extension(
+        val extension = Extension(
             extensionElement.getAttributeByName(QName("name")).value,
             prefix,
             extensionElement.getAttributeByName(QName("uri")).value
@@ -184,7 +187,6 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                                 (attribute as ListAttr).valueInternal.add(this)
                             }
                         } else if (event.isEndElement) {
-                            val xx = event.asEndElement().name.localPart
                             assert(event.asEndElement().name.localPart == "values")
                             break
                         }
@@ -271,7 +273,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         while (reader.hasNext()) {
             val event = reader.peek()
 
-            if (event.isStartElement && (event.asStartElement().name.localPart in this.exitTags)) {
+            if (event.isStartElement && (event.asStartElement().name.localPart in exitTags)) {
                 break
             }
 
@@ -279,7 +281,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             if (event.isStartElement) {
                 val element = event.asStartElement()
                 when (element.name.localPart) {
-                    in this.attributeTags -> {
+                    in attributeTags -> {
                         with(parseAttributeTags(element, reader)) {
                             xesElement.attributesInternal[this.key] = this
                         }
@@ -295,7 +297,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     private fun castToAttribute(type: String, key: String, value: String): Attribute<*> {
         return when (type) {
             "float" ->
-                RealAttr(key, this.numberFormatter.parse(value).toDouble())
+                RealAttr(key, numberFormatter.parse(value).toDouble())
             "string" ->
                 StringAttr(key, value)
             "boolean" ->
@@ -307,8 +309,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             "list" ->
                 ListAttr(key)
             "date" -> {
-                this.dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
-                DateTimeAttr(key, this.dateFormatter.parse(value))
+                DateTimeAttr(key, Date.from(Instant.from(dateFormatter.parse(value))))
             }
             else ->
                 throw Exception("Attribute not recognized. Received $type type.")

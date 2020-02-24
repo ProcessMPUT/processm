@@ -40,6 +40,7 @@ internal class XMLXESInputStreamTest {
                     <int key="__NEW__" value="111"/>
                 </values>
             </list>
+            <id key="id" value="22a66e06-9371-4dbf-aee3-b58b44564a0c"/>
             <string key="meta_3TU:log_type" value="Real-life"/>
             <string key="conceptowy:name" value="Some amazing log file"/>
             <int key="meta_org:role_events_total" value="150291">
@@ -57,7 +58,7 @@ internal class XMLXESInputStreamTest {
                     <string key="Producer code" value="SRTH"/>
                     <string key="Section" value="Section 5"/>
                     <int key="Activity code" value="410100"/>
-                    <date key="time:timestamp" value="2005-01-03T00:00:00.000+01:00"/>
+                    <date key="time:timestamp" value="2005-01-03T00:00:00+01:00"/>
                     <string key="lifecycle:transition" value="complete"/>
                 </event>
                 <event>
@@ -68,7 +69,7 @@ internal class XMLXESInputStreamTest {
                     <string key="Producer code" value="SRTH"/>
                     <string key="Section" value="Section 5"/>
                     <int key="Activity code" value="419100"/>
-                    <date key="time:timestamp" value="2005-01-03T00:00:00.000+01:00"/>
+                    <date key="time:timestamp" value="2005-01-03T00:00:00+01:00"/>
                     <string key="lifecycle:transition" value="complete"/>
                 </event>
             </trace>
@@ -279,7 +280,7 @@ internal class XMLXESInputStreamTest {
     fun `XES parser is able to build event structure`() {
         val stream = ByteArrayInputStream(content.toByteArray())
         val iterator = XMLXESInputStream(stream).iterator()
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
+        val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
         dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
 
         // Skip Log structure
@@ -294,7 +295,7 @@ internal class XMLXESInputStreamTest {
 
         assertEquals(
             receivedEvent.attributes.getValue("time:timestamp").value,
-            dateFormatter.parse("2005-01-03T00:00:00.000+01:00")
+            dateFormatter.parse("2005-01-03T00:00:00+01:00")
         )
         assertEquals(receivedEvent.attributes.getValue("Activity code").value, 410100L)
         assertEquals(receivedEvent.attributes.getValue("lifecycle:transition").value, "complete")

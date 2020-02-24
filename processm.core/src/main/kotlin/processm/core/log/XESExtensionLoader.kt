@@ -33,12 +33,12 @@ object XESExtensionLoader {
      * who are somewhat part of an organizational structure. This extension specifies three attributes for events,
      * which identify the actor having caused the event, and his position in the organizational structure.
      */
-    val org by lazy { XESExtensionLoader.loadExtension("http://www.xes-standard.org/org.xesext")!! }
+    val org by lazy { loadExtension("http://www.xes-standard.org/org.xesext")!! }
 
     /**
      * Extension with 'cost' namespace: Cost extension
      */
-    val cost by lazy { XESExtensionLoader.loadExtension("http://www.xes-standard.org/cost.xesext")!! }
+    val cost by lazy { loadExtension("http://www.xes-standard.org/cost.xesext")!! }
 
     /**
      *  Extension with 'time' namespace: Time extension
@@ -47,7 +47,7 @@ object XESExtensionLoader {
      * Storing this information is the purpose of the time extension. Recording a UTC time for events is important,
      * since this constitutes crucial information for many event log analysis techniques
      */
-    val time by lazy { XESExtensionLoader.loadExtension("http://www.xes-standard.org/time.xesext")!! }
+    val time by lazy { loadExtension("http://www.xes-standard.org/time.xesext")!! }
 
     /**
      *  Extension with 'concept' namespace: Concept extension
@@ -55,14 +55,14 @@ object XESExtensionLoader {
      * The Concept extension defines, for all levels of the XES type hierarchy, an attribute which stores the generally
      * understood name of type hierarchy elements.
      */
-    val concept by lazy { XESExtensionLoader.loadExtension("http://www.xes-standard.org/concept.xesext")!! }
+    val concept by lazy { loadExtension("http://www.xes-standard.org/concept.xesext")!! }
 
     /**
      *  Extension with 'identity' namespace: ID extension
      *
      * The ID extension provides unique identifiers (UUIDs) for elements.
      */
-    val identity by lazy { XESExtensionLoader.loadExtension("http://www.xes-standard.org/identity.xesext")!! }
+    val identity by lazy { loadExtension("http://www.xes-standard.org/identity.xesext")!! }
 
     /**
      *  Extension with 'lifecycle' namespace: Lifecycle extension
@@ -70,7 +70,7 @@ object XESExtensionLoader {
      * The Lifecycle extension specifies for events the lifecycle transition they represent in a transactional
      * model of their generating activity. This transactional model can be arbitrary.
      */
-    val lifecycle by lazy { XESExtensionLoader.loadExtension("http://www.xes-standard.org/lifecycle.xesext")!! }
+    val lifecycle by lazy { loadExtension("http://www.xes-standard.org/lifecycle.xesext")!! }
 
     /**
      * Load exception from the provided URI address.

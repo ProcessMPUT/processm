@@ -1,10 +1,10 @@
 CREATE TABLE events
 (
     id                     BIGSERIAL PRIMARY KEY,
-    trace_id               INTEGER NOT NULL,
+    trace_id               BIGSERIAL NOT NULL,
     "concept:name"         TEXT,
     "concept:instance"     TEXT,
-    "cost:total"           REAL,
+    "cost:total"           DOUBLE PRECISION,
     "cost:currency"        TEXT,
     "identity:id"          TEXT,
     "lifecycle:transition" TEXT,

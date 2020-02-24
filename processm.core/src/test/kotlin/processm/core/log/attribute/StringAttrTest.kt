@@ -1,7 +1,9 @@
 package processm.core.log.attribute
 
 import kotlin.random.Random
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 internal class StringAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
@@ -23,8 +25,7 @@ internal class StringAttrTest {
     }
 
     @Test
-    fun `Field value as String intern() field to reduce memory usage - value and reference are the same`() {
-        assertEquals(attr1.value, attr2.value)
-        assertSame(attr1.value, attr2.value)
+    fun `Attribute with 'string' as XES tag`() {
+        assertEquals(attr1.xesTag, "string")
     }
 }
