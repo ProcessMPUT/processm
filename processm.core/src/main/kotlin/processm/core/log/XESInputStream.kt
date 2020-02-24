@@ -5,4 +5,4 @@ package processm.core.log
  *
  * Class implementing this interface should return Sequence of XESElement (Log, Trace, Event, Event ...)
  */
-interface XESInputStream : Sequence<XESElement>
+typealias XESInputStream = Sequence<XESElement>

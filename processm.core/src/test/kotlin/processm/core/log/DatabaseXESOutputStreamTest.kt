@@ -14,7 +14,16 @@ internal class DatabaseXESOutputStreamTest {
                 <string key="conceptowy:name" value="__INVALID__"/>
             </global>
             <global>
-                <string key="lifecycle:transition" value="complete"/>
+                <string key="lifecycle:transition" value="complete">
+                    <string key="meta_3TU:log_type" value="Real-life"/>
+                    <list key="listKey">
+                        <int key="intInsideListKey" value="22" />
+                        <values>
+                            <float key="__UNKNOWN__" value="202.617"/>
+                            <int key="__NEW__" value="111"/>
+                        </values>
+                    </list>
+                </string>
                 <string key="conceptowy:name" value="__INVALID__"/>
                 <string key="org:group" value="__INVALID__"/>
                 <date key="time:timestamp" value="1970-01-01T01:00:00.000+01:00"/>

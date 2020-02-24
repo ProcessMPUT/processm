@@ -7,9 +7,13 @@ import processm.core.log.Trace as BaseTrace
 
 /**
  * An extension of [processm.core.log.Trace] that supports direct access to underlying events.
- * @property events A lazy sequence of events in this trace.
  */
-class Trace(val events: Sequence<Event>) : BaseTrace() {
+class Trace(events: Sequence<Event> = emptySequence()) : BaseTrace() {
+    /**
+     * A lazy sequence of events in this trace.
+     */
+    var events: Sequence<Event> = events
+        internal set
 }
 
 /**
@@ -31,7 +35,7 @@ fun Trace.toFlatSequence(): XESInputStream = sequenceOf(this).toFlatSequence()
  * @see processm.core.log.Event
  */
 fun Sequence<Trace>.toFlatSequence(): XESInputStream = object : XESInputStream {
-    override fun iterator(): Iterator<XESElement> = sequence<XESElement> {
+    override fun iterator(): Iterator<XESElement> = sequence {
         this@toFlatSequence.forEach {
             yield(it)
             yieldAll(it.events)
