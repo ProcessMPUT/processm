@@ -17,7 +17,7 @@ class MutableModelTest {
     private val h = ActivityInstance(Activity("reject request"))
     private val z = ActivityInstance(Activity("end"))
 
-    //constructing model represented at Fig 3.12 in "Process Mining" by Van van der Alst
+    //constructing model represented at Fig 3.12 in "Process Mining" by Wil van der Aalst
     @Test
     fun constructModel() {
         var mm = MutableModel(start = a, end = z)
