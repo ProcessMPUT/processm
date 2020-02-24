@@ -135,4 +135,48 @@ class MutableModelTest {
         assertTrue { mm.start.activity.special }
         assertTrue { mm.end.activity.special }
     }
+
+    @Test
+    fun multipleActivityInstancesWithSelfLoop() {
+        val mm = MutableModel()
+        val a = Activity("a")
+        val a1 = ActivityInstance(a, "1")
+        val a2 = ActivityInstance(a, "2")
+        mm.addInstance(ActivityInstance(Activity("a"), "1"), a2)
+        assertEquals(setOf(a1, a2, mm.start, mm.end), mm.instances)
+        mm.addDependency(mm.start, a1)
+        assertTrue { mm.incoming[mm.start].isNullOrEmpty() }
+        assertEquals(setOf(Dependency(mm.start, a1)), mm.outgoing[mm.start])
+        assertEquals(setOf(Dependency(mm.start, a1)), mm.incoming[a1])
+        mm.addDependency(a1, a2)
+        assertEquals(setOf(Dependency(a1, a2)), mm.outgoing[a1])
+        assertEquals(setOf(Dependency(a1, a2)), mm.incoming[a2])
+        mm.addDependency(a1, mm.end)
+        assertEquals(setOf(Dependency(a1, a2), Dependency(a1, mm.end)), mm.outgoing[a1])
+        assertEquals(setOf(Dependency(a1, mm.end)), mm.incoming[mm.end])
+        mm.addDependency(a2, a2)
+        assertEquals(setOf(Dependency(a1, a2), Dependency(a2, a2)), mm.incoming[a2])
+        assertEquals(setOf(Dependency(a2, a2)), mm.outgoing[a2])
+        mm.addDependency(a2, mm.end)
+        assertEquals(setOf(Dependency(a1, mm.end), Dependency(a2, mm.end)), mm.incoming[mm.end])
+        assertEquals(setOf(Dependency(a2, a2), Dependency(a2, mm.end)), mm.outgoing[a2])
+        assertTrue { mm.outgoing[mm.end].isNullOrEmpty() }
+    }
+
+    @Test
+    fun singleActivityInstanceGraph() {
+        val a = ActivityInstance(Activity("a"))
+        val mm = MutableModel(start = a, end = a)
+        mm.addInstance(a)
+        assertEquals(setOf(a), mm.instances)
+        assertTrue { mm.outgoing[a].isNullOrEmpty() }
+        assertTrue { mm.incoming[a].isNullOrEmpty() }
+        mm.addDependency(a, a)
+        assertEquals(setOf(Dependency(a, a)), mm.outgoing[a])
+        assertEquals(setOf(Dependency(a, a)), mm.incoming[a])
+        mm.addSplit(Split(setOf(Dependency(a, a))))
+        mm.addJoin(Join(setOf(Dependency(a, a))))
+        assertEquals(setOf(Split(setOf(Dependency(a, a)))), mm.splits[a])
+        assertEquals(setOf(Join(setOf(Dependency(a, a)))), mm.joins[a])
+    }
 }
