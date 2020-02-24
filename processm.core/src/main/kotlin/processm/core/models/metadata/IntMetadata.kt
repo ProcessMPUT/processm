@@ -10,7 +10,7 @@ import kotlin.math.min
  */
 class IntMetadata() : NumericalMetadata<Int, Double> {
     private var _sum: Double = 0.0
-    private val _histogram = HashMap<Int, Int>()
+    private val _histogram = TreeMap<Int, Int>()
     private var _n = 0
 
     override val mean: Double
@@ -37,24 +37,24 @@ class IntMetadata() : NumericalMetadata<Int, Double> {
                 if (_n == 0) newData.max()!!
                 else max(max, newData.max()!!)
             _n += newData.size
-            newData.groupingBy { it }.eachCount()
-                .forEach { (k, v) -> _histogram[k] = _histogram.getOrDefault(k, 0) + v }
+            _histogram.putAll(newData.groupingBy { it }.eachCount()
+                .map { (k, v) -> k to _histogram.getOrDefault(k, 0) + v })
             var cumN = 0
-            for (e in _histogram.toList().sortedBy { it.first }) {
-                var newCumN = cumN + e.second
+            for (e in _histogram.entries) {
+                var newCumN = cumN + e.value
                 if (_n % 2 == 0) {
                     var needle = _n / 2 - 1
                     if (needle in cumN until newCumN) {
-                        median = e.first.toDouble()
+                        median = e.key.toDouble()
                     }
                     if (needle + 1 in cumN until newCumN) {
-                        median = (median + e.first) / 2
+                        median = (median + e.key) / 2
                         break
                     }
                 } else {
                     var needle = (_n - 1) / 2
                     if (needle in cumN until newCumN) {
-                        median = e.first.toDouble()
+                        median = e.key.toDouble()
                         break
                     }
                 }
