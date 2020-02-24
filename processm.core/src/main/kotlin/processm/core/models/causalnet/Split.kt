@@ -8,7 +8,8 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
         if (dependencies.isEmpty()) {
             throw IllegalArgumentException("Binding specification cannot be empty")
         }
-        if (dependencies.any { d -> d.source != dependencies.first().source }) {
+        val firstSource = dependencies.first().source
+        if (dependencies.any { d -> d.source != firstSource }) {
             throw IllegalArgumentException("All the sources must point to the same activity instance")
         }
     }

@@ -8,7 +8,8 @@ data class Join(override val dependencies: Set<Dependency>) : Binding {
         if (dependencies.isEmpty()) {
             throw IllegalArgumentException("Binding specification cannot be empty")
         }
-        if (!(dependencies.isNotEmpty() && dependencies.all { d -> d.target == dependencies.first().target })) {
+        val firstTarget = dependencies.first().target
+        if (dependencies.any { d -> d.target != firstTarget }) {
             throw IllegalArgumentException("All the targets must point to the same activity instance")
         }
     }
