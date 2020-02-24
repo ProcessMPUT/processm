@@ -6,7 +6,17 @@ import processm.core.models.metadata.MetadataHandler
  * A read-only causal net model
  */
 abstract class Model(
+    /**
+     * A unique start activity instance, either real or artificial.
+     *
+     * If artificial, it is up to the user to populate [outgoing] and [incoming]
+     */
     val start: ActivityInstance,
+    /**
+     * A unique end activity instance, either real or artificial.
+     *
+     * If artificial, it is up to the user to populate [outgoing] and [incoming]
+     */
     val end: ActivityInstance,
     metadataHandler: MetadataHandler,
     decisionModel: DecisionModel
@@ -14,8 +24,14 @@ abstract class Model(
     MetadataHandler by metadataHandler,
     DecisionModel by decisionModel {
     protected val _instances = HashSet(listOf(start, end))
-    protected val _outgoing = HashMap<ActivityInstance, HashSet<Dependency>>()  //from source to dependency
-    protected val _incoming = HashMap<ActivityInstance, HashSet<Dependency>>()  //from target to dependency
+    /**
+     * Map from source to dependency
+     */
+    protected val _outgoing = HashMap<ActivityInstance, HashSet<Dependency>>()
+    /**
+     * Map from target to dependency
+     */
+    protected val _incoming = HashMap<ActivityInstance, HashSet<Dependency>>()
     protected val _splits = HashMap<ActivityInstance, HashSet<Split>>()
     protected val _joins = HashMap<ActivityInstance, HashSet<Join>>()
 
