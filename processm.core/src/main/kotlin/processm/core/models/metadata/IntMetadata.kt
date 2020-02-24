@@ -1,5 +1,7 @@
 package processm.core.models.metadata
 
+import java.util.*
+import kotlin.collections.HashMap
 import kotlin.math.max
 import kotlin.math.min
 
@@ -23,7 +25,7 @@ class IntMetadata() : NumericalMetadata<Int, Double> {
     override val max: Int
         get() = if (_n > 0) _max else throw IllegalStateException()
     override val histogram: Map<Int, Int>
-        get() = _histogram
+        get() = Collections.unmodifiableMap(_histogram)
 
     fun add(newData: Collection<Int>) {
         if (!newData.isEmpty()) {
