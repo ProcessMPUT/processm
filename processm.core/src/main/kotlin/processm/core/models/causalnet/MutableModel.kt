@@ -1,17 +1,17 @@
 package processm.core.models.causalnet
 
-import processm.core.models.metadata.DefaultModifiableMetadataHandler
-import processm.core.models.metadata.ModifiableMetadataHandler
+import processm.core.models.metadata.DefaultMutableMetadataHandler
+import processm.core.models.metadata.MutableMetadataHandler
 
 /**
  * The default implementation of a causal net model
  */
-class ModifiableModel(
+class MutableModel(
     start: ActivityInstance = ActivityInstance(Activity("start", true)),
     end: ActivityInstance = ActivityInstance(Activity("end", true)),
-    private val metadataHandler: ModifiableMetadataHandler = DefaultModifiableMetadataHandler(),
+    private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler(),
     var decisionModel: DecisionModel = AlwaysFirstDecisionModel()
-) : Model(start, end, metadataHandler, decisionModel), ModifiableMetadataHandler by metadataHandler {
+) : Model(start, end, metadataHandler, decisionModel), MutableMetadataHandler by metadataHandler {
 
     fun addInstance(vararg a: ActivityInstance) {
         _instances.addAll(a)

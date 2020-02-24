@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class ModifiableModelTest {
+class MutableModelTest {
 
     //activities inspired by Fig 3.12 in "Process Mining" by Van van der Alst
     private val a = ActivityInstance(Activity("register request"))
@@ -23,7 +23,7 @@ class ModifiableModelTest {
     //constructing model represented at Fig 3.12 in "Process Mining" by Van van der Alst
     @Test
     fun constructModel() {
-        var mm = ModifiableModel(start = a, end = z)
+        var mm = MutableModel(start = a, end = z)
         mm.addInstance(a, b, c, d, e, f, g, h, z)
         listOf(
             a to b, a to c, a to d, b to e, c to e, d to e, e to f, e to g,
@@ -77,28 +77,28 @@ class ModifiableModelTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun addDependencyWithUnknownTarget() {
-        val mm = ModifiableModel()
+        val mm = MutableModel()
         mm.addInstance(a)
         mm.addDependency(a, b)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun addDependencyWithUnknownSource() {
-        val mm = ModifiableModel()
+        val mm = MutableModel()
         mm.addInstance(b)
         mm.addDependency(Dependency(a, b))
     }
 
     @Test(expected = NoSuchElementException::class)
     fun addSplitWithNoInstance() {
-        val mm = ModifiableModel()
+        val mm = MutableModel()
         mm.addInstance(a)
         mm.addSplit(Split(setOf(Dependency(a, b))))
     }
 
     @Test(expected = NoSuchElementException::class)
     fun addSplitWithNoDependency() {
-        val mm = ModifiableModel()
+        val mm = MutableModel()
         mm.addInstance(a, b)
         mm.addSplit(Split(setOf(Dependency(a, b))))
     }
@@ -106,21 +106,21 @@ class ModifiableModelTest {
 
     @Test(expected = NoSuchElementException::class)
     fun addJoinWithNoInstance() {
-        val mm = ModifiableModel()
+        val mm = MutableModel()
         mm.addInstance(a)
         mm.addJoin(Join(setOf(Dependency(a, b))))
     }
 
     @Test(expected = NoSuchElementException::class)
     fun addJoinWithNoDependency() {
-        val mm = ModifiableModel()
+        val mm = MutableModel()
         mm.addInstance(a, b)
         mm.addJoin(Join(setOf(Dependency(a, b))))
     }
 
     @Test
     fun defaultStartAndEnd() {
-        val mm = ModifiableModel()
+        val mm = MutableModel()
         assertTrue { mm.start in mm.instances }
         assertTrue { mm.end in mm.instances }
         assertTrue { mm.start.activity.special }

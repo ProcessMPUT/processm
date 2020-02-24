@@ -3,7 +3,7 @@ package processm.core.models.metadata
 /**
  * A default, hash-map based implementation for metadata handler
  */
-open class DefaultModifiableMetadataHandler : ModifiableMetadataHandler {
+open class DefaultMutableMetadataHandler : MutableMetadataHandler {
     protected val _metadataProviders = HashMap<String, MetadataProvider>()
     override val availableMetadata = _metadataProviders.keys
     override fun getAllMetadata(subject: MetadataSubject): Map<String, MetadataValue> {

@@ -3,14 +3,14 @@ package processm.core.models.causalnet
 import processm.core.models.metadata.BasicStatistics
 import processm.core.models.metadata.DefaultMetadataProvider
 import processm.core.models.metadata.IntMetadata
-import processm.core.models.metadata.ModifiableMetadataHandler
+import processm.core.models.metadata.MutableMetadataHandler
 
 /**
- * A modifiable model instance equipped with metadata providers corresponding to basic statistics
+ * A mutable model instance equipped with metadata providers corresponding to basic statistics
  */
-class ModifiableModelInstance(model: Model, metadataHandler: ModifiableMetadataHandler) :
+class MutableModelInstance(model: Model, metadataHandler: MutableMetadataHandler) :
     ModelInstance(model, metadataHandler),
-    ModifiableMetadataHandler by metadataHandler {
+    MutableMetadataHandler by metadataHandler {
 
     init {
         for (name in BasicStatistics.BASIC_TIME_STATISTICS)
