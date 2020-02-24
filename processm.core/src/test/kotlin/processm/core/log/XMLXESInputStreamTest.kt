@@ -1,18 +1,13 @@
 package processm.core.log
 
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertThrows
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
-import processm.core.logging.logger
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
-
 
 internal class XMLXESInputStreamTest {
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -366,32 +361,6 @@ internal class XMLXESInputStreamTest {
             assertEquals(receivedEvent.conceptName, "1e consult poliklinisch")
             assertEquals(receivedEvent.lifecycleTransition, "complete")
             assertEquals(receivedEvent.orgGroup, "Radiotherapy")
-        }
-    }
-
-    @Test
-    @Tag("performance")
-    fun `Analyze logs from 4TU repository`() {
-        var currentFilePath: String? = null
-        try {
-            File("../xes-logs/").walk().forEach { file ->
-                if (file.canonicalPath.endsWith(".xes.gz")) {
-                    currentFilePath = file.canonicalPath
-                    println(currentFilePath)
-
-                    file.absoluteFile.inputStream().use { fileStream ->
-                        GZIPInputStream(fileStream).use { inputStream ->
-                            val iterator = XMLXESInputStream(inputStream).iterator()
-                            while (iterator.hasNext()) {
-                                iterator.next()
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            logger().warn("Error in file $currentFilePath", e)
-            throw e
         }
     }
 }
