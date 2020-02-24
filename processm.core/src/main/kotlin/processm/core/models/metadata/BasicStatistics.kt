@@ -9,7 +9,7 @@ sealed class BasicStatistics() {
         val SERVICE_TIME = "Service time"
         val WAITING_TIME = "Waiting time"
         val SYNCHRONIZATION_TIME = "Synchronization time"
-        val BASIC_TIME_STATISTICS = listOf(LEAD_TIME, SERVICE_TIME, WAITING_TIME, SYNCHRONIZATION_TIME)
+        val BASIC_TIME_STATISTICS = setOf(LEAD_TIME, SERVICE_TIME, WAITING_TIME, SYNCHRONIZATION_TIME)
     }
 
 }
