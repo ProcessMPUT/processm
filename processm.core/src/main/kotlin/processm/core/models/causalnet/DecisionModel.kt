@@ -13,7 +13,7 @@ interface DecisionModel {
     fun predictSplitProbability(
         currentNode: ActivityInstance,
         availableBindings: Iterable<Split>,
-        partialLog: Iterable<Event>
+        partialLog: Sequence<Event>
     ): Map<Split, Double>
 
     /**
@@ -22,7 +22,7 @@ interface DecisionModel {
     fun predictSplit(
         currentNode: ActivityInstance,
         availableBindings: Iterable<Split>,
-        partialLog: Iterable<Event>
+        partialLog: Sequence<Event>
     ): Split
 
     /**
@@ -31,7 +31,7 @@ interface DecisionModel {
     fun predictJoinProbability(
         targetNode: ActivityInstance,
         availableBindings: Iterable<Join>,
-        partialLog: Iterable<Event>
+        partialLog: Sequence<Event>
     ): Map<Join, Double>
 
     /**
@@ -40,6 +40,6 @@ interface DecisionModel {
     fun predictJoin(
         targetNode: ActivityInstance,
         availableBindings: Iterable<Join>,
-        partialLog: Iterable<Event>
+        partialLog: Sequence<Event>
     ): Join
 }

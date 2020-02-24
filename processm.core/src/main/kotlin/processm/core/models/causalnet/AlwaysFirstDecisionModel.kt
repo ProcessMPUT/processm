@@ -6,7 +6,7 @@ class AlwaysFirstDecisionModel : AbstractDecisionModel() {
     override fun predictSplitProbability(
         currentNode: ActivityInstance,
         availableBindings: Iterable<Split>,
-        partialLog: Iterable<Event>
+        partialLog: Sequence<Event>
     ): Map<Split, Double> {
         return availableBindings.mapIndexed { index, split -> if (index == 0) split to 1.0 else split to 0.0 }.toMap()
     }
@@ -14,7 +14,7 @@ class AlwaysFirstDecisionModel : AbstractDecisionModel() {
     override fun predictJoinProbability(
         targetNode: ActivityInstance,
         availableBindings: Iterable<Join>,
-        partialLog: Iterable<Event>
+        partialLog: Sequence<Event>
     ): Map<Join, Double> {
         return availableBindings.mapIndexed { index, join -> if (index == 0) join to 1.0 else join to 0.0 }.toMap()
     }
