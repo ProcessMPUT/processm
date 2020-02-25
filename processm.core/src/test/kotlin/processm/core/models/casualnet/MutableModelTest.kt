@@ -179,4 +179,67 @@ class MutableModelTest {
         assertEquals(setOf(Split(setOf(Dependency(a, a)))), mm.splits[a])
         assertEquals(setOf(Join(setOf(Dependency(a, a)))), mm.joins[a])
     }
+
+    @Test
+    fun removeSplit() {
+        val a = ActivityInstance(Activity("a"))
+        val mm = MutableModel()
+        mm.addInstance(a)
+        val d = mm.addDependency(mm.start, a)
+        val s = Split(setOf(d))
+        mm.addSplit(s)
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.splits as MutableMap).remove(s.source)
+        }
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.splits.getValue(s.source) as MutableSet).remove(s)
+        }
+    }
+
+    @Test
+    fun removeJoin() {
+        val a = ActivityInstance(Activity("a"))
+        val mm = MutableModel()
+        mm.addInstance(a)
+        val d = mm.addDependency(mm.start, a)
+        val s = Join(setOf(d))
+        mm.addJoin(s)
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.joins as MutableMap).remove(s.target)
+        }
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.joins.getValue(s.target) as MutableSet).remove(s)
+        }
+    }
+
+    @Test
+    fun removeDependency() {
+        val a = ActivityInstance(Activity("a"))
+        val mm = MutableModel()
+        mm.addInstance(a)
+        val d = mm.addDependency(mm.start, a)
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.outgoing as MutableMap).remove(d.source)
+        }
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.outgoing.getValue(d.source) as MutableSet).remove(d)
+        }
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.incoming as MutableMap).remove(d.target)
+        }
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.incoming.getValue(d.target) as MutableSet).remove(d)
+        }
+    }
+
+    @Test
+    fun removeActivityInstance() {
+        val a = ActivityInstance(Activity("a"))
+        val mm = MutableModel()
+        mm.addInstance(a)
+        val d = mm.addDependency(mm.start, a)
+        assertFailsWith(UnsupportedOperationException::class) {
+            (mm.instances as MutableSet).remove(a)
+        }
+    }
 }
