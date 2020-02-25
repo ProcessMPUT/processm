@@ -1,9 +1,15 @@
 package processm.core.models.causalnet
 
+import java.util.*
+import kotlin.collections.HashSet
+
 /**
  * A binding between dependencies outgoing from a node in a causal net
  */
-data class Split(override val dependencies: Set<Dependency>) : Binding {
+class Split(_dependencies: Set<Dependency>) : Binding {
+
+    override val dependencies: Set<Dependency> = Collections.unmodifiableSet(HashSet(_dependencies))
+
     init {
         if (dependencies.isEmpty()) {
             throw IllegalArgumentException("Binding specification cannot be empty")
@@ -15,4 +21,12 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
     }
 
     val source = dependencies.first().source
+
+    override fun hashCode(): Int {
+        return dependencies.hashCode()
+    }
+
+    override fun equals(obj: Any?): Boolean {
+        return obj is Split && dependencies == obj.dependencies
+    }
 }
