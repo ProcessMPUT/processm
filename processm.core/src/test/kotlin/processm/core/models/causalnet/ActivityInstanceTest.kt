@@ -1,7 +1,5 @@
-package processm.core.models.casualnet
+package processm.core.models.causalnet
 
-import processm.core.models.causalnet.Activity
-import processm.core.models.causalnet.ActivityInstance
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

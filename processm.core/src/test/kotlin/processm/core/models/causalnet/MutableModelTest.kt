@@ -1,6 +1,5 @@
-package processm.core.models.casualnet
+package processm.core.models.causalnet
 
-import processm.core.models.causalnet.*
 import java.lang.IllegalArgumentException
 import kotlin.test.*
 

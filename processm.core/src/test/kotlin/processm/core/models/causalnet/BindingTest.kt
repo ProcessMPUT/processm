@@ -1,7 +1,6 @@
-package processm.core.models.casualnet
+package processm.core.models.causalnet
 
 import kotlin.test.Test
-import processm.core.models.causalnet.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
