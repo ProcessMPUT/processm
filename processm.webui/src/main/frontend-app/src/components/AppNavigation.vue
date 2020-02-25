@@ -12,7 +12,7 @@
 
       <v-divider></v-divider>
 
-      <v-list-item to="/" exact color="primary">
+      <v-list-item :to="{ name: 'home' }" exact color="primary">
         <v-list-item-action>
           <v-icon>dashboard</v-icon>
         </v-list-item-action>
@@ -20,7 +20,7 @@
           {{ $t("navigation.workspaces") }}
         </v-list-item-content>
       </v-list-item>
-      <v-list-item to="/about" color="primary">
+      <v-list-item :to="'about'" color="primary">
         <v-list-item-action>
           <v-icon>info</v-icon>
         </v-list-item-action>

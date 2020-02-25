@@ -7,14 +7,17 @@ Vue.use(VueRouter);
 const routes = [
   {
     path: "/",
+    name: "home",
     component: () => import("@/views/Workspaces.vue")
   },
   {
     path: "/about",
+    name: "about",
     component: () => import("@/views/About.vue")
   },
   {
     path: "/login",
+    name: "login",
     component: () => import("@/views/Login.vue"),
     beforeEnter: (_to: any, _from: any, next: any) => {
       Vue.prototype.$sessionStorage.sessionExists() ? next("/") : next();
@@ -31,7 +34,7 @@ router.beforeEach((to, _from, next) => {
   Vue.prototype.$sessionStorage.sessionExists() ||
   to.matched.some(record => record.meta.allowUnauthenticated)
     ? next()
-    : next("/login");
+    : next({ name: "login" });
 });
 
 export default router;

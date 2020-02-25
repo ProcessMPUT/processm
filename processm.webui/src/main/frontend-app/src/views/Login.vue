@@ -83,7 +83,7 @@ export default class Login extends Vue {
       );
       this.$sessionStorage.setSessionToken(token);
       this.$sessionStorage.setUserInfo(userData);
-      this.$router.push("/");
+      this.$router.push({ name: "home" });
     } catch (error) {
       this.errorMessage = true;
     }
