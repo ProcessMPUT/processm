@@ -1,6 +1,9 @@
 package processm.core.models.causalnet
 
 import processm.core.models.metadata.MetadataHandler
+import java.util.*
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 
 /**
  * A read-only causal net model
@@ -39,23 +42,23 @@ abstract class Model(
     /**
      * Nodes AKA instances of activities
      */
-    val instances: Set<ActivityInstance> = _instances
+    val instances: Set<ActivityInstance> = Collections.unmodifiableSet(_instances)
     /**
      * Outgoing arcs AKA what depends on a given node
      */
-    val outgoing: Map<ActivityInstance, Set<Dependency>> = _outgoing
+    val outgoing: Map<ActivityInstance, Set<Dependency>> = Collections.unmodifiableMap(_outgoing)
     /**
      * Incoming arcs AKA what given node depends on
      */
-    val incoming: Map<ActivityInstance, Set<Dependency>> = _incoming
+    val incoming: Map<ActivityInstance, Set<Dependency>> = Collections.unmodifiableMap(_incoming)
     /**
      * Splits AKA what other arcs must (not) be followed at the same time when going out of a node
      */
-    val splits: Map<ActivityInstance, Set<Split>> = _splits
+    val splits: Map<ActivityInstance, Set<Split>> = Collections.unmodifiableMap(_splits)
     /**
      * Joins AKA what other arcs must (not) be followed at the same time when going out of a node
      */
-    val joins: Map<ActivityInstance, Set<Join>> = _joins
+    val joins: Map<ActivityInstance, Set<Join>> = Collections.unmodifiableMap(_joins)
 
 
 }
