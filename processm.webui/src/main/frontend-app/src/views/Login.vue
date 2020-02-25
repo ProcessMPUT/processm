@@ -71,14 +71,19 @@ export default class Login extends Vue {
 
   async authenticate() {
     if (!this.isValidForm) {
-      return (this.$refs.loginForm as any).validate();
+      return (this.$refs.loginForm as Vue & {
+        validate: () => boolean;
+      }).validate();
     }
 
     try {
-      const userAccount = await this.accountService.signIn(
+      const { userData, token } = await this.accountService.signIn(
         this.username,
         this.password
       );
+      this.$sessionStorage.setSessionToken(token);
+      this.$sessionStorage.setUserInfo(userData);
+      this.$router.push("/");
     } catch (error) {
       this.errorMessage = true;
     }

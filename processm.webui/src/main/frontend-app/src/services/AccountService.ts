@@ -5,13 +5,13 @@ export default class AccountService {
   public async signIn(
     username: string,
     password: string
-  ): Promise<UserAccount> {
+  ): Promise<{ userData: UserAccount; token: string }> {
     const response = await axios.post("/api/account/session", {
       username,
       password
     });
 
-    return response.data.data;
+    return response.data;
   }
 
   public async signOut(sessionToken: string): Promise<boolean> {

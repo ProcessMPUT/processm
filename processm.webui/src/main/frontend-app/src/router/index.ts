@@ -4,8 +4,6 @@ import VueRouter from "vue-router";
 
 Vue.use(VueRouter);
 
-const isAuthenticated = false;
-
 const routes = [
   {
     path: "/",
@@ -19,7 +17,7 @@ const routes = [
     path: "/login",
     component: () => import("@/views/Login.vue"),
     beforeEnter: (_to: any, _from: any, next: any) => {
-      isAuthenticated ? next("/") : next();
+      Vue.prototype.$sessionStorage.sessionExists() ? next("/") : next();
     },
     meta: { allowUnauthenticated: true }
   }
@@ -30,7 +28,8 @@ const router = new VueRouter({
 });
 
 router.beforeEach((to, _from, next) => {
-  isAuthenticated || to.matched.some(record => record.meta.allowUnauthenticated)
+  Vue.prototype.$sessionStorage.sessionExists() ||
+  to.matched.some(record => record.meta.allowUnauthenticated)
     ? next()
     : next("/login");
 });
