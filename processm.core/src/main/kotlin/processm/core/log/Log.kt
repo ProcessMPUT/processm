@@ -15,7 +15,7 @@ open class Log : XESElement() {
     internal val eventGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
     internal val traceClassifiersInternal: MutableMap<String, Classifier> = HashMap()
     internal val eventClassifiersInternal: MutableMap<String, Classifier> = HashMap()
-    internal override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 
     /**
      * Extensions declared in the log file.

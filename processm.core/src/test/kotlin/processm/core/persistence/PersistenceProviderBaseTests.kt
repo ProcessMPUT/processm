@@ -50,6 +50,4 @@ open class PersistenceProviderBaseTests {
 }
 
 @Serializable
-data class MyClass(val field: String) {
-
-}
+data class MyClass(val field: String)
