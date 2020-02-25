@@ -33,17 +33,17 @@ class DatabaseXESOutputStream : XESOutputStream {
      * Prepared query with insert new log's attribute into database
      */
     private val logAttributeQuery =
-        connection.prepareStatement("""INSERT INTO LOGS_ATTRIBUTES (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+        connection.prepareStatement("""INSERT INTO LOGS_ATTRIBUTES (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
     /**
      * Prepared query with insert new log's global into database
      */
     private val globalQuery =
-        connection.prepareStatement("""INSERT INTO GLOBALS (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr, scope) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+        connection.prepareStatement("""INSERT INTO GLOBALS (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr, scope) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?, ?::scope_type) RETURNING ID""")
     /**
      * Prepared query with insert new log's classifier into database
      */
     private val classifierQuery =
-        connection.prepareStatement("""INSERT INTO CLASSIFIERS (log_id, scope, name, keys) VALUES (?, ?, ?, ?)""")
+        connection.prepareStatement("""INSERT INTO CLASSIFIERS (log_id, scope, name, keys) VALUES (?, ?::scope_type, ?, ?)""")
     /**
      * Prepared query with insert new log's extension into database
      */
@@ -59,7 +59,7 @@ class DatabaseXESOutputStream : XESOutputStream {
      * Prepared query with insert new trace's attribute into database
      */
     private val traceAttributeQuery =
-        connection.prepareStatement("""INSERT INTO TRACES_ATTRIBUTES (trace_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+        connection.prepareStatement("""INSERT INTO TRACES_ATTRIBUTES (trace_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
     /**
      * Prepared query with insert new Event into database
      * As return we expect to receive EventId
@@ -70,7 +70,7 @@ class DatabaseXESOutputStream : XESOutputStream {
      * Prepared query with insert new event's attribute into database
      */
     private val eventAttributeQuery =
-        connection.prepareStatement("""INSERT INTO EVENTS_ATTRIBUTES (event_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+        connection.prepareStatement("""INSERT INTO EVENTS_ATTRIBUTES (event_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
 
     init {
         // Disable autoCommit on connection - we want to add whole XES log structure
