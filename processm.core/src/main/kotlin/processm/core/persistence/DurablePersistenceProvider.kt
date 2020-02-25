@@ -6,5 +6,4 @@ import kotlinx.serialization.ImplicitReflectionSerializer
  * Database-based durable storage.
  */
 @ImplicitReflectionSerializer
-class DurablePersistenceProvider : AbstractPersistenceProvider("durable_storage") {
-}
+class DurablePersistenceProvider : AbstractPersistenceProvider("durable_storage")
