@@ -9,14 +9,14 @@ abstract class AbstractDecisionModel : DecisionModel {
 
 
     abstract override fun predictSplitProbability(
-        currentNode: ActivityInstance,
+        currentNode: Node,
         availableBindings: Iterable<Split>,
         partialLog: Sequence<Event>
     ): Map<Split, Double>
 
 
     override fun predictSplit(
-        currentNode: ActivityInstance,
+        currentNode: Node,
         availableBindings: Iterable<Split>,
         partialLog: Sequence<Event>
     ): Split {
@@ -28,14 +28,14 @@ abstract class AbstractDecisionModel : DecisionModel {
     }
 
     abstract override fun predictJoinProbability(
-        targetNode: ActivityInstance,
+        targetNode: Node,
         availableBindings: Iterable<Join>,
         partialLog: Sequence<Event>
     ): Map<Join, Double>
 
 
     override fun predictJoin(
-        targetNode: ActivityInstance,
+        targetNode: Node,
         availableBindings: Iterable<Join>,
         partialLog: Sequence<Event>
     ): Join {

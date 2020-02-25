@@ -6,9 +6,9 @@ import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 
 class BindingTest {
-    private val a = ActivityInstance(Activity("register request"))
-    private val b = ActivityInstance(Activity("examine thoroughly"))
-    private val c = ActivityInstance(Activity("examine casually"))
+    private val a = Node("register request")
+    private val b = Node("examine thoroughly")
+    private val c = Node("examine casually")
 
     @Test
     fun emptyJoin() {
@@ -50,9 +50,9 @@ class BindingTest {
 
     @Test
     fun modifyJoinConstructorArgument() {
-        val a = ActivityInstance(Activity("a"))
-        val b = ActivityInstance(Activity("b"))
-        val c = ActivityInstance(Activity("c"))
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
         val arg = HashSet(setOf(Dependency(a, b)))
         val j = Join(arg)
         assertEquals(setOf(Dependency(a, b)), j.dependencies)
@@ -62,9 +62,9 @@ class BindingTest {
 
     @Test
     fun modifyJoinByCasting() {
-        val a = ActivityInstance(Activity("a"))
-        val b = ActivityInstance(Activity("b"))
-        val c = ActivityInstance(Activity("c"))
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
         val j = Join(HashSet(setOf(Dependency(a, b))))
         assertEquals(setOf(Dependency(a, b)), j.dependencies)
         assertFails {
@@ -75,9 +75,9 @@ class BindingTest {
 
     @Test
     fun modifySplitConstructorArgument() {
-        val a = ActivityInstance(Activity("a"))
-        val b = ActivityInstance(Activity("b"))
-        val c = ActivityInstance(Activity("c"))
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
         val arg = HashSet(setOf(Dependency(a, b)))
         val j = Split(arg)
         assertEquals(setOf(Dependency(a, b)), j.dependencies)
@@ -87,9 +87,9 @@ class BindingTest {
 
     @Test
     fun modifySplitByCasting() {
-        val a = ActivityInstance(Activity("a"))
-        val b = ActivityInstance(Activity("b"))
-        val c = ActivityInstance(Activity("c"))
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
         val j = Split(HashSet(setOf(Dependency(a, b))))
         assertEquals(setOf(Dependency(a, b)), j.dependencies)
         assertFails {

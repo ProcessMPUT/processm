@@ -7,8 +7,8 @@ import processm.core.models.metadata.MutableMetadataHandler
  * The default implementation of a causal net model
  */
 class MutableModel(
-    start: ActivityInstance = ActivityInstance(Activity("start", true)),
-    end: ActivityInstance = ActivityInstance(Activity("end", true)),
+    start: Node = Node("start", special=true),
+    end: Node = Node("end", special=true),
     private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler(),
     var decisionModel: DecisionModel = AlwaysFirstDecisionModel()
 ) : Model(start, end, metadataHandler, decisionModel), MutableMetadataHandler by metadataHandler {
@@ -16,7 +16,7 @@ class MutableModel(
     /**
      * Adds a (set of) new activity instance(s) to the model
      */
-    fun addInstance(vararg a: ActivityInstance) {
+    fun addInstance(vararg a: Node) {
         _instances.addAll(a)
     }
 
@@ -38,7 +38,7 @@ class MutableModel(
     /**
      * Adds a dependency between activity instances already present in the model
      */
-    fun addDependency(source: ActivityInstance, target: ActivityInstance): Dependency {
+    fun addDependency(source: Node, target: Node): Dependency {
         return addDependency(Dependency(source, target))
     }
 

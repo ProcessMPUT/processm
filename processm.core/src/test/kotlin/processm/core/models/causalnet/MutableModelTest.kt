@@ -6,15 +6,15 @@ import kotlin.test.*
 class MutableModelTest {
 
     //activities inspired by Fig 3.12 in "Process Mining" by Van van der Alst
-    private val a = ActivityInstance(Activity("register request"))
-    private val b = ActivityInstance(Activity("examine thoroughly"))
-    private val c = ActivityInstance(Activity("examine casually"))
-    private val d = ActivityInstance(Activity("check ticket"))
-    private val e = ActivityInstance(Activity("decide"))
-    private val f = ActivityInstance(Activity("reinitiate request"))
-    private val g = ActivityInstance(Activity("pay compensation"))
-    private val h = ActivityInstance(Activity("reject request"))
-    private val z = ActivityInstance(Activity("end"))
+    private val a = Node("register request")
+    private val b = Node("examine thoroughly")
+    private val c = Node("examine casually")
+    private val d = Node("check ticket")
+    private val e = Node("decide")
+    private val f = Node("reinitiate request")
+    private val g = Node("pay compensation")
+    private val h = Node("reject request")
+    private val z = Node("end")
 
     //constructing model represented at Fig 3.12 in "Process Mining" by Wil van der Aalst
     @Test
@@ -131,17 +131,17 @@ class MutableModelTest {
         val mm = MutableModel()
         assertTrue { mm.start in mm.instances }
         assertTrue { mm.end in mm.instances }
-        assertTrue { mm.start.activity.special }
-        assertTrue { mm.end.activity.special }
+        assertTrue { mm.start.special }
+        assertTrue { mm.end.special }
     }
 
     @Test
     fun multipleActivityInstancesWithSelfLoop() {
         val mm = MutableModel()
-        val a = Activity("a")
-        val a1 = ActivityInstance(a, "1")
-        val a2 = ActivityInstance(a, "2")
-        mm.addInstance(ActivityInstance(Activity("a"), "1"), a2)
+        val a = "a"
+        val a1 = Node(a, "1")
+        val a2 = Node(a, "2")
+        mm.addInstance(Node("a", "1"), a2)
         assertEquals(setOf(a1, a2, mm.start, mm.end), mm.instances)
         mm.addDependency(mm.start, a1)
         assertTrue { mm.incoming[mm.start].isNullOrEmpty() }
@@ -164,7 +164,7 @@ class MutableModelTest {
 
     @Test
     fun singleActivityInstanceGraph() {
-        val a = ActivityInstance(Activity("a"))
+        val a = Node("a")
         val mm = MutableModel(start = a, end = a)
         mm.addInstance(a)
         assertEquals(setOf(a), mm.instances)
@@ -181,7 +181,7 @@ class MutableModelTest {
 
     @Test
     fun removeSplit() {
-        val a = ActivityInstance(Activity("a"))
+        val a = Node("a")
         val mm = MutableModel()
         mm.addInstance(a)
         val d = mm.addDependency(mm.start, a)
@@ -197,7 +197,7 @@ class MutableModelTest {
 
     @Test
     fun removeJoin() {
-        val a = ActivityInstance(Activity("a"))
+        val a = Node("a")
         val mm = MutableModel()
         mm.addInstance(a)
         val d = mm.addDependency(mm.start, a)
@@ -213,7 +213,7 @@ class MutableModelTest {
 
     @Test
     fun removeDependency() {
-        val a = ActivityInstance(Activity("a"))
+        val a = Node("a")
         val mm = MutableModel()
         mm.addInstance(a)
         val d = mm.addDependency(mm.start, a)
@@ -233,7 +233,7 @@ class MutableModelTest {
 
     @Test
     fun removeActivityInstance() {
-        val a = ActivityInstance(Activity("a"))
+        val a = Node("a")
         val mm = MutableModel()
         mm.addInstance(a)
         val d = mm.addDependency(mm.start, a)

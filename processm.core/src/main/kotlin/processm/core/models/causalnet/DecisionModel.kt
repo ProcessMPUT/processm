@@ -11,7 +11,7 @@ interface DecisionModel {
      * Returns a probability distribution over the splits given in [availableBindings]
      */
     fun predictSplitProbability(
-        currentNode: ActivityInstance,
+        currentNode: Node,
         availableBindings: Iterable<Split>,
         partialLog: Sequence<Event>
     ): Map<Split, Double>
@@ -20,7 +20,7 @@ interface DecisionModel {
      * Returns the best split for the given situation
      */
     fun predictSplit(
-        currentNode: ActivityInstance,
+        currentNode: Node,
         availableBindings: Iterable<Split>,
         partialLog: Sequence<Event>
     ): Split
@@ -29,7 +29,7 @@ interface DecisionModel {
      * Returns a probability distribution over the joins given in [availableBindings]
      */
     fun predictJoinProbability(
-        targetNode: ActivityInstance,
+        targetNode: Node,
         availableBindings: Iterable<Join>,
         partialLog: Sequence<Event>
     ): Map<Join, Double>
@@ -38,7 +38,7 @@ interface DecisionModel {
      * Returns the best join for the given situation
      */
     fun predictJoin(
-        targetNode: ActivityInstance,
+        targetNode: Node,
         availableBindings: Iterable<Join>,
         partialLog: Sequence<Event>
     ): Join

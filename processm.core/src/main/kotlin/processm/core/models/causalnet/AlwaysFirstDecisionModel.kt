@@ -4,7 +4,7 @@ import processm.core.models.causalnet.mock.Event
 
 class AlwaysFirstDecisionModel : AbstractDecisionModel() {
     override fun predictSplitProbability(
-        currentNode: ActivityInstance,
+        currentNode: Node,
         availableBindings: Iterable<Split>,
         partialLog: Sequence<Event>
     ): Map<Split, Double> {
@@ -12,7 +12,7 @@ class AlwaysFirstDecisionModel : AbstractDecisionModel() {
     }
 
     override fun predictJoinProbability(
-        targetNode: ActivityInstance,
+        targetNode: Node,
         availableBindings: Iterable<Join>,
         partialLog: Sequence<Event>
     ): Map<Join, Double> {
