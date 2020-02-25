@@ -3,7 +3,7 @@ package processm.core.models.metadata
 /**
  * Map-based metadata provider
  */
-class DefaultMetadataProvider<T : MetadataValue>(override val name: String) : MetadataProvider {
+class DefaultMetadataProvider<T : MetadataValue>(override val name: URN) : MetadataProvider {
 
     private val _metadata = HashMap<MetadataSubject, T>()
 
