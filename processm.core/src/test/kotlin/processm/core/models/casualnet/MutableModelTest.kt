@@ -242,4 +242,24 @@ class MutableModelTest {
             (mm.instances as MutableSet).remove(a)
         }
     }
+
+    @Test
+    fun addSameSplitTwice() {
+        val mm = MutableModel()
+        val d = mm.addDependency(mm.start, mm.end)
+        mm.addSplit(Split(setOf(d)))
+        assertFailsWith(IllegalArgumentException::class) {
+            mm.addSplit(Split(setOf(d)))
+        }
+    }
+
+    @Test
+    fun addSameJoinTwice() {
+        val mm = MutableModel()
+        val d = mm.addDependency(mm.start, mm.end)
+        mm.addJoin(Join(setOf(d)))
+        assertFailsWith(IllegalArgumentException::class) {
+            mm.addJoin(Join(setOf(d)))
+        }
+    }
 }

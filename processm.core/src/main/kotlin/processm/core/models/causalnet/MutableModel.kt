@@ -48,6 +48,8 @@ class MutableModel(
     fun addSplit(split: Split) {
         if (!_outgoing.getValue(split.source).containsAll(split.dependencies))
             throw IllegalArgumentException()
+        if (_splits[split.source]?.any { it.dependencies == split.dependencies } == true)
+            throw IllegalArgumentException()
         _splits.getOrPut(split.source, { HashSet() }).add(split)
     }
 
@@ -56,6 +58,8 @@ class MutableModel(
      */
     fun addJoin(join: Join) {
         if (!_incoming.getValue(join.target).containsAll(join.dependencies))
+            throw IllegalArgumentException()
+        if (_joins[join.target]?.any { it.dependencies == join.dependencies } == true)
             throw IllegalArgumentException()
         _joins.getOrPut(join.target, { HashSet() }).add(join)
     }
