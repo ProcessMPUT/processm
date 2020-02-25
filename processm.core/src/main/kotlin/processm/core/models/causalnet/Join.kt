@@ -1,15 +1,11 @@
 package processm.core.models.causalnet
 
-import java.util.*
-import kotlin.collections.HashSet
-
 /**
- * A binding between dependencies incoming into a node in a causal net
+ * A binding between dependencies incoming into a node in a causal net.
+ *
+ * Claims ownership of [dependencies], which should not be modified after construction of the binding.
  */
-class Join(_dependencies: Set<Dependency>) : Binding {
-
-    override val dependencies: Set<Dependency> = Collections.unmodifiableSet(HashSet(_dependencies))
-
+data class Join(override val dependencies: Set<Dependency>) : Binding {
     init {
         if (dependencies.isEmpty()) {
             throw IllegalArgumentException("Binding specification cannot be empty")
@@ -21,12 +17,4 @@ class Join(_dependencies: Set<Dependency>) : Binding {
     }
 
     val target = dependencies.first().target
-
-    override fun hashCode(): Int {
-        return dependencies.hashCode()
-    }
-
-    override fun equals(obj: Any?): Boolean {
-        return obj is Join && dependencies == obj.dependencies
-    }
 }

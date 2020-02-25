@@ -1,14 +1,11 @@
 package processm.core.models.causalnet
 
-import java.util.*
-import kotlin.collections.HashSet
-
 /**
- * A binding between dependencies outgoing from a node in a causal net
+ * A binding between dependencies outgoing from a node in a causal net.
+ *
+ * Claims ownership of [dependencies], which should not be modified after construction of the binding.
  */
-class Split(_dependencies: Set<Dependency>) : Binding {
-
-    override val dependencies: Set<Dependency> = Collections.unmodifiableSet(HashSet(_dependencies))
+data class Split(override val dependencies: Set<Dependency>) : Binding {
 
     init {
         if (dependencies.isEmpty()) {
@@ -21,12 +18,4 @@ class Split(_dependencies: Set<Dependency>) : Binding {
     }
 
     val source = dependencies.first().source
-
-    override fun hashCode(): Int {
-        return dependencies.hashCode()
-    }
-
-    override fun equals(obj: Any?): Boolean {
-        return obj is Split && dependencies == obj.dependencies
-    }
 }

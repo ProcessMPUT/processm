@@ -179,6 +179,7 @@ class MutableModelTest {
         assertEquals(setOf(Join(setOf(Dependency(a, a)))), mm.joins[a])
     }
 
+    @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun removeSplit() {
         val a = Node("a")
@@ -195,6 +196,7 @@ class MutableModelTest {
         }
     }
 
+    @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun removeJoin() {
         val a = Node("a")
@@ -211,6 +213,7 @@ class MutableModelTest {
         }
     }
 
+    @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun removeDependency() {
         val a = Node("a")
@@ -236,7 +239,6 @@ class MutableModelTest {
         val a = Node("a")
         val mm = MutableModel()
         mm.addInstance(a)
-        val d = mm.addDependency(mm.start, a)
         assertFailsWith(UnsupportedOperationException::class) {
             (mm.instances as MutableSet).remove(a)
         }

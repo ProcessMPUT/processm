@@ -47,21 +47,21 @@ abstract class Model(
      * Outgoing arcs AKA what depends on a given node
      */
     val outgoing: Map<Node, Set<Dependency>>
-        get() = Collections.unmodifiableMap(_outgoing.mapValues { (_, v) -> Collections.unmodifiableSet(v) })
+        get() = Collections.unmodifiableMap(_outgoing)
     /**
      * Incoming arcs AKA what given node depends on
      */
     val incoming: Map<Node, Set<Dependency>>
-        get() = Collections.unmodifiableMap(_incoming.mapValues { (_, v) -> Collections.unmodifiableSet(v) })
+        get() = Collections.unmodifiableMap(_incoming)
     /**
      * Splits AKA what other arcs must (not) be followed at the same time when going out of a node
      */
     val splits: Map<Node, Set<Split>>
-        get() = Collections.unmodifiableMap(_splits.mapValues { (_, v) -> Collections.unmodifiableSet(v) })
+        get() = Collections.unmodifiableMap(_splits)
     /**
      * Joins AKA what other arcs must (not) be followed at the same time when going out of a node
      */
     val joins: Map<Node, Set<Join>>
-        get() = Collections.unmodifiableMap(_joins.mapValues { (_, v) -> Collections.unmodifiableSet(v) })
+        get() = Collections.unmodifiableMap(_joins)
 
 }

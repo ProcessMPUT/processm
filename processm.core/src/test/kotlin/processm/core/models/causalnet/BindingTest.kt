@@ -1,9 +1,6 @@
 package processm.core.models.causalnet
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertFailsWith
+import kotlin.test.*
 
 class BindingTest {
     private val a = Node("register request")
@@ -48,6 +45,7 @@ class BindingTest {
         }
     }
 
+    @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun modifyJoinConstructorArgument() {
         val a = Node("a")
@@ -60,6 +58,7 @@ class BindingTest {
         assertEquals(setOf(Dependency(a, b)), j.dependencies)
     }
 
+    @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun modifyJoinByCasting() {
         val a = Node("a")
@@ -73,6 +72,7 @@ class BindingTest {
         assertEquals(setOf(Dependency(a, b)), j.dependencies)
     }
 
+    @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun modifySplitConstructorArgument() {
         val a = Node("a")
@@ -85,6 +85,7 @@ class BindingTest {
         assertEquals(setOf(Dependency(a, b)), j.dependencies)
     }
 
+    @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun modifySplitByCasting() {
         val a = Node("a")
