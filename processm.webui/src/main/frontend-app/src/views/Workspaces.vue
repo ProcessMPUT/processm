@@ -23,15 +23,21 @@
             </v-btn>
           </template>
 
-          <v-list flat>
+          <v-list flat dense>
             <v-list-item
               @click.stop="removeWorkspace"
               :disabled="!(workspaces.length > 1)"
             >
+              <v-list-item-icon
+                ><v-icon>delete_forever</v-icon></v-list-item-icon
+              >
               <v-list-item-title>{{ $t("common.remove") }}</v-list-item-title>
             </v-list-item>
             <v-divider />
             <v-list-item @click.stop="workspaceRenamingDialog = true">
+              <v-list-item-icon
+                ><v-icon>drive_file_rename_outline</v-icon></v-list-item-icon
+              >
               <v-list-item-title>{{ $t("common.rename") }}</v-list-item-title>
             </v-list-item>
           </v-list>
@@ -40,7 +46,7 @@
           workspace.name
         }}</v-tab>
         <v-btn tile color="primary lighten-1" @click="createWorkspace">
-          <v-icon>mdi-plus</v-icon>
+          <v-icon>add_box</v-icon>
         </v-btn>
       </v-tabs>
       <rename-dialog
