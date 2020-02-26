@@ -9,7 +9,7 @@
       </template>
 
       <v-list dense>
-        <v-list-item>
+        <v-list-item @click.stop="signOut">
           <v-list-item-icon><v-icon>logout</v-icon></v-list-item-icon>
           <v-list-item-title>{{ $t("topbar.sign-out") }}</v-list-item-title>
         </v-list-item>
@@ -20,8 +20,22 @@
 
 <script lang="ts">
 import Vue from "vue";
-import Component from "vue-class-component";
+import { Component, Inject } from "vue-property-decorator";
+import AccountService from "@/services/AccountService";
 
 @Component
-export default class TopBar extends Vue {}
+export default class TopBar extends Vue {
+  @Inject() accountService!: AccountService;
+
+  async signOut() {
+    if (!this.$sessionStorage.sessionExists) {
+      return;
+    }
+
+    if (this.accountService.signOut(this.$sessionStorage.sessionToken)) {
+      this.$sessionStorage.removeSession();
+      this.$router.push({ name: "login" });
+    }
+  }
+}
 </script>

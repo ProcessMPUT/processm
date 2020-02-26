@@ -14,23 +14,23 @@ class SessionStorage {
     return _Vue.prototype.$session;
   }
 
-  static getSessionToken(): string {
+  static get sessionToken(): string {
     return this.session.get(this.TokenKey);
   }
 
-  static setSessionToken(token: string) {
+  static set sessionToken(token: string) {
     this.session.set(this.TokenKey, token);
   }
 
-  static sessionExists(): boolean {
+  static get sessionExists(): boolean {
     return this.session.has(this.TokenKey);
   }
 
-  static getUserInfo(): UserAccount {
+  static get userInfo(): UserAccount {
     return this.session.get(this.UserInfoKey);
   }
 
-  static setUserInfo(userInfo: UserAccount) {
+  static set userInfo(userInfo: UserAccount) {
     this.session.set(this.UserInfoKey, userInfo);
   }
 

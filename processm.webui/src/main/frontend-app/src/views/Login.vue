@@ -81,8 +81,8 @@ export default class Login extends Vue {
         this.username,
         this.password
       );
-      this.$sessionStorage.setSessionToken(token);
-      this.$sessionStorage.setUserInfo(userData);
+      this.$sessionStorage.sessionToken = token;
+      this.$sessionStorage.userInfo = userData;
       this.$router.push({ name: "home" });
     } catch (error) {
       this.errorMessage = true;

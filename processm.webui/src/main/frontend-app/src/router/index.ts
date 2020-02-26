@@ -20,7 +20,7 @@ const routes = [
     name: "login",
     component: () => import("@/views/Login.vue"),
     beforeEnter: (_to: any, _from: any, next: any) => {
-      Vue.prototype.$sessionStorage.sessionExists() ? next("/") : next();
+      Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
     },
     meta: { allowUnauthenticated: true }
   }
@@ -31,7 +31,7 @@ const router = new VueRouter({
 });
 
 router.beforeEach((to, _from, next) => {
-  Vue.prototype.$sessionStorage.sessionExists() ||
+  Vue.prototype.$sessionStorage.sessionExists ||
   to.matched.some(record => record.meta.allowUnauthenticated)
     ? next()
     : next({ name: "login" });
