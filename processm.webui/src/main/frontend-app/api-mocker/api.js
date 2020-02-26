@@ -80,7 +80,7 @@ const api = {
     _.set(userSessions, sessionToken, credentials.username);
 
     return res.json({
-      data: { username: credentials.username },
+      userData: { username: credentials.username },
       token: sessionToken
     });
   },

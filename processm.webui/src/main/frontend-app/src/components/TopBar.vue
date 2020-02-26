@@ -8,7 +8,8 @@
         </v-btn>
       </template>
 
-      <v-list dense>
+      <v-list dense rounded>
+        <v-subheader>{{ username }}</v-subheader>
         <v-list-item @click.stop="signOut">
           <v-list-item-icon><v-icon>logout</v-icon></v-list-item-icon>
           <v-list-item-title>{{ $t("topbar.sign-out") }}</v-list-item-title>
@@ -26,6 +27,10 @@ import AccountService from "@/services/AccountService";
 @Component
 export default class TopBar extends Vue {
   @Inject() accountService!: AccountService;
+
+  get username() {
+    return this.$sessionStorage.userInfo?.username || "";
+  }
 
   async signOut() {
     if (!this.$sessionStorage.sessionExists) {
