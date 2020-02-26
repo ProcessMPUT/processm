@@ -1,6 +1,8 @@
 <template>
   <v-app>
-    <app-navigation v-if="!$route.meta.allowUnauthenticated" />
+    <top-bar v-if="!isPublicView" />
+
+    <app-navigation v-if="!isPublicView" />
 
     <v-content>
       <router-view />
@@ -12,9 +14,14 @@
 import Vue from "vue";
 import Component from "vue-class-component";
 import AppNavigation from "@/components/AppNavigation.vue";
+import TopBar from "@/components/TopBar.vue";
 
 @Component({
-  components: { AppNavigation }
+  components: { AppNavigation, TopBar }
 })
-export default class App extends Vue {}
+export default class App extends Vue {
+  get isPublicView(): boolean {
+    return this.$route.meta.allowUnauthenticated;
+  }
+}
 </script>

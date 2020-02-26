@@ -3,6 +3,9 @@
     "workspaces": "Przestrzenie robocze",
     "about": "@:about.page-title"
   },
+  "topbar": {
+    "sign-out": "Wyloguj"
+  },
   "workspace": {
     "default-name": "Przestrzeń robocza",
     "locked": "Zablokowany"

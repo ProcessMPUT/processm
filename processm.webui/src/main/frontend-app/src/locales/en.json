@@ -4,6 +4,9 @@
     "workspaces": "Workspaces",
     "about": "@:about.page-title"
   },
+  "topbar": {
+    "sign-out": "Sign out"
+  },
   "workspace": {
     "default-name": "Workspace",
     "locked": "Locked"
