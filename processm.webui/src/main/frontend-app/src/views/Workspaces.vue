@@ -83,7 +83,7 @@ export default class Workspaces extends Vue {
   }
 
   get currentWorkspaceName(): string {
-    return this.workspaces[this.currentWorkspaceIndex].name || "";
+    return this.workspaces[this.currentWorkspaceIndex]?.name || "";
   }
 
   async createWorkspace() {
