@@ -17,7 +17,10 @@
   },
   "rename-dialog": {
     "dialog-title": "Rename",
-    "new-name-placeholder": "New name"
+    "new-name-placeholder": "New name",
+    "validation": {
+      "name-empty": "Name cannot be empty"
+    }
   },
   "login-form": {
     "title": "Login form",

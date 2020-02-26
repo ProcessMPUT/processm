@@ -15,7 +15,10 @@
   },
   "rename-dialog": {
     "dialog-title": "Zmień nazwę",
-    "new-name-placeholder": "Nowa nazwa"
+    "new-name-placeholder": "Nowa nazwa",
+    "validation": {
+      "name-empty": "Nazwa nie może być pusta"
+    }
   },
   "login-form": {
     "title": "Panel logowania",
