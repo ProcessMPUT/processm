@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.omg.bpmn.miwg</groupId>
+  <artifactId>test-suite</artifactId>
+  <version>0.4-SNAPSHOT</version>
+  <name>BPMN 2.0 MIWG Test Suite</name>
+  <description>Reference BPMN files and various vendor's implementations of the same.</description>
+  <packaging>jar</packaging>
+
+  <properties>
+    <java.version>1.6</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <bpmn-miwg-tools.version>0.6.0</bpmn-miwg-tools.version>
+    <!-- Use this property to name just one tool to be tested
+    <project.bpmn.application>Yaoqiang BPMN Editor 2.2.18</project.bpmn.application>
+    -->
+<!-- staging area for subsequent commit and push -->
+    <local-mvn-repo.snapshot.directory>file:${user.home}/bpmn-miwg-mvn-repo/snapshots</local-mvn-repo.snapshot.directory>
+  </properties>
+
+  <scm>
+    <connection>scm:git:https://github.com/bpmn-miwg/bpmn-miwg-test-suite</connection>
+    <url>https://github.com/bpmn-miwg/bpmn-miwg-test-suite</url>
+  </scm>
+
+  <repositories>
+    <repository>
+      <id>bpmn-miwg-repo</id>
+      <url>https://raw.githubusercontent.com/bpmn-miwg/bpmn-miwg-mvn-repo/master/</url>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>bpmn-miwg-plugin-repo</id>
+      <url>https://raw.githubusercontent.com/bpmn-miwg/bpmn-miwg-mvn-repo/master/</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.omg.bpmn.miwg</groupId>
+      <artifactId>bounds-generator</artifactId>
+      <version>${bpmn-miwg-tools.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <filtering>false</filtering>
+        <directory>${basedir}</directory>
+         <includes>
+          <!-- include only files that follow the naming conventions and are thus understood by the tools -->
+          <include>Reference/*.bpmn</include>
+          <include>Reference/*.png</include>
+          <include>**/*-export.bpmn</include>
+          <include>**/*-roundtrip.bpmn</include>
+          <include>**/*-import.png</include>
+          <include>**/*-export.png</include>
+          <include>**/*-import.*.png</include>
+          <include>**/*-export.*.png</include>
+          <include>*.json</include>
+          <include>LICENSE.txt</include>
+        </includes>
+        <excludes>
+          <exclude>.*</exclude><!-- ignore hidden files from Git & Eclipse -->
+          <exclude>.*/**/*</exclude><!-- ignore hidden folders from Git & Eclipse -->
+          <exclude>target/**/*</exclude><!-- ignore Maven build dir -->
+          <exclude>Work in Progress/**/*</exclude><!-- ignore unfinished test cases -->
+        </excludes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>2.8.1</version>
+        <configuration>
+          <altDeploymentRepository>internal.repo::default::${local-mvn-repo.snapshot.directory}</altDeploymentRepository>
+        </configuration>
+      </plugin>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-jar-plugin</artifactId>
+      <version>3.0.2</version>
+      <executions>
+        <execution>
+          <id>reference-only</id>
+          <phase>package</phase>
+          <goals>
+            <goal>jar</goal>
+          </goals>
+          <configuration>
+            <classifier>reference-only</classifier>
+            <includes>
+              <include>Reference/*.bpmn</include>
+            </includes>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>analysis</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.8</version>
+            <executions>
+              <execution>
+                <phase>process-resources</phase>
+                <configuration>
+                  <target>
+                    <property name="compile_classpath" refid="maven.compile.classpath"/>
+                    <property name="runtime_classpath" refid="maven.runtime.classpath"/>
+                    <property name="test_classpath" refid="maven.test.classpath"/>
+                    <property name="plugin_classpath" refid="maven.plugin.classpath"/>
+
+                    <java classname="org.omg.bpmn.miwg.boundary.BoundaryCreator">
+                      <arg value="Reference"/>
+                      <arg value="${project.build.directory}/site/Reference/Bounds"/>
+                      <classpath>
+                        <pathelement path="${compile_classpath}"/>
+                      </classpath>
+                    </java>
+                  </target>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-site-plugin</artifactId>
+            <version>3.4</version>
+            <executions>
+              <!-- jar BPMN MIWG analysis reports as part of the build's normal 'install' phase -->
+              <execution>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <phase>install</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- This binds the BPMN MIWG analysis tools to the test phase of the Maven lifecycle -->
+          <plugin>
+            <groupId>org.omg.bpmn.miwg</groupId>
+            <artifactId>bpmn-miwg-maven-plugin</artifactId>
+            <version>${bpmn-miwg-tools.version}</version>
+            <executions>
+              <execution>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>
+
