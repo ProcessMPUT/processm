@@ -16,6 +16,11 @@ abstract class Attribute<T : Any>(key: String) {
     internal abstract fun getValue(): T
 
     /**
+     * Value to String formatting
+     */
+    internal open fun valueToString(): String = getValue().toString()
+
+    /**
      * Attributes inside this attribute (nested-attributes)
      * Used as getter based on the internal representation of children
      */
