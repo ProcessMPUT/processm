@@ -7,6 +7,7 @@ import Vuetify from "vuetify";
 import vuetify from "@/plugins/vuetify";
 import "material-design-icons-iconfont/dist/material-design-icons.css";
 import "typeface-roboto";
+import "flag-icon-css/css/flag-icon.min.css";
 import i18n from "@/i18n";
 import SessionStorage from "@/plugins/SessionStorage";
 import WorkspaceService from "@/services/WorkspaceService";

@@ -10,9 +10,15 @@
 
       <v-list dense rounded>
         <v-subheader>{{ username }}</v-subheader>
+        <v-list-item :to="'profile'" color="primary">
+          <v-list-item-icon><v-icon>settings</v-icon></v-list-item-icon>
+          <v-list-item-content>{{
+            $t("topbar.user-profile")
+          }}</v-list-item-content>
+        </v-list-item>
         <v-list-item @click.stop="signOut">
           <v-list-item-icon><v-icon>logout</v-icon></v-list-item-icon>
-          <v-list-item-title>{{ $t("topbar.sign-out") }}</v-list-item-title>
+          <v-list-item-content>{{ $t("topbar.sign-out") }}</v-list-item-content>
         </v-list-item>
       </v-list>
     </v-menu>

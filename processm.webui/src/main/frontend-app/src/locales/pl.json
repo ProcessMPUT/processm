@@ -1,9 +1,12 @@
 {
+  "language-name": "Polski",
+  "iso": "pl",
   "navigation": {
     "workspaces": "Przestrzenie robocze",
     "about": "@:about.page-title"
   },
   "topbar": {
+    "user-profile": "Ustawienia konta",
     "sign-out": "Wyloguj"
   },
   "workspace": {
@@ -12,6 +15,10 @@
   },
   "about": {
     "page-title": "O aplikacji"
+  },
+  "user-profile": {
+    "language": "Język",
+    "save": "Zapisz zmiany"
   },
   "rename-dialog": {
     "dialog-title": "Zmień nazwę",
