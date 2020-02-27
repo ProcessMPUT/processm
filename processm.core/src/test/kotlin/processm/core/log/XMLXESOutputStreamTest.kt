@@ -72,7 +72,7 @@ internal class XMLXESOutputStreamTest {
                 </event>
             </trace>
         </log>
-    """.trimIndent().byteInputStream()
+    """.trimIndent()
 
     @Test
     fun `Abort will close the stream and user can close it again without any exception`() {
@@ -80,22 +80,23 @@ internal class XMLXESOutputStreamTest {
             it.features = "nested-attributes"
         }
 
-        val received = StringWriter()
-        val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
-
-        writer.use {
-            it.write(log)
-            it.abort()
+        StringWriter().use { received ->
+            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+            writer.use {
+                it.write(log)
+                it.abort()
+            }
         }
     }
 
     @Test
     fun `Close XML without passing any XML Element`() {
-        val received = StringWriter()
-        val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+        StringWriter().use { received ->
+            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+            writer.close()
 
-        writer.close()
-        assertEquals(received.toString(), "")
+            assertEquals(received.toString(), "")
+        }
     }
 
     @Test
@@ -104,19 +105,20 @@ internal class XMLXESOutputStreamTest {
             it.features = "nested-attributes"
         }
 
-        val received = StringWriter()
-        val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+        StringWriter().use { received ->
+            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
 
-        writer.write(log)
-        writer.close()
+            writer.write(log)
+            writer.close()
 
-        val output = XMLXESInputStream(received.toString().byteInputStream()).iterator()
+            val output = XMLXESInputStream(received.toString().byteInputStream()).iterator()
 
-        with(output.next() as Log) {
-            assertEquals(features, "nested-attributes")
+            with(output.next() as Log) {
+                assertEquals(features, "nested-attributes")
+            }
+
+            assertFalse(output.hasNext())
         }
-
-        assertFalse(output.hasNext())
     }
 
     @Test
@@ -127,43 +129,47 @@ internal class XMLXESOutputStreamTest {
         }
         val event = Event()
 
-        val received = StringWriter()
-        val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+        StringWriter().use { received ->
+            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
 
-        writer.write(log)
-        writer.write(traceEventStream)
-        writer.write(event)
-        writer.close()
+            writer.write(log)
+            writer.write(traceEventStream)
+            writer.write(event)
+            writer.close()
 
-        val output = XMLXESInputStream(received.toString().byteInputStream()).iterator()
+            val output = XMLXESInputStream(received.toString().byteInputStream()).iterator()
 
-        with(output.next() as Log) {
-            assertNull(features)
+            with(output.next() as Log) {
+                assertNull(features)
+            }
+
+            with(output.next() as Event) {
+                assertEquals(attributes.size, 0)
+            }
+
+            assertFalse(output.hasNext())
         }
-
-        with(output.next() as Event) {
-            assertEquals(attributes.size, 0)
-        }
-
-        assertFalse(output.hasNext())
     }
 
     @Test
     fun `Compare imported and exported XML files`() {
-        storeLog(XMLXESInputStream(content).asSequence())
-        val firstlogId = getLastLogId()
-        val fromDB = DatabaseHierarchicalXESInputStream(firstlogId)
+        content.byteInputStream().use {
+            storeLog(XMLXESInputStream(it).asSequence())
+        }
+        val firstLogId = getLastLogId()
+        val fromDB = DatabaseHierarchicalXESInputStream(firstLogId)
 
         // Log to XML file
-        val received = StringWriter()
-        val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
-        writer.write(fromDB.toFlatSequence())
-        writer.close()
+        StringWriter().use { received ->
+            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+            writer.write(fromDB.toFlatSequence())
+            writer.close()
 
-        // Store XML
-        storeLog(XMLXESInputStream(received.toString().byteInputStream()).asSequence())
+            // Store XML
+            storeLog(XMLXESInputStream(received.toString().byteInputStream()).asSequence())
+        }
 
-        val logFromDB = DatabaseHierarchicalXESInputStream(firstlogId)
+        val logFromDB = DatabaseHierarchicalXESInputStream(firstLogId)
         val logFromXML = DatabaseHierarchicalXESInputStream(getLastLogId())
 
         assertTrue(hierarchicalCompare(logFromDB, logFromXML))
