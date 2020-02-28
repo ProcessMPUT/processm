@@ -7,10 +7,11 @@ import java.io.File
 class BPMNXMLServiceTest {
     @TestFactory
     fun generateTests(): Iterable<DynamicTest> {
-        return File("src/test/resources/bpmn-miwg-test-suite")
+        val base = "src/test/resources/bpmn-miwg-test-suite"
+        return File(base)
             .walk()
             .filter { it.extension.toLowerCase() == "bpmn" }
-            .map { DynamicTest.dynamicTest(it.name) { BPMNXMLService.load(it.inputStream()) } }
+            .map { DynamicTest.dynamicTest(it.path.replace(base, "")) { BPMNXMLService.load(it.inputStream()) } }
             .toList()
     }
 }
