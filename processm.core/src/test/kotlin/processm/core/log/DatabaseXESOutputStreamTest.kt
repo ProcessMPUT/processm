@@ -1,6 +1,5 @@
 package processm.core.log
 
-import java.io.ByteArrayInputStream
 import kotlin.test.Test
 
 internal class DatabaseXESOutputStreamTest {
@@ -67,17 +66,16 @@ internal class DatabaseXESOutputStreamTest {
                 </event>
             </trace>
         </log>
-    """
+    """.trimIndent()
 
     @Test
     fun `Load log into the database`() {
-        val stream = ByteArrayInputStream(content.toByteArray())
-        val iterator = XMLXESInputStream(stream).iterator()
+        content.byteInputStream().use { stream ->
+            val xesElements = XMLXESInputStream(stream).asSequence()
 
-        val db = DatabaseXESOutputStream()
-        while (iterator.hasNext()) {
-            db.write(iterator.next())
+            DatabaseXESOutputStream().use { db ->
+                db.write(xesElements)
+            }
         }
-        db.close()
     }
 }
