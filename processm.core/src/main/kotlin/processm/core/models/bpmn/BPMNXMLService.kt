@@ -67,10 +67,11 @@ sealed class BPMNXMLService {
 
         fun startElement(element: StartElement) {
             (element.namespaces as Iterator<Namespace>).forEach {
-                handler.startPrefixMapping(
-                    it.prefix,
-                    it.namespaceURI
-                )
+                if (it.namespaceURI != null)
+                    handler.startPrefixMapping(
+                        it.prefix,
+                        it.namespaceURI
+                    )
             }
             try {
                 handler.startElement(
