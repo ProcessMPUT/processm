@@ -1,6 +1,7 @@
 package processm.core.models.bpmn
 
 import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestFactory
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -58,6 +59,7 @@ class BPMNXMLServiceTest {
     private val nonStrictFiles = files.filter { nonStrict.any { p -> it.path.endsWith(p) } }
     private val idempotentFiles = strictFiles.filter { !nonIdempotent.any { p -> it.path.endsWith(p) } }
 
+    @Tag("BPMN")
     @TestFactory
     fun loadNonStrictWithStAX(): Iterable<DynamicTest> {
         return nonStrictFiles
@@ -70,6 +72,7 @@ class BPMNXMLServiceTest {
             .toList()
     }
 
+    @Tag("BPMN")
     @TestFactory
     fun loadStrictWithStAX(): Iterable<DynamicTest> {
         return strictFiles
@@ -82,6 +85,7 @@ class BPMNXMLServiceTest {
             }.toList()
     }
 
+    @Tag("BPMN")
     @TestFactory
     fun loadInvalidEncoding(): Iterable<DynamicTest> {
         return files
@@ -92,6 +96,7 @@ class BPMNXMLServiceTest {
             }.toList()
     }
 
+    @Tag("BPMN")
     @TestFactory
     fun loadStrictWithJAXB(): Iterable<DynamicTest> {
         return strictFiles
@@ -101,6 +106,7 @@ class BPMNXMLServiceTest {
             }.toList()
     }
 
+    @Tag("BPMN")
     @TestFactory
     fun loadAndSave(): Iterable<DynamicTest> {
         return idempotentFiles
