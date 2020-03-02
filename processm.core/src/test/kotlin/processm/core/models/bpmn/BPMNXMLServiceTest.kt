@@ -2,14 +2,9 @@ package processm.core.models.bpmn
 
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
-import processm.core.models.bpmn.jaxb.TDefinitions
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.lang.reflect.Field
-import javax.xml.bind.JAXBElement
-import javax.xml.bind.annotation.XmlAttribute
-import javax.xml.bind.annotation.XmlElement
 import javax.xml.stream.XMLStreamException
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -60,14 +55,31 @@ class BPMNXMLServiceTest {
         .iterator()
         .asSequence()
     private val strictFiles = files.filter { !(nonStrict + invalidEncoding).any { p -> it.path.endsWith(p) } }
+    private val nonStrictFiles = files.filter { nonStrict.any { p -> it.path.endsWith(p) } }
     private val idempotentFiles = strictFiles.filter { !nonIdempotent.any { p -> it.path.endsWith(p) } }
 
     @TestFactory
-    fun load(): Iterable<DynamicTest> {
-        return files
-            .filter { !invalidEncoding.any { p -> it.path.endsWith(p) } }
-            .map { DynamicTest.dynamicTest(it.path.replace(base, "")) { BPMNXMLService.load(it.inputStream()) } }
+    fun loadNonStrictWithStAX(): Iterable<DynamicTest> {
+        return nonStrictFiles
+            .map {
+                DynamicTest.dynamicTest(it.path.replace(base, "")) {
+                    val (value, warnings) = BPMNXMLService.load(it.inputStream())
+                    assertTrue { warnings.isNotEmpty() }
+                }
+            }
             .toList()
+    }
+
+    @TestFactory
+    fun loadStrictWithStAX(): Iterable<DynamicTest> {
+        return strictFiles
+            .map {
+                DynamicTest.dynamicTest(it.path.replace(base, ""))
+                {
+                    val (value, warnings) = BPMNXMLService.load(it.inputStream())
+                    assertTrue { warnings.isEmpty() }
+                }
+            }.toList()
     }
 
     @TestFactory
@@ -81,7 +93,7 @@ class BPMNXMLServiceTest {
     }
 
     @TestFactory
-    fun loadStrict(): Iterable<DynamicTest> {
+    fun loadStrictWithJAXB(): Iterable<DynamicTest> {
         return strictFiles
             .map {
                 DynamicTest.dynamicTest(it.path.replace(base, ""))

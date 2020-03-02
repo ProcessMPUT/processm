@@ -5,6 +5,7 @@ import org.xml.sax.helpers.AttributesImpl
 import processm.core.models.bpmn.jaxb.TDefinitions
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.*
 import javax.xml.bind.JAXBContext
 import javax.xml.bind.JAXBElement
 import javax.xml.bind.UnmarshallerHandler
@@ -13,6 +14,7 @@ import javax.xml.stream.XMLEventReader
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLOutputFactory
 import javax.xml.stream.events.*
+import kotlin.collections.ArrayList
 
 
 /**
@@ -23,6 +25,10 @@ import javax.xml.stream.events.*
 sealed class BPMNXMLService {
 
     private class Processor(val handler: UnmarshallerHandler, val reader: XMLEventReader) {
+
+        private val _warnings = ArrayList<Exception>()
+        val warnings: List<Exception> = Collections.unmodifiableList(_warnings)
+
         fun run(): Any? {
             while (reader.hasNext())
                 process(reader.nextEvent())
@@ -40,8 +46,10 @@ sealed class BPMNXMLService {
                 handler.endDocument()
             else if (event.isCharacters)
                 characters(event.asCharacters())
+            else if (event.eventType == XMLEvent.COMMENT)
+            //silently ignore
             else
-                println("${event.eventType} || " + event.javaClass)
+                throw IllegalStateException("eventType: ${event.eventType} class: ${event.javaClass}")
         }
 
         private val buffer = StringBuffer()
@@ -86,9 +94,9 @@ sealed class BPMNXMLService {
                     attributes(element)
                 )
             } catch (e: NumberFormatException) {
-                println(e)
+                _warnings.add(e)
             } catch (e: IllegalArgumentException) {
-                println(e)
+                _warnings.add(e)
             }
         }
 
@@ -107,14 +115,19 @@ sealed class BPMNXMLService {
         }
     }
 
+    data class Result(val value: TDefinitions, val warnings: List<Exception>)
+
     companion object {
         /**
          * Load a BPMN model from an XML using StAX parser
          */
-        internal fun load(inp: InputStream): TDefinitions {
+        internal fun load(inp: InputStream): Result {
             val u = JAXBContext.newInstance(TDefinitions::class.java).createUnmarshaller()
             val reader = XMLInputFactory.newInstance().createXMLEventReader(inp)
-            return (Processor(u.unmarshallerHandler, reader).run() as JAXBElement<TDefinitions>).value
+            //TODO expose Processor.warnings
+            val proc = Processor(u.unmarshallerHandler, reader)
+            val def = (proc.run() as JAXBElement<TDefinitions>).value
+            return Result(def, proc.warnings)
         }
 
         /**
