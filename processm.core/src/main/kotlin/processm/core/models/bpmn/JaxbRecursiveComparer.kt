@@ -1,5 +1,6 @@
 package processm.core.models.bpmn
 
+import org.w3c.dom.Element
 import processm.core.models.bpmn.jaxb.TDefinitions
 import java.lang.reflect.Field
 import javax.xml.bind.JAXBElement
@@ -51,6 +52,9 @@ class JaxbRecursiveComparer {
     }
 
     private fun compareOther(left: Any, right: Any): Boolean {
+        if (left is Element && right is Element) {
+            return left.toString() == right.toString()
+        }
         if (left is String && right is String) {
             val normalizer = Regex("\\s+")
             return normalizer.replace(left, " ") == normalizer.replace(right, " ")
