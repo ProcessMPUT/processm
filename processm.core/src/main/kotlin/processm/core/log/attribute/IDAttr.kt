@@ -12,4 +12,8 @@ class IDAttr(key: String, val value: String) : Attribute<String>(key) {
     override fun getValue() = this.value
     override val xesTag: String
         get() = "id"
+
+    override fun valueToString(): String {
+        return this.value
+    }
 }

@@ -1,5 +1,7 @@
 package processm.core.log.attribute
 
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
@@ -13,4 +15,11 @@ class DateTimeAttr(key: String, val value: Date) : Attribute<Date>(key) {
     override fun getValue() = this.value
     override val xesTag: String
         get() = "date"
+
+    /**
+     * Value to String formatting with ISO 8601
+     */
+    override fun valueToString(): String {
+        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC).format(this.value.toInstant())
+    }
 }
