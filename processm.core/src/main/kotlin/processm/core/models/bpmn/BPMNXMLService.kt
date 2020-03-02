@@ -104,14 +104,24 @@ sealed class BPMNXMLService {
 
     companion object {
         internal fun load(inp: InputStream): TDefinitions {
-            val u = JAXBContext.newInstance(TDefinitions::class.java).createUnmarshaller();
+            val u = JAXBContext.newInstance(TDefinitions::class.java).createUnmarshaller()
             val reader = XMLInputFactory.newInstance().createXMLEventReader(inp)
             return (Processor(u.unmarshallerHandler, reader).run() as JAXBElement<TDefinitions>).value
         }
 
+        internal fun loadStrict(inp: InputStream): TDefinitions {
+            val u = JAXBContext.newInstance(TDefinitions::class.java).createUnmarshaller()
+            return (u.unmarshal(inp) as JAXBElement<TDefinitions>).value
+        }
+
         internal fun save(def: TDefinitions, out: OutputStream) {
+            val wrap = JAXBElement<TDefinitions>(
+                QName("http://www.omg.org/spec/BPMN/20100524/MODEL", "definitions"),
+                def.javaClass,
+                def
+            )
             val writer = XMLOutputFactory.newInstance().createXMLEventWriter(out)
-            JAXBContext.newInstance(TDefinitions::class.java).createMarshaller().marshal(def, writer)
+            JAXBContext.newInstance(TDefinitions::class.java).createMarshaller().marshal(wrap, writer)
         }
     }
 }
