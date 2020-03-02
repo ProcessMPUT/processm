@@ -24,11 +24,11 @@ internal class JaxbRecursiveComparer {
             .filter { m -> m.canAccess(left) && m.canAccess(right) }
             .filter { m -> m.parameterCount == 0 }
             .filter { m ->
-                m.name.toLowerCase() in setOf(
+                setOf(
                     "get${prop.toLowerCase()}",
                     "is${prop.toLowerCase()}",
                     "has${prop.toLowerCase()}"
-                )
+                ).any { m.name.equals(it, true) }
             }
         return getters.isNotEmpty() && getters.any { getter ->
             this(getter.invoke(left), getter.invoke(right))
@@ -60,12 +60,15 @@ internal class JaxbRecursiveComparer {
         return result
     }
 
+    companion object {
+        private val normalizer = Regex("\\s+")
+    }
+
     private fun compareOther(left: Any, right: Any): Boolean {
         if (left is Element && right is Element) {
             return left.toString() == right.toString()
         }
         if (left is String && right is String) {
-            val normalizer = Regex("\\s+")
             return normalizer.replace(left, " ") == normalizer.replace(right, " ")
         }
         if (left is Map<*, *> && right is Map<*, *>) {

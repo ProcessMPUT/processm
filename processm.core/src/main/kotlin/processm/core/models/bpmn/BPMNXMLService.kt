@@ -123,7 +123,6 @@ object BPMNXMLService {
     internal fun load(inp: InputStream): Result {
         val u = JAXBContext.newInstance(TDefinitions::class.java).createUnmarshaller()
         val reader = XMLInputFactory.newInstance().createXMLEventReader(inp)
-        //TODO expose Processor.warnings
         val proc = Processor(u.unmarshallerHandler, reader)
         val def = (proc.run() as JAXBElement<TDefinitions>).value
         return Result(def, proc.warnings)
