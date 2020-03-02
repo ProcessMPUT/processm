@@ -69,59 +69,6 @@ class BPMNXMLServiceTest {
             }.toList()
     }
 
-    private class JaxbRecursiveComparer {
-
-        private val seen = HashSet<Pair<Any, Any>>()
-
-        private fun processAnn(left: Any, right: Any, ann: String): Boolean {
-            val getters = left.javaClass.declaredMethods
-                .filter { m -> m.canAccess(left) && m.canAccess(right) }
-                .filter { m -> m.parameterCount == 0 }
-                .filter { m ->
-                    m.name.toLowerCase() in setOf(
-                        "get${ann.toLowerCase()}",
-                        "is${ann.toLowerCase()}",
-                        "has${ann.toLowerCase()}"
-                    )
-                }
-            return getters.isNotEmpty() && getters.any { getter ->
-                this(getter.invoke(left), getter.invoke(right))
-            }
-        }
-
-        private fun processField(left: Any, right: Any, field: Field): Boolean {
-            return (field.declaredAnnotations.filterIsInstance<XmlElement>().map { ann -> ann.name }.asSequence() +
-                    field.declaredAnnotations.filterIsInstance<XmlAttribute>().map { ann -> ann.name }.asSequence())
-                .all { ann -> processAnn(left, right, ann) }
-        }
-
-        operator fun invoke(_left: Any?, _right: Any?): Boolean {
-            if (_left == null || _right == null)
-                return _left == null && _right == null
-            var left: Any = _left
-            var right: Any = _right
-            if (left is JAXBElement<*>)
-                left = left.value
-            if (right is JAXBElement<*>)
-                right = right.value
-            if (left is Iterable<*> && right is Iterable<*>) {
-                return (left zip right).all { (l, r) -> this(l, r) }
-            } else if (left.javaClass.packageName != TDefinitions::class.java.packageName || right.javaClass.packageName != TDefinitions::class.java.packageName) {
-                return left == right
-            } else if (left::class == right::class) {
-                if (Pair(left, right) in seen || Pair(right, left) in seen) {
-                    return true
-                } else {
-                    seen.add(Pair(left, right))
-                    return left.javaClass.declaredFields
-                        .all { field -> processField(left, right, field) }
-                }
-            } else {
-                return false
-            }
-        }
-    }
-
     @TestFactory
     fun loadAndSave(): Iterable<DynamicTest> {
         return strictFiles
