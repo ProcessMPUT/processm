@@ -59,6 +59,9 @@ class JaxbRecursiveComparer {
             val normalizer = Regex("\\s+")
             return normalizer.replace(left, " ") == normalizer.replace(right, " ")
         }
+        if (left is Map<*, *> && right is Map<*, *>) {
+            return left.keys == right.keys && left.keys.all { key -> this(left[key], right[key]) }
+        }
         return left == right
     }
 

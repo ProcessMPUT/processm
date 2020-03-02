@@ -323,4 +323,15 @@ class JaxbRecursiveComparerTest {
         assertFalse(cmp("a c", "a b"))
     }
 
+    @Test
+    fun sameOtherAttrsConsideringSpaceNormalization() {
+        val a = TProperty()
+        a.otherAttributes[QName("a")] = "1 2"
+        a.otherAttributes[QName("b")] = "2\n1"
+        val b = TProperty()
+        b.otherAttributes[QName("a")] = "1 2"
+        b.otherAttributes[QName("b")] = "2 1"
+        assertTrue(JaxbRecursiveComparer()(a, b))
+    }
+
 }
