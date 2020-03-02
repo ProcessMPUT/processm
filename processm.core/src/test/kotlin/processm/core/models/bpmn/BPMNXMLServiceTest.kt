@@ -3,12 +3,14 @@ package processm.core.models.bpmn
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestFactory
+import processm.core.models.bpmn.jaxb.TPerformer
+import processm.core.models.bpmn.jaxb.TProcess
+import processm.core.models.bpmn.jaxb.TUserTask
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.xml.stream.XMLStreamException
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class BPMNXMLServiceTest {
     private val invalidEncoding = setOf(
@@ -125,5 +127,21 @@ class BPMNXMLServiceTest {
                     assertTrue { JaxbRecursiveComparer()(a, b) }
                 }
             }.toList()
+    }
+
+    @Test
+    fun suspiciousXML() {
+        val a = BPMNXMLService.loadStrict(File("src/test/resources/suspicious1.xml").inputStream())
+        assertEquals(
+            "_404cd32e-8789-46c5-ad72-cdedb860665d",
+            (((a.rootElement[1].value as TProcess).flowElement[0].value as TUserTask).resourceRole[0].value as TPerformer).resourceRef.localPart
+        )
+        val out = ByteArrayOutputStream()
+        BPMNXMLService.save(a, out)
+        val b = BPMNXMLService.loadStrict(ByteArrayInputStream(out.toByteArray()))
+        assertEquals(
+            "_404cd32e-8789-46c5-ad72-cdedb860665d",
+            (((b.rootElement[1].value as TProcess).flowElement[0].value as TUserTask).resourceRole[0].value as TPerformer).resourceRef.localPart
+        )
     }
 }
