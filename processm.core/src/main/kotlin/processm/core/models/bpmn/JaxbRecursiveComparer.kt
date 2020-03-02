@@ -6,7 +6,16 @@ import java.lang.reflect.Field
 import javax.xml.bind.JAXBElement
 import javax.xml.bind.annotation.*
 
-class JaxbRecursiveComparer {
+/**
+ * A helper class to recursively compare two JAXB objects.
+ * Heavily uses reflections to detect fields, and then does a bit of guessing to detect appropriate getters.
+ * Supports whitespace-agnostic string comparison by replacing any sequence of whitespaces (incl. new lines etc.) to a single space before the comparison.
+ *
+ * This is somewhat horrible, but:
+ * * XmlUnit was way too picky, even configured to ignore more or less everything
+ * * Equals and Simple Equals plugins from [JAXB2-Basics](https://github.com/highsource/jaxb2-basics) were throwing StackOverflowError like crazy
+ */
+internal class JaxbRecursiveComparer {
 
     private val seen = HashSet<Pair<Any, Any>>()
 
