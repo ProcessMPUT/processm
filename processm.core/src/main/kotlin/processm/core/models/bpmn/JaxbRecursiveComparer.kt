@@ -50,6 +50,14 @@ class JaxbRecursiveComparer {
         return result
     }
 
+    private fun compareOther(left: Any, right: Any): Boolean {
+        if (left is String && right is String) {
+            val normalizer = Regex("\\s+")
+            return normalizer.replace(left, " ") == normalizer.replace(right, " ")
+        }
+        return left == right
+    }
+
     operator fun invoke(_left: Any?, _right: Any?): Boolean {
         if (_left == null || _right == null)
             return _left == null && _right == null
@@ -62,7 +70,7 @@ class JaxbRecursiveComparer {
         if (left is Iterable<*> && right is Iterable<*>) {
             return (left zip right).all { (l, r) -> this(l, r) }
         } else if (left.javaClass.packageName != TDefinitions::class.java.packageName || right.javaClass.packageName != TDefinitions::class.java.packageName) {
-            return left == right
+            return compareOther(left, right)
         } else if (left::class == right::class) {
             if (Pair(left, right) in seen || Pair(right, left) in seen) {
                 return true

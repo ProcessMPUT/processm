@@ -315,4 +315,12 @@ class JaxbRecursiveComparerTest {
         assertFalse(JaxbRecursiveComparer()(a, b))
     }
 
+    @Test
+    fun normalizeWhitespaces() {
+        val cmp = JaxbRecursiveComparer()
+        assertTrue(cmp("a\nb", "a b"))
+        assertTrue(cmp("a  b", "a b"))
+        assertFalse(cmp("a c", "a b"))
+    }
+
 }
