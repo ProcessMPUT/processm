@@ -3,6 +3,7 @@ package processm.core.models.causalnet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class DBSerializerTest {
 
@@ -66,6 +67,18 @@ class DBSerializerTest {
         assertEquals(mm.outgoing, fetched.outgoing)
         assertEquals(mm.joins, fetched.joins)
         assertEquals(mm.splits, fetched.splits)
+    }
+
+    @Test
+    fun `special nodes handling`() {
+        val orig = MutableModel()
+        val id = DBSerializer.insert(orig)
+        val copy = DBSerializer.fetch(id)
+        assertEquals(orig.instances, copy.instances)
+        assertEquals(orig.start, copy.start)
+        assertEquals(orig.start, copy.start)
+        assertTrue(copy.start.special)
+        assertTrue(copy.end.special)
     }
 
     @Test
