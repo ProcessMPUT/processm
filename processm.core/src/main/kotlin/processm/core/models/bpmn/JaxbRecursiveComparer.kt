@@ -17,7 +17,7 @@ import javax.xml.namespace.QName
  * * XmlUnit was way too picky, even configured to ignore more or less everything
  * * Equals and Simple Equals plugins from [JAXB2-Basics](https://github.com/highsource/jaxb2-basics) were throwing StackOverflowError like crazy
  */
-internal class JaxbRecursiveComparer {
+internal class JaxbRecursiveComparer(val ignoreNSInQName: Boolean = false) {
 
     private val seen = HashSet<Pair<Any, Any>>()
 
@@ -69,13 +69,15 @@ internal class JaxbRecursiveComparer {
     }
 
     private fun compareOther(left: Any, right: Any): Boolean {
+        logger().trace("OTHER $left $right (equals: ${left == right})")
         if (left is Element && right is Element) {
             return left.toString() == right.toString()
         }
         if (left is QName && right is QName) {
-            if (left.namespaceURI.isEmpty() || right.namespaceURI.isEmpty())
-                return left.localPart == right.localPart
-            else
+            if (ignoreNSInQName && left != right && left.localPart == right.localPart) {
+                logger().debug("Difference in NS of QNames: $left $right, assuming they are identical")
+                return true
+            } else
                 return left == right
         }
         if (left is String && right is String) {

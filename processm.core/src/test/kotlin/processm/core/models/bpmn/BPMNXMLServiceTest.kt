@@ -56,7 +56,8 @@ class BPMNXMLServiceTest {
     private val problematicFiles = setOf(
         "/BPMN+ Composer V.10.4/C.4.0-export.bpmn",
         "/Aeneis 5.7.89.2400/C.1.0-roundtrip.bpmn",
-        "/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.2-roundtrip.bpmn"
+        "/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.2-roundtrip.bpmn",
+        "/ADONIS NP 8.0/C.3.0-roundtrip.bpmn"   //StAX creates TExpression from <timeDuration xsi:type="tFormalExpression"><![CDATA[PT2H]]></timeDuration> and JAXB creates TFormalExpression
     )
 
     /**
@@ -74,6 +75,7 @@ class BPMNXMLServiceTest {
     private val strictFiles = files.filter { !(nonStrict + invalidEncoding).any { p -> it.path.endsWith(p) } }
     private val nonStrictFiles = files.filter { nonStrict.any { p -> it.path.endsWith(p) } }
     private val idempotentFiles = strictFiles.filter { !nonIdempotent.any { p -> it.path.endsWith(p) } }
+    private val nonIdempotentFiles = strictFiles.filter { nonIdempotent.any { p -> it.path.endsWith(p) } }
 
     @Tag("BPMN")
     @TestFactory
@@ -90,8 +92,8 @@ class BPMNXMLServiceTest {
 
     @Tag("BPMN")
     @TestFactory
-    fun loadStrictWithStAX(): Iterable<DynamicTest> {
-        return strictFiles
+    fun `load non idempotent with StAX`(): Iterable<DynamicTest> {
+        return nonIdempotentFiles
             .map {
                 DynamicTest.dynamicTest(it.path.replace(base, ""))
                 {
@@ -111,7 +113,7 @@ class BPMNXMLServiceTest {
                     val (stax, warnings) = BPMNXMLService.load(it.inputStream())
                     val jaxb = BPMNXMLService.loadStrict(it.inputStream())
                     assertTrue { warnings.isEmpty() }
-                    assertTrue { JaxbRecursiveComparer()(stax, jaxb) }
+                    assertTrue { JaxbRecursiveComparer(true)(stax, jaxb) }
                 }
             }.toList()
     }
