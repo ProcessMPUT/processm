@@ -187,7 +187,8 @@ object DBSerializer {
      */
     fun delete(modelId: Int) {
         transaction(DBConnectionPool.database) {
-            DAOModel.findById(modelId)?.delete()
+            val model = DAOModel.findById(modelId) ?: throw NoSuchElementException()
+            model.delete()
         }
     }
 }

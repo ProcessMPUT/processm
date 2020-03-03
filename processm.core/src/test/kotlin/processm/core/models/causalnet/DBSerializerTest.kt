@@ -89,4 +89,14 @@ class DBSerializerTest {
         DBSerializer.delete(id)
         assertFailsWith<NoSuchElementException> { DBSerializer.fetch(id) }
     }
+
+    @Test
+    fun `fetch nonexisting model`() {
+        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(-1) }
+    }
+
+    @Test
+    fun `delete nonexisting model`() {
+        assertFailsWith<NoSuchElementException> { DBSerializer.delete(-1) }
+    }
 }
