@@ -103,6 +103,21 @@ class BPMNXMLServiceTest {
 
     @Tag("BPMN")
     @TestFactory
+    fun `load idempotent with StAX and compare with JAXB`(): Iterable<DynamicTest> {
+        return idempotentFiles
+            .map {
+                DynamicTest.dynamicTest(it.path.replace(base, ""))
+                {
+                    val (stax, warnings) = BPMNXMLService.load(it.inputStream())
+                    val jaxb = BPMNXMLService.loadStrict(it.inputStream())
+                    assertTrue { warnings.isEmpty() }
+                    assertTrue { JaxbRecursiveComparer()(stax, jaxb) }
+                }
+            }.toList()
+    }
+
+    @Tag("BPMN")
+    @TestFactory
     fun loadInvalidEncoding(): Iterable<DynamicTest> {
         return files
             .filter { invalidEncoding.any { p -> it.path.endsWith(p) } }

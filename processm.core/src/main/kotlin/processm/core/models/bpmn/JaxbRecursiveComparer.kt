@@ -5,6 +5,7 @@ import processm.core.models.bpmn.jaxb.TDefinitions
 import java.lang.reflect.Field
 import javax.xml.bind.JAXBElement
 import javax.xml.bind.annotation.*
+import javax.xml.namespace.QName
 
 /**
  * A helper class to recursively compare two JAXB objects.
@@ -67,6 +68,12 @@ internal class JaxbRecursiveComparer {
     private fun compareOther(left: Any, right: Any): Boolean {
         if (left is Element && right is Element) {
             return left.toString() == right.toString()
+        }
+        if (left is QName && right is QName) {
+            if (left.namespaceURI.isEmpty() || right.namespaceURI.isEmpty())
+                return left.localPart == right.localPart
+            else
+                return left == right
         }
         if (left is String && right is String) {
             return normalizer.replace(left, " ") == normalizer.replace(right, " ")
