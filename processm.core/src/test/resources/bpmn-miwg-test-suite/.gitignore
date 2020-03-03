@@ -1,0 +1,14 @@
+/.idea
+*.~vsd
+Thumbs.db
+~$*.xlsx
+.DS_Store
+.project
+.classpath
+.settings
+/target
+/bin/
+*export.txt
+*export.xml
+*roundtrip.txt
+*roundtrip.xml

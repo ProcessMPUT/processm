@@ -171,6 +171,26 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.jvnet.jaxb2.maven2</groupId>
+                <artifactId>maven-jaxb2-plugin</artifactId>
+                <version>0.14.0</version>
+                <executions>
+                    <execution>
+                        <id>generate</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <schemaDirectory>src/bpmn</schemaDirectory>
+                    <schemaIncludes>
+                        <include>*.xsd</include>
+                    </schemaIncludes>
+                    <generatePackage>processm.core.models.bpmn.jaxb</generatePackage>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
