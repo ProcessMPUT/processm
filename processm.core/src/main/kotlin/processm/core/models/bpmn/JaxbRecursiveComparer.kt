@@ -1,6 +1,7 @@
 package processm.core.models.bpmn
 
 import org.w3c.dom.Element
+import processm.core.logging.logger
 import processm.core.models.bpmn.jaxb.TDefinitions
 import java.lang.reflect.Field
 import javax.xml.bind.JAXBElement
@@ -31,6 +32,7 @@ internal class JaxbRecursiveComparer {
                     "has${prop.toLowerCase()}"
                 ).any { m.name.equals(it, true) }
             }
+        logger().trace("PROP $prop #getters=${getters.size}")
         return getters.isNotEmpty() && getters.any { getter ->
             this(getter.invoke(left), getter.invoke(right))
         }
@@ -45,6 +47,7 @@ internal class JaxbRecursiveComparer {
 
     private fun compareSameClass(left: Any, right: Any): Boolean {
         var clazz: Class<in Any>? = left.javaClass
+        logger().trace("SAME $${clazz}")
         var result = true
         while (result && clazz != null && clazz.packageName == TDefinitions::class.java.packageName) {
             var props: Iterable<String> = clazz.annotations
@@ -85,6 +88,7 @@ internal class JaxbRecursiveComparer {
     }
 
     operator fun invoke(_left: Any?, _right: Any?): Boolean {
+        logger().trace("NULL ${_left == null} ${_right == null}")
         if (_left == null || _right == null)
             return _left == null && _right == null
         var left: Any = _left
@@ -93,6 +97,7 @@ internal class JaxbRecursiveComparer {
             left = left.value
         if (right is JAXBElement<*>)
             right = right.value
+        logger().trace("CMP ${left.javaClass} ${right.javaClass}")
         if (left is Iterable<*> && right is Iterable<*>) {
             return (left zip right).all { (l, r) -> this(l, r) }
         } else if (left.javaClass.packageName != TDefinitions::class.java.packageName || right.javaClass.packageName != TDefinitions::class.java.packageName) {
