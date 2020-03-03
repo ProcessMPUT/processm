@@ -34,22 +34,36 @@ class BPMNXMLServiceTest {
     )
 
     /**
-     * These files behave strangely - their deserialization, serialization and deserialization again does not lead to the same results.
-     * They mostly fail in comparison with something being null, while the other thing is not null
+     * Bpmn.io displays warnings while loading these files, as documented in
+     * https://git.processtom.com/processm-team/processm/merge_requests/52
      */
-    private val nonIdempotent = setOf(
-        "/BPMN+ Composer V.10.4/C.4.0-export.bpmn",
+    private val invalidFiles = setOf(
         "/BPMN+ Composer V.10.4/B.2.0-export.bpmn",
         "/W4 BPMN+ Composer V.9.4/B.2.0-export.bpmn",
-        "/Aeneis 5.7.89.2400/C.1.0-roundtrip.bpmn",
         "/Aeneis 5.7.89.2400/A.4.1-roundtrip.bpmn",
         "/MID Innovator 12.3.1.20212/C.1.1-export.bpmn",
         "/MID Innovator 12.3.1.20212/C.1.1-roundtrip.bpmn",
         "/Signavio Process Editor 10.0.0/B.2.0-roundtrip.bpmn",
         "/ModelFoundry 1.1.1/B.2.0-roundtrip.bpmn",
-        "/ARIS Architect 9.8.3/Signavio 9.7.0/B.2.0-export-rountrip.bpmn",
+        "/ARIS Architect 9.8.3/Signavio 9.7.0/B.2.0-export-rountrip.bpmn"
+    )
+
+    /**
+     * These files behave strangely and this should be further investigated, see issue #59
+     *
+     * @see suspiciousXML
+     */
+    private val problematicFiles = setOf(
+        "/BPMN+ Composer V.10.4/C.4.0-export.bpmn",
+        "/Aeneis 5.7.89.2400/C.1.0-roundtrip.bpmn",
         "/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.2-roundtrip.bpmn"
     )
+
+    /**
+     * These files behave strangely - their deserialization, serialization and deserialization again does not lead to the same results.
+     * They mostly fail in comparison with something being null, while the other thing is not null
+     */
+    private val nonIdempotent = invalidFiles + problematicFiles
 
     private val base = "src/test/resources/bpmn-miwg-test-suite"
     private val files = File(base)
@@ -130,6 +144,7 @@ class BPMNXMLServiceTest {
     }
 
     @Test
+    @Ignore("To be investigated, issue #59")
     fun suspiciousXML() {
         val a = BPMNXMLService.loadStrict(File("src/test/resources/suspicious1.xml").inputStream())
         assertEquals(
