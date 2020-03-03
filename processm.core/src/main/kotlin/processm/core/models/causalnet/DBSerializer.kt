@@ -1,56 +1,92 @@
 package processm.core.models.causalnet
 
+import org.jetbrains.exposed.dao.IntEntity
+import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.dao.UUIDEntity
+import org.jetbrains.exposed.dao.UUIDEntityClass
+import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.DBConnectionPool
+import java.util.*
+import kotlin.NoSuchElementException
 
-/**
- * A replacement for [org.jetbrains.exposed.dao.id.IntIdTable], to avoid mixing DAO and DSL
- */
-internal abstract class TIntId : Table() {
-    val id = integer("id").autoIncrement()
-    override val primaryKey: PrimaryKey = PrimaryKey(id)
+internal class DAOModel(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<DAOModel>(TModel)
+
+    var start by TModel.start
+    var end by TModel.end
+    val nodes by DAONode referrersOn TNode.model
+    val dependencies by DAODependency referrersOn TDependency.model
+    val bindings by DAOBinding referrersOn TBinding.model
 }
 
-internal object TModel : TIntId() {
-    val start = (integer("start") references TNode.id).nullable()
-    val end = (integer("end") references TNode.id).nullable()
+internal object TModel : IntIdTable() {
+    val start = reference("start", TNode, onDelete = ReferenceOption.CASCADE).nullable()
+    val end = reference("end", TNode, onDelete = ReferenceOption.CASCADE).nullable()
 }
 
-internal object TNode : TIntId() {
+internal class DAONode(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<DAONode>(TNode)
+
+    var activity by TNode.activity
+    var instance by TNode.instance
+    var special by TNode.special
+    var model by DAOModel referencedOn TNode.model
+}
+
+internal object TNode : IntIdTable() {
     val activity = varchar("activity", 100)
     val instance = varchar("instance", 100)
     val special = bool("special")
-    val model = integer("model") references TModel.id
+    val model = reference("model", TModel, onDelete = ReferenceOption.CASCADE)
 
     init {
         index(true, activity, instance, special, model)
     }
 }
 
-internal object TDependency : TIntId() {
-    val depsource = reference("source", TNode.id)
-    val deptarget = reference("target", TNode.id)
-    val model = integer("model") references TModel.id
+internal class DAODependency(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<DAODependency>(TDependency)
+
+    var source by TDependency.depsource
+    var target by TDependency.deptarget
+    var model by DAOModel referencedOn TDependency.model
+}
+
+internal object TDependency : IntIdTable() {
+    val depsource = reference("source", TNode, onDelete = ReferenceOption.CASCADE)
+    val deptarget = reference("target", TNode, onDelete = ReferenceOption.CASCADE)
+    val model = reference("model", TModel, onDelete = ReferenceOption.CASCADE)
 
     init {
         index(true, depsource, deptarget)
     }
 }
 
-internal object TBinding : TIntId() {
-    val isJoin = bool("isjoin")
-    val model = integer("model") references TModel.id
+/**
+ * [UUIDEntity] instead of [IntEntity] to provide randomized UUIDs by hand, to avoid splitting the inserting transaction into two
+ */
+internal class DAOBinding(id: EntityID<UUID>) : UUIDEntity(id) {
+    companion object : UUIDEntityClass<DAOBinding>(TBinding)
+
+    var isJoin by TBinding.isJoin
+    var model by DAOModel referencedOn TBinding.model
+    var dependencies by DAODependency via TDependencyBindings
 }
 
-internal object TDependencyBindings : TIntId() {
-    val dependency = reference("dependency", TDependency.id)
-    val binding = reference("binding", TBinding.id)
-    val model = integer("model") references TModel.id
+internal object TBinding : UUIDTable() {
+    val isJoin = bool("isjoin")
+    val model = reference("model", TModel, onDelete = ReferenceOption.CASCADE)
+}
 
-    init {
-        index(true, dependency, binding, model)
-    }
+internal object TDependencyBindings : Table() {
+    val dependency = reference("dependency", TDependency, onDelete = ReferenceOption.CASCADE)
+    val binding = reference("binding", TBinding, onDelete = ReferenceOption.CASCADE)
+
+    override val primaryKey = PrimaryKey(dependency, binding)
 }
 
 object DBSerializer {
@@ -65,42 +101,35 @@ object DBSerializer {
         transaction(DBConnectionPool.database) {
             addLogger(StdOutSqlLogger)
             SchemaUtils.createMissingTablesAndColumns(TNode, TModel, TDependency, TDependencyBindings, TBinding)
-            val modelId = TModel.insert { } get TModel.id
-            result = modelId
-            val nodeId = model.instances.map { node ->
-                node to (TNode.insert {
-                    it[activity] = node.activity
-                    it[instance] = node.instanceId
-                    it[special] = node.special
-                    it[TNode.model] = modelId
-                } get TNode.id)
-            }.toMap()
-            TModel.update({ TModel.id eq modelId }) {
-                it[start] = nodeId[model.start]
-                it[end] = nodeId[model.end]
+            val daomodel = DAOModel.new {
             }
-            val depId = model.outgoing.values.flatten().map { dep ->
-                dep to (TDependency.insert {
-                    it[depsource] = nodeId.getValue(dep.source)
-                    it[deptarget] = nodeId.getValue(dep.target)
-                    it[TDependency.model] = modelId
-                } get TDependency.id)
+            val node2DAONode = model.instances.map { node ->
+                node to DAONode.new {
+                    activity = node.activity
+                    instance = node.instanceId
+                    special = node.special
+                    this.model = daomodel
+                }
+            }.toMap()
+            daomodel.start = node2DAONode.getValue(model.start).id
+            daomodel.end = node2DAONode.getValue(model.end).id
+            val dep2DAODep = model.outgoing.values.flatten().map { dep ->
+                dep to DAODependency.new {
+                    source = node2DAONode.getValue(dep.source).id
+                    target = node2DAONode.getValue(dep.target).id
+                    this.model = daomodel
+                }
             }.toMap()
             val tmp = model.joins.values.asSequence().flatten().map { join -> Pair(join, true) } +
                     model.splits.values.asSequence().flatten().map { join -> Pair(join, false) }
             tmp.forEach { (bdg, flag) ->
-                val bindingId = TBinding.insert {
-                    it[isJoin] = flag
-                    it[TBinding.model] = modelId
-                } get TBinding.id
-                bdg.dependencies.forEach { dep: Dependency ->
-                    TDependencyBindings.insert {
-                        it[binding] = bindingId
-                        it[dependency] = depId.getValue(dep)
-                        it[TDependencyBindings.model] = modelId
-                    }
+                DAOBinding.new {
+                    isJoin = flag
+                    this.model = daomodel
+                    dependencies = SizedCollection(bdg.dependencies.map { dep -> dep2DAODep.getValue(dep) })
                 }
             }
+            result = daomodel.id.value
         }
         if (result != null)
             return result!!
@@ -116,28 +145,25 @@ object DBSerializer {
     fun fetch(modelId: Int): MutableModel {
         var result: MutableModel? = null
         transaction(DBConnectionPool.database) {
-            val idNode = TNode.select { TNode.model eq modelId }
-                .map { row -> row[TNode.id] to Node(row[TNode.activity], row[TNode.instance], row[TNode.special]) }
+            val daomodel = DAOModel.findById(modelId) ?: throw NoSuchElementException()
+            val idNode = daomodel.nodes
+                .map { row -> row.id to Node(row.activity, row.instance, row.special) }
                 .toMap()
-            val modelRow = TModel.select { TModel.id eq modelId }.single()
-            val startId = modelRow[TModel.start]
-            val endId = modelRow[TModel.end]
-            if (startId == null || endId == null)
+            var start = daomodel.start
+            var end = daomodel.end
+            if (start == null || end == null)
                 throw IllegalStateException("start or end is null") //this means that DB went bonkers
-            val mm = MutableModel(start = idNode.getValue(startId), end = idNode.getValue(endId))
+            val mm = MutableModel(start = idNode.getValue(start), end = idNode.getValue(end))
             mm.addInstance(*idNode.values.toTypedArray())
-            val idDep = TDependency.select { TDependency.model eq modelId }.map { row ->
-                row[TDependency.id] to Dependency(
-                    idNode.getValue(row[TDependency.depsource]),
-                    idNode.getValue(row[TDependency.deptarget])
+            val idDep = daomodel.dependencies.map { row ->
+                row to mm.addDependency(
+                    idNode.getValue(row.source),
+                    idNode.getValue(row.target)
                 )
             }.toMap()
-            idDep.values.forEach { dep -> mm.addDependency(dep) }
-            TBinding.select { TBinding.model eq modelId }.forEach { bindingRow ->
-                val deps = TDependencyBindings.select { TDependencyBindings.binding eq bindingRow[TBinding.id] }
-                    .map { db -> idDep.getValue(db[TDependencyBindings.dependency]) }
-                    .toSet()
-                if (bindingRow[TBinding.isJoin])
+            daomodel.bindings.forEach { row ->
+                val deps = row.dependencies.map { idDep.getValue(it) }.toSet()
+                if (row.isJoin)
                     mm.addJoin(Join(deps))
                 else
                     mm.addSplit(Split(deps))
@@ -155,15 +181,7 @@ object DBSerializer {
      */
     fun delete(modelId: Int) {
         transaction(DBConnectionPool.database) {
-            TDependencyBindings.deleteWhere { TDependencyBindings.model eq modelId }
-            TBinding.deleteWhere { TBinding.model eq modelId }
-            TDependency.deleteWhere { TDependency.model eq modelId }
-            TModel.update({ TModel.id eq modelId }) {
-                it[start] = null
-                it[end] = null
-            }
-            TNode.deleteWhere { TNode.model eq modelId }
-            TModel.deleteWhere { TModel.id eq modelId }
+            DAOModel.findById(modelId)?.delete()
         }
     }
 }
