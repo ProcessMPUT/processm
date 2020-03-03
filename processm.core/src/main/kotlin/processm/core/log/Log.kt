@@ -68,4 +68,27 @@ open class Log : XESElement() {
         internal set(value) {
             field = value?.intern()
         }
+
+    /**
+     * Equals if both are Log and contains the same attributes
+     */
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other !is Log) return false
+        return features == other.features && extensionsInternal == other.extensionsInternal
+                && traceGlobalsInternal == other.traceGlobalsInternal && eventGlobalsInternal == other.eventGlobalsInternal
+                && traceClassifiersInternal == other.traceClassifiersInternal && eventClassifiersInternal == other.eventClassifiersInternal
+                && attributesInternal == other.attributesInternal
+    }
+
+    override fun hashCode(): Int {
+        var result = extensionsInternal.hashCode()
+        result = 31 * result + traceGlobalsInternal.hashCode()
+        result = 31 * result + eventGlobalsInternal.hashCode()
+        result = 31 * result + traceClassifiersInternal.hashCode()
+        result = 31 * result + eventClassifiersInternal.hashCode()
+        result = 31 * result + attributesInternal.hashCode()
+        result = 31 * result + (features?.hashCode() ?: 0)
+        return result
+    }
 }
