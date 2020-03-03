@@ -14,34 +14,34 @@ import java.util.*
 import kotlin.NoSuchElementException
 
 internal class DAOModel(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<DAOModel>(TModel)
+    companion object : IntEntityClass<DAOModel>(CausalNetModel)
 
-    var start by TModel.start
-    var end by TModel.end
-    val nodes by DAONode referrersOn TNode.model
-    val dependencies by DAODependency referrersOn TDependency.model
-    val bindings by DAOBinding referrersOn TBinding.model
+    var start by CausalNetModel.start
+    var end by CausalNetModel.end
+    val nodes by DAONode referrersOn CausalNetNode.model
+    val dependencies by DAODependency referrersOn CausalNetDependency.model
+    val bindings by DAOBinding referrersOn CausalNetBinding.model
 }
 
-internal object TModel : IntIdTable() {
-    val start = reference("start", TNode, onDelete = ReferenceOption.CASCADE).nullable()
-    val end = reference("end", TNode, onDelete = ReferenceOption.CASCADE).nullable()
+internal object CausalNetModel : IntIdTable() {
+    val start = reference("start", CausalNetNode, onDelete = ReferenceOption.CASCADE).nullable()
+    val end = reference("end", CausalNetNode, onDelete = ReferenceOption.CASCADE).nullable()
 }
 
 internal class DAONode(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<DAONode>(TNode)
+    companion object : IntEntityClass<DAONode>(CausalNetNode)
 
-    var activity by TNode.activity
-    var instance by TNode.instance
-    var special by TNode.special
-    var model by DAOModel referencedOn TNode.model
+    var activity by CausalNetNode.activity
+    var instance by CausalNetNode.instance
+    var special by CausalNetNode.special
+    var model by DAOModel referencedOn CausalNetNode.model
 }
 
-internal object TNode : IntIdTable() {
+internal object CausalNetNode : IntIdTable() {
     val activity = varchar("activity", 100)
     val instance = varchar("instance", 100)
     val special = bool("special")
-    val model = reference("model", TModel, onDelete = ReferenceOption.CASCADE)
+    val model = reference("model", CausalNetModel, onDelete = ReferenceOption.CASCADE)
 
     init {
         index(true, activity, instance, special, model)
@@ -49,17 +49,17 @@ internal object TNode : IntIdTable() {
 }
 
 internal class DAODependency(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<DAODependency>(TDependency)
+    companion object : IntEntityClass<DAODependency>(CausalNetDependency)
 
-    var source by TDependency.depsource
-    var target by TDependency.deptarget
-    var model by DAOModel referencedOn TDependency.model
+    var source by CausalNetDependency.depsource
+    var target by CausalNetDependency.deptarget
+    var model by DAOModel referencedOn CausalNetDependency.model
 }
 
-internal object TDependency : IntIdTable() {
-    val depsource = reference("source", TNode, onDelete = ReferenceOption.CASCADE)
-    val deptarget = reference("target", TNode, onDelete = ReferenceOption.CASCADE)
-    val model = reference("model", TModel, onDelete = ReferenceOption.CASCADE)
+internal object CausalNetDependency : IntIdTable() {
+    val depsource = reference("source", CausalNetNode, onDelete = ReferenceOption.CASCADE)
+    val deptarget = reference("target", CausalNetNode, onDelete = ReferenceOption.CASCADE)
+    val model = reference("model", CausalNetModel, onDelete = ReferenceOption.CASCADE)
 
     init {
         index(true, depsource, deptarget)
@@ -70,21 +70,21 @@ internal object TDependency : IntIdTable() {
  * [UUIDEntity] instead of [IntEntity] to provide randomized UUIDs by hand, to avoid splitting the inserting transaction into two
  */
 internal class DAOBinding(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<DAOBinding>(TBinding)
+    companion object : UUIDEntityClass<DAOBinding>(CausalNetBinding)
 
-    var isJoin by TBinding.isJoin
-    var model by DAOModel referencedOn TBinding.model
-    var dependencies by DAODependency via TDependencyBindings
+    var isJoin by CausalNetBinding.isJoin
+    var model by DAOModel referencedOn CausalNetBinding.model
+    var dependencies by DAODependency via CausalNetDependencyBindings
 }
 
-internal object TBinding : UUIDTable() {
+internal object CausalNetBinding : UUIDTable() {
     val isJoin = bool("isjoin")
-    val model = reference("model", TModel, onDelete = ReferenceOption.CASCADE)
+    val model = reference("model", CausalNetModel, onDelete = ReferenceOption.CASCADE)
 }
 
-internal object TDependencyBindings : Table() {
-    val dependency = reference("dependency", TDependency, onDelete = ReferenceOption.CASCADE)
-    val binding = reference("binding", TBinding, onDelete = ReferenceOption.CASCADE)
+internal object CausalNetDependencyBindings : Table() {
+    val dependency = reference("dependency", CausalNetDependency, onDelete = ReferenceOption.CASCADE)
+    val binding = reference("binding", CausalNetBinding, onDelete = ReferenceOption.CASCADE)
 
     override val primaryKey = PrimaryKey(dependency, binding)
 }
@@ -100,7 +100,13 @@ object DBSerializer {
         var result: Int? = null
         transaction(DBConnectionPool.database) {
             addLogger(StdOutSqlLogger)
-            SchemaUtils.createMissingTablesAndColumns(TNode, TModel, TDependency, TDependencyBindings, TBinding)
+            SchemaUtils.createMissingTablesAndColumns(
+                CausalNetNode,
+                CausalNetModel,
+                CausalNetDependency,
+                CausalNetDependencyBindings,
+                CausalNetBinding
+            )
             val daomodel = DAOModel.new {
             }
             val node2DAONode = model.instances.map { node ->
