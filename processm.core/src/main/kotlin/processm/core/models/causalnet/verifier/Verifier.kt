@@ -6,6 +6,7 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
+import java.util.*
 
 typealias CausalNetSequence = List<ActivityBinding>
 
@@ -58,9 +59,9 @@ class Verifier(val model: Model) {
                     }
     }
 
-    private fun helper(input: CausalNetSequence): Sequence<CausalNetSequence> {
+    private fun successors(input: CausalNetSequence): Sequence<ActivityBinding> {
         val currentState = input.last().state
-        val next: Sequence<ActivityBinding> = model.joins.asSequence().flatMap { (ak, joins) ->
+        return model.joins.asSequence().flatMap { (ak, joins) ->
             joins.asSequence()
                 .map { join: Join -> join.sources }
                 .filter { i: Collection<Node> -> currentState.containsAll(i times setOf(ak)) }
@@ -73,25 +74,27 @@ class Verifier(val model: Model) {
                         sequenceOf(ActivityBinding(ak, i, setOf(), currentState))
                 }
         }
-        return next
-            .flatMap { last ->
-                sequence {
-                    if (last.a == model.end) {
-                        if (last.state.isEmpty())
-                            yield(input + last)
-                    } else
-                        yieldAll(helper(input + last))
-                }
-            }
     }
 
     private fun computeSetOfValidSequences(): Sequence<CausalNetSequence> {
-        return model
-            .splits.getValue(model.start).asSequence()
+        val queue = ArrayDeque<CausalNetSequence>()
+        queue.addAll(model
+            .splits.getValue(model.start)
             .map { split ->
                 listOf(ActivityBinding(model.start, setOf(), split.targets, setOf()))
+            })
+        return sequence {
+            while (queue.isNotEmpty()) {
+                val current = queue.pollFirst()
+                successors(current).forEach { last ->
+                    if (last.a == model.end) {
+                        if (last.state.isEmpty())
+                            yield(current + last)
+                    } else
+                        queue.addLast(current + last)
+                }
             }
-            .flatMap { helper(it) }
+        }
     }
 
     private val Join.sources
