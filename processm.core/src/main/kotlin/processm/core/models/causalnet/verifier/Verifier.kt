@@ -96,10 +96,4 @@ class Verifier(val model: Model) {
             }
         }
     }
-
-    private val Join.sources
-        get() = this.dependencies.map { d -> d.source }.toSet()
-    private val Split.targets
-        get() = this.dependencies.map { d -> d.target }.toSet()
-
 }
