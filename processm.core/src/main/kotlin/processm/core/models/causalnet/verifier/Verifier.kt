@@ -97,7 +97,7 @@ class Verifier(val model: Model) {
     private fun computeSetOfValidSequences(): Sequence<CausalNetSequence> {
         val queue = ArrayDeque<CausalNetSequence>()
         queue.addAll(model
-            .splits.getValue(model.start)
+            .splits.getOrDefault(model.start, setOf())
             .map { split ->
                 listOf(ActivityBinding(model.start, setOf(), split.targets, State()))
             })

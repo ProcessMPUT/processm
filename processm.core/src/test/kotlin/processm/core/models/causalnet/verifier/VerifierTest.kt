@@ -1,6 +1,5 @@
 package processm.core.models.causalnet.verifier
 
-import processm.core.helpers.MultiSet
 import processm.core.models.causalnet.*
 import kotlin.test.*
 
@@ -230,11 +229,19 @@ class VerifierTest {
             setOf(de)
         ).forEach { model.addJoin(Join(it)) }
         val v = Verifier(model)
-        assertTrue { v.soundness }
+        assertTrue { v.isSound }
         val tmp = v.validSequences.map { seq -> seq.map { ab -> ab.a } }
         assertTrue { tmp.contains(listOf(a, b, b, c, c, d, d, e)) }
         assertTrue { tmp.contains(listOf(a, b, c, d, e)) }
         assertTrue { tmp.contains(listOf(a, b, c, b, c, d, d, e)) }
         assertTrue { tmp.contains(listOf(a, b, b, b, c, c, c, d, d, d, e)) }
+    }
+
+    @Test
+    fun `empty model`() {
+        val model = MutableModel()
+        val v = Verifier(model)
+        assertFalse { v.isSound }
+        assertTrue { v.validSequences.none() }
     }
 }
