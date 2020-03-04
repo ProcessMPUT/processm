@@ -1,5 +1,6 @@
 package processm.core.models.causalnet.verifier
 
+import processm.core.helpers.MultiSet
 import processm.core.models.causalnet.*
 import kotlin.test.*
 
@@ -97,7 +98,6 @@ class VerifierTest {
         val seqs = v.validSequences
             .map { seq -> seq.map { ab -> ab.a } }
             .toSet()
-//        seqs.forEach { println(it.map { ab -> Pair(Triple(ab.a.activity, ab.i.map { n->n.activity }, ab.o.map { n->n.activity }), ab.state.map { (a,b) -> Pair(a.activity, b.activity) }) }) }
         assertEquals(12, seqs.size)
         assertEquals(
             setOf(
@@ -229,6 +229,12 @@ class VerifierTest {
             setOf(bd, cd),
             setOf(de)
         ).forEach { model.addJoin(Join(it)) }
-        assertTrue { Verifier(model).soundness }
+        val v = Verifier(model)
+        assertTrue { v.soundness }
+        val tmp = v.validSequences.map { seq -> seq.map { ab -> ab.a } }
+        assertTrue { tmp.contains(listOf(a, b, b, c, c, d, d, e)) }
+        assertTrue { tmp.contains(listOf(a, b, c, d, e)) }
+        assertTrue { tmp.contains(listOf(a, b, c, b, c, d, d, e)) }
+        assertTrue { tmp.contains(listOf(a, b, b, b, c, c, c, d, d, d, e)) }
     }
 }
