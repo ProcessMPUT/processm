@@ -37,7 +37,7 @@ class Verifier(val model: Model) {
      * The only important thing is whether there are dead parts.
      * If there aren't, there are some valid sequences, so the rest is trivially satisfied.
      */
-    val soundness: Boolean by lazy { isSafe && hasOptionToComplete && hasProperCompletion && !hasDeadParts }
+    val isSound: Boolean by lazy { isSafe && hasOptionToComplete && hasProperCompletion && !hasDeadParts }
     /**
      * The set of all valid sequences. There is a possiblity that this set is infinite.
      */

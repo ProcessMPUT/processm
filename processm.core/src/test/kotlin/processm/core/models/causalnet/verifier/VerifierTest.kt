@@ -56,7 +56,7 @@ class VerifierTest {
             setOf(h to z)
         ).map { join -> join.map { Dependency(it.first, it.second) }.toSet() }
             .forEach { mm.addJoin(Join(it)) }
-        assertTrue { Verifier(mm).soundness }
+        assertTrue { Verifier(mm).isSound }
     }
 
     @Test
@@ -115,7 +115,7 @@ class VerifierTest {
                 listOf(a, d, c, b, e)
             ), seqs
         )
-        assertTrue { v.soundness }
+        assertTrue { v.isSound }
     }
 
     private fun displayValidSequences(vs: Sequence<List<ActivityBinding>>) {
@@ -156,7 +156,7 @@ class VerifierTest {
         ).forEach { model.addJoin(Join(it)) }
         val v = Verifier(model)
         assertTrue { v.validSequences.none() }
-        assertFalse { v.soundness }
+        assertFalse { v.isSound }
     }
 
     @Test
@@ -193,7 +193,7 @@ class VerifierTest {
             setOf(ce)
         ).forEach { model.addJoin(Join(it)) }
         val v = Verifier(model)
-        assertFalse { v.soundness }
+        assertFalse { v.isSound }
         assertTrue { v.validSequences.any() }
     }
 
