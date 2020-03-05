@@ -10,4 +10,21 @@ abstract class Node {
      * Nodes of this node (children)
      */
     val children: List<Node> = Collections.unmodifiableList(childrenInternal)
+
+    operator fun plus(other: Node): Node {
+        childrenInternal.add(other)
+        return this
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Node
+        return childrenInternal == other.childrenInternal
+    }
+
+    override fun hashCode(): Int {
+        return childrenInternal.hashCode()
+    }
 }

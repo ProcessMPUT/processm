@@ -30,15 +30,15 @@ internal class ModelTest {
         val exclusive = ExclusiveChoice()
         val parallel = Parallel()
 
-        sequence.childrenInternal.add(Activity("A"))
-        sequence.childrenInternal.add(exclusive)
-        sequence.childrenInternal.add(Activity("D"))
+        sequence + Activity("A")
+        sequence + exclusive
+        sequence + Activity("D")
 
-        exclusive.childrenInternal.add(parallel)
-        exclusive.childrenInternal.add(Activity("E"))
+        exclusive + parallel
+        exclusive + Activity("E")
 
-        parallel.childrenInternal.add(Activity("B"))
-        parallel.childrenInternal.add(Activity("C"))
+        parallel + Activity("B")
+        parallel + Activity("C")
 
         val model = Model(sequence)
         with(model.root!!) {
