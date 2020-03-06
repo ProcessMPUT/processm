@@ -64,4 +64,22 @@ class MutableModel(
         _joins.getOrPut(join.target, { HashSet() }).add(join)
     }
 
+    /**
+     * Removes the given split.
+     *
+     * Silently ignores if the split is not present in the model.
+     */
+    fun removeSplit(split: Split) {
+        _splits[split.source]?.remove(split)
+    }
+
+    /**
+     * Removes the given join.
+     *
+     * Silently ignores if the join is not present in the model.
+     */
+    fun removeJoin(join: Join) {
+        _joins[join.target]?.remove(join)
+    }
+
 }
