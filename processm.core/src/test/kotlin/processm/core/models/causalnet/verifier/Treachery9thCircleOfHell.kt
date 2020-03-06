@@ -24,55 +24,21 @@ class Treachery9thCircleOfHell {
     val d2 = Node("d2")
     val e = Node("e")
 
-    val model by lazy {
-        val model = MutableModel(start = a, end = e)
-        val splits = listOf(
-            listOf(a to b1),
-            listOf(a to b2),
-            listOf(a to b1, a to b2),
-            listOf(a to d1),
-            listOf(a to d2),
-            listOf(b1 to c, b1 to e),
-            listOf(b1 to d1, b1 to c, b1 to d2),
-            listOf(b2 to c, b2 to e),
-            listOf(b2 to d1, b2 to c, b2 to d2),
-            listOf(d1 to e),
-            listOf(d2 to e),
-            listOf(c to d1, c to d2),
-            listOf(c to e)
-        )
-        val joins = listOf(
-            listOf(a to b1),
-            listOf(a to b2),
-            listOf(b1 to c),
-            listOf(b2 to c),
-            listOf(b1 to c, b2 to c),
-            listOf(a to d1),
-            listOf(b1 to d1, b2 to d1, c to d1),
-            listOf(a to d2),
-            listOf(b1 to d2, b2 to d2, c to d2),
-            listOf(b1 to e, c to e),
-            listOf(b2 to e, c to e),
-            listOf(d1 to e, d2 to e),
-            listOf(d1 to e),
-            listOf(d2 to e)
-        )
-        model.addInstance(a, b1, b2, c, d1, d2, e)
-        splits
-            .map { deps ->
-                deps.map { (a, b) -> Dependency(a, b) }
-            }.forEach { deps ->
-                deps.forEach { d -> model.addDependency(d) }
-                model.addSplit(Split(deps.toSet()))
-            }
-        joins
-            .map { deps ->
-                deps.map { (a, b) -> Dependency(a, b) }
-            }.forEach { deps ->
-                deps.forEach { d -> model.addDependency(d) }
-                model.addJoin(Join(deps.toSet()))
-            }
-        model
+    val model = causalnet {
+        start = a
+        end = e
+        a splits b1 or b2 or b1 + b2 or d1 or d2
+        b1 splits c + e or d1 + c + d2
+        b2 splits c + e or d1 + c + d2
+        d1 splits e
+        d2 splits e
+        c splits d1 + d2 or e
+        a joins b1
+        a joins b2
+        b1 or b2 or b1 + b2 join c
+        a or b1 + b2 + c join d1
+        a or b1 + b2 + c join d2
+        b1 + c or b2 + c or d1 + d2 or d1 or d2 join e
     }
 
     @Test
