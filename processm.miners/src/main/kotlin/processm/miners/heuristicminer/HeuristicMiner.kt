@@ -18,7 +18,7 @@ internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A
 class HeuristicMiner(
     private val log: Log,
     val minDirectlyFollows: Int = 0,
-    val minDependency: Double = 0.0,
+    val minDependency: Double = 1e-10,
     val minBindingSupport: Int = 0,
     val minLongTermDependency: Double = 0.9999,
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
