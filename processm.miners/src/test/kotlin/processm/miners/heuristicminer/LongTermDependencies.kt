@@ -5,7 +5,9 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.core.models.causalnet.mock.Event
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * This tests a model with the following two acceptable sequences:
@@ -57,13 +59,19 @@ class LongTermDependencies {
     }
 
     @Test
+    fun `long term dependencies`() {
+        assertTrue { hm.result.outgoing.getValue(b1).contains(Dependency(b1, d1)) }
+        assertTrue { hm.result.outgoing.getValue(b2).contains(Dependency(b2, d2)) }
+    }
+
+    @Test
     fun `long term splits`() {
         with(hm.result.splits) {
             assertEquals(setOf(Split(setOf(Dependency(b1, c), Dependency(b1, d1)))), getValue(b1))
             assertEquals(setOf(Split(setOf(Dependency(b2, c), Dependency(b2, d2)))), getValue(b2))
         }
     }
-    
+
     @Test
     fun `long term joins`() {
         with(hm.result.joins) {
