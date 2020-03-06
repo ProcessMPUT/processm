@@ -213,6 +213,70 @@ class MutableModelTest {
         }
     }
 
+    @Test
+    fun removeExistingJoin() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(b, a)
+        assertFalse { mm.contains(Join(setOf(d2))) }
+        mm.addJoin(Join(setOf(d1)))
+        mm.addJoin(Join(setOf(d2)))
+        assertTrue { mm.contains(Join(setOf(d2))) }
+        assertEquals(setOf(Join(setOf(d1)), Join(setOf(d2))), mm.joins[a])
+        mm.removeJoin(Join(setOf(d2)))
+        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+        assertFalse { mm.contains(Join(setOf(d2))) }
+    }
+
+    @Test
+    fun removeNonexistingJoin() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(b, a)
+        mm.addJoin(Join(setOf(d1)))
+        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+        mm.removeJoin(Join(setOf(d2)))
+        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+    }
+
+    @Test
+    fun removeExistingSplit() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(mm.start, b)
+        assertFalse { mm.contains(Split(setOf(d2))) }
+        mm.addSplit(Split(setOf(d1)))
+        mm.addSplit(Split(setOf(d2)))
+        assertTrue { mm.contains(Split(setOf(d2))) }
+        assertEquals(setOf(Split(setOf(d1)), Split(setOf(d2))), mm.splits[mm.start])
+        mm.removeSplit(Split(setOf(d2)))
+        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+        assertFalse { mm.contains(Split(setOf(d2))) }
+    }
+
+    @Test
+    fun removeNonexistingSplit() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(mm.start, b)
+        mm.addSplit(Split(setOf(d1)))
+        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+        mm.removeSplit(Split(setOf(d2)))
+        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+    }
+
     @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun removeDependency() {

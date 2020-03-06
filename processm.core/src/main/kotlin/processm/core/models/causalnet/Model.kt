@@ -114,4 +114,36 @@ abstract class Model(
                 splits.getValue(start)
                     .map { split -> DecoupledNodeExecution(start,  null, split) })
     }
+
+    /**
+     * Returns true if the given join is present in the model and false otherwise
+     */
+    fun contains(join: Join): Boolean {
+        return _joins[join.target]?.contains(join) == true
+    }
+
+    /**
+     * Returns true if the given split is present in the model and false otherwise
+     */
+    fun contains(split: Split): Boolean {
+        return _splits[split.source]?.contains(split) == true
+    }
+
+    /**
+     * A simplified textual representation of the model.
+     *
+     * Useful for debugging tests, not useful for displaying complete information to the user
+     */
+    override fun toString(): String {
+        var result = ""
+        val model = this
+        for (n in model.instances.sortedBy { it.activity }) {
+            val i = model.incoming.getOrDefault(n, setOf()).map { dep -> dep.source.activity }
+            val j = model.joins.getOrDefault(n, setOf()).map { join -> join.sources.map { it.activity } }
+            val o = model.outgoing.getOrDefault(n, setOf()).map { dep -> dep.target.activity }
+            val s = model.splits.getOrDefault(n, setOf()).map { split -> split.targets.map { it.activity } }
+            result += "$i/$j -> ${n.activity} -> $o/$s\n"
+        }
+        return result
+    }
 }
