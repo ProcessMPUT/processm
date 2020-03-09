@@ -17,24 +17,25 @@ internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A
 
 class HeuristicMiner(
     private val log: Log,
-    val minDirectlyFollows: Int = 0,
+    val minDirectlyFollows: Int = 1,
     val minDependency: Double = 1e-10,
-    val minBindingSupport: Int = 0,
+    val minBindingSupport: Int = 1,
     val longTermDependencyMiner: LongTermDependencyMiner = NaiveLongTermDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
     val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport)
 ) {
-    internal val directlyFollows: Map<Pair<Node, Node>, Int> by lazy {
-        val result = HashMap<Pair<Node, Node>, Int>()
+    internal val directlyFollows: Counter<Pair<Node, Node>> by lazy {
+        val result = Counter<Pair<Node, Node>>()
         log.forEach { trace ->
+            println("TRACE: " + trace.map { e -> e.name }.toList())
             val i = trace.iterator()
-            var prev = Node(i.next().name)
+            var prev = start
             while (i.hasNext()) {
                 val curr = Node(i.next().name)
-                val key = prev to curr
-                result[key] = result.getOrDefault(key, 0) + 1
+                result.inc(prev to curr)
                 prev = curr
             }
+            result.inc(prev to end)
         }
         result
     }
@@ -143,11 +144,15 @@ class HeuristicMiner(
             }
     }
 
+    internal val start = Node("start", special = true)
+    internal val end = Node("end", special = true)
+
     val result: MutableModel by lazy {
-        val model = MutableModel()
+        val model = MutableModel(start = start, end = end)
         model.addInstance(*nodes.toTypedArray())
-        (nodes times nodes)
-            .filter { k -> directlyFollows.getOrDefault(k, 0) >= minDirectlyFollows }
+        directlyFollows
+            .filterValues { it >= minDirectlyFollows }
+            .keys
             .filter { k -> dependency.getOrDefault(k, 0.0) >= minDependency }
             .forEach { (a, b) -> model.addDependency(a, b) }
         log
@@ -155,7 +160,7 @@ class HeuristicMiner(
                 longTermDependencyMiner.processTrace(trace)
                 trace
             }
-            .map { trace -> trace.map { e -> Node(e.name) }.toList() }
+            .map { trace -> listOf(start) + trace.map { e -> Node(e.name) }.toList() + listOf(end) }
             .forEach { trace ->
                 joinSelector.add(computeJoins(model, trace))
                 splitSelector.add(computeSplits(model, trace))

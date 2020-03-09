@@ -44,6 +44,8 @@ class PM_chapter_72 {
         val hm = HeuristicMiner(log)
         assertEquals(
             mapOf(
+                (hm.start to a) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
+                (e to hm.end) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
                 (a to b) to 11,
                 (a to c) to 11,
                 (a to d) to 13,

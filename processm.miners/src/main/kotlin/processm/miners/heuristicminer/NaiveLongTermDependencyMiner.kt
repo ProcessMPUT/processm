@@ -23,13 +23,12 @@ class NaiveLongTermDependencyMiner(val minLongTermDependency: Double = 0.9999) :
             .map { d -> d.source to d.target }
             .toSet()
         val v = Verifier(model)
-        assert(v.isSound)
         assert(v.validSequences.any())
         return pairsCtr
             .filter { (dep, ctr) -> !known.contains(dep) }
             .map { (dep, ctr) -> dep to ctr.toDouble() / predecessorCtr.getValue(dep.first) }
             .filter { (dep, ctr) -> ctr >= minLongTermDependency }
             .map { (dep, ctr) -> dep }
-            .filter { dep -> !v.validSequences.all { seq -> seq.fulfills(dep) } }
+            .filter { dep -> v.validSequences.any { seq -> !seq.fulfills(dep) } }
     }
 }
