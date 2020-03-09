@@ -4,19 +4,28 @@ tokens {STRING}
 
 SELECT      : 'select' ;
 WHERE       : 'where' ;
-GROUP_BY    : 'group by' ;
-ORDER_BY    : 'order by' ;
+GROUP       : 'group' ;
+BY          : 'by' ;
+ORDER_BY    : 'order' [ \t\r\n]+ 'by' ;
 LIMIT       : 'limit' ;
 OFFSET      : 'offset' ;
+
+SCOPE       : 'log'
+            | 'l'
+            | 'trace'
+            | 't'
+            | 'event'
+            | 'e'
+            ;
 
 STRING_SINGLE : '\'' ( '\\\'' | . )*? '\'' -> type(STRING) ;
 STRING_DOUBLE : '"' ( '\\"' | . )*? '"' -> type(STRING) ;
 
 NUMBER      : '-'? INT ('.' [0-9] +)? EXP? ;
 BOOLEAN     : 'true' | 'false' ;
-DATE        : 'date' ;
-TIMEOFDAY   : 'timeofday' ;
-DATETIME    : 'datetime' ;
+DATETIME    : ISODATE ('T' ISOTIME)?
+            | ISODATESHORT ISOTIMESHORT?
+            ;
 
 FUNC_AGGR   : 'min'
             | 'max'
@@ -25,7 +34,9 @@ FUNC_AGGR   : 'min'
             | 'sum'
             ;
 
-FUNC_SCALAR : 'year'
+FUNC_SCALAR1: 'date'
+            | 'time'
+            | 'year'
             | 'month'
             | 'day'
             | 'hour'
@@ -33,12 +44,13 @@ FUNC_SCALAR : 'year'
             | 'second'
             | 'millisecond'
             | 'quarter'
-            | 'dayOfWeek'
-            | 'now'
-            | 'dateDiff'
-            | 'toDate'
+            | 'dayofweek'
             | 'upper'
             | 'lower'
+            | 'round'
+            ;
+
+FUNC_SCALAR0: 'now'
             ;
 
 OP_MUL      : '*' ;
@@ -52,29 +64,29 @@ OP_GT       : '>' ;
 OP_GE       : '>=' ;
 OP_EQ       : '=' ;
 OP_NEQ      : '!='
-            | '<>'
             ;
-OP_IS_NULL    : 'is null' ;
-OP_IS_NOT_NULL: 'is not null' ;
+OP_IS_NULL    : 'is' [ \t\r\n]+ 'null' ;
+OP_IS_NOT_NULL: 'is' [ \t\r\n]+ 'not' [ \t\r\n]+ 'null' ;
+
+OP_IN       : 'in';
+OP_NOT_IN   : 'not' [ \t\r\n]+ 'in';
 
 OP_AND      : 'and' ;
 OP_OR       : 'or' ;
 OP_NOT      : 'not' ;
 
-OP_CONTAINS : 'contains' ;
-OP_STARTS_WITH: 'starts' [ \t\r\n]+ 'with' ;
-OP_ENDS_WITH: 'ends' [ \t\r\n]+ 'with' ;
 OP_MATCHES  : 'matches' ;
 OP_LIKE     : 'like' ;
 
 L_PARENTHESIS : '(' ;
 R_PARENTHESIS : ')' ;
 COMMA       : ',' ;
+COLON       : ':' ;
 ORDER_ASC   : 'asc' ;
 ORDER_DESC  : 'desc' ;
 
-ID          : LETTER (LETTER|DIGIT|':')*
-            | '[' ('\\`' | .)*? ']';
+ID          : (SCOPE':')? (LETTER|DIGIT)+ (':' (LETTER|DIGIT)+)?
+            | '[' (SCOPE':')? ('\\]' | .)*? ']';
 
 WS          : [ \t\r\n]+ -> skip ; // skip spaces, tabs, newlines, \r (Windows)
 
@@ -82,5 +94,16 @@ fragment INT    : '0' | [1-9] DIGIT* ;
 fragment EXP    : [Ee] [+\-]? INT ;
 fragment LETTER : [a-zA-Z\u0080-\u00FF_] ;
 fragment DIGIT  : [0-9] ;
-
-
+fragment ISODATE: ISOYEAR '-' ISOMONTH '-' ISODAY ;
+fragment ISODATESHORT:  ISOYEAR ISOMONTH ISODAY ;
+fragment ISOTIME: ISOHOUR ':' ISOMINUTE (':' ISOSECOND ('.' ISOMILLI)?)?;
+fragment ISOTIMESHORT: ISOHOUR ISOMINUTE (ISOSECOND ISOMILLI?)? ;
+fragment ISOYEAR: DIGIT DIGIT DIGIT DIGIT ;
+fragment ISOMONTH: [1-9] | '10' | '11' | '12' ;
+fragment ISODAY: [1-9] | [1-2] DIGIT | '30' | '31' ;
+fragment ISOHOUR: [0-1] DIGIT | '2' [0-3] ;
+fragment ISOMINUTE: [0-5] DIGIT ;
+fragment ISOSECOND: ISOMINUTE ;
+fragment ISOMILLI: DIGIT DIGIT DIGIT ;
+fragment ISOTIMEZONE: 'Z' | ('+'|'-') ISOTZONEHOUR (':'? ISOMINUTE)? ;
+fragment ISOTZONEHOUR: '0' DIGIT | '10' | '11' | '12' ;
