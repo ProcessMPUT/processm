@@ -24,52 +24,19 @@ class HellOfLongTermDependencies {
     val c = Node("c")
     val d = Node("d")
     val e = Node("e")
-    val reference: Model by lazy {
-        val model = MutableModel(start = a, end = e)
-        model.addInstance(a, b1, b2, c, d, e)
-        listOf(
-            a to b1,
-            a to b2,
-            b1 to c,
-            b2 to c,
-            b1 to e,
-            b1 to d,
-            b2 to d,
-            b2 to e,
-            c to d,
-            c to e,
-            d to e
-        ).forEach { (a, b) -> model.addDependency(a, b) }
-        //splits
-        listOf(
-            listOf(a to b1),
-            listOf(a to b2),
-            listOf(a to b1, a to b2),
-            listOf(b1 to c, b1 to e),
-            listOf(b1 to c, b1 to d),
-            listOf(b2 to c, b2 to e),
-            listOf(b2 to c, b2 to d),
-            listOf(c to e),
-            listOf(c to d),
-            listOf(d to e)
-        )
-            .map { it.map { (a, b) -> Dependency(a, b) }.toSet() }
-            .forEach { model.addSplit(Split(it)) }
-        //joins
-        listOf(
-            listOf(a to b1),
-            listOf(a to b2),
-            listOf(b1 to c),
-            listOf(b2 to c),
-            listOf(b1 to c, b2 to c),
-            listOf(b1 to d, b2 to d, c to d),
-            listOf(c to e, b1 to e),
-            listOf(c to e, b2 to e),
-            listOf(d to e)
-        )
-            .map { it.map { (a, b) -> Dependency(a, b) }.toSet() }
-            .forEach { model.addJoin(Join(it)) }
-        model
+    val reference = causalnet {
+        start = a
+        end = e
+        a splits b1 or b2 or b1 + b2
+        b1 splits c + e or c + d
+        b2 splits c + e or c + d
+        c splits d or e
+        d splits e
+        a joins b1
+        a joins b2
+        b1 or b2 or b1 + b2 join c
+        b1 + b2 + c join d
+        c + b1 or c + b2 or d join e
     }
 
     @Test
