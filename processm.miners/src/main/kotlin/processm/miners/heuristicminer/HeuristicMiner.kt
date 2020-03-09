@@ -20,7 +20,7 @@ class HeuristicMiner(
     val minDirectlyFollows: Int = 0,
     val minDependency: Double = 1e-10,
     val minBindingSupport: Int = 0,
-    val minLongTermDependency: Double = 0.9999,
+    val longTermDependencyMiner: LongTermDependencyMiner = NaiveLongTermDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
     val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport)
 ) {
@@ -143,50 +143,6 @@ class HeuristicMiner(
             }
     }
 
-    /**
-     * Returns true if there is no predecessor or both predecessor and successor are present
-     */
-    private fun CausalNetSequence.fulfills(dep: Pair<Node, Node>): Boolean {
-        println("${dep.first.activity}->${dep.second.activity} in? " + this.map { ab -> ab.a.activity })
-        val first = this.indexOfFirst { ab -> ab.a == dep.first }
-        if (first == -1)
-            return true
-        return this.subList(first + 1, this.size).find { ab -> ab.a == dep.second } != null
-    }
-
-    private fun findAssociations(model: Model, log: Log): List<Pair<Node, Node>> {
-        val known = (model.outgoing + model.incoming)
-            .values
-            .flatten()
-            .map { d -> d.source to d.target }
-            .toSet()
-        val predecessorCtr = log
-            .flatMap { trace -> trace.map { e -> Node(e.name) } }
-            .groupingBy { it }
-            .eachCount()
-        val v = Verifier(model)
-        assert(v.isSound)
-        assert(v.validSequences.any())
-        return log
-            .flatMap { trace ->
-                val tmp = trace
-                    .toList()
-                    .map { e -> Node(e.name) }
-                tmp
-                    .mapIndexed { index, node -> setOf(node) times tmp.subList(index + 1, tmp.size) }
-                    .flatten()
-                    .asSequence()
-                    .filter { !known.contains(it) }
-            }
-            .groupingBy { it }
-            .eachCount()
-            .map { (dep, ctr) -> dep to ctr.toDouble() / predecessorCtr.getValue(dep.first) }
-            .filter { (dep, ctr) -> ctr >= minLongTermDependency }
-            .map { (dep, ctr) -> dep }
-            .filter { dep -> !v.validSequences.all { seq -> seq.fulfills(dep) } }
-
-    }
-
     val result: MutableModel by lazy {
         val model = MutableModel()
         model.addInstance(*nodes.toTypedArray())
@@ -195,6 +151,10 @@ class HeuristicMiner(
             .filter { k -> dependency.getOrDefault(k, 0.0) >= minDependency }
             .forEach { (a, b) -> model.addDependency(a, b) }
         log
+            .map { trace ->
+                longTermDependencyMiner.processTrace(trace)
+                trace
+            }
             .map { trace -> trace.map { e -> Node(e.name) }.toList() }
             .forEach { trace ->
                 joinSelector.add(computeJoins(model, trace))
@@ -204,8 +164,7 @@ class HeuristicMiner(
         splitSelector.best.forEach { split -> model.addSplit(split) }
         repairStartAndEnd(model)
         while (true) {
-
-            val ltdeps = findAssociations(model, log)
+            val ltdeps = longTermDependencyMiner.mine(model)
             if (ltdeps.isNotEmpty()) {
                 ltdeps.forEach { dep ->
                     val dep = model.addDependency(dep.first, dep.second)
