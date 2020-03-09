@@ -1,18 +1,30 @@
 package processm.miners.heuristicminer
 
+import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.models.causalnet.mock.Event
-import processm.core.models.causalnet.verifier.ActivityBinding
-import processm.core.models.causalnet.verifier.CausalNetSequence
-import processm.core.models.causalnet.verifier.Verifier
-import java.util.*
-import kotlin.collections.HashMap
+import processm.core.models.causalnet.verifier.State
 
 typealias Trace = Sequence<Event>
 typealias Log = Sequence<Trace>
 
 internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> {
     return this.flatMap { a -> right.map { b -> a to b } }
+}
+
+
+internal fun <T> allSubsets(prefix: Set<T>, rest: List<T>): Sequence<Set<T>> {
+    if (rest.isEmpty())
+        return sequenceOf(prefix)
+    else {
+        val n = rest.first()
+        val newRest = rest.subList(1, rest.size)
+        return allSubsets(prefix, newRest) + allSubsets(prefix + n, newRest)
+    }
+}
+
+internal fun <T> Collection<T>.allSubsets(): Sequence<Set<T>> {
+    return allSubsets(setOf(), this.toList())
 }
 
 class HeuristicMiner(
@@ -57,91 +69,64 @@ class HeuristicMiner(
         }
     }
 
-    private fun computeSplits(model: Model, trace: List<Node>): List<Split> {
-        val consequences = trace
-            .mapIndexed { idx, node ->
-                val after = trace.subList(idx + 1, trace.size)
-                model.outgoing.getOrDefault(node, setOf())
-                    .filter { dep -> after.contains(dep.target) }
-                    .map { dep -> idx + 1 + after.indexOf(dep.target) }
-                    .sorted()
-            }
-        return consequences
-            .map { sucessors ->
-                val remove = HashSet<Int>()
-                sucessors
-                    .flatMap { p ->
-                        if (!remove.contains(p)) {
-                            remove.addAll(consequences[p])
-                            setOf(p)
-                        } else {
-                            setOf()
-                        }
+
+    private fun computeBindings(model: Model, trace: List<Node>): Pair<List<Split>, List<Join>> {
+        var currentStates =
+            sequenceOf(Triple(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
+        for (currentNode in trace) {
+            val consumable = model.incoming.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
+            val producable = model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
+            // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
+            if (!consumable.isEmpty())
+                currentStates = currentStates
+                    .flatMap { (state, joins, splits) ->
+                        consumable.allSubsets()
+                            .filter { consume -> !consume.isEmpty() }
+                            .filter { consume -> state.containsAll(consume) }
+                            .map { consume ->
+                                val ns = State(state)
+                                ns.removeAll(consume)
+                                Triple(ns, joins + setOf(consume), splits)
+                            }
                     }
-                    .toSet()
-            }
-            .mapIndexed { idx, sucessors ->
-                sucessors.map { s -> Dependency(trace[idx], trace[s]) }
-            }
-            .filter { deps -> deps.isNotEmpty() }
-            .map { deps ->
-                Split(deps.toSet())
-            }
-    }
-
-    private fun computeJoins(model: Model, trace: List<Node>): List<Join> {
-        val causes = trace
-            .mapIndexed { idx, node ->
-                val before = trace.subList(0, idx)
-                model.incoming.getOrDefault(node, setOf())
-                    .filter { dep -> before.contains(dep.source) }
-                    .map { dep -> before.lastIndexOf(dep.source) }
-                    .sorted()
-                    .asReversed()
-            }
-        // sprzatanie w incoming
-        // Postepujac od konca, odejmuj incoming elementow, ktore ciagle sa w tym incomingu, w kolejnosci logu
-        // Nastepnie dodaj wszystkie elementy, ktorych incoming odjales
-        return causes
-            .asReversed()
-            .map { predecessors ->
-                val remove = HashSet<Int>()
-                predecessors
-                    .flatMap { p ->
-                        if (!remove.contains(p)) {
-                            remove.addAll(causes[p])
-                            setOf(p)
-                        } else {
-                            setOf()
-                        }
+            // uzupełnij state o dowolny niepusty podzbiór producable albo producable jest puste
+            if (!producable.isEmpty())
+                currentStates = currentStates
+                    .flatMap { (state, joins, splits) ->
+                        producable.allSubsets()
+                            .filter { produce -> !produce.isEmpty() }
+                            .map { produce ->
+                                val ns = State(state)
+                                ns.addAll(produce)
+                                Triple(ns, joins, splits + setOf(produce))
+                            }
                     }
-                    .toSet()
-            }.asReversed()
-            .mapIndexed { idx, predecessors ->
-                predecessors.map { p -> Dependency(trace[p], trace[idx]) }
+        }
+        currentStates = currentStates.filter { (state, joins, splits) -> state.isEmpty() }
+        logger().trace("TRACE: " + trace.map { n -> n.activity })
+        if (!currentStates.any()) {
+            return listOf<Split>() to listOf()
+        }
+        if (logger().isTraceEnabled) {
+            currentStates.forEach { (state, joins, splits) ->
+                logger().trace("JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
+                logger().trace("SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })
             }
-            .filter { deps -> deps.isNotEmpty() }
-            .map { deps -> Join(deps.toSet()) }
-    }
-
-    private fun repairStartAndEnd(model: MutableModel) {
-        model.instances
-            .filter { n -> !n.special }
-            .filter { n -> model.incoming[n].isNullOrEmpty() }
-            .forEach { realStart ->
-                val dep = model.addDependency(model.start, realStart)
-                model.addSplit(Split(setOf(dep)))
-                model.addJoin(Join(setOf(dep)))
-            }
-
-        model.instances
-            .filter { n -> !n.special }
-            .filter { n -> model.outgoing[n].isNullOrEmpty() }
-            .forEach { realEnd ->
-                val dep = model.addDependency(realEnd, model.end)
-                model.addSplit(Split(setOf(dep)))
-                model.addJoin(Join(setOf(dep)))
-            }
+        }
+        //TODO badac zawieranie zamiast tego naiwnego sumowania
+        val tmp = currentStates.map { (state, joins, splits) ->
+            Triple(state, joins, splits) to joins.flatten().count() + splits.flatten().count()
+        }
+        val min = tmp.map { (k, v) -> v }.min()
+        logger().trace("MIN SIZE: " + min)
+        currentStates = tmp.filter { (k, v) -> v == min }.map { (k, v) -> k }
+        logger().trace("CTR: " + currentStates.count())
+        //TODO Co wlasciwie zrobic jezeli currentStates.count() > 1? Idea jest takie, żeby wybrać najbardziej oszczędną hipotezę odnośnie joinów/splitów, ale takich hipotez chyba może być kilka?
+        assert(currentStates.count() == 1)
+        val (_, joins, splits) = currentStates.single()
+        val finalSplits = splits.map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
+        val finalJoins = joins.map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
+        return finalSplits to finalJoins
     }
 
     internal val start = Node("start", special = true)
@@ -162,12 +147,12 @@ class HeuristicMiner(
             }
             .map { trace -> listOf(start) + trace.map { e -> Node(e.name) }.toList() + listOf(end) }
             .forEach { trace ->
-                joinSelector.add(computeJoins(model, trace))
-                splitSelector.add(computeSplits(model, trace))
+                val (splits, joins) = computeBindings(model, trace)
+                joinSelector.add(joins)
+                splitSelector.add(splits)
             }
         joinSelector.best.forEach { join -> model.addJoin(join) }
         splitSelector.best.forEach { split -> model.addSplit(split) }
-        repairStartAndEnd(model)
         while (true) {
             val ltdeps = longTermDependencyMiner.mine(model)
             if (ltdeps.isNotEmpty()) {

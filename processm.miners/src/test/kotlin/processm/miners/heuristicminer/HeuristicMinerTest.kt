@@ -47,4 +47,16 @@ class HeuristicMinerTest {
             assertEquals(joins[c], setOf(Join(setOf(Dependency(start, c))), Join(setOf(Dependency(b, c)))))
         }
     }
+
+    @Test
+    fun `all subsets`() {
+        assertEquals(
+            setOf(
+                setOf(),
+                setOf("a"), setOf("b"), setOf("c"),
+                setOf("a", "b"), setOf("a", "c"), setOf("b", "c"),
+                setOf("a", "b", "c")
+            ), setOf("a", "b", "c").allSubsets().toSet()
+        )
+    }
 }
