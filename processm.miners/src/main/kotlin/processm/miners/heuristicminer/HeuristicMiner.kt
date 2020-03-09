@@ -75,43 +75,44 @@ class HeuristicMiner(
             sequenceOf(Triple(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
         for (currentNode in trace) {
             val consumable = model.incoming.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
-            val producable = model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
+            val producible = model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
+            val consumeCandidates =
+                if (consumable.isNotEmpty())
+                    consumable.allSubsets().filter { consume -> consume.isNotEmpty() }
+                else
+                    sequenceOf(setOf())
+            val produceCandidates =
+                if (producible.isNotEmpty())
+                    producible.allSubsets().filter { produce -> produce.isNotEmpty() }
+                else
+                    sequenceOf(setOf())
             // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
-            if (!consumable.isEmpty())
-                currentStates = currentStates
-                    .flatMap { (state, joins, splits) ->
-                        consumable.allSubsets()
-                            .filter { consume -> !consume.isEmpty() }
-                            .filter { consume -> state.containsAll(consume) }
-                            .map { consume ->
-                                val ns = State(state)
-                                ns.removeAll(consume)
-                                Triple(ns, joins + setOf(consume), splits)
-                            }
-                    }
             // uzupełnij state o dowolny niepusty podzbiór producable albo producable jest puste
-            if (!producable.isEmpty())
-                currentStates = currentStates
-                    .flatMap { (state, joins, splits) ->
-                        producable.allSubsets()
-                            .filter { produce -> !produce.isEmpty() }
-                            .map { produce ->
-                                val ns = State(state)
-                                ns.addAll(produce)
-                                Triple(ns, joins, splits + setOf(produce))
-                            }
-                    }
+            currentStates = currentStates
+                .flatMap { (state, joins, splits) ->
+                    consumeCandidates
+                        .filter { consume -> state.containsAll(consume) }
+                        .flatMap { consume ->
+                            produceCandidates
+                                .map { produce ->
+                                    val ns = State(state)
+                                    ns.removeAll(consume)
+                                    ns.addAll(produce)
+                                    Triple(ns, joins + setOf(consume), splits + setOf(produce))
+                                }
+                        }
+                }
         }
         currentStates = currentStates.filter { (state, joins, splits) -> state.isEmpty() }
-        logger().trace("TRACE: " + trace.map { n -> n.activity })
-        if (!currentStates.any()) {
-            return listOf<Split>() to listOf()
-        }
         if (logger().isTraceEnabled) {
+            logger().trace("TRACE: " + trace.map { n -> n.activity })
             currentStates.forEach { (state, joins, splits) ->
                 logger().trace("JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
                 logger().trace("SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })
             }
+        }
+        if (!currentStates.any()) {
+            return listOf<Split>() to listOf()
         }
         //TODO badac zawieranie zamiast tego naiwnego sumowania
         val tmp = currentStates.map { (state, joins, splits) ->
@@ -124,8 +125,10 @@ class HeuristicMiner(
         //TODO Co wlasciwie zrobic jezeli currentStates.count() > 1? Idea jest takie, żeby wybrać najbardziej oszczędną hipotezę odnośnie joinów/splitów, ale takich hipotez chyba może być kilka?
         assert(currentStates.count() == 1)
         val (_, joins, splits) = currentStates.single()
-        val finalSplits = splits.map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
-        val finalJoins = joins.map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
+        val finalSplits = splits.filter { split -> !split.isEmpty() }
+            .map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
+        val finalJoins = joins.filter { join -> !join.isEmpty() }
+            .map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
         return finalSplits to finalJoins
     }
 
