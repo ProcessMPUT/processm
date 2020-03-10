@@ -1,6 +1,6 @@
 package processm.core.models.processtree
 
-open class Activity(name: String, vararg nodes: Node) : Node(*nodes) {
+open class Activity(name: String) : Node() {
     /**
      * Activity name
      */
