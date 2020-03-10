@@ -6,6 +6,7 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import java.util.*
+import kotlin.collections.HashMap
 
 typealias CausalNetSequence = List<ActivityBinding>
 
@@ -15,7 +16,7 @@ typealias CausalNetSequence = List<ActivityBinding>
  *
  * Computations are potentially expensive, but to minimize impact, everything is initialized lazily and then stored
  */
-class Verifier(val model: Model) {
+class Verifier(val model: Model, val useCache: Boolean = true) {
 
     /**
      * By definition, a causal net model is safe
@@ -82,19 +83,27 @@ class Verifier(val model: Model) {
         return subset.uniqueSet() == superset.uniqueSet() && superset.containsAll(subset)
     }
 
+    private val cache = HashMap<State, List<ActivityBinding>>()
+
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
      */
     private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): List<ActivityBinding> {
         val currentState = input.last().state
+        if (useCache) {
+            val fromCache = cache[currentState]
+            if (fromCache != null)
+                return fromCache
+        }
         val result = ArrayList<ActivityBinding>()
         val candidates = currentState.map { it.second }.intersect(model.joins.keys)
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
                 val expected = join.sources.map { it to ak }
                 if (currentState.containsAll(expected)) {
-                    if (model.splits.containsKey(ak)) {
-                        for (split in model.splits.getValue(ak)) {
+                    val splits = model.splits[ak]
+                    if (splits != null) {
+                        for (split in splits) {
                             val ab = ActivityBinding(ak, join.sources, split.targets, currentState)
                             if (!avoidLoops || input.all { !isBoringSuperset(it.state, ab.state) })
                                 result.add(ab)
@@ -106,6 +115,9 @@ class Verifier(val model: Model) {
                     }
                 }
             }
+        }
+        if (useCache) {
+            cache[currentState] = result
         }
         return result
     }
