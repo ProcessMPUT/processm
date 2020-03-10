@@ -1,3 +1,3 @@
 package processm.core.models.processtree
 
-class Parallel : Node()
+class Parallel(vararg nodes: Node) : Node(*nodes)

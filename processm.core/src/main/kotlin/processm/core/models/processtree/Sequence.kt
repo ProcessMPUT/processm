@@ -1,3 +1,3 @@
 package processm.core.models.processtree
 
-class Sequence : Node()
+class Sequence(vararg nodes: Node) : Node(*nodes)

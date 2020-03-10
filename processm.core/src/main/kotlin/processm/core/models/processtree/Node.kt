@@ -3,13 +3,17 @@ package processm.core.models.processtree
 import java.util.*
 import kotlin.collections.ArrayList
 
-abstract class Node {
+abstract class Node(vararg nodes: Node) {
     internal val childrenInternal: MutableList<Node> = ArrayList()
 
     /**
      * Nodes of this node (children)
      */
     val children: List<Node> = Collections.unmodifiableList(childrenInternal)
+
+    init {
+        childrenInternal.addAll(nodes)
+    }
 
     operator fun plus(other: Node): Node {
         childrenInternal.add(other)

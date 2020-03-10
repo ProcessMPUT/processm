@@ -1,3 +1,3 @@
 package processm.core.models.processtree
 
-class RedoLoop : Node()
+class RedoLoop(vararg nodes: Node) : Node(*nodes)
