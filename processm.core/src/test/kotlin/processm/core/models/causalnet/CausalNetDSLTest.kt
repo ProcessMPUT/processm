@@ -8,6 +8,7 @@ class CausalNetDSLTest {
     val a = Node("a")
     val b = Node("b")
     val c = Node("c")
+    val d = Node("d")
 
     @Test
     fun `single join`() {
@@ -41,6 +42,20 @@ class CausalNetDSLTest {
         }
         assertEquals(
             setOf(Join(setOf(Dependency(a, c), Dependency(c, c))), Join(setOf(Dependency(b, c), Dependency(c, c)))),
+            model.joins[c]
+        )
+    }
+
+    @Test
+    fun `two triple joins`() {
+        val model = causalnet {
+            a + b + c or b + c + d join c
+        }
+        assertEquals(
+            setOf(
+                Join(setOf(Dependency(a, c), Dependency(b, c), Dependency(c, c))),
+                Join(setOf(Dependency(b, c), Dependency(c, c), Dependency(d, c)))
+            ),
             model.joins[c]
         )
     }

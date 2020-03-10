@@ -79,6 +79,10 @@ class CausalNetDSL {
         return other or this
     }
 
+    infix fun Set<Node>.or(other: Set<Node>): SetOfSetOfNodes {
+        return SetOfNodes(this) or SetOfNodes(other)
+    }
+
 
     fun result(): MutableModel {
         val model = MutableModel(start, end)
