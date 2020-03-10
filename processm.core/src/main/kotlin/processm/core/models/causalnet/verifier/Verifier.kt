@@ -79,31 +79,35 @@ class Verifier(val model: Model) {
     }
 
     private fun isBoringSuperset(subset: State, superset: State): Boolean {
-        return subset.toSet() == superset.toSet() && superset.containsAll(subset)
+        return subset.uniqueSet() == superset.uniqueSet() && superset.containsAll(subset)
     }
 
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
      */
-    private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): Sequence<ActivityBinding> {
+    private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): List<ActivityBinding> {
         val currentState = input.last().state
-        val result = model.joins.asSequence().flatMap { (ak, joins) ->
-            joins.asSequence()
-                .map { join: Join -> join.sources }
-                .filter { i: Collection<Node> -> currentState.containsAll(i times setOf(ak)) }
-                .flatMap { i: Collection<Node> ->
-                    if (model.splits.containsKey(ak))
-                        model.splits.getValue(ak).asSequence().map { split ->
-                            ActivityBinding(ak, i, split.targets, currentState)
+        val result = ArrayList<ActivityBinding>()
+        val candidates = currentState.map { it.second }.intersect(model.joins.keys)
+        for (ak in candidates) {
+            for (join in model.joins.getValue(ak)) {
+                val expected = join.sources.map { it to ak }
+                if (currentState.containsAll(expected)) {
+                    if (model.splits.containsKey(ak)) {
+                        for (split in model.splits.getValue(ak)) {
+                            val ab = ActivityBinding(ak, join.sources, split.targets, currentState)
+                            if (!avoidLoops || input.all { !isBoringSuperset(it.state, ab.state) })
+                                result.add(ab)
                         }
-                    else
-                        sequenceOf(ActivityBinding(ak, i, setOf(), currentState))
+                    } else {
+                        val ab = ActivityBinding(ak, join.sources, setOf(), currentState)
+                        if (!avoidLoops || input.all { !isBoringSuperset(it.state, ab.state) })
+                            result.add(ab)
+                    }
                 }
+            }
         }
-        if (avoidLoops)
-            return result.filter { extension -> input.all { !isBoringSuperset(it.state, extension.state) } }
-        else
-            return result
+        return result
     }
 
     /**
