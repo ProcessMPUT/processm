@@ -239,8 +239,7 @@ class VerifierTest {
             v.validLoopFreeSequences.map { seq -> seq.map { ab -> ab.a }.sortedBy { it.activity } }.toSet(),
             setOf(
                 listOf(a, b, c, d, e),
-                listOf(a, b, b, c, c, d, d, e),
-                listOf(a, b, b, b, c, c, c, d, d, d, e)
+                listOf(a, b, b, c, c, d, d, e)
             )
         )
     }

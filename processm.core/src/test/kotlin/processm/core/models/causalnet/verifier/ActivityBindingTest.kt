@@ -1,6 +1,5 @@
 package processm.core.models.causalnet.verifier
 
-import processm.core.helpers.MultiSet
 import processm.core.models.causalnet.Node
 import kotlin.test.Test
 import kotlin.test.assertEquals
