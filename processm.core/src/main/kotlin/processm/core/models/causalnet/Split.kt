@@ -22,6 +22,7 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
     /**
      * Targets of all the dependencies of this split
      */
-    val targets
-        get() = this.dependencies.map { d -> d.target }.toSet()
+    val targets by lazy {
+        dependencies.map { d -> d.target }.toSet()
+    }
 }
