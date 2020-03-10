@@ -17,6 +17,6 @@ internal fun CausalNetSequence.fulfills(dep: Pair<Node, Node>): Boolean {
 }
 
 interface LongTermDependencyMiner {
-    fun processTrace(trace: Trace)
+    fun processTrace(trace: List<Node>)
     fun mine(currentModel: Model): Collection<Pair<Node, Node>>
 }

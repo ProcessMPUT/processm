@@ -17,4 +17,8 @@ class CountGroups<T : Binding>(private val minSupport: Int) : BindingSelector<T>
             .keys
             .flatten()
             .toSet()
+
+    override fun reset() {
+        counter.clear()
+    }
 }

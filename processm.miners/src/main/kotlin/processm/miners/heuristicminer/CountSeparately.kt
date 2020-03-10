@@ -14,4 +14,8 @@ class CountSeparately<T : Binding>(private val minSupport: Int) : BindingSelecto
         get() = counter
             .filter { (binding, ctr) -> ctr >= minSupport }
             .keys
+
+    override fun reset() {
+        counter.clear()
+    }
 }

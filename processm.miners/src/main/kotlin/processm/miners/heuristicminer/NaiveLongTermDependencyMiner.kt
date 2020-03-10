@@ -8,11 +8,10 @@ class NaiveLongTermDependencyMiner(val minLongTermDependency: Double = 0.9999) :
     private val predecessorCtr = Counter<Node>()
     private val pairsCtr = Counter<Pair<Node, Node>>()
 
-    override fun processTrace(trace: Trace) {
-        val tmp = trace.map { e -> Node(e.name) }.toList()
-        predecessorCtr.inc(tmp)
-        pairsCtr.inc(tmp.mapIndexed { index, pred ->
-            tmp.subList(index + 1, tmp.size).map { succ -> pred to succ }
+    override fun processTrace(trace: List<Node>) {
+        predecessorCtr.inc(trace)
+        pairsCtr.inc(trace.mapIndexed { index, pred ->
+            trace.subList(index + 1, trace.size).map { succ -> pred to succ }
         }.flatten())
     }
 
@@ -29,6 +28,7 @@ class NaiveLongTermDependencyMiner(val minLongTermDependency: Double = 0.9999) :
             .map { (dep, ctr) -> dep to ctr.toDouble() / predecessorCtr.getValue(dep.first) }
             .filter { (dep, ctr) -> ctr >= minLongTermDependency }
             .map { (dep, ctr) -> dep }
-            .filter { dep -> v.validSequences.any { seq -> !seq.fulfills(dep) } }
+            .filter { dep -> !(dep.first == model.start && dep.second == model.end) }
+            .filter { dep -> v.validLoopFreeSequences.any { seq -> !seq.fulfills(dep) } }
     }
 }

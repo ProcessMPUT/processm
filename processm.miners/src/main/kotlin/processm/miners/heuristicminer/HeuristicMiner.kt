@@ -34,7 +34,8 @@ class HeuristicMiner(
     val minBindingSupport: Int = 1,
     val longTermDependencyMiner: LongTermDependencyMiner = NaiveLongTermDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
-    val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport)
+    val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport),
+    val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
 ) {
     internal val directlyFollows: Counter<Pair<Node, Node>> by lazy {
         val result = Counter<Pair<Node, Node>>()
@@ -72,7 +73,7 @@ class HeuristicMiner(
 
     private fun computeBindings(model: Model, trace: List<Node>): Pair<List<Split>, List<Join>> {
         var currentStates =
-            sequenceOf(Triple(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
+            sequenceOf(ReplayTrace(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
         for (currentNode in trace) {
             val consumable = model.incoming.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
             val producible = model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
@@ -87,7 +88,7 @@ class HeuristicMiner(
                 else
                     sequenceOf(setOf())
             // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
-            // uzupełnij state o dowolny niepusty podzbiór producable albo producable jest puste
+            // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
             currentStates = currentStates
                 .flatMap { (state, joins, splits) ->
                     consumeCandidates
@@ -98,12 +99,12 @@ class HeuristicMiner(
                                     val ns = State(state)
                                     ns.removeAll(consume)
                                     ns.addAll(produce)
-                                    Triple(ns, joins + setOf(consume), splits + setOf(produce))
+                                    ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce))
                                 }
                         }
                 }
         }
-        currentStates = currentStates.filter { (state, joins, splits) -> state.isEmpty() }
+        currentStates = currentStates.filter { it.state.isEmpty() }
         if (logger().isTraceEnabled) {
             logger().trace("TRACE: " + trace.map { n -> n.activity })
             currentStates.forEach { (state, joins, splits) ->
@@ -114,23 +115,32 @@ class HeuristicMiner(
         if (!currentStates.any()) {
             return listOf<Split>() to listOf()
         }
-        //TODO badac zawieranie zamiast tego naiwnego sumowania
-        val tmp = currentStates.map { (state, joins, splits) ->
-            Triple(state, joins, splits) to joins.flatten().count() + splits.flatten().count()
-        }
-        val min = tmp.map { (k, v) -> v }.min()
-        logger().trace("MIN SIZE: " + min)
-        currentStates = tmp.filter { (k, v) -> v == min }.map { (k, v) -> k }
-        logger().trace("CTR: " + currentStates.count())
-        //TODO Co wlasciwie zrobic jezeli currentStates.count() > 1? Idea jest takie, żeby wybrać najbardziej oszczędną hipotezę odnośnie joinów/splitów, ale takich hipotez chyba może być kilka?
-        assert(currentStates.count() == 1)
-        val (_, joins, splits) = currentStates.single()
-        val finalSplits = splits.filter { split -> !split.isEmpty() }
+
+        val (_, joins, splits) = hypothesisSelector(currentStates.toList())
+
+        val finalSplits = splits.filter { split -> split.isNotEmpty() }
             .map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
-        val finalJoins = joins.filter { join -> !join.isEmpty() }
+        val finalJoins = joins.filter { join -> join.isNotEmpty() }
             .map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
         return finalSplits to finalJoins
     }
+
+    private fun mineBindings(
+        logWithNodes: Sequence<List<Node>>,
+        model: MutableModel
+    ) {
+        model.clearBindings()
+        joinSelector.reset()
+        splitSelector.reset()
+        logWithNodes.forEach { trace ->
+            val (splits, joins) = computeBindings(model, trace)
+            joinSelector.add(joins)
+            splitSelector.add(splits)
+        }
+        joinSelector.best.forEach { join -> model.addJoin(join) }
+        splitSelector.best.forEach { split -> model.addSplit(split) }
+    }
+
 
     internal val start = Node("start", special = true)
     internal val end = Node("end", special = true)
@@ -143,41 +153,24 @@ class HeuristicMiner(
             .keys
             .filter { k -> dependency.getOrDefault(k, 0.0) >= minDependency }
             .forEach { (a, b) -> model.addDependency(a, b) }
-        log
-            .map { trace ->
-                longTermDependencyMiner.processTrace(trace)
-                trace
-            }
+        val logWithNodes = log
             .map { trace -> listOf(start) + trace.map { e -> Node(e.name) }.toList() + listOf(end) }
-            .forEach { trace ->
-                val (splits, joins) = computeBindings(model, trace)
-                joinSelector.add(joins)
-                splitSelector.add(splits)
-            }
-        joinSelector.best.forEach { join -> model.addJoin(join) }
-        splitSelector.best.forEach { split -> model.addSplit(split) }
+        logWithNodes.forEach { trace ->
+            longTermDependencyMiner.processTrace(trace)
+        }
+        mineBindings(logWithNodes, model)
         while (true) {
             val ltdeps = longTermDependencyMiner.mine(model)
             if (ltdeps.isNotEmpty()) {
                 ltdeps.forEach { dep ->
-                    val dep = model.addDependency(dep.first, dep.second)
-                    model.splits.values.flatten().forEach { split ->
-                        if (split.source == dep.source) {
-                            model.removeSplit(split)
-                            model.addSplit(Split(split.dependencies + setOf(dep)))
-                        }
-                    }
-                    model.joins.values.flatten().forEach { join ->
-                        if (join.target == dep.target) {
-                            model.removeJoin(join)
-                            model.addJoin(Join(join.dependencies + setOf(dep)))
-                        }
-                    }
+                    model.addDependency(dep.first, dep.second)
                 }
+                mineBindings(logWithNodes, model)
             } else
                 break
         }
 
         model
     }
+
 }

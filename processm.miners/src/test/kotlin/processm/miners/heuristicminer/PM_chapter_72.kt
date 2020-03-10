@@ -78,7 +78,7 @@ class PM_chapter_72 {
 
     @Test
     fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`() {
-        val hm = HeuristicMiner(log, 2, .7, 4)
+        val hm = HeuristicMiner(log, 2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector())
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())
             with(outgoing) {
