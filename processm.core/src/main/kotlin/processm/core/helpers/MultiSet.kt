@@ -1,5 +1,9 @@
 package processm.core.helpers
 
+import java.util.*
+import kotlin.NoSuchElementException
+import kotlin.collections.HashMap
+
 open class MultiSet<E>() : MutableCollection<E> {
 
     protected val data = HashMap<E, Int>()
@@ -115,6 +119,10 @@ open class MultiSet<E>() : MutableCollection<E> {
 
     override fun hashCode(): Int {
         return data.hashCode()
+    }
+
+    fun toSet(): Set<E> {
+        return Collections.unmodifiableSet(data.keys)
     }
 
 }

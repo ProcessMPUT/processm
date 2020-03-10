@@ -41,7 +41,17 @@ class Verifier(val model: Model) {
     /**
      * The set of all valid sequences. There is a possiblity that this set is infinite.
      */
-    val validSequences: SequenceWithMemory<CausalNetSequence> by lazy { computeSetOfValidSequences().withMemory() }
+    val validSequences: SequenceWithMemory<CausalNetSequence> by lazy { computeSetOfValidSequences(false).withMemory() }
+    /**
+     * The set of all valid sequences without loops. This set should never be infinite.
+     *
+     * Recall that a state is a multi-set of pending obligations.
+     * A loop in a sequence occurs if there is a state B such that there is a state A earlier in the sequence, such that
+     * both states contains exactly the same pending obligations ignoring the number of occurences (e.g., this is the case for {a} and {a,a})
+     * and B contains no less of each obligations than A.
+     * In simple terms, B is A plus something.
+     */
+    val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> by lazy { computeSetOfValidSequences(true).withMemory() }
 
     private fun checkAbsenceOfDeadParts(): Boolean {
         return model.instances.asSequence()
@@ -68,12 +78,16 @@ class Verifier(val model: Model) {
                     }
     }
 
+    private fun isBoringSuperset(subset: State, superset: State): Boolean {
+        return subset.toSet() == superset.toSet() && superset.containsAll(subset)
+    }
+
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
      */
-    private fun extensions(input: CausalNetSequence): Sequence<ActivityBinding> {
+    private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): Sequence<ActivityBinding> {
         val currentState = input.last().state
-        return model.joins.asSequence().flatMap { (ak, joins) ->
+        val result = model.joins.asSequence().flatMap { (ak, joins) ->
             joins.asSequence()
                 .map { join: Join -> join.sources }
                 .filter { i: Collection<Node> -> currentState.containsAll(i times setOf(ak)) }
@@ -86,6 +100,10 @@ class Verifier(val model: Model) {
                         sequenceOf(ActivityBinding(ak, i, setOf(), currentState))
                 }
         }
+        if (avoidLoops)
+            return result.filter { extension -> input.all { !isBoringSuperset(it.state, extension.state) } }
+        else
+            return result
     }
 
     /**
@@ -94,7 +112,7 @@ class Verifier(val model: Model) {
      * There is possiblity that there are infinitely many such sequences.
      * To circumvent this, this function uses breadth-first search (BFS) and lazy evaluation
      */
-    private fun computeSetOfValidSequences(): Sequence<CausalNetSequence> {
+    private fun computeSetOfValidSequences(avoidLoops: Boolean): Sequence<CausalNetSequence> {
         val queue = ArrayDeque<CausalNetSequence>()
         queue.addAll(model
             .splits.getOrDefault(model.start, setOf())
@@ -104,7 +122,7 @@ class Verifier(val model: Model) {
         return sequence {
             while (queue.isNotEmpty()) {
                 val current = queue.pollFirst()
-                extensions(current).forEach { last ->
+                extensions(current, avoidLoops).forEach { last ->
                     if (last.a == model.end) {
                         if (last.state.isEmpty())
                             yield(current + last)
