@@ -82,4 +82,26 @@ class MutableModel(
         _joins[join.target]?.remove(join)
     }
 
+    /**
+     * Remove all bindings from the model
+     */
+    fun clearBindings() {
+        clearSplits()
+        clearJoins()
+    }
+
+    /**
+     * Remove all splits from the model
+     */
+    fun clearSplits() {
+        _splits.clear()
+    }
+
+    /**
+     * Remove all joins from the model
+     */
+    fun clearJoins() {
+        _joins.clear()
+    }
+
 }
