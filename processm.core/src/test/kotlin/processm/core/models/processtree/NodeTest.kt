@@ -6,11 +6,13 @@ import kotlin.test.assertEquals
 class NodeTest {
     @Test
     fun `Add two nodes with + operator`() {
+        val expected = processTree {
+            Parallel(
+                Activity("A"),
+                Activity("B")
+            )
+        }.root!!
         val check = Parallel() + Activity("A") + Activity("B")
-        val expected = Parallel().also {
-            it.childrenInternal.add(Activity("A"))
-            it.childrenInternal.add(Activity("B"))
-        }
 
         assertEquals(expected, check)
     }
