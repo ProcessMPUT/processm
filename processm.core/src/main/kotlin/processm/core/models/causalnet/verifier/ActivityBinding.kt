@@ -1,6 +1,6 @@
 package processm.core.models.causalnet.verifier
 
-import processm.core.helpers.MultiSet
+import org.apache.commons.collections4.multiset.HashMultiSet
 import processm.core.models.causalnet.Node
 
 /**
@@ -13,7 +13,7 @@ internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A
 /**
  * State is a multi-set of pending obligations (the PM book, Definition 3.10)
  */
-typealias State = MultiSet<Pair<Node, Node>>
+typealias State = HashMultiSet<Pair<Node, Node>>
 
 /**
  * Denotes the occurrence of activity [a] with input binding [i] and output binding [o]
@@ -32,7 +32,7 @@ class ActivityBinding(
      */
     val state: State by lazy {
         val tmp = State(stateBefore)
-        tmp.removeAll(i times setOf(a))
+        i.forEach { tmp.remove(it to a) }   //do not replace with removeAll, it doesn't have appropriate semantics
         tmp.addAll(setOf(a) times o)
         tmp
     }

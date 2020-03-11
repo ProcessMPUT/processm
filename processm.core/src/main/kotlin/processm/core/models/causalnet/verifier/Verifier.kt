@@ -6,6 +6,7 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import java.util.*
+import kotlin.collections.HashMap
 
 typealias CausalNetSequence = List<ActivityBinding>
 
@@ -15,7 +16,7 @@ typealias CausalNetSequence = List<ActivityBinding>
  *
  * Computations are potentially expensive, but to minimize impact, everything is initialized lazily and then stored
  */
-class Verifier(val model: Model) {
+class Verifier(val model: Model, val useCache: Boolean = true) {
 
     /**
      * By definition, a causal net model is safe
@@ -79,31 +80,46 @@ class Verifier(val model: Model) {
     }
 
     private fun isBoringSuperset(subset: State, superset: State): Boolean {
-        return subset.toSet() == superset.toSet() && superset.containsAll(subset)
+        return subset.uniqueSet() == superset.uniqueSet() && superset.containsAll(subset)
     }
+
+    private val cache = HashMap<State, List<ActivityBinding>>()
 
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
      */
-    private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): Sequence<ActivityBinding> {
+    private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): List<ActivityBinding> {
         val currentState = input.last().state
-        val result = model.joins.asSequence().flatMap { (ak, joins) ->
-            joins.asSequence()
-                .map { join: Join -> join.sources }
-                .filter { i: Collection<Node> -> currentState.containsAll(i times setOf(ak)) }
-                .flatMap { i: Collection<Node> ->
-                    if (model.splits.containsKey(ak))
-                        model.splits.getValue(ak).asSequence().map { split ->
-                            ActivityBinding(ak, i, split.targets, currentState)
-                        }
-                    else
-                        sequenceOf(ActivityBinding(ak, i, setOf(), currentState))
-                }
+        if (useCache) {
+            val fromCache = cache[currentState]
+            if (fromCache != null)
+                return fromCache
         }
-        if (avoidLoops)
-            return result.filter { extension -> input.all { !isBoringSuperset(it.state, extension.state) } }
-        else
-            return result
+        val result = ArrayList<ActivityBinding>()
+        val candidates = currentState.map { it.second }.intersect(model.joins.keys)
+        for (ak in candidates) {
+            for (join in model.joins.getValue(ak)) {
+                val expected = join.sources.map { it to ak }
+                if (currentState.containsAll(expected)) {
+                    val splits = model.splits[ak]
+                    if (splits != null) {
+                        for (split in splits) {
+                            val ab = ActivityBinding(ak, join.sources, split.targets, currentState)
+                            if (!avoidLoops || input.all { !isBoringSuperset(it.state, ab.state) })
+                                result.add(ab)
+                        }
+                    } else {
+                        val ab = ActivityBinding(ak, join.sources, setOf(), currentState)
+                        if (!avoidLoops || input.all { !isBoringSuperset(it.state, ab.state) })
+                            result.add(ab)
+                    }
+                }
+            }
+        }
+        if (useCache) {
+            cache[currentState] = result
+        }
+        return result
     }
 
     /**
