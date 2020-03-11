@@ -15,11 +15,6 @@ abstract class Node(vararg nodes: Node) {
         childrenInternal.addAll(nodes)
     }
 
-    operator fun plus(other: Node): Node {
-        childrenInternal.add(other)
-        return this
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
