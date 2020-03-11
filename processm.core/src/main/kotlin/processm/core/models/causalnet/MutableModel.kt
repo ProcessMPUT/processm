@@ -104,4 +104,12 @@ class MutableModel(
         _joins.clear()
     }
 
+    /**
+     * Removes all bindings for a given node
+     */
+    fun clearBindingsFor(node: Node) {
+        _joins.remove(node)
+        _splits.remove(node)
+    }
+
 }

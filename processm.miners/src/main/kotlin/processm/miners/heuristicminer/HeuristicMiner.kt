@@ -77,16 +77,26 @@ class HeuristicMiner(
         for (currentNode in trace) {
             val consumable = model.incoming.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
             val producible = model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
-            val consumeCandidates =
-                if (consumable.isNotEmpty())
-                    consumable.allSubsets().filter { consume -> consume.isNotEmpty() }
-                else
-                    sequenceOf(setOf())
-            val produceCandidates =
-                if (producible.isNotEmpty())
-                    producible.allSubsets().filter { produce -> produce.isNotEmpty() }
-                else
-                    sequenceOf(setOf())
+            val knownJoins = model.joins[currentNode]
+            val consumeCandidates: Sequence<Set<Pair<Node, Node>>> =
+                if (knownJoins.isNullOrEmpty()) {
+                    if (consumable.isNotEmpty())
+                        consumable.allSubsets().filter { consume -> consume.isNotEmpty() }
+                    else
+                        sequenceOf(setOf())
+                } else {
+                    knownJoins.map { join -> join.sources.map { it to join.target }.toSet() }.asSequence()
+                }
+            val knownSplits = model.splits[currentNode]
+            val produceCandidates: Sequence<Set<Pair<Node, Node>>> =
+                if (knownSplits.isNullOrEmpty()) {
+                    if (producible.isNotEmpty())
+                        producible.allSubsets().filter { produce -> produce.isNotEmpty() }
+                    else
+                        sequenceOf(setOf())
+                } else {
+                    knownSplits.map { split -> split.targets.map { split.source to it }.toSet() }.asSequence()
+                }
             // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
             // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
             currentStates = currentStates
@@ -129,7 +139,6 @@ class HeuristicMiner(
         logWithNodes: Sequence<List<Node>>,
         model: MutableModel
     ) {
-        model.clearBindings()
         joinSelector.reset()
         splitSelector.reset()
         logWithNodes.forEach { trace ->
@@ -137,8 +146,14 @@ class HeuristicMiner(
             joinSelector.add(joins)
             splitSelector.add(splits)
         }
-        joinSelector.best.forEach { join -> model.addJoin(join) }
-        splitSelector.best.forEach { split -> model.addSplit(split) }
+        joinSelector.best.forEach { join ->
+            if (!model.contains(join))
+                model.addJoin(join)
+        }
+        splitSelector.best.forEach { split ->
+            if (!model.contains(split))
+                model.addSplit(split)
+        }
     }
 
 
@@ -164,6 +179,8 @@ class HeuristicMiner(
             if (ltdeps.isNotEmpty()) {
                 ltdeps.forEach { dep ->
                     model.addDependency(dep.first, dep.second)
+                    model.clearBindingsFor(dep.first)
+                    model.clearBindingsFor(dep.second)
                 }
                 mineBindings(logWithNodes, model)
             } else

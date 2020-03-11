@@ -403,4 +403,34 @@ class MutableModelTest {
         assertTrue { mm.splits[c].isNullOrEmpty() }
         assertTrue { mm.splits[a].isNullOrEmpty() }
     }
+
+    @Test
+    fun `remove all bindings for given node`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addJoin(Join(setOf(mm.addDependency(a, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(a, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, c))))
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearBindingsFor(c)
+        assertFalse { mm.joins.isEmpty() }
+        assertTrue { mm.joins[c].isNullOrEmpty() }
+        assertFalse { mm.joins[a].isNullOrEmpty() }
+        assertFalse { mm.splits.isEmpty() }
+        assertTrue { mm.splits[c].isNullOrEmpty() }
+        assertFalse { mm.splits[a].isNullOrEmpty() }
+    }
 }
