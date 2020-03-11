@@ -24,7 +24,7 @@ class ActivityBinding(
     val a: Node,
     val i: Collection<Node>,
     val o: Collection<Node>,
-    private val stateBefore: State
+    val stateBefore: State
 ) {
 
     /**

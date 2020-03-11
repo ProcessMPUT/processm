@@ -152,4 +152,47 @@ class Verifier(val model: Model, val useCache: Boolean = true) {
             }
         }
     }
+
+    /**
+     * Checks whether the given list of [ActivityBinding]s is a valid, complete execution sequence for the considered model
+     */
+    fun isValid(seq: List<ActivityBinding>): Boolean {
+        for (ab in seq) {
+            val joins = model.joins[ab.a]
+            if (joins.isNullOrEmpty()) {
+                if (ab.i.isNotEmpty())
+                    return false
+            } else {
+                if (ab.i.isEmpty())
+                    return false
+                if (!joins.any { join -> join.sources == ab.i })
+                    return false
+            }
+            val splits = model.splits[ab.a]
+            if (splits.isNullOrEmpty()) {
+                if (ab.o.isNotEmpty())
+                    return false
+            } else {
+                if (ab.o.isEmpty())
+                    return false
+                if (!splits.any { split -> split.targets == ab.o })
+                    return false
+            }
+        }
+        if (seq.first().i.isNotEmpty())
+            return false
+        with(seq.last()) {
+            if (state.isNotEmpty() || o.isNotEmpty())
+                return false
+        }
+        var i = seq.iterator()
+        var prev = i.next()
+        while (i.hasNext()) {
+            val cur = i.next()
+            if (prev.state != cur.stateBefore)
+                return false
+            prev = cur
+        }
+        return true
+    }
 }

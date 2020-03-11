@@ -115,6 +115,10 @@ class VerifierTest {
             ), seqs
         )
         assertTrue { v.isSound }
+        v.validSequences.forEach { seq -> assertTrue { v.isValid(seq) } }
+        v.validSequences.forEach { seq -> assertFalse { v.isValid(seq.subList(1, seq.size)) } }
+        v.validSequences.forEach { seq -> assertFalse { v.isValid(seq.subList(0, seq.size - 1)) } }
+        v.validSequences.forEach { seq -> assertFalse { v.isValid(seq.subList(0, 1) + seq.subList(seq.size-1, seq.size)) } }
     }
 
     private fun displayValidSequences(vs: Sequence<List<ActivityBinding>>) {
