@@ -2,9 +2,12 @@ package processm.miners.heuristicminer
 
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.verifier.Verifier
+import processm.miners.heuristicminer.avoidability.*
 
-class NaiveLongTermDependencyMiner(val minLongTermDependency: Double = 0.9999) : LongTermDependencyMiner {
+class NaiveLongTermDependencyMiner(
+    val minLongTermDependency: Double = 0.9999,
+    val avoidabilityChecker: AvoidabilityChecker = ValidSequenceBasedAvoidabilityChecker()
+) : LongTermDependencyMiner {
     private val predecessorCtr = Counter<Node>()
     private val pairsCtr = Counter<Pair<Node, Node>>()
 
@@ -21,14 +24,13 @@ class NaiveLongTermDependencyMiner(val minLongTermDependency: Double = 0.9999) :
             .flatten()
             .map { d -> d.source to d.target }
             .toSet()
-        val v = Verifier(model)
-        assert(v.validSequences.any())
+        avoidabilityChecker.setContext(model)
         return pairsCtr
             .filter { (dep, ctr) -> !known.contains(dep) }
             .map { (dep, ctr) -> dep to ctr.toDouble() / predecessorCtr.getValue(dep.first) }
             .filter { (dep, ctr) -> ctr >= minLongTermDependency }
             .map { (dep, ctr) -> dep }
             .filter { dep -> !(dep.first == model.start && dep.second == model.end) }
-            .filter { dep -> v.validLoopFreeSequences.any { seq -> !seq.fulfills(dep) } }
+            .filter { dep -> avoidabilityChecker.invoke(dep) }
     }
 }
