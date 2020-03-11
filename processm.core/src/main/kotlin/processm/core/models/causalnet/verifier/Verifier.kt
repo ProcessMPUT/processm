@@ -93,7 +93,10 @@ class Verifier(val model: Model, val useCache: Boolean = true) {
         if (useCache) {
             val fromCache = cache[currentState]
             if (fromCache != null)
-                return fromCache
+                return if (avoidLoops)
+                    fromCache.filter { ab -> input.all { !isBoringSuperset(it.state, ab.state) } }
+                else
+                    fromCache
         }
         val result = ArrayList<ActivityBinding>()
         val candidates = currentState.map { it.second }.intersect(model.joins.keys)
@@ -105,13 +108,11 @@ class Verifier(val model: Model, val useCache: Boolean = true) {
                     if (splits != null) {
                         for (split in splits) {
                             val ab = ActivityBinding(ak, join.sources, split.targets, currentState)
-                            if (!avoidLoops || input.all { !isBoringSuperset(it.state, ab.state) })
-                                result.add(ab)
+                            result.add(ab)
                         }
                     } else {
                         val ab = ActivityBinding(ak, join.sources, setOf(), currentState)
-                        if (!avoidLoops || input.all { !isBoringSuperset(it.state, ab.state) })
-                            result.add(ab)
+                        result.add(ab)
                     }
                 }
             }
@@ -119,7 +120,10 @@ class Verifier(val model: Model, val useCache: Boolean = true) {
         if (useCache) {
             cache[currentState] = result
         }
-        return result
+        return if (avoidLoops)
+            result.filter { ab -> input.all { !isBoringSuperset(it.state, ab.state) } }
+        else
+            result
     }
 
     /**

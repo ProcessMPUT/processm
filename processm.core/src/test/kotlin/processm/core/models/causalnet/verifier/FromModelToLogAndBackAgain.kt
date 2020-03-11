@@ -1,11 +1,8 @@
-package processm.miners.heuristicminer
+package processm.core.models.causalnet.verifier
 
-import processm.core.logging.logger
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
-import processm.core.models.causalnet.mock.Event
-import processm.core.models.causalnet.verifier.Verifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -35,14 +32,17 @@ class FromModelToLogAndBackAgain {
     }
 
     fun test(model: Model, expected: Set<List<Node>>) {
+        val v = Verifier(model)
         assertEquals(
-            Verifier(model).validSequences.map { seq -> seq.map { it.a } }.toSet(),
+            v.validSequences.map { seq -> seq.map { it.a } }.toSet(),
             expected
         )
         assertEquals(
-            Verifier(model).validLoopFreeSequences.map { seq -> seq.map { it.a } }.toSet(),
+            v.validLoopFreeSequences.map { seq -> seq.map { it.a } }.toSet(),
             expected
         )
+        assertFalse(v.hasDeadParts)
+        assertTrue(v.isSound)
     }
 
     @Test

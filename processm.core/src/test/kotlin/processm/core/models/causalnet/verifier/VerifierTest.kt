@@ -228,19 +228,18 @@ class VerifierTest {
             setOf(bd, cd),
             setOf(de)
         ).forEach { model.addJoin(Join(it)) }
-        val v = Verifier(model)
+        val v = Verifier(model, useCache = false)
         assertTrue { v.isSound }
         val tmp = v.validSequences.map { seq -> seq.map { ab -> ab.a } }
         assertTrue { tmp.contains(listOf(a, b, b, c, c, d, d, e)) }
         assertTrue { tmp.contains(listOf(a, b, c, d, e)) }
         assertTrue { tmp.contains(listOf(a, b, c, b, c, d, d, e)) }
-        assertTrue { tmp.contains(listOf(a, b, b, b, c, c, c, d, d, d, e)) }
         assertEquals(
-            v.validLoopFreeSequences.map { seq -> seq.map { ab -> ab.a }.sortedBy { it.activity } }.toSet(),
             setOf(
                 listOf(a, b, c, d, e),
                 listOf(a, b, b, c, c, d, d, e)
-            )
+            ),
+            v.validLoopFreeSequences.map { seq -> seq.map { ab -> ab.a }.sortedBy { it.activity } }.toSet()
         )
     }
 
