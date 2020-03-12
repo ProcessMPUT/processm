@@ -109,7 +109,7 @@ object DBSerializer {
     fun insert(model: Model): Int {
         var result: Int? = null
         transaction(DBConnectionPool.database) {
-            addLogger(StdOutSqlLogger)
+            addLogger(Slf4jSqlDebugLogger)
             updateSchema()
             val daomodel = DAOModel.new {
             }
@@ -155,7 +155,7 @@ object DBSerializer {
     fun fetch(modelId: Int): MutableModel {
         var result: MutableModel? = null
         transaction(DBConnectionPool.database) {
-            addLogger(StdOutSqlLogger)
+            addLogger(Slf4jSqlDebugLogger)
             updateSchema()
             val daomodel = DAOModel.findById(modelId) ?: throw NoSuchElementException()
             val idNode = daomodel.nodes
@@ -193,7 +193,7 @@ object DBSerializer {
      */
     fun delete(modelId: Int) {
         transaction(DBConnectionPool.database) {
-            addLogger(StdOutSqlLogger)
+            addLogger(Slf4jSqlDebugLogger)
             updateSchema()
             val model = DAOModel.findById(modelId) ?: throw NoSuchElementException()
             model.delete()
