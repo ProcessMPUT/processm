@@ -91,16 +91,6 @@ internal object CausalNetDependencyBindings : Table() {
 
 object DBSerializer {
 
-    private fun updateSchema() {
-        SchemaUtils.createMissingTablesAndColumns(
-            CausalNetNode,
-            CausalNetModel,
-            CausalNetDependency,
-            CausalNetDependencyBindings,
-            CausalNetBinding
-        )
-    }
-
     /**
      * Insert a causal net model to the DB
      *
@@ -110,7 +100,6 @@ object DBSerializer {
         var result: Int? = null
         transaction(DBConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
-            updateSchema()
             val daomodel = DAOModel.new {
             }
             val node2DAONode = model.instances.map { node ->
@@ -156,7 +145,6 @@ object DBSerializer {
         var result: MutableModel? = null
         transaction(DBConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
-            updateSchema()
             val daomodel = DAOModel.findById(modelId) ?: throw NoSuchElementException()
             val idNode = daomodel.nodes
                 .map { row -> row.id to Node(row.activity, row.instance, row.special) }
@@ -194,7 +182,6 @@ object DBSerializer {
     fun delete(modelId: Int) {
         transaction(DBConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
-            updateSchema()
             val model = DAOModel.findById(modelId) ?: throw NoSuchElementException()
             model.delete()
         }
