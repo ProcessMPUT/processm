@@ -11,8 +11,17 @@ abstract class Node(vararg nodes: Node) {
      */
     val children: List<Node> = Collections.unmodifiableList(childrenInternal)
 
+    /**
+     * Reference to own parent
+     */
+    var parent: Node? = null
+        private set
+
     init {
-        childrenInternal.addAll(nodes)
+        nodes.forEach { node ->
+            childrenInternal.add(node)
+            node.parent = this
+        }
     }
 
     override fun equals(other: Any?): Boolean {

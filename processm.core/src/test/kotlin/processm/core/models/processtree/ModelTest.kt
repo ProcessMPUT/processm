@@ -6,6 +6,26 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ModelTest {
+    @Test
+    fun `Node without reference to own parent if root`() {
+        val a = Activity("A")
+        with(processTree { Sequence(a) }) {
+            assertNull(root!!.parent)
+        }
+    }
+
+    @Test
+    fun `Node with reference to own parent`() {
+        val a = Activity("A")
+        val b = Activity("B")
+        with(processTree { Sequence(a, b) }.root!!) {
+            assertNull(parent)
+
+            children.forEach { childrenNode ->
+                assertEquals(childrenNode.parent, this)
+            }
+        }
+    }
 
     @Test
     fun `Model without activities`() {

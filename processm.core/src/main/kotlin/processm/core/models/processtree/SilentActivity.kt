@@ -1,3 +1,3 @@
 package processm.core.models.processtree
 
-class SilentActivity : Node()
+class SilentActivity : Activity("")
