@@ -1,11 +1,13 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.hypothesisselector
 
 import processm.core.logging.logger
+import processm.miners.heuristicminer.ReplayTrace
 
 /**
  * Selects the best replay trace by counting overall number of used dependencies
  */
-abstract class CountingHypothesisSelector : ReplayTraceHypothesisSelector {
+abstract class CountingHypothesisSelector :
+    ReplayTraceHypothesisSelector {
     fun invoke(currentStates: Collection<ReplayTrace>, crit: Collection<Int>.() -> Int?): ReplayTrace {
         val statesWithCounts = currentStates
             .map { (state, joins, splits) ->

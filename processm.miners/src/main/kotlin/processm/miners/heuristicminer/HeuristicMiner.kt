@@ -4,6 +4,8 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.models.causalnet.mock.Event
 import processm.core.models.causalnet.verifier.State
+import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
+import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 

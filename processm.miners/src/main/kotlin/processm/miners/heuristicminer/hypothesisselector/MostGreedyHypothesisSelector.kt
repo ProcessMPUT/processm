@@ -1,4 +1,6 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.hypothesisselector
+
+import processm.miners.heuristicminer.ReplayTrace
 
 /**
  * Selects the replay trace with the maximal number of used dependencies.

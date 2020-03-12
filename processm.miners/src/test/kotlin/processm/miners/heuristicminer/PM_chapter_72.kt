@@ -5,10 +5,10 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.core.models.causalnet.mock.Event
+import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.math.absoluteValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 fun assertDoubleEquals(expected: Double?, actual: Double?, eps: Double = 1e-5) {
