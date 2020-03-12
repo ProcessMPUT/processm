@@ -31,6 +31,6 @@ class NaiveLongTermDependencyMiner(
             .filter { (dep, ctr) -> ctr >= minLongTermDependency }
             .map { (dep, ctr) -> dep }
             .filter { dep -> !(dep.first == model.start && dep.second == model.end) }
-            .filter { dep -> avoidabilityChecker.invoke(dep) }
+            .filter { dep -> avoidabilityChecker.invoke(setOf(dep.first) to setOf(dep.second)) }
     }
 }

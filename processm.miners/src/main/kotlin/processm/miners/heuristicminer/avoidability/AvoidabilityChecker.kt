@@ -17,5 +17,5 @@ interface AvoidabilityChecker {
     /**
      * Returns true if the dependency is already enfoced by the model provided via [setContext], and false otherwise.
      */
-    operator fun invoke(dependency: Pair<Node, Node>): Boolean
+    operator fun invoke(dependency: Pair<Set<Node>, Set<Node>>): Boolean
 }

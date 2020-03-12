@@ -19,15 +19,16 @@ class ValidSequenceBasedAvoidabilityChecker :
     /**
      * Returns true if there is no predecessor or both predecessor and successor are present
      */
-    private fun CausalNetSequence.fulfills(dep: Pair<Node, Node>): Boolean {
-        val first = this.indexOfFirst { ab -> ab.a == dep.first }
-        if (first == -1)
+    private fun CausalNetSequence.fulfills(dep: Pair<Set<Node>, Set<Node>>): Boolean {
+        val indices = dep.first.map { expected -> indexOfFirst { ab -> ab.a == expected } }
+        if (indices.any { it == -1 })
             return true
-        return this.subList(first + 1, this.size).any { ab -> ab.a == dep.second }
+        val first = indices.max()!!
+        return this.subList(first + 1, this.size).map { it.a }.containsAll(dep.second)
     }
 
 
-    override fun invoke(dependency: Pair<Node, Node>): Boolean {
+    override fun invoke(dependency: Pair<Set<Node>, Set<Node>>): Boolean {
         val result = seqs?.any { seq -> !seq.fulfills(dependency) }
         if (result != null)
             return result
