@@ -1,13 +1,20 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.longdistance
 
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
+import processm.miners.heuristicminer.Counter
 import processm.miners.heuristicminer.avoidability.*
+import processm.miners.heuristicminer.inc
 
-class NaiveLongTermDependencyMiner(
+/**
+ * A very simple approach for long-distance dependenyc mining, boiling down to mining sequential rules
+ * with a single premise and a single conclusions. Seems to be sound (i.e., all mined dependencies are real) as
+ * long as [minLongTermDependency] is approximately `, but vastly incomplete
+ */
+class NaiveLongDistanceDependencyMiner(
     val minLongTermDependency: Double = 0.9999,
     val avoidabilityChecker: AvoidabilityChecker = ValidSequenceBasedAvoidabilityChecker()
-) : LongTermDependencyMiner {
+) : LongDistanceDependencyMiner {
     private val predecessorCtr = Counter<Node>()
     private val pairsCtr = Counter<Pair<Node, Node>>()
 

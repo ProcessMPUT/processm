@@ -1,4 +1,4 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.longdistance
 
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
@@ -9,8 +9,8 @@ import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
  * identical, independent processes in a sequence - it is able to find dependencies in the second, but not in the first).
  * It is left here just in case, but currently there is no reason to believe this code will be useful.
  */
-private class ShortestUniquePrefixLongTermDependencyMiner(isAvoidable: AvoidabilityChecker) :
-    AbstractAssociationsRulesLongTermDependencyMiner(isAvoidable) {
+private class ShortestUniquePrefixLongDistanceDependencyMiner(isAvoidable: AvoidabilityChecker) :
+    AbstractAssociationsRulesLongDistanceDependencyMiner(isAvoidable) {
 
     private val seen = HashSet<Set<Node>>()
 

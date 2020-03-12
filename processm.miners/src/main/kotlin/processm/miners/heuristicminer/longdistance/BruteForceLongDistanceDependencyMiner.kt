@@ -1,17 +1,22 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.longdistance
 
 import processm.core.models.causalnet.Node
+import processm.miners.heuristicminer.allSubsets
 import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 import kotlin.math.max
 
-class BruteForceLongTermDependencyMiner(
+/**
+ * Long-distance dependency mining by checking all possible sets of premises up to the size specified by [maxPremisesSize].
+ * Seems to be sound and complete (given large enough [maxPremisesSize]) within the hypothesis space of positive association rules (i.e., in general, is incomplete).
+ */
+class BruteForceLongDistanceDependencyMiner(
     isAvoidable: AvoidabilityChecker,
-    val maxPredecessorLength: Int = 3
+    val maxPremisesSize: Int = 3
 ) :
-    AbstractAssociationsRulesLongTermDependencyMiner(isAvoidable) {
+    AbstractAssociationsRulesLongDistanceDependencyMiner(isAvoidable) {
 
 
     private val nodes by lazy {
@@ -37,7 +42,14 @@ class BruteForceLongTermDependencyMiner(
         val common = intersection(log.map { it.toSet() })
         val rules = HashMap<Set<Node>, Set<Node>>()
         val queue = ArrayDeque<Args>()
-        queue.add(Args(setOf(), 0, log.indices.map { it to -1 }.toList(), listOf()))
+        queue.add(
+            Args(
+                setOf(),
+                0,
+                log.indices.map { it to -1 }.toList(),
+                listOf()
+            )
+        )
         while (queue.isNotEmpty()) {
             val (prec, pos, positive, negative) = queue.pollFirst()
             if (negative.isNotEmpty()) {
@@ -54,7 +66,7 @@ class BruteForceLongTermDependencyMiner(
                 }
             }
             val extensions = nodes.subList(pos, nodes.size)
-            if (prec.size + 1 <= maxPredecessorLength) {
+            if (prec.size + 1 <= maxPremisesSize) {
                 for ((idx, ext) in extensions) {
                     val newPos = ArrayList<Pair<Int, Int>>()
                     val newNeg = ArrayList<Int>()
@@ -66,7 +78,14 @@ class BruteForceLongTermDependencyMiner(
                             newNeg.add(tidx)
                     }
                     if (newPos.isNotEmpty()) {
-                        queue.addLast(Args(prec + ext, idx + 1, newPos, negative + newNeg))
+                        queue.addLast(
+                            Args(
+                                prec + ext,
+                                idx + 1,
+                                newPos,
+                                negative + newNeg
+                            )
+                        )
                     }
                 }
             }

@@ -1,16 +1,16 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.longdistance
 
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
 
 /**
- * An abstraction for a [LongTermDependencyMiner] with a hypothesis consisting of (positive) association rules,
+ * An abstraction for a [LongDistanceDependencyMiner] with a hypothesis consisting of (positive) association rules,
  * i.e., `itemset->itemset`
  */
-abstract class AbstractAssociationsRulesLongTermDependencyMiner(
+abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
     val isAvoidable: AvoidabilityChecker
-) : LongTermDependencyMiner {
+) : LongDistanceDependencyMiner {
 
     protected val log = ArrayList<List<Node>>()
 

@@ -4,6 +4,8 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.models.causalnet.mock.Event
 import processm.core.models.causalnet.verifier.State
+import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
+import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 
 typealias Trace = Sequence<Event>
 typealias Log = Sequence<Trace>
@@ -32,7 +34,7 @@ class HeuristicMiner(
     val minDirectlyFollows: Int = 1,
     val minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
-    val longTermDependencyMiner: LongTermDependencyMiner = NaiveLongTermDependencyMiner(),
+    val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
     val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport),
     val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
@@ -171,11 +173,11 @@ class HeuristicMiner(
         val logWithNodes = log
             .map { trace -> listOf(start) + trace.map { e -> Node(e.name) }.toList() + listOf(end) }
         logWithNodes.forEach { trace ->
-            longTermDependencyMiner.processTrace(trace)
+            longDistanceDependencyMiner.processTrace(trace)
         }
         mineBindings(logWithNodes, model)
         while (true) {
-            val ltdeps = longTermDependencyMiner.mine(model)
+            val ltdeps = longDistanceDependencyMiner.mine(model)
             if (ltdeps.isNotEmpty()) {
                 ltdeps.forEach { dep ->
                     model.addDependency(dep.first, dep.second)
