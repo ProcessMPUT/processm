@@ -5,7 +5,7 @@ import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.causalnet.mock.Event
-import processm.core.models.causalnet.verifier.Verifier
+import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.avoidability.ValidSequenceBasedAvoidabilityChecker
 import processm.miners.heuristicminer.longdistance.BruteForceLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
@@ -37,18 +37,18 @@ class FromModelToLogAndBackAgain {
 
     private fun test(reference: Model, longDistanceDependencyMiner: LongDistanceDependencyMiner) {
         logger().debug("REFERENCE:\n${reference}")
-        val referenceVerifier = Verifier(reference)
+        val referenceVerifier = CausalNetVerifier().verify(reference)
         val expectedSequences =
             referenceVerifier.validSequences.map { seq -> seq.map { it.a }.filter { !it.special } }.toSet()
         logger().debug("EXPECTED SEQUENCES: ${str(expectedSequences)}")
-        assertFalse(referenceVerifier.hasDeadParts)
+        assertTrue(referenceVerifier.noDeadParts)
         assertTrue(referenceVerifier.isSound)
         val log: Log = referenceVerifier
             .validSequences
             .flatMap { seq -> List(1) { seq.asSequence().map { ab -> Event(ab.a.activity) } }.asSequence() }
         log.forEach { println(it.toList()) }
         val hm = HeuristicMiner(log, longDistanceDependencyMiner = longDistanceDependencyMiner)
-        val v = Verifier(hm.result)
+        val v = CausalNetVerifier().verify(hm.result)
 
         val actualSequences = v.validSequences.map { seq -> seq.map { ab -> ab.a }.filter { !it.special } }.toSet()
         logger().debug("ACTUAL SEQUENCES: ${str(actualSequences)}")
@@ -56,7 +56,7 @@ class FromModelToLogAndBackAgain {
         logger().debug("MISSING SEQUENCES: ${str(expectedSequences - actualSequences)}")
         logger().debug("MODEL:\n" + hm.result)
         assertEquals(expectedSequences, actualSequences)
-        assertFalse(v.hasDeadParts)
+        assertTrue(v.noDeadParts)
         assertTrue(v.isSound)
     }
 

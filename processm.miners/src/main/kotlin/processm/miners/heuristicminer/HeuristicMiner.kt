@@ -3,7 +3,7 @@ package processm.miners.heuristicminer
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.models.causalnet.mock.Event
-import processm.core.models.causalnet.verifier.State
+import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner

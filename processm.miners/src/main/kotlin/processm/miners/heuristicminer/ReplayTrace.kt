@@ -1,7 +1,7 @@
 package processm.miners.heuristicminer
 
 import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.verifier.State
+import processm.core.verifiers.causalnet.State
 
 data class ReplayTrace(
     val state: State,
