@@ -97,6 +97,82 @@ internal class XESImportCertificationFirstLevelTest {
     }
 
     @Test
+    fun `Level A1 = XES Event data that only contains case identifiers and activity names also when not used standard extensions`() {
+        """<?xml version="1.0" encoding="UTF-8" ?>
+            <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
+                <string key="concept:name" value="Log concept:name"/>
+                <string key="identity:id" value="Log identity:id"/>
+                <trace>
+                    <string key="concept:name" value="Trace #001"/>
+                    <string key="identity:id" value="T-001"/>
+                    <event>
+                        <string key="concept:name" value="Event #1 in Trace #001"/>
+                        <string key="identity:id" value="E-001"/>
+                    </event>
+                    <event>
+                        <string key="concept:name" value="Event #2 in Trace #001"/>
+                        <string key="identity:id" value="E-002"/>
+                    </event>
+                </trace>
+                <trace>
+                    <string key="concept:name" value="Trace #002"/>
+                    <string key="identity:id" value="T-002"/>
+                    <event>
+                        <string key="concept:name" value="Event #1 in Trace #002"/>
+                        <string key="identity:id" value="E-003"/>
+                    </event>
+                    <event>
+                        <string key="concept:name" value="Event #2 in Trace #002"/>
+                        <string key="identity:id" value="E-004"/>
+                    </event>
+                </trace>
+            </log>
+        """.trimIndent().byteInputStream().use { stream ->
+            val iterator = XMLXESInputStream(stream).iterator()
+            val receivedLog: Log = iterator.next() as Log
+
+            with(receivedLog.extensions) {
+                assertEquals(size, 0)
+            }
+
+            with(receivedLog) {
+                assertEquals(conceptName, "Log concept:name")
+                assertEquals(identityId, "Log identity:id")
+            }
+
+            with(iterator.next() as Trace) {
+                assertEquals(conceptName, "Trace #001")
+                assertEquals(identityId, "T-001")
+            }
+
+            with(iterator.next() as Event) {
+                assertEquals(conceptName, "Event #1 in Trace #001")
+                assertEquals(identityId, "E-001")
+            }
+
+            with(iterator.next() as Event) {
+                assertEquals(conceptName, "Event #2 in Trace #001")
+                assertEquals(identityId, "E-002")
+            }
+
+            with(iterator.next() as Trace) {
+                assertEquals(conceptName, "Trace #002")
+                assertEquals(identityId, "T-002")
+            }
+
+            with(iterator.next() as Event) {
+                assertEquals(conceptName, "Event #1 in Trace #002")
+                assertEquals(identityId, "E-003")
+            }
+
+            with(iterator.next() as Event) {
+                assertEquals(conceptName, "Event #2 in Trace #002")
+                assertEquals(identityId, "E-004")
+            }
+        }
+    }
+
+    @Test
     fun `Level B1 = Level A1 extended with event types (lifecycleTransition attribute) and timestamps (timeTimestamp attribute)`() {
         val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
         dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
