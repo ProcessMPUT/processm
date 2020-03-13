@@ -1,16 +1,28 @@
 package processm.miners.heuristicminer
 
+import io.mockk.every
+import io.mockk.mockk
+import processm.core.log.Event
+import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
-import processm.core.models.causalnet.mock.Event
 import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.avoidability.ValidSequenceBasedAvoidabilityChecker
 import processm.miners.heuristicminer.longdistance.BruteForceLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import kotlin.test.*
+
+
+internal fun event(name: String): Event {
+    val e = mockk<Event>()
+    every { e.conceptName } returns name
+    every { e.conceptInstance } returns null
+    return e
+}
 
 class FromModelToLogAndBackAgain {
     val a = Node("a")
@@ -43,10 +55,10 @@ class FromModelToLogAndBackAgain {
         logger().debug("EXPECTED SEQUENCES: ${str(expectedSequences)}")
         assertTrue(referenceVerifier.noDeadParts)
         assertTrue(referenceVerifier.isSound)
-        val log: Log = referenceVerifier
+        val log = Log(referenceVerifier
             .validSequences
-            .flatMap { seq -> List(1) { seq.asSequence().map { ab -> Event(ab.a.activity) } }.asSequence() }
-        log.forEach { println(it.toList()) }
+            .map { seq -> Trace(seq.asSequence().map { ab -> event(ab.a.activity) }) })
+        log.traces.forEach { println(it.events.toList()) }
         val hm = HeuristicMiner(log, longDistanceDependencyMiner = longDistanceDependencyMiner)
         val v = CausalNetVerifier().verify(hm.result)
 

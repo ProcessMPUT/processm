@@ -1,5 +1,7 @@
 package processm.miners.heuristicminer
 
+import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
@@ -27,7 +29,7 @@ class PM_chapter_72 {
     private val d = Node("d")
     private val e = Node("e")
     private val nodes = listOf(a, b, c, d, e)
-    private val log = listOf(
+    private val log = Log(listOf(
         "ae" to 5,
         "abce" to 10,
         "acbe" to 10,
@@ -37,7 +39,7 @@ class PM_chapter_72 {
         "adde" to 2,
         "addde" to 1
     ).asSequence()
-        .flatMap { (s, n) -> List(n) { s.map { e -> Event(e.toString()) }.asSequence() }.asSequence() }
+        .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
 
     @Test
     fun `directly follows`() {

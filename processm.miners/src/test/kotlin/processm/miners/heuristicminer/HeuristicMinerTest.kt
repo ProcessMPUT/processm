@@ -1,10 +1,11 @@
 package processm.miners.heuristicminer
 
+import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.core.models.causalnet.mock.Event
 import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,12 +20,12 @@ class HeuristicMinerTest {
 
     @Test
     fun `a or ab or abc`() {
-        val log = listOf(
+        val log = Log(listOf(
             "a" to 1,
             "ab" to 1,
             "abc" to 1
         ).asSequence()
-            .flatMap { (s, n) -> List(n) { s.map { e -> Event(e.toString()) }.asSequence() }.asSequence() }
+            .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
         val hm = HeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
         with(hm.result) {
             assertEquals(splits[a], setOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))))
@@ -35,12 +36,12 @@ class HeuristicMinerTest {
 
     @Test
     fun `c or bc or abc`() {
-        val log = listOf(
+        val log = Log(listOf(
             "c" to 1,
             "bc" to 1,
             "abc" to 1
         ).asSequence()
-            .flatMap { (s, n) -> List(n) { s.map { e -> Event(e.toString()) }.asSequence() }.asSequence() }
+            .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
         val hm = HeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
         with(hm.result) {
             assertEquals(joins[a], setOf(Join(setOf(Dependency(start, a)))))

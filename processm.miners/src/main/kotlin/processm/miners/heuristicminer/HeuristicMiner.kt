@@ -1,16 +1,14 @@
 package processm.miners.heuristicminer
 
+import processm.core.log.Event
+import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.core.models.causalnet.mock.Event
 import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-
-typealias Trace = Sequence<Event>
-typealias Log = Sequence<Trace>
 
 internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> {
     return this.flatMap { a -> right.map { b -> a to b } }
@@ -31,6 +29,11 @@ internal fun <T> Collection<T>.allSubsets(): Sequence<Set<T>> {
     return allSubsets(setOf(), this.toList())
 }
 
+internal fun node(e: Event): Node {
+    //TODO: do it right once appropriate interface is in place
+    return Node(e.conceptName.toString(), e.conceptInstance ?: "")
+}
+
 class HeuristicMiner(
     private val log: Log,
     val minDirectlyFollows: Int = 1,
@@ -43,12 +46,12 @@ class HeuristicMiner(
 ) {
     internal val directlyFollows: Counter<Pair<Node, Node>> by lazy {
         val result = Counter<Pair<Node, Node>>()
-        log.forEach { trace ->
-            println("TRACE: " + trace.map { e -> e.name }.toList())
-            val i = trace.iterator()
+        //TODO handle lifecycle?
+        log.traces.forEach { trace ->
+            val i = trace.events.iterator()
             var prev = start
             while (i.hasNext()) {
-                val curr = Node(i.next().name)
+                val curr = node(i.next())
                 result.inc(prev to curr)
                 prev = curr
             }
@@ -172,8 +175,8 @@ class HeuristicMiner(
             .keys
             .filter { k -> dependency.getOrDefault(k, 0.0) >= minDependency }
             .forEach { (a, b) -> model.addDependency(a, b) }
-        val logWithNodes = log
-            .map { trace -> listOf(start) + trace.map { e -> Node(e.name) }.toList() + listOf(end) }
+        val logWithNodes = log.traces
+            .map { trace -> listOf(start) + trace.events.map { e -> node(e) }.toList() + listOf(end) }
         logWithNodes.forEach { trace ->
             longDistanceDependencyMiner.processTrace(trace)
         }

@@ -1,10 +1,11 @@
 package processm.miners.heuristicminer
 
+import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.core.models.causalnet.mock.Event
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -25,11 +26,11 @@ class LongTermDependencies {
     private val d1 = Node("d1")
     private val d2 = Node("d2")
     private val e = Node("e")
-    private val log: Log = listOf(
+    private val log = Log(listOf(
         listOf(a, b1, c, d1, e) to 100,
         listOf(a, b2, c, d2, e) to 100
     ).asSequence()
-        .flatMap { (trace, n) -> List(n) { trace.map { n -> Event(n.activity) }.asSequence() }.asSequence() }
+        .flatMap { (trace, n) -> List(n) { Trace(trace.map { n -> event(n.activity) }.asSequence()) }.asSequence() })
     private val hm = HeuristicMiner(log, 1)
 
     @Test
