@@ -29,6 +29,6 @@ class SequenceWithMemory<T>(val base: Sequence<T>) : Sequence<T> {
 /**
  * Adds partial materialization to the sequence. Use sparingly.
  */
-fun <T> Sequence<T>.withMemory(): SequenceWithMemory<T> {
+inline fun <T> Sequence<T>.withMemory(): SequenceWithMemory<T> {
     return SequenceWithMemory(this)
 }
