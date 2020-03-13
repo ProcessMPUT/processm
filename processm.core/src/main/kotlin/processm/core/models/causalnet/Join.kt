@@ -17,4 +17,11 @@ data class Join(override val dependencies: Set<Dependency>) : Binding {
     }
 
     val target = dependencies.first().target
+
+    /**
+     * Sources of all the dependencies of this join
+     */
+    val sources by lazy {
+        dependencies.map { d -> d.source }.toSet()
+    }
 }
