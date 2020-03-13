@@ -1,4 +1,4 @@
-package processm.core.models.causalnet.verifier
+package processm.core.verifiers.causalnet
 
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
@@ -32,7 +32,7 @@ class FromModelToLogAndBackAgain {
     }
 
     fun test(model: Model, expected: Set<List<Node>>) {
-        val v = Verifier(model)
+        val v = CausalNetVerifierImpl(model)
         assertEquals(
             v.validSequences.map { seq -> seq.map { it.a } }.toSet(),
             expected
@@ -303,7 +303,7 @@ class FromModelToLogAndBackAgain {
      */
     @Test
     fun `parallel counting`() {
-        assertEquals(Verifier(causalnet {
+        assertEquals(CausalNetVerifierImpl(causalnet {
             start = a
             end = e
             a splits b1 or b2 or b3 or b1 + b2 + d2 or b1 + b3 + d2 or b2 + b3 + d2 or b1 + b2 + b3 + d2 + d3

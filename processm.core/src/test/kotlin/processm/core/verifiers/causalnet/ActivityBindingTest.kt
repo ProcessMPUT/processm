@@ -1,4 +1,4 @@
-package processm.core.models.causalnet.verifier
+package processm.core.verifiers.causalnet
 
 import processm.core.models.causalnet.Node
 import kotlin.test.Test

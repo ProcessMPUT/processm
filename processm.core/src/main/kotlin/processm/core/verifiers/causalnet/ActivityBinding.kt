@@ -1,4 +1,4 @@
-package processm.core.models.causalnet.verifier
+package processm.core.verifiers.causalnet
 
 import org.apache.commons.collections4.multiset.HashMultiSet
 import processm.core.models.causalnet.Node

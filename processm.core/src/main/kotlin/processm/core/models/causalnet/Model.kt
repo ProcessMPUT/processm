@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.models.commons.AbstractModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
 import kotlin.collections.HashMap
@@ -24,13 +25,16 @@ abstract class Model(
     metadataHandler: MetadataHandler,
     decisionModel: DecisionModel
 ) :
+    AbstractModel,
     MetadataHandler by metadataHandler,
     DecisionModel by decisionModel {
     protected val _instances = HashSet(listOf(start, end))
+
     /**
      * Map from source to dependency
      */
     protected val _outgoing = HashMap<Node, HashSet<Dependency>>()
+
     /**
      * Map from target to dependency
      */
@@ -43,21 +47,25 @@ abstract class Model(
      * Nodes AKA instances of activities
      */
     val instances: Set<Node> = Collections.unmodifiableSet(_instances)
+
     /**
      * Outgoing arcs AKA what depends on a given node
      */
     val outgoing: Map<Node, Set<Dependency>>
         get() = Collections.unmodifiableMap(_outgoing)
+
     /**
      * Incoming arcs AKA what given node depends on
      */
     val incoming: Map<Node, Set<Dependency>>
         get() = Collections.unmodifiableMap(_incoming)
+
     /**
      * Splits AKA what other arcs must (not) be followed at the same time when going out of a node
      */
     val splits: Map<Node, Set<Split>>
         get() = Collections.unmodifiableMap(_splits)
+
     /**
      * Joins AKA what other arcs must (not) be followed at the same time when going out of a node
      */

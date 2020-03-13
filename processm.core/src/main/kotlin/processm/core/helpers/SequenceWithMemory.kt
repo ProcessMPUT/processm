@@ -14,21 +14,13 @@ class SequenceWithMemory<T>(val base: Sequence<T>) : Sequence<T> {
     override fun iterator(): Iterator<T> {
         return object : Iterator<T> {
             private val memIt = memory.listIterator()
-            override fun hasNext(): Boolean {
-                if (memIt.hasNext()) {
-                    return true
-                }
-                return iterator.hasNext()
-            }
+            override fun hasNext(): Boolean = memIt.hasNext() || iterator.hasNext()
 
-            override fun next(): T {
-                if (memIt.hasNext()) {
-                    return memIt.next()
-                }
-                val v = iterator.next()
-                memIt.add(v)
-                return v
-            }
+            override fun next(): T =
+                if (memIt.hasNext())
+                    memIt.next()
+                else
+                    iterator.next().apply { memIt.add(this) }
 
         }
     }
@@ -37,6 +29,6 @@ class SequenceWithMemory<T>(val base: Sequence<T>) : Sequence<T> {
 /**
  * Adds partial materialization to the sequence. Use sparingly.
  */
-fun <T> Sequence<T>.withMemory(): SequenceWithMemory<T> {
+inline fun <T> Sequence<T>.withMemory(): SequenceWithMemory<T> {
     return SequenceWithMemory(this)
 }
