@@ -1,5 +1,55 @@
 package processm.core.models.causalnet
 
+/**
+ * Constructs a Causal Net using a Domain Specific Language (DSL) defined by [CausalNetDSL].
+ *
+ * The idea is to specify only splits and joins (and, optionally, start and end), and from that to infer automatically
+ * all the nodes and dependencies present in the model. However, apart from this,  the DSL does not perform any sort of
+ * guessing, validation or conformance checking, so it is entirely possible to build an incorrect causal net. As the main
+ * purpose of this DSL is to make writing test code easier, it is an intended behaviour to allow for constructing invalid
+ * causal nets.
+ *
+ * ### Example:
+ * In the following code, `a`, `b1`, `b2`, `c`, `d`, `e` are objects of the class `Node`.
+ * The resulting causal net is such that a is always followed by `b1` and/or `b2`, they are followed by
+ * a single execution of `c`, then `d` is executed only if both `b1` and `b2` were executed, and finally `e` is executed.
+ * ```
+ * val model = causalnet {
+ *     start = a
+ *     end = e
+ *     a splits b1 or b2 or b1 + b2
+ *     b1 splits c + e or c + d
+ *     b2 splits c + e or c + d
+ *     c splits d or e
+ *     d splits e
+ *     a joins b1
+ *     a joins b2
+ *     b1 or b2 or b1 + b2 join c
+ *     b1 + b2 + c join d
+ *     c + b1 or c + b2 or d join e
+ * }
+ * ```
+ *
+ * ### Grammar
+ *
+ * The following EBNF grammar defines the language a non-terminal `CausalNet` which should be the sole item enclosed in
+ * in the code block and where a terminal `Node` an object of the class [Node].
+ * The language is still a Kotlin code
+ * ```
+ * CausalNet = (Start | End | Split | Join)*
+ * Start = "start" "=" Node
+ * End = "end" "=" Node
+ * Split = Node "splits" Dependencies
+ * Join = (Node "joins" Node) | (Dependencies "join" Node)
+ * Dependency = Node | (Node "+" Dependency)
+ * Dependencies = Dependency | (Dependency "or" Dependencies)
+ * ```
+ * Two forms of defining a join are introduced to make the language more similar to English's Present Simple.
+ * If one does not define `start` and/or `end`, default values are provided.
+ * These symbols are valid nodes and can be used wherever `Node` is needed.
+ * The order of defining splits and joins does not matter, but `Start` and `End` are assignments to a variable
+ * and thus, if one wants to use `start` and `end` as nodes, the assignment must go before the first usage.
+ */
 fun causalnet(init: CausalNetDSL.() -> Unit): MutableModel {
     val modelDSL = CausalNetDSL()
     modelDSL.init()
@@ -37,6 +87,9 @@ class SetOfSetOfNodes(val base: Set<Set<Node>>) : Set<Set<Node>> by base {
     }
 }
 
+/**
+ * @see [causalnet]
+ */
 class CausalNetDSL {
     internal val joins = ArrayList<Join>()
     internal val splits = ArrayList<Split>()
