@@ -1,10 +1,13 @@
-package processm.core.models.causalnet.verifier
+package processm.core.verifiers.causalnet
 
 import processm.core.models.causalnet.*
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 
-class VerifierTest {
+class CausalNetVerifierImplTest {
 
 
     @Test
@@ -55,7 +58,7 @@ class VerifierTest {
             setOf(h to z)
         ).map { join -> join.map { Dependency(it.first, it.second) }.toSet() }
             .forEach { mm.addJoin(Join(it)) }
-        assertTrue { Verifier(mm).isSound }
+        assertTrue { CausalNetVerifierImpl(mm).isSound }
     }
 
     @Test
@@ -93,7 +96,7 @@ class VerifierTest {
             setOf(be),
             setOf(ce)
         ).forEach { model.addJoin(Join(it)) }
-        val v = Verifier(model)
+        val v = CausalNetVerifierImpl(model)
         val seqs = v.validSequences
             .map { seq -> seq.map { ab -> ab.a } }
             .toSet()
@@ -153,7 +156,7 @@ class VerifierTest {
             setOf(be, ce),
             setOf(de)
         ).forEach { model.addJoin(Join(it)) }
-        val v = Verifier(model)
+        val v = CausalNetVerifierImpl(model)
         assertTrue { v.validSequences.none() }
         assertFalse { v.isSound }
     }
@@ -191,7 +194,7 @@ class VerifierTest {
             setOf(be, de),
             setOf(ce)
         ).forEach { model.addJoin(Join(it)) }
-        val v = Verifier(model)
+        val v = CausalNetVerifierImpl(model)
         assertFalse { v.isSound }
         assertTrue { v.validSequences.any() }
     }
@@ -228,7 +231,7 @@ class VerifierTest {
             setOf(bd, cd),
             setOf(de)
         ).forEach { model.addJoin(Join(it)) }
-        val v = Verifier(model, useCache = false)
+        val v = CausalNetVerifierImpl(model, useCache = false)
         assertTrue { v.isSound }
         val tmp = v.validSequences.map { seq -> seq.map { ab -> ab.a } }
         assertTrue { tmp.contains(listOf(a, b, b, c, c, d, d, e)) }
@@ -246,7 +249,7 @@ class VerifierTest {
     @Test
     fun `empty model`() {
         val model = MutableModel()
-        val v = Verifier(model)
+        val v = CausalNetVerifierImpl(model)
         assertFalse { v.isSound }
         assertTrue { v.validSequences.none() }
     }
