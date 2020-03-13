@@ -19,7 +19,145 @@
     <properties>
         <!--<jersey.version>2.28</jersey.version>-->
         <ktor.version>1.2.6</ktor.version>
+        <openapi-tools.version>4.2.3</openapi-tools.version>
+        <swagger-ui.version>3.25.0</swagger-ui.version>
+        <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>${openapi-tools.version}</version>
+                <configuration>
+                    <inputSpec>${project.basedir}/src/main/resources/${openapi.specfile}</inputSpec>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>generate code</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <generatorName>kotlin-server</generatorName>
+                            <generateModels>true</generateModels>
+                            <generateApis>false</generateApis>
+                            <generateSupportingFiles>false</generateSupportingFiles>
+                            <packageName>processm.services.api</packageName>
+                            <output>${project.build.directory}/generated-sources/openapi</output>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>generate docs</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <generatorName>html2</generatorName>
+                            <output>${project.build.directory}/classes/openapi</output>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <version>${kotlin.version}</version>
+                <configuration>
+                    <jvmTarget>${kotlin.compiler.jvmTarget}</jvmTarget>
+                    <javacOptions/>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirs>
+                                <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
+                                <sourceDir>${project.build.directory}/generated-sources/openapi</sourceDir>
+                            </sourceDirs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.1.1</version>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.webjars.npm</groupId>
+                                    <artifactId>swagger-ui-dist</artifactId>
+                                    <version>${swagger-ui.version}</version>
+                                    <outputDirectory>${project.build.directory}/swagger-ui</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-swagger-files</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/swagger-ui</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.build.directory}/swagger-ui/META-INF/resources/webjars/swagger-ui-dist/${swagger-ui.version}</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <configuration>
+                    <file>
+                        ${project.build.directory}/swagger-ui/index.html
+                    </file>
+                    <replacements>
+                        <replacement>
+                            <token>https://petstore.swagger.io/v2/swagger.json</token>
+                            <value>${openapi.specfile}</value>
+                        </replacement>
+                    </replacements>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
         <dependency>
@@ -74,6 +212,47 @@
             <groupId>org.jetbrains.exposed</groupId>
             <artifactId>exposed-jdbc</artifactId>
             <version>${org.jetbrains.exposed.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>openapi-generator</artifactId>
+            <version>${openapi-tools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>openapi-generator-maven-plugin</artifactId>
+            <version>${openapi-tools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>swagger-ui-dist</artifactId>
+            <version>${swagger-ui.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-auth</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-locations</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-metrics</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-gson</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-auth-jwt</artifactId>
+            <version>${ktor.version}</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>
