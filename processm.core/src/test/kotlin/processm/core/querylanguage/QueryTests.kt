@@ -328,6 +328,56 @@ class QueryTests {
     }
 
     @Test
+    fun selectBooleanTest() {
+        val query = Query("select true, false")
+        assertFalse(query.selectAll)
+        assertFalse(query.selectAllLog)
+        assertFalse(query.selectAllTrace)
+        assertFalse(query.selectAllEvent)
+        // log scope
+        assertEquals(0, query.selectLogStandardAttributes.size)
+        assertEquals(0, query.selectLogOtherAttributes.size)
+        assertEquals(0, query.selectLogExpressions.size)
+        // trace scope
+        assertEquals(0, query.selectTraceStandardAttributes.size)
+        assertEquals(0, query.selectTraceOtherAttributes.size)
+        assertEquals(0, query.selectTraceExpressions.size)
+        // event scope
+        assertEquals(0, query.selectEventStandardAttributes.size)
+        assertEquals(0, query.selectEventOtherAttributes.size)
+        assertEquals(2, query.selectEventExpressions.size)
+        assertEquals("true", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals("false", query.selectEventExpressions.elementAt(1).toString())
+        assertTrue(query.selectEventExpressions.all { it.isTerminal })
+        assertTrue(query.selectEventExpressions.all { it.effectiveScope == Scope.Event })
+    }
+
+    @Test
+    fun selectStringTest() {
+        val query = Query("select 'single-quoted', \"double-quoted\"")
+        assertFalse(query.selectAll)
+        assertFalse(query.selectAllLog)
+        assertFalse(query.selectAllTrace)
+        assertFalse(query.selectAllEvent)
+        // log scope
+        assertEquals(0, query.selectLogStandardAttributes.size)
+        assertEquals(0, query.selectLogOtherAttributes.size)
+        assertEquals(0, query.selectLogExpressions.size)
+        // trace scope
+        assertEquals(0, query.selectTraceStandardAttributes.size)
+        assertEquals(0, query.selectTraceOtherAttributes.size)
+        assertEquals(0, query.selectTraceExpressions.size)
+        // event scope
+        assertEquals(0, query.selectEventStandardAttributes.size)
+        assertEquals(0, query.selectEventOtherAttributes.size)
+        assertEquals(2, query.selectEventExpressions.size)
+        assertEquals("single-quoted", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals("double-quoted", query.selectEventExpressions.elementAt(1).toString())
+        assertTrue(query.selectEventExpressions.all { it.isTerminal })
+        assertTrue(query.selectEventExpressions.all { it.effectiveScope == Scope.Event })
+    }
+
+    @Test
     fun selectErrorHandlingTest() {
         val invalidSelects = listOf("select", "select *, *", "select * from log")
 
