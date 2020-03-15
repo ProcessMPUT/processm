@@ -6,7 +6,7 @@ package processm.core.querylanguage
 class PQLAttribute(attribute: String) : Expression() {
     companion object {
         private val pqlAttributePattern =
-            Regex("^\\[?([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?((?:\\w+:)?\\w+)\\]?$")
+            Regex("^\\[?([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?((?:\\w+:)?\\w+)]?$")
 
         private val standardAttributes: Map<Scope, Set<Pair<String, String?>>> = mapOf(
             Scope.Log to setOf(
@@ -75,8 +75,8 @@ class PQLAttribute(attribute: String) : Expression() {
         assert(match !== null)
 
         hoistingPrefix = match!!.groups[1]!!.value
-        scope = Scope.parse(match!!.groups[2]?.value)
-        name = match!!.groups[3]!!.value
+        scope = Scope.parse(match.groups[2]?.value)
+        name = match.groups[3]!!.value
 
         assert(attribute.startsWith("[") == attribute.endsWith("]"))
 

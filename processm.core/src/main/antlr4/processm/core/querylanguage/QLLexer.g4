@@ -18,14 +18,16 @@ SCOPE       : 'log'
             | 'e'
             ;
 
-STRING_SINGLE : '\'' ( '\\\'' | . )*? '\'' -> type(STRING) ;
-STRING_DOUBLE : '"' ( '\\"' | . )*? '"' -> type(STRING) ;
+STRING_SINGLE : (SCOPE ':')? '\'' ( '\\\'' | . )*? '\'' -> type(STRING) ;
+STRING_DOUBLE : (SCOPE ':')? '"' ( '\\"' | . )*? '"' -> type(STRING) ;
 
-NUMBER      : '-'? INT ('.' [0-9] +)? EXP? ;
-BOOLEAN     : 'true' | 'false' ;
-DATETIME    : ISODATE ('T' ISOTIME)?
-            | ISODATESHORT ISOTIMESHORT?
+NUMBER      : (SCOPE ':')? '-'? INT ('.' [0-9] +)? EXP? ;
+BOOLEAN     : (SCOPE ':')? 'true' | 'false' ;
+DATETIME    : (SCOPE ':')? 'D' ISODATE ('T' ISOTIME ISOTIMEZONE?)?
+            | (SCOPE ':')? 'D' ISODATESHORT ('T'? ISOTIMESHORT ISOTIMEZONE?)?
             ;
+
+NULL        : (SCOPE ':')? 'null' ;
 
 FUNC_AGGR   : 'min'
             | 'max'
@@ -85,7 +87,7 @@ COLON       : ':' ;
 ORDER_ASC   : 'asc' ;
 ORDER_DESC  : 'desc' ;
 
-ID          : (SCOPE':')? (LETTER|DIGIT)+ (':' (LETTER|DIGIT)+)?
+ID          : (SCOPE':')? ([a-zA-CE-Z_]|DIGIT)+ (':' (LETTER|DIGIT)+)?
             | '[' (SCOPE':')? ('\\]' | .)*? ']';
 
 WS          : [ \t\r\n]+ -> skip ; // skip spaces, tabs, newlines, \r (Windows)
@@ -94,13 +96,15 @@ fragment INT    : '0' | [1-9] DIGIT* ;
 fragment EXP    : [Ee] [+\-]? INT ;
 fragment LETTER : [a-zA-Z\u0080-\u00FF_] ;
 fragment DIGIT  : [0-9] ;
-fragment ISODATE: ISOYEAR '-' ISOMONTH '-' ISODAY ;
-fragment ISODATESHORT:  ISOYEAR ISOMONTH ISODAY ;
+fragment ISODATE: ISOYEAR '-' ISOMONTH '-' ISODAY
+                | ISOYEAR '-' ISOMONTH
+                ;
+fragment ISODATESHORT:  ISOYEAR ISOMONTH ISODAY;
 fragment ISOTIME: ISOHOUR ':' ISOMINUTE (':' ISOSECOND ('.' ISOMILLI)?)?;
-fragment ISOTIMESHORT: ISOHOUR ISOMINUTE (ISOSECOND ISOMILLI?)? ;
+fragment ISOTIMESHORT: ISOHOUR ISOMINUTE (ISOSECOND ('.' ISOMILLI)?)? ;
 fragment ISOYEAR: DIGIT DIGIT DIGIT DIGIT ;
-fragment ISOMONTH: [1-9] | '10' | '11' | '12' ;
-fragment ISODAY: [1-9] | [1-2] DIGIT | '30' | '31' ;
+fragment ISOMONTH: '0' [1-9] | '10' | '11' | '12' ;
+fragment ISODAY: '0' [1-9] | [1-2] DIGIT | '30' | '31' ;
 fragment ISOHOUR: [0-1] DIGIT | '2' [0-3] ;
 fragment ISOMINUTE: [0-5] DIGIT ;
 fragment ISOSECOND: ISOMINUTE ;

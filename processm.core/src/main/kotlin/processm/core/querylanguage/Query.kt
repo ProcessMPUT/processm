@@ -110,27 +110,51 @@ class Query(val query: String) {
     )
 
     /**
-     * Standard attributes of log to select.
+     * The standard attributes to select on the log scope.
      */
     val selectLogStandardAttributes: Set<PQLAttribute> =
         Collections.unmodifiableSet(_selectStandardAttributes[Scope.Log])
+
+    /**
+     * The standard attributes to select on the trace scope.
+     */
     val selectTraceStandardAttributes: Set<PQLAttribute> =
         Collections.unmodifiableSet(_selectStandardAttributes[Scope.Trace])
+
+    /**
+     * The standard attributes to select on the event scope.
+     */
     val selectEventStandardAttributes: Set<PQLAttribute> =
         Collections.unmodifiableSet(_selectStandardAttributes[Scope.Event])
 
     /**
-     * Non-standard attributes to select on log scope.
+     * The non-standard attributes to select on the log scope.
      */
     val selectLogOtherAttributes: Set<PQLAttribute> = Collections.unmodifiableSet(_selectOtherAttributes[Scope.Log])
+
+    /**
+     * The non-standard attributes to select on the trace scope.
+     */
     val selectTraceOtherAttributes: Set<PQLAttribute> = Collections.unmodifiableSet(_selectOtherAttributes[Scope.Trace])
+
+    /**
+     * The non-standard attributes to select on the event scope.
+     */
     val selectEventOtherAttributes: Set<PQLAttribute> = Collections.unmodifiableSet(_selectOtherAttributes[Scope.Event])
 
     /**
-     * Expressions to select on log scope.
+     * The expressions to select on the log scope.
      */
     val selectLogExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Log])
+
+    /**
+     * The expressions to select on the trace scope.
+     */
     val selectTraceExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Trace])
+
+    /**
+     * The expressions to select on the event scope.
+     */
     val selectEventExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Event])
     // endregion
     // region SQL join clause
@@ -170,8 +194,8 @@ class Query(val query: String) {
 
         override fun exitArith_expr_root(ctx: QueryLanguage.Arith_expr_rootContext?) {
             val interval = ctx!!.sourceInterval
-            if (interval.length() == 1) {
-                val attribute = PQLAttribute(ctx!!.text)
+            if (interval.length() == 1 && tokens.get(interval.a).type == QueryLanguage.ID) {
+                val attribute = PQLAttribute(ctx.text)
                 if (attribute.hoistingPrefix.isNotEmpty())
                     throw IllegalArgumentException("Scope hoisting is not supported in the select clause. Line ${ctx.start.line} position ${ctx.start.charPositionInLine}.")
 
@@ -189,21 +213,35 @@ class Query(val query: String) {
                     false -> _selectOtherAttributes[attribute.scope]
                 }!!.add(attribute)
             } else {
-                var currentScope = Scope.Log
-                val expression = Expression(*tokens.get(interval.a, interval.b).map {
-                    if (it.type == QueryLanguage.ID) {
-                        PQLAttribute(it.text).apply {
-                            if (hoistingPrefix.isNotEmpty())
+                var currentScope: Scope? = null
+                val exprArray = tokens.get(interval.a, interval.b).map {
+                    val attributeOrLiteral = parseAttributeOrLiteral(it, currentScope ?: Scope.Event)
+                    if (attributeOrLiteral !== null) {
+                        if (currentScope === null)
+                            currentScope = attributeOrLiteral.scope
+                        else if (currentScope!! < attributeOrLiteral.scope)
+                            currentScope = attributeOrLiteral.scope
+
+                        if (attributeOrLiteral is PQLAttribute) {
+                            if (attributeOrLiteral.hoistingPrefix.isNotEmpty())
                                 throw IllegalArgumentException("Scope hoisting is not supported in the select clause. Line ${it.line} position ${it.charPositionInLine}.")
-
-                            if (currentScope < scope)
-                                currentScope = scope
                         }
+                        attributeOrLiteral
                     } else Operator(it.text)
-                }.toTypedArray())
+                }.toTypedArray()
 
-                _selectExpressions[currentScope]!!.add(expression)
+                _selectExpressions[currentScope]!!.add(if (exprArray.size == 1) exprArray.first() else Expression(*exprArray))
             }
+        }
+
+        private fun parseAttributeOrLiteral(token: Token, defaultScope: Scope): Expression? = when (token.type) {
+            QueryLanguage.ID -> PQLAttribute(token.text)
+            QueryLanguage.BOOLEAN -> BooleanLiteral(token.text, defaultScope)
+            QueryLanguage.NUMBER -> NumberLiteral(token.text, defaultScope)
+            QueryLanguage.DATETIME -> DateTimeLiteral(token.text, defaultScope)
+            QueryLanguage.STRING -> StringLiteral(token.text, defaultScope)
+            QueryLanguage.NULL -> NullLiteral(token.text, defaultScope)
+            else -> null
         }
 
         // endregion
@@ -225,8 +263,8 @@ class Query(val query: String) {
             val eWithMessage = RecognitionException(
                 "Line $line position $charPositionInLine: $msg",
                 e!!.recognizer,
-                e!!.inputStream,
-                e!!.ctx as ParserRuleContext
+                e.inputStream,
+                e.ctx as ParserRuleContext?
             )
             if (error === null)
                 error = eWithMessage

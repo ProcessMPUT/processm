@@ -52,6 +52,7 @@ scalar      : STRING
             | NUMBER
             | BOOLEAN
             | DATETIME
+            | NULL
             ;
 
 // The order of productions reflects operator precedence

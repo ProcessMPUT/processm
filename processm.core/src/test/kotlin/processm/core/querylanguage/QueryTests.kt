@@ -201,35 +201,130 @@ class QueryTests {
     }
 
     @Test
-    @Ignore
     fun selectConstantsTest() {
-        val query = Query("select l:1, l:2 + t:3, l:4 * t:5 + e:6, 7 / 8 - 9")
-        assertTrue(query.selectAll)
-        assertTrue(query.selectAllLog)
-        assertTrue(query.selectAllTrace)
-        assertTrue(query.selectAllEvent)
+        val query = Query("select l:1, l:2 + t:3, l:4 * t:5 + e:6, 7 / 8 - 9, 10 * null, t:null/11, l:D2020-03-12")
+        assertFalse(query.selectAll)
+        assertFalse(query.selectAllLog)
+        assertFalse(query.selectAllTrace)
+        assertFalse(query.selectAllEvent)
         // log scope
         assertEquals(0, query.selectLogStandardAttributes.size)
         assertEquals(0, query.selectLogOtherAttributes.size)
-        assertEquals(1, query.selectLogExpressions.size)
-        assertEquals("1", query.selectLogExpressions.elementAt(0).toString())
+        assertEquals(2, query.selectLogExpressions.size)
+        assertEquals("1.0", query.selectLogExpressions.elementAt(0).toString())
+        assertEquals("2020-03-12T00:00:00Z", query.selectLogExpressions.elementAt(1).toString())
         assertTrue(query.selectLogExpressions.all { it.isTerminal })
         assertTrue(query.selectLogExpressions.all { it.effectiveScope == Scope.Log })
         // trace scope
         assertEquals(0, query.selectTraceStandardAttributes.size)
         assertEquals(0, query.selectTraceOtherAttributes.size)
-        assertEquals(1, query.selectTraceExpressions.size)
-        assertEquals("2+3", query.selectTraceExpressions.elementAt(0).toString())
-        assertTrue(query.selectLogExpressions.all { !it.isTerminal })
-        assertTrue(query.selectLogExpressions.all { it.effectiveScope == Scope.Trace })
+        assertEquals(2, query.selectTraceExpressions.size)
+        assertEquals("2.0+3.0", query.selectTraceExpressions.elementAt(0).toString())
+        assertEquals("null/11.0", query.selectTraceExpressions.elementAt(1).toString())
+        assertTrue(query.selectTraceExpressions.all { !it.isTerminal })
+        assertTrue(query.selectTraceExpressions.all { it.effectiveScope == Scope.Trace })
         // event scope
         assertEquals(0, query.selectEventStandardAttributes.size)
         assertEquals(0, query.selectEventOtherAttributes.size)
-        assertEquals(2, query.selectEventExpressions.size)
-        assertEquals("4*5+6", query.selectEventExpressions.elementAt(0).toString())
-        assertEquals("7/8-9", query.selectEventExpressions.elementAt(1).toString())
-        assertTrue(query.selectLogExpressions.all { !it.isTerminal })
-        assertTrue(query.selectLogExpressions.all { it.effectiveScope == Scope.Event })
+        assertEquals(3, query.selectEventExpressions.size)
+        assertEquals("4.0*5.0+6.0", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals("7.0/8.0-9.0", query.selectEventExpressions.elementAt(1).toString())
+        assertEquals("10.0*null", query.selectEventExpressions.elementAt(2).toString())
+        assertTrue(query.selectEventExpressions.all { !it.isTerminal })
+        assertTrue(query.selectEventExpressions.all { it.effectiveScope == Scope.Event })
+    }
+
+    @Test
+    fun selectISO8601Test() {
+        val query = Query(
+            """select 
+                    D2020-03-13, 
+                    D2020-03-13T16:45, 
+                    D2020-03-13T16:45:50, 
+                    D2020-03-13T16:45:50.333, 
+                    D2020-03-13T16:45+0200, 
+                    D2020-03-13T16:45+02:00,
+                    D20200313, 
+                    D20200313T1645, 
+                    D20200313T164550, 
+                    D20200313T164550.333, 
+                    D20200313T1645+0200,
+                    D202003131645, 
+                    D20200313164550, 
+                    D20200313164550.333, 
+                    D202003131645+0200
+                    """
+        )
+        assertFalse(query.selectAll)
+        assertFalse(query.selectAllLog)
+        assertFalse(query.selectAllTrace)
+        assertFalse(query.selectAllEvent)
+        // log scope
+        assertEquals(0, query.selectLogStandardAttributes.size)
+        assertEquals(0, query.selectLogOtherAttributes.size)
+        assertEquals(0, query.selectLogExpressions.size)
+        // trace scope
+        assertEquals(0, query.selectTraceStandardAttributes.size)
+        assertEquals(0, query.selectTraceOtherAttributes.size)
+        assertEquals(0, query.selectTraceExpressions.size)
+        // event scope
+        assertEquals(0, query.selectEventStandardAttributes.size)
+        assertEquals(0, query.selectEventOtherAttributes.size)
+        assertEquals(15, query.selectEventExpressions.size)
+        assertEquals("2020-03-13T00:00:00Z", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(1).toString())
+        assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(2).toString())
+        assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(3).toString())
+        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(4).toString())
+        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(5).toString())
+        assertEquals("2020-03-13T00:00:00Z", query.selectEventExpressions.elementAt(6).toString())
+        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(7).toString())
+        assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(8).toString())
+        assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(9).toString())
+        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(10).toString())
+        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(11).toString())
+        assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(12).toString())
+        assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(13).toString())
+        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(14).toString())
+        assertTrue(query.selectEventExpressions.all { it.isTerminal })
+        assertTrue(query.selectEventExpressions.all { it.effectiveScope == Scope.Event })
+    }
+
+    @Test
+    fun selectIEEE754Test() {
+        val query = Query(
+            "select 0, 0.0, 0.00, -0, -0.0, 1, 1.0, -1, -1.0, ${Math.PI}, ${Double.MIN_VALUE}, ${Double.MAX_VALUE}"
+        )
+        assertFalse(query.selectAll)
+        assertFalse(query.selectAllLog)
+        assertFalse(query.selectAllTrace)
+        assertFalse(query.selectAllEvent)
+        // log scope
+        assertEquals(0, query.selectLogStandardAttributes.size)
+        assertEquals(0, query.selectLogOtherAttributes.size)
+        assertEquals(0, query.selectLogExpressions.size)
+        // trace scope
+        assertEquals(0, query.selectTraceStandardAttributes.size)
+        assertEquals(0, query.selectTraceOtherAttributes.size)
+        assertEquals(0, query.selectTraceExpressions.size)
+        // event scope
+        assertEquals(0, query.selectEventStandardAttributes.size)
+        assertEquals(0, query.selectEventOtherAttributes.size)
+        assertEquals(12, query.selectEventExpressions.size)
+        assertEquals("0.0", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals("0.0", query.selectEventExpressions.elementAt(1).toString())
+        assertEquals("0.0", query.selectEventExpressions.elementAt(2).toString())
+        assertEquals("-0.0", query.selectEventExpressions.elementAt(3).toString())
+        assertEquals("-0.0", query.selectEventExpressions.elementAt(4).toString())
+        assertEquals("1.0", query.selectEventExpressions.elementAt(5).toString())
+        assertEquals("1.0", query.selectEventExpressions.elementAt(6).toString())
+        assertEquals("-1.0", query.selectEventExpressions.elementAt(7).toString())
+        assertEquals("-1.0", query.selectEventExpressions.elementAt(8).toString())
+        assertEquals(Math.PI.toString(), query.selectEventExpressions.elementAt(9).toString())
+        assertEquals(Double.MIN_VALUE.toString(), query.selectEventExpressions.elementAt(10).toString())
+        assertEquals(Double.MAX_VALUE.toString(), query.selectEventExpressions.elementAt(11).toString())
+        assertTrue(query.selectEventExpressions.all { it.isTerminal })
+        assertTrue(query.selectEventExpressions.all { it.effectiveScope == Scope.Event })
     }
 
     @Test
