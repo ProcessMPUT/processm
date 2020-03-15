@@ -18,16 +18,16 @@ SCOPE       : 'log'
             | 'e'
             ;
 
-STRING_SINGLE : (SCOPE ':')? '\'' ( '\\\'' | . )*? '\'' -> type(STRING) ;
-STRING_DOUBLE : (SCOPE ':')? '"' ( '\\"' | . )*? '"' -> type(STRING) ;
+STRING_SINGLE : SCOPE_PREFIX '\'' ( '\\\'' | . )*? '\'' -> type(STRING) ;
+STRING_DOUBLE : SCOPE_PREFIX '"' ( '\\"' | . )*? '"' -> type(STRING) ;
 
-NUMBER      : (SCOPE ':')? '-'? INT ('.' [0-9] +)? EXP? ;
-BOOLEAN     : (SCOPE ':')? 'true' | 'false' ;
-DATETIME    : (SCOPE ':')? 'D' ISODATE ('T' ISOTIME ISOTIMEZONE?)?
-            | (SCOPE ':')? 'D' ISODATESHORT ('T'? ISOTIMESHORT ISOTIMEZONE?)?
+NUMBER      : SCOPE_PREFIX '-'? INT ('.' [0-9] +)? EXP? ;
+BOOLEAN     : SCOPE_PREFIX 'true' | 'false' ;
+DATETIME    : SCOPE_PREFIX 'D' ISODATE ('T' ISOTIME ISOTIMEZONE?)?
+            | SCOPE_PREFIX 'D' ISODATESHORT ('T'? ISOTIMESHORT ISOTIMEZONE?)?
             ;
 
-NULL        : (SCOPE ':')? 'null' ;
+NULL        : SCOPE_PREFIX 'null' ;
 
 FUNC_AGGR   : 'min'
             | 'max'
@@ -87,11 +87,20 @@ COLON       : ':' ;
 ORDER_ASC   : 'asc' ;
 ORDER_DESC  : 'desc' ;
 
-ID          : (SCOPE':')? ([a-zA-CE-Z_]|DIGIT)+ (':' (LETTER|DIGIT)+)?
-            | '[' (SCOPE':')? ('\\]' | .)*? ']';
+ID          : SCOPE_PREFIX ([a-zA-CE-Z_]|DIGIT)+ (':' (LETTER|DIGIT)+)?
+            | '[' SCOPE_PREFIX ('\\]' | .)*? ']';
 
 WS          : [ \t\r\n]+ -> skip ; // skip spaces, tabs, newlines, \r (Windows)
 
+fragment HOISTING_PREFIX: '^' ;
+fragment SCOPE_PREFIX: 'log' ':'
+                | 'l' ':'
+                | HOISTING_PREFIX? 'trace' ':'
+                | HOISTING_PREFIX? 't' ':'
+                | HOISTING_PREFIX? HOISTING_PREFIX? 'event' ':'
+                | HOISTING_PREFIX? HOISTING_PREFIX? 'e' ':'
+                | HOISTING_PREFIX? HOISTING_PREFIX?
+                ;
 fragment INT    : '0' | [1-9] DIGIT* ;
 fragment EXP    : [Ee] [+\-]? INT ;
 fragment LETTER : [a-zA-Z\u0080-\u00FF_] ;

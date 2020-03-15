@@ -12,8 +12,8 @@ select      :                               # select_all
             | SELECT column_list            # select_column_list
             ;
 
-where       :
-            | WHERE logic_expr
+where       :                           # where_empty
+            | WHERE logic_expr          # where_explicit
             ;
 
 group_by    :                           # no_group_by

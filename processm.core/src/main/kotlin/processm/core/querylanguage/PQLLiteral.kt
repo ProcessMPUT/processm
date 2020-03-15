@@ -13,12 +13,13 @@ import java.time.temporal.ChronoField
  * Represents a literal in a PQL query. The subclasses of this class hold particular types of literals.
  */
 @Suppress("LeakingThis")
-sealed class PQLLiteral<out T>(literal: String, defaultScope: Scope) : Expression() {
+sealed class PQLLiteral<out T>(literal: String, override val line: Int, override val charPositionInLine: Int) :
+    Expression() {
     companion object {
         private val scopePattern: Regex = Regex("^(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?(.+)$")
     }
 
-    final override val scope: Scope
+    final override val scope: Scope?
 
     /**
      * The parsed value of the literal. This property is stronly-typed.
@@ -28,7 +29,10 @@ sealed class PQLLiteral<out T>(literal: String, defaultScope: Scope) : Expressio
     init {
         val match = scopePattern.matchEntire(literal)
         assert(match !== null)
-        scope = Scope.parse(match!!.groups[1]?.value, defaultScope)
+        scope = when (match!!.groups[1]) {
+            null -> null
+            else -> Scope.parse(match.groups[1]?.value)
+        }
         value = parse(match.groups[2]!!.value)
     }
 
@@ -45,7 +49,8 @@ sealed class PQLLiteral<out T>(literal: String, defaultScope: Scope) : Expressio
 /**
  * Represents a string literal in a PQL query.
  */
-class StringLiteral(literal: String, defaultScope: Scope) : PQLLiteral<String>(literal, defaultScope) {
+class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
+    PQLLiteral<String>(literal, line, charPositionInLine) {
     override fun parse(literal: String): String {
         if ((literal[0] != '"' && literal[0] != '\'') || literal[0] != literal[literal.length - 1])
             throw IllegalArgumentException("Invalid format of string literal: $literal.")
@@ -57,7 +62,8 @@ class StringLiteral(literal: String, defaultScope: Scope) : PQLLiteral<String>(l
 /**
  * Represents a datetime literal in a PQL query.
  */
-class DateTimeLiteral(literal: String, defaultScope: Scope) : PQLLiteral<Instant>(literal, defaultScope) {
+class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
+    PQLLiteral<Instant>(literal, line, charPositionInLine) {
     companion object {
         private val parsers = arrayOf(
             DateTimeFormatterBuilder()
@@ -154,14 +160,16 @@ class DateTimeLiteral(literal: String, defaultScope: Scope) : PQLLiteral<Instant
 /**
  * Represents a number literal in a PQL query.
  */
-class NumberLiteral(literal: String, defaultScope: Scope) : PQLLiteral<Double>(literal, defaultScope) {
+class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
+    PQLLiteral<Double>(literal, line, charPositionInLine) {
     override fun parse(literal: String): Double = literal.toDouble()
 }
 
 /**
  * Represents a boolean literal in a PQL query.
  */
-class BooleanLiteral(literal: String, defaultScope: Scope) : PQLLiteral<Boolean>(literal, defaultScope) {
+class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
+    PQLLiteral<Boolean>(literal, line, charPositionInLine) {
     override fun parse(literal: String): Boolean = when (literal) {
         "true" -> true
         "false" -> false
@@ -172,6 +180,7 @@ class BooleanLiteral(literal: String, defaultScope: Scope) : PQLLiteral<Boolean>
 /**
  * Represents a null literal in a PQL query.
  */
-class NullLiteral(literal: String, defaultScope: Scope) : PQLLiteral<Any?>(literal, defaultScope) {
+class NullLiteral(literal: String, line: Int, charPositionInLine: Int) :
+    PQLLiteral<Any?>(literal, line, charPositionInLine) {
     override fun parse(literal: String): Any? = null
 }

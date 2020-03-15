@@ -1,11 +1,13 @@
 package processm.core.querylanguage
 
 import org.antlr.v4.runtime.*
+import org.antlr.v4.runtime.misc.Interval
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import java.util.*
 import kotlin.collections.LinkedHashSet
 import kotlin.experimental.and
 import kotlin.experimental.or
+import kotlin.math.max
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
@@ -25,6 +27,7 @@ class Query(val query: String) {
         private const val ALL_SCOPES_MASK: Byte = 0b00000111
     }
 
+    // region parser
     private val errorListener: ErrorListener = ErrorListener()
     private val stream: CodePointCharStream = CharStreams.fromString(query)
     private val lexer: QLLexer = QLLexer(stream)
@@ -37,10 +40,10 @@ class Query(val query: String) {
         parser.removeErrorListeners()
         parser.addErrorListener(errorListener)
     }
-
+    // endregion
 
     // region data model
-    // region SQL select clause
+    // region select clause
     private var _selectAll: Byte = 0
 
     /**
@@ -113,51 +116,57 @@ class Query(val query: String) {
      * The standard attributes to select on the log scope.
      */
     val selectLogStandardAttributes: Set<PQLAttribute> =
-        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Log])
+        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Log]!!)
 
     /**
      * The standard attributes to select on the trace scope.
      */
     val selectTraceStandardAttributes: Set<PQLAttribute> =
-        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Trace])
+        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Trace]!!)
 
     /**
      * The standard attributes to select on the event scope.
      */
     val selectEventStandardAttributes: Set<PQLAttribute> =
-        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Event])
+        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Event]!!)
 
     /**
      * The non-standard attributes to select on the log scope.
      */
-    val selectLogOtherAttributes: Set<PQLAttribute> = Collections.unmodifiableSet(_selectOtherAttributes[Scope.Log])
+    val selectLogOtherAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_selectOtherAttributes[Scope.Log]!!)
 
     /**
      * The non-standard attributes to select on the trace scope.
      */
-    val selectTraceOtherAttributes: Set<PQLAttribute> = Collections.unmodifiableSet(_selectOtherAttributes[Scope.Trace])
+    val selectTraceOtherAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_selectOtherAttributes[Scope.Trace]!!)
 
     /**
      * The non-standard attributes to select on the event scope.
      */
-    val selectEventOtherAttributes: Set<PQLAttribute> = Collections.unmodifiableSet(_selectOtherAttributes[Scope.Event])
+    val selectEventOtherAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_selectOtherAttributes[Scope.Event]!!)
 
     /**
      * The expressions to select on the log scope.
      */
-    val selectLogExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Log])
+    val selectLogExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Log]!!)
 
     /**
      * The expressions to select on the trace scope.
      */
-    val selectTraceExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Trace])
+    val selectTraceExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Trace]!!)
 
     /**
      * The expressions to select on the event scope.
      */
-    val selectEventExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Event])
+    val selectEventExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Event]!!)
+
     // endregion
-    // region SQL join clause
+    // region where clause
+    var whereExpression: Expression = Expression.empty()
+        private set
 
     // endregion
     // endregion
@@ -178,7 +187,6 @@ class Query(val query: String) {
 
     private inner class Listener : QueryLanguageBaseListener() {
         // region PQL select clause
-
         override fun exitSelect_all(ctx: QueryLanguage.Select_allContext?) {
             selectAll = true
         }
@@ -193,13 +201,15 @@ class Query(val query: String) {
         }
 
         override fun exitArith_expr_root(ctx: QueryLanguage.Arith_expr_rootContext?) {
-            val interval = ctx!!.sourceInterval
-            if (interval.length() == 1 && tokens.get(interval.a).type == QueryLanguage.ID) {
-                val attribute = PQLAttribute(ctx.text)
-                if (attribute.hoistingPrefix.isNotEmpty())
-                    throw IllegalArgumentException("Scope hoisting is not supported in the select clause. Line ${ctx.start.line} position ${ctx.start.charPositionInLine}.")
+            val expression = parseExpression(ctx!!.sourceInterval)
+            val hoisted = (sequenceOf(expression) + expression.children).firstOrNull {
+                it is PQLAttribute && it.hoistingPrefix.isNotEmpty()
+            }
+            if (hoisted !== null)
+                errorListener.delayedThrow(IllegalArgumentException("Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select clause."))
 
-                val scopedSelectAll = when (attribute.scope) {
+            if (expression is PQLAttribute) {
+                val scopedSelectAll = when (expression.effectiveScope) {
                     Scope.Log -> selectAllLog
                     Scope.Trace -> selectAllTrace
                     Scope.Event -> selectAllEvent
@@ -208,47 +218,47 @@ class Query(val query: String) {
                 if (scopedSelectAll)
                     return
 
-                when (attribute.isStandard) {
-                    true -> _selectStandardAttributes[attribute.scope]
-                    false -> _selectOtherAttributes[attribute.scope]
-                }!!.add(attribute)
+                when (expression.isStandard) {
+                    true -> _selectStandardAttributes[expression.effectiveScope]
+                    false -> _selectOtherAttributes[expression.effectiveScope]
+                }!!.add(expression)
             } else {
-                var currentScope: Scope? = null
-                val exprArray = tokens.get(interval.a, interval.b).map {
-                    val attributeOrLiteral = parseAttributeOrLiteral(it, currentScope ?: Scope.Event)
-                    if (attributeOrLiteral !== null) {
-                        if (currentScope === null)
-                            currentScope = attributeOrLiteral.scope
-                        else if (currentScope!! < attributeOrLiteral.scope)
-                            currentScope = attributeOrLiteral.scope
-
-                        if (attributeOrLiteral is PQLAttribute) {
-                            if (attributeOrLiteral.hoistingPrefix.isNotEmpty())
-                                throw IllegalArgumentException("Scope hoisting is not supported in the select clause. Line ${it.line} position ${it.charPositionInLine}.")
-                        }
-                        attributeOrLiteral
-                    } else Operator(it.text)
-                }.toTypedArray()
-
-                _selectExpressions[currentScope]!!.add(if (exprArray.size == 1) exprArray.first() else Expression(*exprArray))
+                _selectExpressions[expression.effectiveScope]!!.add(expression)
             }
         }
 
-        private fun parseAttributeOrLiteral(token: Token, defaultScope: Scope): Expression? = when (token.type) {
-            QueryLanguage.ID -> PQLAttribute(token.text)
-            QueryLanguage.BOOLEAN -> BooleanLiteral(token.text, defaultScope)
-            QueryLanguage.NUMBER -> NumberLiteral(token.text, defaultScope)
-            QueryLanguage.DATETIME -> DateTimeLiteral(token.text, defaultScope)
-            QueryLanguage.STRING -> StringLiteral(token.text, defaultScope)
-            QueryLanguage.NULL -> NullLiteral(token.text, defaultScope)
-            else -> null
+        override fun exitWhere_explicit(ctx: QueryLanguage.Where_explicitContext?) {
+            val interval = ctx!!.sourceInterval
+            whereExpression = parseExpression(Interval.of(interval.a + 1, interval.b))
+        }
+        // endregion
+
+        private fun parseExpression(interval: Interval): Expression {
+            // var currentScope: Scope? = null
+            val exprArray = tokens.get(interval.a, max(interval.b, interval.a))
+                .mapNotNull(::parseExpression)
+                .toTypedArray()
+            return if (exprArray.size == 1) exprArray[0] else Expression(*exprArray)
         }
 
-        // endregion
+        private fun parseExpression(token: Token): Expression? = try {
+            when (token.type) {
+                QueryLanguage.ID -> PQLAttribute(token.text, token.line, token.charPositionInLine)
+                QueryLanguage.BOOLEAN -> BooleanLiteral(token.text, token.line, token.charPositionInLine)
+                QueryLanguage.NUMBER -> NumberLiteral(token.text, token.line, token.charPositionInLine)
+                QueryLanguage.DATETIME -> DateTimeLiteral(token.text, token.line, token.charPositionInLine)
+                QueryLanguage.STRING -> StringLiteral(token.text, token.line, token.charPositionInLine)
+                QueryLanguage.NULL -> NullLiteral(token.text, token.line, token.charPositionInLine)
+                else -> Operator(token.text, token.line, token.charPositionInLine)
+            }
+        } catch (e: Exception) {
+            errorListener.delayedThrow(e)
+            null
+        }
     }
 
     private inner class ErrorListener : BaseErrorListener() {
-        var error: RecognitionException? = null
+        var error: Exception? = null
             private set
 
         override fun syntaxError(
@@ -266,10 +276,14 @@ class Query(val query: String) {
                 e.inputStream,
                 e.ctx as ParserRuleContext?
             )
+            delayedThrow(eWithMessage)
+        }
+
+        fun delayedThrow(exception: Exception) {
             if (error === null)
-                error = eWithMessage
+                error = exception
             else
-                error!!.addSuppressed(eWithMessage)
+                error!!.addSuppressed(exception)
         }
     }
 }

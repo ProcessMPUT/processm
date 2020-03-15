@@ -3,7 +3,7 @@ package processm.core.querylanguage
 /**
  * Represents an attribute in a PQL query.
  */
-class PQLAttribute(attribute: String) : Expression() {
+class PQLAttribute(attribute: String, override val line: Int, override val charPositionInLine: Int) : Expression() {
     companion object {
         private val pqlAttributePattern =
             Regex("^\\[?([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?((?:\\w+:)?\\w+)]?$")
@@ -46,7 +46,9 @@ class PQLAttribute(attribute: String) : Expression() {
     /**
      * The (non-hoisted) scope of this attribute.
      */
-    override val scope: Scope
+    override val scope: Scope?
+
+    override val effectiveScope: Scope
 
     /**
      * The name of this attribute as specified in PQL.
@@ -77,6 +79,13 @@ class PQLAttribute(attribute: String) : Expression() {
         hoistingPrefix = match!!.groups[1]!!.value
         scope = Scope.parse(match.groups[2]?.value)
         name = match.groups[3]!!.value
+        effectiveScope = hoistingPrefix.fold(scope) { s, _ ->
+            when (s) {
+                Scope.Log -> throw IllegalArgumentException("It is not supported to hoist a scope beyond the log scope.")
+                Scope.Trace -> Scope.Event
+                Scope.Event -> Scope.Trace
+            }
+        }
 
         assert(attribute.startsWith("[") == attribute.endsWith("]"))
 

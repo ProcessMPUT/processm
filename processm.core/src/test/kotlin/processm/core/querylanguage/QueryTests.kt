@@ -19,7 +19,7 @@ class QueryTests {
         assertEquals(0, query.selectLogExpressions.size)
         assertEquals("concept:name", query.selectLogStandardAttributes.elementAt(0).standardName)
         assertTrue(query.selectLogStandardAttributes.all { it.isStandard })
-        assertTrue(query.selectLogStandardAttributes.all { it.scope == Scope.Log })
+        assertTrue(query.selectLogStandardAttributes.all { it.effectiveScope == Scope.Log })
         assertTrue(query.selectLogStandardAttributes.all { !it.isClassifier })
         // trace scope
         assertEquals(2, query.selectTraceStandardAttributes.size)
@@ -28,7 +28,7 @@ class QueryTests {
         assertEquals("concept:name", query.selectTraceStandardAttributes.elementAt(0).standardName)
         assertEquals("cost:currency", query.selectTraceStandardAttributes.elementAt(1).standardName)
         assertTrue(query.selectTraceStandardAttributes.all { it.isStandard })
-        assertTrue(query.selectTraceStandardAttributes.all { it.scope == Scope.Trace })
+        assertTrue(query.selectTraceStandardAttributes.all { it.effectiveScope == Scope.Trace })
         assertTrue(query.selectTraceStandardAttributes.all { !it.isClassifier })
         // event scope
         assertEquals(2, query.selectEventStandardAttributes.size)
@@ -37,7 +37,7 @@ class QueryTests {
         assertEquals("concept:name", query.selectEventStandardAttributes.elementAt(0).standardName)
         assertEquals("cost:total", query.selectEventStandardAttributes.elementAt(1).standardName)
         assertTrue(query.selectEventStandardAttributes.all { it.isStandard })
-        assertTrue(query.selectEventStandardAttributes.all { it.scope == Scope.Event })
+        assertTrue(query.selectEventStandardAttributes.all { it.effectiveScope == Scope.Event })
         assertTrue(query.selectEventStandardAttributes.all { !it.isClassifier })
     }
 
@@ -59,7 +59,7 @@ class QueryTests {
         assertEquals("concept:name", query.selectTraceStandardAttributes.elementAt(0).standardName)
         assertEquals("cost:total", query.selectTraceStandardAttributes.elementAt(1).standardName)
         assertTrue(query.selectTraceStandardAttributes.all { it.isStandard })
-        assertTrue(query.selectTraceStandardAttributes.all { it.scope == Scope.Trace })
+        assertTrue(query.selectTraceStandardAttributes.all { it.effectiveScope == Scope.Trace })
         assertTrue(query.selectTraceStandardAttributes.all { !it.isClassifier })
         // event scope
         assertEquals(0, query.selectEventStandardAttributes.size)
@@ -84,7 +84,7 @@ class QueryTests {
         assertEquals(0, query.selectTraceExpressions.size)
         assertEquals("classifier:businesscase", query.selectTraceStandardAttributes.elementAt(0).standardName)
         assertTrue(query.selectTraceStandardAttributes.all { it.isStandard })
-        assertTrue(query.selectTraceStandardAttributes.all { it.scope == Scope.Trace })
+        assertTrue(query.selectTraceStandardAttributes.all { it.effectiveScope == Scope.Trace })
         assertTrue(query.selectTraceStandardAttributes.all { it.isClassifier })
         // event scope
         assertEquals(1, query.selectEventStandardAttributes.size)
@@ -92,7 +92,7 @@ class QueryTests {
         assertEquals(0, query.selectEventExpressions.size)
         assertEquals("classifier:activity_resource", query.selectEventStandardAttributes.elementAt(0).standardName)
         assertTrue(query.selectEventStandardAttributes.all { it.isStandard })
-        assertTrue(query.selectEventStandardAttributes.all { it.scope == Scope.Event })
+        assertTrue(query.selectEventStandardAttributes.all { it.effectiveScope == Scope.Event })
         assertTrue(query.selectEventStandardAttributes.all { it.isClassifier })
     }
 
@@ -149,7 +149,7 @@ class QueryTests {
         assertTrue(query.selectEventOtherAttributes.all { !it.isStandard })
         assertTrue(query.selectEventOtherAttributes.all { !it.isClassifier })
         assertTrue(query.selectEventOtherAttributes.all { it.isTerminal })
-        assertTrue(query.selectEventOtherAttributes.all { it.scope == Scope.Event })
+        assertTrue(query.selectEventOtherAttributes.all { it.effectiveScope == Scope.Event })
     }
 
     @Test
@@ -379,7 +379,20 @@ class QueryTests {
 
     @Test
     fun selectErrorHandlingTest() {
-        val invalidSelects = listOf("select", "select *, *", "select * from log")
+        val invalidSelects =
+            listOf(
+                "select",
+                "select *, *",
+                "select * from log",
+                "select tr:*, t:name",
+                "select evant:*",
+                "select evant:concept:name",
+                "select ^l:*",
+                "select ^l:concept:name",
+                "select ^^t:concept:name",
+                "select ^^^e:concept:name",
+                "select ^^^name"
+            )
 
         invalidSelects.forEach {
             assertFailsWith<RecognitionException> { Query(it) }.apply {
@@ -387,12 +400,60 @@ class QueryTests {
             }
         }
 
-        val invalidAttributes =
-            listOf("select tr:*, t:name", "select e:conceptowy:name", "select evant:*", "select evant:concept:name")
+        val invalidAttributes = listOf("select e:conceptowy:name", "select e:date")
         invalidAttributes.forEach {
             assertFailsWith<NoSuchElementException> { Query(it) }.apply {
                 assertNotNull(message)
             }
         }
+
+        val unsupportedOperations = listOf("select ^e:concept:name", "select avg(^time:timestamp)")
+        unsupportedOperations.forEach {
+            assertFailsWith<IllegalArgumentException> { Query(it) }.apply {
+                assertNotNull(message)
+            }
+        }
+    }
+
+    @Test
+    fun whereSimpleTest() {
+        val query = Query("where dayofweek(e:timestamp) in (1, 7)")
+        assertEquals("dayofweek(event:time:timestamp)in(1.0,7.0)", query.whereExpression.toString())
+        assertEquals(Scope.Event, query.whereExpression.effectiveScope)
+    }
+
+    @Test
+    @Ignore
+    fun whereSimpleWithHoistingTest() {
+        val query = Query("where dayofweek(^e:timestamp) in (1, 7)")
+        TODO()
+    }
+
+    @Test
+    @Ignore
+    fun whereSimpleWithHoistingTest2() {
+        val query = Query("where dayofweek(^^e:timestamp) in (1, 7)")
+        TODO()
+    }
+
+    @Test
+    @Ignore
+    fun whereLogicExprWithHoistingTest() {
+        val query = Query("where not(t:currency = ^e:currency)")
+        TODO()
+    }
+
+    @Test
+    @Ignore
+    fun whereLogicExprTest() {
+        val query = Query("where t:currency != e:currency")
+        TODO()
+    }
+
+    @Test
+    @Ignore
+    fun whereLogicExpr2Test() {
+        val query = Query("where not(t:currency = ^e:currency) and t:total is null")
+        TODO()
     }
 }
