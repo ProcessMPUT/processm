@@ -3,6 +3,8 @@ package processm.directlyfollowsgraph
 import processm.core.log.DatabaseXESOutputStream
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.DatabaseHierarchicalXESInputStream
+import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.Activity
 import processm.core.persistence.DBConnectionPool
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
@@ -56,27 +58,37 @@ class DirectlyFollowsGraphTest {
     }
 
     @Test
+    fun `Empty trace in log - no connections added to graph`() {
+        val log: Sequence<Log> = sequenceOf(Log(sequenceOf(Trace())))
+
+        val miner = DirectlyFollowsGraph()
+        miner.mine(log)
+
+        assertTrue(miner.graph.isEmpty())
+        assertTrue(miner.startActivities.isEmpty())
+        assertTrue(miner.endActivities.isEmpty())
+    }
+
+    @Test
     fun `Build directly follows graph based on log from Definition 6,3 PM book`() {
         val a = Activity("A")
         val b = Activity("B")
         val c = Activity("C")
         val d = Activity("D")
         val e = Activity("E")
-        val source = Activity("SOURCE", isSpecial = true)
-        val sink = Activity("SINK", isSpecial = true)
 
-        DirectlyFollowsGraph().mine(DatabaseHierarchicalXESInputStream(logId)).also { graph ->
-            assertEquals(graph.size, 6)
+        val miner = DirectlyFollowsGraph()
+        miner.mine(DatabaseHierarchicalXESInputStream(logId))
 
-            assertTrue(graph.contains(source))
+        miner.graph.also { graph ->
+            assertEquals(graph.size, 4)
 
             assertTrue(graph.contains(a))
             assertTrue(graph.contains(b))
             assertTrue(graph.contains(c))
-            assertTrue(graph.contains(d))
             assertTrue(graph.contains(e))
 
-            assertFalse(graph.contains(sink))
+            assertFalse(graph.contains(d))
 
             with(graph[a]!!) {
                 assertEquals(size, 3)
@@ -111,13 +123,6 @@ class DirectlyFollowsGraphTest {
                 assertEquals(this[d]!!.cardinality, 1)
             }
 
-            with(graph[d]!!) {
-                assertEquals(size, 1)
-
-                assertTrue(contains(sink))
-                assertEquals(this[sink]!!.cardinality, 4)
-            }
-
             with(graph[e]!!) {
                 assertEquals(size, 1)
 
@@ -128,21 +133,34 @@ class DirectlyFollowsGraphTest {
     }
 
     @Test
-    fun `Graph contains extra SOURCE activity with reference to start activities`() {
-        val source = Activity("SOURCE", isSpecial = true)
+    fun `Graph contains only activities from log, no special added`() {
+        val miner = DirectlyFollowsGraph()
+        miner.mine(DatabaseHierarchicalXESInputStream(logId))
+
+        assertEquals(miner.graph.size, 4)
+    }
+
+    @Test
+    fun `Start activities stored in special map`() {
         val a = Activity("A")
+        val miner = DirectlyFollowsGraph()
+        miner.mine(DatabaseHierarchicalXESInputStream(logId))
 
-        DirectlyFollowsGraph().mine(DatabaseHierarchicalXESInputStream(logId)).also { graph ->
-            assertTrue(graph.contains(source))
+        assertEquals(miner.startActivities.size, 1)
 
-            with(graph[source]!!) {
-                assertEquals(size, 1)
+        assertTrue(miner.startActivities.contains(a))
+        assertEquals(miner.startActivities[a]!!.cardinality, 4)
+    }
 
-                assertTrue(contains(a))
-                with(this[a]!!) {
-                    assertEquals(cardinality, 4)
-                }
-            }
-        }
+    @Test
+    fun `Last activities stored in special map`() {
+        val d = Activity("D")
+        val miner = DirectlyFollowsGraph()
+        miner.mine(DatabaseHierarchicalXESInputStream(logId))
+
+        assertEquals(miner.endActivities.size, 1)
+
+        assertTrue(miner.endActivities.contains(d))
+        assertEquals(miner.endActivities[d]!!.cardinality, 4)
     }
 }

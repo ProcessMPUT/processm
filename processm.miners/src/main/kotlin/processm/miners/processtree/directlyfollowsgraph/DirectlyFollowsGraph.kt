@@ -7,50 +7,55 @@ import processm.core.models.processtree.Activity
 import java.util.*
 
 /**
- * Directly-follows graph based on log's events sequencess
+ * Directly-follows graph based on log's events sequences
  */
 class DirectlyFollowsGraph {
-    companion object {
-        /**
-         * Special activity SOURCE - will link to start activity in each trace
-         */
-        private val SOURCE_ACTIVITY = Activity("SOURCE", isSpecial = true)
-        /**
-         * Special activity SINK - will link to end activity in each trace
-         */
-        private val SINK_ACTIVITY = Activity("SINK", isSpecial = true)
-    }
-
     /**
      * Built graph
      *
      * Structure:
      * FROM activity -> NEXT activity in each trace + arc statistic (cardinality of relations)
      *
-     * Log <A, B, C> will be build as:
-     *  SOURCE -> A, cardinality 1
+     * Log <A, B, B, B, C> will be build as:
      *  A -> B, cardinality 1
+     *  B -> B, cardinality 2
      *  B -> C, cardinality 1
-     *  C -> SINK, cardinality 1
      */
-    private val graph = HashMap<Activity, HashMap<Activity, Arc>>()
+    val graph = HashMap<Activity, HashMap<Activity, Arc>>()
+    /**
+     * Map with start activities (first activity in trace) + arc statistics
+     *
+     * Key: first activity in trace
+     * Value: Statistics
+     *
+     * Log <A, B, C> will be build as:
+     *  A, cardinality 1
+     */
+    val startActivities = HashMap<Activity, Arc>()
+    /**
+     * Map with end activities (last activity in trace) + arc statistics
+     *
+     * Key: last activity in trace
+     * Value: Statistics
+     *
+     * Log <A, B, C> will be build as:
+     *  C, cardinality 1
+     */
+    val endActivities = HashMap<Activity, Arc>()
 
     /**
      * Build directly-follows graph
      */
-    fun mine(log: LogInputStream): HashMap<Activity, HashMap<Activity, Arc>> {
+    fun mine(log: LogInputStream) {
         log.forEach { mineGraph(it) }
 
         // TODO: debug only
         logGraphInDotForm()
-
-        return graph
     }
 
     private fun mineGraph(log: Log) {
         log.traces.forEach { trace ->
-            // We are in source
-            var previousActivity = SOURCE_ACTIVITY
+            var previousActivity: Activity? = null
 
             // Iterate over all events in current trace
             trace.events.forEach { event ->
@@ -58,20 +63,43 @@ class DirectlyFollowsGraph {
                 val activity = Activity(event.conceptName!!)
 
                 // Add connection
-                addConnectionInGraph(from = previousActivity, to = activity)
+                if (previousActivity == null)
+                    addConnectionFromSource(activity)
+                else
+                    addConnectionInGraph(from = previousActivity!!, to = activity)
 
                 // Update previous activity
                 previousActivity = activity
             }
 
             // Add connection with sink
-            addConnectionInGraph(from = previousActivity, to = SINK_ACTIVITY)
+            if (previousActivity != null)
+                addConnectionToSink(previousActivity!!)
         }
     }
 
-    private inline fun addConnectionInGraph(from: Activity, to: Activity) {
+    /**
+     * Add connection between two activities in trace and increment statistics of arc.
+     */
+    private fun addConnectionInGraph(from: Activity, to: Activity) {
         graph.getOrPut(from, { HashMap() })
             .compute(to) { _: Activity, value: Arc? -> (value ?: Arc()).increment() }
+    }
+
+    /**
+     * Add connection from source and first seen activity in trace.
+     * Increment statistics of arc in activities map.
+     */
+    private fun addConnectionFromSource(activity: Activity) {
+        startActivities.compute(activity) { _: Activity, value: Arc? -> (value ?: Arc()).increment() }
+    }
+
+    /**
+     * Add connection from last seen activity in trace to sink.
+     * Increment statistics of arc in end activities map.
+     */
+    private fun addConnectionToSink(activity: Activity) {
+        endActivities.compute(activity) { _: Activity, value: Arc? -> (value ?: Arc()).increment() }
     }
 
     /**
@@ -79,10 +107,16 @@ class DirectlyFollowsGraph {
      */
     private fun logGraphInDotForm() {
         logger().debug("digraph Output {")
+        startActivities.forEach { start ->
+            logger().debug("SOURCE -> ${start.key.name} [label=\"${start.value.cardinality}\"]")
+        }
         graph.forEach { from ->
             from.value.forEach { to ->
                 logger().debug("${from.key.name} -> ${to.key.name} [label=\"${to.value.cardinality}\"]")
             }
+        }
+        endActivities.forEach { end ->
+            logger().debug("${end.key.name} -> SINK [label=\"${end.value.cardinality}\"]")
         }
         logger().debug("}")
     }

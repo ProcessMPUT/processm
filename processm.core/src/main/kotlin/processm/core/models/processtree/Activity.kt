@@ -1,6 +1,6 @@
 package processm.core.models.processtree
 
-open class Activity(name: String, val isSpecial: Boolean = false) : Node() {
+open class Activity(name: String) : Node() {
     /**
      * Activity name
      */
@@ -9,13 +9,12 @@ open class Activity(name: String, val isSpecial: Boolean = false) : Node() {
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
         if (other !is Activity) return false
-        return name == other.name && isSpecial == other.isSpecial && super.equals(other)
+        return name == other.name && super.equals(other)
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
         result = 31 * result + name.hashCode()
-        result = 31 * result + isSpecial.hashCode()
         return result
     }
 }
