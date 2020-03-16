@@ -48,7 +48,14 @@ class PQLAttribute(attribute: String, override val line: Int, override val charP
      */
     override val scope: Scope?
 
-    override val effectiveScope: Scope
+    override fun calculateEffectiveScope(): Scope? =
+        hoistingPrefix.fold(scope!!) { s, _ ->
+            when (s) {
+                Scope.Log -> throw IllegalArgumentException("It is not supported to hoist a scope beyond the log scope.")
+                Scope.Trace -> Scope.Log
+                Scope.Event -> Scope.Trace
+            }
+        }
 
     /**
      * The name of this attribute as specified in PQL.
@@ -79,13 +86,6 @@ class PQLAttribute(attribute: String, override val line: Int, override val charP
         hoistingPrefix = match!!.groups[1]!!.value
         scope = Scope.parse(match.groups[2]?.value)
         name = match.groups[3]!!.value
-        effectiveScope = hoistingPrefix.fold(scope) { s, _ ->
-            when (s) {
-                Scope.Log -> throw IllegalArgumentException("It is not supported to hoist a scope beyond the log scope.")
-                Scope.Trace -> Scope.Event
-                Scope.Event -> Scope.Trace
-            }
-        }
 
         assert(attribute.startsWith("[") == attribute.endsWith("]"))
 

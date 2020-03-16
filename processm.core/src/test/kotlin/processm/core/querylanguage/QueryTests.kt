@@ -423,37 +423,40 @@ class QueryTests {
     }
 
     @Test
-    @Ignore
     fun whereSimpleWithHoistingTest() {
         val query = Query("where dayofweek(^e:timestamp) in (1, 7)")
-        TODO()
+        assertEquals("dayofweek(^event:time:timestamp)in(1.0,7.0)", query.whereExpression.toString())
+        assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
     }
 
     @Test
-    @Ignore
     fun whereSimpleWithHoistingTest2() {
         val query = Query("where dayofweek(^^e:timestamp) in (1, 7)")
-        TODO()
+        assertEquals("dayofweek(^^event:time:timestamp)in(1.0,7.0)", query.whereExpression.toString())
+        assertEquals(Scope.Log, query.whereExpression.effectiveScope)
     }
 
     @Test
-    @Ignore
     fun whereLogicExprWithHoistingTest() {
         val query = Query("where not(t:currency = ^e:currency)")
-        TODO()
+        assertEquals("not(trace:cost:currency=^event:cost:currency)", query.whereExpression.toString())
+        assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
     }
 
     @Test
-    @Ignore
     fun whereLogicExprTest() {
         val query = Query("where t:currency != e:currency")
-        TODO()
+        assertEquals("trace:cost:currency!=event:cost:currency", query.whereExpression.toString())
+        assertEquals(Scope.Event, query.whereExpression.effectiveScope)
     }
 
     @Test
-    @Ignore
     fun whereLogicExpr2Test() {
         val query = Query("where not(t:currency = ^e:currency) and t:total is null")
-        TODO()
+        assertEquals(
+            "not(trace:cost:currency=^event:cost:currency)andtrace:cost:totalis null",
+            query.whereExpression.toString()
+        )
+        assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
     }
 }

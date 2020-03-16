@@ -32,20 +32,25 @@ open class Expression(vararg val children: Expression) {
     /**
      * The deepest scope in this expression.
      */
-    open val effectiveScope: Scope by lazy(LazyThreadSafetyMode.NONE) {
-        var effectiveScope = scope
-        fun process(expression: Expression) {
-            for (child in expression.children) {
-                if (effectiveScope === null || child.scope !== null && child.scope!! > effectiveScope!!) {
-                    effectiveScope = child.scope
-                    if (effectiveScope == Scope.Event)
-                        return
-                }
-                process(child)
+    val effectiveScope: Scope by lazy(LazyThreadSafetyMode.NONE) {
+        calculateEffectiveScope() ?: Scope.Event
+    }
+
+    /**
+     * Calculates an effective scope (the deepest scope) for this expression. Yields null when the scope is not set for
+     * this expression and all of its children.
+     */
+    protected open fun calculateEffectiveScope(): Scope? {
+        var effectiveScope: Scope? = scope
+        for (child in children) {
+            val chScope = child.calculateEffectiveScope()
+            if (chScope !== null && (effectiveScope === null || chScope > effectiveScope)) {
+                effectiveScope = chScope
+                if (effectiveScope == Scope.Event)
+                    break
             }
         }
-        process(this)
-        effectiveScope ?: Scope.Event
+        return effectiveScope
     }
 
     /**
