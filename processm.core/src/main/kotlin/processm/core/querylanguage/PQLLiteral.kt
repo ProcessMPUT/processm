@@ -53,7 +53,7 @@ class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
     PQLLiteral<String>(literal, line, charPositionInLine) {
     override fun parse(literal: String): String {
         if ((literal[0] != '"' && literal[0] != '\'') || literal[0] != literal[literal.length - 1])
-            throw IllegalArgumentException("Invalid format of string literal: $literal.")
+            throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid format of string literal: $literal.")
 
         return literal.substring(1, literal.length - 1)
     }
@@ -153,7 +153,10 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
                     exception.addSuppressed(e)
             }
         }
-        throw exception!!
+        throw IllegalArgumentException(
+            "Line $line position $charPositionInLine: Invalid format of datetime literal: $literal.",
+            exception!!
+        )
     }
 }
 
@@ -173,7 +176,9 @@ class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
     override fun parse(literal: String): Boolean = when (literal) {
         "true" -> true
         "false" -> false
-        else -> throw IllegalArgumentException("Invalid format of boolean literal: $literal.")
+        else -> throw IllegalArgumentException(
+            "Line $line position $charPositionInLine: Invalid format of boolean literal: $literal."
+        )
     }
 }
 

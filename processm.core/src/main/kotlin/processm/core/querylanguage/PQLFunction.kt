@@ -49,11 +49,11 @@ class PQLFunction(
         type = when (name) {
             in scalarFunctions -> FunctionType.Scalar
             in aggregationFunctions -> FunctionType.Aggregation
-            else -> throw IllegalArgumentException("Call of an undefined function $name.")
+            else -> throw IllegalArgumentException("Line $line position $charPositionInLine: Call of an undefined function $name.")
         }
         val validArguments = scalarFunctions[name] ?: aggregationFunctions[name]
         if (children.size != validArguments)
-            throw IllegalArgumentException("Invalid number of arguments supplied to function $name: ${children.size} given, $validArguments expected.")
+            throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid number of arguments supplied to function $name: ${children.size} given, $validArguments expected.")
     }
 
     override fun toString(): String = "$name(${children.joinToString(", ")})"

@@ -50,7 +50,9 @@ class PQLAttribute(attribute: String, override val line: Int, override val charP
 
     override fun calculateEffectiveScope(): Scope? =
         hoistingPrefix.fold(scope!!) { s, _ ->
-            s.upper ?: throw IllegalArgumentException("It is not supported to hoist a scope beyond the log scope.")
+            s.upper ?: throw IllegalArgumentException(
+                "Line $line position $charPositionInLine: It is not supported to hoist a scope beyond the log scope."
+            )
         }
 
     /**
@@ -92,7 +94,9 @@ class PQLAttribute(attribute: String, override val line: Int, override val charP
                 // the remaining standard attributes
                 else name == "${it.first}:${it.second}" || name == it.second
             }?.run { "$first:${second ?: name.substringAfterLast(':')}" }
-                ?: throw NoSuchElementException("No such attribute: $attribute. Try using the square-bracket syntax for non-standard attributes.")
+                ?: throw NoSuchElementException(
+                    "Line $line position $charPositionInLine: No such attribute: $attribute. Try using the square-bracket syntax for non-standard attributes."
+                )
         } else ""
     }
 
