@@ -10,6 +10,7 @@ import kotlin.experimental.or
 import kotlin.math.max
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
+import kotlin.reflect.jvm.javaField
 
 /**
  * Represents log query as parsed from the string given as constructor argument.
@@ -43,6 +44,20 @@ class Query(val query: String) {
     // endregion
 
     // region data model
+    /**
+     * The first warning emitted during parsing of this query. Subsequent warnings are stored as suppressed exceptions.
+     * The null value refers to no warnings.
+     *
+     * An exception is considered a warning, if its cause does not change semantics of the query, and so the query
+     * yields the same results with and without this cause. E.g., using an outer-scope attribute in the group by clause
+     * is considered a warning, because no matter whether this attribute is used or not the result of the query would be
+     * the same.
+     *
+     * @see Throwable.getSuppressed
+     */
+    val warning: Exception?
+        get() = errorListener.warning
+
     // region select clause
     private var _selectAll: Byte = 0
 
@@ -165,21 +180,105 @@ class Query(val query: String) {
 
     // endregion
     // region where clause
+    /**
+     * The expression in the where clause.
+     */
     var whereExpression: Expression = Expression.empty()
         private set
 
     // endregion
+
+    // region group by clause
+    // However PQL does not allow for many group by clauses, as of version 0.1, I expect that the support will be
+    // added in a future version. So the below collections hold separate sets of attributes for each scope.
+    private val _groupByStandardAttributes: Map<Scope, LinkedHashSet<PQLAttribute>> = mapOf(
+        Scope.Log to LinkedHashSet(),
+        Scope.Trace to LinkedHashSet(),
+        Scope.Event to LinkedHashSet()
+    )
+    private val _groupByOtherAttributes: Map<Scope, LinkedHashSet<PQLAttribute>> = mapOf(
+        Scope.Log to LinkedHashSet(),
+        Scope.Trace to LinkedHashSet(),
+        Scope.Event to LinkedHashSet()
+    )
+
+    /**
+     * The standard attributes used for grouping on the log scope.
+     */
+    val groupLogByStandardAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Log]!!)
+
+    /**
+     * The standard attributes used for grouping on the trace scope.
+     */
+    val groupTraceByStandardAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Trace]!!)
+
+    /**
+     * The standard attributes used for grouping on the event scope.
+     */
+    val groupEventByStandardAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Event]!!)
+
+    /**
+     * The non-standard attributes used for grouping on the log scope.
+     */
+    val groupLogByOtherAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Log]!!)
+
+    /**
+     * The non-standard attributes used for grouping on the trace scope.
+     */
+    val groupTraceByOtherAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Trace]!!)
+
+    /**
+     * The non-standard attributes used for grouping on the event scope.
+     */
+    val groupEventByOtherAttributes: Set<PQLAttribute> =
+        Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Event]!!)
+
+    // end region
     // endregion
     init {
         assert(Query::class.memberProperties.all {
-            it.isAccessible = true; it.get(this) !== null
+            it.isAccessible = true; it.javaField === null || it.get(this) !== null
         }) { "This init{} block must be located after all properties!" }
 
         val tree = parser.query()
         val walker = ParseTreeWalker()
         walker.walk(Listener(), tree)
+        validateGroupByAttributes()
         if (errorListener.error !== null)
             throw errorListener.error!!
+    }
+
+    private fun validateGroupByAttributes() {
+        fun validate(toValidate: Map<Scope, Set<PQLAttribute>>, groupByMap: Map<Scope, Set<PQLAttribute>>) =
+            toValidate
+                .flatMap { it.value }
+                .filter {
+                    var groupByEnabled = false
+                    var scope: Scope? = it.scope
+                    do {
+                        if (_groupByStandardAttributes[scope]!!.size != 0 || _groupByOtherAttributes[scope]!!.size != 0) {
+                            groupByEnabled = true
+                            if (it in groupByMap[scope]!!)
+                                return@filter false // valid use
+                        }
+                        scope = scope!!.upper
+                    } while (scope !== null)
+                    return@filter groupByEnabled
+                }.forEach {
+                    errorListener.delayedThrow(
+                        IllegalArgumentException(
+                            "Line ${it.line} position ${it.charPositionInLine}: The attribute $it from the select clause is not in the group by clause. Such attributes can be used only as an argument of an aggregation function."
+                        )
+                    )
+                }
+
+        validate(_selectStandardAttributes, _groupByStandardAttributes)
+        validate(_selectOtherAttributes, _groupByOtherAttributes)
     }
 
     override fun toString(): String = query
@@ -226,15 +325,54 @@ class Query(val query: String) {
                 _selectExpressions[expression.effectiveScope]!!.add(expression)
             }
         }
+        // endregion
 
-        override fun exitWhere_explicit(ctx: QueryLanguage.Where_explicitContext?) {
+        // region PQL where clause
+        override fun exitWhere(ctx: QueryLanguage.WhereContext?) {
             val interval = ctx!!.sourceInterval
             whereExpression = parseExpression(Interval.of(interval.a + 1, interval.b))
         }
         // endregion
 
+        // region PQL group by clause
+
+        override fun exitGroup_trace_by(ctx: QueryLanguage.Group_trace_byContext?) {
+            handleGroupByIdList(Scope.Trace, ctx!!.id_list().sourceInterval)
+        }
+
+        override fun exitGroup_scope_by(ctx: QueryLanguage.Group_scope_byContext?) {
+            val scope = Scope.parse(ctx!!.SCOPE().text)
+            handleGroupByIdList(scope, ctx.id_list().sourceInterval)
+        }
+
+        private fun handleGroupByIdList(scope: Scope, interval: Interval) {
+            val standardAttributes = _groupByStandardAttributes[scope]!!
+            val otherAttributes = _groupByOtherAttributes[scope]!!
+
+            tokens.get(interval.a, interval.b)
+                .filter { it.type == QueryLanguage.ID }
+                .map { PQLAttribute(it.text, it.line, it.charPositionInLine) }
+                .filter {
+                    if (it.effectiveScope < scope) {
+                        errorListener.emitWarning(
+                            IllegalArgumentException(
+                                "Line ${it.line} position ${it.charPositionInLine}: Use of the attribute $it with effective scope ${it.effectiveScope} in group by clause with scope $scope is meaningless. Attribute dropped."
+                            )
+                        )
+                        false
+                    } else true
+                }.forEach {
+                    if (it.isStandard)
+                        standardAttributes.add(it)
+                    else
+                        otherAttributes.add(it)
+                }
+        }
+
+
+        // endregion
+
         private fun parseExpression(interval: Interval): Expression {
-            // var currentScope: Scope? = null
             val exprArray = tokens.get(interval.a, max(interval.b, interval.a))
                 .mapNotNull(::parseExpression)
                 .toTypedArray()
@@ -261,6 +399,9 @@ class Query(val query: String) {
         var error: Exception? = null
             private set
 
+        var warning: Exception? = null
+            private set
+
         override fun syntaxError(
             recognizer: Recognizer<*, *>?,
             offendingSymbol: Any?,
@@ -284,6 +425,13 @@ class Query(val query: String) {
                 error = exception
             else
                 error!!.addSuppressed(exception)
+        }
+
+        fun emitWarning(exception: Exception) {
+            if (warning === null)
+                warning = exception
+            else
+                warning!!.addSuppressed(exception)
         }
     }
 }

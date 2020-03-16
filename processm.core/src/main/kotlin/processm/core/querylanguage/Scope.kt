@@ -37,6 +37,26 @@ enum class Scope {
     }
 
     /**
+     * The one level up scope. Null for the top-most scope.
+     */
+    val upper: Scope?
+        get() = when (this) {
+            Log -> null
+            Trace -> Log
+            Event -> Trace
+        }
+
+    /**
+     * The one level down scope. Null for the bottom-most scope.
+     */
+    val lower: Scope?
+        get() = when (this) {
+            Log -> Trace
+            Trace -> Event
+            Event -> null
+        }
+
+    /**
      * A single letter abbreviation for scope name. Useful as scope prefix in many applications.
      */
     val shortName: String

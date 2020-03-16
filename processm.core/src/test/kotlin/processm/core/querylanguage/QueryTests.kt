@@ -378,7 +378,7 @@ class QueryTests {
     }
 
     @Test
-    fun selectErrorHandlingTest() {
+    fun errorHandlingTest() {
         val invalidSelects =
             listOf(
                 "select",
@@ -400,14 +400,25 @@ class QueryTests {
             }
         }
 
-        val invalidAttributes = listOf("select e:conceptowy:name", "select e:date")
+        val invalidAttributes = listOf(
+            "select e:conceptowy:name",
+            "select e:date",
+            "select t:timestamp",
+            "select e:t:timestamp"
+        )
         invalidAttributes.forEach {
             assertFailsWith<NoSuchElementException> { Query(it) }.apply {
                 assertNotNull(message)
             }
         }
 
-        val unsupportedOperations = listOf("select ^e:concept:name", "select avg(^time:timestamp)")
+        val unsupportedOperations = listOf(
+            "select ^e:concept:name",
+            "select avg(^time:timestamp)",
+            "select e:timestamp group by e:name"
+            /* TODO: "group by e:name order by e:timestamp",*/
+            /*"select e:total + 10 group by e:name"*/
+        )
         unsupportedOperations.forEach {
             assertFailsWith<IllegalArgumentException> { Query(it) }.apply {
                 assertNotNull(message)
@@ -458,5 +469,117 @@ class QueryTests {
             query.whereExpression.toString()
         )
         assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
+    }
+
+    @Test
+    fun groupScopeByClassifierTest() {
+        val query = Query("group trace by e:classifier:activity")
+        assertTrue(query.selectAll)
+        assertEquals(0, query.groupLogByStandardAttributes.size)
+        assertEquals(1, query.groupTraceByStandardAttributes.size)
+        assertEquals(0, query.groupEventByStandardAttributes.size)
+        assertEquals(0, query.groupLogByOtherAttributes.size)
+        assertEquals(0, query.groupTraceByOtherAttributes.size)
+        assertEquals(0, query.groupEventByOtherAttributes.size)
+        assertTrue(query.groupTraceByStandardAttributes.all { it.isStandard })
+        assertTrue(query.groupTraceByStandardAttributes.all { it.isClassifier })
+        assertEquals("classifier:activity", query.groupTraceByStandardAttributes.elementAt(0).standardName)
+        assertEquals(Scope.Event, query.groupTraceByStandardAttributes.elementAt(0).effectiveScope)
+    }
+
+    @Test
+    fun groupEventByStandardAttributeTest() {
+        val query = Query(
+            """select t:name, e:name, sum(e:total)
+            group event by e:name"""
+        )
+        assertFalse(query.selectAll)
+        assertEquals("concept:name", query.selectTraceStandardAttributes.elementAt(0).standardName)
+        assertEquals("concept:name", query.selectEventStandardAttributes.elementAt(0).standardName)
+        assertEquals("sum(event:cost:total)", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals(0, query.groupLogByStandardAttributes.size)
+        assertEquals(0, query.groupTraceByStandardAttributes.size)
+        assertEquals(1, query.groupEventByStandardAttributes.size)
+        assertEquals(0, query.groupLogByOtherAttributes.size)
+        assertEquals(0, query.groupTraceByOtherAttributes.size)
+        assertEquals(0, query.groupEventByOtherAttributes.size)
+        assertTrue(query.groupEventByStandardAttributes.all { it.isStandard })
+        assertTrue(query.groupEventByStandardAttributes.all { !it.isClassifier })
+        assertEquals("concept:name", query.groupEventByStandardAttributes.elementAt(0).standardName)
+        assertEquals(Scope.Event, query.groupEventByStandardAttributes.elementAt(0).effectiveScope)
+    }
+
+    @Test
+    fun groupTraceByEventStandardAttributeTest() {
+        val query = Query(
+            """select e:name, sum(e:total)
+            group trace by e:name"""
+        )
+        assertFalse(query.selectAll)
+        assertEquals("concept:name", query.selectEventStandardAttributes.elementAt(0).standardName)
+        assertEquals("sum(event:cost:total)", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals(0, query.groupLogByStandardAttributes.size)
+        assertEquals(1, query.groupTraceByStandardAttributes.size)
+        assertEquals(0, query.groupEventByStandardAttributes.size)
+        assertEquals(0, query.groupLogByOtherAttributes.size)
+        assertEquals(0, query.groupTraceByOtherAttributes.size)
+        assertEquals(0, query.groupEventByOtherAttributes.size)
+        assertTrue(query.groupTraceByStandardAttributes.all { it.isStandard })
+        assertTrue(query.groupTraceByStandardAttributes.all { !it.isClassifier })
+        assertEquals("concept:name", query.groupTraceByStandardAttributes.elementAt(0).standardName)
+        assertEquals(Scope.Event, query.groupTraceByStandardAttributes.elementAt(0).effectiveScope)
+    }
+
+    @Test
+    fun groupLogByEventStandardAttributeTest() {
+        val query = Query(
+            """select e:name, sum(e:total)
+            group log by e:name"""
+        )
+        assertFalse(query.selectAll)
+        assertEquals("concept:name", query.selectEventStandardAttributes.elementAt(0).standardName)
+        assertEquals("sum(event:cost:total)", query.selectEventExpressions.elementAt(0).toString())
+        assertEquals(1, query.groupLogByStandardAttributes.size)
+        assertEquals(0, query.groupTraceByStandardAttributes.size)
+        assertEquals(0, query.groupEventByStandardAttributes.size)
+        assertEquals(0, query.groupLogByOtherAttributes.size)
+        assertEquals(0, query.groupTraceByOtherAttributes.size)
+        assertEquals(0, query.groupEventByOtherAttributes.size)
+        assertTrue(query.groupLogByStandardAttributes.all { it.isStandard })
+        assertTrue(query.groupLogByStandardAttributes.all { !it.isClassifier })
+        assertEquals("concept:name", query.groupLogByStandardAttributes.elementAt(0).standardName)
+        assertEquals(Scope.Event, query.groupLogByStandardAttributes.elementAt(0).effectiveScope)
+    }
+
+    @Test
+    fun groupByImplicitTest() {
+        val query = Query(
+            """group by e:c:main, [t:branch]"""
+        )
+        assertTrue(query.selectAll)
+        assertEquals(0, query.groupLogByStandardAttributes.size)
+        assertEquals(1, query.groupTraceByStandardAttributes.size)
+        assertEquals(0, query.groupEventByStandardAttributes.size)
+        assertEquals(0, query.groupLogByOtherAttributes.size)
+        assertEquals(1, query.groupTraceByOtherAttributes.size)
+        assertEquals(0, query.groupEventByOtherAttributes.size)
+        assertTrue(query.groupTraceByStandardAttributes.all { it.isStandard })
+        assertTrue(query.groupTraceByStandardAttributes.all { it.isClassifier })
+        assertEquals("classifier:main", query.groupTraceByStandardAttributes.elementAt(0).standardName)
+        assertEquals(Scope.Event, query.groupTraceByStandardAttributes.elementAt(0).effectiveScope)
+        assertTrue(query.groupTraceByOtherAttributes.all { !it.isStandard })
+        assertTrue(query.groupTraceByOtherAttributes.all { !it.isClassifier })
+        assertEquals("branch", query.groupTraceByOtherAttributes.elementAt(0).name)
+        assertEquals(Scope.Trace, query.groupTraceByOtherAttributes.elementAt(0).effectiveScope)
+    }
+
+    @Test
+    fun groupByWarningsTest() {
+        val invalidScopes = listOf("group event by t:currency", "group trace by l:name")
+        invalidScopes.forEach {
+            val query = Query(it)
+            assertNotNull(query.warning)
+            assertTrue(query.warning!!.message!!.contains("group"))
+        }
     }
 }

@@ -4,7 +4,7 @@ options {tokenVocab=QLLexer;}
 // parser rules start with lowercase letters
 // Axiom. QL implements a subset of Google Visualization API Query Language limited to the below clauses.
 // See https://developers.google.com/chart/interactive/docs/querylanguage for language details.
-query       : select where group_by order_by limit offset EOF
+query       : select where? group_by? order_by? limit offset EOF
             ;
 
 select      :                               # select_all
@@ -12,17 +12,13 @@ select      :                               # select_all
             | SELECT column_list            # select_column_list
             ;
 
-where       :                           # where_empty
-            | WHERE logic_expr          # where_explicit
-            ;
+where       : WHERE logic_expr ;
 
-group_by    :                           # no_group_by
-            | GROUP BY id_list          # group_trace_by
+group_by    : GROUP BY id_list          # group_trace_by
             | GROUP SCOPE BY id_list    # group_scope_by
             ;
 
-order_by    :
-            | ORDER_BY column_list_with_order
+order_by    : ORDER_BY column_list_with_order
             ;
 
 limit       :
