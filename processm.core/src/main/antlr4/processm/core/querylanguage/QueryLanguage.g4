@@ -4,7 +4,7 @@ options {tokenVocab=QLLexer;}
 // parser rules start with lowercase letters
 // Axiom. QL implements a subset of Google Visualization API Query Language limited to the below clauses.
 // See https://developers.google.com/chart/interactive/docs/querylanguage for language details.
-query       : select where? group_by? order_by? limit offset EOF
+query       : select where? group_by? order_by? limit? offset? EOF
             ;
 
 select      :                               # select_all
@@ -21,11 +21,9 @@ group_by    : GROUP BY id_list          # group_trace_by
 order_by    : ORDER_BY column_list_with_order
             ;
 
-limit       :
-            | LIMIT SCOPE COLON NUMBER (',' SCOPE COLON NUMBER)*;
+limit       : LIMIT SCOPE COLON NUMBER (',' SCOPE COLON NUMBER)*;
 
-offset      :
-            | OFFSET NUMBER ;
+offset      : OFFSET NUMBER ;
 
 column_list : SCOPE COLON '*'                   # scoped_select_all
             | SCOPE COLON '*' ',' column_list   # scoped_select_all
@@ -52,17 +50,17 @@ scalar      : STRING
             ;
 
 // The order of productions reflects operator precedence
-arith_expr  : '(' arith_expr ')'                    # arith_expr_other
-            | arith_expr ('*' | '/') arith_expr     # arith_expr_other
-            | arith_expr ('+' | '-') arith_expr     # arith_expr_other
-            | func                                  # arith_expr_other
-            | ID                                    # arith_expr_id
-            | scalar                                # arith_expr_other
+arith_expr  : '(' arith_expr ')'
+            | arith_expr ('*' | '/') arith_expr
+            | arith_expr ('+' | '-') arith_expr
+            | func
+            | ID
+            | scalar
             ;
 
-func        : FUNC_SCALAR0 '(' ')'              # func_scalar
-            | FUNC_SCALAR1 '(' arith_expr ')'   # func_scalar
-            | FUNC_AGGR '(' ID ')'              # func_aggr // Note: Aggregation functions can only take a column identifier as an argument
+func        : FUNC_SCALAR0 '(' ')'
+            | FUNC_SCALAR1 '(' arith_expr ')'
+            | FUNC_AGGR '(' ID ')'              // Note: Aggregation functions can only take a column identifier as an argument
             ;
 
 cmp         : OP_LT

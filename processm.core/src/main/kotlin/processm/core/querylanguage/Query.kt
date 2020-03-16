@@ -2,12 +2,12 @@ package processm.core.querylanguage
 
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.misc.Interval
+import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import java.util.*
 import kotlin.collections.LinkedHashSet
 import kotlin.experimental.and
 import kotlin.experimental.or
-import kotlin.math.max
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
@@ -121,10 +121,10 @@ class Query(val query: String) {
         Scope.Event to LinkedHashSet()
     )
 
-    private val _selectExpressions: Map<Scope, LinkedHashSet<Expression>> = mapOf(
-        Scope.Log to LinkedHashSet(),
-        Scope.Trace to LinkedHashSet(),
-        Scope.Event to LinkedHashSet()
+    private val _selectExpressions: Map<Scope, ArrayList<Expression>> = mapOf(
+        Scope.Log to ArrayList(),
+        Scope.Trace to ArrayList(),
+        Scope.Event to ArrayList()
     )
 
     /**
@@ -166,24 +166,24 @@ class Query(val query: String) {
     /**
      * The expressions to select on the log scope.
      */
-    val selectLogExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Log]!!)
+    val selectLogExpressions: List<Expression> = Collections.unmodifiableList(_selectExpressions[Scope.Log]!!)
 
     /**
      * The expressions to select on the trace scope.
      */
-    val selectTraceExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Trace]!!)
+    val selectTraceExpressions: List<Expression> = Collections.unmodifiableList(_selectExpressions[Scope.Trace]!!)
 
     /**
      * The expressions to select on the event scope.
      */
-    val selectEventExpressions: Set<Expression> = Collections.unmodifiableSet(_selectExpressions[Scope.Event]!!)
+    val selectEventExpressions: List<Expression> = Collections.unmodifiableList(_selectExpressions[Scope.Event]!!)
 
     // endregion
     // region where clause
     /**
      * The expression in the where clause.
      */
-    var whereExpression: Expression = Expression.empty()
+    var whereExpression: Expression = Expression.empty
         private set
 
     // endregion
@@ -254,9 +254,14 @@ class Query(val query: String) {
     }
 
     private fun validateGroupByAttributes() {
-        fun validate(toValidate: Map<Scope, Set<PQLAttribute>>, groupByMap: Map<Scope, Set<PQLAttribute>>) =
+        fun validate(toValidate: Map<Scope, Collection<Expression>>, groupByMap: Map<Scope, Set<PQLAttribute>>) =
             toValidate
                 .flatMap { it.value }
+                .flatMap {
+                    it.filterRecursively { it !is PQLFunction || it.type != FunctionType.Aggregation }
+                        .filterIsInstance<PQLAttribute>()
+                        .asIterable()
+                }
                 .filter {
                     var groupByEnabled = false
                     var scope: Scope? = it.scope
@@ -279,6 +284,10 @@ class Query(val query: String) {
 
         validate(_selectStandardAttributes, _groupByStandardAttributes)
         validate(_selectOtherAttributes, _groupByOtherAttributes)
+        val groupByAttributes = _groupByStandardAttributes.mapValues {
+            LinkedHashSet<PQLAttribute>(it.value).apply { addAll(_groupByOtherAttributes[it.key]!!) }
+        }
+        validate(_selectExpressions, groupByAttributes)
     }
 
     override fun toString(): String = query
@@ -300,10 +309,10 @@ class Query(val query: String) {
         }
 
         override fun exitArith_expr_root(ctx: QueryLanguage.Arith_expr_rootContext?) {
-            val expression = parseExpression(ctx!!.sourceInterval)
-            val hoisted = (sequenceOf(expression) + expression.children).firstOrNull {
-                it is PQLAttribute && it.hoistingPrefix.isNotEmpty()
-            }
+            val expression = parseExpression(ctx!!)
+
+            val hoisted = expression.filter { it is PQLAttribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()
+
             if (hoisted !== null)
                 errorListener.delayedThrow(IllegalArgumentException("Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select clause."))
 
@@ -329,8 +338,7 @@ class Query(val query: String) {
 
         // region PQL where clause
         override fun exitWhere(ctx: QueryLanguage.WhereContext?) {
-            val interval = ctx!!.sourceInterval
-            whereExpression = parseExpression(Interval.of(interval.a + 1, interval.b))
+            whereExpression = parseExpression(ctx!!.children[1])
         }
         // endregion
 
@@ -372,14 +380,30 @@ class Query(val query: String) {
 
         // endregion
 
-        private fun parseExpression(interval: Interval): Expression {
-            val exprArray = tokens.get(interval.a, max(interval.b, interval.a))
-                .mapNotNull(::parseExpression)
-                .toTypedArray()
-            return if (exprArray.size == 1) exprArray[0] else Expression(*exprArray)
+        private fun parseExpression(ctx: ParseTree): Expression {
+            if (ctx.childCount == 0) {
+                // terminal
+                return parseToken(ctx.payload as Token)
+            }
+            val token = ctx.getChild(0).payload as? Token
+            with(token) {
+                return when (this?.type) {
+                    QueryLanguage.FUNC_SCALAR0 -> PQLFunction(text, line, charPositionInLine)
+                    QueryLanguage.FUNC_SCALAR1, QueryLanguage.FUNC_AGGR -> PQLFunction(
+                        text,
+                        line,
+                        charPositionInLine,
+                        parseExpression(ctx.getChild(2))
+                    )
+                    else -> {
+                        val array = (0 until ctx.childCount).map { parseExpression(ctx.getChild(it)) }.toTypedArray()
+                        if (array.size == 1) array[0] else Expression(*array)
+                    }
+                }
+            }
         }
 
-        private fun parseExpression(token: Token): Expression? = try {
+        private fun parseToken(token: Token): Expression = try {
             when (token.type) {
                 QueryLanguage.ID -> PQLAttribute(token.text, token.line, token.charPositionInLine)
                 QueryLanguage.BOOLEAN -> BooleanLiteral(token.text, token.line, token.charPositionInLine)
@@ -391,7 +415,7 @@ class Query(val query: String) {
             }
         } catch (e: Exception) {
             errorListener.delayedThrow(e)
-            null
+            Expression.empty
         }
     }
 

@@ -395,7 +395,7 @@ class QueryTests {
             )
 
         invalidSelects.forEach {
-            assertFailsWith<RecognitionException> { Query(it) }.apply {
+            assertFailsWith<RecognitionException>(it) { Query(it) }.apply {
                 assertNotNull(message)
             }
         }
@@ -407,7 +407,7 @@ class QueryTests {
             "select e:t:timestamp"
         )
         invalidAttributes.forEach {
-            assertFailsWith<NoSuchElementException> { Query(it) }.apply {
+            assertFailsWith<NoSuchElementException>(it) { Query(it) }.apply {
                 assertNotNull(message)
             }
         }
@@ -415,12 +415,13 @@ class QueryTests {
         val unsupportedOperations = listOf(
             "select ^e:concept:name",
             "select avg(^time:timestamp)",
-            "select e:timestamp group by e:name"
+            "select e:timestamp group by e:name",
             /* TODO: "group by e:name order by e:timestamp",*/
-            /*"select e:total + 10 group by e:name"*/
+            "select e:total + 10 group by e:name"
+            /* TODO: "select avg(e:total), e:resource"*/
         )
         unsupportedOperations.forEach {
-            assertFailsWith<IllegalArgumentException> { Query(it) }.apply {
+            assertFailsWith<IllegalArgumentException>(it) { Query(it) }.apply {
                 assertNotNull(message)
             }
         }
@@ -552,7 +553,7 @@ class QueryTests {
     }
 
     @Test
-    fun groupByImplicitTest() {
+    fun groupByImplicitScopeTest() {
         val query = Query(
             """group by e:c:main, [t:branch]"""
         )
@@ -571,6 +572,13 @@ class QueryTests {
         assertTrue(query.groupTraceByOtherAttributes.all { !it.isClassifier })
         assertEquals("branch", query.groupTraceByOtherAttributes.elementAt(0).name)
         assertEquals(Scope.Trace, query.groupTraceByOtherAttributes.elementAt(0).effectiveScope)
+    }
+
+    @Test
+    @Ignore
+    fun groupByImplicitTest() {
+        val query = Query("select avg(e:total), min(e:timestamp), max(e:timestamp)")
+        TODO()
     }
 
     @Test

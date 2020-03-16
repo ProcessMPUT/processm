@@ -8,19 +8,10 @@ package processm.core.querylanguage
 @Suppress("SelfReferenceConstructorParameter")
 open class Expression(vararg val children: Expression) {
     companion object {
-        private val empty: Map<Scope, Expression> = mapOf(
-            Scope.Log to Expression(),
-            Scope.Trace to Expression(),
-            Scope.Event to Expression()
-        )
-
         /**
-         * Returns an empty singleton [Expression] for the given scope.
-         *
-         * @param scope The scope for which to return the expression.
+         * An empty singleton [Expression].
          */
-        @Suppress("MapGetWithNotNullAssertionOperator")
-        fun empty(scope: Scope = Scope.Event): Expression = empty[scope]!!
+        val empty: Expression = Expression()
     }
 
     /**
@@ -70,7 +61,35 @@ open class Expression(vararg val children: Expression) {
     open val charPositionInLine: Int
         get() = children.map { it.charPositionInLine }.min() ?: 0
 
-    override fun toString(): String = buildString {
-        children.forEach { append(it.toString()) }
+    /**
+     * Selects recursively from this expression subexpressions matching the given predicate. A child expression may be
+     * selected even if its parent does not match this predicate.
+     * @param predicate A predicate that given an expression yields either true or false to approve or deny this
+     * expression, respectively.
+     * @return The sequence of subexpressions.
+     */
+    fun filter(predicate: (expression: Expression) -> Boolean): Sequence<Expression> = sequence {
+        if (predicate(this@Expression))
+            yield(this@Expression)
+
+        for (child in children)
+            yieldAll(child.filter(predicate))
     }
+
+    /**
+     * Selects recursively from this expression subexpressions matching the given predicate. A child expression is not
+     * selected if its parent does not match this predicate.
+     * @param predicate A predicate that given an expression yields either true or false to approve or deny this
+     * expression, respectively.
+     * @return The sequence of subexpressions.
+     */
+    fun filterRecursively(predicate: (expression: Expression) -> Boolean): Sequence<Expression> = sequence {
+        if (predicate(this@Expression)) {
+            yield(this@Expression)
+            for (child in children)
+                yieldAll(child.filterRecursively(predicate))
+        }
+    }
+
+    override fun toString(): String = children.joinToString("")
 }
