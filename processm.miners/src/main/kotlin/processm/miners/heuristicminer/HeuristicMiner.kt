@@ -1,7 +1,10 @@
 package processm.miners.heuristicminer
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
 import processm.core.log.Event
 import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
@@ -35,50 +38,94 @@ internal fun node(e: Event): Node {
 }
 
 class HeuristicMiner(
-    private val log: Log,
     val minDirectlyFollows: Int = 1,
     val minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
-    val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport),
     val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
 ) {
-    internal val directlyFollows: Counter<Pair<Node, Node>> by lazy {
-        val result = Counter<Pair<Node, Node>>()
-        //TODO handle lifecycle?
-        log.traces.forEach { trace ->
-            val i = trace.events.iterator()
-            var prev = start
+
+    private val selector = IntegratedSelector(minBindingSupport)
+
+    init {
+//        (logger() as Logger).level = Level.TRACE
+    }
+
+    fun processLog(log: Log) {
+        for (trace in log.traces)
+            processTrace(trace)
+    }
+
+    fun processTrace(trace: Trace) {
+        //Directly follows
+        val nodeTrace = trace.events.map { node(it) }.toList()
+        val i = nodeTrace.iterator()
+        var prev = start
+        while (i.hasNext()) {
+            val curr = i.next()
+            directlyFollows.inc(prev to curr)
+            prev = curr
+        }
+        directlyFollows.inc(prev to end)
+        model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
+        //TODO consider only pairs (in both directions!) from the trace and add/remove accordingly
+        model.clearDependencies()
+        directlyFollows
+            .filterValues { it >= minDirectlyFollows }
+            .keys
+            .filter { (a, b) -> dependency(a, b) >= minDependency }
+            .forEach { (a, b) -> model.addDependency(a, b) }
+
+        model.clearBindings()
+        println("TRACE " + (nodeTrace.map { it.activity }.toString()))
+        if (mineBindings(nodeTrace)) {
+            println("\tSUCCESS")
+            val i = unableToReplay.iterator()
             while (i.hasNext()) {
-                val curr = node(i.next())
-                result.inc(prev to curr)
-                prev = curr
+                val t = i.next()
+                println("\tREPLAY " + (t.map { it.activity }.toString()))
+                model.clearBindings()
+                if (mineBindings(t)) {
+                    println("\t\tSUCCESS")
+                    i.remove()
+                } else
+                    println("\t\tFAIL")
+                //TODO restore bindings
             }
-            result.inc(prev to end)
+        } else {
+            println("\tFAIL")
+            unableToReplay.add(nodeTrace)
         }
-        result
+//        longDistanceDependencyMiner.processTrace(nodeTrace)
+//        while (true) {
+//            val ltdeps = longDistanceDependencyMiner.mine(model)
+//            if (ltdeps.isNotEmpty()) {
+//                ltdeps.forEach { dep ->
+//                    model.addDependency(dep.first, dep.second)
+//                    model.clearBindingsFor(dep.first)
+//                    model.clearBindingsFor(dep.second)
+//                }
+//                mineBindings(nodeTrace)
+//            } else
+//                break
+//        }
     }
 
-    internal val nodes: Set<Node> by lazy {
-        (directlyFollows.keys.map { it.first } + directlyFollows.keys.map { it.second }).distinct().toSet()
-    }
+    internal val directlyFollows = Counter<Pair<Node, Node>>()
 
-    internal val dependency: Map<Pair<Node, Node>, Double> by lazy {
-        (nodes times nodes).associateWith { (a, b) ->
-            if (a != b) {
-                val ab = directlyFollows.getOrDefault(a to b, 0)
-                val ba = directlyFollows.getOrDefault(b to a, 0)
-                (ab - ba) / (ab + ba + 1.0)
-            } else {
-                val aa = directlyFollows.getOrDefault(a to a, 0)
-                aa / (aa + 1.0)
-            }
+
+    internal fun dependency(a: Node, b: Node): Double {
+        if (a != b) {
+            val ab = directlyFollows.getOrDefault(a to b, 0)
+            val ba = directlyFollows.getOrDefault(b to a, 0)
+            return (ab - ba) / (ab + ba + 1.0)
+        } else {
+            val aa = directlyFollows.getOrDefault(a to a, 0)
+            return aa / (aa + 1.0)
         }
     }
 
-
-    private fun computeBindings(model: Model, trace: List<Node>): Pair<List<Split>, List<Join>> {
+    private fun computeBindings(trace: List<Node>): Pair<List<Split>, List<Join>> {
         var currentStates =
             sequenceOf(ReplayTrace(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
         for (currentNode in trace) {
@@ -124,6 +171,7 @@ class HeuristicMiner(
         currentStates = currentStates.filter { it.state.isEmpty() }
         if (logger().isTraceEnabled) {
             logger().trace("TRACE: " + trace.map { n -> n.activity })
+            logger().trace(model.toString())
             currentStates.forEach { (state, joins, splits) ->
                 logger().trace("JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
                 logger().trace("SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })
@@ -134,6 +182,10 @@ class HeuristicMiner(
         }
 
         val (_, joins, splits) = hypothesisSelector(currentStates.toList())
+        if (logger().isTraceEnabled) {
+            logger().trace("WINNING JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
+            logger().trace("WINNING SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })
+        }
 
         val finalSplits = splits.filter { split -> split.isNotEmpty() }
             .map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
@@ -142,59 +194,69 @@ class HeuristicMiner(
         return finalSplits to finalJoins
     }
 
-    private fun mineBindings(
-        logWithNodes: Sequence<List<Node>>,
-        model: MutableModel
-    ) {
-        joinSelector.reset()
-        splitSelector.reset()
-        logWithNodes.forEach { trace ->
-            val (splits, joins) = computeBindings(model, trace)
-            joinSelector.add(joins)
-            splitSelector.add(splits)
-        }
-        joinSelector.best.forEach { join ->
-            if (!model.contains(join))
-                model.addJoin(join)
-        }
-        splitSelector.best.forEach { split ->
-            if (!model.contains(split))
-                model.addSplit(split)
-        }
-    }
+    private val unableToReplay = ArrayList<List<Node>>()
 
+    private fun mineBindings(nodeTrace: List<Node>): Boolean {
+//        joinSelector.reset()
+//        splitSelector.reset()
+//        history.add(nodeTrace)
+//        history.forEach { nodeTrace ->
+        val (splits, joins) = computeBindings(listOf(start) + nodeTrace + listOf(end))
+        selector.addJoins(joins)
+        selector.addSplits(splits)
 
-    internal val start = Node("start", special = true)
-    internal val end = Node("end", special = true)
-
-    val result: MutableModel by lazy {
-        val model = MutableModel(start = start, end = end)
-        model.addInstance(*nodes.toTypedArray())
-        directlyFollows
-            .filterValues { it >= minDirectlyFollows }
-            .keys
-            .filter { k -> dependency.getOrDefault(k, 0.0) >= minDependency }
-            .forEach { (a, b) -> model.addDependency(a, b) }
-        val logWithNodes = log.traces
-            .map { trace -> listOf(start) + trace.events.map { e -> node(e) }.toList() + listOf(end) }
-        logWithNodes.forEach { trace ->
-            longDistanceDependencyMiner.processTrace(trace)
-        }
-        mineBindings(logWithNodes, model)
-        while (true) {
-            val ltdeps = longDistanceDependencyMiner.mine(model)
-            if (ltdeps.isNotEmpty()) {
-                ltdeps.forEach { dep ->
-                    model.addDependency(dep.first, dep.second)
-                    model.clearBindingsFor(dep.first)
-                    model.clearBindingsFor(dep.second)
+//        }
+        assert(joins.isEmpty() == splits.isEmpty())
+        //Dependencies moga fluktowac - znikac i pojawiac sie - przez niemonotonicznosc dependency
+        //W takim razie best musi byc kontekstowe - wybierz best z dostepnych
+        println("SPLITS")
+        val deps = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
+        val (bestJoins, bestSplits) = selector.best(deps)
+        if (bestSplits.isNotEmpty() && bestJoins.isNotEmpty()) {
+            bestSplits.forEach { split ->
+                if (!model.contains(split))
+                    model.addSplit(split)
+            }
+            println("JOINS")
+            bestJoins.forEach { join ->
+                if (!model.contains(join)) {
+                    model.addJoin(join)
                 }
-                mineBindings(logWithNodes, model)
-            } else
-                break
+            }
+            return joins.isNotEmpty() && splits.isNotEmpty()
+        } else {
+            //TODO taki replay moze powodowac, ze niektore traces beda glosowaly wielokrotnie
+            return false
         }
-
-        model
     }
+
+
+//        val logWithNodes = log.traces
+//            .map { trace -> listOf(start) + trace.events.map { e -> node(e) }.toList() + listOf(end) }
+//        logWithNodes.forEach { trace ->
+//            longDistanceDependencyMiner.processTrace(trace)
+//        }
+//        mineBindings(logWithNodes, model)
+//        while (true) {
+//            val ltdeps = longDistanceDependencyMiner.mine(model)
+//            if (ltdeps.isNotEmpty()) {
+//                ltdeps.forEach { dep ->
+//                    model.addDependency(dep.first, dep.second)
+//                    model.clearBindingsFor(dep.first)
+//                    model.clearBindingsFor(dep.second)
+//                }
+//                mineBindings(logWithNodes, model)
+//            } else
+//                break
+//        }
+
+
+    private val model = MutableModel()
+
+    internal val start = model.start
+    internal val end = model.end
+
+    val result: Model = model
+
 
 }

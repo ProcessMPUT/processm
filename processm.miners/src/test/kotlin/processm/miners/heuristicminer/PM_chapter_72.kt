@@ -43,7 +43,8 @@ class PM_chapter_72 {
 
     @Test
     fun `directly follows`() {
-        val hm = HeuristicMiner(log)
+        val hm = HeuristicMiner()
+        hm.processLog(log)
         assertEquals(
             mapOf(
                 (hm.start to a) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
@@ -64,7 +65,8 @@ class PM_chapter_72 {
 
     @Test
     fun `dependency measure`() {
-        val hm = HeuristicMiner(log)
+        val hm = HeuristicMiner()
+        hm.processLog(log)
         val dm = listOf(
             listOf(0.0, 0.92, 0.92, 0.93, 0.83),
             listOf(-0.92, 0.0, 0.0, 0.0, 0.92),
@@ -74,13 +76,15 @@ class PM_chapter_72 {
         )
         val indices = nodes.indices.map { it }
         (indices times indices).forEach { (i, j) ->
-            assertDoubleEquals(hm.dependency[nodes[i] to nodes[j]], dm[i][j], 0.01)
+            assertDoubleEquals(hm.dependency(nodes[i], nodes[j]), dm[i][j], 0.01)
         }
     }
 
     @Test
     fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`() {
-        val hm = HeuristicMiner(log, 2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = HeuristicMiner(2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        hm.processLog(log)
+        println(hm.result)
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())
             with(outgoing) {
@@ -136,7 +140,8 @@ class PM_chapter_72 {
 
     @Test
     fun `dependency graph minDirectlyFollows=5 minDependency=,9`() {
-        val hm = HeuristicMiner(log, 5, .9)
+        val hm = HeuristicMiner(5, .9)
+        hm.processLog(log)
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())
             with(outgoing) {

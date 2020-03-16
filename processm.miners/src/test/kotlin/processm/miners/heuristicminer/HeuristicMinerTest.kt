@@ -26,7 +26,8 @@ class HeuristicMinerTest {
             "abc" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = HeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = HeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        hm.processLog(log)
         with(hm.result) {
             assertEquals(splits[a], setOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))))
             assertEquals(splits[b], setOf(Split(setOf(Dependency(b, c))), Split(setOf(Dependency(b, end)))))
@@ -42,7 +43,8 @@ class HeuristicMinerTest {
             "abc" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = HeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = HeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        hm.processLog(log)
         with(hm.result) {
             assertEquals(joins[a], setOf(Join(setOf(Dependency(start, a)))))
             assertEquals(joins[b], setOf(Join(setOf(Dependency(start, b))), Join(setOf(Dependency(a, b)))))

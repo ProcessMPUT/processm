@@ -113,4 +113,11 @@ class MutableModel(
         _splits.remove(node)
     }
 
+    fun clearDependencies() {
+        _incoming.clear()
+        _outgoing.clear()
+        clearSplits()
+        clearJoins()
+    }
+
 }

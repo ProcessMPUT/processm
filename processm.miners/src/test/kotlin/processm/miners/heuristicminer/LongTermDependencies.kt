@@ -31,7 +31,11 @@ class LongTermDependencies {
         listOf(a, b2, c, d2, e) to 100
     ).asSequence()
         .flatMap { (trace, n) -> List(n) { Trace(trace.map { n -> event(n.activity) }.asSequence()) }.asSequence() })
-    private val hm = HeuristicMiner(log, 1)
+    private val hm = HeuristicMiner(1)
+
+    init {
+        hm.processLog(log)
+    }
 
     @Test
     fun nodes() {

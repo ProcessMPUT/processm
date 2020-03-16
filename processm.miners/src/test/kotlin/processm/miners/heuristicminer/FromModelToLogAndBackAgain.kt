@@ -21,6 +21,8 @@ internal fun event(name: String): Event {
     val e = mockk<Event>()
     every { e.conceptName } returns name
     every { e.conceptInstance } returns null
+    every { e.hashCode() } returns name.hashCode()
+    every { e.toString() } returns name
     return e
 }
 
@@ -59,7 +61,8 @@ class FromModelToLogAndBackAgain {
             .validSequences
             .map { seq -> Trace(seq.asSequence().map { ab -> event(ab.a.activity) }) })
         log.traces.forEach { println(it.events.toList()) }
-        val hm = HeuristicMiner(log, longDistanceDependencyMiner = longDistanceDependencyMiner)
+        val hm = HeuristicMiner(longDistanceDependencyMiner = longDistanceDependencyMiner)
+        hm.processLog(log)
         val v = CausalNetVerifier().verify(hm.result)
 
         val actualSequences = v.validSequences.map { seq -> seq.map { ab -> ab.a }.filter { !it.special } }.toSet()
