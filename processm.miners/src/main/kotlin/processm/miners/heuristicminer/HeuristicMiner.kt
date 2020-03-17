@@ -1,7 +1,5 @@
 package processm.miners.heuristicminer
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import processm.core.log.Event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
@@ -45,8 +43,6 @@ class HeuristicMiner(
     val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
 ) {
 
-    private val selector = IntegratedSelector(minBindingSupport)
-
     init {
 //        (logger() as Logger).level = Level.TRACE
     }
@@ -78,24 +74,8 @@ class HeuristicMiner(
 
         model.clearBindings()
         println("TRACE " + (nodeTrace.map { it.activity }.toString()))
-        if (mineBindings(nodeTrace)) {
-            println("\tSUCCESS")
-            val i = unableToReplay.iterator()
-            while (i.hasNext()) {
-                val t = i.next()
-                println("\tREPLAY " + (t.map { it.activity }.toString()))
-                model.clearBindings()
-                if (mineBindings(t)) {
-                    println("\t\tSUCCESS")
-                    i.remove()
-                } else
-                    println("\t\tFAIL")
-                //TODO restore bindings
-            }
-        } else {
-            println("\tFAIL")
-            unableToReplay.add(nodeTrace)
-        }
+        mineBindings(nodeTrace)
+        println(model)
 //        longDistanceDependencyMiner.processTrace(nodeTrace)
 //        while (true) {
 //            val ltdeps = longDistanceDependencyMiner.mine(model)
@@ -125,7 +105,7 @@ class HeuristicMiner(
         }
     }
 
-    private fun computeBindings(trace: List<Node>): Pair<List<Split>, List<Join>> {
+    private fun computeBindings(trace: List<Node>): List<Binding> {
         var currentStates =
             sequenceOf(ReplayTrace(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
         for (currentNode in trace) {
@@ -178,7 +158,7 @@ class HeuristicMiner(
             }
         }
         if (!currentStates.any()) {
-            return listOf<Split>() to listOf()
+            return listOf<Binding>()
         }
 
         val (_, joins, splits) = hypothesisSelector(currentStates.toList())
@@ -191,42 +171,61 @@ class HeuristicMiner(
             .map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
         val finalJoins = joins.filter { join -> join.isNotEmpty() }
             .map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
-        return finalSplits to finalJoins
+        return finalSplits + finalJoins
     }
 
-    private val unableToReplay = ArrayList<List<Node>>()
+    private var unableToReplay = ArrayList<List<Node>>()
 
-    private fun mineBindings(nodeTrace: List<Node>): Boolean {
-//        joinSelector.reset()
-//        splitSelector.reset()
-//        history.add(nodeTrace)
-//        history.forEach { nodeTrace ->
-        val (splits, joins) = computeBindings(listOf(start) + nodeTrace + listOf(end))
-        selector.addJoins(joins)
-        selector.addSplits(splits)
-
-//        }
-        assert(joins.isEmpty() == splits.isEmpty())
-        //Dependencies moga fluktowac - znikac i pojawiac sie - przez niemonotonicznosc dependency
-        //W takim razie best musi byc kontekstowe - wybierz best z dostepnych
-        println("SPLITS")
-        val deps = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
-        val (bestJoins, bestSplits) = selector.best(deps)
-        if (bestSplits.isNotEmpty() && bestJoins.isNotEmpty()) {
-            bestSplits.forEach { split ->
-                if (!model.contains(split))
-                    model.addSplit(split)
+    class HashMapWithDefault<K, V>(private val default: () -> V) : HashMap<K, V>() {
+        override operator fun get(key: K): V {
+            val result = super.get(key)
+            if (result == null) {
+                val new = default()
+                this[key] = new
+                return new
+            } else {
+                return result
             }
-            println("JOINS")
-            bestJoins.forEach { join ->
-                if (!model.contains(join)) {
-                    model.addJoin(join)
+        }
+    }
+
+    protected val bindingCounter = HashMapWithDefault<Binding, HashSet<List<Node>>> { HashSet() }
+
+
+    private fun mineBindings(nodeTrace: List<Node>) {
+        val bindings = computeBindings(listOf(start) + nodeTrace + listOf(end))
+        if (bindings.isNotEmpty()) {
+            for (binding in bindings)
+                bindingCounter[binding].add(nodeTrace)
+            var bestBindings = bindingCounter.filterValues { it.size >= minBindingSupport }.keys
+            val availableDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
+            val toReplay = bestBindings
+                .filter { !availableDependencies.containsAll(it.dependencies) }
+                .flatMap { bindingCounter[it] }
+                .toSet()
+            bindingCounter.values.forEach { it.removeAll(toReplay) }
+            if (toReplay.isNotEmpty()) {
+                unableToReplay.addAll(toReplay)
+                val i = unableToReplay.iterator()
+                while (i.hasNext()) {
+                    val trace = i.next()
+                    val bindings = computeBindings(listOf(start) + trace + listOf(end))
+                    if (bindings.isNotEmpty()) {
+                        for (binding in bindings)
+                            bindingCounter[binding].add(trace)
+                        i.remove()
+                    }
                 }
+                bestBindings = bindingCounter.filterValues { it.size >= minBindingSupport }.keys
             }
-            return joins.isNotEmpty() && splits.isNotEmpty()
+            assert(bestBindings.all { availableDependencies.containsAll(it.dependencies) })
+            for (binding in bestBindings)
+                if (binding is Split)
+                    model.addSplit(binding)
+                else
+                    model.addJoin(binding as Join)
         } else {
-            //TODO taki replay moze powodowac, ze niektore traces beda glosowaly wielokrotnie
-            return false
+            unableToReplay.add(nodeTrace)
         }
     }
 
