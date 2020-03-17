@@ -17,6 +17,8 @@ abstract class Node(vararg nodes: Node) {
     var parent: Node? = null
         private set
 
+    abstract val symbol: String
+
     init {
         nodes.forEach { node ->
             childrenInternal.add(node)
@@ -34,5 +36,28 @@ abstract class Node(vararg nodes: Node) {
 
     override fun hashCode(): Int {
         return childrenInternal.hashCode()
+    }
+
+    /**
+     * Custom toString to present nodes in process tree as text
+     */
+    override fun toString(): String {
+        val iterator = childrenInternal.iterator()
+        val builder = StringBuilder()
+        builder.append(symbol)
+
+        if (iterator.hasNext()) {
+            builder.append("(")
+
+            while (iterator.hasNext()) {
+                builder.append(iterator.next())
+                if (iterator.hasNext())
+                    builder.append(",")
+            }
+
+            builder.append(")")
+        }
+
+        return builder.toString()
     }
 }

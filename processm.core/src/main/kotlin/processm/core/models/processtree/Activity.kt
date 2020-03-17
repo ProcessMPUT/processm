@@ -6,6 +6,12 @@ open class Activity(name: String) : Node() {
      */
     val name: String = name.intern()
 
+    /**
+     * Name of activity as representation of object
+     */
+    override val symbol: String
+        get() = name
+
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
         if (other !is Activity) return false
