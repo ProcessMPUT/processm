@@ -61,4 +61,20 @@ class OfflineHeuristicMinerTest {
             ), setOf("a", "b", "c").allSubsets().toSet()
         )
     }
+
+    @Test
+    fun `l2 loop`() {
+        val log = Log(listOf(
+            "abcd" to 1,
+            "abcbcd" to 1,
+            "abcbcbcd" to 1,
+            "abcbcbcbcd" to 1
+        ).asSequence()
+            .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
+        val hm = OfflineHeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        with(hm.result) {
+            assertEquals(setOf(Split(setOf(Dependency(c, b))), Split(setOf(Dependency(c, d)))), splits[c])
+            assertEquals(setOf(Split(setOf(Dependency(b, c)))), splits[b])
+        }
+    }
 }
