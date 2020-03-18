@@ -350,7 +350,9 @@ class Query(val query: String) {
         override fun exitArith_expr_root(ctx: QueryLanguage.Arith_expr_rootContext?) {
             val expression = parseExpression(ctx!!)
 
-            val hoisted = expression.filter { it is PQLAttribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()
+            val hoisted = expression
+                .filterRecursively { it !is PQLFunction || it.type != FunctionType.Aggregation }
+                .filter { it is PQLAttribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()
 
             if (hoisted !== null)
                 errorListener.delayedThrow(IllegalArgumentException("Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select clause."))

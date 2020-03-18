@@ -417,7 +417,6 @@ class QueryTests {
 
         val illegalOperations = listOf(
             "select ^e:concept:name",
-            "select avg(^time:timestamp)",
             "select e:timestamp group by e:name",
             /* TODO: "group by e:name order by e:timestamp",*/
             "select e:total + 10 group by e:name",
@@ -584,6 +583,23 @@ class QueryTests {
         assertEquals(3, query.selectEventExpressions.size)
         assertTrue(query.selectEventExpressions.all { !it.isTerminal })
         assertTrue(query.selectEventExpressions.all { it is PQLFunction && it.type == FunctionType.Aggregation })
+        assertEquals(0, query.groupLogByStandardAttributes.size)
+        assertEquals(0, query.groupTraceByStandardAttributes.size)
+        assertEquals(0, query.groupEventByStandardAttributes.size)
+        assertEquals(0, query.groupLogByOtherAttributes.size)
+        assertEquals(0, query.groupTraceByOtherAttributes.size)
+        assertEquals(0, query.groupEventByOtherAttributes.size)
+    }
+
+    @Test
+    fun groupByImplicitWithHoistingTest() {
+        val query = Query("select avg(^^e:total), min(^^e:timestamp), max(^^e:timestamp)")
+        assertFalse(query.selectAll)
+        assertEquals(3, query.selectLogExpressions.size)
+        assertEquals(0, query.selectTraceExpressions.size)
+        assertEquals(0, query.selectEventExpressions.size)
+        assertTrue(query.selectLogExpressions.all { !it.isTerminal })
+        assertTrue(query.selectLogExpressions.all { it is PQLFunction && it.type == FunctionType.Aggregation })
         assertEquals(0, query.groupLogByStandardAttributes.size)
         assertEquals(0, query.groupTraceByStandardAttributes.size)
         assertEquals(0, query.groupEventByStandardAttributes.size)
