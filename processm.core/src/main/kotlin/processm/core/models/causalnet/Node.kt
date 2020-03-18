@@ -13,4 +13,8 @@ data class Node(val activity: String, val instanceId: String = "", val special: 
     AbstractActivity {
     override val name: String = activity
     //TODO replace activity by name and get rid of this
+
+    override fun toString(): String {
+        return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (special) "*" else "")
+    }
 }
