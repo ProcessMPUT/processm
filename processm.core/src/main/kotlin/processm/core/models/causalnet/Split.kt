@@ -25,4 +25,8 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
     val targets by lazy {
         dependencies.map { d -> d.target }.toSet()
     }
+
+    override fun toString(): String {
+        return "{${source.activity} -> ${targets.map { it.activity }}}"
+    }
 }
