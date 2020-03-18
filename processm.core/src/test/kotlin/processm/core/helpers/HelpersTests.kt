@@ -80,4 +80,17 @@ class HelpersTests {
             }
         }
     }
+
+    @Test
+    fun subsets() {
+        assertEquals(
+            setOf(
+                setOf(),
+                setOf("a"), setOf("b"), setOf("c"),
+                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
+                setOf("a", "b", "c")
+            ),
+            setOf("a", "b", "c").allSubsets().map { it.toSet() }.toSet()
+        )
+    }
 }

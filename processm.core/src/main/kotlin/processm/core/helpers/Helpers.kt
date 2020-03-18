@@ -73,3 +73,19 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
     if (it1.hasNext() || it2.hasNext())
         throw IllegalArgumentException("Inconsistent sizes of the given sequences")
 }
+
+/**
+ * Generates the power-set of the collection (incl. the empty set and the full set)
+ */
+fun <T> Collection<T>.allSubsets(): Sequence<List<T>> {
+    fun <T> allSubsets(prefix: List<T>, rest: List<T>): Sequence<List<T>> {
+        if (rest.isEmpty())
+            return sequenceOf(prefix)
+        else {
+            val n = rest.first()
+            val newRest = rest.subList(1, rest.size)
+            return allSubsets(prefix, newRest) + allSubsets(prefix + n, newRest)
+        }
+    }
+    return allSubsets(listOf(), this.toList())
+}
