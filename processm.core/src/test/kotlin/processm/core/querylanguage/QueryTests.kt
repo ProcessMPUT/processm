@@ -154,7 +154,10 @@ class QueryTests {
 
     @Test
     fun selectExpressionTest() {
-        val query = Query("select [e:conceptowy:name] + e:resource, max(timestamp) - \t \n min(timestamp)")
+        val query = Query(
+            "select [e:conceptowy:name] + e:resource, max(timestamp) - \t \n min(timestamp)" +
+                    "group event by [e:conceptowy:name], e:resource"
+        )
         assertFalse(query.selectAll)
         assertFalse(query.selectAllLog)
         assertFalse(query.selectAllTrace)
@@ -412,15 +415,15 @@ class QueryTests {
             }
         }
 
-        val unsupportedOperations = listOf(
+        val illegalOperations = listOf(
             "select ^e:concept:name",
             "select avg(^time:timestamp)",
             "select e:timestamp group by e:name",
             /* TODO: "group by e:name order by e:timestamp",*/
-            "select e:total + 10 group by e:name"
-            /* TODO: "select avg(e:total), e:resource"*/
+            "select e:total + 10 group by e:name",
+            "select avg(e:total), e:resource"
         )
-        unsupportedOperations.forEach {
+        illegalOperations.forEach {
             assertFailsWith<IllegalArgumentException>(it) { Query(it) }.apply {
                 assertNotNull(message)
             }
@@ -554,9 +557,7 @@ class QueryTests {
 
     @Test
     fun groupByImplicitScopeTest() {
-        val query = Query(
-            """group by e:c:main, [t:branch]"""
-        )
+        val query = Query("group by e:c:main, [t:branch]")
         assertTrue(query.selectAll)
         assertEquals(0, query.groupLogByStandardAttributes.size)
         assertEquals(1, query.groupTraceByStandardAttributes.size)
@@ -575,10 +576,20 @@ class QueryTests {
     }
 
     @Test
-    @Ignore
     fun groupByImplicitTest() {
         val query = Query("select avg(e:total), min(e:timestamp), max(e:timestamp)")
-        TODO()
+        assertFalse(query.selectAll)
+        assertEquals(0, query.selectLogExpressions.size)
+        assertEquals(0, query.selectTraceExpressions.size)
+        assertEquals(3, query.selectEventExpressions.size)
+        assertTrue(query.selectEventExpressions.all { !it.isTerminal })
+        assertTrue(query.selectEventExpressions.all { it is PQLFunction && it.type == FunctionType.Aggregation })
+        assertEquals(0, query.groupLogByStandardAttributes.size)
+        assertEquals(0, query.groupTraceByStandardAttributes.size)
+        assertEquals(0, query.groupEventByStandardAttributes.size)
+        assertEquals(0, query.groupLogByOtherAttributes.size)
+        assertEquals(0, query.groupTraceByOtherAttributes.size)
+        assertEquals(0, query.groupEventByOtherAttributes.size)
     }
 
     @Test

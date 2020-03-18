@@ -254,40 +254,79 @@ class Query(val query: String) {
     }
 
     private fun validateGroupByAttributes() {
-        fun validate(toValidate: Map<Scope, Collection<Expression>>, groupByMap: Map<Scope, Set<PQLAttribute>>) =
-            toValidate
-                .flatMap { it.value }
+        validateExplicitGroupBy(_selectStandardAttributes, _groupByStandardAttributes)
+        validateExplicitGroupBy(_selectOtherAttributes, _groupByOtherAttributes)
+        val groupByAttributes = _groupByStandardAttributes.mapValues {
+            LinkedHashSet<PQLAttribute>(it.value).apply { addAll(_groupByOtherAttributes[it.key]!!) }
+        }
+        validateExplicitGroupBy(_selectExpressions, groupByAttributes)
+
+        if (_groupByStandardAttributes.values.all { it.isEmpty() } && _groupByOtherAttributes.values.all { it.isEmpty() }) {
+            // possible implicit group by
+            val selectAllExpressions = sequence {
+                _selectStandardAttributes.values.forEach { yieldAll(it) }
+                _selectOtherAttributes.values.forEach { yieldAll(it) }
+                _selectExpressions.values.forEach { yieldAll(it) }
+            }
+
+            validateImplicitGroupBy(selectAllExpressions.asIterable())
+        }
+    }
+
+    private fun validateExplicitGroupBy(
+        toValidate: Map<Scope, Iterable<Expression>>,
+        groupByMap: Map<Scope, Set<PQLAttribute>>
+    ) =
+        toValidate
+            .flatMap { it.value }
+            .flatMap {
+                it.filterRecursively { it !is PQLFunction || it.type != FunctionType.Aggregation }
+                    .filterIsInstance<PQLAttribute>()
+                    .asIterable()
+            }
+            .filter {
+                var groupByEnabled = false
+                var scope: Scope? = it.scope
+                do {
+                    if (_groupByStandardAttributes[scope]!!.size != 0 || _groupByOtherAttributes[scope]!!.size != 0) {
+                        groupByEnabled = true
+                        if (it in groupByMap[scope]!!)
+                            return@filter false // valid use
+                    }
+                    scope = scope!!.upper
+                } while (scope !== null)
+                return@filter groupByEnabled
+            }.forEach {
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Line ${it.line} position ${it.charPositionInLine}: The attribute $it is not included in the group by clause. Such attributes can be used only as an argument of an aggregation function."
+                    )
+                )
+            }
+
+    private fun validateImplicitGroupBy(toValidate: Iterable<Expression>) {
+        //val allScopesExpressions = toValidate.flatMap { it.value }
+        val anyAggregation = toValidate
+            .any { it.filter { it is PQLFunction && it.type == FunctionType.Aggregation }.any() }
+
+        if (anyAggregation) {
+            // implicit group by for sure
+            val nonaggregated = toValidate
                 .flatMap {
                     it.filterRecursively { it !is PQLFunction || it.type != FunctionType.Aggregation }
                         .filterIsInstance<PQLAttribute>()
                         .asIterable()
                 }
-                .filter {
-                    var groupByEnabled = false
-                    var scope: Scope? = it.scope
-                    do {
-                        if (_groupByStandardAttributes[scope]!!.size != 0 || _groupByOtherAttributes[scope]!!.size != 0) {
-                            groupByEnabled = true
-                            if (it in groupByMap[scope]!!)
-                                return@filter false // valid use
-                        }
-                        scope = scope!!.upper
-                    } while (scope !== null)
-                    return@filter groupByEnabled
-                }.forEach {
-                    errorListener.delayedThrow(
-                        IllegalArgumentException(
-                            "Line ${it.line} position ${it.charPositionInLine}: The attribute $it from the select clause is not in the group by clause. Such attributes can be used only as an argument of an aggregation function."
-                        )
+            if (nonaggregated.any()) {
+                // nonaggregated attributes exist
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Use of an aggregation function without a group by clause requires all attributes to be aggregated. "
+                                + "The attributes ${nonaggregated.joinToString(", ")} are not supplied to an aggregation function."
                     )
-                }
-
-        validate(_selectStandardAttributes, _groupByStandardAttributes)
-        validate(_selectOtherAttributes, _groupByOtherAttributes)
-        val groupByAttributes = _groupByStandardAttributes.mapValues {
-            LinkedHashSet<PQLAttribute>(it.value).apply { addAll(_groupByOtherAttributes[it.key]!!) }
+                )
+            }
         }
-        validate(_selectExpressions, groupByAttributes)
     }
 
     override fun toString(): String = query
@@ -396,7 +435,8 @@ class Query(val query: String) {
                         parseExpression(ctx.getChild(2))
                     )
                     else -> {
-                        val array = (0 until ctx.childCount).map { parseExpression(ctx.getChild(it)) }.toTypedArray()
+                        val array =
+                            (0 until ctx.childCount).map { parseExpression(ctx.getChild(it)) }.toTypedArray()
                         if (array.size == 1) array[0] else Expression(*array)
                     }
                 }
