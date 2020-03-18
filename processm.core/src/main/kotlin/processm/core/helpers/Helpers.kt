@@ -89,3 +89,20 @@ fun <T> Collection<T>.allSubsets(): Sequence<List<T>> {
     }
     return allSubsets(listOf(), this.toList())
 }
+
+/**
+ * Generate all permutations of the given list
+ */
+fun <T> List<T>.allPermutations(): List<List<T>> {
+    val first = this.first()
+    val rest = this.drop(1)
+    if (rest.isNotEmpty()) {
+        return rest.allPermutations()
+            .flatMap { perm ->
+                perm.indices.map { perm.subList(0, it) + first + perm.subList(it, perm.size) } +
+                        listOf(perm + first)
+            }
+    } else {
+        return listOf(listOf(first))
+    }
+}

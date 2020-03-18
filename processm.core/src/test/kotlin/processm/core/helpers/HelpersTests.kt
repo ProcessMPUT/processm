@@ -93,4 +93,19 @@ class HelpersTests {
             setOf("a", "b", "c").allSubsets().map { it.toSet() }.toSet()
         )
     }
+
+    @Test
+    fun permutations() {
+        assertEquals(
+            setOf(
+                listOf("a", "b", "c"),
+                listOf("a", "c", "b"),
+                listOf("b", "a", "c"),
+                listOf("b", "c", "a"),
+                listOf("c", "a", "b"),
+                listOf("c", "b", "a")
+            ),
+            listOf("a", "b", "c").allPermutations().toSet()
+        )
+    }
 }
