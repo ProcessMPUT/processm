@@ -132,4 +132,33 @@ class ModelSimplifierTest {
         assertEquals(tree.toString(), "⟲(τ,×(τ,A),∧(B,C),D,→(E,→(F,G)))")
         assertTrue(tree.languageEqual(expectedTree))
     }
+
+    @Test
+    fun `In redo loop can remove duplicated silent activities but only in loop part`() {
+        val tree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                Activity("A"),
+                SilentActivity(),
+                SilentActivity(),
+                SilentActivity(),
+                Activity("C"),
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                Activity("A"),
+                SilentActivity(),
+                Activity("C")
+            )
+        }
+
+        assertEquals(tree.toString(), "⟲(τ,A,τ,C)")
+        assertTrue(tree.languageEqual(expectedTree))
+    }
 }
