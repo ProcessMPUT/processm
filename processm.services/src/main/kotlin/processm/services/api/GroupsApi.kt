@@ -21,11 +21,7 @@ fun Route.GroupsApi() {
             post {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
 
@@ -34,11 +30,7 @@ fun Route.GroupsApi() {
             post {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
 
@@ -47,11 +39,7 @@ fun Route.GroupsApi() {
             post {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
 
@@ -114,22 +102,14 @@ fun Route.GroupsApi() {
         delete<Paths.removeGroupMember> { _: Paths.removeGroupMember ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         delete<Paths.removeSubgroup> { _: Paths.removeSubgroup ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
@@ -137,11 +117,7 @@ fun Route.GroupsApi() {
             put {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
     }

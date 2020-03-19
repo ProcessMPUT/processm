@@ -4,21 +4,17 @@ package processm.services.api
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.ktor.application.call
 import io.ktor.auth.Authentication
-import io.ktor.auth.OAuthServerSettings
 import io.ktor.auth.jwt.jwt
 import io.ktor.config.ApplicationConfig
 import io.ktor.features.*
 import io.ktor.http.HttpStatusCode
 import io.ktor.response.respond
-import io.ktor.server.engine.applicationEngineEnvironment
-import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.error
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
 import processm.services.api.models.ErrorResponse
 import java.time.Duration
-import java.util.concurrent.Executors
 
 internal fun ApplicationHstsConfiguration(): HSTS.Configuration.() -> Unit {
     return {
@@ -73,7 +69,7 @@ internal fun ApplicationAuthenticationConfiguration(config: ApplicationConfig): 
             validate { credentials ->
                 val identificationClaim = credentials.payload.claims["id"]?.asString()
 
-                if (!identificationClaim.isNullOrEmpty()) ApiUser(identificationClaim) else null
+                ApiUser(identificationClaim ?: throw UnsupportedOperationException("Token should contain 'id' field"))
             }
         }
     }

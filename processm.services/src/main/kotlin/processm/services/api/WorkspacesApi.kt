@@ -21,11 +21,7 @@ fun Route.WorkspacesApi() {
             post {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
 
@@ -33,33 +29,21 @@ fun Route.WorkspacesApi() {
         delete<Paths.deleteWorkspace> { _: Paths.deleteWorkspace ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         get<Paths.getWorkspace> { _: Paths.getWorkspace ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         get<Paths.getWorkspaces> { _: Paths.getWorkspaces ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
@@ -67,11 +51,7 @@ fun Route.WorkspacesApi() {
             put {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
     }

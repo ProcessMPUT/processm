@@ -150,7 +150,7 @@ class UsersApiTest : BaseApiTest() {
 
         do {
             repeat(20) {
-                randomizedToken[Random.nextInt(0..randomizedToken.length)] = ('A'..'z').random()
+                randomizedToken[Random.nextInt(randomizedToken.indices)] = ('A'..'z').random()
             }
         } while (randomizedToken.toString() == currentToken)
 

@@ -21,11 +21,7 @@ fun Route.OrganizationsApi() {
             post {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
 
@@ -34,11 +30,7 @@ fun Route.OrganizationsApi() {
             post {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
 
@@ -46,55 +38,35 @@ fun Route.OrganizationsApi() {
         get<Paths.getOrganization> { _: Paths.getOrganization ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         get<Paths.getOrganizationMembers> { _: Paths.getOrganizationMembers ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         get<Paths.getOrganizations> { _: Paths.getOrganizations ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         delete<Paths.removeOrganization> { _: Paths.removeOrganization ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         delete<Paths.removeOrganizationMember> { _: Paths.removeOrganizationMember ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
@@ -102,11 +74,7 @@ fun Route.OrganizationsApi() {
             put {
                 val principal = call.authentication.principal<ApiUser>()
 
-                if (principal == null) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                } else {
-                    call.respond(HttpStatusCode.NotImplemented)
-                }
+                call.respond(HttpStatusCode.NotImplemented)
             }
         }
     }
