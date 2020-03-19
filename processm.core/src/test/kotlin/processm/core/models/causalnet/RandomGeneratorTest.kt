@@ -12,8 +12,9 @@ class RandomGeneratorTest {
     fun factory(): List<DynamicTest> {
         return List(1000) {
             DynamicTest.dynamicTest(it.toString()) {
-                val seqs = CausalNetVerifier().verify(RandomGenerator(Random(it)).generate()).validLoopFreeSequences
-                assertTrue { seqs.any() }
+                val v = CausalNetVerifier().verify(RandomGenerator(Random(it)).generate())
+                assertTrue { v.validLoopFreeSequences.any() }
+                assertTrue { v.isSound }
             }
         }
     }
