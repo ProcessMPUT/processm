@@ -1,6 +1,8 @@
 package processm.core.verifiers
 
+import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.Split
 import processm.core.models.causalnet.causalnet
 import kotlin.test.*
 
@@ -87,5 +89,153 @@ class CausalNetVerifierTest {
         })
         assertFalse { vr.isSound }
         assertFalse { vr.noDeadParts }
+    }
+
+    @Test
+    fun `unused dependency`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        model.addDependency(a, c)
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
+    }
+
+    @Test
+    fun `dependency unused in join`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        val dep = model.addDependency(a, c)
+        model.addSplit(Split(setOf(dep)))
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
+    }
+
+    @Test
+    fun `dependency unused in split`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        val dep = model.addDependency(a, c)
+        model.addJoin(Join(setOf(dep)))
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
+    }
+
+    @Test
+    fun `no start`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        val d = model.addDependency(b, a)
+        model.addSplit(Split(setOf(d)))
+        model.addJoin(Join(setOf(d)))
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
+    }
+
+    @Test
+    fun `no end`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        val d = model.addDependency(c, b)
+        model.addSplit(Split(setOf(d)))
+        model.addJoin(Join(setOf(d)))
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
+    }
+
+    @Test
+    fun `two starts`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        model.addInstance(d)
+        val d = model.addDependency(d, b)
+        model.addSplit(Split(setOf(d)))
+        model.addJoin(Join(setOf(d)))
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
+    }
+
+    @Test
+    fun `two ends`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        model.addInstance(d)
+        val d = model.addDependency(a, d)
+        model.addSplit(Split(setOf(d)))
+        model.addJoin(Join(setOf(d)))
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
+    }
+
+    @Test
+    fun `unused node`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        val vr = CausalNetVerifier().verify(model)
+        assertTrue { vr.isSound }
+        model.addInstance(d)
+        val vr2 = CausalNetVerifier().verify(model)
+        assertFalse { vr2.isSound }
     }
 }
