@@ -29,7 +29,7 @@ fun Application.staticContentModule() {
                 default("index.html")
             }
         }
-        static("api") {
+        static("api-docs") {
             if (jar) {
                 logger().debug("Serving static API doc")
                 staticBasePackage = "processm.services"
