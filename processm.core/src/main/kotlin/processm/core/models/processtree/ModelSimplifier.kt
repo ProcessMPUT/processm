@@ -10,7 +10,8 @@ class ModelSimplifier {
      *
      * For example in tree →(A,τ,B) activity τ can be removed and we can generate →(A,B)
      * Model with →(A,τ) will be simplify to →(A) => no reduction to single activity!
-     * Reduction can be executed also if parallel operator.
+     * Reduction can be executed also in parallel operator.
+     * In exclusive choice operator can use reduction if one silent activity will be still in tree.
      *
      * For redo loop operator we can simplify body part:
      * ⟲(τ,A,τ,τ,τ,C,τ) will be replaced by ⟲(τ,A,τ,C)
@@ -21,46 +22,55 @@ class ModelSimplifier {
     }
 
     private fun reduceTauLeafsInModel(node: Node) {
-        // Apply reduce only if sequence operator
-        if (node is Sequence || node is Parallel) {
-            var childrenCount = node.childrenInternal.size
-            val iterator = node.childrenInternal.iterator()
+        when (node) {
+            is Sequence, is Parallel -> {
+                var childrenCount = node.childrenInternal.size
+                val iterator = node.childrenInternal.iterator()
 
-            // Iterate over children
-            while (iterator.hasNext()) {
-                // If node is silent activity AND this is not only child
-                if (iterator.next() is SilentActivity && childrenCount > 1) {
-                    // Remove silent activity and decrement total number of not removed children in analyzed node
-                    iterator.remove()
-                    childrenCount--
-                }
-            }
-        } else if (node is RedoLoop) {
-            var alreadySeenSilentActivity = false
-            val iterator = node.childrenInternal.iterator()
-
-            // Ignore the first element - it can not be simplified
-            if (iterator.hasNext())
-                iterator.next()
-
-            // Iterate over children in body part
-            while (iterator.hasNext()) {
-                // If node is silent activity AND already seen silent activity
-                if (iterator.next() is SilentActivity) {
-                    if (alreadySeenSilentActivity) {
-                        // Remove silent activity
+                // Iterate over children
+                while (iterator.hasNext()) {
+                    // If node is silent activity AND this is not only child
+                    if (iterator.next() is SilentActivity && childrenCount > 1) {
+                        // Remove silent activity and decrement total number of not removed children in analyzed node
                         iterator.remove()
-                    } else {
-                        // Mark silent activity as already seen in loop - each next we can remove
-                        alreadySeenSilentActivity = true
+                        childrenCount--
                     }
                 }
+            }
+            is Exclusive -> {
+                val iterator = node.childrenInternal.iterator()
+                removeDuplicatedTauLeafs(iterator)
+            }
+            is RedoLoop -> {
+                val iterator = node.childrenInternal.iterator()
+
+                // Ignore the first element - it can not be simplified
+                if (iterator.hasNext())
+                    iterator.next()
+
+                removeDuplicatedTauLeafs(iterator)
             }
         }
 
         // Apply action for each children
         node.childrenInternal.forEach {
             reduceTauLeafsInModel(it)
+        }
+    }
+
+    private fun removeDuplicatedTauLeafs(iterator: MutableIterator<Node>) {
+        var alreadySeenSilentActivity = false
+        while (iterator.hasNext()) {
+            // If node is silent activity AND already seen silent activity
+            if (iterator.next() is SilentActivity) {
+                if (alreadySeenSilentActivity) {
+                    // Remove silent activity
+                    iterator.remove()
+                } else {
+                    // Mark silent activity as already seen in operator - each next we can remove
+                    alreadySeenSilentActivity = true
+                }
+            }
         }
     }
 }

@@ -301,4 +301,31 @@ class ModelSimplifierTest {
         assertEquals( "⟲(A,τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
+
+    @Test
+    fun `In exclusive choice operator can remove duplicated silent activities`() {
+        val tree = processTree {
+            Exclusive(
+                SilentActivity(),
+                Activity("A"),
+                SilentActivity(),
+                SilentActivity(),
+                Activity("C"),
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            Exclusive(
+                SilentActivity(),
+                Activity("A"),
+                Activity("C")
+            )
+        }
+
+        assertEquals(tree.toString(), "×(τ,A,C)")
+        assertTrue(tree.languageEqual(expectedTree))
+    }
 }
