@@ -8,19 +8,19 @@ import java.util.stream.Stream
 class WorkspacesApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
-        Pair(HttpMethod.Get, "/api/workspaces"),
-        Pair(HttpMethod.Post, "/api/workspaces"),
-        Pair(HttpMethod.Get, "/api/workspaces/1"),
-        Pair(HttpMethod.Put, "/api/workspaces/1"),
-        Pair(HttpMethod.Delete, "/api/workspaces/1")
+        HttpMethod.Get to "/api/workspaces",
+        HttpMethod.Post to "/api/workspaces",
+        HttpMethod.Get to "/api/workspaces/1",
+        HttpMethod.Put to "/api/workspaces/1",
+        HttpMethod.Delete to "/api/workspaces/1"
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
-        Pair(HttpMethod.Get, "/api/workspaces"),
-        Pair(HttpMethod.Post, "/api/workspaces"),
-        Pair(HttpMethod.Get, "/api/workspaces/1"),
-        Pair(HttpMethod.Put, "/api/workspaces/1"),
-        Pair(HttpMethod.Delete, "/api/workspaces/1")
+        HttpMethod.Get to "/api/workspaces",
+        HttpMethod.Post to "/api/workspaces",
+        HttpMethod.Get to "/api/workspaces/1",
+        HttpMethod.Put to "/api/workspaces/1",
+        HttpMethod.Delete to "/api/workspaces/1"
     )
 
 }

@@ -8,31 +8,31 @@ import java.util.stream.Stream
 class GroupsApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
-        Pair(HttpMethod.Get, "/api/groups"),
-        Pair(HttpMethod.Post, "/api/groups"),
-        Pair(HttpMethod.Get, "/api/groups/1"),
-        Pair(HttpMethod.Put, "/api/groups/1"),
-        Pair(HttpMethod.Delete, "/api/groups/1"),
-        Pair(HttpMethod.Get, "/api/groups/1/members"),
-        Pair(HttpMethod.Post, "/api/groups/1/members"),
-        Pair(HttpMethod.Delete, "/api/groups/1/members/1"),
-        Pair(HttpMethod.Get, "/api/groups/1/subgroups"),
-        Pair(HttpMethod.Post, "/api/groups/1/subgroups"),
-        Pair(HttpMethod.Delete, "/api/groups/1/subgroups/1")
+        HttpMethod.Get to "/api/groups",
+        HttpMethod.Post to "/api/groups",
+        HttpMethod.Get to "/api/groups/1",
+        HttpMethod.Put to "/api/groups/1",
+        HttpMethod.Delete to "/api/groups/1",
+        HttpMethod.Get to "/api/groups/1/members",
+        HttpMethod.Post to "/api/groups/1/members",
+        HttpMethod.Delete to "/api/groups/1/members/1",
+        HttpMethod.Get to "/api/groups/1/subgroups",
+        HttpMethod.Post to "/api/groups/1/subgroups",
+        HttpMethod.Delete to "/api/groups/1/subgroups/1"
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
-        Pair(HttpMethod.Get, "/api/groups"),
-        Pair(HttpMethod.Post, "/api/groups"),
-        Pair(HttpMethod.Get, "/api/groups/1"),
-        Pair(HttpMethod.Put, "/api/groups/1"),
-        Pair(HttpMethod.Delete, "/api/groups/1"),
-        Pair(HttpMethod.Get, "/api/groups/1/members"),
-        Pair(HttpMethod.Post, "/api/groups/1/members"),
-        Pair(HttpMethod.Delete, "/api/groups/1/members/1"),
-        Pair(HttpMethod.Get, "/api/groups/1/subgroups"),
-        Pair(HttpMethod.Post, "/api/groups/1/subgroups"),
-        Pair(HttpMethod.Delete, "/api/groups/1/subgroups/1")
+        HttpMethod.Get to "/api/groups",
+        HttpMethod.Post to "/api/groups",
+        HttpMethod.Get to "/api/groups/1",
+        HttpMethod.Put to "/api/groups/1",
+        HttpMethod.Delete to "/api/groups/1",
+        HttpMethod.Get to "/api/groups/1/members",
+        HttpMethod.Post to "/api/groups/1/members",
+        HttpMethod.Delete to "/api/groups/1/members/1",
+        HttpMethod.Get to "/api/groups/1/subgroups",
+        HttpMethod.Post to "/api/groups/1/subgroups",
+        HttpMethod.Delete to "/api/groups/1/subgroups/1"
     )
 
 }

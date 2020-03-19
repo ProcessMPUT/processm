@@ -8,25 +8,25 @@ import java.util.stream.Stream
 class OrganizationsApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
-        Pair(HttpMethod.Get, "/api/organizations"),
-        Pair(HttpMethod.Post, "/api/organizations"),
-        Pair(HttpMethod.Get, "/api/organizations/1"),
-        Pair(HttpMethod.Put, "/api/organizations/1"),
-        Pair(HttpMethod.Delete, "/api/organizations/1"),
-        Pair(HttpMethod.Get, "/api/organizations/1/members"),
-        Pair(HttpMethod.Post, "/api/organizations/1/members"),
-        Pair(HttpMethod.Delete, "/api/organizations/1/members/1")
+        HttpMethod.Get to "/api/organizations",
+        HttpMethod.Post to "/api/organizations",
+        HttpMethod.Get to "/api/organizations/1",
+        HttpMethod.Put to "/api/organizations/1",
+        HttpMethod.Delete to "/api/organizations/1",
+        HttpMethod.Get to "/api/organizations/1/members",
+        HttpMethod.Post to "/api/organizations/1/members",
+        HttpMethod.Delete to "/api/organizations/1/members/1"
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
-        Pair(HttpMethod.Get, "/api/organizations"),
-        Pair(HttpMethod.Post, "/api/organizations"),
-        Pair(HttpMethod.Get, "/api/organizations/1"),
-        Pair(HttpMethod.Put, "/api/organizations/1"),
-        Pair(HttpMethod.Delete, "/api/organizations/1"),
-        Pair(HttpMethod.Get, "/api/organizations/1/members"),
-        Pair(HttpMethod.Post, "/api/organizations/1/members"),
-        Pair(HttpMethod.Delete, "/api/organizations/1/members/1")
+        HttpMethod.Get to "/api/organizations",
+        HttpMethod.Post to "/api/organizations",
+        HttpMethod.Get to "/api/organizations/1",
+        HttpMethod.Put to "/api/organizations/1",
+        HttpMethod.Delete to "/api/organizations/1",
+        HttpMethod.Get to "/api/organizations/1/members",
+        HttpMethod.Post to "/api/organizations/1/members",
+        HttpMethod.Delete to "/api/organizations/1/members/1"
     )
 
 }
