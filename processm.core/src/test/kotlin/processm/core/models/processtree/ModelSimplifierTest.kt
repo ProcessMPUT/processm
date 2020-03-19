@@ -79,7 +79,7 @@ class ModelSimplifierTest {
     }
 
     @Test
-    fun `Remove tau from sequence but not from other operators`() {
+    fun `Remove tau from sequence and parallel but not from other operators`() {
         val tree = processTree {
             RedoLoop(
                 SilentActivity(),
@@ -116,7 +116,6 @@ class ModelSimplifierTest {
                 ),
                 Parallel(
                     Activity("B"),
-                    SilentActivity(),
                     Activity("C")
                 ),
                 Activity("D"),
@@ -130,7 +129,7 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals(tree.toString(), "⟲(τ,×(τ,A),∧(B,τ,C),D,→(E,→(F,G)))")
+        assertEquals(tree.toString(), "⟲(τ,×(τ,A),∧(B,C),D,→(E,→(F,G)))")
         assertTrue(tree.languageEqual(expectedTree))
     }
 }
