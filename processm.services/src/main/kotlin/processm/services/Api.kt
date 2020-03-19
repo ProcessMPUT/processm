@@ -26,6 +26,7 @@ fun Application.apiModule() {
     install(HSTS, ApplicationHstsConfiguration())
     install(Compression, ApplicationCompressionConfiguration())
     install(Locations)
+    install(StatusPages, ApplicationStatusPageConfiguration())
     install(Authentication) {
 
         jwt {

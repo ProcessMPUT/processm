@@ -1,14 +1,20 @@
 package processm.services.api
 
 // Use this file to hold package-level internal functions that return receiver object passed to the `install` method.
+import com.auth0.jwt.exceptions.TokenExpiredException
+import io.ktor.application.call
 import io.ktor.auth.OAuthServerSettings
-import io.ktor.features.Compression
-import io.ktor.features.HSTS
-import io.ktor.features.deflate
-import io.ktor.features.gzip
-import io.ktor.features.minimumSize
-import io.ktor.http.HttpMethod
+import io.ktor.features.*
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.httpDateFormat
+import io.ktor.response.respond
 import io.ktor.util.KtorExperimentalAPI
+import io.ktor.util.error
+import org.apache.maven.wagon.authorization.AuthorizationException
+import processm.core.logging.enter
+import processm.core.logging.exit
+import processm.core.logging.logger
+import processm.services.api.models.ErrorResponse
 import java.time.Duration
 import java.util.concurrent.Executors
 
@@ -49,6 +55,23 @@ internal fun ApplicationCompressionConfiguration(): Compression.Configuration.()
             priority = 10.0
             minimumSize(1024) // condition
         }
+    }
+}
+
+internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() -> Unit {
+    return {
+        logger().enter()
+        exception<TokenExpiredException> { cause ->
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse(cause.message))
+        }
+        exception<UnsupportedOperationException> { cause ->
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse(cause.message))
+        }
+        exception<Exception> { cause ->
+            logger().error(cause)
+            call.respond(HttpStatusCode.InternalServerError)
+        }
+        logger().exit()
     }
 }
 
