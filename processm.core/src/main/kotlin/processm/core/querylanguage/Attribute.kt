@@ -3,7 +3,7 @@ package processm.core.querylanguage
 /**
  * Represents an attribute in a PQL query.
  */
-class PQLAttribute(attribute: String, override val line: Int, override val charPositionInLine: Int) : Expression() {
+class Attribute(attribute: String, override val line: Int, override val charPositionInLine: Int) : Expression() {
     companion object {
         private val pqlAttributePattern =
             Regex("^\\[?([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?((?:\\w+:)?\\w+)]?$")
@@ -101,7 +101,7 @@ class PQLAttribute(attribute: String, override val line: Int, override val charP
     }
 
     override fun equals(other: Any?): Boolean =
-        if (other !is PQLAttribute) false
+        if (other !is Attribute) false
         else this.toString() == other.toString()
 
     override fun hashCode(): Int = toString().hashCode()

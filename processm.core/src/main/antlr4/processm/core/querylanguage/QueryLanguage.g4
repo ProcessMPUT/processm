@@ -1,13 +1,15 @@
 parser grammar QueryLanguage;
 options {tokenVocab=QLLexer;}
 
+// Process Query Language
+// See https://git.processtom.com/processm-team/processm/-/wikis/Process-Query-Language for language details.
+
 // parser rules start with lowercase letters
-// Axiom. QL implements a subset of Google Visualization API Query Language limited to the below clauses.
-// See https://developers.google.com/chart/interactive/docs/querylanguage for language details.
+// Axiom.
 query       : select where? group_by? order_by? limit? offset? EOF
             ;
 
-select      :                               # select_all
+select      :                               # select_all_implicit
             | SELECT '*' (',' column_list)? # select_all
             | SELECT column_list            # select_column_list
             ;
@@ -35,11 +37,13 @@ arith_expr_root : arith_expr ;
 
 id_list     : ID (',' ID)* ;
 
-column_list_with_order : arith_expr order_dir (',' arith_expr order_dir)* ;
+column_list_with_order : ordered_expression_root (',' ordered_expression_root)* ;
 
-order_dir:                      # order_by_asc
-            | ORDER_ASC         # order_by_asc
-            | ORDER_DESC        # order_by_desc
+ordered_expression_root : arith_expr order_dir ;
+
+order_dir:
+            | ORDER_ASC
+            | ORDER_DESC
             ;
 
 scalar      : STRING
@@ -49,7 +53,7 @@ scalar      : STRING
             | NULL
             ;
 
-// The order of productions reflects operator precedence
+// The order of productions reflects the operator precedence
 arith_expr  : '(' arith_expr ')'
             | arith_expr ('*' | '/') arith_expr
             | arith_expr ('+' | '-') arith_expr
@@ -83,7 +87,7 @@ cmp_in      : OP_IN
             | OP_NOT_IN
             ;
 
-// The order of productions reflects operator precedence
+// The order of productions reflects the operator precedence
 logic_expr  : '(' logic_expr ')'
             | arith_expr cmp_in '(' id_or_scalar_list ')'
             | arith_expr cmp_func STRING

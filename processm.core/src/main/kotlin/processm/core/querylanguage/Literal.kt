@@ -13,7 +13,7 @@ import java.time.temporal.ChronoField
  * Represents a literal in a PQL query. The subclasses of this class hold particular types of literals.
  */
 @Suppress("LeakingThis")
-sealed class PQLLiteral<out T>(literal: String, override val line: Int, override val charPositionInLine: Int) :
+sealed class Literal<out T>(literal: String, override val line: Int, override val charPositionInLine: Int) :
     Expression() {
     companion object {
         private val scopePattern: Regex = Regex("^(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?(.+)$")
@@ -50,7 +50,7 @@ sealed class PQLLiteral<out T>(literal: String, override val line: Int, override
  * Represents a string literal in a PQL query.
  */
 class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
-    PQLLiteral<String>(literal, line, charPositionInLine) {
+    Literal<String>(literal, line, charPositionInLine) {
     override fun parse(literal: String): String {
         if ((literal[0] != '"' && literal[0] != '\'') || literal[0] != literal[literal.length - 1])
             throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid format of string literal: $literal.")
@@ -63,7 +63,7 @@ class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
  * Represents a datetime literal in a PQL query.
  */
 class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
-    PQLLiteral<Instant>(literal, line, charPositionInLine) {
+    Literal<Instant>(literal, line, charPositionInLine) {
     companion object {
         private val parsers = arrayOf(
             DateTimeFormatterBuilder()
@@ -164,7 +164,7 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
  * Represents a number literal in a PQL query.
  */
 class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
-    PQLLiteral<Double>(literal, line, charPositionInLine) {
+    Literal<Double>(literal, line, charPositionInLine) {
     override fun parse(literal: String): Double = literal.toDouble()
 }
 
@@ -172,7 +172,7 @@ class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
  * Represents a boolean literal in a PQL query.
  */
 class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
-    PQLLiteral<Boolean>(literal, line, charPositionInLine) {
+    Literal<Boolean>(literal, line, charPositionInLine) {
     override fun parse(literal: String): Boolean = when (literal) {
         "true" -> true
         "false" -> false
@@ -186,6 +186,6 @@ class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
  * Represents a null literal in a PQL query.
  */
 class NullLiteral(literal: String, line: Int, charPositionInLine: Int) :
-    PQLLiteral<Any?>(literal, line, charPositionInLine) {
+    Literal<Any?>(literal, line, charPositionInLine) {
     override fun parse(literal: String): Any? = null
 }

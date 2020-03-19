@@ -21,18 +21,18 @@ enum class Scope {
 
     companion object {
         /**
-         * Transforms the given string into a [Scope]. The [emptyStrInterpretation] argument sets the default when
+         * Transforms the given string into a [Scope]. The [default] argument sets the default when
          * empty string and null is supplied as the first argument.
-         * @param str String to parse.
-         * @param emptyStrInterpretation The default value if [str] is null or empty.
+         * @param text String to parse.
+         * @param default The default value if [text] is null or empty.
          * @throws IllegalArgumentException If an incorrect string is supplied.
          */
-        fun parse(str: String?, emptyStrInterpretation: Scope = Event): Scope = when (str) {
-            "", null -> emptyStrInterpretation
+        fun parse(text: String?, default: Scope = Event): Scope = when (text) {
+            "", null -> default
             "log", "l" -> Log
             "trace", "t" -> Trace
             "event", "e" -> Event
-            else -> throw IllegalArgumentException("Invalid scope $str.")
+            else -> throw IllegalArgumentException("Invalid scope $text.")
         }
     }
 

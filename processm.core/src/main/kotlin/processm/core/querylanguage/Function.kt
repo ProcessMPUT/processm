@@ -5,7 +5,7 @@ package processm.core.querylanguage
  *
  * @property name The name of the function being called.
  */
-class PQLFunction(
+class Function(
     val name: String,
     override val line: Int,
     override val charPositionInLine: Int,

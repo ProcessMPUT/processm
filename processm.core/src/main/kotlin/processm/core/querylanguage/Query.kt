@@ -6,11 +6,6 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import java.util.*
 import kotlin.collections.LinkedHashSet
-import kotlin.experimental.and
-import kotlin.experimental.or
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.isAccessible
-import kotlin.reflect.jvm.javaField
 
 /**
  * Represents log query as parsed from the string given as constructor argument.
@@ -20,14 +15,6 @@ import kotlin.reflect.jvm.javaField
  */
 @Suppress("MapGetWithNotNullAssertionOperator")
 class Query(val query: String) {
-    companion object {
-        private const val LOG_MASK: Byte = 0b00000100
-        private const val TRACE_MASK: Byte = 0b00000010
-        private const val EVENT_MASK: Byte = 0b00000001
-        private const val EMPTY_MASK: Byte = 0b00000000
-        private const val ALL_SCOPES_MASK: Byte = 0b00000111
-    }
-
     // region parser
     private val errorListener: ErrorListener = ErrorListener()
     private val stream: CodePointCharStream = CharStreams.fromString(query)
@@ -59,63 +46,46 @@ class Query(val query: String) {
         get() = errorListener.warning
 
     // region select clause
-    private var _selectAll: Byte = 0
+    /**
+     * Whether the select all clause is not specified explicitly, but it is implied by the query structure.
+     */
+    var isImplicitSelectAll: Boolean = false
+        private set
+    private var _selectAllLog: Boolean? = null
+    private var _selectAllTrace: Boolean? = null
+    private var _selectAllEvent: Boolean? = null
 
     /**
      * Whether to select all (standard and non-standard) attributes.
      */
-    var selectAll: Boolean
-        get() = _selectAll == ALL_SCOPES_MASK
-        set(value) {
-            _selectAll = if (value) ALL_SCOPES_MASK else EMPTY_MASK
-        }
+    val selectAll: Boolean
+        get() = selectAllLog && selectAllTrace && selectAllEvent
 
     /**
      * Whether to select all (standard and non-standard) attributes on log scope.
      */
-    var selectAllLog: Boolean
-        get() = _selectAll and LOG_MASK != 0.toByte()
-        private set(value) {
-            _selectAll = _selectAll or LOG_MASK
-            if (value) {
-                _selectStandardAttributes[Scope.Log]!!.clear()
-                _selectOtherAttributes[Scope.Log]!!.clear()
-            }
-        }
+    val selectAllLog: Boolean
+        get() = _selectAllLog ?: isImplicitSelectAll
 
     /**
      * Whether to select all (standard and non-standard) attributes on trace scope.
      */
-    var selectAllTrace: Boolean
-        get() = _selectAll and TRACE_MASK != 0.toByte()
-        private set(value) {
-            _selectAll = _selectAll or TRACE_MASK
-            if (value) {
-                _selectStandardAttributes[Scope.Trace]!!.clear()
-                _selectOtherAttributes[Scope.Trace]!!.clear()
-            }
-        }
+    val selectAllTrace: Boolean
+        get() = _selectAllTrace ?: isImplicitSelectAll
 
     /**
      * Whether to select all (standard and non-standard) attributes on event scope.
      */
-    var selectAllEvent: Boolean
-        get() = _selectAll and EVENT_MASK != 0.toByte()
-        private set(value) {
-            _selectAll = _selectAll or EVENT_MASK
-            if (value) {
-                _selectStandardAttributes[Scope.Event]!!.clear()
-                _selectOtherAttributes[Scope.Event]!!.clear()
-            }
-        }
+    val selectAllEvent: Boolean
+        get() = _selectAllEvent ?: isImplicitSelectAll
 
-    private val _selectStandardAttributes: Map<Scope, LinkedHashSet<PQLAttribute>> = mapOf(
+    private val _selectStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
         Scope.Log to LinkedHashSet(),
         Scope.Trace to LinkedHashSet(),
         Scope.Event to LinkedHashSet()
     )
 
-    private val _selectOtherAttributes: Map<Scope, LinkedHashSet<PQLAttribute>> = mapOf(
+    private val _selectOtherAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
         Scope.Log to LinkedHashSet(),
         Scope.Trace to LinkedHashSet(),
         Scope.Event to LinkedHashSet()
@@ -130,37 +100,37 @@ class Query(val query: String) {
     /**
      * The standard attributes to select on the log scope.
      */
-    val selectLogStandardAttributes: Set<PQLAttribute> =
+    val selectLogStandardAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_selectStandardAttributes[Scope.Log]!!)
 
     /**
      * The standard attributes to select on the trace scope.
      */
-    val selectTraceStandardAttributes: Set<PQLAttribute> =
+    val selectTraceStandardAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_selectStandardAttributes[Scope.Trace]!!)
 
     /**
      * The standard attributes to select on the event scope.
      */
-    val selectEventStandardAttributes: Set<PQLAttribute> =
+    val selectEventStandardAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_selectStandardAttributes[Scope.Event]!!)
 
     /**
      * The non-standard attributes to select on the log scope.
      */
-    val selectLogOtherAttributes: Set<PQLAttribute> =
+    val selectLogOtherAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_selectOtherAttributes[Scope.Log]!!)
 
     /**
      * The non-standard attributes to select on the trace scope.
      */
-    val selectTraceOtherAttributes: Set<PQLAttribute> =
+    val selectTraceOtherAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_selectOtherAttributes[Scope.Trace]!!)
 
     /**
      * The non-standard attributes to select on the event scope.
      */
-    val selectEventOtherAttributes: Set<PQLAttribute> =
+    val selectEventOtherAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_selectOtherAttributes[Scope.Event]!!)
 
     /**
@@ -191,12 +161,12 @@ class Query(val query: String) {
     // region group by clause
     // However PQL does not allow for many group by clauses, as of version 0.1, I expect that the support will be
     // added in a future version. So the below collections hold separate sets of attributes for each scope.
-    private val _groupByStandardAttributes: Map<Scope, LinkedHashSet<PQLAttribute>> = mapOf(
+    private val _groupByStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
         Scope.Log to LinkedHashSet(),
         Scope.Trace to LinkedHashSet(),
         Scope.Event to LinkedHashSet()
     )
-    private val _groupByOtherAttributes: Map<Scope, LinkedHashSet<PQLAttribute>> = mapOf(
+    private val _groupByOtherAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
         Scope.Log to LinkedHashSet(),
         Scope.Trace to LinkedHashSet(),
         Scope.Event to LinkedHashSet()
@@ -205,83 +175,169 @@ class Query(val query: String) {
     /**
      * The standard attributes used for grouping on the log scope.
      */
-    val groupLogByStandardAttributes: Set<PQLAttribute> =
+    val groupLogByStandardAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Log]!!)
 
     /**
      * The standard attributes used for grouping on the trace scope.
      */
-    val groupTraceByStandardAttributes: Set<PQLAttribute> =
+    val groupTraceByStandardAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Trace]!!)
 
     /**
      * The standard attributes used for grouping on the event scope.
      */
-    val groupEventByStandardAttributes: Set<PQLAttribute> =
+    val groupEventByStandardAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Event]!!)
 
     /**
      * The non-standard attributes used for grouping on the log scope.
      */
-    val groupLogByOtherAttributes: Set<PQLAttribute> =
+    val groupLogByOtherAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Log]!!)
 
     /**
      * The non-standard attributes used for grouping on the trace scope.
      */
-    val groupTraceByOtherAttributes: Set<PQLAttribute> =
+    val groupTraceByOtherAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Trace]!!)
 
     /**
      * The non-standard attributes used for grouping on the event scope.
      */
-    val groupEventByOtherAttributes: Set<PQLAttribute> =
+    val groupEventByOtherAttributes: Set<Attribute> =
         Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Event]!!)
+
+    /**
+     * Indicates whether the implicit out-of-scope group by applies.
+     */
+    var isImplicitGroupBy: Boolean = false
+        private set
+
+    /**
+     * Indicates whether the group by on log scope is used.
+     */
+    val isGroupLogBy: Boolean
+        get() = _groupByStandardAttributes[Scope.Log]!!.size > 0 || _groupByOtherAttributes[Scope.Log]!!.size > 0
+
+    /**
+     * Indicates whether the group by on trace scope is used.
+     */
+    val isGroupTraceBy: Boolean
+        get() = _groupByStandardAttributes[Scope.Trace]!!.size > 0 || _groupByOtherAttributes[Scope.Trace]!!.size > 0
+
+    /**
+     * Indicates whether the group by on event scope is used.
+     */
+    val isGroupEventBy: Boolean
+        get() = _groupByStandardAttributes[Scope.Event]!!.size > 0 || _groupByOtherAttributes[Scope.Event]!!.size > 0
 
     // end region
     // endregion
-    init {
-        assert(Query::class.memberProperties.all {
-            it.isAccessible = true; it.javaField === null || it.get(this) !== null
-        }) { "This init{} block must be located after all properties!" }
 
+    // region order by clause
+    private val _orderByExpressions: Map<Scope, ArrayList<OrderedExpression>> = mapOf(
+        Scope.Log to ArrayList(),
+        Scope.Trace to ArrayList(),
+        Scope.Event to ArrayList()
+    )
+
+    /**
+     * The list of ordering expressions on log scope in decreasing precedence.
+     */
+    val orderByLogExpressions: List<OrderedExpression> =
+        Collections.unmodifiableList(_orderByExpressions[Scope.Log]!!)
+
+    /**
+     * The list of ordering expressions on trace scope in decreasing precedence.
+     */
+    val orderByTraceExpressions: List<OrderedExpression> =
+        Collections.unmodifiableList(_orderByExpressions[Scope.Trace]!!)
+
+    /**
+     * The list of ordering expressions on event scope in decreasing precedence.
+     */
+    val orderByEventExpressions: List<OrderedExpression> =
+        Collections.unmodifiableList(_orderByExpressions[Scope.Event]!!)
+    // endregion
+
+    init {
         val tree = parser.query()
         val walker = ParseTreeWalker()
         walker.walk(Listener(), tree)
+        validateSelectAll()
         validateGroupByAttributes()
         if (errorListener.error !== null)
             throw errorListener.error!!
     }
 
+    private fun validateSelectAll() {
+        validateSelectAll(Scope.Log, _selectAllLog)
+        validateSelectAll(Scope.Trace, _selectAllTrace)
+        validateSelectAll(Scope.Event, _selectAllEvent)
+    }
+
+    private fun validateSelectAll(scope: Scope, flag: Boolean?) {
+        if (!isImplicitSelectAll && flag == null)
+            return
+
+        val standard = _selectStandardAttributes[scope]!!
+        val other = _selectOtherAttributes[scope]!!
+        if (standard.isNotEmpty() || other.isNotEmpty()) {
+            val first = standard.firstOrNull() ?: other.first()
+            errorListener.emitWarning(
+                IllegalArgumentException(
+                    "Line ${first.line} position ${first.charPositionInLine}: Use of select all with scope $scope and "
+                            + "referencing attributes by name on the same scope is meaningless. Attributes "
+                            + "${(standard + other).joinToString(", ")} are removed from the select clause."
+                )
+            )
+            standard.clear()
+            other.clear()
+        }
+    }
+
+
     private fun validateGroupByAttributes() {
         validateExplicitGroupBy(_selectStandardAttributes, _groupByStandardAttributes)
         validateExplicitGroupBy(_selectOtherAttributes, _groupByOtherAttributes)
         val groupByAttributes = _groupByStandardAttributes.mapValues {
-            LinkedHashSet<PQLAttribute>(it.value).apply { addAll(_groupByOtherAttributes[it.key]!!) }
+            LinkedHashSet<Attribute>(it.value).apply { addAll(_groupByOtherAttributes[it.key]!!) }
         }
         validateExplicitGroupBy(_selectExpressions, groupByAttributes)
 
-        if (_groupByStandardAttributes.values.all { it.isEmpty() } && _groupByOtherAttributes.values.all { it.isEmpty() }) {
+        val orderByExpressions = _orderByExpressions.mapValues {
+            sequence {
+                it.value.forEach { yield(it.base) }
+            }.asIterable()
+        }
+        validateExplicitGroupBy(orderByExpressions, groupByAttributes)
+
+        if (!isGroupLogBy && !isGroupTraceBy && !isGroupEventBy) {
             // possible implicit group by
             val selectAllExpressions = sequence {
                 _selectStandardAttributes.values.forEach { yieldAll(it) }
                 _selectOtherAttributes.values.forEach { yieldAll(it) }
                 _selectExpressions.values.forEach { yieldAll(it) }
-            }
+            }.asIterable()
+            validateImplicitGroupBy(selectAllExpressions)
 
-            validateImplicitGroupBy(selectAllExpressions.asIterable())
+            val orderByAllExpressions = sequence {
+                _orderByExpressions.values.forEach { it.forEach { yield(it.base) } }
+            }.asIterable()
+            validateImplicitGroupBy(orderByAllExpressions)
         }
     }
 
     private fun validateExplicitGroupBy(
         toValidate: Map<Scope, Iterable<Expression>>,
-        groupByMap: Map<Scope, Set<PQLAttribute>>
+        groupByMap: Map<Scope, Set<Attribute>>
     ) =
         toValidate
             .flatMap { it.value }
             .flatMap {
-                it.filterRecursively { it !is PQLFunction || it.type != FunctionType.Aggregation }
-                    .filterIsInstance<PQLAttribute>()
+                it.filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                    .filterIsInstance<Attribute>()
                     .asIterable()
             }
             .filter {
@@ -305,16 +361,37 @@ class Query(val query: String) {
             }
 
     private fun validateImplicitGroupBy(toValidate: Iterable<Expression>) {
-        //val allScopesExpressions = toValidate.flatMap { it.value }
         val anyAggregation = toValidate
-            .any { it.filter { it is PQLFunction && it.type == FunctionType.Aggregation }.any() }
+            .any { it.filter { it is Function && it.type == FunctionType.Aggregation }.any() }
 
         if (anyAggregation) {
             // implicit group by for sure
+            isImplicitGroupBy = true
+            isImplicitSelectAll = false
+            if (_selectAllLog == true || _selectAllTrace == true || _selectAllEvent == true) {
+                // query uses explicit select all
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Use of the explicit select all clause with the implicit group by clause is meaningless."
+                    )
+                )
+            }
+
+            val orderByExpression = _orderByExpressions.values.flatten().firstOrNull()
+            if (orderByExpression !== null) {
+                errorListener.emitWarning(
+                    IllegalArgumentException(
+                        "Line ${orderByExpression.line} position ${orderByExpression.charPositionInLine}: Use of the order "
+                                + "by clause with the implicit group by clause is meaningless. The order by clause is removed."
+                    )
+                )
+                _orderByExpressions.values.forEach { it.clear() }
+            }
+
             val nonaggregated = toValidate
                 .flatMap {
-                    it.filterRecursively { it !is PQLFunction || it.type != FunctionType.Aggregation }
-                        .filterIsInstance<PQLAttribute>()
+                    it.filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                        .filterIsInstance<Attribute>()
                         .asIterable()
                 }
             if (nonaggregated.any()) {
@@ -333,40 +410,31 @@ class Query(val query: String) {
 
 
     private inner class Listener : QueryLanguageBaseListener() {
-        // region PQL select clause
+        override fun exitSelect_all_implicit(ctx: QueryLanguage.Select_all_implicitContext?) {
+            isImplicitSelectAll = true
+        }
+
         override fun exitSelect_all(ctx: QueryLanguage.Select_allContext?) {
-            selectAll = true
+            _selectAllLog = true
+            _selectAllTrace = true
+            _selectAllEvent = true
         }
 
         override fun enterScoped_select_all(ctx: QueryLanguage.Scoped_select_allContext?) {
-            val token = ctx!!.SCOPE().text
-            when (Scope.parse(token)) {
-                Scope.Log -> selectAllLog = true
-                Scope.Trace -> selectAllTrace = true
-                Scope.Event -> selectAllEvent = true
+            val token = ctx!!.SCOPE()
+            val scope = Scope.parse(token.text)
+            when (scope) {
+                Scope.Log -> _selectAllLog = true
+                Scope.Trace -> _selectAllTrace = true
+                Scope.Event -> _selectAllEvent = true
             }
         }
 
         override fun exitArith_expr_root(ctx: QueryLanguage.Arith_expr_rootContext?) {
             val expression = parseExpression(ctx!!)
+            validateHoisting(expression)
 
-            val hoisted = expression
-                .filterRecursively { it !is PQLFunction || it.type != FunctionType.Aggregation }
-                .filter { it is PQLAttribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()
-
-            if (hoisted !== null)
-                errorListener.delayedThrow(IllegalArgumentException("Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select clause."))
-
-            if (expression is PQLAttribute) {
-                val scopedSelectAll = when (expression.effectiveScope) {
-                    Scope.Log -> selectAllLog
-                    Scope.Trace -> selectAllTrace
-                    Scope.Event -> selectAllEvent
-                }
-
-                if (scopedSelectAll)
-                    return
-
+            if (expression is Attribute) {
                 when (expression.isStandard) {
                     true -> _selectStandardAttributes[expression.effectiveScope]
                     false -> _selectOtherAttributes[expression.effectiveScope]
@@ -380,6 +448,15 @@ class Query(val query: String) {
         // region PQL where clause
         override fun exitWhere(ctx: QueryLanguage.WhereContext?) {
             whereExpression = parseExpression(ctx!!.children[1])
+            val aggregation = whereExpression
+                .filter { it is Function && it.type == FunctionType.Aggregation }
+                .firstOrNull()
+            if (aggregation !== null)
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Line ${aggregation.line} position ${aggregation.charPositionInLine}: The aggregation function call is not supported in the where clause."
+                    )
+                )
         }
         // endregion
 
@@ -400,7 +477,7 @@ class Query(val query: String) {
 
             tokens.get(interval.a, interval.b)
                 .filter { it.type == QueryLanguage.ID }
-                .map { PQLAttribute(it.text, it.line, it.charPositionInLine) }
+                .map { Attribute(it.text, it.line, it.charPositionInLine) }
                 .filter {
                     if (it.effectiveScope < scope) {
                         errorListener.emitWarning(
@@ -421,6 +498,29 @@ class Query(val query: String) {
 
         // endregion
 
+        // region PQL order by clause
+        override fun exitOrdered_expression_root(ctx: QueryLanguage.Ordered_expression_rootContext?) {
+            val expression = parseExpression(ctx!!.arith_expr())
+            validateHoisting(expression)
+
+            val order = OrderDirection.parse(ctx.order_dir().text)
+            _orderByExpressions[expression.effectiveScope]!!.add(OrderedExpression(expression, order))
+        }
+        // endregion
+
+        private fun validateHoisting(expression: Expression) {
+            val hoisted = expression
+                .filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                .filter { it is Attribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()
+
+            if (hoisted !== null)
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select and the order by clauses, except in an aggregate function."
+                    )
+                )
+        }
+
         private fun parseExpression(ctx: ParseTree): Expression {
             if (ctx.childCount == 0) {
                 // terminal
@@ -429,8 +529,8 @@ class Query(val query: String) {
             val token = ctx.getChild(0).payload as? Token
             with(token) {
                 return when (this?.type) {
-                    QueryLanguage.FUNC_SCALAR0 -> PQLFunction(text, line, charPositionInLine)
-                    QueryLanguage.FUNC_SCALAR1, QueryLanguage.FUNC_AGGR -> PQLFunction(
+                    QueryLanguage.FUNC_SCALAR0 -> Function(text, line, charPositionInLine)
+                    QueryLanguage.FUNC_SCALAR1, QueryLanguage.FUNC_AGGR -> Function(
                         text,
                         line,
                         charPositionInLine,
@@ -447,7 +547,7 @@ class Query(val query: String) {
 
         private fun parseToken(token: Token): Expression = try {
             when (token.type) {
-                QueryLanguage.ID -> PQLAttribute(token.text, token.line, token.charPositionInLine)
+                QueryLanguage.ID -> Attribute(token.text, token.line, token.charPositionInLine)
                 QueryLanguage.BOOLEAN -> BooleanLiteral(token.text, token.line, token.charPositionInLine)
                 QueryLanguage.NUMBER -> NumberLiteral(token.text, token.line, token.charPositionInLine)
                 QueryLanguage.DATETIME -> DateTimeLiteral(token.text, token.line, token.charPositionInLine)
