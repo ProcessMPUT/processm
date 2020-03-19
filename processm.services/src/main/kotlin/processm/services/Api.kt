@@ -1,22 +1,20 @@
 package processm.services
 
 import io.ktor.application.Application
+import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.auth.Authentication
-import io.ktor.auth.jwt.jwt
 import io.ktor.features.*
 import io.ktor.gson.GsonConverter
 import io.ktor.http.ContentType
 import io.ktor.locations.Locations
+import io.ktor.response.respondRedirect
+import io.ktor.routing.get
 import io.ktor.routing.route
 import io.ktor.routing.routing
 import processm.services.api.*
-import java.time.Instant
 
 fun Application.apiModule() {
-    val jwtIssuer = environment.config.property("ktor.jwt.issuer").getString()
-    val jwtRealm = environment.config.property("ktor.jwt.realm").getString()
-    val jwtSecret = environment.config.propertyOrNull("ktor.jwt.secret")?.getString() ?: JwtAuthentication.generateSecretKey()
 
     install(DefaultHeaders)
     install(ContentNegotiation) {
@@ -27,18 +25,7 @@ fun Application.apiModule() {
     install(Compression, ApplicationCompressionConfiguration())
     install(Locations)
     install(StatusPages, ApplicationStatusPageConfiguration())
-    install(Authentication) {
-
-        jwt {
-            realm = jwtRealm
-            verifier(JwtAuthentication.createVerifier(jwtIssuer, jwtSecret))
-            validate { credentials ->
-                val identificationClaim = credentials.payload.claims["id"]?.asString()
-
-                if (!identificationClaim.isNullOrEmpty()) ApiUser(identificationClaim) else null
-            }
-        }
-    }
+    install(Authentication, ApplicationAuthenticationConfiguration(environment.config.config("ktor.jwt")))
 
     routing {
         route("api") {
@@ -46,6 +33,7 @@ fun Application.apiModule() {
             OrganizationsApi()
             UsersApi()
             WorkspacesApi()
+            get { call.respondRedirect("/api-docs/", permanent = true) }
         }
     }
 }

@@ -3,14 +3,16 @@ package processm.services.api
 // Use this file to hold package-level internal functions that return receiver object passed to the `install` method.
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.ktor.application.call
+import io.ktor.auth.Authentication
 import io.ktor.auth.OAuthServerSettings
+import io.ktor.auth.jwt.jwt
+import io.ktor.config.ApplicationConfig
 import io.ktor.features.*
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.httpDateFormat
 import io.ktor.response.respond
+import io.ktor.server.engine.applicationEngineEnvironment
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.error
-import org.apache.maven.wagon.authorization.AuthorizationException
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -18,15 +20,6 @@ import processm.services.api.models.ErrorResponse
 import java.time.Duration
 import java.util.concurrent.Executors
 
-
-/**
- * Application block for [HSTS] configuration.
- *
- * This file may be excluded in .openapi-generator-ignore,
- * and application specific configuration can be applied in this function.
- *
- * See http://ktor.io/features/hsts.html
- */
 internal fun ApplicationHstsConfiguration(): HSTS.Configuration.() -> Unit {
     return {
         maxAge = Duration.ofDays(365)
@@ -38,14 +31,6 @@ internal fun ApplicationHstsConfiguration(): HSTS.Configuration.() -> Unit {
     }
 }
 
-/**
- * Application block for [Compression] configuration.
- *
- * This file may be excluded in .openapi-generator-ignore,
- * and application specific configuration can be applied in this function.
- *
- * See http://ktor.io/features/compression.html
- */
 internal fun ApplicationCompressionConfiguration(): Compression.Configuration.() -> Unit {
     return {
         gzip {
@@ -75,20 +60,21 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
     }
 }
 
-// Defines authentication mechanisms used throughout the application.
-@KtorExperimentalAPI
-val ApplicationAuthProviders: Map<String, OAuthServerSettings> = listOf<OAuthServerSettings>(
-//        OAuthServerSettings.OAuth2ServerSettings(
-//                name = "facebook",
-//                authorizeUrl = "https://graph.facebook.com/oauth/authorize",
-//                accessTokenUrl = "https://graph.facebook.com/oauth/access_token",
-//                requestMethod = HttpMethod.Post,
-//
-//                clientId = "settings.property("auth.oauth.facebook.clientId").getString()",
-//                clientSecret = "settings.property("auth.oauth.facebook.clientSecret").getString()",
-//                defaultScopes = listOf("public_profile")
-//        )
-).associateBy { it.name }
+internal fun ApplicationAuthenticationConfiguration(config: ApplicationConfig): Authentication.Configuration.() -> Unit {
+    return {
+        val jwtIssuer = config.property("issuer").getString()
+        val jwtRealm = config.property("realm").getString()
+        val jwtSecret = config.propertyOrNull("secret")?.getString()
+            ?: JwtAuthentication.generateSecretKey()
 
-// Provides an application-level fixed thread pool on which to execute coroutines (mainly)
-internal val ApplicationExecutors = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 4)
+        jwt {
+            realm = jwtRealm
+            verifier(JwtAuthentication.createVerifier(jwtIssuer, jwtSecret))
+            validate { credentials ->
+                val identificationClaim = credentials.payload.claims["id"]?.asString()
+
+                if (!identificationClaim.isNullOrEmpty()) ApiUser(identificationClaim) else null
+            }
+        }
+    }
+}
