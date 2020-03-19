@@ -5,14 +5,17 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.request.header
 import io.ktor.server.testing.handleRequest
 import io.ktor.server.testing.setBody
 import io.ktor.server.testing.withTestApplication
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.TestInstance
 import processm.services.apiModule
-import java.util.concurrent.TimeUnit
+import java.lang.StringBuilder
 import java.util.stream.Stream
+import kotlin.random.Random
+import kotlin.random.nextInt
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -116,7 +119,7 @@ class UsersApiTest : BaseApiTest() {
         assertNotNull(renewedToken)
 
         // make sure the token is valid
-        with(handleRequest(HttpMethod.Get, "/api/users"){
+        with(handleRequest(HttpMethod.Get, "/api/users") {
             addHeader(HttpHeaders.Authorization, "Bearer $renewedToken")
         }) {
             assertNotEquals(HttpStatusCode.Unauthorized, response.status())
@@ -127,7 +130,34 @@ class UsersApiTest : BaseApiTest() {
     fun `responds to authentication request without credentials or token with 400 and error message`() = withConfiguredTestApplication {
         with(handleRequest(HttpMethod.Post, "/api/users/session")) {
             assertEquals(HttpStatusCode.BadRequest, response.status())
-            assertTrue(response.content!!.contains("accessToken"))
+            assertTrue(
+                response.content!!.contains("Either user credentials or authentication token needs to be provided"))
+        }
+    }
+
+    @Test
+    fun `responds to request with malformed token with 401`() = withConfiguredTestApplication {
+        var currentToken: String? = null
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Get, "/api/users")) {
+                assertNotEquals(HttpStatusCode.Unauthorized, response.status())
+                currentToken = request.header(HttpHeaders.Authorization)
+            }
+        }
+
+        var randomizedToken = StringBuilder(assertNotNull(currentToken))
+
+        do {
+            repeat(20) {
+                randomizedToken[Random.nextInt(0..randomizedToken.length)] = ('A'..'z').random()
+            }
+        } while (randomizedToken.toString() == currentToken)
+
+        with(handleRequest(HttpMethod.Get, "/api/users") {
+            addHeader(HttpHeaders.Authorization, "Bearer $randomizedToken")
+        }) {
+            assertEquals(HttpStatusCode.Unauthorized, response.status())
         }
     }
 }
