@@ -44,6 +44,7 @@ abstract class BaseApiTest {
             put("ktor.jwt.issuer", "issuer")
             put("ktor.jwt.realm", "test")
             put("ktor.jwt.secret", "secretkey123")
+            put("ktor.jwt.tokenTtl", "PT10S")
         }
         application.apiModule()
         test(this)
