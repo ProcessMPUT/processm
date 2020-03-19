@@ -61,25 +61,29 @@ abstract class BaseApiTest {
         private val username: String,
         private val password: String) {
 
-        private var authenticationHeader: Pair<String, String> = Pair("", "")
+        private var authenticationHeader: Pair<String, String>? = null
 
         fun handleRequest(
             method: HttpMethod,
             uri: String,
             test: TestApplicationRequest.() -> Unit = {}): TestApplicationCall {
-            with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
-                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"username":"$username","password":"$password"}""")}) {
-                assertEquals(HttpStatusCode.Created, response.status())
-                assertTrue(response.content!!.contains("accessToken"))
 
-                val token = response.content?.substringAfter("""accessToken":"""")?.substringBefore('"')
-                authenticationHeader = Pair("Authorization", "Bearer $token")
+            if (authenticationHeader == null) {
+                with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    setBody("""{"username":"$username","password":"$password"}""")
+                }) {
+                    assertEquals(HttpStatusCode.Created, response.status())
+                    assertTrue(response.content!!.contains("accessToken"))
+
+                    val token = response.content?.substringAfter("""accessToken":"""")?.substringBefore('"')
+                    authenticationHeader = Pair(HttpHeaders.Authorization, "Bearer $token")
+                }
             }
 
             return engine.handleRequest(method, uri) {
-                if (!authenticationHeader.first.isNullOrEmpty()) {
-                    addHeader(authenticationHeader.first, authenticationHeader.second)
+                if (authenticationHeader != null && !authenticationHeader?.first.isNullOrEmpty()) {
+                    addHeader(authenticationHeader!!.first, authenticationHeader?.second ?: "")
                 }
                 test()
             }
