@@ -30,14 +30,11 @@ fun Application.apiModule() {
 
         jwt {
             realm = jwtRealm
-            verifier(JwtAuthentication.verifier(jwtIssuer, jwtSecret))
-            validate {
-                if (Instant.now().isBefore(it.payload.expiresAt.toInstant())) {
-                    val identificationClaim = it.payload.claims["id"]?.asString()
+            verifier(JwtAuthentication.createVerifier(jwtIssuer, jwtSecret))
+            validate { credentials ->
+                val identificationClaim = credentials.payload.claims["id"]?.asString()
 
-                    if (!identificationClaim.isNullOrEmpty()) ApiUser(identificationClaim) else null
-                }
-                else null
+                if (!identificationClaim.isNullOrEmpty()) ApiUser(identificationClaim) else null
             }
         }
     }

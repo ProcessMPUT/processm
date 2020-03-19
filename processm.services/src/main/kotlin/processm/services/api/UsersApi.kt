@@ -3,11 +3,14 @@ package processm.services.api
 import io.ktor.application.call
 import io.ktor.auth.authenticate
 import io.ktor.auth.authentication
+import io.ktor.auth.parseAuthorizationHeader
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.delete
 import io.ktor.locations.get
-import io.ktor.request.receive
+import io.ktor.request.authorization
+import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
 import io.ktor.routing.Route
 import io.ktor.routing.application
@@ -17,31 +20,53 @@ import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.AuthenticationResultResponse
 import processm.services.api.models.ErrorResponse
 import processm.services.api.models.UserCredentials
+import java.time.Duration
 import java.time.Instant
-import java.util.*
+
 
 @KtorExperimentalLocationsAPI
 fun Route.UsersApi() {
-    val tokenTtl: Long = 60 * 60 * 12
     val jwtIssuer = application.environment.config.property("ktor.jwt.issuer").getString()
     val jwtSecret = application.environment.config.propertyOrNull("ktor.jwt.secret")?.getString()
         ?: JwtAuthentication.generateSecretKey()
+    val jwtTokenTtl = Duration.parse(
+        application.environment.config.property("ktor.jwt.tokenTtl").getString())
 
     route("/users/session") {
         post {
-            val credentials = call.receive<UserCredentials>()
+            val credentials = call.receiveOrNull<UserCredentials>()
 
-            if (credentials?.password != "pass") {
-                call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid username or password"))
-            } else {
-                val token = JwtAuthentication.createToken(
-                    credentials.username,
-                    Date.from(Instant.now().plusSeconds(tokenTtl)),
-                    jwtIssuer,
-                    jwtSecret
-                )
+            if (credentials != null) {
+                if (credentials?.password != "pass") {
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid username or password"))
+                } else {
+                    val token = JwtAuthentication.createToken(
+                        credentials.username,
+                        Instant.now().plus(jwtTokenTtl),
+                        jwtIssuer,
+                        jwtSecret
+                    )
 
-                call.respond(HttpStatusCode.Created, AuthenticationResultResponse(AuthenticationResult(token)))
+                    call.respond(HttpStatusCode.Created, AuthenticationResultResponse(AuthenticationResult(token)))
+                }
+            }
+            else if (call.request.authorization() != null) {
+                val authorizationHeader = call.request.parseAuthorizationHeader()
+
+                if (authorizationHeader is HttpAuthHeader.Single) {
+
+                    val prolongedToken = JwtAuthentication.verifyAndProlongToken(
+                        authorizationHeader.blob,
+                        jwtIssuer,
+                        jwtSecret,
+                        jwtTokenTtl)
+                    call.respond(HttpStatusCode.Created, AuthenticationResultResponse(AuthenticationResult(prolongedToken)))
+                }
+            }
+            else {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("Either user credentials or authentication token needs to be provided"))
             }
         }
     }
@@ -56,31 +81,19 @@ fun Route.UsersApi() {
         get<Paths.getUserAccountDetails> { _: Paths.getUserAccountDetails ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
         get<Paths.getUsers> { _: Paths.getUsers ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
         delete<Paths.signUserOut> { _: Paths.signUserOut ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
     }
 }

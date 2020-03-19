@@ -57,13 +57,20 @@ paths:
         - users
       summary: User authentication
       operationId: signUserIn
+      parameters:
+        - in: header
+          name: Authorization
+          description: Expired authentication token
+          required: false
+          schema:
+            type: string
       requestBody:
         description: User account credentials
         content:
           '*/*':
             schema:
               $ref: '#/components/schemas/UserCredentials'
-        required: true
+        required: false
       responses:
         '201':
           description: successful operation
@@ -71,6 +78,8 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/AuthenticationResultResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
     delete:
