@@ -8,6 +8,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import processm.services.api.models.AuthenticationResult
 import processm.services.apiModule
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -74,9 +75,9 @@ abstract class BaseApiTest {
                     setBody("""{"username":"$username","password":"$password"}""")
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
-                    assertTrue(response.content!!.contains("accessToken"))
+                    assertTrue(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))
 
-                    val token = response.content?.substringAfter("""accessToken":"""")?.substringBefore('"')
+                    val token = response.content?.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""")?.substringBefore('"')
                     authenticationHeader = Pair(HttpHeaders.Authorization, "Bearer $token")
                 }
             }

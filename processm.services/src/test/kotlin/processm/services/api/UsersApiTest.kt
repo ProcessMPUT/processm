@@ -11,6 +11,7 @@ import io.ktor.server.testing.setBody
 import io.ktor.server.testing.withTestApplication
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.TestInstance
+import processm.services.api.models.AuthenticationResult
 import processm.services.apiModule
 import java.lang.StringBuilder
 import java.util.stream.Stream
@@ -41,7 +42,7 @@ class UsersApiTest : BaseApiTest() {
             setBody("""{"username":"user","password":"pass"}""")
         }) {
             assertEquals(HttpStatusCode.Created, response.status())
-            assertTrue(response.content!!.contains("accessToken"))
+            assertTrue(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))
         }
     }
 
@@ -52,7 +53,7 @@ class UsersApiTest : BaseApiTest() {
             setBody("""{"username":"user","password":"wrong_password"}""")
         }) {
             assertEquals(HttpStatusCode.Unauthorized, response.status())
-            assertFalse(response.content!!.contains("accessToken"))
+            assertFalse(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))
             assertTrue(response.content!!.contains(""""error":"Invalid username or password""""))
         }
     }
@@ -111,8 +112,8 @@ class UsersApiTest : BaseApiTest() {
             // renew the token
             with(handleRequest(HttpMethod.Post, "/api/users/session")) {
                 assertEquals(HttpStatusCode.Created, response.status())
-                assertTrue(response.content!!.contains("accessToken"))
-                renewedToken = response.content!!.substringAfter("""accessToken":"""").substringBefore('"')
+                assertTrue(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))
+                renewedToken = response.content!!.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""").substringBefore('"')
             }
         }
 

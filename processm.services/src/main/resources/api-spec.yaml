@@ -1,7 +1,7 @@
 openapi: 3.0.1
 info:
   title: Processm
-  description: Descirption on api methods used in processm.
+  description: Description of api methods used in processm.
   version: 1.0.0
 servers:
   - url: https://processtom.com/api/
@@ -668,7 +668,7 @@ components:
     AuthenticationResult:
       type: object
       properties:
-        AccessToken:
+        AuthorizationToken:
           type: string
     AuthenticationResultResponse:
       type: object
