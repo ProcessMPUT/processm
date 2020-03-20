@@ -668,7 +668,7 @@ components:
     AuthenticationResult:
       type: object
       properties:
-        AccessToken:
+        AuthorizationToken:
           type: string
     AuthenticationResultResponse:
       type: object
