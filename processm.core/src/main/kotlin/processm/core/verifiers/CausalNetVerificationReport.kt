@@ -30,4 +30,13 @@ class CausalNetVerificationReport internal constructor(verifier: CausalNetVerifi
      * In simple terms, B is A plus something.
      */
     val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> = verifier.validLoopFreeSequences
+
+    /**
+     * An approximation of the subset of all valid sequences without loops with a single, arbitrary serialization whenever there is paralellism involved.
+     *
+     * This employs an heuristic approach: partial sequence is discarded whenever we already visited the state reached by this partial sequence using exactly the same set of nodes as this partial sequence.
+     * That is, for the causal net `a (b || c) d` (where `||` denotes parallel execution) it will yield either `a c b d` or `a b c d`, but not both, because the second one will be discarded before `d`
+     * Conversely, for the causal net `a (b ^ c) d` (where `^` denotes XOR) both `a b d` and `a c d` will be returned
+     */
+    val validLoopFreeSequencesWithArbitrarySerialization = verifier.validLoopFreeSequencesWithArbitrarySerialization
 }

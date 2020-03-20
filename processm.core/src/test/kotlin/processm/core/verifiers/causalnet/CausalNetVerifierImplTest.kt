@@ -203,13 +203,14 @@ class CausalNetVerifierImplTest {
         assertTrue { v.validSequences.any() }
     }
 
+    val a = Node("a")
+    val b = Node("b")
+    val c = Node("c")
+    val d = Node("d")
+    val e = Node("e")
+
     @Test
     fun `Fig 3_16`() {
-        val a = Node("a")
-        val b = Node("b")
-        val c = Node("c")
-        val d = Node("d")
-        val e = Node("e")
         val model = MutableModel(start = a, end = e)
         model.addInstance(a, b, c, d, e)
         val ab = model.addDependency(a, b)
@@ -256,5 +257,35 @@ class CausalNetVerifierImplTest {
         val v = CausalNetVerifierImpl(model)
         assertFalse { v.isSound }
         assertTrue { v.validSequences.none() }
+    }
+
+    @Test
+    fun `sequences with arbitrary serialization in presence of paralleism`() {
+        val model = causalnet {
+            start = a
+            end = d
+            a splits b + c
+            b splits d
+            c splits d
+            a joins b
+            a joins c
+            b + c join d
+        }
+        assertEquals(1, CausalNetVerifierImpl(model).validLoopFreeSequencesWithArbitrarySerialization.count())
+    }
+
+    @Test
+    fun `sequences with arbitrary serialization in absence of paralleism`() {
+        val model = causalnet {
+            start = a
+            end = d
+            a splits b or c
+            b splits d
+            c splits d
+            a joins b
+            a joins c
+            b or c join d
+        }
+        assertEquals(2, CausalNetVerifierImpl(model).validLoopFreeSequencesWithArbitrarySerialization.count())
     }
 }
