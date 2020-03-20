@@ -14,8 +14,6 @@ object Main {
         try {
             loadConfiguration()
 
-            // Migrator.migrate()
-
             EnterpriseServiceBus().apply {
                 autoRegister()
                 startAll()

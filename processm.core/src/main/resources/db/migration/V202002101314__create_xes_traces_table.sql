@@ -1,9 +1,9 @@
 CREATE TABLE traces
 (
-    id              SERIAL PRIMARY KEY,
+    id              BIGSERIAL PRIMARY KEY,
     log_id          INTEGER NOT NULL,
     "concept:name"  TEXT,
-    "cost:total"    REAL,
+    "cost:total"    DOUBLE PRECISION,
     "cost:currency" TEXT,
     "identity:id"   TEXT,
     event_stream    BOOLEAN

@@ -99,6 +99,11 @@
             <artifactId>exposed-jdbc</artifactId>
             <version>${org.jetbrains.exposed.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -155,7 +160,41 @@
                             <onError>abort</onError>
                         </configuration>
                     </execution>
+                    <execution>
+                        <!-- Called by TeamCity before tests to prepare database.
+                        Requires property dbname to be set by command line. -->
+                        <id>drop-db</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <sqlCommand>DROP DATABASE "${dbname}";</sqlCommand>
+                            <autocommit>true</autocommit>
+                            <onError>abort</onError>
+                        </configuration>
+                    </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jvnet.jaxb2.maven2</groupId>
+                <artifactId>maven-jaxb2-plugin</artifactId>
+                <version>0.14.0</version>
+                <executions>
+                    <execution>
+                        <id>generate</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <schemaDirectory>src/bpmn</schemaDirectory>
+                    <schemaIncludes>
+                        <include>*.xsd</include>
+                    </schemaIncludes>
+                    <generatePackage>processm.core.models.bpmn.jaxb</generatePackage>
+                </configuration>
             </plugin>
         </plugins>
     </build>

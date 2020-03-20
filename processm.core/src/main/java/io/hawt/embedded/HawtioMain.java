@@ -168,7 +168,7 @@ public class HawtioMain {
             } else {
                 System.out.println("Attempting to open keystore with no password...");
             }
-            try (ServerConnector sslconn = new ServerConnector(server, new SslConnectionFactory(sslcontf, "http/1.1"), new HttpConnectionFactory(httpconf));) {
+            try (ServerConnector sslconn = new ServerConnector(server, new SslConnectionFactory(sslcontf, "http/1.1"), new HttpConnectionFactory(httpconf))) {
                 sslconn.setPort(options.getPort());
                 server.setConnectors(new Connector[]{sslconn});
 

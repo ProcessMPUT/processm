@@ -1,7 +1,9 @@
 package processm.core.log.attribute
 
 import kotlin.random.Random
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 internal class BoolAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
@@ -25,6 +27,11 @@ internal class BoolAttrTest {
     @Test
     fun `Field value with the correct value`() {
         assertEquals(attr1.value, true)
-        assertEquals(attr2.value, false)
+        assertEquals(attr2.getValue(), false)
+    }
+
+    @Test
+    fun `Attribute with 'boolean' as XES tag`() {
+        assertEquals(attr1.xesTag, "boolean")
     }
 }

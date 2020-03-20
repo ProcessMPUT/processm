@@ -6,7 +6,6 @@ import io.mockk.spyk
 import io.mockk.verifyOrder
 import processm.core.log.XESExtensionLoader.loadExtension
 import processm.core.log.extension.Extension
-import java.io.ByteArrayInputStream
 import kotlin.test.*
 
 class XESExtensionLoaderTest {
@@ -50,8 +49,7 @@ class XESExtensionLoaderTest {
 
     @Test
     fun `can read from the Internet with success`() {
-        val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
-        val content = """<?xml version="1.0" encoding="UTF-8" ?>
+        """<?xml version="1.0" encoding="UTF-8" ?>
             <xesextension name="Example" prefix="example" uri="http://example.com/example.xesext">
                 <event>
                     <int key="level">
@@ -59,20 +57,21 @@ class XESExtensionLoaderTest {
                     </int>
                 </event>
             </xesextension>
-        """
+        """.trimIndent().byteInputStream().use { content ->
+            val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
+            every { mock["openExternalStream"]("http://example.com/example.xesext") } returns content
 
-        every { mock["openExternalStream"]("http://example.com/example.xesext") } returns ByteArrayInputStream(content.toByteArray())
+            val result = mock.loadExtension("http://example.com/example.xesext")!!
 
-        val result = mock.loadExtension("http://example.com/example.xesext")!!
+            verifyOrder {
+                mock.loadExtension("http://example.com/example.xesext")
+                mock["openExternalStream"]("http://example.com/example.xesext")
+            }
 
-        verifyOrder {
-            mock.loadExtension("http://example.com/example.xesext")
-            mock["openExternalStream"]("http://example.com/example.xesext")
+            assertEquals(result.name, "Example")
+            assertEquals(result.prefix, "example")
+            assertEquals(result.uri, "http://example.com/example.xesext")
         }
-
-        assertEquals(result.name, "Example")
-        assertEquals(result.prefix, "example")
-        assertEquals(result.uri, "http://example.com/example.xesext")
     }
 
     @Test
@@ -92,8 +91,7 @@ class XESExtensionLoaderTest {
 
     @Test
     fun `xml with invalid format (invalid opening tag) - ignore whole file`() {
-        val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
-        val content = """<?xml version="1.0" encoding="UTF-8" ?>
+        """<?xml version="1.0" encoding="UTF-8" ?>
             <INVALID_TAG name="Example" prefix="example" uri="http://example.com/example.xesext">
                 <event>
                     <int key="level">
@@ -101,45 +99,41 @@ class XESExtensionLoaderTest {
                     </int>
                 </event>
             </INVALID_TAG>
-        """
+        """.trimIndent().byteInputStream().use { content ->
+            val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
+            every { mock["openExternalStream"]("http://example.com/invalid-resource.xesext") } returns content
 
-        every { mock["openExternalStream"]("http://example.com/invalid-resource.xesext") } returns ByteArrayInputStream(
-            content.toByteArray()
-        )
+            val result = mock.loadExtension("http://example.com/invalid-resource.xesext")
 
-        val result = mock.loadExtension("http://example.com/invalid-resource.xesext")
+            verifyOrder {
+                mock.loadExtension("http://example.com/invalid-resource.xesext")
+                mock["openExternalStream"]("http://example.com/invalid-resource.xesext")
+            }
 
-        verifyOrder {
-            mock.loadExtension("http://example.com/invalid-resource.xesext")
-            mock["openExternalStream"]("http://example.com/invalid-resource.xesext")
+            assertNull(result)
         }
-
-        assertNull(result)
     }
 
     @Test
     fun `receive html instead of xml file - ignore whole file`() {
-        val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
-        val content = "<html><body>Error page</body></html>"
+        "<html><body>Error page</body></html>".trimIndent().byteInputStream().use { content ->
+            val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
+            every { mock["openExternalStream"]("http://example.com/html-resource.xesext") } returns content
 
-        every { mock["openExternalStream"]("http://example.com/html-resource.xesext") } returns ByteArrayInputStream(
-            content.toByteArray()
-        )
+            val result = mock.loadExtension("http://example.com/html-resource.xesext")
 
-        val result = mock.loadExtension("http://example.com/html-resource.xesext")
+            verifyOrder {
+                mock.loadExtension("http://example.com/html-resource.xesext")
+                mock["openExternalStream"]("http://example.com/html-resource.xesext")
+            }
 
-        verifyOrder {
-            mock.loadExtension("http://example.com/html-resource.xesext")
-            mock["openExternalStream"]("http://example.com/html-resource.xesext")
+            assertNull(result)
         }
-
-        assertNull(result)
     }
 
     @Test
     fun `xml with invalid tag inside - ignore it in structure`() {
-        val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
-        val content = """<?xml version="1.0" encoding="UTF-8" ?>
+        """<?xml version="1.0" encoding="UTF-8" ?>
             <xesextension name="Example" prefix="example" uri="http://example.com/invalid-mapping-tag.xesext">
                 <event>
                     <int key="level">
@@ -147,34 +141,32 @@ class XESExtensionLoaderTest {
                     </int>
                 </event>
             </xesextension>
-        """
+        """.trimIndent().byteInputStream().use { content ->
+            val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
+            every { mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext") } returns content
 
-        every { mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext") } returns ByteArrayInputStream(
-            content.toByteArray()
-        )
+            val result = mock.loadExtension("http://example.com/invalid-mapping-tag.xesext")!!
 
-        val result = mock.loadExtension("http://example.com/invalid-mapping-tag.xesext")!!
+            verifyOrder {
+                mock.loadExtension("http://example.com/invalid-mapping-tag.xesext")
+                mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext")
+            }
 
-        verifyOrder {
-            mock.loadExtension("http://example.com/invalid-mapping-tag.xesext")
-            mock["openExternalStream"]("http://example.com/invalid-mapping-tag.xesext")
+            assertEquals(result.name, "Example")
+            assertEquals(result.prefix, "example")
+            assertEquals(result.uri, "http://example.com/invalid-mapping-tag.xesext")
+
+            val levelAttr = result.event.getValue("level")
+
+            assertEquals(levelAttr.key, "level")
+            assertEquals(levelAttr.type, "int")
+            assertEquals(levelAttr.aliases.size, 0)
         }
-
-        assertEquals(result.name, "Example")
-        assertEquals(result.prefix, "example")
-        assertEquals(result.uri, "http://example.com/invalid-mapping-tag.xesext")
-
-        val levelAttr = result.event.getValue("level")
-
-        assertEquals(levelAttr.key, "level")
-        assertEquals(levelAttr.type, "int")
-        assertEquals(levelAttr.aliases.size, 0)
     }
 
     @Test
     fun `load extensions only one and store it in memory to reduce memory usage`() {
-        val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
-        val content = """<?xml version="1.0" encoding="UTF-8" ?>
+        """<?xml version="1.0" encoding="UTF-8" ?>
             <xesextension name="Once" prefix="once" uri="http://example.com/only-once.xesext">
                 <event>
                     <int key="level">
@@ -182,24 +174,26 @@ class XESExtensionLoaderTest {
                     </int>
                 </event>
             </xesextension>
-        """
-        every { mock["openExternalStream"]("http://example.com/only-once.xesext") } returns ByteArrayInputStream(content.toByteArray())
+        """.trimIndent().byteInputStream().use { content ->
+            val mock = spyk<XESExtensionLoader>(recordPrivateCalls = true)
+            every { mock["openExternalStream"]("http://example.com/only-once.xesext") } returns content
 
-        mock.loadExtension("http://example.com/only-once.xesext")!!
-        verifyOrder {
-            mock.loadExtension("http://example.com/only-once.xesext")
-            mock["openExternalStream"]("http://example.com/only-once.xesext")
+            mock.loadExtension("http://example.com/only-once.xesext")!!
+            verifyOrder {
+                mock.loadExtension("http://example.com/only-once.xesext")
+                mock["openExternalStream"]("http://example.com/only-once.xesext")
+            }
+
+            val fromMemory = mock.loadExtension("http://example.com/only-once.xesext")!!
+            verifyOrder {
+                mock.loadExtension("http://example.com/only-once.xesext")
+                mock["openExternalStream"]("http://example.com/only-once.xesext")?.wasNot(Called)
+            }
+
+            assertEquals(fromMemory.name, "Once")
+            assertEquals(fromMemory.prefix, "once")
+            assertEquals(fromMemory.uri, "http://example.com/only-once.xesext")
         }
-
-        val fromMemory = mock.loadExtension("http://example.com/only-once.xesext")!!
-        verifyOrder {
-            mock.loadExtension("http://example.com/only-once.xesext")
-            mock["openExternalStream"]("http://example.com/only-once.xesext")?.wasNot(Called)
-        }
-
-        assertEquals(fromMemory.name, "Once")
-        assertEquals(fromMemory.prefix, "once")
-        assertEquals(fromMemory.uri, "http://example.com/only-once.xesext")
     }
 
     @Test
