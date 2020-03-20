@@ -105,8 +105,23 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
                     }
     }
 
-    private fun isBoringSuperset(subset: State, superset: State): Boolean {
-        return subset.uniqueSet() == superset.uniqueSet() && superset.containsAll(subset)
+    private class CausalNetSequenceWithHash(other: CausalNetSequenceWithHash? = null) {
+        private val _data: ArrayList<ActivityBinding> = ArrayList(other?._data ?: emptyList())
+        private val states: HashMap<Int, ArrayList<State>> = HashMap(other?.states ?: emptyMap())
+        val data: List<ActivityBinding> = Collections.unmodifiableList(_data)
+
+        fun add(ab: ActivityBinding) {
+            _data.add(ab)
+            states.getOrPut(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
+        }
+
+        fun containsBoringSubset(superset: State): Boolean {
+            val candidates = states[superset.uniqueSet().hashCode()]
+            if (!candidates.isNullOrEmpty()) {
+                return candidates.any { superset.containsAll(it) }
+            }
+            return false
+        }
     }
 
     private val cache = HashMap<State, List<ActivityBinding>>()
@@ -114,13 +129,13 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
      */
-    private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): List<ActivityBinding> {
-        val currentState = input.last().state
+    private fun extensions(input: CausalNetSequenceWithHash, avoidLoops: Boolean): List<ActivityBinding> {
+        val currentState = input.data.last().state
         if (useCache) {
             val fromCache = cache[currentState]
             if (fromCache != null)
                 return if (avoidLoops)
-                    fromCache.filter { ab -> input.all { !isBoringSuperset(it.state, ab.state) } }
+                    fromCache.filter { ab -> !input.containsBoringSubset(ab.state) }
                 else
                     fromCache
         }
@@ -147,7 +162,7 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
             cache[currentState] = result
         }
         return if (avoidLoops)
-            result.filter { ab -> input.all { !isBoringSuperset(it.state, ab.state) } }
+            result.filter { ab -> !input.containsBoringSubset(ab.state) }
         else
             result
     }
@@ -159,11 +174,13 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
      * To circumvent this, this function uses breadth-first search (BFS) and lazy evaluation
      */
     private fun computeSetOfValidSequences(avoidLoops: Boolean): Sequence<CausalNetSequence> {
-        val queue = ArrayDeque<CausalNetSequence>()
+        val queue = ArrayDeque<CausalNetSequenceWithHash>()
         queue.addAll(model
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
-                listOf(ActivityBinding(model.start, setOf(), split.targets, State()))
+                val tmp = CausalNetSequenceWithHash()
+                tmp.add(ActivityBinding(model.start, setOf(), split.targets, State()))
+                tmp
             })
         return sequence {
             while (queue.isNotEmpty()) {
@@ -171,9 +188,12 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
                 extensions(current, avoidLoops).forEach { last ->
                     if (last.a == model.end) {
                         if (last.state.isEmpty())
-                            yield(current + last)
-                    } else
-                        queue.addLast(current + last)
+                            yield(current.data + last)
+                    } else {
+                        val next = CausalNetSequenceWithHash(current)
+                        next.add(last)
+                        queue.addLast(next)
+                    }
                 }
             }
         }
