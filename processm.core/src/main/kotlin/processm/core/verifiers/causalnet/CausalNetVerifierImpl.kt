@@ -15,7 +15,7 @@ typealias CausalNetSequence = List<ActivityBinding>
  *
  * Computations are potentially expensive, but to minimize impact, everything is initialized lazily and then stored
  */
-internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
+class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
 
     /**
      * By definition, a causal net model is safe
