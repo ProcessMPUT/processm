@@ -33,6 +33,19 @@ class CausalNetTraceComparisonTest {
         b joins d
     }
 
+    val model1c = causalnet {
+        start splits a
+        start joins a
+        a splits b
+        b splits c
+        c splits d
+        a joins b
+        b joins c
+        c joins d
+        d splits end
+        d joins end
+    }
+
     val model2 = causalnet {
         start = a
         end = d
@@ -85,5 +98,11 @@ class CausalNetTraceComparisonTest {
         assertTrue { cmp.leftSubsumedByRight }
         assertTrue { cmp.rightSubsumedByLeft }
         assertTrue { cmp.equivalent }
+    }
+
+    @Test
+    fun `ignore special`() {
+        assertTrue { CausalNetTraceComparison(model1a, model1c).equivalent }
+        assertTrue { CausalNetTraceComparison(model1c, model1a).equivalent }
     }
 }
