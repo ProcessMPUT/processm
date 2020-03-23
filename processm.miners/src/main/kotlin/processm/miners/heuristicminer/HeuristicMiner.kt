@@ -76,22 +76,30 @@ class HeuristicMiner(
             .filter { (a, b) -> dependency(a, b) >= minDependency }
             .forEach { (a, b) -> model.addDependency(a, b) }
 
-        println("TRACE " + (nodeTrace.map { it.activity }.toString()))
-        mineBindings(listOf(start) + nodeTrace + listOf(end))
+        val nodeTraceWithLimits = listOf(start) + nodeTrace + listOf(end)
+        mineBindings(nodeTraceWithLimits)
+        longDistanceDependencyMiner.processTrace(nodeTraceWithLimits)
+        while (true) {
+            val ltdeps = longDistanceDependencyMiner.mine(model)
+            if (ltdeps.isNotEmpty()) {
+                ltdeps.forEach { dep ->
+                    model.addDependency(dep.first, dep.second)
+                    model.clearBindingsFor(dep.first)
+                    model.clearBindingsFor(dep.second)
+                }
+                val affectedNodes = (ltdeps.map { it.first } + ltdeps.map { it.second }).toSet()
+                val affectedTraces = oldBindings
+                    .filter { binding ->
+                        binding.dependencies.any { affectedNodes.contains(it.source) || affectedNodes.contains(it.target) }
+                    }
+                    .flatMap { traceRegister[it] }
+                    .toSet()
+                replay(affectedTraces)
+                updateBindings()
+            } else
+                break
+        }
         println(model)
-//        longDistanceDependencyMiner.processTrace(nodeTrace)
-//        while (true) {
-//            val ltdeps = longDistanceDependencyMiner.mine(model)
-//            if (ltdeps.isNotEmpty()) {
-//                ltdeps.forEach { dep ->
-//                    model.addDependency(dep.first, dep.second)
-//                    model.clearBindingsFor(dep.first)
-//                    model.clearBindingsFor(dep.second)
-//                }
-//                mineBindings(nodeTrace)
-//            } else
-//                break
-//        }
     }
 
     internal val directlyFollows = Counter<Pair<Node, Node>>()
@@ -108,10 +116,7 @@ class HeuristicMiner(
         }
     }
 
-    private var computeBindingsCallCtr = 0
-
     private fun computeBindings(trace: List<Node>): List<Binding> {
-        computeBindingsCallCtr += 1
         var currentStates =
             sequenceOf(ReplayTrace(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
         for (currentNode in trace) {
@@ -183,6 +188,33 @@ class HeuristicMiner(
     private var unableToReplay = ArrayList<List<Node>>()
     private var oldBindings = setOf<Binding>()
 
+    private fun replay(toReplay: Collection<List<Node>>) {
+        traceRegister.removeAll(toReplay)
+        unableToReplay.addAll(toReplay)
+        val i = unableToReplay.iterator()
+        while (i.hasNext()) {
+            val trace = i.next()
+            val bindings = computeBindings(trace)
+            if (bindings.isNotEmpty()) {
+                println("REPLAYING $trace OK")
+                traceRegister.register(bindings, trace)
+                i.remove()
+            } else
+                println("REPLAYING $trace FAILED")
+        }
+    }
+
+    private fun updateBindings() {
+        model.clearBindings()
+        val bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }
+        oldBindings = bestBindings
+        for (binding in bestBindings)
+            if (binding is Split)
+                model.addSplit(binding)
+            else
+                model.addJoin(binding as Join)
+    }
+
     private fun mineBindings(nodeTrace: List<Node>) {
         model.clearBindings()
         val bindings = computeBindings(nodeTrace)
@@ -200,60 +232,24 @@ class HeuristicMiner(
                 .filter { binding ->
                     binding.dependencies.any { dependenciesOfNewBindings.contains(it) }
                 }
+            println("OLD $old")
+            println("NEW $new")
+            println("BWDONB $bindingsWithDependenciesOfNewBindings")
+            println("BWUD $bindingsWithUnavailableDependencies")
 
             val toReplay = (bindingsWithUnavailableDependencies + bindingsWithDependenciesOfNewBindings)
                 .flatMap { traceRegister[it] }
                 .toSet()
 
-            traceRegister.removeAll(toReplay)
             if (unableToReplay.isNotEmpty() || toReplay.isNotEmpty()) {
-                unableToReplay.addAll(toReplay)
-                val i = unableToReplay.iterator()
-                while (i.hasNext()) {
-                    val trace = i.next()
-                    val bindings = computeBindings(trace)
-                    if (bindings.isNotEmpty()) {
-                        println("REPLAYING $trace OK")
-                        traceRegister.register(bindings, trace)
-                        i.remove()
-                    } else
-                        println("REPLAYING $trace FAILED")
-                }
-                bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }
+                replay(toReplay)
             }
-            check(bestBindings.all { availableDependencies.containsAll(it.dependencies) })
-            oldBindings = bestBindings
-            for (binding in bestBindings)
-                if (binding is Split)
-                    model.addSplit(binding)
-                else
-                    model.addJoin(binding as Join)
+            updateBindings()
         } else {
             println("FAILED $nodeTrace")
             unableToReplay.add(nodeTrace)
         }
     }
-
-
-//        val logWithNodes = log.traces
-//            .map { trace -> listOf(start) + trace.events.map { e -> node(e) }.toList() + listOf(end) }
-//        logWithNodes.forEach { trace ->
-//            longDistanceDependencyMiner.processTrace(trace)
-//        }
-//        mineBindings(logWithNodes, model)
-//        while (true) {
-//            val ltdeps = longDistanceDependencyMiner.mine(model)
-//            if (ltdeps.isNotEmpty()) {
-//                ltdeps.forEach { dep ->
-//                    model.addDependency(dep.first, dep.second)
-//                    model.clearBindingsFor(dep.first)
-//                    model.clearBindingsFor(dep.second)
-//                }
-//                mineBindings(logWithNodes, model)
-//            } else
-//                break
-//        }
-
 
     private val model = MutableModel()
 
