@@ -10,7 +10,8 @@ import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSel
 import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-import processm.miners.heuristicminer.traceregisters.AdfixTraceRegister
+import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
+import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.miners.heuristicminer.traceregisters.TraceRegister
 
 internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> {
@@ -42,7 +43,8 @@ class HeuristicMiner(
     val minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
+    val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector(),
+    val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
 ) {
 
     init {
@@ -179,46 +181,31 @@ class HeuristicMiner(
     }
 
     private var unableToReplay = ArrayList<List<Node>>()
-
-    class HashMapWithDefault<K, V>(private val default: () -> V) : HashMap<K, V>() {
-        override operator fun get(key: K): V {
-            val result = super.get(key)
-            if (result == null) {
-                val new = default()
-                this[key] = new
-                return new
-            } else {
-                return result
-            }
-        }
-    }
-
-    private val bindingCounter: TraceRegister = AdfixTraceRegister()
     private var oldBindings = setOf<Binding>()
 
     private fun mineBindings(nodeTrace: List<Node>) {
         model.clearBindings()
         val bindings = computeBindings(nodeTrace)
         if (bindings.isNotEmpty()) {
-            bindingCounter.registerTrace(bindings, nodeTrace)
-            var bestBindings = bindingCounter.selectBest { it.size >= minBindingSupport }
+            traceRegister.register(bindings, nodeTrace)
+            var bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }
             val availableDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
 
-            val tmp = (bestBindings - oldBindings)
-                .flatMap { newBinding -> newBinding.dependencies }
-                .flatMap { dep -> bestBindings.intersect(oldBindings).filter { it.dependencies.contains(dep) } }
+            val bindingsWithUnavailableDependencies =
+                bestBindings.filter { !availableDependencies.containsAll(it.dependencies) }.toSet()
+
+            val (old, new) = bestBindings.partition { oldBindings.contains(it) }
+            val dependenciesOfNewBindings = new.flatMap { it.dependencies }.toSet()
+            val bindingsWithDependenciesOfNewBindings = old
+                .filter { binding ->
+                    binding.dependencies.any { dependenciesOfNewBindings.contains(it) }
+                }
+
+            val toReplay = (bindingsWithUnavailableDependencies + bindingsWithDependenciesOfNewBindings)
+                .flatMap { traceRegister[it] }
                 .toSet()
-                .flatMap { bindingCounter[it] }
-                .toSet()
 
-            println("REDOING ${tmp.size}")
-
-            val toReplay = bestBindings
-                .filter { !availableDependencies.containsAll(it.dependencies) }
-                .flatMap { bindingCounter[it] }
-                .toSet() + tmp
-
-            bindingCounter.removeAll(toReplay)
+            traceRegister.removeAll(toReplay)
             if (unableToReplay.isNotEmpty() || toReplay.isNotEmpty()) {
                 unableToReplay.addAll(toReplay)
                 val i = unableToReplay.iterator()
@@ -227,14 +214,14 @@ class HeuristicMiner(
                     val bindings = computeBindings(trace)
                     if (bindings.isNotEmpty()) {
                         println("REPLAYING $trace OK")
-                        bindingCounter.registerTrace(bindings, trace)
+                        traceRegister.register(bindings, trace)
                         i.remove()
                     } else
                         println("REPLAYING $trace FAILED")
                 }
-                bestBindings = bindingCounter.selectBest { it.size >= minBindingSupport }
+                bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }
             }
-            assert(bestBindings.all { availableDependencies.containsAll(it.dependencies) })
+            check(bestBindings.all { availableDependencies.containsAll(it.dependencies) })
             oldBindings = bestBindings
             for (binding in bestBindings)
                 if (binding is Split)

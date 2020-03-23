@@ -3,10 +3,29 @@ package processm.miners.heuristicminer.traceregisters
 import processm.core.models.causalnet.Binding
 import processm.core.models.causalnet.Node
 
+typealias NodeTrace = List<Node>
+
+/**
+ * For a binding, stores a collection of somehow relevant traces
+ */
 interface TraceRegister {
-    fun registerTrace(bindings: List<Binding>, nodeTrace: List<Node>)
-    fun selectBest(selector: (Set<List<Node>>) -> Boolean): Set<Binding>
-    fun removeAll(traces:Collection<List<Node>>)
-    operator fun get(binding: Binding): Set<List<Node>>
-    fun report()    //TODO remove this
+    /**
+     * Registers a trace [nodeTrace] for the give collection of bindings [bindings]
+     */
+    fun register(bindings: List<Binding>, nodeTrace: NodeTrace)
+
+    /**
+     * Returns bindings such that [selector] returned `true` for the collected traces corresponding to the considered binding
+     */
+    fun selectBest(selector: (Set<NodeTrace>) -> Boolean): Set<Binding>
+
+    /**
+     * Removes given traces from the register
+     */
+    fun removeAll(traces: Collection<NodeTrace>)
+
+    /**
+     * Returns the traces relevant for the binding, possibly an empty set.
+     */
+    operator fun get(binding: Binding): Set<NodeTrace>
 }
