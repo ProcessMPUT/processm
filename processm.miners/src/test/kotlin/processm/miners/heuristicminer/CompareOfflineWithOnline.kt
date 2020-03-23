@@ -1,7 +1,10 @@
 package processm.miners.heuristicminer
 
+import org.junit.jupiter.api.DynamicContainer
+import org.junit.jupiter.api.DynamicNode
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import processm.core.comparators.CausalNetTraceComparison
 import processm.core.helpers.allPermutations
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
@@ -10,10 +13,13 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.RandomGenerator
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.CausalNetVerifier
+import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import javax.management.DynamicMBean
 import kotlin.random.Random
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CompareOfflineWithOnline {
 
@@ -197,28 +203,80 @@ class CompareOfflineWithOnline {
         })
     }
 
-    @TestFactory
-    fun factory(): List<DynamicTest> {
-        //these few are painful to wait for due to the verifier being slow
-        val verifierIsSlow = setOf(19, 54, 84, 95, 103, 188, 194, 195)
-        val temporarilyIgnored = setOf(94, 87, 66, 45)
-        val seeds = List(240) { it } - verifierIsSlow
-        return seeds.flatMap { seed ->
-            val log = logFromModel(RandomGenerator(Random(seed)).generate())
-            val offlineSeqs = seqs(OfflineHeuristicMiner(log).result)
+    private fun helper(seed: Int, nNodes:Int): DynamicNode? {
+        val reference = RandomGenerator(Random(seed), nNodes = nNodes).generate()
+        val log = logFromModel(reference)
+        val offline = OfflineHeuristicMiner(
+            log,
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        ).result
+        if (CausalNetTraceComparison(reference, offline).equivalent) {
             if (log.traces.count() <= 4) {
-                log.traces.toList().allPermutations().mapIndexed { idx, traces ->
-                    DynamicTest.dynamicTest("$seed/$idx") {
-                        val onlineSeqs = online(Log(traces.asSequence()))
-                        assertEquals(offlineSeqs, onlineSeqs)
-                    }
-                }
+                return DynamicContainer.dynamicContainer("seed=$seed",
+                    log.traces.toList().allPermutations().mapIndexed { idx, traces ->
+                        DynamicTest.dynamicTest("$idx") {
+                            val hm = HeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+                            hm.processLog(log)
+                            val online = hm.result
+                            assertTrue { CausalNetTraceComparison(online, offline).equivalent }
+                        }
+                    })
             } else {
-                listOf(DynamicTest.dynamicTest(seed.toString()) {
-                    val onlineSeqs = online(log)
-                    assertEquals(offlineSeqs, onlineSeqs)
-                })
+                return DynamicTest.dynamicTest("seed=$seed") {
+                    val hm = HeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+                    hm.processLog(log)
+                    val online = hm.result
+                    assertTrue { CausalNetTraceComparison(online, offline).equivalent }
+                }
             }
+        } else {
+            return null
         }
+    }
+
+    @TestFactory
+    fun `nNodes=5`(): Iterator<DynamicNode> {
+        return List(1000) { it }.asSequence().map { seed -> helper(seed, 5) }.filterNotNull().iterator()
+    }
+
+//    @Ignore("Dunno, my IntelliJ behaves strangely with this enabled")
+//    @TestFactory
+//    fun `nNodes=7`(): Iterator<DynamicNode> {
+//        return List(100) { it }.asSequence().map { seed -> helper(seed, 7) }.filterNotNull().iterator()
+//    }
+//
+//    @TestFactory
+//    fun `nNodes=9`(): Iterator<DynamicNode> {
+//        return List(100) { it }.asSequence().map { seed -> helper(seed, 9) }.filterNotNull().iterator()
+//    }
+
+    @Test
+    fun `tmp`() {
+        val random = RandomGenerator(Random(53), nNodes = 5).generate()
+        val log = logFromModel(random)
+        val offline = OfflineHeuristicMiner(
+            log,
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        ).result
+        val hm = HeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+        hm.processLog(log)
+        val online = hm.result
+        val cmp1=CausalNetTraceComparison(random, offline)
+        val cmp2=CausalNetTraceComparison(random, online)
+        val cmp3=CausalNetTraceComparison(online, offline)
+        println("RANDOM")
+        println(cmp1.leftTraces)
+        println(random)
+        println("OFFLINE")
+        println(cmp1.rightTraces)
+        println(offline)
+        println("ONLINE")
+        println(cmp3.leftTraces)
+        println(online)
+        println("RANDOM == OFFLINE ${cmp1.equivalent}")
+        println("RANDOM == ONLINE ${cmp2.equivalent}")
+        println("OFFLINE SOUND ${cmp1.rightVerficiationReport.isSound}")
+        println("ONLINE == OFFLINE ${cmp3.equivalent}")
+        assertTrue { CausalNetTraceComparison(online, offline).equivalent }
     }
 }

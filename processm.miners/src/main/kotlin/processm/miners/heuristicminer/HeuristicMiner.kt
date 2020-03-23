@@ -10,6 +10,8 @@ import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSel
 import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
+import kotlin.math.max
+import kotlin.math.min
 
 internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> {
     return this.flatMap { a -> right.map { b -> a to b } }
@@ -72,9 +74,8 @@ class HeuristicMiner(
             .filter { (a, b) -> dependency(a, b) >= minDependency }
             .forEach { (a, b) -> model.addDependency(a, b) }
 
-        model.clearBindings()
         println("TRACE " + (nodeTrace.map { it.activity }.toString()))
-        mineBindings(nodeTrace)
+        mineBindings(listOf(start) + nodeTrace + listOf(end))
         println(model)
 //        longDistanceDependencyMiner.processTrace(nodeTrace)
 //        while (true) {
@@ -105,7 +106,10 @@ class HeuristicMiner(
         }
     }
 
+    private var computeBindingsCallCtr = 0
+
     private fun computeBindings(trace: List<Node>): List<Binding> {
+        computeBindingsCallCtr += 1
         var currentStates =
             sequenceOf(ReplayTrace(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
         for (currentNode in trace) {
@@ -190,41 +194,86 @@ class HeuristicMiner(
     }
 
     protected val bindingCounter = HashMapWithDefault<Binding, HashSet<List<Node>>> { HashSet() }
+    private var oldBindings = setOf<Binding>()
+    private var ignoredCtr = 0
 
+    //TODO jak wybierac ktore traces mozna bezpiecznie zapomniec?
+    private fun registerTrace(bindings: List<Binding>, nodeTrace: List<Node>) {
+        var ignored = true
+        for (binding in bindings) {
+//            if (bindingCounter[binding].isNotEmpty()) {
+//                if (bindingCounter[binding].any { it.size < nodeTrace.size })
+//                    continue
+//            }
+            require(binding is Split || binding is Join)
+            if (binding is Split) {
+                val idx = nodeTrace.lastIndexOf(binding.source)
+                assert(idx >= 0)
+                val suffix = nodeTrace.subList(idx, nodeTrace.size)
+                if (bindingCounter[binding].any { it.subList(max(it.size - suffix.size, 0), it.size) == suffix })
+                    continue
+            } else {
+                val idx = nodeTrace.indexOf((binding as Join).target)
+                assert(idx >= 0)
+                val prefix = nodeTrace.subList(0, idx)
+                if (bindingCounter[binding].any { it.subList(0, min(idx, it.size)) == prefix })
+                    continue
+            }
+//            bindingCounter[binding].clear()
+            bindingCounter[binding].add(nodeTrace)
+            ignored = false
+        }
+        if (ignored)
+            ignoredCtr += 1
+    }
 
     private fun mineBindings(nodeTrace: List<Node>) {
-        val bindings = computeBindings(listOf(start) + nodeTrace + listOf(end))
+        model.clearBindings()
+        val bindings = computeBindings(nodeTrace)
         if (bindings.isNotEmpty()) {
-            for (binding in bindings)
-                bindingCounter[binding].add(nodeTrace)
+            registerTrace(bindings, nodeTrace)
             var bestBindings = bindingCounter.filterValues { it.size >= minBindingSupport }.keys
             val availableDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
+
+            val tmp = (bestBindings - oldBindings)
+                .flatMap { newBinding -> newBinding.dependencies }
+                .flatMap { dep -> bestBindings.intersect(oldBindings).filter { it.dependencies.contains(dep) } }
+                .toSet()
+                .flatMap { bindingCounter.getValue(it) }
+                .toSet()
+
+            println("REDOING ${tmp.size}")
+
             val toReplay = bestBindings
                 .filter { !availableDependencies.containsAll(it.dependencies) }
                 .flatMap { bindingCounter[it] }
-                .toSet()
+                .toSet() + tmp
+
             bindingCounter.values.forEach { it.removeAll(toReplay) }
-            if (toReplay.isNotEmpty()) {
+            if (unableToReplay.isNotEmpty() || toReplay.isNotEmpty()) {
                 unableToReplay.addAll(toReplay)
                 val i = unableToReplay.iterator()
                 while (i.hasNext()) {
                     val trace = i.next()
-                    val bindings = computeBindings(listOf(start) + trace + listOf(end))
+                    val bindings = computeBindings(trace)
                     if (bindings.isNotEmpty()) {
-                        for (binding in bindings)
-                            bindingCounter[binding].add(trace)
+                        println("REPLAYING $trace OK")
+                        registerTrace(bindings, trace)
                         i.remove()
-                    }
+                    } else
+                        println("REPLAYING $trace FAILED")
                 }
                 bestBindings = bindingCounter.filterValues { it.size >= minBindingSupport }.keys
             }
             assert(bestBindings.all { availableDependencies.containsAll(it.dependencies) })
+            oldBindings = bestBindings
             for (binding in bestBindings)
                 if (binding is Split)
                     model.addSplit(binding)
                 else
                     model.addJoin(binding as Join)
         } else {
+            println("FAILED $nodeTrace")
             unableToReplay.add(nodeTrace)
         }
     }
