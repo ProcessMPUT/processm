@@ -1,14 +1,18 @@
 package processm.miners.heuristicminer
 
+import org.junit.jupiter.api.Assumptions
+import processm.core.comparators.CausalNetTraceComparison
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Join
-import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.Split
+import processm.core.models.causalnet.*
+import processm.core.verifiers.CausalNetVerifier
+import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
+import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class OfflineHeuristicMinerTest {
 
@@ -17,6 +21,8 @@ class OfflineHeuristicMinerTest {
     val c = Node("c")
     val d = Node("d")
     val e = Node("e")
+    val f = Node("f")
+    val g = Node("g")
 
     @Test
     fun `a or ab or abc`() {
@@ -76,5 +82,43 @@ class OfflineHeuristicMinerTest {
             assertEquals(setOf(Split(setOf(Dependency(c, b))), Split(setOf(Dependency(c, d)))), splits[c])
             assertEquals(setOf(Split(setOf(Dependency(b, c)))), splits[b])
         }
+    }
+
+    @Ignore("Known to fail. HM is unable to recreate the model under both MostGreedyHypothesisSelector and MostParsimoniousHypothesisSelector")
+    @Test
+    fun `try to recreate`() {
+        val reference = causalnet {
+            start = a
+            end = g
+            a splits d or e or f
+            d splits e + f
+            e splits f or g
+            f splits g
+            a joins d
+            a or d join e
+            a or d or d + e or e join f
+            e or f or e + f join g
+        }
+        val v = CausalNetVerifier().verify(reference)
+        Assumptions.assumeTrue(v.isSound)
+        Assumptions.assumeTrue(v.validSequences.map { seq -> seq.map { it.a } }.toSet().size == 5)
+        v.validSequences.map { seq -> seq.map { it.a } }.toSet().forEach { println(it) }
+        val log = Helper.logFromModel(reference)
+        val hmp = OfflineHeuristicMiner(
+            log,
+            hypothesisSelector = MostParsimoniousHypothesisSelector(),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        val hmg = OfflineHeuristicMiner(
+            log,
+            hypothesisSelector = MostGreedyHypothesisSelector(),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        val cmp1 = CausalNetTraceComparison(reference, hmp.result)
+        val cmp2 = CausalNetTraceComparison(reference, hmg.result)
+        println(reference)
+        println(hmp.result)
+        println(hmg.result)
+        assertTrue { cmp1.equivalent || cmp2.equivalent }
     }
 }
