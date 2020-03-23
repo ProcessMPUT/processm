@@ -6,7 +6,6 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.core.models.causalnet.mock.Event
 import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.math.absoluteValue
 import kotlin.test.Test

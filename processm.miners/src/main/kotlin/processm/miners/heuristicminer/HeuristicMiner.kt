@@ -47,10 +47,6 @@ class HeuristicMiner(
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
 ) {
 
-    init {
-//        (logger() as Logger).level = Level.TRACE
-    }
-
     fun processLog(log: Log) {
         for (trace in log.traces)
             processTrace(trace)
