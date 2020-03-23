@@ -1,8 +1,8 @@
 package processm.miners.heuristicminer.longdistance
 
 import org.apache.commons.collections4.bidimap.DualHashBidiMap
+import processm.core.helpers.allSubsets
 import processm.core.models.causalnet.Node
-import processm.miners.heuristicminer.allSubsets
 import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
 import java.io.BufferedReader
 import java.io.FileOutputStream
@@ -130,8 +130,8 @@ private class SPMFLongDistanceDependencyMiner(
         val deps = tmp
             .mapValues { (k, v) ->
                 val redundant =
-                    k.allSubsets().filter { it != k }.toList().flatMap { tmp.getOrDefault(it, setOf()) }.toSet()
-                val vredundant = v.allSubsets().filter { it != v }.toList()
+                    k.allSubsets().map { it.toSet() }.filter { it != k }.toList().flatMap { tmp.getOrDefault(it, setOf()) }.toSet()
+                val vredundant = v.allSubsets().map { it.toSet() }.filter { it != v }.toList()
                     .flatMap { tmp.getOrDefault(it, setOf()) }.toSet()
                 v - redundant - vredundant
             }

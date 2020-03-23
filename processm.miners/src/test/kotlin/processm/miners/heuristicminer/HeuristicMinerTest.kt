@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer
 
+import processm.core.helpers.allSubsets
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
@@ -50,17 +51,5 @@ class HeuristicMinerTest {
             assertEquals(joins[b], setOf(Join(setOf(Dependency(start, b))), Join(setOf(Dependency(a, b)))))
             assertEquals(joins[c], setOf(Join(setOf(Dependency(start, c))), Join(setOf(Dependency(b, c)))))
         }
-    }
-
-    @Test
-    fun `all subsets`() {
-        assertEquals(
-            setOf(
-                setOf(),
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("b", "c"),
-                setOf("a", "b", "c")
-            ), setOf("a", "b", "c").allSubsets().toSet()
-        )
     }
 }

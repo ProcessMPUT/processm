@@ -59,18 +59,6 @@ class OfflineHeuristicMinerTest {
     }
 
     @Test
-    fun `all subsets`() {
-        assertEquals(
-            setOf(
-                setOf(),
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("b", "c"),
-                setOf("a", "b", "c")
-            ), setOf("a", "b", "c").allSubsets().toSet()
-        )
-    }
-
-    @Test
     fun `l2 loop`() {
         val log = Log(listOf(
             "abcd" to 1,

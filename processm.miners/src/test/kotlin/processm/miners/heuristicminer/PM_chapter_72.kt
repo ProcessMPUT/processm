@@ -1,5 +1,7 @@
 package processm.miners.heuristicminer
 
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
@@ -8,7 +10,6 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.math.absoluteValue
-import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -40,9 +41,34 @@ class PM_chapter_72 {
     ).asSequence()
         .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
 
-    @Test
-    fun `online - directly follows`() {
-        val hm = OnlineHeuristicMiner()
+    @Suppress("unused")
+    companion object {
+        @JvmStatic
+        fun hmFactory(minDirectlyFollows: Int, minDependency: Double): List<AbstractHeuristicMiner> =
+            listOf(
+                OnlineHeuristicMiner(minDirectlyFollows, minDependency),
+                OfflineHeuristicMiner(minDirectlyFollows, minDependency)
+            )
+
+        @JvmStatic
+        fun hmFactory(): List<AbstractHeuristicMiner> = hmFactory(1, 1e-5)
+
+        @JvmStatic
+        fun hmFactory_5_9(): List<AbstractHeuristicMiner> =
+            hmFactory(5, .9)
+
+        @JvmStatic
+        fun hmFactory_2_7(): List<AbstractHeuristicMiner> =
+            listOf(
+                OnlineHeuristicMiner(2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector()),
+                OfflineHeuristicMiner(2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector())
+            )
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("hmFactory")
+    fun `directly follows`(hm: AbstractHeuristicMiner) {
         hm.processLog(log)
         assertEquals(
             mapOf(
@@ -62,9 +88,12 @@ class PM_chapter_72 {
         )
     }
 
-    @Test
-    fun `dependency measure`() {
-        val hm = OnlineHeuristicMiner()
+    internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> =
+        this.flatMap { a -> right.map { b -> a to b } }
+
+    @ParameterizedTest
+    @MethodSource("hmFactory")
+    fun `dependency measure`(hm: AbstractHeuristicMiner) {
         hm.processLog(log)
         val dm = listOf(
             listOf(0.0, 0.92, 0.92, 0.93, 0.83),
@@ -79,9 +108,9 @@ class PM_chapter_72 {
         }
     }
 
-    @Test
-    fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`() {
-        val hm = OnlineHeuristicMiner(2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector())
+    @ParameterizedTest
+    @MethodSource("hmFactory_2_7")
+    fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`(hm: AbstractHeuristicMiner) {
         hm.processLog(log)
         println(hm.result)
         with(hm.result) {
@@ -137,9 +166,9 @@ class PM_chapter_72 {
         }
     }
 
-    @Test
-    fun `dependency graph minDirectlyFollows=5 minDependency=,9`() {
-        val hm = OnlineHeuristicMiner(5, .9)
+    @ParameterizedTest
+    @MethodSource("hmFactory_5_9")
+    fun `dependency graph minDirectlyFollows=5 minDependency=,9`(hm: AbstractHeuristicMiner) {
         hm.processLog(log)
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())

@@ -1,7 +1,7 @@
 package processm.miners.heuristicminer.longdistance
 
+import processm.core.helpers.allSubsets
 import processm.core.models.causalnet.Node
-import processm.miners.heuristicminer.allSubsets
 import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
 import java.util.*
 import kotlin.collections.ArrayList
@@ -54,7 +54,7 @@ class BruteForceLongDistanceDependencyMiner(
             val (prec, pos, positive, negative) = queue.pollFirst()
             if (negative.isNotEmpty()) {
                 val known =
-                    prec.allSubsets().filter { it.isNotEmpty() }.toList().map { rules.getOrDefault(it, setOf()) }
+                    prec.allSubsets().filter { it.isNotEmpty() }.toList().map { rules.getOrDefault(it.toSet(), setOf()) }
                         .flatten()
                 val succ = intersection(positive.map {
                     val t = log[it.first]

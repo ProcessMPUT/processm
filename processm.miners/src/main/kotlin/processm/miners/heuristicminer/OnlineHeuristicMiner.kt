@@ -1,46 +1,24 @@
 package processm.miners.heuristicminer
 
-import processm.core.log.Event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.miners.heuristicminer.traceregisters.TraceRegister
 
-internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> {
-    return this.flatMap { a -> right.map { b -> a to b } }
-}
-
-
-internal fun <T> allSubsets(prefix: Set<T>, rest: List<T>): Sequence<Set<T>> {
-    if (rest.isEmpty())
-        return sequenceOf(prefix)
-    else {
-        val n = rest.first()
-        val newRest = rest.subList(1, rest.size)
-        return allSubsets(prefix, newRest) + allSubsets(prefix + n, newRest)
-    }
-}
-
-internal fun <T> Collection<T>.allSubsets(): Sequence<Set<T>> {
-    return allSubsets(setOf(), this.toList())
-}
 
 class OnlineHeuristicMiner(
     minDirectlyFollows: Int = 1,
     minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector(),
+    hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector(),
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
-) : AbstractHeuristicMiner(minDirectlyFollows, minDependency) {
+) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, hypothesisSelector) {
 
     override fun processLog(log: Log) {
         for (trace in log.traces)
@@ -83,74 +61,6 @@ class OnlineHeuristicMiner(
         println(model)
     }
 
-    private fun computeBindings(trace: List<Node>): List<Binding> {
-        var currentStates =
-            sequenceOf(ReplayTrace(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
-        for (currentNode in trace) {
-            val consumable = model.incoming.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
-            val producible = model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
-            val knownJoins = model.joins[currentNode]
-            val consumeCandidates: Sequence<Set<Pair<Node, Node>>> =
-                if (knownJoins.isNullOrEmpty()) {
-                    if (consumable.isNotEmpty())
-                        consumable.allSubsets().filter { consume -> consume.isNotEmpty() }
-                    else
-                        sequenceOf(setOf())
-                } else {
-                    knownJoins.map { join -> join.sources.map { it to join.target }.toSet() }.asSequence()
-                }
-            val knownSplits = model.splits[currentNode]
-            val produceCandidates: Sequence<Set<Pair<Node, Node>>> =
-                if (knownSplits.isNullOrEmpty()) {
-                    if (producible.isNotEmpty())
-                        producible.allSubsets().filter { produce -> produce.isNotEmpty() }
-                    else
-                        sequenceOf(setOf())
-                } else {
-                    knownSplits.map { split -> split.targets.map { split.source to it }.toSet() }.asSequence()
-                }
-            // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
-            // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
-            currentStates = currentStates
-                .flatMap { (state, joins, splits) ->
-                    consumeCandidates
-                        .filter { consume -> state.containsAll(consume) }
-                        .flatMap { consume ->
-                            produceCandidates
-                                .map { produce ->
-                                    val ns = State(state)
-                                    ns.removeAll(consume)
-                                    ns.addAll(produce)
-                                    ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce))
-                                }
-                        }
-                }
-        }
-        currentStates = currentStates.filter { it.state.isEmpty() }
-        if (logger().isTraceEnabled) {
-            logger().trace("TRACE: " + trace.map { n -> n.activity })
-            logger().trace(model.toString())
-            currentStates.forEach { (state, joins, splits) ->
-                logger().trace("JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
-                logger().trace("SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })
-            }
-        }
-        if (!currentStates.any()) {
-            return listOf<Binding>()
-        }
-
-        val (_, joins, splits) = hypothesisSelector(currentStates.toList())
-        if (logger().isTraceEnabled) {
-            logger().trace("WINNING JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
-            logger().trace("WINNING SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })
-        }
-
-        val finalSplits = splits.filter { split -> split.isNotEmpty() }
-            .map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
-        val finalJoins = joins.filter { join -> join.isNotEmpty() }
-            .map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
-        return finalSplits + finalJoins
-    }
 
     private var unableToReplay = ArrayList<List<Node>>()
     private var oldBindings = setOf<Binding>()
@@ -161,7 +71,7 @@ class OnlineHeuristicMiner(
         val i = unableToReplay.iterator()
         while (i.hasNext()) {
             val trace = i.next()
-            val bindings = computeBindings(trace)
+            val bindings = computeBindings(model, trace)
             if (bindings.isNotEmpty()) {
                 println("REPLAYING $trace OK")
                 traceRegister.register(bindings, trace)
@@ -184,7 +94,7 @@ class OnlineHeuristicMiner(
 
     private fun mineBindings(nodeTrace: List<Node>) {
         model.clearBindings()
-        val bindings = computeBindings(nodeTrace)
+        val bindings = computeBindings(model, nodeTrace)
         if (bindings.isNotEmpty()) {
             traceRegister.register(bindings, nodeTrace)
             var bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }
