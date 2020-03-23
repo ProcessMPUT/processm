@@ -16,20 +16,6 @@ object Helper {
         return inp.map { seq -> seq.map { it.activity } }.toString()
     }
 
-    fun online(log: Log): Model {
-        val hm = HeuristicMiner()
-        hm.processLog(log)
-        return hm.result
-    }
-
-    fun offline(log: Log): Model {
-        return OfflineHeuristicMiner(log).result
-    }
-
-    fun offline(longDistanceDependencyMiner: LongDistanceDependencyMiner): (Log) -> Model {
-        return { log -> OfflineHeuristicMiner(log, longDistanceDependencyMiner = longDistanceDependencyMiner).result }
-    }
-
     fun logFromModel(model: Model): Log {
         val tmp = CausalNetVerifier().verify(model).validLoopFreeSequences.map { seq -> seq.map { it.a } }
             .toSet()

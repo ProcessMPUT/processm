@@ -11,7 +11,6 @@ import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 
 class OfflineHeuristicMiner(
-    private val log: Log,
     val minDirectlyFollows: Int = 1,
     val minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
@@ -19,7 +18,13 @@ class OfflineHeuristicMiner(
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
     val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport),
     val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
-) {
+):HeuristicMiner {
+    private lateinit var log: Log
+
+    override fun processLog(log: Log) {
+        this.log = log
+    }
+
     internal val directlyFollows: Counter<Pair<Node, Node>> by lazy {
         val result = Counter<Pair<Node, Node>>()
         //TODO handle lifecycle?
@@ -143,7 +148,7 @@ class OfflineHeuristicMiner(
     internal val start = Node("start", special = true)
     internal val end = Node("end", special = true)
 
-    val result: MutableModel by lazy {
+    override val result: MutableModel by lazy {
         val model = MutableModel(start = start, end = end)
         model.addInstance(*nodes.toTypedArray())
         directlyFollows

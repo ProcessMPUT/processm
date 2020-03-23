@@ -32,7 +32,8 @@ class OfflineHeuristicMinerTest {
             "abc" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = OfflineHeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = OfflineHeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        hm.processLog(log)
         with(hm.result) {
             assertEquals(splits[a], setOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))))
             assertEquals(splits[b], setOf(Split(setOf(Dependency(b, c))), Split(setOf(Dependency(b, end)))))
@@ -48,7 +49,8 @@ class OfflineHeuristicMinerTest {
             "abc" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = OfflineHeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = OfflineHeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        hm.processLog(log)
         with(hm.result) {
             assertEquals(joins[a], setOf(Join(setOf(Dependency(start, a)))))
             assertEquals(joins[b], setOf(Join(setOf(Dependency(start, b))), Join(setOf(Dependency(a, b)))))
@@ -77,7 +79,8 @@ class OfflineHeuristicMinerTest {
             "abcbcbcbcd" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = OfflineHeuristicMiner(log, hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = OfflineHeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        hm.processLog(log)
         with(hm.result) {
             assertEquals(setOf(Split(setOf(Dependency(c, b))), Split(setOf(Dependency(c, d)))), splits[c])
             assertEquals(setOf(Split(setOf(Dependency(b, c)))), splits[b])
@@ -105,15 +108,15 @@ class OfflineHeuristicMinerTest {
         v.validSequences.map { seq -> seq.map { it.a } }.toSet().forEach { println(it) }
         val log = Helper.logFromModel(reference)
         val hmp = OfflineHeuristicMiner(
-            log,
             hypothesisSelector = MostParsimoniousHypothesisSelector(),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
+        hmp.processLog(log)
         val hmg = OfflineHeuristicMiner(
-            log,
             hypothesisSelector = MostGreedyHypothesisSelector(),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
+        hmg.processLog(log)
         val cmp1 = CausalNetTraceComparison(reference, hmp.result)
         val cmp2 = CausalNetTraceComparison(reference, hmg.result)
         println(reference)

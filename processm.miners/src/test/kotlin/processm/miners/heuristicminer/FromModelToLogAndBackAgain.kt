@@ -61,7 +61,7 @@ class FromModelToLogAndBackAgain {
             .validSequences
             .map { seq -> Trace(seq.asSequence().map { ab -> event(ab.a.activity) }) })
         log.traces.forEach { println(it.events.toList()) }
-        val hm = HeuristicMiner(longDistanceDependencyMiner = longDistanceDependencyMiner)
+        val hm = OnlineHeuristicMiner(longDistanceDependencyMiner = longDistanceDependencyMiner)
         hm.processLog(log)
         val v = CausalNetVerifier().verify(hm.result)
 

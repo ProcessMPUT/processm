@@ -24,14 +24,16 @@ class CompareOfflineWithOnline {
             .toSet()
 
     private fun online(log: Log): Set<List<Node>> {
-        val hm = HeuristicMiner()
+        val hm = OnlineHeuristicMiner()
         hm.processLog(log)
         val onlineModel = hm.result
         return seqs(onlineModel)
     }
 
     private fun compare(log: Log, permuteLog: Boolean = false) {
-        val offlineModel = OfflineHeuristicMiner(log).result
+        val hm = OfflineHeuristicMiner()
+        hm.processLog(log)
+        val offlineModel = hm.result
         val offlineSeqs = seqs(offlineModel)
         if (permuteLog) {
             for (perm in log.traces.toList().allPermutations()) {
@@ -188,12 +190,10 @@ class CompareOfflineWithOnline {
         val reference = RandomGenerator(Random(seed), nNodes = nNodes).generate()
         val log = logFromModel(reference)
         fun prepareOffline(): Pair<MutableModel, Boolean> {
-            val offline = OfflineHeuristicMiner(
-                log,
-                longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
-            ).result
-            val eq = CausalNetTraceComparison(reference, offline).equivalent
-            return offline to eq
+            val hm = OfflineHeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+            hm.processLog(log)
+            val eq = CausalNetTraceComparison(reference, hm.result).equivalent
+            return hm.result to eq
         }
         if (log.traces.count() <= 4) {
             val (offline, eq) = prepareOffline()
@@ -201,7 +201,7 @@ class CompareOfflineWithOnline {
                 log.traces.toList().allPermutations().mapIndexed { idx, traces ->
                     DynamicTest.dynamicTest("$idx") {
                         Assumptions.assumeTrue(eq)
-                        val hm = HeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+                        val hm = OnlineHeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
                         hm.processLog(log)
                         val online = hm.result
                         assertTrue { CausalNetTraceComparison(online, offline).equivalent }
@@ -211,7 +211,7 @@ class CompareOfflineWithOnline {
             return DynamicTest.dynamicTest("seed=$seed") {
                 val (offline, eq) = prepareOffline()
                 Assumptions.assumeTrue(eq)
-                val hm = HeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+                val hm = OnlineHeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
                 hm.processLog(log)
                 val online = hm.result
                 assertTrue { CausalNetTraceComparison(online, offline).equivalent }
