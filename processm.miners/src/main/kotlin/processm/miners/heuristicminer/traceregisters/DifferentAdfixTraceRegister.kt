@@ -3,6 +3,7 @@ package processm.miners.heuristicminer.traceregisters
 import processm.core.models.causalnet.Binding
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Split
+import processm.miners.heuristicminer.NodeTrace
 import kotlin.math.max
 import kotlin.math.min
 

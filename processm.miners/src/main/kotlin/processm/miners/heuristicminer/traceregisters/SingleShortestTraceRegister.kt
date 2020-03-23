@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
+import processm.miners.heuristicminer.NodeTrace
 
 /**
  * A trace register storing for each binding a single shortest trace seen so far, preferring older (i.e., a trace must be shorter in order to replace existing)

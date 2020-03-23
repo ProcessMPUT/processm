@@ -33,19 +33,14 @@ internal fun <T> Collection<T>.allSubsets(): Sequence<Set<T>> {
     return allSubsets(setOf(), this.toList())
 }
 
-internal fun node(e: Event): Node {
-    //TODO: do it right once appropriate interface is in place
-    return Node(e.conceptName.toString(), e.conceptInstance ?: "")
-}
-
 class OnlineHeuristicMiner(
-    val minDirectlyFollows: Int = 1,
-    val minDependency: Double = 1e-10,
+    minDirectlyFollows: Int = 1,
+    minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
     val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector(),
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
-) : HeuristicMiner {
+) : AbstractHeuristicMiner(minDirectlyFollows, minDependency) {
 
     override fun processLog(log: Log) {
         for (trace in log.traces)
@@ -53,24 +48,14 @@ class OnlineHeuristicMiner(
     }
 
     fun processTrace(trace: Trace) {
-        //Directly follows
-        val nodeTrace = trace.events.map { node(it) }.toList()
-        val i = nodeTrace.iterator()
-        var prev = start
-        while (i.hasNext()) {
-            val curr = i.next()
-            directlyFollows.inc(prev to curr)
-            prev = curr
-        }
-        directlyFollows.inc(prev to end)
+        val nodeTrace = traceToNodeTrace(trace)
+        updateDirectlyFollows(nodeTrace)
+
         model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
         //TODO consider only pairs (in both directions!) from the trace and add/remove accordingly
         model.clearDependencies()
-        directlyFollows
-            .filterValues { it >= minDirectlyFollows }
-            .keys
-            .filter { (a, b) -> dependency(a, b) >= minDependency }
-            .forEach { (a, b) -> model.addDependency(a, b) }
+        for ((a, b) in computeDependencyGraph())
+            model.addDependency(a, b)
 
         val nodeTraceWithLimits = listOf(start) + nodeTrace + listOf(end)
         mineBindings(nodeTraceWithLimits)
@@ -96,20 +81,6 @@ class OnlineHeuristicMiner(
                 break
         }
         println(model)
-    }
-
-    internal val directlyFollows = Counter<Pair<Node, Node>>()
-
-
-    internal fun dependency(a: Node, b: Node): Double {
-        if (a != b) {
-            val ab = directlyFollows.getOrDefault(a to b, 0)
-            val ba = directlyFollows.getOrDefault(b to a, 0)
-            return (ab - ba) / (ab + ba + 1.0)
-        } else {
-            val aa = directlyFollows.getOrDefault(a to a, 0)
-            return aa / (aa + 1.0)
-        }
     }
 
     private fun computeBindings(trace: List<Node>): List<Binding> {
@@ -247,10 +218,7 @@ class OnlineHeuristicMiner(
         }
     }
 
-    private val model = MutableModel()
-
-    internal val start = model.start
-    internal val end = model.end
+    private val model = MutableModel(start = start, end = end)
 
     override val result: MutableModel = model
 

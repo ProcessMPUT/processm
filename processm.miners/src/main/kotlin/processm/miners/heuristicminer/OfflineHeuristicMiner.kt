@@ -11,53 +11,25 @@ import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 
 class OfflineHeuristicMiner(
-    val minDirectlyFollows: Int = 1,
-    val minDependency: Double = 1e-10,
+    minDirectlyFollows: Int = 1,
+    minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
     val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport),
     val hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
-):HeuristicMiner {
+) : AbstractHeuristicMiner(minDirectlyFollows, minDependency) {
     private lateinit var log: Log
 
     override fun processLog(log: Log) {
         this.log = log
-    }
-
-    internal val directlyFollows: Counter<Pair<Node, Node>> by lazy {
-        val result = Counter<Pair<Node, Node>>()
-        //TODO handle lifecycle?
-        log.traces.forEach { trace ->
-            val i = trace.events.iterator()
-            var prev = start
-            while (i.hasNext()) {
-                val curr = node(i.next())
-                result.inc(prev to curr)
-                prev = curr
-            }
-            result.inc(prev to end)
-        }
-        result
+        for (trace in log.traces)
+            updateDirectlyFollows(traceToNodeTrace(trace))
     }
 
     internal val nodes: Set<Node> by lazy {
         (directlyFollows.keys.map { it.first } + directlyFollows.keys.map { it.second }).distinct().toSet()
     }
-
-    internal val dependency: Map<Pair<Node, Node>, Double> by lazy {
-        (nodes times nodes).associateWith { (a, b) ->
-            if (a != b) {
-                val ab = directlyFollows.getOrDefault(a to b, 0)
-                val ba = directlyFollows.getOrDefault(b to a, 0)
-                (ab - ba) / (ab + ba + 1.0)
-            } else {
-                val aa = directlyFollows.getOrDefault(a to a, 0)
-                aa / (aa + 1.0)
-            }
-        }
-    }
-
 
     private fun computeBindings(model: Model, trace: List<Node>): Pair<List<Split>, List<Join>> {
         var currentStates =
@@ -145,17 +117,11 @@ class OfflineHeuristicMiner(
     }
 
 
-    internal val start = Node("start", special = true)
-    internal val end = Node("end", special = true)
-
     override val result: MutableModel by lazy {
         val model = MutableModel(start = start, end = end)
         model.addInstance(*nodes.toTypedArray())
-        directlyFollows
-            .filterValues { it >= minDirectlyFollows }
-            .keys
-            .filter { k -> dependency.getOrDefault(k, 0.0) >= minDependency }
-            .forEach { (a, b) -> model.addDependency(a, b) }
+        for ((a, b) in computeDependencyGraph())
+            model.addDependency(a, b)
         val logWithNodes = log.traces
             .map { trace -> listOf(start) + trace.events.map { e -> node(e) }.toList() + listOf(end) }
         logWithNodes.forEach { trace ->

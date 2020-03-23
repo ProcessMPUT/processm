@@ -1,7 +1,7 @@
 package processm.miners.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
-import processm.core.models.causalnet.Node
+import processm.miners.heuristicminer.NodeTrace
 
 /**
  * Stores each and every trace

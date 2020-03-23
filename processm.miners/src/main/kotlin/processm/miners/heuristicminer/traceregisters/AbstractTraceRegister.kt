@@ -1,7 +1,7 @@
 package processm.miners.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
-import processm.core.models.causalnet.Node
+import processm.miners.heuristicminer.NodeTrace
 
 /**
  * An abstract trace register providing basic storage capabilities

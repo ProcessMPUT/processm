@@ -41,7 +41,7 @@ class PM_chapter_72 {
         .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
 
     @Test
-    fun `directly follows`() {
+    fun `online - directly follows`() {
         val hm = OnlineHeuristicMiner()
         hm.processLog(log)
         assertEquals(
