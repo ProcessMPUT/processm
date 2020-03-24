@@ -2,6 +2,7 @@ package processm.miners.heuristicminer
 
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.miners.heuristicminer.bindingproviders.BindingProvider
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
@@ -21,6 +22,11 @@ class OnlineHeuristicMiner(
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
 ) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, bindingProvider) {
 
+    private var unableToReplay = ArrayList<List<Node>>()
+    private var currentBindings = setOf<Binding>()
+    private val model = MutableModel(start = start, end = end)
+    override val result: MutableModel = model
+
     override fun processLog(log: Log) {
         for (trace in log.traces)
             processTrace(trace)
@@ -31,8 +37,6 @@ class OnlineHeuristicMiner(
         updateDirectlyFollows(nodeTrace)
 
         model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
-        //TODO consider only pairs (in both directions!) from the trace and add/remove accordingly
-        model.clearDependencies()
         for ((a, b) in computeDependencyGraph())
             model.addDependency(a, b)
 
@@ -48,7 +52,7 @@ class OnlineHeuristicMiner(
                     model.clearBindingsFor(dep.second)
                 }
                 val affectedNodes = (ltdeps.map { it.first } + ltdeps.map { it.second }).toSet()
-                val affectedTraces = oldBindings
+                val affectedTraces = currentBindings
                     .filter { binding ->
                         binding.dependencies.any { affectedNodes.contains(it.source) || affectedNodes.contains(it.target) }
                     }
@@ -59,12 +63,7 @@ class OnlineHeuristicMiner(
             } else
                 break
         }
-        println(model)
     }
-
-
-    private var unableToReplay = ArrayList<List<Node>>()
-    private var oldBindings = setOf<Binding>()
 
     private fun replay(toReplay: Collection<List<Node>>) {
         traceRegister.removeAll(toReplay)
@@ -74,19 +73,22 @@ class OnlineHeuristicMiner(
             val trace = i.next()
             val bindings = bindingProvider.computeBindings(model, trace)
             if (bindings.isNotEmpty()) {
-                println("REPLAYING $trace OK")
+                logger().trace("replaying succeeded: $trace")
                 traceRegister.register(bindings, trace)
                 i.remove()
             } else
-                println("REPLAYING $trace FAILED")
+                logger().trace("replaying failed: $trace")
         }
+    }
+
+    private fun bestBindings(): Set<Binding> {
+        return traceRegister.selectBest { it.size >= minBindingSupport }
     }
 
     private fun updateBindings() {
         model.clearBindings()
-        val bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }
-        oldBindings = bestBindings
-        for (binding in bestBindings)
+        currentBindings = bestBindings()
+        for (binding in currentBindings)
             if (binding is Split)
                 model.addSplit(binding)
             else
@@ -98,40 +100,28 @@ class OnlineHeuristicMiner(
         val bindings = bindingProvider.computeBindings(model, nodeTrace)
         if (bindings.isNotEmpty()) {
             traceRegister.register(bindings, nodeTrace)
-            var bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }
+            val bestBindings = bestBindings()
             val availableDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
 
             val bindingsWithUnavailableDependencies =
                 bestBindings.filter { !availableDependencies.containsAll(it.dependencies) }.toSet()
 
-            val (old, new) = bestBindings.partition { oldBindings.contains(it) }
+            val (old, new) = bestBindings.partition { currentBindings.contains(it) }
             val dependenciesOfNewBindings = new.flatMap { it.dependencies }.toSet()
             val bindingsWithDependenciesOfNewBindings = old
                 .filter { binding ->
                     binding.dependencies.any { dependenciesOfNewBindings.contains(it) }
                 }
-            println("OLD $old")
-            println("NEW $new")
-            println("BWDONB $bindingsWithDependenciesOfNewBindings")
-            println("BWUD $bindingsWithUnavailableDependencies")
 
             val toReplay = (bindingsWithUnavailableDependencies + bindingsWithDependenciesOfNewBindings)
                 .flatMap { traceRegister[it] }
                 .toSet()
 
-            if (unableToReplay.isNotEmpty() || toReplay.isNotEmpty()) {
-                replay(toReplay)
-            }
+            replay(toReplay)
             updateBindings()
         } else {
-            println("FAILED $nodeTrace")
+            logger().trace("computing bindings failed, keeping for later: $nodeTrace")
             unableToReplay.add(nodeTrace)
         }
     }
-
-    private val model = MutableModel(start = start, end = end)
-
-    override val result: MutableModel = model
-
-
 }
