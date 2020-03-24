@@ -5,8 +5,9 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.MutableModel
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
+import processm.miners.heuristicminer.bindingproviders.BindingProvider
+import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
-import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 
@@ -17,8 +18,8 @@ class OfflineHeuristicMiner(
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
     val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport),
-    hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector()
-) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, hypothesisSelector) {
+    bindingProvider: BindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector())
+) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, bindingProvider) {
     private lateinit var log: Log
 
     override fun processLog(log: Log) {
@@ -38,7 +39,7 @@ class OfflineHeuristicMiner(
         joinSelector.reset()
         splitSelector.reset()
         logWithNodes.forEach { trace ->
-            val (joins, splits) = computeBindings(model, trace).partition { it is Join }
+            val (joins, splits) = bindingProvider.computeBindings(model, trace).partition { it is Join }
             joinSelector.add(joins.map { it as Join })
             splitSelector.add(splits.map { it as Split })
         }

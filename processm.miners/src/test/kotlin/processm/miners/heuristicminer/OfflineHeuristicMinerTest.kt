@@ -6,6 +6,7 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
+import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
@@ -32,7 +33,7 @@ class OfflineHeuristicMinerTest {
             "abc" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = OfflineHeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = OfflineHeuristicMiner(bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()))
         hm.processLog(log)
         with(hm.result) {
             assertEquals(splits[a], setOf(Split(setOf(Dependency(a, b))), Split(setOf(Dependency(a, end)))))
@@ -49,7 +50,7 @@ class OfflineHeuristicMinerTest {
             "abc" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = OfflineHeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = OfflineHeuristicMiner(bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()))
         hm.processLog(log)
         with(hm.result) {
             assertEquals(joins[a], setOf(Join(setOf(Dependency(start, a)))))
@@ -67,7 +68,7 @@ class OfflineHeuristicMinerTest {
             "abcbcbcbcd" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = OfflineHeuristicMiner(hypothesisSelector = MostParsimoniousHypothesisSelector())
+        val hm = OfflineHeuristicMiner(bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()))
         hm.processLog(log)
         with(hm.result) {
             assertEquals(setOf(Split(setOf(Dependency(c, b))), Split(setOf(Dependency(c, d)))), splits[c])
@@ -96,12 +97,12 @@ class OfflineHeuristicMinerTest {
         v.validSequences.map { seq -> seq.map { it.a } }.toSet().forEach { println(it) }
         val log = Helper.logFromModel(reference)
         val hmp = OfflineHeuristicMiner(
-            hypothesisSelector = MostParsimoniousHypothesisSelector(),
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
         hmp.processLog(log)
         val hmg = OfflineHeuristicMiner(
-            hypothesisSelector = MostGreedyHypothesisSelector(),
+            bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
         hmg.processLog(log)

@@ -3,8 +3,9 @@ package processm.miners.heuristicminer
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
+import processm.miners.heuristicminer.bindingproviders.BindingProvider
+import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
-import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
@@ -16,9 +17,9 @@ class OnlineHeuristicMiner(
     minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    hypothesisSelector: ReplayTraceHypothesisSelector = MostGreedyHypothesisSelector(),
+    bindingProvider: BindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
-) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, hypothesisSelector) {
+) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, bindingProvider) {
 
     override fun processLog(log: Log) {
         for (trace in log.traces)
@@ -71,7 +72,7 @@ class OnlineHeuristicMiner(
         val i = unableToReplay.iterator()
         while (i.hasNext()) {
             val trace = i.next()
-            val bindings = computeBindings(model, trace)
+            val bindings = bindingProvider.computeBindings(model, trace)
             if (bindings.isNotEmpty()) {
                 println("REPLAYING $trace OK")
                 traceRegister.register(bindings, trace)
@@ -94,7 +95,7 @@ class OnlineHeuristicMiner(
 
     private fun mineBindings(nodeTrace: List<Node>) {
         model.clearBindings()
-        val bindings = computeBindings(model, nodeTrace)
+        val bindings = bindingProvider.computeBindings(model, nodeTrace)
         if (bindings.isNotEmpty()) {
             traceRegister.register(bindings, nodeTrace)
             var bestBindings = traceRegister.selectBest { it.size >= minBindingSupport }

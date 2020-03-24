@@ -8,6 +8,7 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
+import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.math.absoluteValue
 import kotlin.test.assertEquals
@@ -60,8 +61,18 @@ class PM_chapter_72 {
         @JvmStatic
         fun hmFactory_2_7(): List<AbstractHeuristicMiner> =
             listOf(
-                OnlineHeuristicMiner(2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector()),
-                OfflineHeuristicMiner(2, .7, 4, hypothesisSelector = MostParsimoniousHypothesisSelector())
+                OnlineHeuristicMiner(
+                    2,
+                    .7,
+                    4,
+                    bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
+                ),
+                OfflineHeuristicMiner(
+                    2,
+                    .7,
+                    4,
+                    bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
+                )
             )
     }
 
