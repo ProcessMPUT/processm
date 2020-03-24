@@ -37,6 +37,7 @@ class OnlineHeuristicMiner(
         updateDirectlyFollows(nodeTrace)
 
         model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
+        model.clearDependencies()
         for ((a, b) in computeDependencyGraph())
             model.addDependency(a, b)
 
