@@ -5,7 +5,7 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.ReplayTrace
-import processm.miners.heuristicminer.hypothesisselector.ReplayTraceHypothesisSelector
+import processm.miners.heuristicminer.bindingproviders.hypothesisselector.ReplayTraceHypothesisSelector
 
 class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelector) : BindingProvider {
 

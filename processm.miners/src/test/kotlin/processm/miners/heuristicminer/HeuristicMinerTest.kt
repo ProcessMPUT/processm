@@ -8,7 +8,7 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
-import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
+import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

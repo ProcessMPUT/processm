@@ -1,7 +1,7 @@
 package processm.miners.heuristicminer.longdistance
 
 import processm.core.models.causalnet.Node
-import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
+import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 
 /**
  * A proof-of-concept of an approach finding shortest common prefixes such that the remainder the traces sharing the prefix

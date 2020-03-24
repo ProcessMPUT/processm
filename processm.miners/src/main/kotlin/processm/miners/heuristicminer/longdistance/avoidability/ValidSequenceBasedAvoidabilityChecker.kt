@@ -1,4 +1,4 @@
-package processm.miners.heuristicminer.avoidability
+package processm.miners.heuristicminer.longdistance.avoidability
 
 import processm.core.helpers.SequenceWithMemory
 import processm.core.models.causalnet.Model

@@ -3,7 +3,7 @@ package processm.miners.heuristicminer.longdistance
 import processm.core.helpers.Counter
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
-import processm.miners.heuristicminer.avoidability.*
+import processm.miners.heuristicminer.longdistance.avoidability.*
 
 /**
  * A very simple approach for long-distance dependenyc mining, boiling down to mining sequential rules

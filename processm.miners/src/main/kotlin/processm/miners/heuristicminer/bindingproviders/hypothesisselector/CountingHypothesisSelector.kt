@@ -1,4 +1,4 @@
-package processm.miners.heuristicminer.hypothesisselector
+package processm.miners.heuristicminer.bindingproviders.hypothesisselector
 
 import processm.core.logging.logger
 import processm.miners.heuristicminer.ReplayTrace

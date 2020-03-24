@@ -2,7 +2,7 @@ package processm.miners.heuristicminer.longdistance
 
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
-import processm.miners.heuristicminer.avoidability.AvoidabilityChecker
+import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 
 /**
  * An abstraction for a [LongDistanceDependencyMiner] with a hypothesis consisting of (positive) association rules,
