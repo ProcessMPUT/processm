@@ -12,6 +12,9 @@ import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
+import processm.services.api.models.Workspace
+import processm.services.api.models.WorkspaceCollectionMessageBody
+import processm.services.api.models.WorkspaceMessageBody
 
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
@@ -33,17 +36,17 @@ fun Route.WorkspacesApi() {
         }
 
 
-        get<Paths.getWorkspace> { _: Paths.getWorkspace ->
+        get<Paths.getWorkspace> { workspace: Paths.getWorkspace ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.OK, WorkspaceMessageBody(Workspace(workspace.workspaceId, workspace.workspaceId)))
         }
 
 
         get<Paths.getWorkspaces> { _: Paths.getWorkspaces ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.OK, WorkspaceCollectionMessageBody(emptyArray()))
         }
 
 
