@@ -11,6 +11,9 @@ import processm.core.models.causalnet.Split
 import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
+import processm.miners.heuristicminer.bindingselectors.CountGroups
+import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
+import processm.miners.heuristicminer.traceregisters.SingleShortestTraceRegister
 import kotlin.math.absoluteValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,7 +53,15 @@ class PM_chapter_72 {
         fun hmFactory(minDirectlyFollows: Int, minDependency: Double): List<AbstractHeuristicMiner> =
             listOf(
                 OnlineHeuristicMiner(minDirectlyFollows, minDependency),
-                OfflineHeuristicMiner(minDirectlyFollows, minDependency)
+                OnlineHeuristicMiner(minDirectlyFollows, minDependency, traceRegister = SingleShortestTraceRegister()),
+                OnlineHeuristicMiner(minDirectlyFollows, minDependency, traceRegister = CompleteTraceRegister()),
+                OfflineHeuristicMiner(minDirectlyFollows, minDependency),
+                OfflineHeuristicMiner(
+                    minDirectlyFollows,
+                    minDependency,
+                    splitSelector = CountGroups(1),
+                    joinSelector = CountGroups(1)
+                )
             )
 
         @JvmStatic
