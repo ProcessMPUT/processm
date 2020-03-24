@@ -12,6 +12,7 @@ import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.math.absoluteValue
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -120,9 +121,12 @@ class PM_chapter_72 {
         }
     }
 
-    @ParameterizedTest
-    @MethodSource("hmFactory_2_7")
-    fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`(hm: AbstractHeuristicMiner) {
+    @Test
+    fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`() {
+        val hm = OfflineHeuristicMiner(
+            2, .7, 4,
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
+        )
         hm.processLog(log)
         println(hm.result)
         with(hm.result) {

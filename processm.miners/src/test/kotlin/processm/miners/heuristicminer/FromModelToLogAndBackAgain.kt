@@ -9,6 +9,8 @@ import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.avoidability.ValidSequenceBasedAvoidabilityChecker
+import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
+import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.longdistance.BruteForceLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import kotlin.test.Ignore
@@ -85,6 +87,7 @@ class FromModelToLogAndBackAgain {
         test(
             hell,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -118,6 +121,7 @@ class FromModelToLogAndBackAgain {
         test(
             reversedHell,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -162,6 +166,7 @@ class FromModelToLogAndBackAgain {
         test(
             treachery,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -172,7 +177,13 @@ class FromModelToLogAndBackAgain {
     @Test
     @Ignore("Naive approach is too simple")
     fun `Offline - Naive - treachery 9th circle of hell`() {
-        test(treachery, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
+        test(
+            treachery,
+            OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
+                longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()
+            )
+        )
     }
 
     /**
@@ -206,6 +217,7 @@ class FromModelToLogAndBackAgain {
         test(
             sequentialCounting,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -217,7 +229,10 @@ class FromModelToLogAndBackAgain {
     fun `Offline - Naive - sequential counting`() {
         test(
             sequentialCounting,
-            OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner())
+            OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
+                longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()
+            )
         )
     }
 
@@ -225,7 +240,10 @@ class FromModelToLogAndBackAgain {
     fun `Online - Naive - sequential counting`() {
         test(
             sequentialCounting,
-            OnlineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner())
+            OnlineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
+                longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()
+            )
         )
     }
 
@@ -262,6 +280,7 @@ class FromModelToLogAndBackAgain {
         test(
             numberIndicator,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -272,7 +291,12 @@ class FromModelToLogAndBackAgain {
     @Ignore("Naive approach is too simple")
     @Test
     fun `Offline - Naive - number indicator`() {
-        test(numberIndicator, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
+        test(
+            numberIndicator,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()
+            )
+        )
     }
 
     /**
@@ -304,6 +328,7 @@ class FromModelToLogAndBackAgain {
         test(
             firstNInParallel,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -349,6 +374,7 @@ class FromModelToLogAndBackAgain {
         test(
             parallelCounting,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -398,6 +424,7 @@ class FromModelToLogAndBackAgain {
         test(
             binaryToUnary,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )
@@ -430,6 +457,7 @@ class FromModelToLogAndBackAgain {
         test(
             fhm,
             OfflineHeuristicMiner(
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
                 )

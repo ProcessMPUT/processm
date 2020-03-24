@@ -4,9 +4,8 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
+import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.bindingproviders.BindingProvider
-import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
-import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
@@ -18,7 +17,7 @@ class OnlineHeuristicMiner(
     minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    bindingProvider: BindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
+    bindingProvider: BindingProvider = BestFirstBindingProvider(),
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
 ) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, bindingProvider) {
 

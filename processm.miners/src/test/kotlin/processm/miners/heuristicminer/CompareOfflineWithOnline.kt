@@ -8,6 +8,7 @@ import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.Helper.logFromModel
 import processm.miners.heuristicminer.Helper.logFromString
+import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import kotlin.random.Random
 import kotlin.test.Ignore
@@ -24,7 +25,7 @@ class CompareOfflineWithOnline {
             .toSet()
 
     private fun online(log: Log): Set<List<Node>> {
-        val hm = OnlineHeuristicMiner()
+        val hm = OnlineHeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
         hm.processLog(log)
         val onlineModel = hm.result
         return seqs(onlineModel)
@@ -149,7 +150,6 @@ class CompareOfflineWithOnline {
         )
     }
 
-    @Ignore
     @Test
     fun `diamond of diamonds`() {
         val a = Node("a")
@@ -190,7 +190,10 @@ class CompareOfflineWithOnline {
         val reference = RandomGenerator(Random(seed), nNodes = nNodes).generate()
         val log = logFromModel(reference)
         fun prepareOffline(): Pair<MutableModel, Boolean> {
-            val hm = OfflineHeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+            val hm = OfflineHeuristicMiner(
+                bindingProvider = BestFirstBindingProvider(),
+                longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+            )
             hm.processLog(log)
             val eq = CausalNetTraceComparison(reference, hm.result).equivalent
             return hm.result to eq
@@ -222,10 +225,5 @@ class CompareOfflineWithOnline {
     @TestFactory
     fun `nNodes=5`(): Iterator<DynamicNode> {
         return List(1000) { it }.asSequence().map { seed -> helper(seed, 5) }.iterator()
-    }
-
-    @TestFactory
-    fun `nNodes=7`(): Iterator<DynamicNode> {
-        return List(50) { it }.asSequence().map { seed -> helper(seed, 7) }.iterator()
     }
 }
