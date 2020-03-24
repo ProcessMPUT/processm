@@ -757,6 +757,8 @@ components:
           type: string
         name:
           type: string
+        contact:
+          type: string
         isPrivate:
           type: boolean
     OrganizationMessageBody:
