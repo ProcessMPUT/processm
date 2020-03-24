@@ -77,11 +77,11 @@ export default class Login extends Vue {
     }
 
     try {
-      const { userData, token } = await this.accountService.signIn(
+      const { userData, authorizationToken } = await this.accountService.signIn(
         this.username,
         this.password
       );
-      this.$sessionStorage.sessionToken = token;
+      this.$sessionStorage.sessionToken = authorizationToken;
       this.$sessionStorage.userInfo = userData;
       this.$router.push({ name: "home" });
     } catch (error) {

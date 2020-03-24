@@ -81,7 +81,7 @@ const api = {
 
     return res.json({
       userData: { username: credentials.username },
-      token: sessionToken
+      authorizationToken: sessionToken
     });
   },
   "DELETE /api/account/session/:sessionId": (req, res) => {

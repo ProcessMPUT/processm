@@ -5,7 +5,7 @@ export default class AccountService {
   public async signIn(
     username: string,
     password: string
-  ): Promise<{ userData: UserAccount; token: string }> {
+  ): Promise<{ userData: UserAccount; authorizationToken: string }> {
     const response = await axios.post("/api/account/session", {
       username,
       password
