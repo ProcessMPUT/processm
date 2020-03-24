@@ -221,6 +221,14 @@ class FromModelToLogAndBackAgain {
         )
     }
 
+    @Test
+    fun `Online - Naive - sequential counting`() {
+        test(
+            sequentialCounting,
+            OnlineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner())
+        )
+    }
+
 
     /**
     Any non-zero number X of bs may be executed in parallel, but then dX must be executed (e.g., if exactly 2 (any) bs were executed, then d2 must be executed)
@@ -432,5 +440,10 @@ class FromModelToLogAndBackAgain {
     @Test
     fun `Offline - Naive - flexible heurisitc miner long-distance dependency example`() {
         test(fhm, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
+    }
+
+    @Test
+    fun `Online - Naive - flexible heurisitc miner long-distance dependency example`() {
+        test(fhm, OnlineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
     }
 }
