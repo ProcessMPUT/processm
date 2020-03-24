@@ -1,8 +1,9 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.bindingselectors
 
 import processm.core.models.causalnet.Binding
 
-class CountSeparately<T : Binding>(private val minSupport: Int) : BindingSelector<T> {
+class CountSeparately<T : Binding>(private val minSupport: Int) :
+    BindingSelector<T> {
 
     private val counter = HashMap<T, Int>()
 

@@ -1,8 +1,9 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.bindingselectors
 
 import processm.core.models.causalnet.Binding
 
-class CountGroups<T : Binding>(private val minSupport: Int) : BindingSelector<T> {
+class CountGroups<T : Binding>(private val minSupport: Int) :
+    BindingSelector<T> {
 
     private val counter = HashMap<Set<T>, Int>()
 

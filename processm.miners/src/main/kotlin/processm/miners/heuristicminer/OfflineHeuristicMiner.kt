@@ -7,6 +7,8 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.miners.heuristicminer.bindingproviders.BindingProvider
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
+import processm.miners.heuristicminer.bindingselectors.BindingSelector
+import processm.miners.heuristicminer.bindingselectors.CountSeparately
 import processm.miners.heuristicminer.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
@@ -16,8 +18,12 @@ class OfflineHeuristicMiner(
     minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    val splitSelector: BindingSelector<Split> = CountSeparately(minBindingSupport),
-    val joinSelector: BindingSelector<Join> = CountSeparately(minBindingSupport),
+    val splitSelector: BindingSelector<Split> = CountSeparately(
+        minBindingSupport
+    ),
+    val joinSelector: BindingSelector<Join> = CountSeparately(
+        minBindingSupport
+    ),
     bindingProvider: BindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector())
 ) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, bindingProvider) {
     private lateinit var log: Log

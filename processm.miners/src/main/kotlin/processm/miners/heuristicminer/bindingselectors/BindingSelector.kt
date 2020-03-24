@@ -1,4 +1,4 @@
-package processm.miners.heuristicminer
+package processm.miners.heuristicminer.bindingselectors
 
 import processm.core.models.causalnet.Binding
 
