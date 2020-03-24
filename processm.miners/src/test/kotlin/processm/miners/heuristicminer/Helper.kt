@@ -1,5 +1,8 @@
 package processm.miners.heuristicminer
 
+import io.mockk.every
+import io.mockk.mockk
+import processm.core.log.Event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
@@ -52,5 +55,14 @@ object Helper {
         assertEquals(expectedSequences, actualSequences)
         assertTrue(v.noDeadParts)
         assertTrue(v.isSound)
+    }
+
+    fun event(name: String): Event {
+        val e = mockk<Event>()
+        every { e.conceptName } returns name
+        every { e.conceptInstance } returns null
+        every { e.hashCode() } returns name.hashCode()
+        every { e.toString() } returns name
+        return e
     }
 }

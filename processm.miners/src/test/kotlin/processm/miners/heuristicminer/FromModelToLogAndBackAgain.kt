@@ -1,8 +1,5 @@
 package processm.miners.heuristicminer
 
-import io.mockk.every
-import io.mockk.mockk
-import processm.core.log.Event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
@@ -10,21 +7,15 @@ import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.CausalNetVerifier
+import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.avoidability.ValidSequenceBasedAvoidabilityChecker
 import processm.miners.heuristicminer.longdistance.BruteForceLongDistanceDependencyMiner
-import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-import kotlin.test.*
+import kotlin.test.Ignore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-
-internal fun event(name: String): Event {
-    val e = mockk<Event>()
-    every { e.conceptName } returns name
-    every { e.conceptInstance } returns null
-    every { e.hashCode() } returns name.hashCode()
-    every { e.toString() } returns name
-    return e
-}
 
 class FromModelToLogAndBackAgain {
     val a = Node("a")
@@ -49,7 +40,7 @@ class FromModelToLogAndBackAgain {
         return inp.map { seq -> seq.map { it.activity } }.toString()
     }
 
-    private fun test(reference: Model, longDistanceDependencyMiner: LongDistanceDependencyMiner) {
+    private fun test(reference: Model, hm: AbstractHeuristicMiner) {
         logger().debug("REFERENCE:\n${reference}")
         val referenceVerifier = CausalNetVerifier().verify(reference)
         val expectedSequences =
@@ -61,7 +52,6 @@ class FromModelToLogAndBackAgain {
             .validSequences
             .map { seq -> Trace(seq.asSequence().map { ab -> event(ab.a.activity) }) })
         log.traces.forEach { println(it.events.toList()) }
-        val hm = OnlineHeuristicMiner(longDistanceDependencyMiner = longDistanceDependencyMiner)
         hm.processLog(log)
         val v = CausalNetVerifier().verify(hm.result)
 
@@ -91,14 +81,21 @@ class FromModelToLogAndBackAgain {
     }
 
     @Test
-    fun `Brute - hell of long-term dependencies`() {
-        test(hell, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - hell of long-term dependencies`() {
+        test(
+            hell,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     @Test
     @Ignore
-    fun `Naive - hell of long-term dependencies`() {
-        test(hell, NaiveLongDistanceDependencyMiner())
+    fun `Offline - Naive - hell of long-term dependencies`() {
+        test(hell, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
     }
 
     private val reversedHell = causalnet {
@@ -117,14 +114,21 @@ class FromModelToLogAndBackAgain {
     }
 
     @Test
-    fun `Brute - reversed hell of long-term dependencies`() {
-        test(reversedHell, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - reversed hell of long-term dependencies`() {
+        test(
+            reversedHell,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     @Test
     @Ignore("Naive approach is too simple")
-    fun `Naive - reversed hell of long-term dependencies`() {
-        test(reversedHell, NaiveLongDistanceDependencyMiner())
+    fun `Offline - Naive - reversed hell of long-term dependencies`() {
+        test(reversedHell, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
     }
 
 
@@ -154,14 +158,21 @@ class FromModelToLogAndBackAgain {
     }
 
     @Test
-    fun `Brute - treachery 9th circle of hell`() {
-        test(treachery, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - treachery 9th circle of hell`() {
+        test(
+            treachery,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     @Test
     @Ignore("Naive approach is too simple")
-    fun `Naive - treachery 9th circle of hell`() {
-        test(treachery, NaiveLongDistanceDependencyMiner())
+    fun `Offline - Naive - treachery 9th circle of hell`() {
+        test(treachery, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
     }
 
     /**
@@ -191,13 +202,23 @@ class FromModelToLogAndBackAgain {
     }
 
     @Test
-    fun `Brute - sequential counting`() {
-        test(sequentialCounting, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - sequential counting`() {
+        test(
+            sequentialCounting,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     @Test
-    fun `Naive - sequential counting`() {
-        test(sequentialCounting, NaiveLongDistanceDependencyMiner())
+    fun `Offline - Naive - sequential counting`() {
+        test(
+            sequentialCounting,
+            OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner())
+        )
     }
 
 
@@ -229,14 +250,21 @@ class FromModelToLogAndBackAgain {
 
     @Test
     @Ignore("Hypothesis space is too small, as the underlying model also depends on a task not being executed")
-    fun `Brute - number indicator`() {
-        test(numberIndicator, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - number indicator`() {
+        test(
+            numberIndicator,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     @Ignore("Naive approach is too simple")
     @Test
-    fun `Naive - number indicator`() {
-        test(numberIndicator, NaiveLongDistanceDependencyMiner())
+    fun `Offline - Naive - number indicator`() {
+        test(numberIndicator, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
     }
 
     /**
@@ -264,14 +292,21 @@ class FromModelToLogAndBackAgain {
     }
 
     @Test
-    fun `Brute - first n in parallel`() {
-        test(firstNInParallel, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - first n in parallel`() {
+        test(
+            firstNInParallel,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     @Ignore("Naive approach is too simple")
     @Test
-    fun `Naive - first n in parallel`() {
-        test(firstNInParallel, NaiveLongDistanceDependencyMiner())
+    fun `Offline - Naive - first n in parallel`() {
+        test(firstNInParallel, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
     }
 
     /**
@@ -302,8 +337,15 @@ class FromModelToLogAndBackAgain {
 
     @Test
     @Ignore("Takes too long. Also outside the hypothesis space?")
-    fun `Brute - parallel counting`() {
-        test(parallelCounting, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - parallel counting`() {
+        test(
+            parallelCounting,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     /**
@@ -344,8 +386,15 @@ class FromModelToLogAndBackAgain {
 
     @Ignore
     @Test
-    fun `Brute - binary to unary decoder`() {
-        test(binaryToUnary, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - binary to unary decoder`() {
+        test(
+            binaryToUnary,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     /**
@@ -369,12 +418,19 @@ class FromModelToLogAndBackAgain {
     }
 
     @Test
-    fun `Brute - flexible heurisitc miner long-distance dependency example`() {
-        test(fhm, BruteForceLongDistanceDependencyMiner(ValidSequenceBasedAvoidabilityChecker()))
+    fun `Offline - Brute - flexible heurisitc miner long-distance dependency example`() {
+        test(
+            fhm,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
+                    ValidSequenceBasedAvoidabilityChecker()
+                )
+            )
+        )
     }
 
     @Test
-    fun `Naive - flexible heurisitc miner long-distance dependency example`() {
-        test(fhm, NaiveLongDistanceDependencyMiner())
+    fun `Offline - Naive - flexible heurisitc miner long-distance dependency example`() {
+        test(fhm, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
     }
 }

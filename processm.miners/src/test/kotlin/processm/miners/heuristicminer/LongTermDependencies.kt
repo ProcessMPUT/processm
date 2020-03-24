@@ -6,6 +6,7 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
+import processm.miners.heuristicminer.Helper.event
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -30,7 +31,11 @@ class LongTermDependencies {
         listOf(a, b1, c, d1, e) to 100,
         listOf(a, b2, c, d2, e) to 100
     ).asSequence()
-        .flatMap { (trace, n) -> List(n) { Trace(trace.map { n -> event(n.activity) }.asSequence()) }.asSequence() })
+        .flatMap { (trace, n) ->
+            List(n) {
+                Trace(trace.map { n -> event(n.activity) }.asSequence())
+            }.asSequence()
+        })
     private val hm = OnlineHeuristicMiner(1)
 
     init {
