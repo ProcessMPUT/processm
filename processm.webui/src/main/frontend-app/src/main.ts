@@ -14,7 +14,7 @@ import WorkspaceService from "@/services/WorkspaceService";
 import AccountService from "@/services/AccountService";
 
 Vue.config.productionTip = false;
-Vue.use(SessionStorage);
+Vue.use(SessionStorage, { persist: true });
 
 new Vue({
   router,
