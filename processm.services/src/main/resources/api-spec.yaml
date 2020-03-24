@@ -1,0 +1,812 @@
+openapi: 3.0.1
+info:
+  title: Processm
+  description: Description of api methods used in processm.
+  version: 1.0.0
+servers:
+  - url: https://processtom.com/api/
+tags:
+  - name: users
+    description: User registration and session management
+  - name: workspaces
+    description: User workspace management
+  - name: groups
+    description: User groups and groups membership management
+  - name: organizations
+    description: User organizations and organizations membership management
+paths:
+  /users:
+    get:
+      tags:
+        - users
+      summary: Get users associated with the current user by organization membership
+      operationId: getUsers
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserInfoCollectionResponse'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - users
+      summary: Regisiter user account
+      operationId: createUser
+      requestBody:
+        description: User email and account password
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/UserCredentials'
+        required: true
+      responses:
+        '201':
+          description: successful operation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /users/session:
+    post:
+      tags:
+        - users
+      summary: User authentication
+      operationId: signUserIn
+      parameters:
+        - in: header
+          name: Authorization
+          description: Expired authentication token
+          required: false
+          schema:
+            type: string
+      requestBody:
+        description: User account credentials
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/UserCredentials'
+        required: false
+      responses:
+        '201':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AuthenticationResultResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - users
+      summary: Session termination
+      operationId: signUserOut
+      responses:
+        '204':
+          description: user successfully logged out
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /users/me:
+    get:
+      tags:
+        - users
+      summary: Get details about current user
+      operationId: getUserAccountDetails
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserAccountInfoResponse'
+      security:
+        - bearerAuth: []
+  /workspaces:
+    get:
+      tags:
+        - workspaces
+      summary: Get workspaces which user has access to
+      operationId: getWorkspaces
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/WorkspaceCollectionResponse'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - workspaces
+      summary: Create workspace
+      operationId: createWorkspace
+      requestBody:
+        description: Workspace details
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Workspace'
+        required: true
+      responses:
+        '201':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - bearerAuth: []
+  /workspaces/{workspaceId}:
+    parameters:
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - workspaces
+      summary: Get specified workspace
+      operationId: getWorkspace
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - workspaces
+      summary: Update specified workspace
+      operationId: updateWorkspace
+      requestBody:
+        description: Workspace details to update
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Workspace'
+        required: true
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - workspaces
+      summary: Remove specified workspace
+      operationId: deleteWorkspace
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /groups:
+    get:
+      tags:
+        - groups
+      summary: Get groups belonging to user organization
+      operationId: getGroups
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GroupCollectionResponse'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - groups
+      summary: Create user group
+      operationId: createGroup
+      requestBody:
+        description: Group details
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Group'
+        required: true
+      responses:
+        '201':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - bearerAuth: []
+  /groups/{groupId}:
+    parameters:
+      - name: groupId
+        in: path
+        description: Group ID
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - groups
+      summary: Get specified group
+      operationId: getGroup
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - groups
+      summary: Update specified group
+      operationId: updateGroup
+      requestBody:
+        description: Group details
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Group'
+        required: true
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - groups
+      summary: Remove user group
+      operationId: removeGroup
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /groups/{groupId}/members:
+    parameters:
+      - name: groupId
+        in: path
+        description: Group ID
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - groups
+      summary: Get members of specified group
+      operationId: getGroupMembers
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserInfoCollectionResponse'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - groups
+      summary: Add new member to group
+      operationId: addGroupMember
+      requestBody:
+        description: New member ID
+        content:
+          '*/*':
+            schema:
+              description: User ID
+              type: string
+        required: true
+      responses:
+        '201':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /groups/{groupId}/members/{userId}:
+    parameters:
+      - name: groupId
+        in: path
+        description: Group ID
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        description: User ID
+        required: true
+        schema:
+          type: string
+    delete:
+      tags:
+        - groups
+      summary: Remove member from group
+      operationId: removeGroupMember
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /groups/{groupId}/subgroups:
+    parameters:
+      - name: groupId
+        in: path
+        description: Group ID
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - groups
+      summary: Get subgroups of specified group
+      operationId: getSubgroups
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/GroupCollectionResponse'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - groups
+      summary: Create new subgroup
+      operationId: createSubgroup
+      requestBody:
+        description: Subgroup details
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Group'
+        required: true
+      responses:
+        '201':
+          description: successful operation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      security:
+        - bearerAuth: []
+  /groups/{groupId}/subgroups/{subgroupId}:
+    parameters:
+      - name: groupId
+        in: path
+        description: Group ID
+        required: true
+        schema:
+          type: string
+      - name: subgroupId
+        in: path
+        description: Subgroup ID
+        required: true
+        schema:
+          type: string
+    delete:
+      tags:
+        - groups
+      summary: Remove speciified subgroup
+      operationId: removeSubgroup
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations:
+    get:
+      tags:
+        - organizations
+      summary: Get organizations
+      operationId: getOrganizations
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrganizationCollectionResponse'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - organizations
+      summary: Create organization
+      operationId: createOrganization
+      requestBody:
+        description: Organization details
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/OrganizationResponse'
+        required: true
+      responses:
+        '201':
+          description: successful operation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - organizations
+      summary: Get specified organization
+      operationId: getOrganization
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrganizationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - organizations
+      summary: Update specified organization
+      operationId: updateOrganization
+      requestBody:
+        description: Organization details
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/OrganizationResponse'
+        required: true
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - organizations
+      summary: Remove specified organization
+      operationId: removeOrganization
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/members:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - organizations
+      summary: Get members of specified organization
+      operationId: getOrganizationMembers
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserInfoCollectionResponse'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - organizations
+      summary: Add new member to organization
+      operationId: addOrganizationMember
+      requestBody:
+        description: New member username
+        content:
+          '*/*':
+            schema:
+              description: Username
+              type: string
+        required: true
+      responses:
+        '201':
+          description: successful operation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/members/{userId}:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        description: User ID
+        required: true
+        schema:
+          type: string
+    delete:
+      tags:
+        - organizations
+      summary: Remove member from organization
+      operationId: removeOrganizationMember
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          description: error details
+          type: string
+    OrganizationRole:
+      type: string
+      enum: [owner, writer, reader]
+    GroupRole:
+      type: string
+      enum: [owner, writer, reader]
+    UserCredentials:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    UserAccountInfo:
+      type: object
+      required:
+        - username
+        - organizationRole
+      properties:
+        username:
+          type: string
+        language:
+          type: string
+        organizationRoles:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/OrganizationRole'
+    UserAccountInfoResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/UserAccountInfo'
+    AuthenticationResult:
+      type: object
+      properties:
+        AuthorizationToken:
+          type: string
+    AuthenticationResultResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthenticationResult'
+    UserInfo:
+      type: object
+      required:
+        - username
+        - organization
+        - organizationRole
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        organization:
+          type: string
+        organizationRoles:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/OrganizationRole'
+    UserInfoCollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserInfo'
+    Workspace:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    WorkspaceResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Workspace'
+    WorkspaceCollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+    Group:
+      type: object
+      required:
+        - name
+        - groupRole
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        groupRole:
+          $ref: '#/components/schemas/GroupRole'
+    GroupResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Group'
+    GroupCollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+    Organization:
+      type: object
+      required:
+        - name
+        - organizationRole
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        isPrivate:
+          type: boolean
+    OrganizationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Organization'
+    OrganizationCollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organization'
+  responses:
+    BadRequest:
+      description: invalid request body
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: user not authenticated
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: user not authorized
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: specified resource was not found
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: resource with sepcified identifier already exists
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: request had valid format but included semantic error
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
