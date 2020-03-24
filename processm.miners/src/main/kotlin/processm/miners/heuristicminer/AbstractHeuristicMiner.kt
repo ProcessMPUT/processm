@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer
 
+import processm.core.helpers.Counter
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Node
