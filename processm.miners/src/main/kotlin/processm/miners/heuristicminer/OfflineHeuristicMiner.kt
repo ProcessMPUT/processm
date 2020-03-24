@@ -12,6 +12,11 @@ import processm.miners.heuristicminer.bindingselectors.CountSeparately
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 
+/**
+ * An off-line implementation of Heuristic Miner.
+ *
+ * It is more efficient than [OnlineHeuristicMiner], as it does not need to recompute the model after each trace.
+ */
 class OfflineHeuristicMiner(
     minDirectlyFollows: Int = 1,
     minDependency: Double = 1e-10,

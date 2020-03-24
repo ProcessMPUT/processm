@@ -6,6 +6,9 @@ import processm.core.models.causalnet.Node
 import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.CausalNetSequence
 
+/**
+ * An [AvoidabilityChecker] using valid sequences provided by [CausalNetVerifier] to verify whether a given dependency is avoidable.
+ */
 class ValidSequenceBasedAvoidabilityChecker :
     AvoidabilityChecker {
 

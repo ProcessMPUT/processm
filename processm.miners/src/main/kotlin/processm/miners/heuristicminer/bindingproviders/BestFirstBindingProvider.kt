@@ -7,14 +7,30 @@ import processm.miners.heuristicminer.NodeTrace
 import processm.miners.heuristicminer.ReplayTrace
 import java.util.*
 
+/**
+ * Represents a node in a search graph of [BestFirstBindingProvider]
+ *
+ * @param nextNode Index of the node in [nodeTrace] to be considered next
+ * @param trace States, joins and splits so far
+ * @param nodeTrace Complete trace being considered
+ */
 data class ComputationState(val nextNode: Int, val trace: ReplayTrace, val nodeTrace: NodeTrace)
 
+/**
+ * Compares two [ComputationState] for the purposes of maintaining a priority queue.
+ *
+ * The following criterion are considered
+ * 1. Number of nodes that are yet to be visited, but are not present in the current state (fewer is beter).
+ * 2. Minimal number of nodes that are yet to be visited according to the current state (fewer is better).
+ * 3. Index of the node to be considered next (higher is better).
+ * 4. Number of pending obligations in the state (fewer is better).
+ */
 class DefaultComputationStateComparator : Comparator<ComputationState> {
     private fun value(o: ComputationState): IntArray {
-        var targets = o.trace.state.map { it.second }.toSet()
-        var nMissing =
+        val targets = o.trace.state.map { it.second }.toSet()
+        val nMissing =
             (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
-        var nTargets = targets.size
+        val nTargets = targets.size
         return intArrayOf(-nMissing, -nTargets, o.nextNode, -o.trace.state.size)
     }
 
@@ -26,7 +42,12 @@ class DefaultComputationStateComparator : Comparator<ComputationState> {
     }
 }
 
-
+/**
+ * Computes bindings for a given trace in a give model using best-first principle, where best is defined by [comparator].
+ *
+ * [BestFirstBindingProvider] maintains a priority queue of partial [ReplayTrace]s and, at each step, considers the best
+ * currently available. Once it reaches any correct and complete replay trace, it immediately stops computation and returns it.
+ */
 class BestFirstBindingProvider(
     val comparator: Comparator<ComputationState> = DefaultComputationStateComparator()
 ) : BindingProvider {

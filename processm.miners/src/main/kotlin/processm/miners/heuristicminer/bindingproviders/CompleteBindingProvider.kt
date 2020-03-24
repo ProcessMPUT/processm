@@ -7,6 +7,12 @@ import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.ReplayTrace
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.ReplayTraceHypothesisSelector
 
+/**
+ * A [BindingProvider] that exhaustively considers all possibilities and uses [hypothesisSelector] to select the best
+ * bindings out of all valid executions of the given trace.
+ *
+ * In general far slower than [BestFirstBindingProvider], but in some cases may offer greater flexibility.
+ */
 class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelector) : BindingProvider {
 
     override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {

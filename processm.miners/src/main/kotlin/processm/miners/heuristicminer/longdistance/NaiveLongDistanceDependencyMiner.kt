@@ -8,7 +8,7 @@ import processm.miners.heuristicminer.longdistance.avoidability.*
 /**
  * A very simple approach for long-distance dependenyc mining, boiling down to mining sequential rules
  * with a single premise and a single conclusions. Seems to be sound (i.e., all mined dependencies are real) as
- * long as [minLongTermDependency] is approximately `, but vastly incomplete
+ * long as [minLongTermDependency] is approximately 1, but vastly incomplete
  */
 class NaiveLongDistanceDependencyMiner(
     val minLongTermDependency: Double = 0.9999,

@@ -11,7 +11,11 @@ import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMi
 import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.miners.heuristicminer.traceregisters.TraceRegister
 
-
+/**
+ * An on-line implementation of the heuristic miner.
+ * Given appropriate [traceRegister] and [longDistanceDependencyMiner] able to avoid storing all traces, but less efficient
+ * than [OfflineHeuristicMiner].
+ */
 class OnlineHeuristicMiner(
     minDirectlyFollows: Int = 1,
     minDependency: Double = 1e-10,
