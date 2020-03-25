@@ -23,15 +23,19 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
     /**
      * If there exists at least one valid sequence, there is a possibility to complete
      */
-    val hasOptionToComplete: Boolean by lazy { validSequences.any() }
+    val hasOptionToComplete: Boolean by lazy { hasSingleStart() && hasSingleEnd() && validSequences.any() }
     /**
      * Each valid sequence, by definition, ensures proper completion
      */
     val hasProperCompletion: Boolean by lazy { validSequences.any() }
     /**
-     * Based on Definition 3.12 in PM of soundness of C-nets
+     * Based on Definition 3.8 and Definition 3.12 in PM of soundness of C-nets
      */
-    val hasDeadParts: Boolean by lazy { !checkAbsenceOfDeadParts() }
+    val noDeadParts: Boolean by lazy { allDependenciesUsed() && checkAbsenceOfDeadParts() }
+    /**
+     * Based on Definition 3.8 and Definition 3.12 in PM of soundness of C-nets
+     */
+    val hasDeadParts: Boolean by lazy { !noDeadParts }
     /**
      * The only important thing is whether there are dead parts.
      * If there aren't, there are some valid sequences, so the rest is trivially satisfied.
@@ -51,6 +55,30 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
      * In simple terms, B is A plus something.
      */
     val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> by lazy { computeSetOfValidSequences(true).withMemory() }
+
+    /**
+     * Based on Definition 3.8 in PM
+     */
+    private fun allDependenciesUsed(): Boolean {
+        val splitDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
+        val joinDependencies = model.joins.values.flatten().flatMap { it.dependencies }.toSet()
+        val allDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
+        return splitDependencies == allDependencies && joinDependencies == allDependencies
+    }
+
+    /**
+     * Over all nodes, there should be exactly one with no predecessor
+     */
+    private fun hasSingleStart(): Boolean {
+        return model.instances.filter { model.incoming[it].isNullOrEmpty() }.size == 1
+    }
+
+    /**
+     * Over all nodes, there should be exactly one with no successor
+     */
+    private fun hasSingleEnd(): Boolean {
+        return model.instances.filter { model.outgoing[it].isNullOrEmpty() }.size == 1
+    }
 
     private fun checkAbsenceOfDeadParts(): Boolean {
         return model.instances.asSequence()
