@@ -40,6 +40,19 @@
       "failed": "Nieprawidłowy email lub hasło"
     }
   },
+  "registration-form": {
+    "title": "Rejestracja konta",
+    "organization-name": "Nazwa organizacji",
+    "admin-email": "Email administratora",
+    "register": "Zarejestruj",
+    "validation": {
+      "email-format": "Nieprawidłowy format adresu email",
+      "organization-empty": "Nazwa organizacji nie może być pusta"
+    },
+    "error-box": {
+      "failed": "Inorrect organization name"
+    }
+  },
   "common": {
     "cancel": "Anuluj",
     "save": "Zapisz",

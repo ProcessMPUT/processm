@@ -42,6 +42,19 @@
       "failed": "Inorrect email or password"
     }
   },
+  "registration-form": {
+    "title": "Account registration",
+    "organization-name": "Organization name",
+    "admin-email": "Administrator email",
+    "register": "Register",
+    "validation": {
+      "email-format": "Email must be valid",
+      "organization-empty": "Organization name cannot be empty"
+    },
+    "error-box": {
+      "failed": "Inorrect organization name"
+    }
+  },
   "common": {
     "cancel": "Cancel",
     "save": "Save",

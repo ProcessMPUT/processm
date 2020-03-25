@@ -28,6 +28,15 @@ const routes = [
       Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
     },
     meta: { allowUnauthenticated: true }
+  },
+  {
+    path: "/register",
+    name: "register",
+    component: () => import("@/views/Registration.vue"),
+    beforeEnter: (_to: any, _from: any, next: any) => {
+      Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
+    },
+    meta: { allowUnauthenticated: true }
   }
 ];
 

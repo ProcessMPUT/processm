@@ -31,14 +31,14 @@
                 ]"
                 @keypress.enter="authenticate"
               ></v-text-field>
+              <v-layout justify-space-between>
+                <v-btn color="primary" text small to="register">Register account</v-btn>
+                <v-btn color="primary" @click.stop="authenticate">
+                  {{ $t("login-form.login") }}
+                </v-btn>
+              </v-layout>
             </v-form>
           </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="primary" @click.stop="authenticate">{{
-              $t("login-form.login")
-            }}</v-btn>
-          </v-card-actions>
         </v-card>
         <v-snackbar
           color="error"
@@ -46,9 +46,9 @@
           :timeout="errorTimeout"
         >
           {{ $t("login-form.error-box.failed") }}
-          <v-btn dark text @click="errorMessage = false">
-            {{ $t("common.close") }}
-          </v-btn>
+          <v-btn dark text @click="errorMessage = false">{{
+            $t("common.close")
+          }}</v-btn>
         </v-snackbar>
       </v-flex>
     </v-layout>
