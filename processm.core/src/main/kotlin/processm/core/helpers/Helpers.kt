@@ -77,18 +77,25 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
 /**
  * Generates the power-set of the collection (incl. the empty set and the full set)
  */
-fun <T> Collection<T>.allSubsets(): Sequence<List<T>> {
-    fun <T> allSubsets(prefix: List<T>, rest: List<T>): Sequence<List<T>> {
-        if (rest.isEmpty())
-            return sequenceOf(prefix)
-        else {
-            val n = rest.first()
-            val newRest = rest.subList(1, rest.size)
-            return allSubsets(prefix, newRest) + allSubsets(prefix + n, newRest)
-        }
+fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
+    if (this@allSubsets.size >= Long.SIZE_BITS)
+        throw IllegalArgumentException("This implementation of power set supports sets of up to 63 items.")
+    if (this@allSubsets.isEmpty()) {
+        yield(listOf<T>())
+        return@sequence
     }
-    return allSubsets(listOf(), this.toList())
+
+    val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this@allSubsets.size)
+
+    var mask = 0L
+    while (true) {
+        yield(this@allSubsets.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L })
+
+        if (++mask > lastBucketMask || mask < 0L)
+            return@sequence
+    }
 }
+
 
 /**
  * Generate all permutations of the given list

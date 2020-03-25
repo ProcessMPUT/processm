@@ -95,6 +95,14 @@ class HelpersTests {
     }
 
     @Test
+    fun `subsets of empty`() {
+        assertEquals(
+            setOf(setOf()),
+            setOf<Int>().allSubsets().map { it.toSet() }.toSet()
+        )
+    }
+
+    @Test
     fun permutations() {
         assertEquals(
             setOf(
