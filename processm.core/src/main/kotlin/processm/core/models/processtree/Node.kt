@@ -4,7 +4,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 abstract class Node(vararg nodes: Node) {
-    protected val childrenInternal: MutableList<Node> = ArrayList()
+    internal val childrenInternal: MutableList<Node> = LinkedList()
 
     /**
      * Nodes of this node (children)
