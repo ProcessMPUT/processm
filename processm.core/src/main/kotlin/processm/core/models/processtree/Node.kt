@@ -17,6 +17,9 @@ abstract class Node(vararg nodes: Node) {
     var parent: Node? = null
         private set
 
+    /**
+     * Symbol of the node. For operators should be graphic symbol, activity will use name.
+     */
     abstract val symbol: String
 
     init {
@@ -42,22 +45,6 @@ abstract class Node(vararg nodes: Node) {
      * Custom toString to present nodes in process tree as text
      */
     override fun toString(): String {
-        val iterator = childrenInternal.iterator()
-        val builder = StringBuilder()
-        builder.append(symbol)
-
-        if (iterator.hasNext()) {
-            builder.append("(")
-
-            while (iterator.hasNext()) {
-                builder.append(iterator.next())
-                if (iterator.hasNext())
-                    builder.append(",")
-            }
-
-            builder.append(")")
-        }
-
-        return builder.toString()
+        return if (childrenInternal.isNotEmpty()) childrenInternal.joinToString(",", "$symbol(", ")") else symbol
     }
 }
