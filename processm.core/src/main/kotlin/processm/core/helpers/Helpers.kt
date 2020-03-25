@@ -100,16 +100,32 @@ fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
 /**
  * Generate all permutations of the given list
  */
-fun <T> List<T>.allPermutations(): List<List<T>> {
-    val first = this.first()
-    val rest = this.drop(1)
-    if (rest.isNotEmpty()) {
-        return rest.allPermutations()
-            .flatMap { perm ->
-                perm.indices.map { perm.subList(0, it) + first + perm.subList(it, perm.size) } +
-                        listOf(perm + first)
-            }
-    } else {
-        return listOf(listOf(first))
+fun <T> List<T>.allPermutations(): List<List<T>> = sequence {
+    if (this@allPermutations.isEmpty())
+        return@sequence
+
+    yield(ArrayList(this@allPermutations))
+
+    var A = this@allPermutations.toMutableList()
+    val n = A.size
+    val c = IntArray(n)
+
+    var i = 0
+    while (i < n) {
+        if (c[i] < i) {
+            A.swap((i and 1) * c[i], i)
+            yield(ArrayList(A))
+            ++c[i]
+            i = 0
+        } else {
+            c[i] = 0
+            ++i
+        }
     }
+}.toList()
+
+private inline fun <T> MutableList<T>.swap(i: Int, j: Int) {
+    val tmp = this[i]
+    this[i] = this[j]
+    this[j] = tmp
 }
