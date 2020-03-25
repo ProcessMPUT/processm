@@ -9,13 +9,12 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.Helper.event
-import processm.miners.heuristicminer.longdistance.avoidability.ValidSequenceBasedAvoidabilityChecker
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.longdistance.BruteForceLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-import processm.miners.heuristicminer.longdistance.ShortestUniquePrefixLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import processm.miners.heuristicminer.longdistance.avoidability.ValidSequenceBasedAvoidabilityChecker
 import kotlin.test.*
 
 
