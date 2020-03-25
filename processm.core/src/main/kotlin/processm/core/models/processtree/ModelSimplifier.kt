@@ -5,16 +5,15 @@ package processm.core.models.processtree
  */
 class ModelSimplifier {
     /**
-     * Reduce tau leafs in SEQUENCE operator only.
-     * WARNING: This action can modify internal structure of given process tree model!
+     * Drops redundant [SilentActivity] leaves if it does not change the semantics of the process tree.
+     * WARNING: This action can modify the internal structure of the given process tree!
      *
-     * For example in tree →(A,τ,B) activity τ can be removed and we can generate →(A,B)
-     * Model with →(A,τ) will be simplify to →(A) => no reduction to single activity!
-     * Reduction can be executed also in parallel operator.
-     * In exclusive choice operator can use reduction if one silent activity will be still in tree.
-     *
-     * For redo loop operator we can simplify body part:
-     * ⟲(τ,A,τ,τ,τ,C,τ) will be replaced by ⟲(τ,A,τ,C)
+     * For example:
+     * * The tree →(A,τ,B) will be reduced to →(A,B) without changing its semantics.
+     * * The tree →(A,τ) will be reduced to →(A). A further reduction to a single activity does not apply.
+     * * The tree ∧(A,τ,B) will be reduced to ∧(A,B).
+     * * The tree ×(A,τ,B,τ) will be reduced to ×(A,τ,B), such that at least one τ remains.
+     * * The tree ⟲(τ,A,τ,τ,τ,C,τ) will be reduced to ⟲(τ,A,τ,C), such that at least one τ remains as non-first child.
      */
     fun reduceTauLeafs(model: Model) {
         if (model.root != null)
