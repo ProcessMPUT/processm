@@ -22,6 +22,7 @@ class DirectlyFollowsGraph {
      *  B -> C, cardinality 1
      */
     val graph = HashMap<Activity, HashMap<Activity, Arc>>()
+
     /**
      * Map with start activities (first activity in trace) + arc statistics
      *
@@ -32,6 +33,7 @@ class DirectlyFollowsGraph {
      *  A, cardinality 1
      */
     val startActivities = HashMap<Activity, Arc>()
+
     /**
      * Map with end activities (last activity in trace) + arc statistics
      *
@@ -46,14 +48,14 @@ class DirectlyFollowsGraph {
     /**
      * Build directly-follows graph
      */
-    fun mine(log: LogInputStream) {
-        log.forEach { mineGraph(it) }
+    fun discover(log: LogInputStream) {
+        log.forEach { discoverGraph(it) }
 
         // TODO: debug only
         logGraphInDotForm()
     }
 
-    private fun mineGraph(log: Log) {
+    private fun discoverGraph(log: Log) {
         log.traces.forEach { trace ->
             var previousActivity: Activity? = null
 
@@ -82,8 +84,7 @@ class DirectlyFollowsGraph {
      * Add connection between two activities in trace and increment statistics of arc.
      */
     private fun addConnectionInGraph(from: Activity, to: Activity) {
-        graph.getOrPut(from, { HashMap() })
-            .compute(to) { _: Activity, value: Arc? -> (value ?: Arc()).increment() }
+        graph.getOrPut(from, { HashMap() }).getOrPut(to, { Arc() }).increment()
     }
 
     /**
@@ -91,7 +92,7 @@ class DirectlyFollowsGraph {
      * Increment statistics of arc in activities map.
      */
     private fun addConnectionFromSource(activity: Activity) {
-        startActivities.compute(activity) { _: Activity, value: Arc? -> (value ?: Arc()).increment() }
+        startActivities.getOrPut(activity, { Arc() }).increment()
     }
 
     /**
@@ -99,7 +100,7 @@ class DirectlyFollowsGraph {
      * Increment statistics of arc in end activities map.
      */
     private fun addConnectionToSink(activity: Activity) {
-        endActivities.compute(activity) { _: Activity, value: Arc? -> (value ?: Arc()).increment() }
+        endActivities.getOrPut(activity, { Arc() }).increment()
     }
 
     /**

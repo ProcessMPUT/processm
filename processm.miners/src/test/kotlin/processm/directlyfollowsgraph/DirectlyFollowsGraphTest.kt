@@ -62,7 +62,7 @@ class DirectlyFollowsGraphTest {
         val log: Sequence<Log> = sequenceOf(Log(sequenceOf(Trace())))
 
         val miner = DirectlyFollowsGraph()
-        miner.mine(log)
+        miner.discover(log)
 
         assertTrue(miner.graph.isEmpty())
         assertTrue(miner.startActivities.isEmpty())
@@ -78,7 +78,7 @@ class DirectlyFollowsGraphTest {
         val e = Activity("E")
 
         val miner = DirectlyFollowsGraph()
-        miner.mine(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         miner.graph.also { graph ->
             assertEquals(graph.size, 4)
@@ -135,7 +135,7 @@ class DirectlyFollowsGraphTest {
     @Test
     fun `Graph contains only activities from log, no special added`() {
         val miner = DirectlyFollowsGraph()
-        miner.mine(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         assertEquals(miner.graph.size, 4)
     }
@@ -144,7 +144,7 @@ class DirectlyFollowsGraphTest {
     fun `Start activities stored in special map`() {
         val a = Activity("A")
         val miner = DirectlyFollowsGraph()
-        miner.mine(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         assertEquals(miner.startActivities.size, 1)
 
@@ -156,7 +156,7 @@ class DirectlyFollowsGraphTest {
     fun `Last activities stored in special map`() {
         val d = Activity("D")
         val miner = DirectlyFollowsGraph()
-        miner.mine(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         assertEquals(miner.endActivities.size, 1)
 
