@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer.longdistance
 
+import processm.core.logging.logger
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChecker
@@ -40,7 +41,7 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
         }
         val common = intersection(tmp.map { it.toSet() })
         val latest = tmp.map { prefix -> prefix.last { common.contains(it) } }.toSet()
-        println("LATEST $latest")
+        logger().debug("LATEST $latest")
         return latest.single()
     }
 
@@ -50,7 +51,7 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
         for ((premises, conclusions) in deps) {
             if (!isAvoidable(premises to conclusions))
                 continue
-            println("MINE ${premises.map { it.activity }} -> ${conclusions.map { it.activity }}")
+            logger().debug("MINE ${premises.map { it.activity }} -> ${conclusions.map { it.activity }}")
             if (premises.size == 1 && conclusions.size == 1) {
                 //1-to-1 dependency
                 val r = premises.single() to conclusions.single()
@@ -77,7 +78,8 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
                 result.addAll(premises.map { lcp to it })
             }
         }
-        result.forEach { println("FINAL ${it.first.activity} ${it.second.activity}") }
+        if (logger().isDebugEnabled)
+            result.forEach { logger().debug("FINAL ${it.first.activity} ${it.second.activity}") }
         return result
     }
 }
