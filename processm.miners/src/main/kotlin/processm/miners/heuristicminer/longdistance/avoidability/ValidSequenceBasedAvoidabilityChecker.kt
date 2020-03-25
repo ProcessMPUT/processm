@@ -32,9 +32,7 @@ class ValidSequenceBasedAvoidabilityChecker :
 
     override fun invoke(dependency: Pair<Set<Node>, Set<Node>>): Boolean {
         val result = seqs?.any { seq -> !seq.fulfills(dependency) }
-        if (result != null)
-            return result
-        else
-            throw IllegalStateException()
+        checkNotNull(result)
+        return result
     }
 }

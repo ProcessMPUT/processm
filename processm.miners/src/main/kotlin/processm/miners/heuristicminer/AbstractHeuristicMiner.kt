@@ -12,8 +12,8 @@ internal typealias NodeTrace = List<Node>
  * An abstract for [OnlineHeuristicMiner] and [OfflineHeuristicMiner] with common operations related to building dependency graph
  */
 abstract class AbstractHeuristicMiner(
-    val minDirectlyFollows: Int,
-    val minDependency: Double,
+    private val minDirectlyFollows: Int,
+    private val minDependency: Double,
     val bindingProvider: BindingProvider
 ) : HeuristicMiner {
 
