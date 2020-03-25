@@ -5,6 +5,22 @@ package processm.core.models.processtree
  */
 class ModelSimplifier {
     /**
+     * Simplify process tree
+     * WARNING: This action can modify internal structure of given process tree model!
+     *
+     * Actions:
+     * * Remove operators with single activity and replace it with this activity
+     * * Remove extra τ activities based on operator meaning
+     * * Replace nested operators with one operator - can be prepared if operator Parallel or Exclusive
+     *   (for example op(op(a, b, c), d) == op(a, b, c, d) if op == ∧ or ×
+     * * Replace nodes without children by τ activity
+     */
+    fun simplify(model: Model) {
+        if (model.root != null)
+            simplifyProcessTree(model.root)
+    }
+
+    /**
      * Drops redundant [SilentActivity] leaves if it does not change the semantics of the process tree.
      * WARNING: This action can modify the internal structure of the given process tree!
      *
@@ -16,11 +32,66 @@ class ModelSimplifier {
      * * The tree ⟲(τ,A,τ,τ,τ,C,τ) will be reduced to ⟲(τ,A,τ,C), such that at least one τ remains as non-first child.
      */
     fun reduceTauLeafs(model: Model) {
-        if (model.root != null)
+        if (model.root != null) {
+            // Reduce tree
             reduceTauLeafsInModel(model.root)
+
+            // Simplify node
+            reduceTauActivitiesInNode(model.root)
+        }
+    }
+
+    private fun simplifyProcessTree(node: Node) {
+        node.childrenInternal.forEach { simplifyProcessTree(it) }
+
+        if (node.parent != null) {
+            // Replace empty operator with silent activity
+            if (node.childrenInternal.isEmpty() && node !is Activity) {
+                node.parent!!.replaceChild(replaced = node, replacement = SilentActivity())
+            }
+
+            // We have just one child - can be moved up
+            if (node.childrenInternal.size == 1) {
+                node.parent!!.replaceChild(replaced = node, replacement = node.childrenInternal.first())
+            }
+
+            // Simplify parent's node
+            reduceTauActivitiesInNode(node)
+        }
+
+        //        // If node without children - remove node
+//        if (node.childrenInternal.isEmpty() && node.parent != null) {
+//            // Remove node from parent's children and exit function
+//            node.parent!!.childrenInternal.remove(node)
+//            return
+//        }
+//
+//        // Nodes with single child can be simplify to just child element
+//        if (node.childrenInternal.size == 1) {
+//            node.childrenInternal.first().also { child ->
+//                // Add child to node's parent
+//                node.parent?.addChild(child)
+//
+//                // Forget child in node
+//                node.childrenInternal.remove(child)
+//
+//                // Remove node from parent's collection
+//                node.parent
+//            }
+//        }
     }
 
     private fun reduceTauLeafsInModel(node: Node) {
+        reduceTauActivitiesInNode(node)
+
+
+        // Apply action for each children
+        node.childrenInternal.forEach {
+            reduceTauLeafsInModel(it)
+        }
+    }
+
+    private fun reduceTauActivitiesInNode(node: Node) {
         when (node) {
             is Sequence, is Parallel -> {
                 var childrenCount = node.childrenInternal.size
@@ -49,11 +120,6 @@ class ModelSimplifier {
 
                 removeDuplicatedTauLeafs(iterator)
             }
-        }
-
-        // Apply action for each children
-        node.childrenInternal.forEach {
-            reduceTauLeafsInModel(it)
         }
     }
 

@@ -23,10 +23,21 @@ abstract class Node(vararg nodes: Node) {
     abstract val symbol: String
 
     init {
-        nodes.forEach { node ->
-            childrenInternal.add(node)
-            node.parent = this
-        }
+        nodes.forEach { addChild(it) }
+    }
+
+    /**
+     * Add child node to collection of nodes
+     */
+    fun addChild(node: Node) {
+        childrenInternal.add(node)
+        node.parent = this
+    }
+
+    fun replaceChild(replaced: Node, replacement: Node) {
+        val index = childrenInternal.indexOfFirst { it == replaced }
+        childrenInternal[index] = replacement
+        replacement.parent = this
     }
 
     override fun equals(other: Any?): Boolean {
