@@ -186,6 +186,14 @@ class CompareOfflineWithOnline {
         })
     }
 
+    companion object {
+        /**
+         * For logs up to this size we run [OnlineHeuristicMiner] for each permutation of the log in [helper].
+         * Above this size for a single permutation.
+         */
+        private val maxLogSizeForPermutations = 4
+    }
+
     private fun helper(seed: Int, nNodes: Int): DynamicNode {
         val reference = RandomGenerator(Random(seed), nNodes = nNodes).generate()
         val log = logFromModel(reference)
@@ -198,7 +206,7 @@ class CompareOfflineWithOnline {
             val eq = CausalNetTraceComparison(reference, hm.result).equivalent
             return hm.result to eq
         }
-        if (log.traces.count() <= 4) {
+        if (log.traces.count() <= maxLogSizeForPermutations) {
             val (offline, eq) = prepareOffline()
             return DynamicContainer.dynamicContainer("seed=$seed",
                 log.traces.toList().allPermutations().mapIndexed { idx, traces ->
