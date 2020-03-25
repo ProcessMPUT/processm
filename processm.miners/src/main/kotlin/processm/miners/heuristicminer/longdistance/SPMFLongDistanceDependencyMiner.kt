@@ -10,6 +10,10 @@ import java.io.FileReader
 import java.io.PrintStream
 import java.nio.file.Files
 
+@RequiresOptIn(message = "This is a PoC kept to facilitate further development of long-distance dependency mining and not intended for production.")
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
+annotation class ExperimentalLongDistanceDependencyMining
 
 /**
  * An approach to long-distance dependency mining based on sequential rule mining.
@@ -17,6 +21,7 @@ import java.nio.file.Files
  * a form of an executable JAR file and with an interface compatible with those of SPMF
  * (https://www.philippe-fournier-viger.com/spmf/)
  */
+@ExperimentalLongDistanceDependencyMining
 private class SPMFLongDistanceDependencyMiner(
     val blackboxJarPath: String,
     isAvoidable: AvoidabilityChecker
