@@ -96,16 +96,15 @@ class BestFirstBindingProvider(
                 }
                 continue
             }
-            val (state, joins, splits) = traceSoFar
             consumeCandidates[currentNodeIdx]
-                .filter { consume -> state.containsAll(consume) }
+                .filter { consume -> traceSoFar.state.containsAll(consume) }
                 .flatMap { consume ->
                     produceCandidates[currentNodeIdx]
                         .map { produce ->
-                            val ns = State(state)
+                            val ns = State(traceSoFar.state)
                             ns.removeAll(consume)
                             ns.addAll(produce)
-                            ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce))
+                            ReplayTrace(ns, traceSoFar.joins + setOf(consume), traceSoFar.splits + setOf(produce))
                         }
                 }
                 .forEach { queue.add(ComputationState(currentNodeIdx + 1, it, trace)) }
