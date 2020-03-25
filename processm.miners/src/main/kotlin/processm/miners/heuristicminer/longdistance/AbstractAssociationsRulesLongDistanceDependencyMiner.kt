@@ -9,7 +9,7 @@ import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChec
  * i.e., `itemset->itemset`
  */
 abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
-    val isAvoidable: AvoidabilityChecker
+    private val isAvoidable: AvoidabilityChecker
 ) : LongDistanceDependencyMiner {
 
     protected val log = ArrayList<List<Node>>()

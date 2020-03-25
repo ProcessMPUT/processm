@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer
 
+import org.opentest4j.AssertionFailedError
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
@@ -13,10 +14,9 @@ import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.longdistance.BruteForceLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-import kotlin.test.Ignore
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import processm.miners.heuristicminer.longdistance.ShortestUniquePrefixLongDistanceDependencyMiner
+import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import kotlin.test.*
 
 
 class FromModelToLogAndBackAgain {
@@ -468,6 +468,13 @@ class FromModelToLogAndBackAgain {
     @Test
     fun `Offline - Naive - flexible heurisitc miner long-distance dependency example`() {
         test(fhm, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
+    }
+
+    @Test
+    fun `Offline - Void - flexible heurisitc miner long-distance dependency example`() {
+        assertFailsWith<AssertionFailedError> {
+            test(fhm, OfflineHeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()))
+        }
     }
 
     @Test

@@ -51,26 +51,25 @@ class BruteForceLongDistanceDependencyMiner(
             )
         )
         while (queue.isNotEmpty()) {
-            val (prec, pos, positive, negative) = queue.pollFirst()
-            if (negative.isNotEmpty()) {
+            val arg = queue.pollFirst()
+            if (arg.negative.isNotEmpty()) {
                 val known =
-                    prec.allSubsets().filter { it.isNotEmpty() }.toList().map { rules.getOrDefault(it.toSet(), setOf()) }
+                    arg.prec.allSubsets().filter { it.isNotEmpty() }.toList().map { rules.getOrDefault(it.toSet(), setOf()) }
                         .flatten()
-                val succ = intersection(positive.map {
+                val succ = intersection(arg.positive.map {
                     val t = log[it.first]
                     t.subList(it.second, t.size).toSet()
-                }) - prec - known - common
+                }) - arg.prec - known - common
                 if (succ.isNotEmpty()) {
-                    rules[prec] = succ
-                    println("\t$prec -> $succ")
+                    rules[arg.prec] = succ
                 }
             }
-            val extensions = nodes.subList(pos, nodes.size)
-            if (prec.size + 1 <= maxPremisesSize) {
+            val extensions = nodes.subList(arg.pos, nodes.size)
+            if (arg.prec.size + 1 <= maxPremisesSize) {
                 for ((idx, ext) in extensions) {
                     val newPos = ArrayList<Pair<Int, Int>>()
                     val newNeg = ArrayList<Int>()
-                    for ((tidx, last) in positive) {
+                    for ((tidx, last) in arg.positive) {
                         val extpos = log[tidx].indexOfFirst { it == ext }
                         if (extpos >= 0)
                             newPos.add(tidx to max(last, extpos))
@@ -80,10 +79,10 @@ class BruteForceLongDistanceDependencyMiner(
                     if (newPos.isNotEmpty()) {
                         queue.addLast(
                             Args(
-                                prec + ext,
+                                arg.prec + ext,
                                 idx + 1,
                                 newPos,
-                                negative + newNeg
+                                arg.negative + newNeg
                             )
                         )
                     }
