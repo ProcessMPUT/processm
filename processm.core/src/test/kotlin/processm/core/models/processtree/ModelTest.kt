@@ -11,6 +11,7 @@ class ModelTest {
         val a = Activity("A")
         with(processTree { Sequence(a) }) {
             assertNull(root!!.parent)
+            assertEquals(toString(), "→(A)")
         }
     }
 
@@ -18,19 +19,24 @@ class ModelTest {
     fun `Node with reference to own parent`() {
         val a = Activity("A")
         val b = Activity("B")
-        with(processTree { Sequence(a, b) }.root!!) {
+        val model = processTree { Sequence(a, b) }
+
+        with(model.root!!) {
             assertNull(parent)
 
             children.forEach { childrenNode ->
                 assertEquals(childrenNode.parent, this)
             }
         }
+
+        assertEquals(model.toString(), "→(A,B)")
     }
 
     @Test
     fun `Model without activities`() {
         val model = processTree { null }
         assertNull(model.root)
+        assertEquals(model.toString(), "")
     }
 
     @Test
@@ -54,6 +60,8 @@ class ModelTest {
                 assertTrue(children.isEmpty())
             }
         }
+
+        assertEquals(model.toString(), "⟲(τ,A)")
     }
 
     @Test
@@ -66,6 +74,8 @@ class ModelTest {
             assertEquals(name, "A")
             assertTrue(children.isEmpty())
         }
+
+        assertEquals(model.toString(), "A")
     }
 
     @Test
@@ -84,6 +94,8 @@ class ModelTest {
                 Activity("D")
             )
         }
+
+        assertEquals(model.toString(), "→(A,×(∧(B,C),E),D)")
 
         with(model.root!!) {
             assert(this is Sequence)
@@ -145,6 +157,8 @@ class ModelTest {
                 Activity("D")
             )
         }
+
+        assertEquals(model.toString(), "→(A,⟲(∧(B,C),→(E,F)),D)")
 
         with(model.root!!) {
             assert(this is Sequence)
@@ -222,6 +236,8 @@ class ModelTest {
                 )
             )
         }
+
+        assertEquals(model.toString(), "→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
 
         with(model.root!!) {
             assert(this is Sequence)

@@ -2,9 +2,15 @@ package processm.core.models.processtree
 
 open class Activity(name: String) : Node() {
     /**
-     * Activity name
+     * The name of an activity as a representation of an object
      */
     val name: String = name.intern()
+
+    /**
+     * The symbol of an activity - for activity this will be name
+     */
+    override val symbol: String
+        get() = name
 
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
