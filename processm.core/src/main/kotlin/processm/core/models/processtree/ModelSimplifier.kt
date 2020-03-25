@@ -16,11 +16,6 @@ class ModelSimplifier {
     }
 
     private fun reduceTauLeafsInModel(node: Node) {
-        // Apply action for each children
-        node.childrenInternal.forEach {
-            reduceTauLeafsInModel(it)
-        }
-
         // Apply reduce only if sequence operator
         if (node is Sequence) {
             var childrenCount = node.childrenInternal.size
@@ -35,6 +30,11 @@ class ModelSimplifier {
                     childrenCount--
                 }
             }
+        }
+
+        // Apply action for each children
+        node.childrenInternal.forEach {
+            reduceTauLeafsInModel(it)
         }
     }
 }
