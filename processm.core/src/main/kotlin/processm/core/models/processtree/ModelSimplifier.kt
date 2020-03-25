@@ -39,7 +39,7 @@ class ModelSimplifier {
             var alreadySeenSilentActivity = false
             val iterator = node.childrenInternal.iterator()
 
-            // Ignore first element - this ca not be simplify
+            // Ignore the first element - it can not be simplified
             if (iterator.hasNext())
                 iterator.next()
 
