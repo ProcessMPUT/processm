@@ -11,6 +11,9 @@ class ModelSimplifier {
      * For example in tree →(A,τ,B) activity τ can be removed and we can generate →(A,B)
      * Model with →(A,τ) will be simplify to →(A) => no reduction to single activity!
      * Reduction can be executed also if parallel operator.
+     *
+     * For redo loop operator we can simplify body part:
+     * ⟲(τ,A,τ,τ,τ,C,τ) will be replaced by ⟲(τ,A,τ,C)
      */
     fun reduceTauLeafs(model: Model) {
         if (model.root != null)
@@ -30,6 +33,27 @@ class ModelSimplifier {
                     // Remove silent activity and decrement total number of not removed children in analyzed node
                     iterator.remove()
                     childrenCount--
+                }
+            }
+        } else if (node is RedoLoop) {
+            var alreadySeenSilentActivity = false
+            val iterator = node.childrenInternal.iterator()
+
+            // Ignore the first element - it can not be simplified
+            if (iterator.hasNext())
+                iterator.next()
+
+            // Iterate over children in body part
+            while (iterator.hasNext()) {
+                // If node is silent activity AND already seen silent activity
+                if (iterator.next() is SilentActivity) {
+                    if (alreadySeenSilentActivity) {
+                        // Remove silent activity
+                        iterator.remove()
+                    } else {
+                        // Mark silent activity as already seen in loop - each next we can remove
+                        alreadySeenSilentActivity = true
+                    }
                 }
             }
         }

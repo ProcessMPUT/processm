@@ -132,4 +132,173 @@ class ModelSimplifierTest {
         assertEquals(tree.toString(), "⟲(τ,×(τ,A),∧(B,C),D,→(E,→(F,G)))")
         assertTrue(tree.languageEqual(expectedTree))
     }
+
+    @Test
+    fun `In redo loop can remove duplicated silent activities but only in loop part`() {
+        val tree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                Activity("A"),
+                SilentActivity(),
+                SilentActivity(),
+                SilentActivity(),
+                Activity("C"),
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                Activity("A"),
+                SilentActivity(),
+                Activity("C")
+            )
+        }
+
+        assertEquals( "⟲(τ,A,τ,C)", tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
+    fun `Redo-Loop with not tau as first element`() {
+        val tree = processTree {
+            RedoLoop(
+                Activity("A"),
+                SilentActivity(),
+                SilentActivity(),
+                SilentActivity(),
+                Activity("C"),
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                Activity("A"),
+                SilentActivity(),
+                Activity("C")
+            )
+        }
+
+        assertEquals( "⟲(A,τ,C)", tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
+    fun `Redo-loop without any silent activity`() {
+        val tree = processTree {
+            RedoLoop(
+                Activity("A"),
+                Activity("B"),
+                Activity("C")
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                Activity("A"),
+                Activity("B"),
+                Activity("C")
+            )
+        }
+
+        assertEquals( "⟲(A,B,C)", tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
+    fun `Redo-loop with only silent activity`() {
+        val tree = processTree {
+            RedoLoop(
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                SilentActivity()
+            )
+        }
+
+        assertEquals( "⟲(τ)", tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
+    fun `Redo-loop with only two silent activity`() {
+        val tree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                SilentActivity()
+            )
+        }
+
+        assertEquals( "⟲(τ,τ)", tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
+    fun `Redo-loop with only silent activities`() {
+        val tree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                SilentActivity(),
+                SilentActivity(),
+                SilentActivity(),
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                SilentActivity(),
+                SilentActivity()
+            )
+        }
+
+        assertEquals( "⟲(τ,τ)", tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
+    fun `Redo-loop with silent and non silent activities`() {
+        val tree = processTree {
+            RedoLoop(
+                Activity("A"),
+                SilentActivity()
+            )
+        }
+
+        ModelSimplifier().reduceTauLeafs(tree)
+
+        val expectedTree = processTree {
+            RedoLoop(
+                Activity("A"),
+                SilentActivity()
+            )
+        }
+
+        assertEquals( "⟲(A,τ)", tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
 }

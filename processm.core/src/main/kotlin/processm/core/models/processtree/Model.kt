@@ -47,17 +47,30 @@ class Model(val root: Node? = null) : AbstractModel {
                 if (!isLanguageEqual(model.children.firstOrNull(), other.children.firstOrNull())) return false
             }
 
+            val allAttributes = HashSet<Node>()
+            allAttributes.addAll(model.children)
+            allAttributes.addAll(other.children)
+
             // All children should match - order not important now
             val childrenSetOther = other.children.toHashSet()
             for (childInModel in model.children) {
-                val first = childrenSetOther.firstOrNull { isLanguageEqual(childInModel, it) }
-                if (first === null)
-                    return false
-                // Remove element from the set to reduce the volume of calculations
-                childrenSetOther.remove(first)
+                for (childInOther in childrenSetOther) {
+                    if (isLanguageEqual(childInModel, childInOther)) {
+                        // Remove from all attributes set element from model and other
+                        // x(A,B) and x(B,A) are logical equal but in set stored both - we need to remove both
+                        allAttributes.remove(childInModel)
+                        allAttributes.remove(childInOther)
+
+                        // Remove element from set used to reduce the amount of calculations
+                        childrenSetOther.remove(childInOther)
+
+                        // Break loop - already match, second match not required
+                        break
+                    }
+                }
             }
 
-            return childrenSetOther.isEmpty()
+            return allAttributes.isEmpty()
         }
     }
 }
