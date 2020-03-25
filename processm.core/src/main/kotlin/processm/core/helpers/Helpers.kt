@@ -100,7 +100,7 @@ fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
 /**
  * Generate all permutations of the given list
  */
-fun <T> List<T>.allPermutations(): List<List<T>> = sequence {
+fun <T> Collection<T>.allPermutations(): Sequence<ArrayList<T>> = sequence {
     if (this@allPermutations.isEmpty())
         return@sequence
 
@@ -122,7 +122,7 @@ fun <T> List<T>.allPermutations(): List<List<T>> = sequence {
             ++i
         }
     }
-}.toList()
+}
 
 private inline fun <T> MutableList<T>.swap(i: Int, j: Int) {
     val tmp = this[i]

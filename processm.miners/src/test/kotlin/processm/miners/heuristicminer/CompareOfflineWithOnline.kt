@@ -217,7 +217,7 @@ class CompareOfflineWithOnline {
                         val online = hm.result
                         assertTrue { CausalNetTraceComparison(online, offline).equivalent }
                     }
-                })
+                }.asIterable())
         } else {
             return DynamicTest.dynamicTest("seed=$seed") {
                 val (offline, eq) = prepareOffline()
