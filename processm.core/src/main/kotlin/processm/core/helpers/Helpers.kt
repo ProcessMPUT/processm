@@ -73,3 +73,43 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
     if (it1.hasNext() || it2.hasNext())
         throw IllegalArgumentException("Inconsistent sizes of the given sequences")
 }
+
+/**
+ * Generates the power-set of the collection (incl. the empty set and the full set)
+ */
+fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
+    if (this@allSubsets.size >= Long.SIZE_BITS)
+        throw IllegalArgumentException("This implementation of power set supports sets of up to 63 items.")
+    if (this@allSubsets.isEmpty()) {
+        yield(listOf<T>())
+        return@sequence
+    }
+
+    val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this@allSubsets.size)
+
+    var mask = 0L
+    while (true) {
+        yield(this@allSubsets.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L })
+
+        if (++mask > lastBucketMask || mask < 0L)
+            return@sequence
+    }
+}
+
+
+/**
+ * Generate all permutations of the given list
+ */
+fun <T> List<T>.allPermutations(): List<List<T>> {
+    val first = this.first()
+    val rest = this.drop(1)
+    if (rest.isNotEmpty()) {
+        return rest.allPermutations()
+            .flatMap { perm ->
+                perm.indices.map { perm.subList(0, it) + first + perm.subList(it, perm.size) } +
+                        listOf(perm + first)
+            }
+    } else {
+        return listOf(listOf(first))
+    }
+}
