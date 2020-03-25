@@ -9,6 +9,8 @@ class ModelSimplifier {
      * WARNING: This action can modify internal structure of given process tree model!
      *
      * For example in tree →(A,τ,B) activity τ can be removed and we can generate →(A,B)
+     * Model with →(A,τ) will be simplify to →(A) => no reduction to single activity!
+     * Reduction can be executed also if parallel operator.
      */
     fun reduceTauLeafs(model: Model) {
         if (model.root != null)
@@ -17,7 +19,7 @@ class ModelSimplifier {
 
     private fun reduceTauLeafsInModel(node: Node) {
         // Apply reduce only if sequence operator
-        if (node is Sequence) {
+        if (node is Sequence || node is Parallel) {
             var childrenCount = node.childrenInternal.size
             val iterator = node.childrenInternal.iterator()
 
