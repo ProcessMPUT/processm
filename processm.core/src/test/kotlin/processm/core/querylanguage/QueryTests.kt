@@ -929,5 +929,49 @@ class QueryTests {
         assertTrue("decimal" in query.warning!!.message!!)
     }
 
+    @Test
+    fun commentLineTest() {
+        val query = Query(
+            """select e:name
+            --where e:timestamp > D2020-01-01
+            order by e:timestamp
+            """
+        )
+        assertEquals(1, query.selectEventStandardAttributes.size)
+        assertEquals(Expression.empty, query.whereExpression)
+        assertEquals(1, query.orderByEventExpressions.size)
+    }
+
+    @Test
+    fun commentLine2Test() {
+        val query = Query(
+            """select e:name
+            //where e:timestamp > D2020-01-01
+            order by e:timestamp
+            """
+        )
+        assertEquals(1, query.selectEventStandardAttributes.size)
+        assertEquals(Expression.empty, query.whereExpression)
+        assertEquals(1, query.orderByEventExpressions.size)
+    }
+
+    @Test
+    fun commentBlockTest() {
+        val query = Query(
+            """select e:name
+            /*where e:timestamp > D2020-01-01
+            group by e:name
+            */
+            order by e:timestamp
+            """
+        )
+        assertEquals(1, query.selectEventStandardAttributes.size)
+        assertEquals(Expression.empty, query.whereExpression)
+        assertFalse(query.isImplicitGroupBy)
+        assertFalse(query.isGroupLogBy)
+        assertFalse(query.isGroupTraceBy)
+        assertFalse(query.isGroupEventBy)
+        assertEquals(1, query.orderByEventExpressions.size)
+    }
 
 }

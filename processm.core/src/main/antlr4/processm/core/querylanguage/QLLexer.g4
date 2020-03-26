@@ -90,6 +90,8 @@ ORDER_DESC  : 'desc' ;
 ID          : SCOPE_PREFIX ([a-zA-CE-Z_]|DIGIT)+ (':' (LETTER|DIGIT)+)?
             | '[' SCOPE_PREFIX ('\\]' | .)*? ']';
 
+LINE_COMMENT: ( '//' | '--' ) .*? ( '\r' | '\n' ) -> skip ;
+COMMENT     : '/*' .*? '*/' -> skip ;
 WS          : [ \t\r\n]+ -> skip ; // skip spaces, tabs, newlines, \r (Windows)
 
 fragment HOISTING_PREFIX: '^' ;
