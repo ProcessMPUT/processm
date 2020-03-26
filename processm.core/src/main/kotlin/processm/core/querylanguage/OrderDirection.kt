@@ -24,8 +24,8 @@ enum class OrderDirection {
          */
         fun parse(text: String?, default: OrderDirection = Ascending): OrderDirection = when (text) {
             null, "" -> default
-            "asc" -> Ascending
-            "desc" -> Descending
+            "asc", Ascending.name -> Ascending
+            "desc", Descending.name -> Descending
             else -> throw IllegalArgumentException("Invalid order direction $text.")
         }
     }

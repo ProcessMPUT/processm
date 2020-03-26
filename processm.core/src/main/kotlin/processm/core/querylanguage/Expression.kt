@@ -58,7 +58,7 @@ open class Expression(final override vararg val children: IExpression) : IExpres
      * Character position in line in the source PQL query.
      */
     override val charPositionInLine: Int
-        get() = children.map { it.charPositionInLine }.min() ?: 0
+        get() = children.minBy { it.line }?.charPositionInLine ?: 0
 
     /**
      * Selects recursively from this expression subexpressions matching the given predicate. A child expression may be

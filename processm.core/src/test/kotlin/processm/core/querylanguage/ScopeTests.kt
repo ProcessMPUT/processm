@@ -7,7 +7,7 @@ import kotlin.test.assertFailsWith
 class ScopeTests {
 
     @Test
-    fun storeAndParseTest() {
+    fun parseTest() {
         val scopes = arrayOf(Scope.Log, Scope.Trace, Scope.Event)
         for (scope in scopes) {
             assertEquals(scope, Scope.parse(scope.toString()))
@@ -17,7 +17,7 @@ class ScopeTests {
     }
 
     @Test
-    fun invalidScopeParseTest() {
+    fun invalidParseTest() {
         assertFailsWith<IllegalArgumentException> { Scope.parse("XYZ") }
     }
 

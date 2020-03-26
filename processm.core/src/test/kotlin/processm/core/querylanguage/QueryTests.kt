@@ -73,6 +73,16 @@ class QueryTests {
     }
 
     @Test
+    fun scopedSelectAll2Test() {
+        val query = Query("select t:*, e:*, l:*")
+        assertTrue(query.selectAll)
+        assertTrue(query.selectAllLog)
+        assertTrue(query.selectAllTrace)
+        assertTrue(query.selectAllEvent)
+        assertFalse(query.isImplicitSelectAll)
+    }
+
+    @Test
     fun selectUsingClassifierTest() {
         val query = Query("select t:c:businesscase, e:classifier:activity_resource")
         assertFalse(query.isImplicitSelectAll)
@@ -447,6 +457,7 @@ class QueryTests {
             "select e:total + 10 group by e:name",
             "select avg(e:total), e:resource",
             "where avg(e:total) > 100",
+            "select *, avg(e:total)",
             "limit 42",
             "limit l:-1",
             "limit l:0",
@@ -814,7 +825,7 @@ class QueryTests {
     fun orderByExpression2Test() {
         val query = Query(
             """group trace by e:name
-                order by [l:basePrice] * avg(^e:total) * 3.141592 desc"""
+            |order by [l:basePrice] * avg(^e:total) * 3.141592 desc""".trimMargin()
         )
         assertEquals(0, query.orderByLogExpressions.size)
         assertEquals(1, query.orderByTraceExpressions.size)
@@ -826,6 +837,8 @@ class QueryTests {
         val expression = query.orderByTraceExpressions[0].base
         assertEquals(Scope.Trace, expression.effectiveScope)
         assertEquals("[log:basePrice]*avg(^event:cost:total)*3.141592", expression.toString())
+        assertEquals(2, expression.line)
+        assertEquals(9, expression.charPositionInLine)
         assertEquals(0, query.orderByEventExpressions.size)
     }
 
@@ -959,11 +972,11 @@ class QueryTests {
     fun commentBlockTest() {
         val query = Query(
             """select e:name
-            /*where e:timestamp > D2020-01-01
-            group by e:name
-            */
-            order by e:timestamp
-            """
+            |/*where e:timestamp > D2020-01-01
+            |group by e:name
+            |*/
+            |order by e:timestamp
+            """.trimMargin()
         )
         assertEquals(1, query.selectEventStandardAttributes.size)
         assertEquals(Expression.empty, query.whereExpression)
@@ -972,6 +985,19 @@ class QueryTests {
         assertFalse(query.isGroupTraceBy)
         assertFalse(query.isGroupEventBy)
         assertEquals(1, query.orderByEventExpressions.size)
+        assertEquals(5, query.orderByEventExpressions[0].line)
+        assertEquals(9, query.orderByEventExpressions[0].charPositionInLine)
     }
 
+    @Test
+    fun toStringTest() {
+        val q = """select e:name
+            |/*where e:timestamp > D2020-01-01
+            |group by e:name
+            |*/
+            |order by e:timestamp
+            """.trimMargin()
+        val query = Query(q)
+        assertEquals(q, query.toString())
+    }
 }
