@@ -704,12 +704,11 @@ class Query(val query: String) {
             msg: String?,
             e: RecognitionException?
         ) {
-            assert(e !== null)
             val eWithMessage = RecognitionException(
                 "Line $line position $charPositionInLine: $msg",
-                e!!.recognizer,
-                e.inputStream,
-                e.ctx as ParserRuleContext?
+                recognizer,
+                e?.inputStream,
+                e?.ctx as ParserRuleContext?
             )
             delayedThrow(eWithMessage)
         }

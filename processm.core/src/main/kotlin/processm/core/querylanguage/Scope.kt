@@ -29,9 +29,9 @@ enum class Scope {
          */
         fun parse(text: String?, default: Scope = Event): Scope = when (text) {
             "", null -> default
-            "log", "l" -> Log
-            "trace", "t" -> Trace
-            "event", "e" -> Event
+            "log", "l", Log.name -> Log
+            "trace", "t", Trace.name -> Trace
+            "event", "e", Event.name -> Event
             else -> throw IllegalArgumentException("Invalid scope $text.")
         }
     }

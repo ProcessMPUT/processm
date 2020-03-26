@@ -521,6 +521,30 @@ class QueryTests {
     }
 
     @Test
+    fun whereLogicExpr3Test() {
+        val query = Query("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2020-01-01) and t:total is null")
+        assertTrue(query.isImplicitSelectAll)
+        assertTrue(query.selectAll)
+        assertEquals(
+            "(not(trace:cost:currency=^event:cost:currency)or^event:time:timestamp>=2020-01-01T00:00:00Z)andtrace:cost:totalis null",
+            query.whereExpression.toString()
+        )
+        assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
+    }
+
+    @Test
+    fun whereLikeAndMatchesTest() {
+        val query = Query("where t:name like 'transaction %' and ^e:resource matches '^[A-Z][a-z]+ [A-Z][a-z]+$'")
+        assertTrue(query.selectAll)
+        assertEquals(
+            "trace:concept:nameliketransaction %and^event:org:resourcematches^[A-Z][a-z]+ [A-Z][a-z]+\$",
+            query.whereExpression.toString()
+        )
+
+        assertNull(query.warning)
+    }
+
+    @Test
     fun groupScopeByClassifierTest() {
         val query = Query("group trace by e:classifier:activity")
         assertTrue(query.isImplicitSelectAll)
@@ -904,4 +928,6 @@ class QueryTests {
         assertNotNull(query.warning)
         assertTrue("decimal" in query.warning!!.message!!)
     }
+
+
 }
