@@ -410,6 +410,30 @@ class QueryTests {
     }
 
     @Test
+    fun selectNowTest() {
+        val query = Query("select now()")
+        assertFalse(query.isImplicitSelectAll)
+        assertFalse(query.selectAll)
+        assertFalse(query.selectAllLog)
+        assertFalse(query.selectAllTrace)
+        assertFalse(query.selectAllEvent)
+        // log scope
+        assertEquals(0, query.selectLogStandardAttributes.size)
+        assertEquals(0, query.selectLogOtherAttributes.size)
+        assertEquals(0, query.selectLogExpressions.size)
+        // trace scope
+        assertEquals(0, query.selectTraceStandardAttributes.size)
+        assertEquals(0, query.selectTraceOtherAttributes.size)
+        assertEquals(0, query.selectTraceExpressions.size)
+        // event scope
+        assertEquals(0, query.selectEventStandardAttributes.size)
+        assertEquals(0, query.selectEventOtherAttributes.size)
+        assertEquals(1, query.selectEventExpressions.size)
+        assertEquals("now()", query.selectEventExpressions[0].toString())
+
+    }
+
+    @Test
     fun errorHandlingTest() {
         val invalidSyntax =
             listOf(
