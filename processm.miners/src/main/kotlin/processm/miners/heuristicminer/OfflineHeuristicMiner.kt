@@ -39,7 +39,7 @@ class OfflineHeuristicMiner(
     }
 
     internal val nodes: Set<Node> by lazy {
-        (directlyFollows.keys.map { it.first } + directlyFollows.keys.map { it.second }).distinct().toSet()
+        (directlyFollows.keys.map { it.source } + directlyFollows.keys.map { it.target }).distinct().toSet()
     }
 
     private fun mineBindings(
@@ -79,9 +79,9 @@ class OfflineHeuristicMiner(
             val ltdeps = longDistanceDependencyMiner.mine(model)
             if (ltdeps.isNotEmpty()) {
                 ltdeps.forEach { dep ->
-                    model.addDependency(dep.first, dep.second)
-                    model.clearBindingsFor(dep.first)
-                    model.clearBindingsFor(dep.second)
+                    model.addDependency(dep)
+                    model.clearBindingsFor(dep.source)
+                    model.clearBindingsFor(dep.target)
                 }
                 mineBindings(logWithNodes, model)
             } else

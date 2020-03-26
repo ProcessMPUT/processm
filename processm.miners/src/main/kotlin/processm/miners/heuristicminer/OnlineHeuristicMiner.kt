@@ -51,11 +51,11 @@ class OnlineHeuristicMiner(
             val ltdeps = longDistanceDependencyMiner.mine(model)
             if (ltdeps.isNotEmpty()) {
                 ltdeps.forEach { dep ->
-                    model.addDependency(dep.first, dep.second)
-                    model.clearBindingsFor(dep.first)
-                    model.clearBindingsFor(dep.second)
+                    model.addDependency(dep)
+                    model.clearBindingsFor(dep.source)
+                    model.clearBindingsFor(dep.target)
                 }
-                val affectedNodes = (ltdeps.map { it.first } + ltdeps.map { it.second }).toSet()
+                val affectedNodes = (ltdeps.map { it.source } + ltdeps.map { it.target }).toSet()
                 val affectedTraces = currentBindings
                     .filter { binding ->
                         binding.dependencies.any { affectedNodes.contains(it.source) || affectedNodes.contains(it.target) }

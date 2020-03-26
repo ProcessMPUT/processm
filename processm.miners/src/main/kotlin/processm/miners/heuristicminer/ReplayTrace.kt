@@ -1,13 +1,21 @@
 package processm.miners.heuristicminer
 
-import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.Dependency
 import processm.core.verifiers.causalnet.State
+
+typealias ActiveDependencies = Set<Dependency>
 
 /**
  * Partial replay trace, consisting of the reached state and bindings executed so far.
  */
 data class ReplayTrace(
     val state: State,
-    val joins: List<Set<Pair<Node, Node>>>,
-    val splits: List<Set<Pair<Node, Node>>>
+    /**
+     * Dependencies that were activated in the last step to reach [state]
+     */
+    val joins: List<ActiveDependencies>,
+    /**
+     * Dependencies that were activated in the last step to reach [state]
+     */
+    val splits: List<ActiveDependencies>
 )

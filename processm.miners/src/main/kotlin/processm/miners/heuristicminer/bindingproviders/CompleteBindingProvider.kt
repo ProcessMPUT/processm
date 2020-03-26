@@ -17,29 +17,29 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
 
     override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
         var currentStates =
-            sequenceOf(ReplayTrace(State(), listOf<Set<Pair<Node, Node>>>(), listOf<Set<Pair<Node, Node>>>()))
+            sequenceOf(ReplayTrace(State(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
         for (currentNode in trace) {
-            val consumable = model.incoming.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
-            val producible = model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
+            val consumable = model.incoming.getOrDefault(currentNode, setOf())
+            val producible = model.outgoing.getOrDefault(currentNode, setOf())
             val knownJoins = model.joins[currentNode]
-            val consumeCandidates: Sequence<Set<Pair<Node, Node>>> =
+            val consumeCandidates: Sequence<Set<Dependency>> =
                 if (knownJoins.isNullOrEmpty()) {
                     if (consumable.isNotEmpty())
                         consumable.allSubsets().filter { consume -> consume.isNotEmpty() }.map { it.toSet() }
                     else
                         sequenceOf(setOf())
                 } else {
-                    knownJoins.map { join -> join.sources.map { it to join.target }.toSet() }.asSequence()
+                    knownJoins.map { join -> join.dependencies }.asSequence()
                 }
             val knownSplits = model.splits[currentNode]
-            val produceCandidates: Sequence<Set<Pair<Node, Node>>> =
+            val produceCandidates: Sequence<Set<Dependency>> =
                 if (knownSplits.isNullOrEmpty()) {
                     if (producible.isNotEmpty())
                         producible.allSubsets().filter { produce -> produce.isNotEmpty() }.map { it.toSet() }
                     else
                         sequenceOf(setOf())
                 } else {
-                    knownSplits.map { split -> split.targets.map { split.source to it }.toSet() }.asSequence()
+                    knownSplits.map { split -> split.dependencies }.asSequence()
                 }
             // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
             // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste

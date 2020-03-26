@@ -96,18 +96,18 @@ class PM_chapter_72 {
         hm.processLog(log)
         assertEquals(
             mapOf(
-                (hm.start to a) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
-                (e to hm.end) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
-                (a to b) to 11,
-                (a to c) to 11,
-                (a to d) to 13,
-                (a to e) to 5,
-                (b to c) to 10,
-                (b to e) to 11,
-                (c to b) to 10,
-                (c to e) to 11,
-                (d to d) to 4,
-                (d to e) to 13
+                Dependency(hm.start, a) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
+                Dependency(e, hm.end) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
+                Dependency(a, b) to 11,
+                Dependency(a, c) to 11,
+                Dependency(a, d) to 13,
+                Dependency(a, e) to 5,
+                Dependency(b, c) to 10,
+                Dependency(b, e) to 11,
+                Dependency(c, b) to 10,
+                Dependency(c, e) to 11,
+                Dependency(d, d) to 4,
+                Dependency(d, e) to 13
             ), hm.directlyFollows
         )
     }

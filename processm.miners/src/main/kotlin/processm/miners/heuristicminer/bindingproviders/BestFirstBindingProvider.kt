@@ -27,7 +27,7 @@ data class ComputationState(val nextNode: Int, val trace: ReplayTrace, val nodeT
  */
 class DefaultComputationStateComparator : Comparator<ComputationState> {
     private fun value(o: ComputationState): IntArray {
-        val targets = o.trace.state.map { it.second }.toSet()
+        val targets = o.trace.state.map { it.target }.toSet()
         val nMissing =
             (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
         val nTargets = targets.size
@@ -56,9 +56,9 @@ class BestFirstBindingProvider(
         val queue = PriorityQueue(comparator)
         queue.add(ComputationState(0, ReplayTrace(State(), listOf(), listOf()), trace))
 
-        val consumeCandidates: List<Sequence<Set<Pair<Node, Node>>>> = trace.map { currentNode ->
+        val consumeCandidates: List<Sequence<Set<Dependency>>> = trace.map { currentNode ->
             val consumable =
-                model.incoming.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
+                model.incoming.getOrDefault(currentNode, setOf())
             val knownJoins = model.joins[currentNode]
             if (knownJoins.isNullOrEmpty()) {
                 if (consumable.isNotEmpty())
@@ -66,12 +66,12 @@ class BestFirstBindingProvider(
                 else
                     sequenceOf(setOf())
             } else {
-                knownJoins.map { join -> join.sources.map { it to join.target }.toSet() }.asSequence()
+                knownJoins.map { join -> join.dependencies }.asSequence()
             }
         }
-        val produceCandidates: List<Sequence<Set<Pair<Node, Node>>>> = trace.map { currentNode ->
+        val produceCandidates: List<Sequence<Set<Dependency>>> = trace.map { currentNode ->
             val producible =
-                model.outgoing.getOrDefault(currentNode, setOf()).map { dep -> dep.source to dep.target }
+                model.outgoing.getOrDefault(currentNode, setOf())
             val knownSplits = model.splits[currentNode]
             if (knownSplits.isNullOrEmpty()) {
                 if (producible.isNotEmpty())
@@ -79,7 +79,7 @@ class BestFirstBindingProvider(
                 else
                     sequenceOf(setOf())
             } else {
-                knownSplits.map { split -> split.targets.map { split.source to it }.toSet() }.asSequence()
+                knownSplits.map { split -> split.dependencies }.asSequence()
             }
         }
         while (queue.isNotEmpty()) {

@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.longdistance
 
 import processm.core.logging.logger
+import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChecker
@@ -45,41 +46,41 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
         return latest.single()
     }
 
-    override fun mine(currentModel: Model): Collection<Pair<Node, Node>> {
+    override fun mine(currentModel: Model): Collection<Dependency> {
         isAvoidable.setContext(currentModel)
-        val result = ArrayList<Pair<Node, Node>>()
+        val result = ArrayList<Dependency>()
         for ((premises, conclusions) in deps) {
             if (!isAvoidable(premises to conclusions))
                 continue
             logger().debug("MINE ${premises.map { it.activity }} -> ${conclusions.map { it.activity }}")
             if (premises.size == 1 && conclusions.size == 1) {
                 //1-to-1 dependency
-                val r = premises.single() to conclusions.single()
+                val r = Dependency(premises.single(), conclusions.single())
                 result.add(r)
             } else if (premises.size >= 2 && conclusions.size == 1) {
                 //N-to-1 dependency
                 val s = conclusions.single()
-                val base = premises.map { it to s }
+                val base = premises.map { Dependency(it, s) }
                 result.addAll(base)
-                result.addAll(premises.map { it to currentModel.end })
-                result.add(s to currentModel.end)
+                result.addAll(premises.map { Dependency(it, currentModel.end) })
+                result.add(Dependency(s, currentModel.end))
             } else if (premises.size == 1 && conclusions.size >= 2) {
                 //1-to-N dependency
                 val p = premises.single()
-                val base = conclusions.map { p to it }
+                val base = conclusions.map { Dependency(p, it) }
                 result.addAll(base)
-                result.addAll(conclusions.map { currentModel.start to it })
-                result.add(currentModel.start to p)
+                result.addAll(conclusions.map { Dependency(currentModel.start, it) })
+                result.add(Dependency(currentModel.start, p))
             } else {
                 //N-to-M dependency
                 //honestly, I'm not sure if this is sufficient
                 val lcp = latestCommonPredecessor(premises)
-                result.addAll(conclusions.map { lcp to it })
-                result.addAll(premises.map { lcp to it })
+                result.addAll(conclusions.map { Dependency(lcp, it) })
+                result.addAll(premises.map { Dependency(lcp, it) })
             }
         }
         if (logger().isDebugEnabled)
-            result.forEach { logger().debug("FINAL ${it.first.activity} ${it.second.activity}") }
+            result.forEach { logger().debug("FINAL ${it.source.activity} ${it.target.activity}") }
         return result
     }
 }

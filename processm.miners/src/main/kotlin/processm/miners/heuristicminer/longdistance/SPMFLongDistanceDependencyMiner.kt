@@ -135,7 +135,8 @@ private class SPMFLongDistanceDependencyMiner(
         val deps = tmp
             .mapValues { (k, v) ->
                 val redundant =
-                    k.allSubsets().map { it.toSet() }.filter { it != k }.toList().flatMap { tmp.getOrDefault(it, setOf()) }.toSet()
+                    k.allSubsets().map { it.toSet() }.filter { it != k }.toList()
+                        .flatMap { tmp.getOrDefault(it, setOf()) }.toSet()
                 val vredundant = v.allSubsets().map { it.toSet() }.filter { it != v }.toList()
                     .flatMap { tmp.getOrDefault(it, setOf()) }.toSet()
                 v - redundant - vredundant

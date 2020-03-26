@@ -54,7 +54,8 @@ class BruteForceLongDistanceDependencyMiner(
             val arg = queue.pollFirst()
             if (arg.negative.isNotEmpty()) {
                 val known =
-                    arg.prec.allSubsets().filter { it.isNotEmpty() }.toList().map { rules.getOrDefault(it.toSet(), setOf()) }
+                    arg.prec.allSubsets().filter { it.isNotEmpty() }.toList()
+                        .map { rules.getOrDefault(it.toSet(), setOf()) }
                         .flatten()
                 val succ = intersection(arg.positive.map {
                     val t = log[it.first]

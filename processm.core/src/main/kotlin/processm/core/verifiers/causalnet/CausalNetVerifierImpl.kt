@@ -2,6 +2,7 @@ package processm.core.verifiers.causalnet
 
 import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.withMemory
+import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import java.util.*
@@ -165,10 +166,10 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
                     fromCache
         }
         val result = ArrayList<ActivityBinding>()
-        val candidates = currentState.map { it.second }.intersect(model.joins.keys)
+        val candidates = currentState.map { it.target }.intersect(model.joins.keys)
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
-                val expected = join.sources.map { it to ak }
+                val expected = join.sources.map { Dependency(it , ak) }
                 if (currentState.containsAll(expected)) {
                     val splits = model.splits[ak]
                     if (splits != null) {
@@ -210,7 +211,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
                 tmp.add(ActivityBinding(model.start, setOf(), split.targets, State()))
                 tmp
             })
-        val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Pair<Node, Node>>>>()
+        val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
         return sequence {
             while (queue.isNotEmpty()) {
                 val current = queue.pollFirst()
