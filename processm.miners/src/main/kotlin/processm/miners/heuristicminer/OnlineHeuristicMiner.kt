@@ -15,6 +15,8 @@ import processm.miners.heuristicminer.traceregisters.TraceRegister
  * An on-line implementation of the heuristic miner.
  * Given appropriate [traceRegister] and [longDistanceDependencyMiner] able to avoid storing all traces, but less efficient
  * than [OfflineHeuristicMiner].
+ *
+ * For the default values of parameters, the final model is guaranteed to have fitness = 1 for each of the presented traces.
  */
 class OnlineHeuristicMiner(
     minDirectlyFollows: Int = 1,

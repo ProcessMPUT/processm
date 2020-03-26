@@ -16,6 +16,7 @@ import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMi
  * An off-line implementation of Heuristic Miner.
  *
  * It is more efficient than [OnlineHeuristicMiner], as it does not need to recompute the model after each trace.
+ * For the default values of parameters, the final model is guaranteed to have fitness = 1 for each of the presented traces.
  */
 class OfflineHeuristicMiner(
     minDirectlyFollows: Int = 1,
