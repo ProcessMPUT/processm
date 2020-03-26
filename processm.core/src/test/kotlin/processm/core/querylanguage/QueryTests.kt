@@ -258,6 +258,7 @@ class QueryTests {
                     D2020-03-13T16:45:50.333, 
                     D2020-03-13T16:45+0200, 
                     D2020-03-13T16:45+02:00,
+                    D2020-03-13T16:45Z,
                     D20200313, 
                     D20200313T1645, 
                     D20200313T164550, 
@@ -266,7 +267,8 @@ class QueryTests {
                     D202003131645, 
                     D20200313164550, 
                     D20200313164550.333, 
-                    D202003131645+0200
+                    D202003131645+0200,
+                    D202003131645Z
                     """
         )
         assertFalse(query.isImplicitSelectAll)
@@ -285,22 +287,24 @@ class QueryTests {
         // event scope
         assertEquals(0, query.selectEventStandardAttributes.size)
         assertEquals(0, query.selectEventOtherAttributes.size)
-        assertEquals(15, query.selectEventExpressions.size)
+        assertEquals(17, query.selectEventExpressions.size)
         assertEquals("2020-03-13T00:00:00Z", query.selectEventExpressions.elementAt(0).toString())
         assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(1).toString())
         assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(2).toString())
         assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(3).toString())
         assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(4).toString())
         assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(5).toString())
-        assertEquals("2020-03-13T00:00:00Z", query.selectEventExpressions.elementAt(6).toString())
-        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(7).toString())
-        assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(8).toString())
-        assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(9).toString())
-        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(10).toString())
-        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(11).toString())
-        assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(12).toString())
-        assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(13).toString())
-        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(14).toString())
+        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(6).toString())
+        assertEquals("2020-03-13T00:00:00Z", query.selectEventExpressions.elementAt(7).toString())
+        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(8).toString())
+        assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(9).toString())
+        assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(10).toString())
+        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(11).toString())
+        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(12).toString())
+        assertEquals("2020-03-13T16:45:50Z", query.selectEventExpressions.elementAt(13).toString())
+        assertEquals("2020-03-13T16:45:50.333Z", query.selectEventExpressions.elementAt(14).toString())
+        assertEquals("2020-03-13T14:45:00Z", query.selectEventExpressions.elementAt(15).toString())
+        assertEquals("2020-03-13T16:45:00Z", query.selectEventExpressions.elementAt(16).toString())
         assertTrue(query.selectEventExpressions.all { it.isTerminal })
         assertTrue(query.selectEventExpressions.all { it.effectiveScope == Scope.Event })
     }
@@ -397,7 +401,7 @@ class QueryTests {
 
     @Test
     fun errorHandlingTest() {
-        val invalidSelects =
+        val invalidSyntax =
             listOf(
                 "select",
                 "select *, *",
@@ -409,10 +413,16 @@ class QueryTests {
                 "select ^l:concept:name",
                 "select ^^t:concept:name",
                 "select ^^^e:concept:name",
-                "select ^^^name"
+                "select ^^^name",
+                "limit l:${Double.NaN}",
+                "limit l:${Double.POSITIVE_INFINITY}",
+                "limit l:${Double.NEGATIVE_INFINITY}",
+                "offset e:${Double.NaN}",
+                "offset e:${Double.POSITIVE_INFINITY}",
+                "offset e:${Double.NEGATIVE_INFINITY}"
             )
 
-        invalidSelects.forEach {
+        invalidSyntax.forEach {
             assertFailsWith<RecognitionException>(it) { Query(it) }.apply {
                 assertNotNull(message)
             }
@@ -436,7 +446,15 @@ class QueryTests {
             "group by e:name order by e:timestamp",
             "select e:total + 10 group by e:name",
             "select avg(e:total), e:resource",
-            "where avg(e:total) > 100"
+            "where avg(e:total) > 100",
+            "limit 42",
+            "limit l:-1",
+            "limit l:0",
+            "limit l:0.1",
+            "limit l:-0.01",
+            "offset 42",
+            "offset l:-1",
+            "offset l:0"
         )
         illegalOperations.forEach {
             assertFailsWith<IllegalArgumentException>(it) { Query(it) }.apply {
@@ -785,5 +803,105 @@ class QueryTests {
         assertEquals(Scope.Trace, expression.effectiveScope)
         assertEquals("[log:basePrice]*avg(^event:cost:total)*3.141592", expression.toString())
         assertEquals(0, query.orderByEventExpressions.size)
+    }
+
+    @Test
+    fun limitSingleTest() {
+        val query = Query("limit l:1")
+        assertEquals(1, query.logLimit)
+        assertEquals(-1, query.traceLimit)
+        assertEquals(-1, query.eventLimit)
+        assertEquals(-1, query.logOffset)
+        assertEquals(-1, query.traceOffset)
+        assertEquals(-1, query.eventOffset)
+    }
+
+    @Test
+    fun limitAllTest() {
+        val query = Query("limit e:3, t:2, l:1")
+        assertEquals(1, query.logLimit)
+        assertEquals(2, query.traceLimit)
+        assertEquals(3, query.eventLimit)
+        assertEquals(-1, query.logOffset)
+        assertEquals(-1, query.traceOffset)
+        assertEquals(-1, query.eventOffset)
+    }
+
+    @Test
+    fun limitDuplicatesTest() {
+        val query = Query("limit e:3, t:2, l:1, e:10")
+        assertEquals(1, query.logLimit)
+        assertEquals(2, query.traceLimit)
+        assertEquals(10, query.eventLimit)
+        assertEquals(-1, query.logOffset)
+        assertEquals(-1, query.traceOffset)
+        assertEquals(-1, query.eventOffset)
+
+        assertNotNull(query.warning)
+        assertTrue("duplicate" in query.warning!!.message!!)
+    }
+
+    @Test
+    fun limitRealNumberTest() {
+        val query = Query("limit e:3.14, t:2.72, l:1")
+        assertEquals(1, query.logLimit)
+        assertEquals(3, query.traceLimit)
+        assertEquals(3, query.eventLimit)
+        assertEquals(-1, query.logOffset)
+        assertEquals(-1, query.traceOffset)
+        assertEquals(-1, query.eventOffset)
+
+        assertNotNull(query.warning)
+        assertTrue("decimal" in query.warning!!.message!!)
+    }
+
+    @Test
+    fun offsetSingleTest() {
+        val query = Query("offset l:1")
+        assertEquals(-1, query.logLimit)
+        assertEquals(-1, query.traceLimit)
+        assertEquals(-1, query.eventLimit)
+        assertEquals(1, query.logOffset)
+        assertEquals(-1, query.traceOffset)
+        assertEquals(-1, query.eventOffset)
+    }
+
+    @Test
+    fun offsetAllTest() {
+        val query = Query("offset e:3, t:2, l:1")
+        assertEquals(-1, query.logLimit)
+        assertEquals(-1, query.traceLimit)
+        assertEquals(-1, query.eventLimit)
+        assertEquals(1, query.logOffset)
+        assertEquals(2, query.traceOffset)
+        assertEquals(3, query.eventOffset)
+    }
+
+    @Test
+    fun offsetDuplicatesTest() {
+        val query = Query("offset e:3, t:2, l:1, e:10")
+        assertEquals(-1, query.logLimit)
+        assertEquals(-1, query.traceLimit)
+        assertEquals(-1, query.eventLimit)
+        assertEquals(1, query.logOffset)
+        assertEquals(2, query.traceOffset)
+        assertEquals(10, query.eventOffset)
+
+        assertNotNull(query.warning)
+        assertTrue("duplicate" in query.warning!!.message!!)
+    }
+
+    @Test
+    fun offsetRealNumberTest() {
+        val query = Query("offset e:3.14, t:2.72, l:1")
+        assertEquals(-1, query.logLimit)
+        assertEquals(-1, query.traceLimit)
+        assertEquals(-1, query.eventLimit)
+        assertEquals(1, query.logOffset)
+        assertEquals(3, query.traceOffset)
+        assertEquals(3, query.eventOffset)
+
+        assertNotNull(query.warning)
+        assertTrue("decimal" in query.warning!!.message!!)
     }
 }

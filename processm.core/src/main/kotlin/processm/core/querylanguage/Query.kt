@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import java.util.*
 import kotlin.collections.LinkedHashSet
+import kotlin.math.round
 
 /**
  * Represents log query as parsed from the string given as constructor argument.
@@ -261,6 +262,46 @@ class Query(val query: String) {
         Collections.unmodifiableList(_orderByExpressions[Scope.Event]!!)
     // endregion
 
+    // region limit clause
+    /**
+     * The maximum number of logs returned by this query. -1 means no limit.
+     */
+    var logLimit: Long = -1L
+        private set
+
+    /**
+     * The maximum number of traces within a log returned by this query. -1 means no limit.
+     */
+    var traceLimit: Long = -1L
+        private set
+
+    /**
+     * The maximum number of events within a trace returned by this query. -1 means no limit.
+     */
+    var eventLimit: Long = -1L
+        private set
+    // endregion
+
+    // region offset clause
+    /**
+     * The offset number of the first log returned by this query. -1 means no offset.
+     */
+    var logOffset: Long = -1L
+        private set
+
+    /**
+     * The offset number of the first trace within a log returned by this query. -1 means no offset.
+     */
+    var traceOffset: Long = -1L
+        private set
+
+    /**
+     * The offset number of the first event within a trace returned by this query. -1 means no offset.
+     */
+    var eventOffset: Long = -1L
+        private set
+    // endregion
+
     init {
         val tree = parser.query()
         val walker = ParseTreeWalker()
@@ -506,6 +547,93 @@ class Query(val query: String) {
             val order = OrderDirection.parse(ctx.order_dir().text)
             _orderByExpressions[expression.effectiveScope]!!.add(OrderedExpression(expression, order))
         }
+        // endregion
+
+        // region PQL limit & offset clauses
+
+        override fun exitLimit_number(ctx: QueryLanguage.Limit_numberContext?) {
+            parseLimitOrOffsetNumber(ctx!!.getChild(0).payload as Token, "limit") { scope, value, number ->
+                fun warn() = errorListener.emitWarning(
+                    IllegalArgumentException(
+                        "Line ${number.line} position ${number.charPositionInLine}: A duplicate limit overrides the previous value."
+                    )
+                )
+
+                when (scope) {
+                    Scope.Log -> {
+                        if (logLimit != -1L) warn()
+                        logLimit = value
+                    }
+                    Scope.Trace -> {
+                        if (traceLimit != -1L) warn()
+                        traceLimit = value
+                    }
+                    Scope.Event -> {
+                        if (eventLimit != -1L) warn()
+                        eventLimit = value
+                    }
+                }
+            }
+        }
+
+        override fun exitOffset_number(ctx: QueryLanguage.Offset_numberContext?) {
+            parseLimitOrOffsetNumber(ctx!!.getChild(0).payload as Token, "offset") { scope, value, number ->
+                fun warn() = errorListener.emitWarning(
+                    IllegalArgumentException(
+                        "Line ${number.line} position ${number.charPositionInLine}: A duplicate offset overrides the previous value."
+                    )
+                )
+
+                when (scope) {
+                    Scope.Log -> {
+                        if (logOffset != -1L) warn()
+                        logOffset = value
+                    }
+                    Scope.Trace -> {
+                        if (traceOffset != -1L) warn()
+                        traceOffset = value
+                    }
+                    Scope.Event -> {
+                        if (eventOffset != -1L) warn()
+                        eventOffset = value
+                    }
+                }
+            }
+        }
+
+        private fun parseLimitOrOffsetNumber(
+            token: Token,
+            clause: String,
+            setter: (scope: Scope, value: Long, number: NumberLiteral) -> Unit
+        ) {
+            val number = parseToken(token) as? NumberLiteral ?: return
+            val intValue = round(number.value)
+
+            if (intValue <= 0.0 || number.value.isNaN() || number.value.isInfinite())
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Line ${number.line} position ${number.charPositionInLine}: A value of the $clause must be a positive integer, $number given."
+                    )
+                )
+
+            if (number.value != intValue)
+                errorListener.emitWarning(
+                    IllegalArgumentException(
+                        "Line ${number.line} position ${number.charPositionInLine}: Dropped the decimal part of $number."
+                    )
+                )
+
+            if (number.scope === null) {
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Line ${number.line} position ${number.charPositionInLine}: Scope is required for the number $number in the $clause clause."
+                    )
+                )
+            } else {
+                setter(number.scope, intValue.toLong(), number)
+            }
+        }
+
         // endregion
 
         private fun validateHoisting(expression: Expression) {

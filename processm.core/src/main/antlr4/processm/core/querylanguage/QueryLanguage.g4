@@ -23,9 +23,9 @@ group_by    : GROUP BY id_list          # group_trace_by
 order_by    : ORDER_BY column_list_with_order
             ;
 
-limit       : LIMIT SCOPE COLON NUMBER (',' SCOPE COLON NUMBER)*;
+limit       : LIMIT limit_number (',' limit_number)*;
 
-offset      : OFFSET NUMBER ;
+offset      : OFFSET offset_number (',' offset_number)*;
 
 column_list : SCOPE COLON '*'                   # scoped_select_all
             | SCOPE COLON '*' ',' column_list   # scoped_select_all
@@ -41,10 +41,13 @@ column_list_with_order : ordered_expression_root (',' ordered_expression_root)* 
 
 ordered_expression_root : arith_expr order_dir ;
 
-order_dir:
+order_dir   :
             | ORDER_ASC
             | ORDER_DESC
             ;
+
+limit_number: NUMBER ;
+offset_number: NUMBER ;
 
 scalar      : STRING
             | NUMBER
