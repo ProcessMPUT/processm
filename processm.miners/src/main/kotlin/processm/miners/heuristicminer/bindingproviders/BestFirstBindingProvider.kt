@@ -22,8 +22,9 @@ data class ComputationState(val nextNode: Int, val trace: ReplayTrace, val nodeT
  * The following criterion are considered
  * 1. Number of nodes that are yet to be visited, but are not present in the current state (fewer is beter).
  * 2. Minimal number of nodes that are yet to be visited according to the current state (fewer is better).
- * 3. Index of the node to be considered next (higher is better).
- * 4. Number of pending obligations in the state (fewer is better).
+ * 3. Number of pending obligations in the state (fewer is better).
+ *
+ * The corresponding experimental evaluation is in [DefaultComputationStateComparatorPerformanceTest]
  */
 class DefaultComputationStateComparator : Comparator<ComputationState> {
     private fun value(o: ComputationState): IntArray {
@@ -31,7 +32,7 @@ class DefaultComputationStateComparator : Comparator<ComputationState> {
         val nMissing =
             (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
         val nTargets = targets.size
-        return intArrayOf(-nMissing, -nTargets, o.nextNode, -o.trace.state.size)
+        return intArrayOf(-nMissing, -nTargets, -o.trace.state.size)
     }
 
     override fun compare(o1: ComputationState, o2: ComputationState): Int {
