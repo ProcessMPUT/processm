@@ -1,16 +1,203 @@
 package processm.core.models.processtree
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class ModelTest {
+    @Test
+    fun `Silent activity and activity without name are different`() {
+        val firstModel = processTree { SilentActivity() }
+        val secondModel = processTree { Activity("") }
+
+        assertFalse(firstModel.languageEqual(secondModel))
+        assertFalse(secondModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Model without activities language equal to another model without activities`() {
+        val firstModel = processTree { null }
+        val secondModel = processTree { null }
+
+        assertTrue(firstModel.languageEqual(secondModel))
+        assertTrue(secondModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Models with different activities (single activity in tree) can not be language equal`() {
+        val firstModel = processTree { Activity("A") }
+        val secondModel = processTree { Activity("B") }
+
+        assertFalse(firstModel.languageEqual(secondModel))
+        assertFalse(secondModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Models with XOR can store children in any order`() {
+        val firstModel = processTree {
+            Exclusive(
+                Activity("A"),
+                Activity("B"),
+                Activity("C")
+            )
+        }
+        val secondModel = processTree {
+            Exclusive(
+                Activity("C"),
+                Activity("B"),
+                Activity("A")
+            )
+        }
+
+        assertTrue(firstModel.languageEqual(secondModel))
+        assertTrue(secondModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Models must store the same attributes, not only the same count`() {
+        val firstModel = processTree {
+            Exclusive(
+                Activity("A"),
+                Activity("B")
+            )
+        }
+        val secondModel = processTree {
+            Exclusive(
+                Activity("C"),
+                Activity("D")
+            )
+        }
+
+        assertFalse(firstModel.languageEqual(secondModel))
+        assertFalse(secondModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Models with SEQUENCE must store children in the same order`() {
+        val firstModel = processTree {
+            Sequence(
+                Activity("A"),
+                Activity("B"),
+                Activity("C")
+            )
+        }
+        val secondModel = processTree {
+            Sequence(
+                Activity("B"),
+                Activity("C"),
+                Activity("A")
+            )
+        }
+        val extraModel = processTree {
+            Sequence(
+                Activity("A"),
+                Activity("B"),
+                Activity("C")
+            )
+        }
+
+        assertFalse(firstModel.languageEqual(secondModel))
+        assertFalse(secondModel.languageEqual(firstModel))
+
+        assertTrue(firstModel.languageEqual(extraModel))
+        assertTrue(extraModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Redo loop must contain the same first child`() {
+        val firstModel = processTree {
+            RedoLoop(
+                SilentActivity(),
+                Exclusive(
+                    Activity("A"),
+                    Activity("B")
+                )
+            )
+        }
+        val secondModel = processTree {
+            RedoLoop(
+                Activity(""),
+                Exclusive(
+                    Activity("B"),
+                    Activity("A")
+                )
+            )
+        }
+
+        assertFalse(firstModel.languageEqual(secondModel))
+        assertFalse(secondModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Redo loop can contain children in any order but first must match`() {
+        val firstModel = processTree {
+            RedoLoop(
+                SilentActivity(),
+                Exclusive(
+                    Activity("A"),
+                    Activity("B")
+                ),
+                Sequence(
+                    Activity("C"),
+                    Activity("D")
+                )
+            )
+        }
+        val secondModel = processTree {
+            RedoLoop(
+                SilentActivity(),
+                Sequence(
+                    Activity("C"),
+                    Activity("D")
+                ),
+                Exclusive(
+                    Activity("B"),
+                    Activity("A")
+                )
+            )
+        }
+
+        assertTrue(firstModel.languageEqual(secondModel))
+        assertTrue(secondModel.languageEqual(firstModel))
+    }
+
+    @Test
+    fun `Parallel can contain children in any order`() {
+        val firstModel = processTree {
+            Parallel(
+                Exclusive(
+                    Activity("A"),
+                    Activity("B")
+                ),
+                Sequence(
+                    Activity("C"),
+                    Activity("D")
+                ),
+                Activity("X")
+            )
+        }
+        val secondModel = processTree {
+            Parallel(
+                Activity("X"),
+                Sequence(
+                    Activity("C"),
+                    Activity("D")
+                ),
+                Exclusive(
+                    Activity("B"),
+                    Activity("A")
+                )
+            )
+        }
+
+        assertTrue(firstModel.languageEqual(secondModel))
+        assertTrue(secondModel.languageEqual(firstModel))
+    }
+
     @Test
     fun `Node without reference to own parent if root`() {
         val a = Activity("A")
         with(processTree { Sequence(a) }) {
             assertNull(root!!.parent)
+            assertEquals(toString(), "→(A)")
         }
     }
 
@@ -18,19 +205,24 @@ class ModelTest {
     fun `Node with reference to own parent`() {
         val a = Activity("A")
         val b = Activity("B")
-        with(processTree { Sequence(a, b) }.root!!) {
+        val model = processTree { Sequence(a, b) }
+
+        with(model.root!!) {
             assertNull(parent)
 
             children.forEach { childrenNode ->
                 assertEquals(childrenNode.parent, this)
             }
         }
+
+        assertEquals(model.toString(), "→(A,B)")
     }
 
     @Test
     fun `Model without activities`() {
         val model = processTree { null }
         assertNull(model.root)
+        assertEquals(model.toString(), "")
     }
 
     @Test
@@ -54,6 +246,8 @@ class ModelTest {
                 assertTrue(children.isEmpty())
             }
         }
+
+        assertEquals(model.toString(), "⟲(τ,A)")
     }
 
     @Test
@@ -66,6 +260,8 @@ class ModelTest {
             assertEquals(name, "A")
             assertTrue(children.isEmpty())
         }
+
+        assertEquals(model.toString(), "A")
     }
 
     @Test
@@ -84,6 +280,8 @@ class ModelTest {
                 Activity("D")
             )
         }
+
+        assertEquals(model.toString(), "→(A,×(∧(B,C),E),D)")
 
         with(model.root!!) {
             assert(this is Sequence)
@@ -145,6 +343,8 @@ class ModelTest {
                 Activity("D")
             )
         }
+
+        assertEquals(model.toString(), "→(A,⟲(∧(B,C),→(E,F)),D)")
 
         with(model.root!!) {
             assert(this is Sequence)
@@ -222,6 +422,8 @@ class ModelTest {
                 )
             )
         }
+
+        assertEquals(model.toString(), "→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
 
         with(model.root!!) {
             assert(this is Sequence)
