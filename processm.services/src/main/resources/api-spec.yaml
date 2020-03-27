@@ -25,9 +25,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionResponse'
+                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
@@ -38,9 +38,9 @@ paths:
       requestBody:
         description: User email and account password
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/UserCredentials'
+              $ref: '#/components/schemas/UserCredentialsMessageBody'
         required: true
       responses:
         '201':
@@ -67,17 +67,17 @@ paths:
       requestBody:
         description: User account credentials
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/UserCredentials'
+              $ref: '#/components/schemas/UserCredentialsMessageBody'
         required: false
       responses:
         '201':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/AuthenticationResultResponse'
+                $ref: '#/components/schemas/AuthenticationResultMessageBody'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -104,9 +104,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/UserAccountInfoResponse'
+                $ref: '#/components/schemas/UserAccountInfoMessageBody'
       security:
         - bearerAuth: []
   /workspaces:
@@ -119,9 +119,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceCollectionResponse'
+                $ref: '#/components/schemas/WorkspaceCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
@@ -132,17 +132,17 @@ paths:
       requestBody:
         description: Workspace details
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/WorkspaceMessageBody'
         required: true
       responses:
         '201':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceResponse'
+                $ref: '#/components/schemas/WorkspaceMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
       security:
@@ -164,9 +164,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceResponse'
+                $ref: '#/components/schemas/WorkspaceMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -181,9 +181,9 @@ paths:
       requestBody:
         description: Workspace details to update
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/Workspace'
+              $ref: '#/components/schemas/WorkspaceMessageBody'
         required: true
       responses:
         '204':
@@ -218,9 +218,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/GroupCollectionResponse'
+                $ref: '#/components/schemas/GroupCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
@@ -231,17 +231,17 @@ paths:
       requestBody:
         description: Group details
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: '#/components/schemas/GroupMessageBody'
         required: true
       responses:
         '201':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/GroupResponse'
+                $ref: '#/components/schemas/GroupMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
       security:
@@ -263,9 +263,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/GroupResponse'
+                $ref: '#/components/schemas/GroupMessageBody'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -278,9 +278,9 @@ paths:
       requestBody:
         description: Group details
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: '#/components/schemas/GroupMessageBody'
         required: true
       responses:
         '204':
@@ -322,9 +322,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionResponse'
+                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
@@ -335,7 +335,7 @@ paths:
       requestBody:
         description: New member ID
         content:
-          '*/*':
+          'application/json':
             schema:
               description: User ID
               type: string
@@ -394,9 +394,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/GroupCollectionResponse'
+                $ref: '#/components/schemas/GroupCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
@@ -407,9 +407,9 @@ paths:
       requestBody:
         description: Subgroup details
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: '#/components/schemas/GroupMessageBody'
         required: true
       responses:
         '201':
@@ -460,9 +460,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationCollectionResponse'
+                $ref: '#/components/schemas/OrganizationCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
@@ -473,9 +473,9 @@ paths:
       requestBody:
         description: Organization details
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/OrganizationResponse'
+              $ref: '#/components/schemas/OrganizationMessageBody'
         required: true
       responses:
         '201':
@@ -505,9 +505,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationResponse'
+                $ref: '#/components/schemas/OrganizationMessageBody'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -520,9 +520,9 @@ paths:
       requestBody:
         description: Organization details
         content:
-          '*/*':
+          'application/json':
             schema:
-              $ref: '#/components/schemas/OrganizationResponse'
+              $ref: '#/components/schemas/OrganizationMessageBody'
         required: true
       responses:
         '204':
@@ -564,9 +564,9 @@ paths:
         '200':
           description: successful operation
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionResponse'
+                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
@@ -577,7 +577,7 @@ paths:
       requestBody:
         description: New member username
         content:
-          '*/*':
+          'application/json':
             schema:
               description: Username
               type: string
@@ -623,8 +623,9 @@ paths:
         - bearerAuth: []
 components:
   schemas:
-    ErrorResponse:
+    ErrorMessageBody:
       type: object
+      required: [error]
       properties:
         error:
           description: error details
@@ -637,20 +638,22 @@ components:
       enum: [owner, writer, reader]
     UserCredentials:
       type: object
-      required:
-        - username
-        - password
+      required: [username, password]
       properties:
         username:
           type: string
         password:
           type: string
           format: password
+    UserCredentialsMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/UserCredentials'
     UserAccountInfo:
       type: object
-      required:
-        - username
-        - organizationRole
+      required: [username, organizationRole]
       properties:
         username:
           type: string
@@ -660,27 +663,27 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/OrganizationRole'
-    UserAccountInfoResponse:
+    UserAccountInfoMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           $ref: '#/components/schemas/UserAccountInfo'
     AuthenticationResult:
       type: object
+      required: [AuthorizationToken]
       properties:
         AuthorizationToken:
           type: string
-    AuthenticationResultResponse:
+    AuthenticationResultMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           $ref: '#/components/schemas/AuthenticationResult'
     UserInfo:
       type: object
-      required:
-        - username
-        - organization
-        - organizationRole
+      required: [username, organization, organizationRole]
       properties:
         id:
           type: string
@@ -692,8 +695,9 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/OrganizationRole'
-    UserInfoCollectionResponse:
+    UserInfoCollectionMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           type: array
@@ -701,20 +705,21 @@ components:
             $ref: '#/components/schemas/UserInfo'
     Workspace:
       type: object
-      required:
-        - name
+      required: [name]
       properties:
         id:
           type: string
         name:
           type: string
-    WorkspaceResponse:
+    WorkspaceMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           $ref: '#/components/schemas/Workspace'
-    WorkspaceCollectionResponse:
+    WorkspaceCollectionMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           type: array
@@ -722,9 +727,7 @@ components:
             $ref: '#/components/schemas/Workspace'
     Group:
       type: object
-      required:
-        - name
-        - groupRole
+      required: [name, groupRole]
       properties:
         id:
           type: string
@@ -732,13 +735,15 @@ components:
           type: string
         groupRole:
           $ref: '#/components/schemas/GroupRole'
-    GroupResponse:
+    GroupMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           $ref: '#/components/schemas/Group'
-    GroupCollectionResponse:
+    GroupCollectionMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           type: array
@@ -746,23 +751,25 @@ components:
             $ref: '#/components/schemas/Group'
     Organization:
       type: object
-      required:
-        - name
-        - organizationRole
+      required: [name, isPrivate]
       properties:
         id:
           type: string
         name:
           type: string
+        contact:
+          type: string
         isPrivate:
           type: boolean
-    OrganizationResponse:
+    OrganizationMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           $ref: '#/components/schemas/Organization'
-    OrganizationCollectionResponse:
+    OrganizationCollectionMessageBody:
       type: object
+      required: [data]
       properties:
         data:
           type: array
@@ -772,39 +779,39 @@ components:
     BadRequest:
       description: invalid request body
       content:
-        '*/*':
+        'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/ErrorMessageBody'
     Unauthorized:
       description: user not authenticated
       content:
-        '*/*':
+        'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/ErrorMessageBody'
     Forbidden:
       description: user not authorized
       content:
-        '*/*':
+        'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/ErrorMessageBody'
     NotFound:
       description: specified resource was not found
       content:
-        '*/*':
+        'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
       description: resource with sepcified identifier already exists
       content:
-        '*/*':
+        'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/ErrorMessageBody'
     UnprocessableEntity:
       description: request had valid format but included semantic error
       content:
-        '*/*':
+        'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/ErrorMessageBody'
   securitySchemes:
     bearerAuth:
       type: http

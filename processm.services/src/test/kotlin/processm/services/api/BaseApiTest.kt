@@ -1,5 +1,7 @@
 package processm.services.api
 
+import com.google.common.reflect.TypeToken
+import com.google.gson.Gson
 import io.ktor.config.MapApplicationConfig
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -72,7 +74,7 @@ abstract class BaseApiTest {
             if (authenticationHeader == null) {
                 with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("""{"username":"$username","password":"$password"}""")
+                    setBody("""{"data":{"username":"$username","password":"$password"}}""")
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
                     assertTrue(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))
@@ -90,4 +92,13 @@ abstract class BaseApiTest {
             }
         }
     }
+
+    protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T {
+        return Gson().fromJson(content, object: TypeToken<T>() {}.type)
+    }
+
+    protected inline fun <T: Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
+        setBody(Gson().toJson(requestBody))
+    }
+
 }

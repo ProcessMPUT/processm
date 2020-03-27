@@ -12,6 +12,10 @@ import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
+import processm.services.api.models.Group
+import processm.services.api.models.GroupCollectionMessageBody
+import processm.services.api.models.GroupMessageBody
+import processm.services.api.models.GroupRole
 
 @KtorExperimentalLocationsAPI
 fun Route.GroupsApi() {
@@ -44,14 +48,10 @@ fun Route.GroupsApi() {
         }
 
 
-        get<Paths.getGroup> { _: Paths.getGroup ->
+        get<Paths.getGroup> { group: Paths.getGroup ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.OK, GroupMessageBody(Group(group.groupId, GroupRole.owner, group.groupId)))
         }
 
 
@@ -69,11 +69,7 @@ fun Route.GroupsApi() {
         get<Paths.getGroups> { _: Paths.getGroups ->
             val principal = call.authentication.principal<ApiUser>()
 
-            if (principal == null) {
-                call.respond(HttpStatusCode.Unauthorized)
-            } else {
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(emptyArray()))
         }
 
 
