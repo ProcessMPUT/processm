@@ -28,7 +28,7 @@
 
     <issueManagement>
         <system>GitLab</system>
-        <url>https://processm.cs.put.poznan.pl:5000</url>
+        <url>https://git.processtom.com</url>
     </issueManagement>
 
     <modules>
@@ -69,6 +69,14 @@
         </repository>
     </repositories>
 
+    <pluginRepositories>
+        <pluginRepository>
+            <id>jcenter</id>
+            <name>JCenter</name>
+            <url>https://jcenter.bintray.com/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -104,6 +112,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.mockk</groupId>
             <artifactId>mockk</artifactId>
             <version>${mockk.version}</version>
@@ -129,6 +143,7 @@
                                 <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
                                 <sourceDir>${project.basedir}/src/main/java</sourceDir>
                                 <sourceDir>${project.basedir}/target/generated-sources/antlr4</sourceDir>
+                                <sourceDir>${project.basedir}/target/generated-sources/xjc</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -200,6 +215,26 @@
                         <include>**/*.java</include>
                         <include>**/*.kt</include>
                     </includes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jetbrains.dokka</groupId>
+                <artifactId>dokka-maven-plugin</artifactId>
+                <version>0.10.0</version>
+                <executions>
+                    <execution>
+                        <phase>pre-site</phase>
+                        <goals>
+                            <goal>dokka</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <sourceRoots>
+                        <root>
+                            <path>${project.basedir}/src/main/kotlin</path>
+                        </root>
+                    </sourceRoots>
                 </configuration>
             </plugin>
         </plugins>

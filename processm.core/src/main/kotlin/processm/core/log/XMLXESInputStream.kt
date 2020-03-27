@@ -200,69 +200,51 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     }
 
     private fun addGeneralMeaningFieldsIntoLog(log: Log) {
-        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri]
-        if (conceptPrefix != null)
-            log.conceptName = log.attributes["$conceptPrefix:name"]?.getValue() as String?
+        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri] ?: "concept"
+        log.conceptName = log.attributes["$conceptPrefix:name"]?.getValue() as String?
 
-        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri]
-        if (identityPrefix != null)
-            log.identityId = log.attributes["$identityPrefix:id"]?.getValue() as String?
+        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri] ?: "identity"
+        log.identityId = log.attributes["$identityPrefix:id"]?.getValue() as String?
 
-        val lifecyclePrefix = this.prefixesMapping[XESExtensionLoader.lifecycle.uri]
-        if (lifecyclePrefix != null)
-            log.lifecycleModel = log.attributes["$lifecyclePrefix:model"]?.getValue() as String?
+        val lifecyclePrefix = this.prefixesMapping[XESExtensionLoader.lifecycle.uri] ?: "lifecycle"
+        log.lifecycleModel = log.attributes["$lifecyclePrefix:model"]?.getValue() as String?
     }
 
     private fun addGeneralMeaningFieldsIntoTrace(trace: Trace) {
-        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri]
-        if (conceptPrefix != null)
-            trace.conceptName = trace.attributes["$conceptPrefix:name"]?.getValue() as String?
+        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri] ?: "concept"
+        trace.conceptName = trace.attributes["$conceptPrefix:name"]?.getValue() as String?
 
-        val costPrefix = this.prefixesMapping[XESExtensionLoader.cost.uri]
-        if (costPrefix != null) {
-            trace.costTotal = trace.attributes["$costPrefix:total"]?.getValue() as Double?
-            trace.costCurrency = trace.attributes["$costPrefix:currency"]?.getValue() as String?
-        }
+        val costPrefix = this.prefixesMapping[XESExtensionLoader.cost.uri] ?: "cost"
+        trace.costTotal = trace.attributes["$costPrefix:total"]?.getValue() as Double?
+        trace.costCurrency = trace.attributes["$costPrefix:currency"]?.getValue() as String?
 
-        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri]
-        if (identityPrefix != null)
-            trace.identityId = trace.attributes["$identityPrefix:id"]?.getValue() as String?
+        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri] ?: "identity"
+        trace.identityId = trace.attributes["$identityPrefix:id"]?.getValue() as String?
     }
 
     private fun addGeneralMeaningFieldsIntoEvent(event: Event) {
-        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri]
-        if (conceptPrefix != null) {
-            event.conceptName = event.attributes["$conceptPrefix:name"]?.getValue() as String?
-            event.conceptInstance = event.attributes["$conceptPrefix:instance"]?.getValue() as String?
-        }
+        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri] ?: "concept"
+        event.conceptName = event.attributes["$conceptPrefix:name"]?.getValue() as String?
+        event.conceptInstance = event.attributes["$conceptPrefix:instance"]?.getValue() as String?
 
-        val costPrefix = this.prefixesMapping[XESExtensionLoader.cost.uri]
-        if (costPrefix != null) {
-            event.costTotal = event.attributes["$costPrefix:total"]?.getValue() as Double?
-            event.costCurrency = event.attributes["$costPrefix:currency"]?.getValue() as String?
-        }
+        val costPrefix = this.prefixesMapping[XESExtensionLoader.cost.uri] ?: "cost"
+        event.costTotal = event.attributes["$costPrefix:total"]?.getValue() as Double?
+        event.costCurrency = event.attributes["$costPrefix:currency"]?.getValue() as String?
 
-        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri]
-        if (identityPrefix != null)
-            event.identityId = event.attributes["$identityPrefix:id"]?.getValue() as String?
+        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri] ?: "identity"
+        event.identityId = event.attributes["$identityPrefix:id"]?.getValue() as String?
 
-        val lifecyclePrefix = this.prefixesMapping[XESExtensionLoader.lifecycle.uri]
-        if (lifecyclePrefix != null) {
-            event.lifecycleState = event.attributes["$lifecyclePrefix:state"]?.getValue() as String?
-            event.lifecycleTransition = event.attributes["$lifecyclePrefix:transition"]?.getValue() as String?
-        }
+        val lifecyclePrefix = this.prefixesMapping[XESExtensionLoader.lifecycle.uri] ?: "lifecycle"
+        event.lifecycleState = event.attributes["$lifecyclePrefix:state"]?.getValue() as String?
+        event.lifecycleTransition = event.attributes["$lifecyclePrefix:transition"]?.getValue() as String?
 
-        val orgPrefix = this.prefixesMapping[XESExtensionLoader.org.uri]
-        if (orgPrefix != null) {
-            event.orgRole = event.attributes["$orgPrefix:role"]?.getValue() as String?
-            event.orgGroup = event.attributes["$orgPrefix:group"]?.getValue() as String?
-            event.orgResource = event.attributes["$orgPrefix:resource"]?.getValue() as String?
-        }
+        val orgPrefix = this.prefixesMapping[XESExtensionLoader.org.uri] ?: "org"
+        event.orgRole = event.attributes["$orgPrefix:role"]?.getValue() as String?
+        event.orgGroup = event.attributes["$orgPrefix:group"]?.getValue() as String?
+        event.orgResource = event.attributes["$orgPrefix:resource"]?.getValue() as String?
 
-        val timePrefix = this.prefixesMapping[XESExtensionLoader.time.uri]
-        if (timePrefix != null) {
-            event.timeTimestamp = event.attributes["$timePrefix:timestamp"]?.getValue() as Date?
-        }
+        val timePrefix = this.prefixesMapping[XESExtensionLoader.time.uri] ?: "time"
+        event.timeTimestamp = event.attributes["$timePrefix:timestamp"]?.getValue() as Date?
     }
 
     private fun parseTraceOrEventTag(reader: XMLStreamReader, xesElement: XESElement) {

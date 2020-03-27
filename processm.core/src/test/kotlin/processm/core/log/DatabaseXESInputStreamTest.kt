@@ -3,7 +3,6 @@ package processm.core.log
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import processm.core.persistence.DBConnectionPool
-import java.io.ByteArrayInputStream
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -273,13 +272,12 @@ internal class DatabaseXESInputStreamTest {
     }
 
     private fun loadIntoDB() {
-        val stream = ByteArrayInputStream(content.toByteArray())
-        val iterator = XMLXESInputStream(stream).iterator()
+        content.byteInputStream().use { stream ->
+            val xesElements = XMLXESInputStream(stream).asSequence()
 
-        val db = DatabaseXESOutputStream()
-        while (iterator.hasNext()) {
-            db.write(iterator.next())
+            DatabaseXESOutputStream().use { db ->
+                db.write(xesElements)
+            }
         }
-        db.close()
     }
 }

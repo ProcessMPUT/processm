@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<bpmn20:definitions xmlns:bpmn20="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:signavio="http://www.signavio.com"
+                    targetNamespace="http://www.signavio.com/bpmn20">
+    <bpmn20:resource name="Approver" id="_404cd32e-8789-46c5-ad72-cdedb860665d"/>
+    <bpmn20:process>
+        <bpmn20:userTask>
+            <extensionElements xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
+                <signavio:signavioMetaData/>
+            </extensionElements>
+            <bpmn20:performer>
+                <bpmn20:resourceRef>_404cd32e-8789-46c5-ad72-cdedb860665d</bpmn20:resourceRef>
+            </bpmn20:performer>
+        </bpmn20:userTask>
+    </bpmn20:process>
+</bpmn20:definitions>
