@@ -12,6 +12,7 @@ import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
+import processm.services.api.models.*
 
 @KtorExperimentalLocationsAPI
 fun Route.OrganizationsApi() {
@@ -35,10 +36,14 @@ fun Route.OrganizationsApi() {
         }
 
 
-        get<Paths.getOrganization> { _: Paths.getOrganization ->
+        get<Paths.getOrganization> { organization: Paths.getOrganization ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.OK, OrganizationMessageBody(Organization(
+                organization.organizationId,
+                false,
+                organization.organizationId))
+            )
         }
 
 
@@ -52,7 +57,7 @@ fun Route.OrganizationsApi() {
         get<Paths.getOrganizations> { _: Paths.getOrganizations ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.OK, OrganizationCollectionMessageBody(emptyArray()))
         }
 
 

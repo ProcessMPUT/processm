@@ -13,7 +13,7 @@ import io.ktor.util.error
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
-import processm.services.api.models.ErrorResponse
+import processm.services.api.models.ErrorMessageBody
 import java.time.Duration
 
 internal fun ApplicationHstsConfiguration(): HSTS.Configuration.() -> Unit {
@@ -43,10 +43,10 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
     return {
         logger().enter()
         exception<TokenExpiredException> { cause ->
-            call.respond(HttpStatusCode.Unauthorized, ErrorResponse(cause.message))
+            call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody(cause.message.orEmpty()))
         }
         exception<UnsupportedOperationException> { cause ->
-            call.respond(HttpStatusCode.BadRequest, ErrorResponse(cause.message))
+            call.respond(HttpStatusCode.BadRequest, ErrorMessageBody(cause.message.orEmpty()))
         }
         exception<Exception> { cause ->
             logger().error(cause)
