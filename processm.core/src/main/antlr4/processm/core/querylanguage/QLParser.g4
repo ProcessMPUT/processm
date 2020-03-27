@@ -1,6 +1,5 @@
-parser grammar QueryLanguage;
-options {tokenVocab=QLLexer;}
-
+parser grammar QLParser;
+options { tokenVocab=QLLexer; }
 // Process Query Language
 // See https://git.processtom.com/processm-team/processm/-/wikis/Process-Query-Language for language details.
 

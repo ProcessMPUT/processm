@@ -21,7 +21,7 @@ class Query(val query: String) {
     private val stream: CodePointCharStream = CharStreams.fromString(query)
     private val lexer: QLLexer = QLLexer(stream)
     private val tokens: CommonTokenStream = CommonTokenStream(lexer)
-    private val parser: QueryLanguage = QueryLanguage(tokens)
+    private val parser: QLParser = QLParser(tokens)
 
     init {
         lexer.removeErrorListeners()
@@ -450,18 +450,18 @@ class Query(val query: String) {
     override fun toString(): String = query
 
 
-    private inner class Listener : QueryLanguageBaseListener() {
-        override fun exitSelect_all_implicit(ctx: QueryLanguage.Select_all_implicitContext?) {
+    private inner class Listener : QLParserBaseListener() {
+        override fun exitSelect_all_implicit(ctx: QLParser.Select_all_implicitContext?) {
             isImplicitSelectAll = true
         }
 
-        override fun exitSelect_all(ctx: QueryLanguage.Select_allContext?) {
+        override fun exitSelect_all(ctx: QLParser.Select_allContext?) {
             _selectAllLog = true
             _selectAllTrace = true
             _selectAllEvent = true
         }
 
-        override fun enterScoped_select_all(ctx: QueryLanguage.Scoped_select_allContext?) {
+        override fun enterScoped_select_all(ctx: QLParser.Scoped_select_allContext?) {
             val token = ctx!!.SCOPE()
             val scope = Scope.parse(token.text)
             when (scope) {
@@ -471,7 +471,7 @@ class Query(val query: String) {
             }
         }
 
-        override fun exitArith_expr_root(ctx: QueryLanguage.Arith_expr_rootContext?) {
+        override fun exitArith_expr_root(ctx: QLParser.Arith_expr_rootContext?) {
             val expression = parseExpression(ctx!!)
             validateHoisting(expression)
 
@@ -487,7 +487,7 @@ class Query(val query: String) {
         // endregion
 
         // region PQL where clause
-        override fun exitWhere(ctx: QueryLanguage.WhereContext?) {
+        override fun exitWhere(ctx: QLParser.WhereContext?) {
             whereExpression = parseExpression(ctx!!.children[1])
             val aggregation = whereExpression
                 .filter { it is Function && it.type == FunctionType.Aggregation }
@@ -503,11 +503,11 @@ class Query(val query: String) {
 
         // region PQL group by clause
 
-        override fun exitGroup_trace_by(ctx: QueryLanguage.Group_trace_byContext?) {
+        override fun exitGroup_trace_by(ctx: QLParser.Group_trace_byContext?) {
             handleGroupByIdList(Scope.Trace, ctx!!.id_list().sourceInterval)
         }
 
-        override fun exitGroup_scope_by(ctx: QueryLanguage.Group_scope_byContext?) {
+        override fun exitGroup_scope_by(ctx: QLParser.Group_scope_byContext?) {
             val scope = Scope.parse(ctx!!.SCOPE().text)
             handleGroupByIdList(scope, ctx.id_list().sourceInterval)
         }
@@ -517,7 +517,7 @@ class Query(val query: String) {
             val otherAttributes = _groupByOtherAttributes[scope]!!
 
             tokens.get(interval.a, interval.b)
-                .filter { it.type == QueryLanguage.ID }
+                .filter { it.type == QLParser.ID }
                 .map { Attribute(it.text, it.line, it.charPositionInLine) }
                 .filter {
                     if (it.effectiveScope < scope) {
@@ -540,7 +540,7 @@ class Query(val query: String) {
         // endregion
 
         // region PQL order by clause
-        override fun exitOrdered_expression_root(ctx: QueryLanguage.Ordered_expression_rootContext?) {
+        override fun exitOrdered_expression_root(ctx: QLParser.Ordered_expression_rootContext?) {
             val expression = parseExpression(ctx!!.arith_expr())
             validateHoisting(expression)
 
@@ -551,7 +551,7 @@ class Query(val query: String) {
 
         // region PQL limit & offset clauses
 
-        override fun exitLimit_number(ctx: QueryLanguage.Limit_numberContext?) {
+        override fun exitLimit_number(ctx: QLParser.Limit_numberContext?) {
             parseLimitOrOffsetNumber(ctx!!.getChild(0).payload as Token, "limit") { scope, value, number ->
                 fun warn() = errorListener.emitWarning(
                     IllegalArgumentException(
@@ -576,7 +576,7 @@ class Query(val query: String) {
             }
         }
 
-        override fun exitOffset_number(ctx: QueryLanguage.Offset_numberContext?) {
+        override fun exitOffset_number(ctx: QLParser.Offset_numberContext?) {
             parseLimitOrOffsetNumber(ctx!!.getChild(0).payload as Token, "offset") { scope, value, number ->
                 fun warn() = errorListener.emitWarning(
                     IllegalArgumentException(
@@ -652,13 +652,14 @@ class Query(val query: String) {
         private fun parseExpression(ctx: ParseTree): Expression {
             if (ctx.childCount == 0) {
                 // terminal
-                return parseToken(ctx.payload as Token)
+                val token = ctx.payload as? Token ?: return Expression.empty
+                return parseToken(token)
             }
             val token = ctx.getChild(0).payload as? Token
             with(token) {
                 return when (this?.type) {
-                    QueryLanguage.FUNC_SCALAR0 -> Function(text, line, charPositionInLine)
-                    QueryLanguage.FUNC_SCALAR1, QueryLanguage.FUNC_AGGR -> Function(
+                    QLParser.FUNC_SCALAR0 -> Function(text, line, charPositionInLine)
+                    QLParser.FUNC_SCALAR1, QLParser.FUNC_AGGR -> Function(
                         text,
                         line,
                         charPositionInLine,
@@ -675,12 +676,12 @@ class Query(val query: String) {
 
         private fun parseToken(token: Token): Expression = try {
             when (token.type) {
-                QueryLanguage.ID -> Attribute(token.text, token.line, token.charPositionInLine)
-                QueryLanguage.BOOLEAN -> BooleanLiteral(token.text, token.line, token.charPositionInLine)
-                QueryLanguage.NUMBER -> NumberLiteral(token.text, token.line, token.charPositionInLine)
-                QueryLanguage.DATETIME -> DateTimeLiteral(token.text, token.line, token.charPositionInLine)
-                QueryLanguage.STRING -> StringLiteral(token.text, token.line, token.charPositionInLine)
-                QueryLanguage.NULL -> NullLiteral(token.text, token.line, token.charPositionInLine)
+                QLParser.ID -> Attribute(token.text, token.line, token.charPositionInLine)
+                QLParser.BOOLEAN -> BooleanLiteral(token.text, token.line, token.charPositionInLine)
+                QLParser.NUMBER -> NumberLiteral(token.text, token.line, token.charPositionInLine)
+                QLParser.DATETIME -> DateTimeLiteral(token.text, token.line, token.charPositionInLine)
+                QLParser.STRING -> StringLiteral(token.text, token.line, token.charPositionInLine)
+                QLParser.NULL -> NullLiteral(token.text, token.line, token.charPositionInLine)
                 else -> Operator(token.text, token.line, token.charPositionInLine)
             }
         } catch (e: Exception) {

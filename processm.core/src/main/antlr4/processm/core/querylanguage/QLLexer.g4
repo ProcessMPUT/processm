@@ -1,6 +1,7 @@
 lexer grammar QLLexer;
-tokens {STRING}
 // lexer rules start with uppercase letters
+tokens {STRING}
+
 
 SELECT      : 'select' ;
 WHERE       : 'where' ;
@@ -88,7 +89,7 @@ ORDER_ASC   : 'asc' ;
 ORDER_DESC  : 'desc' ;
 
 ID          : SCOPE_PREFIX ([a-zA-CE-Z_]|DIGIT)+ (':' (LETTER|DIGIT)+)?
-            | '[' SCOPE_PREFIX ('\\]' | .)*? ']';
+            | '[' SCOPE_PREFIX .+? ']';
 
 LINE_COMMENT: ( '//' | '--' ) .*? ( '\r' | '\n' ) -> skip ;
 COMMENT     : '/*' .*? '*/' -> skip ;
