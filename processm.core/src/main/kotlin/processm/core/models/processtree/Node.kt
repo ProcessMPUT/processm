@@ -4,7 +4,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 abstract class Node(vararg nodes: Node) {
-    protected val childrenInternal: MutableList<Node> = ArrayList()
+    internal val childrenInternal: MutableList<Node> = LinkedList()
 
     /**
      * Nodes of this node (children)
@@ -16,6 +16,11 @@ abstract class Node(vararg nodes: Node) {
      */
     var parent: Node? = null
         private set
+
+    /**
+     * Symbol of the node. For operators should be graphic symbol, activity will use name.
+     */
+    abstract val symbol: String
 
     init {
         nodes.forEach { node ->
@@ -34,5 +39,12 @@ abstract class Node(vararg nodes: Node) {
 
     override fun hashCode(): Int {
         return childrenInternal.hashCode()
+    }
+
+    /**
+     * Custom toString to present nodes in process tree as text
+     */
+    override fun toString(): String {
+        return if (childrenInternal.isNotEmpty()) childrenInternal.joinToString(",", "$symbol(", ")") else symbol
     }
 }

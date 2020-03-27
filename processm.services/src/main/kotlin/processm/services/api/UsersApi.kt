@@ -16,10 +16,7 @@ import io.ktor.routing.Route
 import io.ktor.routing.application
 import io.ktor.routing.post
 import io.ktor.routing.route
-import processm.services.api.models.AuthenticationResult
-import processm.services.api.models.AuthenticationResultResponse
-import processm.services.api.models.ErrorResponse
-import processm.services.api.models.UserCredentials
+import processm.services.api.models.*
 import java.time.Duration
 import java.time.Instant
 
@@ -34,20 +31,20 @@ fun Route.UsersApi() {
 
     route("/users/session") {
         post {
-            val credentials = call.receiveOrNull<UserCredentials>()
+            val credentials = call.receiveOrNull<UserCredentialsMessageBody>()
 
             if (credentials != null) {
-                if (credentials?.password != "pass") {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid username or password"))
+                if (credentials?.data.password != "pass") {
+                    call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody("Invalid username or password"))
                 } else {
                     val token = JwtAuthentication.createToken(
-                        credentials.username,
+                        credentials.data.username,
                         Instant.now().plus(jwtTokenTtl),
                         jwtIssuer,
                         jwtSecret
                     )
 
-                    call.respond(HttpStatusCode.Created, AuthenticationResultResponse(AuthenticationResult(token)))
+                    call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token)))
                 }
             }
             else if (call.request.authorization() != null) {
@@ -60,13 +57,13 @@ fun Route.UsersApi() {
                         jwtIssuer,
                         jwtSecret,
                         jwtTokenTtl)
-                    call.respond(HttpStatusCode.Created, AuthenticationResultResponse(AuthenticationResult(prolongedToken)))
+                    call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(prolongedToken)))
                 }
             }
             else {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse("Either user credentials or authentication token needs to be provided"))
+                    ErrorMessageBody("Either user credentials or authentication token needs to be provided"))
             }
         }
     }
@@ -81,13 +78,15 @@ fun Route.UsersApi() {
         get<Paths.getUserAccountDetails> { _: Paths.getUserAccountDetails ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.OK, UserAccountInfoMessageBody(UserAccountInfo(
+                principal!!.userId,
+            organizationRoles = mapOf("org1" to OrganizationRole.owner))))
         }
 
         get<Paths.getUsers> { _: Paths.getUsers ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.OK, UserInfoCollectionMessageBody(emptyArray()))
         }
 
         delete<Paths.signUserOut> { _: Paths.signUserOut ->
