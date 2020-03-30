@@ -27,6 +27,6 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
     }
 
     override fun toString(): String {
-        return "{${source.activity} -> ${targets.map { it.activity }}}"
+        return "{${source} -> ${targets.map { it }}}"
     }
 }
