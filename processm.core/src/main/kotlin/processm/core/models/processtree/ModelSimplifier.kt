@@ -61,6 +61,23 @@ class ModelSimplifier {
     }
 
     private fun simplifyProcessTree(node: Node) {
+        // Edge case - redo loop with only silent activities can be replaced by just one silent activity
+        if (node is RedoLoop) {
+            if (node.childrenInternal.all { it is SilentActivity }) {
+                val iter = node.childrenInternal.iterator()
+
+                // Skip first silent activity
+                if (iter.hasNext())
+                    iter.next()
+
+                // Remove remaining part
+                while (iter.hasNext()) {
+                    iter.next()
+                    iter.remove()
+                }
+            }
+        }
+
         // For each child try to simplify model
         node.childrenInternal.forEach { child ->
             simplifyProcessTree(child)
