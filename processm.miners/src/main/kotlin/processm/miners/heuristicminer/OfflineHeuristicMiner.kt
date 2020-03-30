@@ -1,16 +1,19 @@
 package processm.miners.heuristicminer
 
+import ch.qos.logback.classic.Level
 import processm.core.log.hierarchical.Log
-import processm.core.models.causalnet.Join
-import processm.core.models.causalnet.MutableModel
-import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.Split
+import processm.core.logging.logger
+import processm.core.models.causalnet.*
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.bindingproviders.BindingProvider
 import processm.miners.heuristicminer.bindingselectors.BindingSelector
 import processm.miners.heuristicminer.bindingselectors.CountSeparately
+import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
+import processm.miners.heuristicminer.dependencygraphproviders.DependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
+import java.util.*
+import kotlin.collections.HashMap
 
 /**
  * An off-line implementation of Heuristic Miner.
@@ -22,6 +25,11 @@ class OfflineHeuristicMiner(
     minDirectlyFollows: Int = 1,
     minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
+    val traceToNodeTrace: TraceToNodeTrace = BasicTraceToNodeTrace(),
+    val dependencyGraphProvider: DependencyGraphProvider = DefaultDependencyGraphProvider(
+        minDirectlyFollows,
+        minDependency
+    ),
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(
         minBindingSupport
@@ -29,19 +37,23 @@ class OfflineHeuristicMiner(
     val joinSelector: BindingSelector<Join> = CountSeparately(
         minBindingSupport
     ),
-    bindingProvider: BindingProvider = BestFirstBindingProvider()
-) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, bindingProvider) {
+    val bindingProvider: BindingProvider = BestFirstBindingProvider()
+) : HeuristicMiner {
     private lateinit var log: Log
 
     override fun processLog(log: Log) {
         this.log = log
         for (trace in log.traces)
-            updateDirectlyFollows(traceToNodeTrace(trace))
+            dependencyGraphProvider.processTrace(traceToNodeTrace(trace))
     }
 
-    internal val nodes: Set<Node> by lazy {
-        (directlyFollows.keys.map { it.source } + directlyFollows.keys.map { it.target }).distinct().toSet()
-    }
+    //TODO get rid of these
+    internal val nodes: Set<Node>
+        get() = dependencyGraphProvider.nodes
+    internal val start: Node
+        get() = dependencyGraphProvider.start
+    internal val end: Node
+        get() = dependencyGraphProvider.end
 
     private fun mineBindings(
         logWithNodes: Sequence<List<Node>>,
@@ -68,10 +80,10 @@ class OfflineHeuristicMiner(
     override val result: MutableModel by lazy {
         val model = MutableModel(start = start, end = end)
         model.addInstance(*nodes.toTypedArray())
-        for ((a, b) in computeDependencyGraph())
+        for ((a, b) in dependencyGraphProvider.computeDependencyGraph())
             model.addDependency(a, b)
         val logWithNodes = log.traces
-            .map { trace -> listOf(start) + trace.events.map { e -> node(e) }.toList() + listOf(end) }
+            .map { trace -> listOf(start) + traceToNodeTrace(trace) + listOf(end) }
         logWithNodes.forEach { trace ->
             longDistanceDependencyMiner.processTrace(trace)
         }
@@ -89,7 +101,32 @@ class OfflineHeuristicMiner(
                 break
         }
 
-        model
+        if (logger().isTraceEnabled)
+            logger().trace("Intermediate model:\n$model")
+
+        val finalModel = MutableModel(start = start, end = end)
+        finalModel.addInstance(*model.instances.filter { it.instanceId.isNullOrEmpty() }.toTypedArray())
+        val dep2finalDep = HashMap<Dependency, Dependency>()
+        for (dep in model.splits.values.flatten().flatMap { it.dependencies }.toSet()) {
+            val s = Node(dep.source.activity, special = dep.source.special)
+            val t = Node(dep.target.activity, special = dep.target.special)
+            dep2finalDep[dep] = finalModel.addDependency(s, t)
+        }
+        for (split in model.splits.values.flatten()) {
+            val s = Split(split.dependencies.map { dep2finalDep.getValue(it) }.toSet())
+            if (!finalModel.contains(s))
+                finalModel.addSplit(s)
+        }
+        for (join in model.joins.values.flatten()) {
+            val j = Join(join.dependencies.map { dep2finalDep.getValue(it) }.toSet())
+            if (!finalModel.contains(j))
+                finalModel.addJoin(j)
+        }
+
+        if (logger().isTraceEnabled)
+            logger().trace("Final model:\n$finalModel")
+
+        finalModel
     }
 
 }

@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.bindingproviders
 
 import processm.core.helpers.allSubsets
+import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.NodeTrace
@@ -110,6 +111,8 @@ class BestFirstBindingProvider(
                 }
                 .forEach { queue.add(ComputationState(currentNodeIdx + 1, it, trace)) }
         }
+        logger().warn("Failed to compute bindings for $trace")
+        logger().warn(model.toString())
         return emptyList()
     }
 }

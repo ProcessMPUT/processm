@@ -12,6 +12,7 @@ import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.heuristicminer.bindingselectors.CountGroups
+import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.miners.heuristicminer.traceregisters.SingleShortestTraceRegister
 import kotlin.math.absoluteValue
@@ -50,7 +51,7 @@ class PM_chapter_72 {
     @Suppress("unused")
     companion object {
         @JvmStatic
-        fun hmFactory(minDirectlyFollows: Int, minDependency: Double): List<AbstractHeuristicMiner> =
+        fun hmFactory(minDirectlyFollows: Int, minDependency: Double): List<HeuristicMiner> =
             listOf(
                 OnlineHeuristicMiner(minDirectlyFollows, minDependency),
                 OnlineHeuristicMiner(minDirectlyFollows, minDependency, traceRegister = SingleShortestTraceRegister()),
@@ -65,14 +66,14 @@ class PM_chapter_72 {
             )
 
         @JvmStatic
-        fun hmFactory(): List<AbstractHeuristicMiner> = hmFactory(1, 1e-5)
+        fun hmFactory(): List<HeuristicMiner> = hmFactory(1, 1e-5)
 
         @JvmStatic
-        fun hmFactory_5_9(): List<AbstractHeuristicMiner> =
+        fun hmFactory_5_9(): List<HeuristicMiner> =
             hmFactory(5, .9)
 
         @JvmStatic
-        fun hmFactory_2_7(): List<AbstractHeuristicMiner> =
+        fun hmFactory_2_7(): List<HeuristicMiner> =
             listOf(
                 OnlineHeuristicMiner(
                     2,
@@ -90,14 +91,15 @@ class PM_chapter_72 {
     }
 
 
-    @ParameterizedTest
-    @MethodSource("hmFactory")
-    fun `directly follows`(hm: AbstractHeuristicMiner) {
-        hm.processLog(log)
+    @Test
+    fun `directly follows`() {
+        val gp = DefaultDependencyGraphProvider(1, 1e-5)
+        for (trace in log.traces)
+            gp.processTrace(BasicTraceToNodeTrace()(trace))
         assertEquals(
             mapOf(
-                Dependency(hm.start, a) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
-                Dependency(e, hm.end) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
+                Dependency(gp.start, a) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
+                Dependency(e, gp.end) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
                 Dependency(a, b) to 11,
                 Dependency(a, c) to 11,
                 Dependency(a, d) to 13,
@@ -108,17 +110,18 @@ class PM_chapter_72 {
                 Dependency(c, e) to 11,
                 Dependency(d, d) to 4,
                 Dependency(d, e) to 13
-            ), hm.directlyFollows
+            ), gp.directlyFollows
         )
     }
 
     internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> =
         this.flatMap { a -> right.map { b -> a to b } }
 
-    @ParameterizedTest
-    @MethodSource("hmFactory")
-    fun `dependency measure`(hm: AbstractHeuristicMiner) {
-        hm.processLog(log)
+    @Test
+    fun `dependency measure`() {
+        val gp = DefaultDependencyGraphProvider(1, 1e-5)
+        for (trace in log.traces)
+            gp.processTrace(BasicTraceToNodeTrace()(trace))
         val dm = listOf(
             listOf(0.0, 0.92, 0.92, 0.93, 0.83),
             listOf(-0.92, 0.0, 0.0, 0.0, 0.92),
@@ -128,7 +131,7 @@ class PM_chapter_72 {
         )
         val indices = nodes.indices.map { it }
         (indices times indices).forEach { (i, j) ->
-            assertDoubleEquals(hm.dependency(nodes[i], nodes[j]), dm[i][j], 0.01)
+            assertDoubleEquals(gp.dependency(nodes[i], nodes[j]), dm[i][j], 0.01)
         }
     }
 
@@ -195,7 +198,7 @@ class PM_chapter_72 {
 
     @ParameterizedTest
     @MethodSource("hmFactory_5_9")
-    fun `dependency graph minDirectlyFollows=5 minDependency=,9`(hm: AbstractHeuristicMiner) {
+    fun `dependency graph minDirectlyFollows=5 minDependency=,9`(hm: HeuristicMiner) {
         hm.processLog(log)
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())

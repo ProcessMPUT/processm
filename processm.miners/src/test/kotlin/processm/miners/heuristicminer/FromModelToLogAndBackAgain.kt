@@ -41,7 +41,7 @@ class FromModelToLogAndBackAgain {
         return inp.map { seq -> seq.map { it.activity } }.toString()
     }
 
-    private fun test(reference: Model, hm: AbstractHeuristicMiner) {
+    private fun test(reference: Model, hm: HeuristicMiner) {
         logger().debug("REFERENCE:\n${reference}")
         val referenceVerifier = CausalNetVerifier().verify(reference)
         val expectedSequences =

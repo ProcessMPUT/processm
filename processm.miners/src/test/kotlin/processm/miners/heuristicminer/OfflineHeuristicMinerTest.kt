@@ -7,6 +7,7 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.Helper.event
+import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
@@ -114,4 +115,82 @@ class OfflineHeuristicMinerTest {
         println(hmg.result)
         assertTrue { cmp1.equivalent || cmp2.equivalent }
     }
+
+    @Test
+    fun `first trace from data-driven_process_discovery-artificial_event_log-0-percent-noise`() {
+        val text = "Triage Register Check X-Ray Visit Check Final_Visit Check Prepare"
+        val log = logFromString(text)
+        val hm = OfflineHeuristicMiner(
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        hm.processLog(log)
+        println(hm.result)
+        val v = CausalNetVerifier().verify(hm.result)
+        assertTrue { v.isSound }
+        assertTrue {
+            v.validLoopFreeSequences.any { seq ->
+                seq
+                    .filterNot { it.a.special }
+                    .map { it.a.activity } == text.split(" ")
+            }
+        }
+    }
+
+    @Ignore
+    @Test
+    fun `first trace of activities_of_daily_living_of_several_individuals-edited_hh110_weekends`() {
+        val text =
+            "toilet sleep toilet sleep bathe dress groom medication mealpreperation eatingdrinking cleaning work personalhygiene medication work toilet outdoors toilet sleep toilet work medication outdoors relax personalhygiene medication sleep"
+        val log = logFromString(text)
+        val hm = OfflineHeuristicMiner(
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        hm.processLog(log)
+        val v = CausalNetVerifier().verify(hm.result)
+        assertTrue { v.isSound }
+    }
+
+    @Ignore
+    @Test
+    fun `subtrace of the first trace of activities_of_daily_living_of_several_individuals-edited_hh110_weekends`() {
+        val text =
+            "groom medication mealpreperation work personalhygiene medication work toilet outdoors toilet sleep toilet work medication outdoors"
+        val log = logFromString(text)
+        val hm = OfflineHeuristicMiner(
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        hm.processLog(log)
+        println(hm.result)
+        val v = CausalNetVerifier().verify(hm.result)
+        assertTrue { v.isSound }
+    }
+
+    @Test
+    fun `some test`() {
+        val text =
+            "a b d f d b g"
+        val log = logFromString(text)
+        val hm = OfflineHeuristicMiner(
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        hm.processLog(log)
+        println(hm.result)
+        val v = CausalNetVerifier().verify(hm.result)
+        assertTrue { v.isSound }
+    }
+
+    @Ignore("Good luck")
+    @Test
+    fun `lotta fun`() {
+        val log= logFromString("a b b c d")
+        val hm = OfflineHeuristicMiner(
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        hm.processLog(log)
+        println(hm.result)
+    }
+
 }

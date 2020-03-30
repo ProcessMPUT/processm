@@ -61,6 +61,7 @@ object Helper {
         val e = mockk<Event>()
         every { e.conceptName } returns name
         every { e.conceptInstance } returns null
+        every { e.lifecycleTransition } returns "complete"
         every { e.hashCode() } returns name.hashCode()
         every { e.toString() } returns name
         return e

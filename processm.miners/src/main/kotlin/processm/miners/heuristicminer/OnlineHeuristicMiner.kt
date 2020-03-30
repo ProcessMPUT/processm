@@ -6,6 +6,8 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.bindingproviders.BindingProvider
+import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
+import processm.miners.heuristicminer.dependencygraphproviders.DependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
@@ -22,10 +24,23 @@ class OnlineHeuristicMiner(
     minDirectlyFollows: Int = 1,
     minDependency: Double = 1e-10,
     val minBindingSupport: Int = 1,
+    val traceToNodeTrace: TraceToNodeTrace=BasicTraceToNodeTrace(),
+    val dependencyGraphProvider: DependencyGraphProvider = DefaultDependencyGraphProvider(
+        minDirectlyFollows,
+        minDependency
+    ),
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    bindingProvider: BindingProvider = BestFirstBindingProvider(),
+    val bindingProvider: BindingProvider = BestFirstBindingProvider(),
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
-) : AbstractHeuristicMiner(minDirectlyFollows, minDependency, bindingProvider) {
+) : HeuristicMiner {
+
+    //TODO get rid of these
+    internal val nodes: Set<Node>
+        get() = dependencyGraphProvider.nodes
+    internal val start: Node
+        get() = dependencyGraphProvider.start
+    internal val end: Node
+        get() = dependencyGraphProvider.end
 
     private var unableToReplay = ArrayList<List<Node>>()
     private var currentBindings = setOf<Binding>()
@@ -39,12 +54,13 @@ class OnlineHeuristicMiner(
 
     fun processTrace(trace: Trace) {
         val nodeTrace = traceToNodeTrace(trace)
-        updateDirectlyFollows(nodeTrace)
+        println(nodeTrace)
+        dependencyGraphProvider.processTrace(nodeTrace)
 
         model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
         model.clearDependencies()
-        for ((a, b) in computeDependencyGraph())
-            model.addDependency(a, b)
+        for (dep in dependencyGraphProvider.computeDependencyGraph())
+            model.addDependency(dep)
 
         val nodeTraceWithLimits = listOf(start) + nodeTrace + listOf(end)
         mineBindings(nodeTraceWithLimits)
