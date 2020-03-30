@@ -138,11 +138,11 @@ abstract class Model(
         var result = ""
         val model = this
         for (n in model.instances.sortedBy { it.activity }) {
-            val i = model.incoming.getOrDefault(n, setOf()).map { dep -> dep.source.activity }
-            val j = model.joins.getOrDefault(n, setOf()).map { join -> join.sources.map { it.activity } }
-            val o = model.outgoing.getOrDefault(n, setOf()).map { dep -> dep.target.activity }
-            val s = model.splits.getOrDefault(n, setOf()).map { split -> split.targets.map { it.activity } }
-            result += "$i/$j -> ${n.activity} -> $o/$s\n"
+            val i = model.incoming.getOrDefault(n, setOf()).map { dep -> dep.source }
+            val j = model.joins.getOrDefault(n, setOf()).map { join -> join.sources.map { it } }
+            val o = model.outgoing.getOrDefault(n, setOf()).map { dep -> dep.target }
+            val s = model.splits.getOrDefault(n, setOf()).map { split -> split.targets.map { it } }
+            result += "$i/$j -> $n -> $o/$s\n"
         }
         return result
     }
