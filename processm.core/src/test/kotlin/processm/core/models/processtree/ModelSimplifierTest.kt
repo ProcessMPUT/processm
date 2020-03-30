@@ -159,7 +159,7 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals( "⟲(τ,A,τ,C)", tree.toString())
+        assertEquals("⟲(τ,A,τ,C)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -186,7 +186,7 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals( "⟲(A,τ,C)", tree.toString())
+        assertEquals("⟲(A,τ,C)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -210,7 +210,7 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals( "⟲(A,B,C)", tree.toString())
+        assertEquals("⟲(A,B,C)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -230,7 +230,7 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals( "⟲(τ)", tree.toString())
+        assertEquals("⟲(τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -252,7 +252,7 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals( "⟲(τ,τ)", tree.toString())
+        assertEquals("⟲(τ,τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -277,7 +277,7 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals( "⟲(τ,τ)", tree.toString())
+        assertEquals("⟲(τ,τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -299,8 +299,17 @@ class ModelSimplifierTest {
             )
         }
 
-        assertEquals( "⟲(A,τ)", tree.toString())
+        assertEquals("⟲(A,τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
+    fun `Ignore action if root is activity (activity as root in process tree)`() {
+        val model = processTree { Activity("A") }
+        ModelSimplifier().simplify(model)
+
+        assertEquals("A", model.toString())
+        assertTrue(model.languageEqual(processTree { Activity("A") }))
     }
 
     @Test
@@ -348,11 +357,12 @@ class ModelSimplifierTest {
     }
 
     @Test
-    fun `Tree with empty operator as root can be replaced with null value`() {
+    fun `Tree with empty operator as root can be replaced with silent activity`() {
         val model = processTree { Exclusive() }
         ModelSimplifier().simplify(model)
 
-        assertNull(model.root)
+        assertEquals("τ", model.toString())
+        assertTrue(model.languageEqual(processTree { SilentActivity() }))
     }
 
     @Test
@@ -457,6 +467,7 @@ class ModelSimplifierTest {
 
         ModelSimplifier().simplify(model)
 
+        assertEquals("τ", model.toString())
         assertTrue(model.languageEqual(processTree { SilentActivity() }))
     }
 
@@ -471,6 +482,7 @@ class ModelSimplifierTest {
 
         ModelSimplifier().simplify(model)
 
+        assertEquals("A", model.toString())
         assertTrue(model.languageEqual(processTree { Activity("A") }))
     }
 
@@ -506,6 +518,7 @@ class ModelSimplifierTest {
 
         ModelSimplifier().simplify(model)
 
+        assertEquals("A", model.toString())
         assertTrue(model.languageEqual(processTree { Activity("A") }))
     }
 
@@ -563,6 +576,48 @@ class ModelSimplifierTest {
                 Activity("F")
             )
         }
+        assertEquals("∧(A,B,C,D,E,F)", model.toString())
+        assertTrue(model.languageEqual(expected))
+    }
+
+    @Test
+    fun `Move up activity if sequence operators`() {
+        val model = processTree {
+            Sequence(
+                Activity("A"),
+                Sequence(
+                    Activity("B"),
+                    Activity("C"),
+                    Parallel(
+                        Activity("D"),
+                        Activity("E")
+                    )
+                ),
+                Activity("F"),
+                Sequence(
+                    Activity("G"),
+                    Activity("H")
+                )
+            )
+        }
+
+        ModelSimplifier().simplify(model)
+
+        val expected = processTree {
+            Sequence(
+                Activity("A"),
+                Activity("B"),
+                Activity("C"),
+                Parallel(
+                    Activity("D"),
+                    Activity("E")
+                ),
+                Activity("F"),
+                Activity("G"),
+                Activity("H")
+            )
+        }
+        assertEquals("→(A,B,C,∧(D,E),F,G,H)", model.toString())
         assertTrue(model.languageEqual(expected))
     }
 }

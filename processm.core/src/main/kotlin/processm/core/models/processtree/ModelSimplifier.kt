@@ -16,8 +16,27 @@ class ModelSimplifier {
      * * Replace nodes without children by τ activity
      */
     fun simplify(model: Model) {
-        if (model.root != null)
-            simplifyProcessTree(model.root)
+        val root = model.root
+
+        // Ignore
+        if (root != null && root !is Activity) {
+            // Simplify process tree
+            simplifyProcessTree(root)
+
+            // Calculate how many children we have after clean up tree
+            val rootChildrenSize = root.childrenInternal.size
+
+            // No children - can replace root with silent activity
+            if (rootChildrenSize == 0) {
+                model.root = SilentActivity()
+            }
+
+            // Operator with one child
+            if (rootChildrenSize == 1) {
+                model.root = root.childrenInternal.first()
+                model.root!!.parent = null
+            }
+        }
     }
 
     /**
@@ -34,51 +53,77 @@ class ModelSimplifier {
     fun reduceTauLeafs(model: Model) {
         if (model.root != null) {
             // Reduce tree
-            reduceTauLeafsInModel(model.root)
+            reduceTauLeafsInModel(model.root!!)
 
             // Simplify node
-            reduceTauActivitiesInNode(model.root)
+            reduceTauActivitiesInNode(model.root!!)
         }
     }
 
     private fun simplifyProcessTree(node: Node) {
-        node.childrenInternal.forEach { simplifyProcessTree(it) }
-
-        if (node.parent != null) {
-            // Replace empty operator with silent activity
-            if (node.childrenInternal.isEmpty() && node !is Activity) {
-                node.parent!!.replaceChild(replaced = node, replacement = SilentActivity())
-            }
-
-            // We have just one child - can be moved up
-            if (node.childrenInternal.size == 1) {
-                node.parent!!.replaceChild(replaced = node, replacement = node.childrenInternal.first())
-            }
-
-            // Simplify parent's node
-            reduceTauActivitiesInNode(node)
+        // For each child try to simplify model
+        node.childrenInternal.forEach { child ->
+            simplifyProcessTree(child)
         }
 
-        //        // If node without children - remove node
-//        if (node.childrenInternal.isEmpty() && node.parent != null) {
-//            // Remove node from parent's children and exit function
-//            node.parent!!.childrenInternal.remove(node)
-//            return
-//        }
-//
-//        // Nodes with single child can be simplify to just child element
-//        if (node.childrenInternal.size == 1) {
-//            node.childrenInternal.first().also { child ->
-//                // Add child to node's parent
-//                node.parent?.addChild(child)
-//
-//                // Forget child in node
-//                node.childrenInternal.remove(child)
-//
-//                // Remove node from parent's collection
-//                node.parent
-//            }
-//        }
+        node.childrenInternal.forEach { child ->
+            val childrenInChildNode = child.childrenInternal.size
+
+            // Replace empty operator with silent activity
+            if (childrenInChildNode == 0 && child !is Activity) {
+                node.replaceChild(replaced = child, replacement = SilentActivity())
+            }
+
+            // Move one level up alone child
+            if (childrenInChildNode == 1) {
+                node.replaceChild(replaced = child, replacement = child.childrenInternal.first())
+            }
+        }
+
+        if (node is Sequence || node is Exclusive || node is Parallel) {
+            var changedNodes = true
+
+            // Each node with the same symbol like node can be moved up
+            while (changedNodes) {
+                // Set no changes in current iteration
+                changedNodes = false
+
+                // To prevent concurrent modification on iterator - we will iterate multiple times over children
+                val iterator = node.childrenInternal.iterator()
+                var index = 0
+
+                while (iterator.hasNext()) {
+                    val child = iterator.next()
+
+                    // If is operator and operator's type like node's type
+                    if (child !is Activity && node.symbol == child.symbol) {
+                        // Remove old node from children list
+                        iterator.remove()
+
+                        // Add children from child to node
+                        node.childrenInternal.addAll(index, child.childrenInternal)
+
+                        child.childrenInternal.forEach { n ->
+                            // Change parent reference
+                            n.parent = node
+
+                            // Update index reference
+                            index++
+                        }
+
+                        // Break current iteration - prevent concurrent modification error
+                        changedNodes = true
+                        break
+                    }
+
+                    // Update index reference - iteration complete
+                    index++
+                }
+            }
+        }
+
+        // Simplify node after operations - remove extra silent activities
+        reduceTauActivitiesInNode(node)
     }
 
     private fun reduceTauLeafsInModel(node: Node) {

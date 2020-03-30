@@ -5,7 +5,10 @@ import processm.core.models.commons.AbstractModel
 /**
  * Process Tree model with `root` reference
  */
-class Model(val root: Node? = null) : AbstractModel {
+class Model(root: Node? = null) : AbstractModel {
+    var root: Node? = root
+        internal set
+
     override fun toString(): String {
         return root?.toString() ?: ""
     }
