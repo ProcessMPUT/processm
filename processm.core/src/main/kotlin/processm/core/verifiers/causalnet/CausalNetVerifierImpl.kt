@@ -128,7 +128,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
     private fun checkAbsenceOfDeadParts(): Boolean {
         if (checkAbsenceOfDeadParts(validLoopFreeSequencesWithArbitrarySerialization))
             return true
-        return checkAbsenceOfDeadParts(validLoopFreeSequences)
+        return checkAbsenceOfDeadParts(validSequences)
     }
 
     private class CausalNetSequenceWithHash(other: CausalNetSequenceWithHash? = null) {

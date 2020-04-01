@@ -288,4 +288,17 @@ class CausalNetVerifierImplTest {
         }
         assertEquals(2, CausalNetVerifierImpl(model).validLoopFreeSequencesWithArbitrarySerialization.count())
     }
+
+    @Test
+    fun `single L2 loop`() {
+        val model = causalnet {
+            start splits a
+            a splits b
+            b splits a or end
+            start or b join a
+            a joins b
+            b joins end
+        }
+        assertTrue(CausalNetVerifierImpl(model).noDeadParts)
+    }
 }
