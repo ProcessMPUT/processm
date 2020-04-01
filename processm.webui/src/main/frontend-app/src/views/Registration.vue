@@ -23,7 +23,7 @@
 
               <v-text-field
                 :label="$t('registration-form.admin-email')"
-                v-model="username"
+                v-model="userEmail"
                 prepend-icon="person"
                 type="text"
                 :rules="[
@@ -44,10 +44,20 @@
         <v-snackbar
           color="error"
           v-model="errorMessage"
-          :timeout="errorTimeout"
+          :timeout="messageTimeout"
         >
           {{ $t("registration-form.error-box.failed") }}
           <v-btn dark text @click="errorMessage = false">
+            {{ $t("common.close") }}
+          </v-btn>
+        </v-snackbar>
+        <v-snackbar
+          color="success"
+          v-model="registrationResultMessage"
+          :timeout="messageTimeout"
+        >
+          {{ $t("registration-form.success-box.registered") }}
+          <v-btn dark text @click="registrationResultMessage = false">
             {{ $t("common.close") }}
           </v-btn>
         </v-snackbar>
@@ -64,10 +74,11 @@ import AccountService from "@/services/AccountService";
 @Component
 export default class Registration extends Vue {
   @Inject() accountService!: AccountService;
-  readonly errorTimeout = 3000;
+  readonly messageTimeout = 3000;
   isValidForm = false;
   errorMessage = false;
-  username = "";
+  registrationResultMessage = false;
+  userEmail = "";
   organizationName = "";
 
   async register() {
@@ -75,6 +86,20 @@ export default class Registration extends Vue {
       return (this.$refs.loginForm as Vue & {
         validate: () => boolean;
       }).validate();
+    }
+
+    try {
+      await this.accountService.registerNewAccount(
+        this.userEmail,
+        this.organizationName
+      );
+      this.registrationResultMessage = true;
+      setTimeout(
+        () => this.$router.push({ name: "login" }),
+        this.messageTimeout
+      );
+    } catch (error) {
+      this.errorMessage = true;
     }
   }
 }

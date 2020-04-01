@@ -50,7 +50,10 @@
       "organization-empty": "Nazwa organizacji nie może być pusta"
     },
     "error-box": {
-      "failed": "Inorrect organization name"
+      "failed": "Nieprawidłowy adres email lub nazwa organizacji"
+    },
+    "success-box": {
+      "registered": "Rejestracja konta zakończona powodzeniem"
     }
   },
   "common": {

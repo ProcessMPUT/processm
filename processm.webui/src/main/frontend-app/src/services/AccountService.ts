@@ -2,15 +2,13 @@ import Vue from "vue";
 import { UsersApiFactory, UsersApi, Configuration } from "@/openapi";
 
 export default class AccountService {
-  usersApiFactory!: () => UsersApi;
   private get usersApi(): UsersApi {
     const token = Vue.prototype.$sessionStorage.sessionToken;
     const config = new Configuration();
     if (token) {
       config.accessToken = token;
     }
-    console.log(token);
-    return UsersApiFactory(config, "http://localhost:8080/api") as UsersApi;
+    return UsersApiFactory(config, "http://localhost:8081/api") as UsersApi;
   }
 
   public async signIn(username: string, password: string) {
@@ -44,6 +42,16 @@ export default class AccountService {
       .finally(() => Vue.prototype.$sessionStorage.removeSession());
 
     if (![204, 404].includes(response.status)) {
+      throw new Error(response.statusText);
+    }
+  }
+
+  public async registerNewAccount(userEmail: string, organizationName: string) {
+    const response = await this.usersApi.createAccount({
+      data: { userEmail, organizationName }
+    });
+
+    if (response.status != 201) {
       throw new Error(response.statusText);
     }
   }

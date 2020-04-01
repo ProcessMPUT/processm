@@ -12,6 +12,8 @@ const workspaces = [
   }
 ];
 
+const users = {};
+
 const userSessions = {};
 
 const api = {
@@ -65,7 +67,7 @@ const api = {
   "POST /api/users/session": (req, res) => {
     const credentials = req.body.data;
 
-    if (credentials.password != "pass") {
+    if (!_.has(users, credentials.username) || credentials.password != "pass") {
       return res.status(401).json();
     }
 
@@ -79,18 +81,28 @@ const api = {
 
     _.set(userSessions, sessionToken, credentials.username);
 
-    return res.json({
+    return res.status(201).json({
       data: {
         authorizationToken: `Bearer ${sessionToken}`
       }
     });
   },
-  "DELETE /api/users/session/:sessionId": (req, res) => {
+  "DELETE /api/users/session": (req, res) => {
     const { sessionId } = req.params;
 
     return _.unset(userSessions, sessionId)
       ? res.status(204).json()
       : res.status(404).json();
+  },
+  "POST /api/users": (req, res) => {
+    const { userEmail, organizationName } = req.body.data;
+
+    if (organizationName != "org1" && userEmail != "user1@example.com") {
+      users[userEmail] = { organizationName };
+      res.status(201).json();
+    } else {
+      res.status(400).json();
+    }
   }
 };
 

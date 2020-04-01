@@ -52,7 +52,10 @@
       "organization-empty": "Organization name cannot be empty"
     },
     "error-box": {
-      "failed": "Inorrect organization name"
+      "failed": "Inorrect email address or organization name"
+    },
+    "success-box": {
+      "registered": "Account registration was successful"
     }
   },
   "common": {
