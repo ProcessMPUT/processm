@@ -301,4 +301,26 @@ class CausalNetVerifierImplTest {
         }
         assertTrue(CausalNetVerifierImpl(model).noDeadParts)
     }
+
+    @Test
+    fun connectivity() {
+        val model = MutableModel(start = a, end = d)
+        model.addInstance(a, b, c, d)
+        model.addDependency(a, b)
+        model.addDependency(a, c)
+        val v1 = CausalNetVerifierImpl(model)
+        assertFalse(v1.isEveryNodeReachableFromStart)
+        assertFalse(v1.isEndReachableFromEveryNode)
+        assertFalse(v1.isConnected)
+        model.addDependency(c, d)
+        val v2 = CausalNetVerifierImpl(model)
+        assertTrue(v2.isEveryNodeReachableFromStart)
+        assertFalse(v2.isEndReachableFromEveryNode)
+        assertFalse(v2.isConnected)
+        model.addDependency(b, d)
+        val v3 = CausalNetVerifierImpl(model)
+        assertTrue(v3.isEveryNodeReachableFromStart)
+        assertTrue(v3.isEndReachableFromEveryNode)
+        assertTrue(v3.isConnected)
+    }
 }

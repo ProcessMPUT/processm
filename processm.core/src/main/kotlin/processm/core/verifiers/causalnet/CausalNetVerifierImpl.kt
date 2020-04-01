@@ -77,6 +77,50 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
     }
 
     /**
+     * True if, in the dependency graph, every node is reachable from start and end is reachable from every node.
+     *
+     * This is not consistent with the usual definition of connectivity for a directed graph, but seems to resemble it
+     * and I'm hacking it for the lack of a better term.
+     */
+    val isConnected: Boolean by lazy {
+        isEveryNodeReachableFromStart && isEndReachableFromEveryNode
+    }
+
+    /**
+     * True if, starting from start, one can visit all nodes while traveling forward through dependencies
+     */
+    val isEveryNodeReachableFromStart: Boolean by lazy {
+        val queue = ArrayDeque<Node>()
+        val visited = HashSet<Node>()
+        queue.add(model.start)
+        while (!queue.isEmpty()) {
+            val n = queue.poll()
+            if (visited.contains(n))
+                continue
+            visited.add(n)
+            queue.addAll(model.outgoing[n].orEmpty().map { it.target })
+        }
+        return@lazy visited == model.instances
+    }
+
+    /**
+     * True if, starting from end, one can visit all nodes while traveling backwards through dependencies
+     */
+    val isEndReachableFromEveryNode: Boolean by lazy {
+        val queue = ArrayDeque<Node>()
+        val visited = HashSet<Node>()
+        queue.add(model.end)
+        while (!queue.isEmpty()) {
+            val n = queue.poll()
+            if (visited.contains(n))
+                continue
+            visited.add(n)
+            queue.addAll(model.incoming[n].orEmpty().map { it.source })
+        }
+        return@lazy visited == model.instances
+    }
+
+    /**
      * Based on Definition 3.8 in PM
      */
     private fun allDependenciesUsed(): Boolean {
