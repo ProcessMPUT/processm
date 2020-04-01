@@ -14,6 +14,11 @@ The project is developed using the following tools:
 npm install
 ```
 
+## Generates source code
+```
+npm run generate-api-sources
+```
+
 ### Compiles and hot-reloads for development
 ```
 npm run serve
