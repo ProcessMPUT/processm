@@ -4,6 +4,7 @@ const apiMocker = require("mocker-api");
 
 module.exports = {
   transpileDependencies: ["vuetify"],
+  lintOnSave: process.env.NODE_ENV !== "production",
   devServer: {
     port: 8081,
     before(app) {

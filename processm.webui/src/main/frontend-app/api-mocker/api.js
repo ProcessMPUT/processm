@@ -62,8 +62,8 @@ const api = {
 
     return res.status(204).json();
   },
-  "POST /api/account/session": (req, res) => {
-    const credentials = req.body;
+  "POST /api/users/session": (req, res) => {
+    const credentials = req.body.data;
 
     if (credentials.password != "pass") {
       return res.status(401).json();
@@ -80,11 +80,12 @@ const api = {
     _.set(userSessions, sessionToken, credentials.username);
 
     return res.json({
-      userData: { username: credentials.username },
-      authorizationToken: sessionToken
+      data: {
+        authorizationToken: `Bearer ${sessionToken}`
+      }
     });
   },
-  "DELETE /api/account/session/:sessionId": (req, res) => {
+  "DELETE /api/users/session/:sessionId": (req, res) => {
     const { sessionId } = req.params;
 
     return _.unset(userSessions, sessionId)
