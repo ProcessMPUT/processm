@@ -33,14 +33,14 @@ paths:
     post:
       tags:
         - users
-      summary: Regisiter user account
-      operationId: createUser
+      summary: Regisiter account
+      operationId: createAccount
       requestBody:
-        description: User email and account password
+        description: User email and organization name
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/UserCredentialsMessageBody'
+              $ref: '#/components/schemas/AccountRegistrationInfoMessageBody'
         required: true
       responses:
         '201':
@@ -636,6 +636,20 @@ components:
     GroupRole:
       type: string
       enum: [owner, writer, reader]
+    AccountRegistrationInfo:
+      type: object
+      required: [userEmail, organizationName]
+      properties:
+        userEmail:
+          type: string
+        organizationName:
+          type: string
+    AccountRegistrationInfoMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AccountRegistrationInfo'
     UserCredentials:
       type: object
       required: [username, password]
