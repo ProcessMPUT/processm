@@ -671,9 +671,9 @@ components:
           $ref: '#/components/schemas/UserAccountInfo'
     AuthenticationResult:
       type: object
-      required: [AuthorizationToken]
+      required: [authorizationToken]
       properties:
-        AuthorizationToken:
+        authorizationToken:
           type: string
     AuthenticationResultMessageBody:
       type: object
