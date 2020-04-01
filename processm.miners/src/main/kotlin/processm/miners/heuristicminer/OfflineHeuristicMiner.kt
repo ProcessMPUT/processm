@@ -1,9 +1,10 @@
 package processm.miners.heuristicminer
 
-import ch.qos.logback.classic.Level
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
+import processm.core.logging.trace
 import processm.core.models.causalnet.*
+import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.bindingproviders.BindingProvider
 import processm.miners.heuristicminer.bindingselectors.BindingSelector
@@ -12,8 +13,6 @@ import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependency
 import processm.miners.heuristicminer.dependencygraphproviders.DependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
-import java.util.*
-import kotlin.collections.HashMap
 
 /**
  * An off-line implementation of Heuristic Miner.
@@ -29,21 +28,13 @@ class OfflineHeuristicMiner(
     val joinSelector: BindingSelector<Join> = CountSeparately(1),
     val bindingProvider: BindingProvider = BestFirstBindingProvider()
 ) : HeuristicMiner {
-    private lateinit var log: Log
+    private lateinit var log: Sequence<NodeTrace>
 
     override fun processLog(log: Log) {
-        this.log = log
-        for (trace in log.traces)
-            dependencyGraphProvider.processTrace(traceToNodeTrace(trace))
+        this.log = log.traces.map { traceToNodeTrace(it) }
+        for (trace in this.log)
+            dependencyGraphProvider.processTrace(trace)
     }
-
-    //TODO get rid of these
-    internal val nodes: Set<Node>
-        get() = dependencyGraphProvider.nodes
-    internal val start: Node
-        get() = dependencyGraphProvider.start
-    internal val end: Node
-        get() = dependencyGraphProvider.end
 
     private fun mineBindings(
         logWithNodes: Sequence<List<Node>>,
@@ -51,29 +42,62 @@ class OfflineHeuristicMiner(
     ) {
         joinSelector.reset()
         splitSelector.reset()
-        logWithNodes.forEach { trace ->
+        for (trace in logWithNodes) {
             val (joins, splits) = bindingProvider.computeBindings(model, trace).partition { it is Join }
             joinSelector.add(joins.map { it as Join })
             splitSelector.add(splits.map { it as Split })
         }
-        joinSelector.best.forEach { join ->
+        val joins = joinSelector.best
+        val splits = splitSelector.best
+        check(joins.isNotEmpty() && splits.isNotEmpty()) { "Failed to compute bindings. Aborting, as the final model will not be sound anyhow." }
+        for (join in joins)
             if (!model.contains(join))
                 model.addJoin(join)
-        }
-        splitSelector.best.forEach { split ->
+        for (split in splits)
             if (!model.contains(split))
                 model.addSplit(split)
-        }
     }
 
+    private fun removeUnusedParts(model: MutableModel): MutableModel {
+        val usedDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
+        val usedNodes = (usedDependencies.map { it.source } + usedDependencies.map { it.target }).toSet()
+        //If start or end are not used something went horribly wrong and we may as well throw, as the final model won't even have a connected dependency graph
+        check(usedNodes.contains(model.start))
+        check(usedNodes.contains(model.end))
+        val finalModel = MutableModel(start = model.start, end = model.end)
+        finalModel.addInstance(*usedNodes.toTypedArray())
+        val dep2finalDep = HashMap<Dependency, Dependency>()
+        for (dep in usedDependencies) {
+            val s = Node(dep.source.activity, special = dep.source.special)
+            val t = Node(dep.target.activity, special = dep.target.special)
+            dep2finalDep[dep] = finalModel.addDependency(s, t)
+        }
+        for (split in model.splits.values.flatten()) {
+            val s = Split(split.dependencies.map { dep2finalDep.getValue(it) }.toSet())
+            if (!finalModel.contains(s))
+                finalModel.addSplit(s)
+        }
+        for (join in model.joins.values.flatten()) {
+            val j = Join(join.dependencies.map { dep2finalDep.getValue(it) }.toSet())
+            if (!finalModel.contains(j))
+                finalModel.addJoin(j)
+        }
+
+        logger().trace { "Final model:\n$finalModel" }
+
+        return finalModel
+    }
 
     override val result: MutableModel by lazy {
-        val model = MutableModel(start = start, end = end)
-        model.addInstance(*nodes.toTypedArray())
-        for ((a, b) in dependencyGraphProvider.computeDependencyGraph())
-            model.addDependency(a, b)
-        val logWithNodes = log.traces
-            .map { trace -> listOf(start) + traceToNodeTrace(trace) + listOf(end) }
+        val model = MutableModel(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
+        model.addInstance(*dependencyGraphProvider.nodes.toTypedArray())
+        for (dep in dependencyGraphProvider.computeDependencyGraph())
+            model.addDependency(dep)
+
+        logger().trace { "Dependency graph (connected=${CausalNetVerifierImpl(model).isConnected}):\n$model" }
+
+        val logWithNodes = log
+            .map { trace -> listOf(dependencyGraphProvider.start) + trace + listOf(dependencyGraphProvider.end) }
         logWithNodes.forEach { trace ->
             longDistanceDependencyMiner.processTrace(trace)
         }
@@ -91,32 +115,9 @@ class OfflineHeuristicMiner(
                 break
         }
 
-        if (logger().isTraceEnabled)
-            logger().trace("Intermediate model:\n$model")
+        logger().trace { "Intermediate model:\n$model" }
 
-        val finalModel = MutableModel(start = start, end = end)
-        finalModel.addInstance(*model.instances.filter { it.instanceId.isNullOrEmpty() }.toTypedArray())
-        val dep2finalDep = HashMap<Dependency, Dependency>()
-        for (dep in model.splits.values.flatten().flatMap { it.dependencies }.toSet()) {
-            val s = Node(dep.source.activity, special = dep.source.special)
-            val t = Node(dep.target.activity, special = dep.target.special)
-            dep2finalDep[dep] = finalModel.addDependency(s, t)
-        }
-        for (split in model.splits.values.flatten()) {
-            val s = Split(split.dependencies.map { dep2finalDep.getValue(it) }.toSet())
-            if (!finalModel.contains(s))
-                finalModel.addSplit(s)
-        }
-        for (join in model.joins.values.flatten()) {
-            val j = Join(join.dependencies.map { dep2finalDep.getValue(it) }.toSet())
-            if (!finalModel.contains(j))
-                finalModel.addJoin(j)
-        }
-
-        if (logger().isTraceEnabled)
-            logger().trace("Final model:\n$finalModel")
-
-        finalModel
+        return@lazy removeUnusedParts(model)
     }
 
 }
