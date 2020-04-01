@@ -22,21 +22,11 @@ import kotlin.collections.HashMap
  * For the default values of parameters, the final model is guaranteed to have fitness = 1 for each of the presented traces.
  */
 class OfflineHeuristicMiner(
-    minDirectlyFollows: Int = 1,
-    minDependency: Double = 1e-10,
-    val minBindingSupport: Int = 1,
     val traceToNodeTrace: TraceToNodeTrace = BasicTraceToNodeTrace(),
-    val dependencyGraphProvider: DependencyGraphProvider = DefaultDependencyGraphProvider(
-        minDirectlyFollows,
-        minDependency
-    ),
+    val dependencyGraphProvider: DependencyGraphProvider = DefaultDependencyGraphProvider(1, 1e-10),
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
-    val splitSelector: BindingSelector<Split> = CountSeparately(
-        minBindingSupport
-    ),
-    val joinSelector: BindingSelector<Join> = CountSeparately(
-        minBindingSupport
-    ),
+    val splitSelector: BindingSelector<Split> = CountSeparately(1),
+    val joinSelector: BindingSelector<Join> = CountSeparately(1),
     val bindingProvider: BindingProvider = BestFirstBindingProvider()
 ) : HeuristicMiner {
     private lateinit var log: Log

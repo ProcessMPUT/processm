@@ -12,6 +12,7 @@ import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.heuristicminer.bindingselectors.CountGroups
+import processm.miners.heuristicminer.bindingselectors.CountSeparately
 import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.miners.heuristicminer.traceregisters.SingleShortestTraceRegister
@@ -53,13 +54,32 @@ class PM_chapter_72 {
         @JvmStatic
         fun hmFactory(minDirectlyFollows: Int, minDependency: Double): List<HeuristicMiner> =
             listOf(
-                OnlineHeuristicMiner(minDirectlyFollows, minDependency),
-                OnlineHeuristicMiner(minDirectlyFollows, minDependency, traceRegister = SingleShortestTraceRegister()),
-                OnlineHeuristicMiner(minDirectlyFollows, minDependency, traceRegister = CompleteTraceRegister()),
-                OfflineHeuristicMiner(minDirectlyFollows, minDependency),
+                OnlineHeuristicMiner(
+                    dependencyGraphProvider = DefaultDependencyGraphProvider(
+                        minDirectlyFollows,
+                        minDependency
+                    )
+                ),
+                OnlineHeuristicMiner(
+                    dependencyGraphProvider = DefaultDependencyGraphProvider(
+                        minDirectlyFollows,
+                        minDependency
+                    ), traceRegister = SingleShortestTraceRegister()
+                ),
+                OnlineHeuristicMiner(
+                    dependencyGraphProvider = DefaultDependencyGraphProvider(
+                        minDirectlyFollows,
+                        minDependency
+                    ), traceRegister = CompleteTraceRegister()
+                ),
                 OfflineHeuristicMiner(
-                    minDirectlyFollows,
-                    minDependency,
+                    dependencyGraphProvider = DefaultDependencyGraphProvider(
+                        minDirectlyFollows,
+                        minDependency
+                    )
+                ),
+                OfflineHeuristicMiner(
+                    dependencyGraphProvider = DefaultDependencyGraphProvider(minDirectlyFollows, minDependency),
                     splitSelector = CountGroups(1),
                     joinSelector = CountGroups(1)
                 )
@@ -82,9 +102,9 @@ class PM_chapter_72 {
                     bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
                 ),
                 OfflineHeuristicMiner(
-                    2,
-                    .7,
-                    4,
+                    splitSelector = CountSeparately(4),
+                    joinSelector = CountSeparately(4),
+                    dependencyGraphProvider = DefaultDependencyGraphProvider(2, .7),
                     bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
                 )
             )
@@ -138,7 +158,9 @@ class PM_chapter_72 {
     @Test
     fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`() {
         val hm = OfflineHeuristicMiner(
-            2, .7, 4,
+            splitSelector = CountSeparately(4),
+            joinSelector = CountSeparately(4),
+            dependencyGraphProvider = DefaultDependencyGraphProvider(2, .7),
             bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
         )
         hm.processLog(log)
