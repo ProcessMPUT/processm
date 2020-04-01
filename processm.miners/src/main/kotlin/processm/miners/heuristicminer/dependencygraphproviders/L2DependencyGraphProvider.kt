@@ -5,7 +5,10 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.NodeTrace
 
-open class HalfwayDependencyGraphProvider(
+/**
+ * [DefaultDependencyGraphProvider] plus additional measure to detect L2 loops from Flexible Heuristic Miner
+ */
+open class L2DependencyGraphProvider(
     minDirectlyFollows: Int,
     minDependency: Double,
     protected val minL2: Double
@@ -42,6 +45,5 @@ open class HalfwayDependencyGraphProvider(
             .keys
             .filter { (a, b) -> dependency2(a, b) >= minL2 }
             .flatMap { listOf(it, Dependency(it.target, it.source)) }
-
 
 }

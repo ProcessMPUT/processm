@@ -2,13 +2,21 @@ package processm.miners.heuristicminer.dependencygraphproviders
 
 import processm.core.models.causalnet.Dependency
 
+/**
+ * Dependency graph provider following Definition 6 in A.J.M.M. Weijters and J.T.S. Ribeiro "Flexible Heuristics Miner (FHM)" DOI: 10.1109/CIDM.2011.5949453
+ * The default values of the parameters also follow the paper.
+ *
+ * @see L2DependencyGraphProvider
+ * @param minL1 Minimal dependency value for loops of length 1
+ * @param sigma_r Margin of indistinguishability from the best dependencies ("Relative-to-best threshold")
+ */
 open class FHMDependencyGraphProvider(
     minDirectlyFollows: Int,
-    minDependency: Double,
-    minL2: Double = 0.01,
-    protected val minL1: Double = 0.01,
+    minDependency: Double = 0.9,
+    minL2: Double = 0.9,
+    protected val minL1: Double = 0.9,
     protected val sigma_r: Double = 0.05
-) : HalfwayDependencyGraphProvider(minDirectlyFollows, minDependency, minL2) {
+) : L2DependencyGraphProvider(minDirectlyFollows, minDependency, minL2) {
 
 
     override fun computeDependencyGraph(): List<Dependency> {
