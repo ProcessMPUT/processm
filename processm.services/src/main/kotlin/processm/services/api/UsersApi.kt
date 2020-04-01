@@ -92,7 +92,7 @@ fun Route.UsersApi() {
         delete<Paths.signUserOut> { _: Paths.signUserOut ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.NoContent)
         }
     }
 }
