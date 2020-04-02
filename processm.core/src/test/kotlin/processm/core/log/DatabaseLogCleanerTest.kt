@@ -1,6 +1,7 @@
 package processm.core.log
 
 import processm.core.persistence.DBConnectionPool
+import processm.core.querylanguage.Query
 import kotlin.test.*
 
 internal class DatabaseLogCleanerTest {
@@ -38,11 +39,11 @@ internal class DatabaseLogCleanerTest {
     fun `Remove whole log from the DB`() {
         val logId = getLastLogId()
         val before = setStateBefore()
-        assertTrue(DatabaseXESInputStream(logId).iterator().hasNext())
+        assertTrue(DatabaseXESInputStream(Query(logId)).iterator().hasNext())
 
         DatabaseLogCleaner.removeLog(logId)
 
-        assertFalse(DatabaseXESInputStream(logId).iterator().hasNext())
+        assertFalse(DatabaseXESInputStream(Query(logId)).iterator().hasNext())
 
         assertEquals(countRecordsInTable("logs"), before["logs"]!! - 1)
         assertEquals(countRecordsInTable("traces"), before["traces"]!! - 1)

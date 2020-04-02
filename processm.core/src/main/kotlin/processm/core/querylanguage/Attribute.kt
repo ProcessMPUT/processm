@@ -12,7 +12,8 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
             Scope.Log to setOf(
                 "concept" to "name",
                 "identity" to "id",
-                "lifecycle" to "model"
+                "lifecycle" to "model",
+                "db" to "id"
             ),
             Scope.Trace to setOf(
                 "concept" to "name",
@@ -50,9 +51,7 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
 
     override fun calculateEffectiveScope(): Scope? =
         hoistingPrefix.fold(scope!!) { s, _ ->
-            s.upper ?: throw IllegalArgumentException(
-                "Line $line position $charPositionInLine: It is not supported to hoist a scope beyond the log scope."
-            )
+            requireNotNull(s.upper) { "Line $line position $charPositionInLine: It is not supported to hoist a scope beyond the log scope." }
         }
 
     /**

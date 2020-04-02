@@ -52,8 +52,9 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
 class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<String>(literal, line, charPositionInLine) {
     override fun parse(literal: String): String {
-        if ((literal[0] != '"' && literal[0] != '\'') || literal[0] != literal[literal.length - 1])
-            throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid format of string literal: $literal.")
+        require((literal[0] == '"' || literal[0] == '\'') && literal[0] == literal[literal.length - 1]) {
+            "Line $line position $charPositionInLine: Invalid format of string literal: $literal."
+        }
 
         return literal.substring(1, literal.length - 1)
     }

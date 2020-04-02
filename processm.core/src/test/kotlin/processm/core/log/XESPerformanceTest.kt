@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Tag
 import processm.core.helpers.zipOrThrow
 import processm.core.logging.logger
 import processm.core.persistence.DBConnectionPool
+import processm.core.querylanguage.Query
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
@@ -25,7 +26,7 @@ class XESPerformanceTest {
                         }
                     }
 
-                    val dbInput = DatabaseXESInputStream(getLogId())
+                    val dbInput = DatabaseXESInputStream(Query(getLogId()))
 
                     file.absoluteFile.inputStream().use { fileStream ->
                         GZIPInputStream(fileStream).use { stream ->

@@ -1,8 +1,8 @@
 package processm.core.log.hierarchical
 
-import processm.core.log.Log as BaseLog
 import processm.core.log.XESElement
 import processm.core.log.XESInputStream
+import processm.core.log.Log as BaseLog
 
 /**
  * An extension of [processm.core.log.Log] that supports direct access to underlying traces.
@@ -33,11 +33,9 @@ fun Log.toFlatSequence(): XESInputStream = sequenceOf(this).toFlatSequence()
  * @see processm.core.log.Trace
  * @see processm.core.log.Event
  */
-fun Sequence<Log>.toFlatSequence(): XESInputStream = object : XESInputStream {
-    override fun iterator(): Iterator<XESElement> = sequence {
-        this@toFlatSequence.forEach {
-            yield(it)
-            yieldAll(it.traces.toFlatSequence())
-        }
-    }.iterator()
+fun Sequence<Log>.toFlatSequence(): XESInputStream = sequence {
+    this@toFlatSequence.forEach {
+        yield(it)
+        yieldAll(it.traces.toFlatSequence())
+    }
 }

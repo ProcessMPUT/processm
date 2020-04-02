@@ -52,8 +52,9 @@ class Function(
             else -> throw IllegalArgumentException("Line $line position $charPositionInLine: Call of an undefined function $name.")
         }
         val validArguments = scalarFunctions[name] ?: aggregationFunctions[name]
-        if (children.size != validArguments)
-            throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid number of arguments supplied to function $name: ${children.size} given, $validArguments expected.")
+        require(children.size == validArguments) {
+            "Line $line position $charPositionInLine: Invalid number of arguments supplied to function $name: ${children.size} given, $validArguments expected."
+        }
     }
 
     override fun toString(): String = "$name(${children.joinToString(", ")})"

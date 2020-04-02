@@ -3,6 +3,7 @@ package processm.core.log
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import processm.core.persistence.DBConnectionPool
+import processm.core.querylanguage.Query
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -71,7 +72,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Receive expected extensions in Log structure`() {
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -92,7 +93,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Receive expected classifiers in Log structure`() {
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -108,7 +109,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains named, special values in structure`() {
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -122,7 +123,7 @@ internal class DatabaseXESInputStreamTest {
     fun `Log contains trace global attributes`() {
         val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
         dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -147,7 +148,10 @@ internal class DatabaseXESInputStreamTest {
                 assertEquals(children.getValue("Specialism code").value, 61L)
                 assertEquals(children.getValue("conceptowy:name").value, "1e consult poliklinisch")
                 assertEquals(children.getValue("Activity code").value, 410100L)
-                assertTrue(dateFormatter.parse("2005-01-03T00:00:00.000+01:00").compareTo(children.getValue("time:timestamp").value as Date?) == 0)
+                assertTrue(
+                    dateFormatter.parse("2005-01-03T00:00:00.000+01:00")
+                        .compareTo(children.getValue("time:timestamp").value as Date?) == 0
+                )
                 assertEquals(children.getValue("lifecycle:transition").value, "complete")
 
                 with(children.getValue("listKey") as ListAttr) {
@@ -168,7 +172,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains event global attributes`() {
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -182,7 +186,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains attributes`() {
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -208,7 +212,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Event stream - special Trace element received`() {
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         // Ignore Log element
         assert(stream.next() is Log)
@@ -222,7 +226,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Receive events from the DB`() {
-        val stream = DatabaseXESInputStream(logId).iterator()
+        val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         // Ignore Log element
         assert(stream.next() is Log)
@@ -255,7 +259,7 @@ internal class DatabaseXESInputStreamTest {
     @Test
     fun `No elements in sequence when log not found`() {
         val missingLogId = -1
-        val stream = DatabaseXESInputStream(missingLogId).iterator()
+        val stream = DatabaseXESInputStream(Query(missingLogId)).iterator()
 
         assertFalse(stream.hasNext())
     }

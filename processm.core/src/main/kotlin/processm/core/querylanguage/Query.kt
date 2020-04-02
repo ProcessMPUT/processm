@@ -16,6 +16,15 @@ import kotlin.math.round
  */
 @Suppress("MapGetWithNotNullAssertionOperator")
 class Query(val query: String) {
+
+    /**
+     * This constructor is provided for backward-compatibility with the previous implementation of XES layer and its
+     * use is discouraged in new code.
+     * @param logId is the database id of the log. Not to be confused with log:identity:id.
+     */
+    @Deprecated("Use the primary constructor.", level = DeprecationLevel.WARNING)
+    constructor(logId: Int) : this("where log:db:id=$logId")
+
     // region parser
     private val errorListener: ErrorListener = ErrorListener()
     private val stream: CodePointCharStream = CharStreams.fromString(query)
@@ -52,102 +61,52 @@ class Query(val query: String) {
      */
     var isImplicitSelectAll: Boolean = false
         private set
-    private var _selectAllLog: Boolean? = null
-    private var _selectAllTrace: Boolean? = null
-    private var _selectAllEvent: Boolean? = null
+
+    private val _selectAll: MutableMap<Scope, Boolean?> = EnumMap<Scope, Boolean>(Scope::class.java)
 
     /**
-     * Whether to select all (standard and non-standard) attributes.
+     * Indicates whether to select all (standard and non-standard) attributes on particular scopes.
      */
-    val selectAll: Boolean
-        get() = selectAllLog && selectAllTrace && selectAllEvent
+    val selectAll: Map<Scope, Boolean?> = object : Map<Scope, Boolean?> by _selectAll {
+        override fun get(key: Scope): Boolean = _selectAll[key] ?: isImplicitSelectAll
+    }
+
+    private val _selectStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> =
+        EnumMap<Scope, LinkedHashSet<Attribute>>(Scope::class.java).apply {
+            put(Scope.Log, LinkedHashSet())
+            put(Scope.Trace, LinkedHashSet())
+            put(Scope.Event, LinkedHashSet())
+        }
+
+    private val _selectOtherAttributes: Map<Scope, LinkedHashSet<Attribute>> =
+        EnumMap<Scope, LinkedHashSet<Attribute>>(Scope::class.java).apply {
+            put(Scope.Log, LinkedHashSet())
+            put(Scope.Trace, LinkedHashSet())
+            put(Scope.Event, LinkedHashSet())
+        }
+
+    private val _selectExpressions: Map<Scope, ArrayList<Expression>> =
+        EnumMap<Scope, ArrayList<Expression>>(Scope::class.java).apply {
+            put(Scope.Log, ArrayList())
+            put(Scope.Trace, ArrayList())
+            put(Scope.Event, ArrayList())
+        }
 
     /**
-     * Whether to select all (standard and non-standard) attributes on log scope.
+     * The standard attributes to select split into the scopes.
      */
-    val selectAllLog: Boolean
-        get() = _selectAllLog ?: isImplicitSelectAll
+    val selectStandardAttributes: Map<Scope, Set<Attribute>> = Collections.unmodifiableMap(_selectStandardAttributes)
 
     /**
-     * Whether to select all (standard and non-standard) attributes on trace scope.
+     * The non-standard attributes to select split into the scopes.
      */
-    val selectAllTrace: Boolean
-        get() = _selectAllTrace ?: isImplicitSelectAll
+    val selectOtherAttributes: Map<Scope, Set<Attribute>> = Collections.unmodifiableMap(_selectOtherAttributes)
 
     /**
-     * Whether to select all (standard and non-standard) attributes on event scope.
+     * The expressions to select split into the scopes.
      */
-    val selectAllEvent: Boolean
-        get() = _selectAllEvent ?: isImplicitSelectAll
+    val selectExpressions: Map<Scope, List<Expression>> = Collections.unmodifiableMap(_selectExpressions)
 
-    private val _selectStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
-        Scope.Log to LinkedHashSet(),
-        Scope.Trace to LinkedHashSet(),
-        Scope.Event to LinkedHashSet()
-    )
-
-    private val _selectOtherAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
-        Scope.Log to LinkedHashSet(),
-        Scope.Trace to LinkedHashSet(),
-        Scope.Event to LinkedHashSet()
-    )
-
-    private val _selectExpressions: Map<Scope, ArrayList<Expression>> = mapOf(
-        Scope.Log to ArrayList(),
-        Scope.Trace to ArrayList(),
-        Scope.Event to ArrayList()
-    )
-
-    /**
-     * The standard attributes to select on the log scope.
-     */
-    val selectLogStandardAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Log]!!)
-
-    /**
-     * The standard attributes to select on the trace scope.
-     */
-    val selectTraceStandardAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Trace]!!)
-
-    /**
-     * The standard attributes to select on the event scope.
-     */
-    val selectEventStandardAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_selectStandardAttributes[Scope.Event]!!)
-
-    /**
-     * The non-standard attributes to select on the log scope.
-     */
-    val selectLogOtherAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_selectOtherAttributes[Scope.Log]!!)
-
-    /**
-     * The non-standard attributes to select on the trace scope.
-     */
-    val selectTraceOtherAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_selectOtherAttributes[Scope.Trace]!!)
-
-    /**
-     * The non-standard attributes to select on the event scope.
-     */
-    val selectEventOtherAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_selectOtherAttributes[Scope.Event]!!)
-
-    /**
-     * The expressions to select on the log scope.
-     */
-    val selectLogExpressions: List<Expression> = Collections.unmodifiableList(_selectExpressions[Scope.Log]!!)
-
-    /**
-     * The expressions to select on the trace scope.
-     */
-    val selectTraceExpressions: List<Expression> = Collections.unmodifiableList(_selectExpressions[Scope.Trace]!!)
-
-    /**
-     * The expressions to select on the event scope.
-     */
-    val selectEventExpressions: List<Expression> = Collections.unmodifiableList(_selectExpressions[Scope.Event]!!)
 
     // endregion
     // region where clause
@@ -162,52 +121,29 @@ class Query(val query: String) {
     // region group by clause
     // However PQL does not allow for many group by clauses, as of version 0.1, I expect that the support will be
     // added in a future version. So the below collections hold separate sets of attributes for each scope.
-    private val _groupByStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
-        Scope.Log to LinkedHashSet(),
-        Scope.Trace to LinkedHashSet(),
-        Scope.Event to LinkedHashSet()
-    )
-    private val _groupByOtherAttributes: Map<Scope, LinkedHashSet<Attribute>> = mapOf(
-        Scope.Log to LinkedHashSet(),
-        Scope.Trace to LinkedHashSet(),
-        Scope.Event to LinkedHashSet()
-    )
+    private val _groupByStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> =
+        EnumMap<Scope, LinkedHashSet<Attribute>>(Scope::class.java).apply {
+            put(Scope.Log, LinkedHashSet())
+            put(Scope.Trace, LinkedHashSet())
+            put(Scope.Event, LinkedHashSet())
+        }
+
+    private val _groupByOtherAttributes: Map<Scope, LinkedHashSet<Attribute>> =
+        EnumMap<Scope, LinkedHashSet<Attribute>>(Scope::class.java).apply {
+            put(Scope.Log, LinkedHashSet())
+            put(Scope.Trace, LinkedHashSet())
+            put(Scope.Event, LinkedHashSet())
+        }
 
     /**
-     * The standard attributes used for grouping on the log scope.
+     * The standard attributes used for grouping on particular scopes.
      */
-    val groupLogByStandardAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Log]!!)
+    val groupByStandardAttributes: Map<Scope, Set<Attribute>> = Collections.unmodifiableMap(_groupByStandardAttributes)
 
     /**
-     * The standard attributes used for grouping on the trace scope.
+     * The non-standard attributes used for grouping on particular scopes.
      */
-    val groupTraceByStandardAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Trace]!!)
-
-    /**
-     * The standard attributes used for grouping on the event scope.
-     */
-    val groupEventByStandardAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_groupByStandardAttributes[Scope.Event]!!)
-
-    /**
-     * The non-standard attributes used for grouping on the log scope.
-     */
-    val groupLogByOtherAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Log]!!)
-
-    /**
-     * The non-standard attributes used for grouping on the trace scope.
-     */
-    val groupTraceByOtherAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Trace]!!)
-
-    /**
-     * The non-standard attributes used for grouping on the event scope.
-     */
-    val groupEventByOtherAttributes: Set<Attribute> =
-        Collections.unmodifiableSet(_groupByOtherAttributes[Scope.Event]!!)
+    val groupByOtherAttributes: Map<Scope, Set<Attribute>> = Collections.unmodifiableMap(_groupByOtherAttributes)
 
     /**
      * Indicates whether the implicit out-of-scope group by applies.
@@ -216,90 +152,46 @@ class Query(val query: String) {
         private set
 
     /**
-     * Indicates whether the group by on log scope is used.
+     * Indicates whether the group by clause occurs on particular scopes.
      */
-    val isGroupLogBy: Boolean
-        get() = _groupByStandardAttributes[Scope.Log]!!.size > 0 || _groupByOtherAttributes[Scope.Log]!!.size > 0
-
-    /**
-     * Indicates whether the group by on trace scope is used.
-     */
-    val isGroupTraceBy: Boolean
-        get() = _groupByStandardAttributes[Scope.Trace]!!.size > 0 || _groupByOtherAttributes[Scope.Trace]!!.size > 0
-
-    /**
-     * Indicates whether the group by on event scope is used.
-     */
-    val isGroupEventBy: Boolean
-        get() = _groupByStandardAttributes[Scope.Event]!!.size > 0 || _groupByOtherAttributes[Scope.Event]!!.size > 0
+    val isGroupBy: Map<Scope, Boolean> = object : Map<Scope, Boolean> by emptyMap() {
+        override fun get(scope: Scope): Boolean =
+            _groupByStandardAttributes[scope]!!.size > 0 || _groupByOtherAttributes[scope]!!.size > 0
+    }
 
     // end region
     // endregion
 
     // region order by clause
-    private val _orderByExpressions: Map<Scope, ArrayList<OrderedExpression>> = mapOf(
-        Scope.Log to ArrayList(),
-        Scope.Trace to ArrayList(),
-        Scope.Event to ArrayList()
-    )
+    private val _orderByExpressions: Map<Scope, ArrayList<OrderedExpression>> =
+        EnumMap<Scope, ArrayList<OrderedExpression>>(Scope::class.java).apply {
+            put(Scope.Log, ArrayList())
+            put(Scope.Trace, ArrayList())
+            put(Scope.Event, ArrayList())
+        }
 
     /**
-     * The list of ordering expressions on log scope in decreasing precedence.
+     * The lists of ordering expressions in decreasing precedence on particular scopes.
      */
-    val orderByLogExpressions: List<OrderedExpression> =
-        Collections.unmodifiableList(_orderByExpressions[Scope.Log]!!)
-
-    /**
-     * The list of ordering expressions on trace scope in decreasing precedence.
-     */
-    val orderByTraceExpressions: List<OrderedExpression> =
-        Collections.unmodifiableList(_orderByExpressions[Scope.Trace]!!)
-
-    /**
-     * The list of ordering expressions on event scope in decreasing precedence.
-     */
-    val orderByEventExpressions: List<OrderedExpression> =
-        Collections.unmodifiableList(_orderByExpressions[Scope.Event]!!)
+    val orderByExpressions: Map<Scope, List<OrderedExpression>> = Collections.unmodifiableMap(_orderByExpressions)
     // endregion
 
     // region limit clause
-    /**
-     * The maximum number of logs returned by this query. -1 means no limit.
-     */
-    var logLimit: Long = -1L
-        private set
+    private val _limit: MutableMap<Scope, Long> = EnumMap(Scope::class.java)
 
     /**
-     * The maximum number of traces within a log returned by this query. -1 means no limit.
+     * The maximum number of logs, traces, and events, respectively, returned by this query. null mean no limit.
      */
-    var traceLimit: Long = -1L
-        private set
-
-    /**
-     * The maximum number of events within a trace returned by this query. -1 means no limit.
-     */
-    var eventLimit: Long = -1L
-        private set
+    val limit: Map<Scope, Long> = Collections.unmodifiableMap(_limit)
     // endregion
 
     // region offset clause
-    /**
-     * The offset number of the first log returned by this query. -1 means no offset.
-     */
-    var logOffset: Long = -1L
-        private set
+    private val _offset: MutableMap<Scope, Long> = EnumMap(Scope::class.java)
 
     /**
-     * The offset number of the first trace within a log returned by this query. -1 means no offset.
+     * The offset number of the first log, trace, event returned by this query. null means no offset.
      */
-    var traceOffset: Long = -1L
-        private set
-
-    /**
-     * The offset number of the first event within a trace returned by this query. -1 means no offset.
-     */
-    var eventOffset: Long = -1L
-        private set
+    val offset: Map<Scope, Long> = Collections.unmodifiableMap(_offset)
     // endregion
 
     init {
@@ -313,9 +205,9 @@ class Query(val query: String) {
     }
 
     private fun validateSelectAll() {
-        validateSelectAll(Scope.Log, _selectAllLog)
-        validateSelectAll(Scope.Trace, _selectAllTrace)
-        validateSelectAll(Scope.Event, _selectAllEvent)
+        validateSelectAll(Scope.Log, _selectAll[Scope.Log])
+        validateSelectAll(Scope.Trace, _selectAll[Scope.Trace])
+        validateSelectAll(Scope.Event, _selectAll[Scope.Event])
     }
 
     private fun validateSelectAll(scope: Scope, flag: Boolean?) {
@@ -354,7 +246,7 @@ class Query(val query: String) {
         }
         validateExplicitGroupBy(orderByExpressions, groupByAttributes)
 
-        if (!isGroupLogBy && !isGroupTraceBy && !isGroupEventBy) {
+        if (isGroupBy[Scope.Log] == false && isGroupBy[Scope.Trace] == false && isGroupBy[Scope.Event] == false) {
             // possible implicit group by
             val selectAllExpressions = sequence {
                 _selectStandardAttributes.values.forEach { yieldAll(it) }
@@ -409,7 +301,7 @@ class Query(val query: String) {
             // implicit group by for sure
             isImplicitGroupBy = true
             isImplicitSelectAll = false
-            if (_selectAllLog == true || _selectAllTrace == true || _selectAllEvent == true) {
+            if (_selectAll[Scope.Log] == true || _selectAll[Scope.Trace] == true || _selectAll[Scope.Event] == true) {
                 // query uses explicit select all
                 errorListener.delayedThrow(
                     IllegalArgumentException(
@@ -456,18 +348,18 @@ class Query(val query: String) {
         }
 
         override fun exitSelect_all(ctx: QLParser.Select_allContext?) {
-            _selectAllLog = true
-            _selectAllTrace = true
-            _selectAllEvent = true
+            _selectAll[Scope.Log] = true
+            _selectAll[Scope.Trace] = true
+            _selectAll[Scope.Event] = true
         }
 
         override fun enterScoped_select_all(ctx: QLParser.Scoped_select_allContext?) {
             val token = ctx!!.SCOPE()
             val scope = Scope.parse(token.text)
             when (scope) {
-                Scope.Log -> _selectAllLog = true
-                Scope.Trace -> _selectAllTrace = true
-                Scope.Event -> _selectAllEvent = true
+                Scope.Log -> _selectAll[Scope.Log] = true
+                Scope.Trace -> _selectAll[Scope.Trace] = true
+                Scope.Event -> _selectAll[Scope.Event] = true
             }
         }
 
@@ -559,20 +451,9 @@ class Query(val query: String) {
                     )
                 )
 
-                when (scope) {
-                    Scope.Log -> {
-                        if (logLimit != -1L) warn()
-                        logLimit = value
-                    }
-                    Scope.Trace -> {
-                        if (traceLimit != -1L) warn()
-                        traceLimit = value
-                    }
-                    Scope.Event -> {
-                        if (eventLimit != -1L) warn()
-                        eventLimit = value
-                    }
-                }
+                if (_limit[scope] !== null)
+                    warn()
+                _limit[scope] = value
             }
         }
 
@@ -584,20 +465,9 @@ class Query(val query: String) {
                     )
                 )
 
-                when (scope) {
-                    Scope.Log -> {
-                        if (logOffset != -1L) warn()
-                        logOffset = value
-                    }
-                    Scope.Trace -> {
-                        if (traceOffset != -1L) warn()
-                        traceOffset = value
-                    }
-                    Scope.Event -> {
-                        if (eventOffset != -1L) warn()
-                        eventOffset = value
-                    }
-                }
+                if (_offset[scope] !== null)
+                    warn()
+                _offset[scope] = value
             }
         }
 
