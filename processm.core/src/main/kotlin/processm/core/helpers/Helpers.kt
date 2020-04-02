@@ -96,6 +96,34 @@ fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
     }
 }
 
+/**
+ * Eagerly computes powerset. The empty set is included if [filterEmpty] is true.
+ *
+ * This seems to be more efficient if one knows that the whole powerset is going to be used.
+ * Otherwise, [allSubsets] should be the preferred solution, as it does not perform eager materialization.
+ */
+fun <T> Collection<T>.materializedAllSubsets(filterEmpty: Boolean): List<List<T>> {
+    require(this.size < Int.SIZE_BITS) { "This implementation of power set supports sets of up to 31 items." }
+    if (this.isEmpty()) {
+        return if (filterEmpty)
+            emptyList()
+        else
+            listOf(emptyList())
+    }
+
+    val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this.size)
+
+    var mask = 0L
+    val result = ArrayList<List<T>>(1 shl (this.size + 1))
+    while (true) {
+        val tmp = this.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L }
+        if (!filterEmpty || tmp.isNotEmpty())
+            result.add(tmp)
+
+        if (++mask > lastBucketMask || mask < 0L)
+            return result
+    }
+}
 
 /**
  * Generate all permutations of the given list
