@@ -2,16 +2,24 @@ package processm.miners.heuristicminer.bindingproviders
 
 import io.mockk.every
 import io.mockk.mockkConstructor
+import processm.core.helpers.Counter
 import processm.core.helpers.allPermutations
-import processm.core.helpers.allSubsets
-import processm.miners.heuristicminer.Helper.logFromString
-import processm.miners.heuristicminer.OnlineHeuristicMiner
+import processm.core.log.XMLXESInputStream
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
+import processm.core.models.causalnet.Node
+import processm.miners.heuristicminer.OfflineHeuristicMiner
+import processm.miners.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
+import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import java.io.File
 import java.util.*
+import java.util.zip.GZIPInputStream
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
+@InMemoryXESProcessing
 class DefaultComputationStateComparatorPerformanceTest {
 
     private class ParametrizedDefaultComputationStateComparator(
@@ -19,16 +27,18 @@ class DefaultComputationStateComparatorPerformanceTest {
         private val weights: List<Int>
     ) : Comparator<ComputationState> {
         init {
-            require(order.size <= 4)
             require(weights.size == order.size)
         }
 
         private fun value(o: ComputationState): Array<Int> {
-            val targets = o.trace.state.map { it.target }.toSet()
-            val nMissing =
-                (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
-            val nTargets = targets.size
-            val values = listOf(nMissing, nTargets, o.nextNode, o.trace.state.size)
+            val targets = Counter<Node>()
+            for (n in o.trace.state)
+                targets.inc(n.target)
+            val nTargets = targets.keys.size
+            for (i in o.nextNode until o.nodeTrace.size)
+                targets.dec(o.nodeTrace[i])
+            val nMissing = -targets.values.sum()
+            val values = intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size, targets.values.sum())
             return (order.map { values[it] } zip weights)
                 .map { (v, w) -> v * w }
                 .toTypedArray()
@@ -98,40 +108,31 @@ class DefaultComputationStateComparatorPerformanceTest {
         )
     }
 
-    val logs = listOf(
-        """
-                a b1 c1 b2 c2 d
-                a b1 b2 c1 c2 d
-                a b2 b1 c1 c2 d
-                a b1 b2 c2 c1 d
-                a b2 b1 c2 c1 d
-                a b2 c2 b1 c1 d
-            """.trimIndent(),
-        """
-                a b c d e f g
-                a c b d e f g
-                a b c d f e g
-                a c b d f e g
-            """.trimIndent(),
-        """
-                 a b c d e
-                 a c b d e
-                 a b d c e
-                 a c d b e
-                 a d b c e
-                 a d c b e
-            """.trimIndent()
-    ).map { logFromString(it) }
+    val logs = loadLogs()
 
     /**
      * Whether to perform grid-search also on weights. Increases computational cost many times.
      */
     val adjustWeights = false
 
+    val defaultWeights = listOf(-1, -1, 1, -1, -1)
+
+    //not testing all possible combinations, as this is very time consuming
+//    val consideredOrders=listOf(0,1,2,3,4).allSubsets().filter { it.isNotEmpty() }.flatMap { it.allPermutations() }
+    val consideredOrders = listOf(
+        listOf(1, 3),
+        listOf(1),
+        listOf(1, 0),
+        listOf(1, 2),
+        listOf(1, 2, 3),
+        listOf(1, 2, 0),
+        listOf(1, 2, 4)
+    ).asSequence().flatMap { it.allPermutations() }
+
     /**
      * This is not a real tests. Its purpose is to decide which combination of features leads to the least number of polls from the priority queue in [BestFirstBindingProvider]
      */
-    @Ignore
+    @Ignore("This is not a real test")
     @Test
     fun `grid-search on order and weights of features`() {
         var ctr = 0
@@ -142,18 +143,23 @@ class DefaultComputationStateComparatorPerformanceTest {
         }
         val history = HashMap<Pair<List<Int>, List<Int>>, MutableList<Int>>()
         for (log in logs) {
-            for (order in listOf(0, 1, 2, 3).allSubsets().filter { it.isNotEmpty() }.flatMap { it.allPermutations() }) {
+            for (order in consideredOrders) {
                 val availableWeights = if (adjustWeights) {
                     listOf(-1, 1).product(order.size)
                 } else {
-                    val baseWeights = listOf(-1, -1, 1, -1)
-                    sequenceOf(order.map { baseWeights[it] })
+                    sequenceOf(order.map { defaultWeights[it] })
                 }
                 for (weights in availableWeights) {
+                    println("$order/$weights")
                     ctr = 0
                     val comp = ParametrizedDefaultComputationStateComparator(order, weights)
-                    val hm = OnlineHeuristicMiner(bindingProvider = BestFirstBindingProvider(comp))
+                    val hm = OfflineHeuristicMiner(
+                        dependencyGraphProvider = BasicDependencyGraphProvider(1),
+                        bindingProvider = BestFirstBindingProvider(comp),
+                        longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+                    )
                     hm.processLog(log)
+                    val model = hm.result   //perform lazy operations
                     history.getOrPut(order to weights, { ArrayList() }).add(ctr)
                 }
             }
@@ -167,4 +173,18 @@ class DefaultComputationStateComparatorPerformanceTest {
         best.sortedBy { it.first.size }.forEach { println(it) }
     }
 
+    private fun loadLogs() = listOf(
+        "../xes-logs/activities_of_daily_living_of_several_individuals-edited_hh102_weekends.xes.gz",
+        "../xes-logs/activities_of_daily_living_of_several_individuals-edited_hh110_weekends.xes.gz"
+    ).map {
+        File(it).inputStream().use { fileStream ->
+            GZIPInputStream(fileStream).use { stream ->
+                HoneyBadgerHierarchicalXESInputStream(
+                    XMLXESInputStream(
+                        stream
+                    )
+                ).single()
+            }
+        }
+    }
 }

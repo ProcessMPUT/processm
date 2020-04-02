@@ -1,6 +1,8 @@
 package processm.miners.heuristicminer.bindingproviders
 
+import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.allSubsets
+import processm.core.helpers.materializedAllSubsets
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
@@ -15,29 +17,24 @@ import java.util.*
  * @param trace States, joins and splits so far
  * @param nodeTrace Complete trace being considered
  */
-data class ComputationState(val nextNode: Int, val trace: ReplayTrace, val nodeTrace: NodeTrace)
+data class ComputationState(val nextNode: Int, val trace: ReplayTrace, val nodeTrace: NodeTrace) {
 
-/**
- * Compares two [ComputationState] for the purposes of maintaining a priority queue.
- *
- * The following criterion are considered
- * 1. Number of nodes that are yet to be visited, but are not present in the current state (fewer is beter).
- * 2. Minimal number of nodes that are yet to be visited according to the current state (fewer is better).
- * 3. Number of pending obligations in the state (fewer is better).
- *
- * The corresponding experimental evaluation is in [DefaultComputationStateComparatorPerformanceTest]
- */
-class DefaultComputationStateComparator : Comparator<ComputationState> {
-    private fun value(o: ComputationState): IntArray {
-        val targets = o.trace.state.map { it.target }.toSet()
-        val nMissing =
-            (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
-        val nTargets = targets.size
-        return intArrayOf(-nMissing, -nTargets, -o.trace.state.size)
+    /**
+     * Priority in a priority queue. The following is considered:
+     * 1. Minimal number of nodes that are yet to be visited according to the current state (fewer is better).
+     * 2. Position in trace to be considered next (higher is better).
+     *
+     * The corresponding experimental evaluation is in [DefaultComputationStateComparatorPerformanceTest]
+     */
+    val value: IntArray by lazy {
+        val nTargets = trace.state.uniqueSet().size
+        return@lazy intArrayOf(-nTargets, nextNode)
     }
+}
 
+class DefaultComputationStateComparator : Comparator<ComputationState> {
     override fun compare(o1: ComputationState, o2: ComputationState): Int {
-        for ((x, y) in value(o1) zip value(o2))
+        for ((x, y) in o1.value zip o2.value)
             if (x != y)
                 return y - x
         return 0
@@ -50,39 +47,49 @@ class DefaultComputationStateComparator : Comparator<ComputationState> {
  * [BestFirstBindingProvider] maintains a priority queue of partial [ReplayTrace]s and, at each step, considers the best
  * currently available. Once it reaches any correct and complete replay trace, it immediately stops computation and returns it.
  */
-class BestFirstBindingProvider(
-    val comparator: Comparator<ComputationState> = DefaultComputationStateComparator()
-) : BindingProvider {
+class BestFirstBindingProvider(val comparator: Comparator<ComputationState> = DefaultComputationStateComparator()) :
+    BindingProvider {
+
+    private fun consumeCandidates(
+        model: Model,
+        currentNode: Node,
+        available: Set<Dependency>
+    ): Sequence<Collection<Dependency>> {
+        val consumable =
+            model.incoming.getOrDefault(currentNode, setOf())
+        val knownJoins = model.joins[currentNode]
+        return if (knownJoins.isNullOrEmpty()) {
+            if (consumable.isNotEmpty())
+                consumable.intersect(available).allSubsets().filter { it.isNotEmpty() }
+            else
+                sequenceOf(emptySet<Dependency>())
+        } else {
+            knownJoins.map { join -> join.dependencies }.asSequence()
+        }
+    }
 
     override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
         val queue = PriorityQueue(comparator)
         queue.add(ComputationState(0, ReplayTrace(State(), listOf(), listOf()), trace))
 
-        val consumeCandidates: List<Sequence<Set<Dependency>>> = trace.map { currentNode ->
-            val consumable =
-                model.incoming.getOrDefault(currentNode, setOf())
-            val knownJoins = model.joins[currentNode]
-            if (knownJoins.isNullOrEmpty()) {
-                if (consumable.isNotEmpty())
-                    consumable.allSubsets().filter { it.isNotEmpty() }.map { it.toSet() }
-                else
-                    sequenceOf(setOf())
-            } else {
-                knownJoins.map { join -> join.dependencies }.asSequence()
-            }
-        }
-        val produceCandidates: List<Sequence<Set<Dependency>>> = trace.map { currentNode ->
+        val available = HashSet<Node>()
+        val produceCandidates: MutableList<Iterable<Collection<Dependency>>> =
+            MutableList(trace.size) { emptyList<Collection<Dependency>>() }
+        for (idx in trace.indices.reversed()) {
+            val currentNode = trace[idx]
             val producible =
                 model.outgoing.getOrDefault(currentNode, setOf())
             val knownSplits = model.splits[currentNode]
-            if (knownSplits.isNullOrEmpty()) {
+            val tmp = if (knownSplits.isNullOrEmpty()) {
                 if (producible.isNotEmpty())
-                    producible.allSubsets().filter { it.isNotEmpty() }.map { it.toSet() }
+                    producible.filter { it.target in available }.materializedAllSubsets(true)
                 else
-                    sequenceOf(setOf())
+                    listOf(setOf<Dependency>())
             } else {
-                knownSplits.map { split -> split.dependencies }.asSequence()
+                knownSplits.map { split -> split.dependencies }
             }
+            produceCandidates[idx] = tmp
+            available.add(currentNode)
         }
         while (queue.isNotEmpty()) {
             val compState = queue.poll()!!
@@ -98,18 +105,24 @@ class BestFirstBindingProvider(
                 }
                 continue
             }
-            consumeCandidates[currentNodeIdx]
-                .filter { consume -> traceSoFar.state.containsAll(consume) }
-                .flatMap { consume ->
-                    produceCandidates[currentNodeIdx]
-                        .map { produce ->
-                            val ns = State(traceSoFar.state)
-                            ns.removeAll(consume)
-                            ns.addAll(produce)
-                            ReplayTrace(ns, traceSoFar.joins + setOf(consume), traceSoFar.splits + setOf(produce))
-                        }
+            val avail = traceSoFar.state.uniqueSet()
+            for (consume in consumeCandidates(model, trace[currentNodeIdx], avail)) {
+                if (traceSoFar.state.containsAll(consume)) {
+                    val intermediate = State(traceSoFar.state)
+                    for (c in consume)
+                        intermediate.remove(c)
+                    for (produce in produceCandidates[currentNodeIdx]) {
+                        val ns = State(intermediate)
+                        ns.addAll(produce)
+                        val it = ReplayTrace(
+                            ns,
+                            HierarchicalIterable(traceSoFar.joins, consume),
+                            HierarchicalIterable(traceSoFar.splits, produce)
+                        )
+                        queue.add(ComputationState(currentNodeIdx + 1, it, trace))
+                    }
                 }
-                .forEach { queue.add(ComputationState(currentNodeIdx + 1, it, trace)) }
+            }
         }
         logger().warn("Failed to compute bindings for $trace")
         logger().warn(model.toString())
