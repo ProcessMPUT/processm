@@ -81,61 +81,35 @@ class ModelSimplifier {
         // For each child try to simplify model
         node.childrenInternal.forEach { child ->
             simplifyProcessTree(child)
-        }
 
-        node.childrenInternal.forEach { child ->
-            val childrenInChildNode = child.childrenInternal.size
-
-            // Replace empty operator with silent activity
-            if (childrenInChildNode == 0 && child !is Activity) {
-                node.replaceChild(replaced = child, replacement = SilentActivity())
-            }
-
-            // Move one level up alone child
-            if (childrenInChildNode == 1) {
-                node.replaceChild(replaced = child, replacement = child.childrenInternal.first())
+            // Replace empty operator with silent activity and move one level up alone child
+            when (child.childrenInternal.size) {
+                0 -> if (child !is Activity) replaceChildInNode(node, replaced = child, replacement = SilentActivity())
+                1 -> replaceChildInNode(node, replaced = child, replacement = child.childrenInternal.first())
             }
         }
 
         if (node is Sequence || node is Exclusive || node is Parallel) {
-            var changedNodes = true
+            var index = 0
 
-            // Each node with the same symbol like node can be moved up
-            while (changedNodes) {
-                // Set no changes in current iteration
-                changedNodes = false
+            while (index < node.childrenInternal.size) {
+                val child = node.childrenInternal[index]
 
-                // To prevent concurrent modification on iterator - we will iterate multiple times over children
-                val iterator = node.childrenInternal.iterator()
-                var index = 0
+                // If is operator and operator's type like node's type
+                if (child !is Activity && node.symbol == child.symbol) {
+                    // Remove old node from children list
+                    node.childrenInternal.removeAt(index)
 
-                while (iterator.hasNext()) {
-                    val child = iterator.next()
-
-                    // If is operator and operator's type like node's type
-                    if (child !is Activity && node.symbol == child.symbol) {
-                        // Remove old node from children list
-                        iterator.remove()
-
-                        // Add children from child to node
-                        node.childrenInternal.addAll(index, child.childrenInternal)
-
-                        child.childrenInternal.forEach { n ->
-                            // Change parent reference
-                            n.parent = node
-
-                            // Update index reference
-                            index++
-                        }
-
-                        // Break current iteration - prevent concurrent modification error
-                        changedNodes = true
-                        break
+                    // Add children from child to node
+                    node.childrenInternal.addAll(index, child.childrenInternal)
+                    child.childrenInternal.forEach {
+                        // Change parent reference
+                        it.parent = node
                     }
-
-                    // Update index reference - iteration complete
-                    index++
                 }
+
+                // Update index reference - iteration complete
+                ++index
             }
         }
 
@@ -157,16 +131,9 @@ class ModelSimplifier {
         when (node) {
             is Sequence, is Parallel -> {
                 var childrenCount = node.childrenInternal.size
-                val iterator = node.childrenInternal.iterator()
-
-                // Iterate over children
-                while (iterator.hasNext()) {
+                node.childrenInternal.removeIf {
                     // If node is silent activity AND this is not only child
-                    if (iterator.next() is SilentActivity && childrenCount > 1) {
-                        // Remove silent activity and decrement total number of not removed children in analyzed node
-                        iterator.remove()
-                        childrenCount--
-                    }
+                    it is SilentActivity && childrenCount-- > 1
                 }
             }
             is Exclusive -> {
@@ -181,6 +148,9 @@ class ModelSimplifier {
                     iterator.next()
 
                 removeDuplicatedTauLeafs(iterator)
+
+                if (node.childrenInternal.size == 2 && node.childrenInternal[0] is SilentActivity && node.childrenInternal[1] is SilentActivity)
+                    node.childrenInternal.removeAt(1)
             }
         }
     }
@@ -199,5 +169,12 @@ class ModelSimplifier {
                 }
             }
         }
+    }
+
+    private fun replaceChildInNode(node: Node, replaced: Node, replacement: Node) {
+        val index = node.childrenInternal.indexOfFirst { it === replaced }
+        require(index >= 0) { "The 'replaced' node is not a child of this node." }
+        node.childrenInternal[index] = replacement
+        replacement.parent = node
     }
 }

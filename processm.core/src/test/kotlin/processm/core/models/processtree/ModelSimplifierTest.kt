@@ -247,12 +247,11 @@ class ModelSimplifierTest {
 
         val expectedTree = processTree {
             RedoLoop(
-                SilentActivity(),
                 SilentActivity()
             )
         }
 
-        assertEquals("⟲(τ,τ)", tree.toString())
+        assertEquals("⟲(τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -272,12 +271,11 @@ class ModelSimplifierTest {
 
         val expectedTree = processTree {
             RedoLoop(
-                SilentActivity(),
                 SilentActivity()
             )
         }
 
-        assertEquals("⟲(τ,τ)", tree.toString())
+        assertEquals("⟲(τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
     }
 
@@ -587,11 +585,12 @@ class ModelSimplifierTest {
                 Activity("A"),
                 Sequence(
                     Activity("B"),
-                    Activity("C"),
                     Parallel(
                         Activity("D"),
-                        Activity("E")
-                    )
+                        Activity("E"),
+                        Activity("I")
+                    ),
+                    Activity("C")
                 ),
                 Activity("F"),
                 Sequence(
@@ -607,17 +606,18 @@ class ModelSimplifierTest {
             Sequence(
                 Activity("A"),
                 Activity("B"),
-                Activity("C"),
                 Parallel(
                     Activity("D"),
-                    Activity("E")
+                    Activity("E"),
+                    Activity("I")
                 ),
+                Activity("C"),
                 Activity("F"),
                 Activity("G"),
                 Activity("H")
             )
         }
-        assertEquals("→(A,B,C,∧(D,E),F,G,H)", model.toString())
+        assertEquals("→(A,B,∧(D,E,I),C,F,G,H)", model.toString())
         assertTrue(model.languageEqual(expected))
     }
 }

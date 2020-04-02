@@ -28,16 +28,6 @@ abstract class Node(vararg nodes: Node) {
         }
     }
 
-    /**
-     * Replace child in node
-     * Update `parent` reference
-     */
-    fun replaceChild(replaced: Node, replacement: Node) {
-        val index = childrenInternal.indexOfFirst { it == replaced }
-        childrenInternal[index] = replacement
-        replacement.parent = this
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
