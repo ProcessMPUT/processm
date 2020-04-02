@@ -128,6 +128,7 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+    <<<<<<< HEAD
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
     fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>): Array<DirectlyFollowsSubGraph?> {
