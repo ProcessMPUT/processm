@@ -55,7 +55,7 @@ class DirectlyFollowsSubGraph(
      * Each activity will receive labels - we want to assign a number as low as possible.
      * Based on assigned labels activities connected into groups.
      *
-     * This function generates a map of activity => label reference.
+     * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
     fun calculateExclusiveCut(): HashMap<ProcessTreeActivity, Int> {
         // Last assigned label, on start 0 (not assigned yet)
@@ -122,5 +122,40 @@ class DirectlyFollowsSubGraph(
 
         // Return activities and assigned labels
         return activitiesWithLabels
+    }
+
+    /**
+     * Split graph into map of subGraphs based on assigment map [ProcessTreeActivity] => [Int]
+     * where value as number of group.
+     */
+    fun splitIntoSubGraphs(assigment: HashMap<ProcessTreeActivity, Int>): HashMap<Int, DirectlyFollowsSubGraph> {
+        val subGraphs = HashMap<Int, DirectlyFollowsSubGraph>()
+        val activityGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
+
+        // Add each activity to designated group
+        assigment.forEach { (activity, groupId) ->
+            activityGroups.getOrPut(groupId, { HashSet() }).add(activity)
+        }
+
+        activityGroups.forEach { (groupId, activities) ->
+            // Prepare connections map
+            val connectionsHashMap = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+
+            // For each activity add connection with another activities from group
+            activities.forEach { activity ->
+                connectionsHashMap.getOrPut(activity, { HashMap() }).also { connections ->
+                    outgoingConnections[activity].orEmpty().forEach { (pointedActivity, arc) ->
+                        if (activities.contains(pointedActivity))
+                            connections[pointedActivity] = arc
+                    }
+                }
+            }
+
+            // Add prepared subGraph to map.
+            // Use the same key as a group to prevent swapping order
+            subGraphs[groupId] = DirectlyFollowsSubGraph(activities, connectionsHashMap)
+        }
+
+        return subGraphs
     }
 }

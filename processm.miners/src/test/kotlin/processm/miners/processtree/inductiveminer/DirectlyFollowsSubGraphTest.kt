@@ -193,4 +193,59 @@ internal class DirectlyFollowsSubGraphTest {
         // E with different label
         assertNotEquals(assigment[ProcessTreeActivity("B")], assigment[ProcessTreeActivity("E")])
     }
+
+    @Test
+    fun `Split graph based on list of activities - all activity in the same group`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("E")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("C")] = Arc()
+                arcs[ProcessTreeActivity("E")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut())
+
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `Split graph based on list of activities - separated groups`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                conn[ProcessTreeActivity("A")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("A")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut())
+
+        assertEquals(2, result.size)
+    }
 }
