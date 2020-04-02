@@ -1,6 +1,7 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.models.processtree.Activity
+import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.Arc
 import java.util.*
 import kotlin.collections.HashMap
@@ -23,6 +24,21 @@ class DirectlyFollowsSubGraph(
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
         return connections.isEmpty() && activities.size <= 1
+    }
+
+    /**
+     * Finish calculations and return activity
+     */
+    fun finishCalculations(): Activity {
+        // Check can finish condition
+        if (!canFinishCalculationsOnSubGraph())
+            throw IllegalStateException("SubGraph is not split yet. Can't fetch activity!")
+
+        // Empty graph - return silent activity
+        if (activities.isEmpty()) return SilentActivity()
+
+        // Return activity
+        return activities.first()
     }
 
     /**
