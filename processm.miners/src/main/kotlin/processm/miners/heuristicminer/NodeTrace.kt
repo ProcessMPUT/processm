@@ -20,7 +20,7 @@ interface TraceToNodeTrace {
 class BasicTraceToNodeTrace : TraceToNodeTrace {
     override fun invoke(trace: Trace): NodeTrace =
         trace.events
-            .filter { it.lifecycleTransition == "complete" }
+            .filter { it.lifecycleTransition == "complete" || it.lifecycleTransition == null }
             .map { node(it) }
             .toList()
 }
