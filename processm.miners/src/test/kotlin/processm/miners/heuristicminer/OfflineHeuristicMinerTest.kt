@@ -6,11 +6,14 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
+import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
+import processm.miners.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
+import processm.miners.heuristicminer.dependencygraphproviders.L2DependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import kotlin.test.Ignore
 import kotlin.test.Test
@@ -70,7 +73,10 @@ class OfflineHeuristicMinerTest {
             "abcbcbcbcd" to 1
         ).asSequence()
             .flatMap { (s, n) -> List(n) { Trace(s.map { e -> event(e.toString()) }.asSequence()) }.asSequence() })
-        val hm = OfflineHeuristicMiner(bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()))
+        val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = L2DependencyGraphProvider(1, 1e-5, 1e-5),
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
+        )
         hm.processLog(log)
         with(hm.result) {
             assertEquals(setOf(Split(setOf(Dependency(c, b))), Split(setOf(Dependency(c, d)))), splits[c])
@@ -121,6 +127,7 @@ class OfflineHeuristicMinerTest {
         val text = "Triage Register Check X-Ray Visit Check Final_Visit Check Prepare"
         val log = logFromString(text)
         val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = BasicDependencyGraphProvider(1),
             bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
@@ -137,27 +144,47 @@ class OfflineHeuristicMinerTest {
         }
     }
 
-    @Ignore
     @Test
     fun `first trace of activities_of_daily_living_of_several_individuals-edited_hh110_weekends`() {
         val text =
             "toilet sleep toilet sleep bathe dress groom medication mealpreperation eatingdrinking cleaning work personalhygiene medication work toilet outdoors toilet sleep toilet work medication outdoors relax personalhygiene medication sleep"
         val log = logFromString(text)
         val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = BasicDependencyGraphProvider(1),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
         hm.processLog(log)
-        val v = CausalNetVerifier().verify(hm.result)
-        assertTrue { v.isSound }
+        println(hm.result)
+        //only this little verification, because soundness verification OOMs
+        val v = CausalNetVerifierImpl(hm.result)
+        assertTrue(v.isConnected)
+        assertTrue(v.allDependenciesUsed())
     }
 
-    @Ignore
     @Test
     fun `subtrace of the first trace of activities_of_daily_living_of_several_individuals-edited_hh110_weekends`() {
         val text =
             "groom medication mealpreperation work personalhygiene medication work toilet outdoors toilet sleep toilet work medication outdoors"
         val log = logFromString(text)
         val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = BasicDependencyGraphProvider(1),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        hm.processLog(log)
+        println(hm.result)
+        //only this little verification, because soundness verification OOMs
+        val v = CausalNetVerifierImpl(hm.result)
+        assertTrue(v.isConnected)
+        assertTrue(v.allDependenciesUsed())
+    }
+
+    @Test
+    fun `some test`() {
+        val text = "a b d f d b g"
+        val log = logFromString(text)
+        val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = BasicDependencyGraphProvider(1),
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
         hm.processLog(log)
@@ -167,11 +194,26 @@ class OfflineHeuristicMinerTest {
     }
 
     @Test
-    fun `some test`() {
-        val text =
-            "a b d f d b g"
+    fun `sequence that confuses dependency measure`() {
+        val text = "m w o m w o w m o"
         val log = logFromString(text)
         val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = BasicDependencyGraphProvider(1),
+            bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
+        hm.processLog(log)
+        println(hm.result)
+        val v = CausalNetVerifier().verify(hm.result)
+        assertTrue { v.isSound }
+    }
+
+    @Test
+    fun `simple L2 loop`() {
+        val text = "a b a b"
+        val log = logFromString(text)
+        val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = L2DependencyGraphProvider(1, .25, .25),
             bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
@@ -184,7 +226,7 @@ class OfflineHeuristicMinerTest {
     @Ignore("Good luck")
     @Test
     fun `lotta fun`() {
-        val log= logFromString("a b b c d")
+        val log = logFromString("a b b c d")
         val hm = OfflineHeuristicMiner(
             bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
