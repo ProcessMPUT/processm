@@ -7,8 +7,12 @@ import processm.core.helpers.allPermutations
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
+import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.causalnet
+import processm.miners.heuristicminer.Helper.logFromModel
 import processm.miners.heuristicminer.OfflineHeuristicMiner
+import processm.miners.heuristicminer.OnlineHeuristicMiner
 import processm.miners.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import java.io.File
@@ -38,7 +42,10 @@ class DefaultComputationStateComparatorPerformanceTest {
             for (i in o.nextNode until o.nodeTrace.size)
                 targets.dec(o.nodeTrace[i])
             val nMissing = -targets.values.sum()
-            val values = intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size, targets.values.sum())
+            val targets2 = o.trace.state.map { it.target }.toSet()
+            val nMissing2 =
+                (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
+            val values = intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size, targets.values.sum(), nMissing2)
             return (order.map { values[it] } zip weights)
                 .map { (v, w) -> v * w }
                 .toTypedArray()
@@ -108,17 +115,52 @@ class DefaultComputationStateComparatorPerformanceTest {
         )
     }
 
-    val logs = loadLogs()
+    fun diamondOfDiamonds(): Log {
+        val a = Node("a")
+        val b1 = Node("b1")
+        val c1 = Node("c1")
+        val d1 = Node("d1")
+        val e1 = Node("e1")
+        val b2 = Node("b2")
+        val c2 = Node("c2")
+        val d2 = Node("d2")
+        val e2 = Node("e2")
+        val f = Node("f")
+        return logFromModel(causalnet {
+            start = a
+            end = f
+            a splits b1 + b2
+            b1 splits c1 + d1
+            b2 splits c2 + d2
+            c1 splits e1
+            d1 splits e1
+            c2 splits e2
+            d2 splits e2
+            e1 splits f
+            e2 splits f
+            a joins b1
+            a joins b2
+            b1 joins c1
+            b1 joins d1
+            b2 joins c2
+            b2 joins d2
+            c1 + d1 join e1
+            c2 + d2 join e2
+            e1 + e2 join f
+        })
+    }
+
+    val logs = loadLogs() + listOf(diamondOfDiamonds())
 
     /**
      * Whether to perform grid-search also on weights. Increases computational cost many times.
      */
     val adjustWeights = false
 
-    val defaultWeights = listOf(-1, -1, 1, -1, -1)
+    val defaultWeights = listOf(-1, -1, 1, -1, -1, -1)
 
     //not testing all possible combinations, as this is very time consuming
-//    val consideredOrders=listOf(0,1,2,3,4).allSubsets().filter { it.isNotEmpty() }.flatMap { it.allPermutations() }
+//    val consideredOrders=listOf(0,1,2,3,4,5).allSubsets().filter { it.isNotEmpty() }.flatMap { it.allPermutations() }
     val consideredOrders = listOf(
         listOf(1, 3),
         listOf(1),
