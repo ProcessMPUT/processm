@@ -9,6 +9,7 @@ import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.bindingproviders.BindingProvider
 import processm.miners.heuristicminer.bindingselectors.BindingSelector
 import processm.miners.heuristicminer.bindingselectors.CountSeparately
+import processm.miners.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.dependencygraphproviders.DependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
@@ -22,7 +23,7 @@ import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMi
  */
 class OfflineHeuristicMiner(
     val traceToNodeTrace: TraceToNodeTrace = BasicTraceToNodeTrace(),
-    val dependencyGraphProvider: DependencyGraphProvider = DefaultDependencyGraphProvider(1, 1e-10),
+    val dependencyGraphProvider: DependencyGraphProvider = BasicDependencyGraphProvider(1),
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
     val splitSelector: BindingSelector<Split> = CountSeparately(1),
     val joinSelector: BindingSelector<Join> = CountSeparately(1),

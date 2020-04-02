@@ -96,9 +96,8 @@ class PM_chapter_72 {
         fun hmFactory_2_7(): List<HeuristicMiner> =
             listOf(
                 OnlineHeuristicMiner(
-                    2,
-                    .7,
-                    4,
+                    minBindingSupport = 4,
+                    dependencyGraphProvider = DefaultDependencyGraphProvider(2, .7),
                     bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector())
                 ),
                 OfflineHeuristicMiner(

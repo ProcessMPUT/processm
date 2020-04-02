@@ -9,9 +9,9 @@ import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.Helper.logFromModel
 import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
+import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import kotlin.random.Random
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -25,14 +25,20 @@ class CompareOfflineWithOnline {
             .toSet()
 
     private fun online(log: Log): Set<List<Node>> {
-        val hm = OnlineHeuristicMiner(longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+        val hm = OnlineHeuristicMiner(
+            dependencyGraphProvider = DefaultDependencyGraphProvider(1,1e-5),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
         hm.processLog(log)
         val onlineModel = hm.result
         return seqs(onlineModel)
     }
 
     private fun compare(log: Log, permuteLog: Boolean = false) {
-        val hm = OfflineHeuristicMiner()
+        val hm = OfflineHeuristicMiner(
+            dependencyGraphProvider = DefaultDependencyGraphProvider(1,1e-5),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
         hm.processLog(log)
         val offlineModel = hm.result
         val offlineSeqs = seqs(offlineModel)
@@ -217,7 +223,8 @@ class CompareOfflineWithOnline {
                         val online = hm.result
                         assertTrue { CausalNetTraceComparison(online, offline).equivalent }
                     }
-                }.asIterable())
+                }.asIterable()
+            )
         } else {
             return DynamicTest.dynamicTest("seed=$seed") {
                 val (offline, eq) = prepareOffline()
