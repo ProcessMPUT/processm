@@ -46,14 +46,16 @@ class DirectlyFollowsSubGraph(
      * This function with generate map with activity => label reference.
      */
     fun calculateExclusiveCut(): HashMap<Activity, Int> {
-        // Current label
+        // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
         // Activities and assigned label
         val activitiesWithLabels = HashMap<Activity, Int>()
 
-        // Not labeled yet
+        // Not labeled yet activities
         val nonLabeledActivities = HashSet<Activity>()
+
+        // Add each activity on graph
         activities.forEach { nonLabeledActivities.add(it) }
 
         // Temp list with activities to check - will be a FIFO queue
@@ -63,37 +65,53 @@ class DirectlyFollowsSubGraph(
         while (nonLabeledActivities.isNotEmpty()) {
             // Add first non-labeled activity to list
             toCheckActivitiesListFIFO.addLast(nonLabeledActivities.first())
-            nonLabeledActivities.remove(nonLabeledActivities.first())
 
             while (toCheckActivitiesListFIFO.isNotEmpty()) {
-                val current = toCheckActivitiesListFIFO.first()
+                // Now we will analise this activity
+                val current = toCheckActivitiesListFIFO.pop()
 
-                // If not labeled yet - set it now
+                // Get activity label
                 var label = activitiesWithLabels[current]
+
+                // If not labeled yet - start new group
                 if (label == null) {
                     // Start new group
                     lastLabelId++
                     label = lastLabelId
 
+                    // Assign label and remove from not labeled yet activities
                     activitiesWithLabels[current] = label
                     nonLabeledActivities.remove(current)
-                    toCheckActivitiesListFIFO.add(current)
                 }
 
-                connections[current]?.keys?.forEach {
-                    if (!activitiesWithLabels.containsKey(it)) {
-                        activitiesWithLabels[it] = label
-                        nonLabeledActivities.remove(it)
-                        toCheckActivitiesListFIFO.add(it)
+                // Iterate over not labeled yet activities
+                val iter = nonLabeledActivities.iterator()
+                while (iter.hasNext()) {
+                    val activity = iter.next()
+
+                    if (areConnected(current, activity)) {
+                        // Assign label
+                        activitiesWithLabels[activity] = label
+
+                        // Add activity to check list
+                        toCheckActivitiesListFIFO.add(activity)
+
+                        // Remove activity from not labeled yet activities list
+                        iter.remove()
                     }
                 }
-
-                // Remove activity from list
-                toCheckActivitiesListFIFO.removeFirst()
             }
         }
 
         // Return activities and assigned labels
         return activitiesWithLabels
+    }
+
+    /**
+     * Check in connections exists `from` -> `to` or `to` -> `from` connection
+     */
+    private fun areConnected(from: Activity?, to: Activity): Boolean {
+        return (connections.containsKey(from) && connections[from]!!.containsKey(to)) ||
+                (connections.containsKey(to) && connections[to]!!.containsKey(from))
     }
 }
