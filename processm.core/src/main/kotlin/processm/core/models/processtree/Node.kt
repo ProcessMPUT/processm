@@ -1,7 +1,6 @@
 package processm.core.models.processtree
 
 import java.util.*
-import kotlin.collections.ArrayList
 
 abstract class Node(vararg nodes: Node) {
     internal val childrenInternal: MutableList<Node> = LinkedList()
@@ -15,7 +14,7 @@ abstract class Node(vararg nodes: Node) {
      * Reference to own parent
      */
     var parent: Node? = null
-        private set
+        internal set
 
     /**
      * Symbol of the node. For operators should be graphic symbol, activity will use name.
