@@ -7,6 +7,11 @@ import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 
 abstract class AbstractBindingProvider : BindingProvider {
+
+    /**
+     * Generate sets of dependencies that can be consumed (i.e., removed from state) according to [model], given that
+     * the target of these dependencies must be [currentNode] and they all must be present in [available]
+     */
     protected fun consumeCandidates(
         model: Model,
         currentNode: Node,
@@ -25,6 +30,10 @@ abstract class AbstractBindingProvider : BindingProvider {
         }
     }
 
+    /**
+     * Generate sets of dependencies that can be produced (i.e., added to state) according to [model], given that
+     * the source of these dependencies must be [currentNode] and their targets must be present in [available]
+     */
     protected fun produceCandidates(
         model: Model,
         currentNode: Node,

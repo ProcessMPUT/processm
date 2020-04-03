@@ -3,6 +3,9 @@ package processm.miners.heuristicminer.dependencygraphproviders
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 
+/**
+ * [DependencyGraphProvider] using a dependency measure, like a vanilla heuristic miner
+ */
 open class DefaultDependencyGraphProvider(
     minDirectlyFollows: Int,
     protected val minDependency: Double
