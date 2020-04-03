@@ -1,8 +1,6 @@
 package processm.miners.heuristicminer.bindingproviders
 
 import processm.core.helpers.HierarchicalIterable
-import processm.core.helpers.allSubsets
-import processm.core.helpers.materializedAllSubsets
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
@@ -48,25 +46,7 @@ class DefaultComputationStateComparator : Comparator<ComputationState> {
  * currently available. Once it reaches any correct and complete replay trace, it immediately stops computation and returns it.
  */
 class BestFirstBindingProvider(val comparator: Comparator<ComputationState> = DefaultComputationStateComparator()) :
-    BindingProvider {
-
-    private fun consumeCandidates(
-        model: Model,
-        currentNode: Node,
-        available: Set<Dependency>
-    ): Sequence<Collection<Dependency>> {
-        val consumable =
-            model.incoming.getOrDefault(currentNode, setOf())
-        val knownJoins = model.joins[currentNode]
-        return if (knownJoins.isNullOrEmpty()) {
-            if (consumable.isNotEmpty())
-                consumable.intersect(available).allSubsets().filter { it.isNotEmpty() }
-            else
-                sequenceOf(emptySet<Dependency>())
-        } else {
-            knownJoins.map { join -> join.dependencies }.asSequence()
-        }
-    }
+    AbstractBindingProvider() {
 
     override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
         val queue = PriorityQueue(comparator)
@@ -77,18 +57,7 @@ class BestFirstBindingProvider(val comparator: Comparator<ComputationState> = De
             MutableList(trace.size) { emptyList<Collection<Dependency>>() }
         for (idx in trace.indices.reversed()) {
             val currentNode = trace[idx]
-            val producible =
-                model.outgoing.getOrDefault(currentNode, setOf())
-            val knownSplits = model.splits[currentNode]
-            val tmp = if (knownSplits.isNullOrEmpty()) {
-                if (producible.isNotEmpty())
-                    producible.filter { it.target in available }.materializedAllSubsets(true)
-                else
-                    listOf(setOf<Dependency>())
-            } else {
-                knownSplits.map { split -> split.dependencies }
-            }
-            produceCandidates[idx] = tmp
+            produceCandidates[idx] = produceCandidates(model, currentNode, available)
             available.add(currentNode)
         }
         while (queue.isNotEmpty()) {

@@ -1,6 +1,5 @@
 package processm.miners.heuristicminer.bindingproviders
 
-import processm.core.helpers.allSubsets
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
@@ -13,50 +12,31 @@ import processm.miners.heuristicminer.bindingproviders.hypothesisselector.Replay
  *
  * In general far slower than [BestFirstBindingProvider], but in some cases may offer greater flexibility.
  */
-class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelector) : BindingProvider {
+class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelector) : AbstractBindingProvider() {
 
     override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
         var currentStates =
-            sequenceOf(ReplayTrace(State(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
-        for (currentNode in trace) {
-            val consumable = model.incoming.getOrDefault(currentNode, setOf())
-            val producible = model.outgoing.getOrDefault(currentNode, setOf())
-            val knownJoins = model.joins[currentNode]
-            val consumeCandidates: Sequence<Set<Dependency>> =
-                if (knownJoins.isNullOrEmpty()) {
-                    if (consumable.isNotEmpty())
-                        consumable.allSubsets().filter { consume -> consume.isNotEmpty() }.map { it.toSet() }
-                    else
-                        sequenceOf(setOf())
-                } else {
-                    knownJoins.map { join -> join.dependencies }.asSequence()
-                }
-            val knownSplits = model.splits[currentNode]
-            val produceCandidates: Sequence<Set<Dependency>> =
-                if (knownSplits.isNullOrEmpty()) {
-                    if (producible.isNotEmpty())
-                        producible.allSubsets().filter { produce -> produce.isNotEmpty() }.map { it.toSet() }
-                    else
-                        sequenceOf(setOf())
-                } else {
-                    knownSplits.map { split -> split.dependencies }.asSequence()
-                }
+            listOf(ReplayTrace(State(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
+        for (idx in trace.indices) {
+            val currentNode = trace[idx]
+            val available = trace.subList(idx, trace.size).toSet()
+            val produceCandidates = produceCandidates(model, currentNode, available)
             // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
             // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
-            currentStates = currentStates
-                .flatMap { (state, joins, splits) ->
-                    consumeCandidates
-                        .filter { consume -> state.containsAll(consume) }
-                        .flatMap { consume ->
-                            produceCandidates
-                                .map { produce ->
-                                    val ns = State(state)
-                                    ns.removeAll(consume)
-                                    ns.addAll(produce)
-                                    ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce))
-                                }
-                        }
+            val nextStates = ArrayList<ReplayTrace>()
+            for ((state, joins, splits) in currentStates) {
+                for (consume in consumeCandidates(model, currentNode, state.uniqueSet())) {
+                    if(state.containsAll(consume))
+                    for (produce in produceCandidates) {
+                        val ns = State(state)
+                        ns.removeAll(consume)
+                        ns.addAll(produce)
+
+                        nextStates.add(ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce)))
+                    }
                 }
+            }
+            currentStates = nextStates
         }
         currentStates = currentStates.filter { it.state.isEmpty() }
         if (logger().isTraceEnabled) {
