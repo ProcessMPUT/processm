@@ -1,6 +1,8 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.models.processtree.ProcessTreeActivity
+import processm.core.models.processtree.RedoLoop
+import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.Arc
 import java.util.*
 import kotlin.collections.HashMap
@@ -152,5 +154,24 @@ class DirectlyFollowsSubGraph(
         }
 
         return subGraphs
+    }
+
+    /**
+     * Default rule for Inductive Miner - generate redo loop with silent activity and each activity in graph:
+     * ⟲(τ, a1, a2, ..., an)
+     */
+    fun finishWithDefaultRule(): RedoLoop {
+        val listOfActivities = arrayOfNulls<ProcessTreeActivity>(size = activities.size + 1)
+
+        // Add silent activity as first element
+        listOfActivities[0] = SilentActivity()
+
+        // Add activities
+        activities.withIndex().forEach { (index, activity) ->
+            listOfActivities[index + 1] = activity
+        }
+
+        // Prepare node with redo-loop operator
+        return RedoLoop(*listOfActivities.requireNoNulls())
     }
 }
