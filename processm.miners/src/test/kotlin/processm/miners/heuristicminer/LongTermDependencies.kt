@@ -7,6 +7,8 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.miners.heuristicminer.Helper.event
+import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
+import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -36,7 +38,7 @@ class LongTermDependencies {
                 Trace(trace.map { n -> event(n.activity) }.asSequence())
             }.asSequence()
         })
-    private val hm = OnlineHeuristicMiner(1)
+    private val hm = OnlineHeuristicMiner(1, bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()))
 
     init {
         hm.processLog(log)

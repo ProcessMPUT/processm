@@ -11,6 +11,9 @@ import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
+import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
+import processm.miners.heuristicminer.traceregisters.TraceRegister
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,9 +27,10 @@ class CompareOfflineWithOnline {
             .map { seq -> seq.map { ab -> ab.a }.filter { !it.special } }
             .toSet()
 
-    private fun online(log: Log): Set<List<Node>> {
+    private fun online(log: Log, traceRegister: TraceRegister): Set<List<Node>> {
         val hm = OnlineHeuristicMiner(
-            dependencyGraphProvider = DefaultDependencyGraphProvider(1,1e-5),
+            traceRegister = traceRegister,
+            dependencyGraphProvider = DefaultDependencyGraphProvider(1, 1e-5),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
         hm.processLog(log)
@@ -34,9 +38,9 @@ class CompareOfflineWithOnline {
         return seqs(onlineModel)
     }
 
-    private fun compare(log: Log, permuteLog: Boolean = false) {
+    private fun compare(log: Log, traceRegister: TraceRegister, permuteLog: Boolean = false) {
         val hm = OfflineHeuristicMiner(
-            dependencyGraphProvider = DefaultDependencyGraphProvider(1,1e-5),
+            dependencyGraphProvider = DefaultDependencyGraphProvider(1, 1e-5),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
         hm.processLog(log)
@@ -44,21 +48,25 @@ class CompareOfflineWithOnline {
         val offlineSeqs = seqs(offlineModel)
         if (permuteLog) {
             for (perm in log.traces.toList().allPermutations()) {
-                val onlineSeqs = online(Log(perm.asSequence()))
+                val onlineSeqs = online(Log(perm.asSequence()), traceRegister)
                 assertEquals(offlineSeqs, onlineSeqs)
             }
         } else {
-            val onlineSeqs = online(log)
+            val onlineSeqs = online(log, traceRegister)
             assertEquals(offlineSeqs, onlineSeqs)
         }
     }
 
     private fun compare(text: String, permuteLog: Boolean = false) =
-        compare(logFromString(text), permuteLog = permuteLog)
+        compare(logFromString(text), permuteLog = permuteLog, traceRegister = DifferentAdfixTraceRegister())
 
-    private fun compare(model: Model, permuteLog: (Log) -> Boolean = { false }) {
+    private fun compare(
+        model: Model,
+        permuteLog: (Log) -> Boolean = { false },
+        traceRegister: TraceRegister = DifferentAdfixTraceRegister()
+    ) {
         val log = logFromModel(model)
-        compare(log, permuteLog = permuteLog(log))
+        compare(log, traceRegister, permuteLog = permuteLog(log))
     }
 
     @Test
@@ -189,7 +197,7 @@ class CompareOfflineWithOnline {
             c1 + d1 join e1
             c2 + d2 join e2
             e1 + e2 join f
-        })
+        }, traceRegister = CompleteTraceRegister())
     }
 
     companion object {

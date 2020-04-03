@@ -11,6 +11,7 @@ import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
+import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.BruteForceLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
@@ -327,6 +328,7 @@ class FromModelToLogAndBackAgain {
         test(
             firstNInParallel,
             OfflineHeuristicMiner(
+                dependencyGraphProvider = DefaultDependencyGraphProvider(1, 1e-5),
                 bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector()),
                 longDistanceDependencyMiner = BruteForceLongDistanceDependencyMiner(
                     ValidSequenceBasedAvoidabilityChecker()
@@ -466,7 +468,13 @@ class FromModelToLogAndBackAgain {
 
     @Test
     fun `Offline - Naive - flexible heurisitc miner long-distance dependency example`() {
-        test(fhm, OfflineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
+        test(
+            fhm,
+            OfflineHeuristicMiner(
+                longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector())
+            )
+        )
     }
 
     @Test
@@ -478,6 +486,12 @@ class FromModelToLogAndBackAgain {
 
     @Test
     fun `Online - Naive - flexible heurisitc miner long-distance dependency example`() {
-        test(fhm, OnlineHeuristicMiner(longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner()))
+        test(
+            fhm,
+            OnlineHeuristicMiner(
+                longDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
+                bindingProvider = CompleteBindingProvider(MostGreedyHypothesisSelector())
+            )
+        )
     }
 }
