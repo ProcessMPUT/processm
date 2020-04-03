@@ -1,10 +1,12 @@
 package processm.core.models.processtree
 
-open class Activity(name: String) : Node() {
+import processm.core.models.commons.AbstractActivity
+
+open class Activity(name: String) : Node(), AbstractActivity {
     /**
      * The name of an activity as a representation of an object
      */
-    val name: String = name.intern()
+    override val name: String = name.intern()
 
     /**
      * The symbol of an activity - for activity this will be name
@@ -23,4 +25,8 @@ open class Activity(name: String) : Node() {
         result = 31 * result + name.hashCode()
         return result
     }
+
+    override val startActivities: kotlin.sequences.Sequence<Activity> = sequenceOf(this)
+
+    override val endActivities: kotlin.sequences.Sequence<Activity> = sequenceOf(this)
 }

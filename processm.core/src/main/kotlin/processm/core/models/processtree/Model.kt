@@ -1,5 +1,6 @@
 package processm.core.models.processtree
 
+import processm.core.models.commons.AbstractActivity
 import processm.core.models.commons.AbstractModel
 
 /**
@@ -76,4 +77,14 @@ class Model(root: Node? = null) : AbstractModel {
             return allAttributes.isEmpty()
         }
     }
+
+    override val activities: kotlin.sequences.Sequence<Activity>
+        get() = root?.chilrenRecursive?.filterIsInstance<Activity>().orEmpty()
+
+    override val startActivities: kotlin.sequences.Sequence<AbstractActivity>
+        get() = root?.startActivities.orEmpty()
+
+    override val endActivities: kotlin.sequences.Sequence<AbstractActivity>
+        get() = root?.endActivities.orEmpty()
+
 }

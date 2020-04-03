@@ -9,5 +9,5 @@ import processm.core.models.metadata.MetadataHandler
  * Model's metadata are to be treated as a expected, whereas instance's metadata are to be treated as actual
  */
 abstract class ModelInstance(val model: Model, metadataHandler: MetadataHandler) :
-    AbstractModel,
+    AbstractModel by model,
     MetadataHandler by metadataHandler

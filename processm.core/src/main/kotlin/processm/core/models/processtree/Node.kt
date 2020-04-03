@@ -46,4 +46,14 @@ abstract class Node(vararg nodes: Node) {
     override fun toString(): String {
         return if (childrenInternal.isNotEmpty()) childrenInternal.joinToString(",", "$symbol(", ")") else symbol
     }
+
+    internal val chilrenRecursive: kotlin.sequences.Sequence<Node>
+        get() = sequence {
+            yieldAll(childrenInternal)
+            for (child in children)
+                yieldAll(child.chilrenRecursive)
+        }
+
+    internal abstract val startActivities: kotlin.sequences.Sequence<Activity>
+    internal abstract val endActivities: kotlin.sequences.Sequence<Activity>
 }

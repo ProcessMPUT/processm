@@ -1,3 +1,7 @@
 package processm.core.models.commons
 
-interface AbstractModel
+interface AbstractModel {
+    val activities: Sequence<AbstractActivity>
+    val startActivities: Sequence<AbstractActivity>
+    val endActivities: Sequence<AbstractActivity>
+}

@@ -263,4 +263,12 @@ class MutableModelTest {
             mm.addJoin(Join(setOf(d)))
         }
     }
+
+    @Test
+    fun `common interface`() {
+        val mm=MutableModel()
+        assertEquals(setOf(mm.start), mm.startActivities.toSet())
+        assertEquals(setOf(mm.end), mm.endActivities.toSet())
+        assertEquals(mm.instances, mm.activities.toSet())
+    }
 }

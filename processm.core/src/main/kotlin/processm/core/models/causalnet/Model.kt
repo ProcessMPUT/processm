@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.models.commons.AbstractActivity
 import processm.core.models.commons.AbstractModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -72,4 +73,9 @@ abstract class Model(
     val joins: Map<Node, Set<Join>>
         get() = Collections.unmodifiableMap(_joins)
 
+    override val activities: Sequence<Node> = instances.asSequence()
+
+    override val startActivities: Sequence<AbstractActivity> = sequenceOf(start)
+
+    override val endActivities: Sequence<AbstractActivity> = sequenceOf(end)
 }

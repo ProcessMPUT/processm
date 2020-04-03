@@ -495,4 +495,124 @@ class ModelTest {
             }
         }
     }
+
+    @Test
+    fun `start nodes example from PM page 82`() {
+        assertEquals(setOf(SilentActivity()), processTree { SilentActivity() }.startActivities.toSet())
+        assertEquals(setOf(Activity("a")), processTree { Activity("a") }.startActivities.toSet())
+        assertEquals(
+            setOf(Activity("a")),
+            processTree { Sequence(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a"), Activity("b"), Activity("c")),
+            processTree { Exclusive(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a"), Activity("b"), Activity("c")),
+            processTree { Parallel(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a")),
+            processTree { RedoLoop(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a")),
+            processTree {
+                Sequence(
+                    Activity("a"),
+                    Exclusive(Activity("b"), Activity("c")),
+                    Parallel(Activity("a"), Activity("a"))
+                )
+            }.startActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a"), Activity("c"), SilentActivity()),
+            processTree {
+                Exclusive(
+                    SilentActivity(),
+                    Activity("a"),
+                    SilentActivity(),
+                    Sequence(
+                        SilentActivity(),
+                        Activity("b")
+                    ),
+                    Parallel(
+                        Activity("c"),
+                        SilentActivity()
+                    )
+                )
+            }.startActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a")),
+            processTree {
+                RedoLoop(
+                    Activity("a"),
+                    SilentActivity(),
+                    Activity("c")
+                )
+            }.startActivities.toSet()
+        )
+    }
+
+    @Test
+    fun `end nodes example from PM page 82`() {
+        assertEquals(setOf(SilentActivity()), processTree { SilentActivity() }.endActivities.toSet())
+        assertEquals(setOf(Activity("a")), processTree { Activity("a") }.endActivities.toSet())
+        assertEquals(
+            setOf(Activity("c")),
+            processTree { Sequence(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a"), Activity("b"), Activity("c")),
+            processTree { Exclusive(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a"), Activity("b"), Activity("c")),
+            processTree { Parallel(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a")),
+            processTree { RedoLoop(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a")),
+            processTree {
+                Sequence(
+                    Activity("a"),
+                    Exclusive(Activity("b"), Activity("c")),
+                    Parallel(Activity("a"), Activity("a"))
+                )
+            }.endActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a"), Activity("b"), Activity("c"), SilentActivity()),
+            processTree {
+                Exclusive(
+                    SilentActivity(),
+                    Activity("a"),
+                    SilentActivity(),
+                    Sequence(
+                        SilentActivity(),
+                        Activity("b")
+                    ),
+                    Parallel(
+                        Activity("c"),
+                        SilentActivity()
+                    )
+                )
+            }.endActivities.toSet()
+        )
+        assertEquals(
+            setOf(Activity("a")),
+            processTree {
+                RedoLoop(
+                    Activity("a"),
+                    SilentActivity(),
+                    Activity("c")
+                )
+            }.endActivities.toSet()
+        )
+    }
 }
