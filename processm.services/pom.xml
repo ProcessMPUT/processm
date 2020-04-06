@@ -21,6 +21,7 @@
         <ktor.version>1.2.6</ktor.version>
         <openapi-tools.version>4.2.3</openapi-tools.version>
         <swagger-ui.version>3.25.0</swagger-ui.version>
+        <koin.version>2.1.5</koin.version>
         <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
 
@@ -265,6 +266,22 @@
             <artifactId>ktor-auth-jwt</artifactId>
             <version>${ktor.version}</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.koin</groupId>
+            <artifactId>koin-core</artifactId>
+            <version>${koin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.koin</groupId>
+            <artifactId>koin-ktor</artifactId>
+            <version>${koin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.koin</groupId>
+            <artifactId>koin-test</artifactId>
+            <version>${koin.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

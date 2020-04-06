@@ -12,7 +12,11 @@ import io.ktor.response.respondRedirect
 import io.ktor.routing.get
 import io.ktor.routing.route
 import io.ktor.routing.routing
+import org.koin.dsl.module
+import org.koin.ktor.ext.Koin
+import org.koin.ktor.ext.get
 import processm.services.api.*
+import processm.services.logic.AccountService
 
 fun Application.apiModule() {
 
@@ -26,6 +30,11 @@ fun Application.apiModule() {
     install(Locations)
     install(StatusPages, ApplicationStatusPageConfiguration())
     install(Authentication, ApplicationAuthenticationConfiguration(environment.config.config("ktor.jwt")))
+    install(Koin) {
+        modules(module {
+            single { AccountService() }
+        })
+    }
 
     routing {
         route("api") {
