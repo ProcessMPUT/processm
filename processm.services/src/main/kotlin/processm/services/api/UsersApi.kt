@@ -16,13 +16,26 @@ import io.ktor.routing.Route
 import io.ktor.routing.application
 import io.ktor.routing.post
 import io.ktor.routing.route
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.exists
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.koin.ktor.ext.inject
+import processm.core.persistence.DBConnectionPool
 import processm.services.api.models.*
+import processm.services.logic.AccountService
+import processm.services.logic.ValidationException
+import processm.services.models.User
+import processm.services.models.Organization
+import processm.services.models.Organizations
+import processm.services.models.Users
 import java.time.Duration
 import java.time.Instant
 
 
 @KtorExperimentalLocationsAPI
 fun Route.UsersApi() {
+    val accountService by inject<AccountService>()
     val jwtIssuer = application.environment.config.property("ktor.jwt.issuer").getString()
     val jwtSecret = application.environment.config.propertyOrNull("ktor.jwt.secret")?.getString()
         ?: JwtAuthentication.generateSecretKey()
@@ -31,14 +44,14 @@ fun Route.UsersApi() {
 
     route("/users/session") {
         post {
-            val credentials = call.receiveOrNull<UserCredentialsMessageBody>()
+            val credentials = call.receiveOrNull<UserCredentialsMessageBody>()?.data
 
             if (credentials != null) {
-                if (credentials?.data.password != "pass") {
+                if (!accountService.verifyUsersCredentials(credentials.username, credentials.password)) {
                     call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody("Invalid username or password"))
                 } else {
                     val token = JwtAuthentication.createToken(
-                        credentials.data.username,
+                        credentials.username,
                         Instant.now().plus(jwtTokenTtl),
                         jwtIssuer,
                         jwtSecret
@@ -61,16 +74,18 @@ fun Route.UsersApi() {
                 }
             }
             else {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorMessageBody("Either user credentials or authentication token needs to be provided"))
+                throw ApiException("Either user credentials or authentication token needs to be provided")
             }
         }
     }
 
     route("/users") {
         post {
-            call.respond(HttpStatusCode.NotImplemented)
+            val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
+                ?: throw ApiException("The provided account details cannot be parsed")
+
+            accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName)
+            call.respond(HttpStatusCode.Created)
         }
     }
 

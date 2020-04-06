@@ -14,6 +14,7 @@ import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
 import processm.services.api.models.ErrorMessageBody
+import processm.services.logic.ValidationException
 import java.time.Duration
 
 internal fun ApplicationHstsConfiguration(): HSTS.Configuration.() -> Unit {
@@ -42,6 +43,17 @@ internal fun ApplicationCompressionConfiguration(): Compression.Configuration.()
 internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() -> Unit {
     return {
         logger().enter()
+        exception<ValidationException> { cause ->
+            val responseStatusCode = when(cause.reason) {
+                ValidationException.Reason.ResourceAlreadyExists -> HttpStatusCode.Conflict
+                ValidationException.Reason.ResourceNotFound -> HttpStatusCode.NotFound
+            }
+            logger().trace(cause.message)
+            call.respond(responseStatusCode, ErrorMessageBody(cause.userMessage))
+        }
+        exception<ApiException> { cause ->
+            call.respond(cause.responseCode, ErrorMessageBody(cause.publicMessage.orEmpty()))
+        }
         exception<TokenExpiredException> { cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody(cause.message.orEmpty()))
         }

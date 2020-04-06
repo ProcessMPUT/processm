@@ -283,5 +283,10 @@
             <version>${koin.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>at.favre.lib</groupId>
+            <artifactId>bcrypt</artifactId>
+            <version>0.9.0</version>
+        </dependency>
     </dependencies>
 </project>
