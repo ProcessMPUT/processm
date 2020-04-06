@@ -78,13 +78,26 @@ class Model(root: Node? = null) : AbstractModel {
         }
     }
 
-    override val activities: kotlin.sequences.Sequence<Activity>
-        get() = root?.chilrenRecursive?.filterIsInstance<Activity>().orEmpty()
+    private val allNodes: kotlin.sequences.Sequence<Node>
+        get() {
+            val r = root
+            return if (r != null)
+                sequenceOf(r) + r.chilrenRecursive
+            else
+                emptySequence()
+        }
 
-    override val startActivities: kotlin.sequences.Sequence<AbstractActivity>
+    override val activities: kotlin.sequences.Sequence<Activity>
+        get() = allNodes.filterIsInstance<Activity>()
+
+    override val startActivities: kotlin.sequences.Sequence<Activity>
         get() = root?.startActivities.orEmpty()
 
-    override val endActivities: kotlin.sequences.Sequence<AbstractActivity>
+    override val endActivities: kotlin.sequences.Sequence<Activity>
         get() = root?.endActivities.orEmpty()
+
+    override val decisionPoints: kotlin.sequences.Sequence<InternalNode>
+        get() = allNodes.filterIsInstance<InternalNode>()
+
 
 }

@@ -1,6 +1,6 @@
 package processm.core.models.processtree
 
-class Exclusive(vararg nodes: Node) : Node(*nodes) {
+class Exclusive(vararg nodes: Node) : InternalNode(*nodes) {
     override val symbol: String
         get() = "×"
 
@@ -9,4 +9,6 @@ class Exclusive(vararg nodes: Node) : Node(*nodes) {
 
     override val endActivities: kotlin.sequences.Sequence<Activity>
         get() = children.asSequence().flatMap { it.endActivities }
+
+    override val isStrict: Boolean = children.size > 1
 }

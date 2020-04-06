@@ -73,9 +73,15 @@ abstract class Model(
     val joins: Map<Node, Set<Join>>
         get() = Collections.unmodifiableMap(_joins)
 
+    //TODO jak to sobie radzi ze zmienianiem instances
     override val activities: Sequence<Node> = instances.asSequence()
 
     override val startActivities: Sequence<AbstractActivity> = sequenceOf(start)
 
     override val endActivities: Sequence<AbstractActivity> = sequenceOf(end)
+
+    //TODO jak to sobie radzi ze zmienianiem splits i joins
+    override val decisionPoints: Sequence<DecisionPoint> =
+        splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
+                joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
 }

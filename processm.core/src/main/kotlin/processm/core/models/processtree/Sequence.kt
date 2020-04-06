@@ -1,6 +1,6 @@
 package processm.core.models.processtree
 
-class Sequence(vararg nodes: Node) : Node(*nodes) {
+class Sequence(vararg nodes: Node) : InternalNode(*nodes) {
     override val symbol: String
         get() = "→"
     override val startActivities: kotlin.sequences.Sequence<Activity>
@@ -8,4 +8,6 @@ class Sequence(vararg nodes: Node) : Node(*nodes) {
 
     override val endActivities: kotlin.sequences.Sequence<Activity>
         get() = children.last().endActivities
+
+    override val isStrict: Boolean = false
 }

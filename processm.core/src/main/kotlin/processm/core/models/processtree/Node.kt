@@ -1,5 +1,6 @@
 package processm.core.models.processtree
 
+import processm.core.models.commons.AbstractDecisionPoint
 import java.util.*
 
 abstract class Node(vararg nodes: Node) {
