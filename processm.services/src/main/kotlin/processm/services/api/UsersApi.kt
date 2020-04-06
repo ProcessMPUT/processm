@@ -16,19 +16,9 @@ import io.ktor.routing.Route
 import io.ktor.routing.application
 import io.ktor.routing.post
 import io.ktor.routing.route
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.exists
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.ktor.ext.inject
-import processm.core.persistence.DBConnectionPool
 import processm.services.api.models.*
 import processm.services.logic.AccountService
-import processm.services.logic.ValidationException
-import processm.services.models.User
-import processm.services.models.Organization
-import processm.services.models.Organizations
-import processm.services.models.Users
 import java.time.Duration
 import java.time.Instant
 
@@ -46,35 +36,33 @@ fun Route.UsersApi() {
         post {
             val credentials = call.receiveOrNull<UserCredentialsMessageBody>()?.data
 
-            if (credentials != null) {
-                if (!accountService.verifyUsersCredentials(credentials.username, credentials.password)) {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody("Invalid username or password"))
-                } else {
+            when {
+                credentials != null -> {
+                    var user = accountService.verifyUsersCredentials(credentials.username, credentials.password)
+                        ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
                     val token = JwtAuthentication.createToken(
-                        credentials.username,
+                        user.id.value,
+                        user.username,
                         Instant.now().plus(jwtTokenTtl),
                         jwtIssuer,
-                        jwtSecret
-                    )
+                        jwtSecret)
 
                     call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token)))
                 }
-            }
-            else if (call.request.authorization() != null) {
-                val authorizationHeader = call.request.parseAuthorizationHeader()
-
-                if (authorizationHeader is HttpAuthHeader.Single) {
-
+                call.request.authorization() != null -> {
+                    val authorizationHeader = call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single
+                        ?: throw ApiException("Invalid authorization token format", HttpStatusCode.Unauthorized)
                     val prolongedToken = JwtAuthentication.verifyAndProlongToken(
                         authorizationHeader.blob,
                         jwtIssuer,
                         jwtSecret,
                         jwtTokenTtl)
+
                     call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(prolongedToken)))
                 }
-            }
-            else {
-                throw ApiException("Either user credentials or authentication token needs to be provided")
+                else -> {
+                    throw ApiException("Either user credentials or authentication token needs to be provided")
+                }
             }
         }
     }
@@ -94,7 +82,7 @@ fun Route.UsersApi() {
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.OK, UserAccountInfoMessageBody(UserAccountInfo(
-                principal!!.userId,
+                principal!!.username,
             organizationRoles = mapOf("org1" to OrganizationRole.owner))))
         }
 

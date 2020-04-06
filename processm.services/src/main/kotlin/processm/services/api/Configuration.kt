@@ -57,9 +57,6 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
         exception<TokenExpiredException> { cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody(cause.message.orEmpty()))
         }
-        exception<UnsupportedOperationException> { cause ->
-            call.respond(HttpStatusCode.BadRequest, ErrorMessageBody(cause.message.orEmpty()))
-        }
         exception<Exception> { cause ->
             logger().error(cause)
             call.respond(HttpStatusCode.InternalServerError)
@@ -78,11 +75,7 @@ internal fun ApplicationAuthenticationConfiguration(config: ApplicationConfig): 
         jwt {
             realm = jwtRealm
             verifier(JwtAuthentication.createVerifier(jwtIssuer, jwtSecret))
-            validate { credentials ->
-                val identificationClaim = credentials.payload.claims["id"]?.asString()
-
-                ApiUser(identificationClaim ?: throw UnsupportedOperationException("Token should contain 'id' field"))
-            }
+            validate { credentials ->  ApiUser(credentials.payload.claims) }
         }
     }
 }

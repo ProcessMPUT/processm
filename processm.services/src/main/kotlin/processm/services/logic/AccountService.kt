@@ -18,7 +18,10 @@ class AccountService {
                 "Specified user account does not exist"
             )
 
-        BCrypt.verifyer().verify(password.toByteArray(), user.password.toByteArray()).verified
+        if (BCrypt.verifyer().verify(password.toByteArray(), user.password.toByteArray()).verified)
+            user
+        else
+            null
     }
 
     fun createAccount(userEmail: String, organizationName: String) {

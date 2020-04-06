@@ -3,8 +3,7 @@ package processm.services.api
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
-import com.auth0.jwt.exceptions.TokenExpiredException
-import java.lang.Exception
+import io.ktor.http.HttpStatusCode
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -22,17 +21,17 @@ object JwtAuthentication {
             .verify(encodedToken)
 
         if (Duration.between(expiredToken.expiresAt.toInstant(), Instant.now()) > acceptableExpiration) {
-            throw TokenExpiredException("The token exceeded allowed expiration")
+            throw ApiException("The token exceeded allowed expiration", HttpStatusCode.Unauthorized)
         }
 
-        val username = expiredToken.claims["id"]?.asString()
-            ?: throw UnsupportedOperationException("Token should contain 'id' field")
+        val apiUser = ApiUser(expiredToken.claims)
         val newExpirationDate = Instant
             .now()
             .plusMillis(expiredToken.expiresAt.time - expiredToken.issuedAt.time)
 
         return createToken(
-            username,
+            apiUser.userId,
+            apiUser.username,
             newExpirationDate,
             expiredToken.issuer,
             secret
@@ -45,10 +44,11 @@ object JwtAuthentication {
         .acceptLeeway(0)
         .build()
 
-    fun createToken(username: String, expiration: Instant, issuer: String, secret: String): String = JWT.create()
+    fun createToken(userId: Long, username: String, expiration: Instant, issuer: String, secret: String): String = JWT.create()
         .withSubject("Authentication")
         .withIssuer(issuer)
-        .withClaim("id", username)
+        .withClaim("userId", userId)
+        .withClaim("username", username)
         .withExpiresAt(Date(expiration.toEpochMilli()))
         .withIssuedAt(Date())
         .withNotBefore(Date())
