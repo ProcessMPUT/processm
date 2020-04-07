@@ -98,5 +98,7 @@ class Model(root: Node? = null) : AbstractModel {
     override val decisionPoints: kotlin.sequences.Sequence<InternalNode>
         get() = allNodes.filterIsInstance<InternalNode>()
 
+    override fun createInstance() = ModelInstance(this)
+
 
 }

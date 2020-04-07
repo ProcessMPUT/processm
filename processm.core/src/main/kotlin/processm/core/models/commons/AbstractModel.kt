@@ -5,4 +5,5 @@ interface AbstractModel {
     val startActivities: Sequence<AbstractActivity>
     val endActivities: Sequence<AbstractActivity>
     val decisionPoints: Sequence<AbstractDecisionPoint>
+    fun createInstance(): AbstractModelInstance
 }

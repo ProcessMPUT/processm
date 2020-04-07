@@ -65,4 +65,6 @@ class MutableModel(
         _joins.getOrPut(join.target, { HashSet() }).add(join)
     }
 
+    override fun createInstance() = MutableModelInstance(this, metadataHandler)
+
 }

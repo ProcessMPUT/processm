@@ -23,7 +23,7 @@ class ModelInstanceTest {
         val l2 = RedoLoop(c, d)
         val top = Exclusive(l1, l2)
         val model = processTree { top }
-        val instance = ModelInstance(model)
+        val instance = model.createInstance()
         with(instance) {
             expecting(a, c)[0].execute()
             expecting(EndLoopSilentActivity(l1), b)[1].execute()

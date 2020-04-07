@@ -23,7 +23,7 @@ class MutableModelInstanceTest {
 
     @BeforeTest
     fun before() {
-        instance = MutableModelInstance(model, DefaultMutableMetadataHandler())
+        instance = model.createInstance()
     }
 
     @Test

@@ -3,6 +3,7 @@ package processm.core.models.bpmn
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class BPMNModelTest {
 
@@ -53,5 +54,10 @@ class BPMNModelTest {
     @Test
     fun `bpmnio C10-export end`() {
         assertEquals(4, c10export.endActivities.count())
+    }
+
+    @Test
+    fun `model instances are not supported`() {
+        assertFailsWith<UnsupportedOperationException> { a40export.createInstance() }
     }
 }

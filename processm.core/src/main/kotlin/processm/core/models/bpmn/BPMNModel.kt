@@ -4,6 +4,7 @@ import processm.core.models.bpmn.jaxb.TDefinitions
 import processm.core.models.bpmn.jaxb.TProcess
 import processm.core.models.commons.AbstractActivity
 import processm.core.models.commons.AbstractModel
+import processm.core.models.commons.AbstractModelInstance
 import java.io.InputStream
 
 class BPMNModel internal constructor(internal val model: TDefinitions) : AbstractModel {
@@ -27,5 +28,8 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Abstrac
 
     override val decisionPoints: Sequence<BPMNGateway>
         get() = processes.asSequence().flatMap { it.allGateways }
+
+    override fun createInstance(): AbstractModelInstance =
+        throw UnsupportedOperationException("BPMN model instances are not supported")
 
 }
