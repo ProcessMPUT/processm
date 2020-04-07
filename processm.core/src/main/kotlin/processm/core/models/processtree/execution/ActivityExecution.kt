@@ -1,8 +1,10 @@
 package processm.core.models.processtree.execution
 
+import processm.core.models.commons.AbstractActivityExecution
 import processm.core.models.processtree.Activity
 
-class ActivityExecution(override val base: Activity, parent: ExecutionNode?) : ExecutionNode(base, parent) {
+class ActivityExecution(override val base: Activity, parent: ExecutionNode?) : ExecutionNode(base, parent),
+    AbstractActivityExecution {
 
     override val available
         get() = if (!isComplete) sequenceOf(this) else emptySequence()
@@ -13,7 +15,9 @@ class ActivityExecution(override val base: Activity, parent: ExecutionNode?) : E
     override fun postExecution(child: ExecutionNode) =
         throw UnsupportedOperationException("An activity cannot have children")
 
-    fun execute() {
+    override val activity: Activity = base
+
+    override fun execute() {
         isComplete = true
         parent?.postExecution(this)
     }

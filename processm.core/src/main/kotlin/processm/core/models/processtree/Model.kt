@@ -1,6 +1,5 @@
 package processm.core.models.processtree
 
-import processm.core.models.commons.AbstractActivity
 import processm.core.models.commons.AbstractModel
 
 /**
