@@ -2,6 +2,7 @@ package processm.core.verifiers.causalnet
 
 import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.withMemory
+import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.Model
 import java.util.*
 import kotlin.collections.HashMap
@@ -105,11 +106,11 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
                     }
     }
 
-    private fun isBoringSuperset(subset: State, superset: State): Boolean {
+    private fun isBoringSuperset(subset: CausalNetState, superset: CausalNetState): Boolean {
         return subset.uniqueSet() == superset.uniqueSet() && superset.containsAll(subset)
     }
 
-    private val cache = HashMap<State, List<ActivityBinding>>()
+    private val cache = HashMap<CausalNetState, List<ActivityBinding>>()
 
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
@@ -125,11 +126,10 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
                     fromCache
         }
         val result = ArrayList<ActivityBinding>()
-        val candidates = currentState.map { it.second }.intersect(model.joins.keys)
+        val candidates = currentState.map { it.target }.intersect(model.joins.keys)
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
-                val expected = join.sources.map { it to ak }
-                if (currentState.containsAll(expected)) {
+                if (currentState.containsAll(join.dependencies)) {
                     val splits = model.splits[ak]
                     if (splits != null) {
                         for (split in splits) {
@@ -163,7 +163,9 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
         queue.addAll(model
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
-                listOf(ActivityBinding(model.start, setOf(), split.targets, State()))
+                listOf(ActivityBinding(model.start, setOf(), split.targets,
+                    CausalNetState()
+                ))
             })
         return sequence {
             while (queue.isNotEmpty()) {
