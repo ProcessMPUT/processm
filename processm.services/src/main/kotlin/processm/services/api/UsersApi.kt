@@ -9,8 +9,7 @@ import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.delete
 import io.ktor.locations.get
-import io.ktor.request.authorization
-import io.ktor.request.receiveOrNull
+import io.ktor.request.*
 import io.ktor.response.respond
 import io.ktor.routing.Route
 import io.ktor.routing.application
@@ -71,8 +70,9 @@ fun Route.UsersApi() {
         post {
             val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
                 ?: throw ApiException("The provided account details cannot be parsed")
+            val locale = call.request.acceptLanguageItems().getOrNull(0)
 
-            accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName)
+            accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName, locale?.value)
             call.respond(HttpStatusCode.Created)
         }
     }

@@ -10,6 +10,7 @@ import processm.services.models.*
 
 class AccountService {
     private val passwordHashingComplexity = 8
+    private val defaultLocale = "en-US"
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
         val user = User.find(Op.build { Users.username eq username }).firstOrNull()
@@ -24,7 +25,7 @@ class AccountService {
             null
     }
 
-    fun createAccount(userEmail: String, organizationName: String) {
+    fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null) {
         transaction(DBConnectionPool.database) {
             val organizationsCount = Organization.count( Op.build { Organizations.name eq organizationName })
             val usersCount = User.count(Op.build { Users.username eq userEmail })
@@ -41,6 +42,7 @@ class AccountService {
             val userId = Users.insertAndGetId {
                 it[username] = userEmail
                 it[password] = BCrypt.withDefaults().hashToString(passwordHashingComplexity, "pass".toCharArray())
+                it[locale] = accountLocale ?: defaultLocale
             }
 
             val organizationId = Organizations.insertAndGetId {
