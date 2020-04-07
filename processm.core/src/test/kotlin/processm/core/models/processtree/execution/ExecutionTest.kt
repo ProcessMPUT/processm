@@ -1,0 +1,177 @@
+package processm.core.models.processtree.execution
+
+import processm.core.models.processtree.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+class ExecutionTest {
+
+
+    private fun ExecutionNode.expecting(vararg what: Activity): List<ActivityExecution> {
+        val result = this.available.toList()
+        println(result.map { it.base })
+        assertEquals(what.toList(), result.map { it.base })
+        assertEquals(what.isEmpty(), this.isComplete)
+        return result
+    }
+
+    @Test
+    fun `∧(a,×(b,c),⟲(d,e,f))`() {
+        val a = Activity("a")
+        val b = Activity("b")
+        val c = Activity("c")
+        val d = Activity("d")
+        val e = Activity("e")
+        val f = Activity("f")
+        val loop = RedoLoop(d, e, f)
+        val tree = processTree {
+            Parallel(
+                a,
+                Exclusive(b, c),
+                loop
+            )
+        }
+        println(tree)
+        with(tree.root!!.executionNode(null)) {
+            expecting(a, b, c, d)[3].execute()
+            expecting(a, b, c, EndLoopSilentActivity(loop), e, f)[2].execute()
+            expecting(a, EndLoopSilentActivity(loop), e, f)[2].execute()
+            expecting(a, d)[0].execute()
+            expecting(d)[0].execute()
+            expecting(EndLoopSilentActivity(loop), e, f)[0].execute()
+            expecting()
+        }
+    }
+
+    @Test
+    fun `⟲(⟲(a1,a2,a3),⟲(b1,b2,b3),⟲(c1,c2,c3))`() {
+        val a1 = Activity("a1")
+        val a2 = Activity("a2")
+        val a3 = Activity("a3")
+        val b1 = Activity("b1")
+        val b2 = Activity("b2")
+        val b3 = Activity("b3")
+        val c1 = Activity("c1")
+        val c2 = Activity("c2")
+        val c3 = Activity("c3")
+        val a = RedoLoop(a1, a2, a3)
+        val b = RedoLoop(b1, b2, b3)
+        val c = RedoLoop(c1, c2, c3)
+        val top = RedoLoop(a, b, c)
+        val model = processTree { top }
+        println(model)
+        with(top.executionNode(null)) {
+            expecting(a1)[0].execute()
+            expecting(EndLoopSilentActivity(a), a2, a3)[1].execute()
+            expecting(a1)[0].execute()
+            expecting(EndLoopSilentActivity(a), a2, a3)[2].execute()
+            expecting(a1)[0].execute()
+            expecting(EndLoopSilentActivity(a), a2, a3)[0].execute()
+            expecting(EndLoopSilentActivity(top), b1, c1)[0].execute()
+            expecting()
+        }
+    }
+
+
+    @Test
+    fun `⟲(→(a1,a2,a3),→(b1,b2,b3),→(c1,c2,c3))`() {
+        val a1 = Activity("a1")
+        val a2 = Activity("a2")
+        val a3 = Activity("a3")
+        val b1 = Activity("b1")
+        val b2 = Activity("b2")
+        val b3 = Activity("b3")
+        val c1 = Activity("c1")
+        val c2 = Activity("c2")
+        val c3 = Activity("c3")
+        val a = Sequence(a1, a2, a3)
+        val b = Sequence(b1, b2, b3)
+        val c = Sequence(c1, c2, c3)
+        val top = RedoLoop(a, b, c)
+        val model = processTree { top }
+        println(model)
+        val root = top.executionNode(null)
+        with(root) {
+            expecting(a1)[0].execute()
+            expecting(a2)[0].execute()
+            expecting(a3)[0].execute()
+            expecting(EndLoopSilentActivity(top), b1, c1)[1].execute()
+            expecting(b2)[0].execute()
+            expecting(b3)[0].execute()
+            expecting(a1)[0].execute()
+        }
+    }
+
+    @Test
+    fun `→(a,∧(→(b1,∧(c1,d1),e1),→(b2,∧(c2,d2),e2)),f)`() {
+        val a = Activity("a")
+        val b1 = Activity("b1")
+        val b2 = Activity("b2")
+        val c1 = Activity("c1")
+        val c2 = Activity("c2")
+        val d1 = Activity("d1")
+        val d2 = Activity("d2")
+        val e1 = Activity("e1")
+        val e2 = Activity("e2")
+        val f = Activity("f")
+        val model = processTree {
+            Sequence(
+                a,
+                Parallel(
+                    Sequence(b1, Parallel(c1, d1), e1),
+                    Sequence(b2, Parallel(c2, d2), e2)
+                ),
+                f
+            )
+        }
+        println(model)
+        val e =
+            with(model.root!!.executionNode(null)) {
+                expecting(a)[0].execute()
+                expecting(b1, b2)[0].execute()
+                expecting(c1, d1, b2)[1].execute()
+                expecting(c1, b2)[1].execute()
+                expecting(c1, c2, d2)[0].execute()
+                expecting(e1, c2, d2)[1].execute()
+                expecting(e1, d2)[0].execute()
+                expecting(d2)[0].execute()
+                expecting(e2)[0].execute()
+                expecting(f)[0].execute()
+                expecting()
+            }
+    }
+
+    @Test
+    fun `×(⟲(a,b),⟲(c,d))`() {
+        val a = Activity("a")
+        val b = Activity("b")
+        val c = Activity("c")
+        val d = Activity("d")
+        val l1 = RedoLoop(a, b)
+        val l2 = RedoLoop(c, d)
+        val top = Exclusive(l1, l2)
+        println(processTree { top })
+        with(top.executionNode(null)) {
+            expecting(a, c)[0].execute()
+            expecting(EndLoopSilentActivity(l1), b)[1].execute()
+            expecting(a)[0].execute()
+            expecting(EndLoopSilentActivity(l1), b)[0].execute()
+            expecting()
+        }
+        with(top.executionNode(null)) {
+            expecting(a, c)[1].execute()
+            expecting(EndLoopSilentActivity(l2), d)[1].execute()
+            expecting(c)[0].execute()
+            expecting(EndLoopSilentActivity(l2), d)[0].execute()
+            expecting()
+        }
+    }
+
+    @Test
+    fun `children of an Activity are not supported`() {
+        val a = Activity("a")
+        val b = Activity("b")
+        assertFailsWith<UnsupportedOperationException> { b.executionNode(a.executionNode(null)).execute() }
+    }
+}

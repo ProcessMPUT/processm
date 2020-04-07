@@ -1,6 +1,6 @@
 package processm.core.models.processtree
 
-class SilentActivity : Activity("") {
+open class SilentActivity : Activity("") {
     /**
      * Silent activity represent as τ - tau
      */

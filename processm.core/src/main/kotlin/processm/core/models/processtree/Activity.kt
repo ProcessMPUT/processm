@@ -1,6 +1,8 @@
 package processm.core.models.processtree
 
 import processm.core.models.commons.AbstractActivity
+import processm.core.models.processtree.execution.ActivityExecution
+import processm.core.models.processtree.execution.ExecutionNode
 
 open class Activity(name: String) : Node(), AbstractActivity {
     /**
@@ -29,4 +31,6 @@ open class Activity(name: String) : Node(), AbstractActivity {
     override val startActivities: kotlin.sequences.Sequence<Activity> = sequenceOf(this)
 
     override val endActivities: kotlin.sequences.Sequence<Activity> = sequenceOf(this)
+
+    override fun executionNode(parent: ExecutionNode?): ActivityExecution = ActivityExecution(this, parent)
 }

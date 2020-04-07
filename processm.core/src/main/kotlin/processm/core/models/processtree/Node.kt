@@ -1,6 +1,6 @@
 package processm.core.models.processtree
 
-import processm.core.models.commons.AbstractDecisionPoint
+import processm.core.models.processtree.execution.ExecutionNode
 import java.util.*
 
 abstract class Node(vararg nodes: Node) {
@@ -57,4 +57,6 @@ abstract class Node(vararg nodes: Node) {
 
     internal abstract val startActivities: kotlin.sequences.Sequence<Activity>
     internal abstract val endActivities: kotlin.sequences.Sequence<Activity>
+
+    internal abstract fun executionNode(parent: ExecutionNode?): ExecutionNode
 }
