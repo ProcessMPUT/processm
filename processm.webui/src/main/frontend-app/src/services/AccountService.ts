@@ -1,5 +1,6 @@
 import Vue from "vue";
 import { UsersApiFactory, UsersApi, Configuration } from "@/openapi";
+import UserAccount from "@/models/UserAccount";
 
 export default class AccountService {
   private get usersApi(): UsersApi {
@@ -54,5 +55,20 @@ export default class AccountService {
     if (response.status != 201) {
       throw new Error(response.statusText);
     }
+  }
+
+  public async getAccountDetails(): Promise<UserAccount> {
+    const response = await this.usersApi.getUserAccountDetails();
+
+    if (response.status != 200) {
+      throw new Error(response.statusText);
+    }
+
+    const accountDetails = response.data.data;
+
+    return (Vue.prototype.$sessionStorage.userInfo = new UserAccount(
+      accountDetails.username,
+      accountDetails.locale
+    ));
   }
 }

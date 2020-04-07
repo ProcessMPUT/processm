@@ -667,16 +667,12 @@ components:
           $ref: '#/components/schemas/UserCredentials'
     UserAccountInfo:
       type: object
-      required: [username, organizationRole]
+      required: [username, locale]
       properties:
         username:
           type: string
-        language:
+        locale:
           type: string
-        organizationRoles:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/OrganizationRole'
     UserAccountInfoMessageBody:
       type: object
       required: [data]

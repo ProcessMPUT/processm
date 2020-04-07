@@ -79,11 +79,12 @@ fun Route.UsersApi() {
 
     authenticate {
         get<Paths.getUserAccountDetails> { _: Paths.getUserAccountDetails ->
-            val principal = call.authentication.principal<ApiUser>()
+            val principal = call.authentication.principal<ApiUser>()!!
+            val userAccountDetails = accountService.getAccountDetails(principal.userId)
 
             call.respond(HttpStatusCode.OK, UserAccountInfoMessageBody(UserAccountInfo(
-                principal!!.username,
-            organizationRoles = mapOf("org1" to OrganizationRole.owner))))
+                userAccountDetails.username,
+                userAccountDetails.locale)))
         }
 
         get<Paths.getUsers> { _: Paths.getUsers ->

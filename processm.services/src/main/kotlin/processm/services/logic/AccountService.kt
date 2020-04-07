@@ -16,8 +16,7 @@ class AccountService {
         val user = User.find(Op.build { Users.username eq username }).firstOrNull()
             ?: throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
-                "Specified user account does not exist"
-            )
+                "Specified user account does not exist")
 
         if (BCrypt.verifyer().verify(password.toByteArray(), user.password.toByteArray()).verified)
             user
@@ -56,5 +55,13 @@ class AccountService {
                 it[role] = OrganizationRoles.getIdByName(OrganizationRole.Owner)
             }
         }
+    }
+
+    fun getAccountDetails(userId: Long) = transaction(DBConnectionPool.database) {
+        User.findById(userId)
+            ?: throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "Specified user account does not exist")
+
     }
 }

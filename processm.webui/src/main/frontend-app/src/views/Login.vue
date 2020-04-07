@@ -32,9 +32,9 @@
                 @keypress.enter="authenticate"
               ></v-text-field>
               <v-layout justify-space-between>
-                <v-btn color="primary" text small to="register"
-                  >Register account</v-btn
-                >
+                <v-btn color="primary" text small to="register">
+                  {{ $t('login-form.register-account') }}
+                </v-btn>
                 <v-btn color="primary" @click.stop="authenticate">
                   {{ $t("login-form.login") }}
                 </v-btn>
@@ -80,9 +80,17 @@ export default class Login extends Vue {
 
     try {
       await this.accountService.signIn(this.username, this.password);
+      const { language } = await this.accountService.getAccountDetails();
+      this.setLanguage(language);
       this.$router.push({ name: "home" });
     } catch (error) {
       this.errorMessage = true;
+    }
+  }
+
+  setLanguage(language: string) {
+    if (this.$i18n.availableLocales.includes(language)) {
+      this.$i18n.locale = language;
     }
   }
 }
