@@ -4,6 +4,7 @@ import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.RedoLoop
 import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.Arc
+import java.lang.Integer.min
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -173,5 +174,108 @@ class DirectlyFollowsSubGraph(
 
         // Prepare node with redo-loop operator
         return RedoLoop(*listOfActivities.requireNoNulls())
+    }
+
+    /**
+     * Generate a list of strongly connected components in DFG.
+     * Uses Tarjan's algorithm with Nuutila's modifications - non recursive version.
+     *
+     * More details:
+     *  R. Tarjan (1972), Depth-first search and linear graph algorithms. SIAM Journal of Computing 1(2):146-160.
+     *  E. Nuutila and E. Soisalon-Soinen (1994), On finding the strongly connected components in a directed graph. Information Processing Letters 49(1): 9-14.
+     */
+    fun stronglyConnectedComponents(): List<Set<ProcessTreeActivity>> {
+        val stronglyConnectedComponents = LinkedList<HashSet<ProcessTreeActivity>>()
+        // Assigned to each node - the lowest node ID reachable from that node when doing a DFS (including itself)
+        val lowLink = HashMap<ProcessTreeActivity, Int>()
+        // Order in normal move across graph - first element found will receive smallest number
+        val preOrder = HashMap<ProcessTreeActivity, Int>()
+        // Already assigned activities
+        val alreadyAssigned = HashSet<ProcessTreeActivity>()
+        // Stack - activities to analyze
+        val stack = LinkedList<ProcessTreeActivity>()
+        // Activities waiting to assigment
+        val stronglyConnectedQueue = LinkedList<ProcessTreeActivity>()
+        // Last label assigned
+        var counter = 0
+
+        // Analyze each activity in graph
+        activities.forEach { source ->
+            // Ignore already analyzed activities
+            if (!alreadyAssigned.contains(source)) {
+                // Clean stack and add current activity
+                with(stack) {
+                    clear()
+                    add(source)
+                }
+
+                // Do-while because we have always at least one element
+                do {
+                    // Last element (latest added)
+                    val v = stack.last()
+
+                    // Assign label if not done before
+                    if (!preOrder.containsKey(v)) {
+                        // Increment counter and assign new label
+                        counter++
+                        preOrder[v] = counter
+                    }
+
+                    // Will be true if not added new activity in next block
+                    var done = true
+                    outgoingConnections[v].orEmpty().keys.forEach checkV@{ w ->
+                        if (!preOrder.containsKey(w)) {
+                            stack.add(w)
+                            done = false
+                            return@checkV
+                        }
+                    }
+
+                    if (done) {
+                        // Assign lowLink based on preOrder - this will be maximal value which can be stored here
+                        lowLink[v] = preOrder[v]!!
+
+                        // Try to decrement value and set as minimal as possible
+                        outgoingConnections[v].orEmpty().keys.forEach { w ->
+                            if (!alreadyAssigned.contains(w)) {
+                                val lowLinkV = lowLink[v]!!
+                                val preOrderedW = preOrder[w]!!
+
+                                if (preOrderedW > preOrder[v]!!) {
+                                    lowLink[v] = min(lowLinkV, lowLink[w]!!)
+                                } else {
+                                    lowLink[v] = min(lowLinkV, preOrderedW)
+                                }
+                            }
+                        }
+
+                        // Remove last element from stack
+                        stack.removeLast()
+
+                        // Check - is possible to join node into group
+                        if (lowLink[v] == preOrder[v]) {
+                            // Create group and add `v` activity
+                            val group = HashSet<ProcessTreeActivity>().also {
+                                it.add(v)
+                                stronglyConnectedComponents.add(it)
+                            }
+
+                            // Check activities in queue
+                            while (stronglyConnectedQueue.isNotEmpty() && preOrder[stronglyConnectedQueue.last]!! > preOrder[v]!!) {
+                                group.add(stronglyConnectedQueue.removeLast())
+                            }
+
+                            // Update already assigned activities
+                            alreadyAssigned.addAll(group)
+                        } else {
+                            // Add activity to queue - will be analyzed later
+                            stronglyConnectedQueue.addLast(v)
+                        }
+                    }
+                } while (stack.isNotEmpty())
+            }
+        }
+
+        return stronglyConnectedComponents
     }
 }

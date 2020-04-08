@@ -281,4 +281,70 @@ internal class DirectlyFollowsSubGraphTest {
 
         assertEquals("⟲(τ,A,B,C)", result.toString())
     }
+
+    @Test
+    fun `Strongly connected components`() {
+        // Based on https://en.wikipedia.org/wiki/Strongly_connected_component
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("D"),
+                ProcessTreeActivity("E"),
+                ProcessTreeActivity("F"),
+                ProcessTreeActivity("G"),
+                ProcessTreeActivity("H")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                conn[ProcessTreeActivity("A")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("C")] = Arc()
+                arcs[ProcessTreeActivity("E")] = Arc()
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("D")] = Arc()
+                arcs[ProcessTreeActivity("G")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("C")] = Arc()
+                arcs[ProcessTreeActivity("H")] = Arc()
+                conn[ProcessTreeActivity("D")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("A")] = Arc()
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("E")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("G")] = Arc()
+                conn[ProcessTreeActivity("F")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("G")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("D")] = Arc()
+                arcs[ProcessTreeActivity("G")] = Arc()
+                conn[ProcessTreeActivity("H")] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val result = graph.stronglyConnectedComponents()
+
+        assertEquals(3, result.size)
+        assertTrue(result.contains(setOf(ProcessTreeActivity("F"), ProcessTreeActivity("G"))))
+        assertTrue(result.contains(setOf(ProcessTreeActivity("C"), ProcessTreeActivity("D"), ProcessTreeActivity("H"))))
+        assertTrue(result.contains(setOf(ProcessTreeActivity("A"), ProcessTreeActivity("B"), ProcessTreeActivity("E"))))
+    }
 }
