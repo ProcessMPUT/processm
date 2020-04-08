@@ -3,6 +3,9 @@ package processm.core.models.processtree.execution
 import processm.core.models.commons.AbstractActivityExecution
 import processm.core.models.processtree.Activity
 
+/**
+ * [ExecutionNode] for an [Activity]
+ */
 class ActivityExecution(override val base: Activity, parent: ExecutionNode?) : ExecutionNode(base, parent),
     AbstractActivityExecution {
 

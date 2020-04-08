@@ -5,6 +5,9 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.AbstractReplayer
 import java.util.*
 
+/**
+ * A simple CausalNet replayer. Unable to skip and not optimized.
+ */
 class BasicReplayer(override val model: Model) : AbstractReplayer {
 
     private data class ExecutionState(

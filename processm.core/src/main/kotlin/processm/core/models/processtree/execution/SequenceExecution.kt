@@ -2,6 +2,9 @@ package processm.core.models.processtree.execution
 
 import processm.core.models.processtree.Sequence
 
+/**
+ * An [ExecutionNode] for [Sequence]
+ */
 class SequenceExecution(override val base: Sequence, parent: ExecutionNode?) : ExecutionNode(base, parent) {
 
     private var iter = base.children.iterator()

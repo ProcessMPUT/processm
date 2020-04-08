@@ -1,8 +1,10 @@
 package processm.core.models.processtree.execution
 
-import processm.core.models.processtree.EndLoopSilentActivity
 import processm.core.models.processtree.RedoLoop
 
+/**
+ * An [ExecutionNode] for [RedoLoop]
+ */
 class RedoLoopExecution(override val base: RedoLoop, parent: ExecutionNode?) : ExecutionNode(base, parent) {
 
     private var doPhase = true

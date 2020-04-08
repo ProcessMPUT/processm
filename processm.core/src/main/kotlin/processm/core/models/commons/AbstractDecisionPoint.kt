@@ -11,7 +11,7 @@ interface AbstractDecisionPoint {
     val possibleOutcomes: Collection<AbstractDecision>
 
     /**
-     * True if there is real decision to make here, e.g., an exclusive choice
+     * True if there is real decision to make here, e.g., an exclusive choice with more than one possible outcome
      */
     val isStrict: Boolean
         get() = possibleOutcomes.size > 1

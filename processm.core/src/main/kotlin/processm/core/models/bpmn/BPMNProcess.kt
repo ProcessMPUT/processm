@@ -5,7 +5,10 @@ import java.util.*
 import javax.xml.bind.JAXBElement
 import javax.xml.namespace.QName
 
-class BPMNProcess(base: TProcess) {
+/**
+ * A wrapper for [TProcess]
+ */
+internal class BPMNProcess internal constructor(base: TProcess) {
 
     internal val recursiveFlowElements: Sequence<TFlowElement> = sequence {
         val queue = ArrayDeque<List<JAXBElement<out TFlowElement>>>()

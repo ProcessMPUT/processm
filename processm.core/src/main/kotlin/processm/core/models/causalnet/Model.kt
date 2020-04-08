@@ -71,17 +71,33 @@ abstract class Model(
     val joins: Map<Node, Set<Join>>
         get() = Collections.unmodifiableMap(_joins)
 
+    /**
+     * Same as [instances]
+     */
     override val activities: Sequence<Node>
         get() = instances.asSequence()
 
-    override val startActivities: Sequence<AbstractActivity> = sequenceOf(start)
+    /**
+     * A single-element sequence consisting of [start]
+     */
+    override val startActivities: Sequence<Node> = sequenceOf(start)
 
-    override val endActivities: Sequence<AbstractActivity> = sequenceOf(end)
+    /**
+     * A single-element sequence consisting of [end]
+     */
+    override val endActivities: Sequence<Node> = sequenceOf(end)
 
+    /**
+     * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to chose a [Split].
+     * Some of them may be not strict.
+     */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
                 joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
 
+    /**
+     * In the given [state], list of nodes that can be executed, along with corresponding split and join
+     */
     internal fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
         if (state.isNotEmpty()) {
             for (node in state.map { it.target }.toSet())

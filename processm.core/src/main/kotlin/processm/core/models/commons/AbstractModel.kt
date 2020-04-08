@@ -1,7 +1,5 @@
 package processm.core.models.commons
 
-import processm.core.log.Trace
-
 /**
  * An abstract process model, such as causal net, process tree, BPMN Process, Petri net
  */

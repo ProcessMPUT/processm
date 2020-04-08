@@ -4,7 +4,10 @@ import processm.core.helpers.allSubsets
 import processm.core.models.bpmn.jaxb.*
 import processm.core.models.commons.AbstractDecisionPoint
 
-class BPMNGateway(override val base: TGateway, val process: BPMNProcess) : BPMNFlowNode(), AbstractDecisionPoint {
+/**
+ * A wrapper for [TGateway]. Implements [AbstractDecisionPoint], but not resulting decision points are strict
+ */
+class BPMNGateway internal constructor(override val base: TGateway, internal val process: BPMNProcess) : BPMNFlowNode(), AbstractDecisionPoint {
 
     override val name: String
         get() = base.name
@@ -14,7 +17,6 @@ class BPMNGateway(override val base: TGateway, val process: BPMNProcess) : BPMNF
             base.outgoing.map { process.get(process.flowByName<TSequenceFlow>(it).targetRef as TFlowNode) }
         val incoming =
             base.incoming.map { process.get(process.flowByName<TSequenceFlow>(it).sourceRef as TFlowNode) }
-        println("${base::class} $incoming || $outgoing")
         val isSplit = outgoing.size > 1
         val isJoin = incoming.size > 1
         check(isSplit xor isJoin) {

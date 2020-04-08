@@ -1,5 +1,8 @@
 package processm.core.models.causalnet
 
+/**
+ * [DecoupledNodeExecution] with concrete [ModelInstance] to provide context for execution
+ */
 class NodeExecution internal constructor(
     activity: Node,
     val instance: MutableModelInstance,

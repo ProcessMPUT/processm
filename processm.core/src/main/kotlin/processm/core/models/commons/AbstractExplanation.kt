@@ -1,4 +1,6 @@
 package processm.core.models.commons
 
-interface AbstractExplanation {
-}
+/**
+ * A base interface for explanations. Currently, it is empty at is not clear what commonalities are there for explanations
+ */
+interface AbstractExplanation

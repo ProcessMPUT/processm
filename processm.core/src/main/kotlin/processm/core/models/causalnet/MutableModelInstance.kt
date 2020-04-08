@@ -11,8 +11,7 @@ import processm.core.models.metadata.MutableMetadataHandler
  */
 class MutableModelInstance(
     model: Model,
-    metadataHandler: MutableMetadataHandler,
-    val initialState: CausalNetState = CausalNetState()
+    metadataHandler: MutableMetadataHandler
 ) :
     ModelInstance(model, metadataHandler),
     MutableMetadataHandler by metadataHandler {
@@ -36,9 +35,14 @@ class MutableModelInstance(
 
     override fun resetExecution() {
         state.clear()
-        state.addAll(initialState)
     }
 
+    /**
+     * Executes given [join] and [split] to change the current [state]
+     *
+     * @param join may be null only for the start node
+     * @param split may be null only for the end node
+     */
     internal fun execute(join: Join?, split: Split?) {
         require(join != null || split != null) { "At least one of the arguments must be non-null" }
         if (join != null) {

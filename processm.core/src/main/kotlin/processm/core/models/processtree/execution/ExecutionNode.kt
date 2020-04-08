@@ -5,7 +5,8 @@ import processm.core.models.processtree.Node
 
 abstract class ExecutionNode(open val base: Node, internal val parent: ExecutionNode?) : AbstractState {
     /**
-     * Activities (possibly silent) that can be currently executed in the process tree rooted at [base]
+     * Activities (possibly silent) that can be currently executed in the process tree rooted at [base].
+     * Empty if [isComplete] is true
      */
     abstract val available: Sequence<ActivityExecution>
 

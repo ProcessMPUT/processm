@@ -2,6 +2,9 @@ package processm.core.models.processtree.execution
 
 import processm.core.models.processtree.Exclusive
 
+/**
+ * An [ExecutionNode] for [Exclusive]
+ */
 class ExclusiveExecution(override val base: Exclusive, parent: ExecutionNode?) : ExecutionNode(base, parent) {
 
     private var selected: ExecutionNode? = null

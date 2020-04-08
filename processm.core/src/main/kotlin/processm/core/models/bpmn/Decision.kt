@@ -2,6 +2,7 @@ package processm.core.models.bpmn
 
 import processm.core.models.commons.AbstractDecision
 
-class Decision(val activities: List<BPMNFlowNode>, override val decisionPoint: BPMNGateway) :AbstractDecision {
-
-}
+/**
+ * A decision that can be made in [decisionPoint], resulting in executing [activities]
+ */
+class Decision(val activities: List<BPMNFlowNode>, override val decisionPoint: BPMNGateway) : AbstractDecision
