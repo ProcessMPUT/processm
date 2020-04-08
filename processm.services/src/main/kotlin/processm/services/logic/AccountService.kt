@@ -18,10 +18,7 @@ class AccountService {
                 ValidationException.Reason.ResourceNotFound,
                 "Specified user account does not exist")
 
-        if (BCrypt.verifyer().verify(password.toByteArray(), user.password.toByteArray()).verified)
-            user
-        else
-            null
+        if (verifyPassword(password, user.password)) user else null
     }
 
     fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null) {
@@ -40,7 +37,7 @@ class AccountService {
 
             val userId = Users.insertAndGetId {
                 it[username] = userEmail
-                it[password] = BCrypt.withDefaults().hashToString(passwordHashingComplexity, "pass".toCharArray())
+                it[password] = calculatePasswordHash("pass")
                 it[locale] = accountLocale ?: defaultLocale
             }
 
@@ -62,6 +59,23 @@ class AccountService {
             ?: throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
                 "Specified user account does not exist")
-
     }
+
+    fun changePassword(userId: Long, currentPassword: String, newPassword: String) = transaction(DBConnectionPool.database) {
+        val user = getAccountDetails(userId)
+
+        if (!verifyPassword(currentPassword, user.password)) {
+            return@transaction false
+        }
+
+        user.password = calculatePasswordHash(newPassword)
+
+        return@transaction true
+    }
+
+    private fun calculatePasswordHash(password: String) =
+        BCrypt.withDefaults().hashToString(passwordHashingComplexity, password.toCharArray())
+
+    private fun verifyPassword(password: String, passwordHash: String) =
+        BCrypt.verifyer().verify(password.toByteArray(), passwordHash.toByteArray()).verified
 }

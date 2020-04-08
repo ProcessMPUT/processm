@@ -18,6 +18,7 @@
   },
   "user-profile": {
     "language": "Język",
+    "change-password": "Zmień hasło",
     "save": "Zapisz zmiany"
   },
   "rename-dialog": {
@@ -25,6 +26,17 @@
     "new-name-placeholder": "Nowa nazwa",
     "validation": {
       "name-empty": "Nazwa nie może być pusta"
+    }
+  },
+  "password-change-dialog": {
+    "dialog-title": "Zmiana hasła",
+    "current-password": "Obecne hasło",
+    "new-password": "Nowe hasło",
+    "password-confirmation": "Potwierdź hasło",
+    "validation": {
+      "password-empty": "Hasło nie może być puste",
+      "new-password-is-the-same": "Nowe hasło musi być inne",
+      "password-confirmation-not-the-same": "Nowe hasło i potwierdzenie hasła muszą być takie same"
     }
   },
   "login-form": {
@@ -62,6 +74,7 @@
     "save": "Zapisz",
     "rename": "Zmień nazwę",
     "remove": "Usuń",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "submit": "Zatwierdź"
   }
 }

@@ -67,7 +67,10 @@ const api = {
   "POST /api/users/session": (req, res) => {
     const credentials = req.body.data;
 
-    if (!_.has(users, credentials.username) || credentials.password != "pass") {
+    if (
+      !_.has(users, credentials.username) ||
+      credentials.password != users[credentials.username].password
+    ) {
       return res.status(401).json();
     }
 
@@ -98,11 +101,33 @@ const api = {
     const { userEmail, organizationName } = req.body.data;
 
     if (organizationName != "org1" && userEmail != "user1@example.com") {
-      users[userEmail] = { organizationName };
+      users[userEmail] = { organizationName, password: "pass" };
       res.status(201).json();
     } else {
       res.status(400).json();
     }
+  },
+  "GET /api/users/me": (req, res) => {
+    return res.json({
+      data: {
+        username: _.get(_.keys(users), 0),
+        locale: "en-US"
+      }
+    });
+  },
+  "PATCH /api/users/me/password": (req, res) => {
+    const { currentPassword, newPassword } = req.body.data;
+    const username = _.get(_.keys(users), 0);
+
+    if (users[username].password != currentPassword) {
+      return res
+        .status(403)
+        .json({ error: "The current password is not valid" });
+    }
+
+    users[username].password = newPassword;
+
+    return res.status(202).json();
   }
 };
 

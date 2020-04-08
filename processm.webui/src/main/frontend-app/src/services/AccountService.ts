@@ -5,11 +5,8 @@ import UserAccount from "@/models/UserAccount";
 export default class AccountService {
   private get usersApi(): UsersApi {
     const token = Vue.prototype.$sessionStorage.sessionToken;
-    const config = new Configuration();
-    if (token) {
-      config.accessToken = token;
-    }
-    return UsersApiFactory(config, "http://localhost:8081/api") as UsersApi;
+
+    return UsersApiFactory({ accessToken: token }, "/api") as UsersApi;
   }
 
   public async signIn(username: string, password: string) {
@@ -70,5 +67,15 @@ export default class AccountService {
       accountDetails.username,
       accountDetails.locale
     ));
+  }
+
+  public async changePassword(currentPassword: string, newPassword: string) {
+    const response = await this.usersApi.changeUserPassword({
+      data: { currentPassword, newPassword }
+    });
+
+    if (response.status != 202) {
+      throw new Error(response.statusText);
+    }
   }
 }

@@ -9,12 +9,11 @@ import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.delete
 import io.ktor.locations.get
-import io.ktor.request.*
+import io.ktor.request.acceptLanguageItems
+import io.ktor.request.authorization
+import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
-import io.ktor.routing.Route
-import io.ktor.routing.application
-import io.ktor.routing.post
-import io.ktor.routing.route
+import io.ktor.routing.*
 import org.koin.ktor.ext.inject
 import processm.services.api.models.*
 import processm.services.logic.AccountService
@@ -85,6 +84,21 @@ fun Route.UsersApi() {
             call.respond(HttpStatusCode.OK, UserAccountInfoMessageBody(UserAccountInfo(
                 userAccountDetails.username,
                 userAccountDetails.locale)))
+        }
+
+        route("/users/me/password") {
+            patch {
+                val principal = call.authentication.principal<ApiUser>()!!
+                val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
+                    ?: throw ApiException("The provided password data cannot be parsed")
+
+                if (accountService.changePassword(principal.userId, passwordData.currentPassword, passwordData.newPassword)) {
+                    call.respond(HttpStatusCode.Accepted)
+                }
+                else {
+                    call.respond(HttpStatusCode.Forbidden)
+                }
+            }
         }
 
         get<Paths.getUsers> { _: Paths.getUsers ->

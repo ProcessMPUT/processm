@@ -4,7 +4,7 @@ info:
   description: Description of api methods used in processm.
   version: 1.0.0
 servers:
-  - url: https://processtom.com/api/
+  - url: /api
 tags:
   - name: users
     description: User registration and session management
@@ -107,6 +107,26 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/UserAccountInfoMessageBody'
+      security:
+        - bearerAuth: []
+  /users/me/password:
+    patch:
+      tags:
+        - users
+      summary: Get details about current user
+      operationId: changeUserPassword
+      requestBody:
+        description: Old and new password
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PasswordChangeMessageBody'
+        required: true
+      responses:
+        '202':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
   /workspaces:
@@ -691,6 +711,20 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/AuthenticationResult'
+    PasswordChange:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+    PasswordChangeMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/PasswordChange'
     UserInfo:
       type: object
       required: [username, organization, organizationRole]

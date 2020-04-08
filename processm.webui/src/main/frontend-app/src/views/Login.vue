@@ -33,7 +33,7 @@
               ></v-text-field>
               <v-layout justify-space-between>
                 <v-btn color="primary" text small to="register">
-                  {{ $t('login-form.register-account') }}
+                  {{ $t("login-form.register-account") }}
                 </v-btn>
                 <v-btn color="primary" @click.stop="authenticate">
                   {{ $t("login-form.login") }}

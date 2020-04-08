@@ -20,6 +20,7 @@
   },
   "user-profile": {
     "language": "Language",
+    "change-password": "Change password",
     "save": "Save changes"
   },
   "rename-dialog": {
@@ -27,6 +28,17 @@
     "new-name-placeholder": "New name",
     "validation": {
       "name-empty": "Name cannot be empty"
+    }
+  },
+  "password-change-dialog": {
+    "dialog-title": "Password change",
+    "current-password": "Current password",
+    "new-password": "New password",
+    "password-confirmation": "Password confirmation",
+    "validation": {
+      "password-empty": "Password cannot be empty",
+      "new-password-is-the-same": "New password must be different",
+      "password-confirmation-not-the-same": "New password and password confirmation must be the same"
     }
   },
   "login-form": {
@@ -64,6 +76,7 @@
     "save": "Save",
     "rename": "Rename",
     "remove": "Remove",
-    "close": "Close"
+    "close": "Close",
+    "submit": "Submit"
   }
 }

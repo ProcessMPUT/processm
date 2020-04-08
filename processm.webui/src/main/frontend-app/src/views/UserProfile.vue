@@ -35,17 +35,28 @@
                 </template>
               </v-select>
             </v-row>
+            <v-layout>
+              <v-btn
+                color="primary lighten-2"
+                @click.stop="passwordChangeDialog = true"
+              >
+                {{ $t("user-profile.change-password") }}
+              </v-btn>
+              <v-spacer></v-spacer>
+              <v-btn color="primary" @click.stop="updateSettings">
+                <v-icon left dark>save</v-icon>
+                {{ $t("user-profile.save") }}
+              </v-btn>
+            </v-layout>
           </v-container>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" @click.stop="updateSettings">
-            <v-icon left dark>save</v-icon>
-            {{ $t("user-profile.save") }}
-          </v-btn>
-        </v-card-actions>
       </v-card>
     </v-layout>
+    <password-change-dialog
+      v-model="passwordChangeDialog"
+      @cancelled="passwordChangeDialog = false"
+      @submitted="submitNewPassword"
+    />
   </v-container>
 </template>
 
@@ -59,9 +70,12 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component } from "vue-property-decorator";
+import { Component, Inject } from "vue-property-decorator";
+import PasswordChangeDialog from "@/components/PasswordChangeDialog.vue";
+import AccountService from "@/services/AccountService";
 
 @Component({
+  components: { PasswordChangeDialog },
   filters: {
     objectify(input: Array<string>) {
       return input.map(item => {
@@ -71,7 +85,9 @@ import { Component } from "vue-property-decorator";
   }
 })
 export default class UserProfile extends Vue {
+  @Inject() accountService!: AccountService;
   selectedLocale = "";
+  passwordChangeDialog = false;
 
   mounted() {
     this.selectedLocale = this.$i18n.locale; // .$i18n.locale;
@@ -80,6 +96,15 @@ export default class UserProfile extends Vue {
   updateSettings() {
     if (this.$i18n.availableLocales.includes(this.selectedLocale)) {
       this.$i18n.locale = this.selectedLocale;
+    }
+  }
+
+  async submitNewPassword(currentPassword: string, newPassword: string) {
+    try {
+      await this.accountService.changePassword(currentPassword, newPassword);
+      this.passwordChangeDialog = false;
+    } catch (error) {
+      //TODO: display the error on the global snackbar
     }
   }
 }
