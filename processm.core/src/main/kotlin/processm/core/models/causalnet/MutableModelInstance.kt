@@ -22,7 +22,7 @@ class MutableModelInstance(
             addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
     }
 
-    internal var state: CausalNetState=CausalNetState()
+    internal var state: CausalNetState = CausalNetState()
 
     init {
         resetExecution()
@@ -53,30 +53,9 @@ class MutableModelInstance(
             if (join == null)
                 require(model.incoming[split.source].isNullOrEmpty()) { "Can skip start only for the start node" }
         }
-        if (join != null) {
-            check(state.containsAll(join.dependencies)) { "It is impossible to execute this join in the current state" }
-            for (d in join.dependencies)
-                state.remove(d)
-        }
-        if (split != null)
-            state.addAll(split.dependencies)
+        state.execute(join, split)
     }
 
     override val availableActivityExecutions
-        get() = sequence {
-            if (state.isNotEmpty()) {
-                for (node in state.map { it.target }.toSet())
-                    for (join in model.joins[node].orEmpty())
-                        if (state.containsAll(join.dependencies)) {
-                            val splits = if (node != model.end) model.splits[node].orEmpty() else setOf(null)
-                            yieldAll(splits.map { split ->
-                                NodeExecution(node, this@MutableModelInstance, join, split)
-                            })
-                        }
-
-            } else
-                yieldAll(
-                    model.splits.getValue(model.start)
-                        .map { split -> NodeExecution(model.start, this@MutableModelInstance, null, split) })
-        }
+        get() = model.available(state).map { NodeExecution(it.activity, this, it.join, it.split) }
 }

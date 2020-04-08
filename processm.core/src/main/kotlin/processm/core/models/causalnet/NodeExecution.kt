@@ -1,13 +1,10 @@
 package processm.core.models.causalnet
 
-import processm.core.models.commons.AbstractActivityExecution
-
-data class NodeExecution internal constructor(
-    override val activity: Node,
+class NodeExecution internal constructor(
+    activity: Node,
     val instance: MutableModelInstance,
-    val join: Join?,
-    val split: Split?
-) : AbstractActivityExecution {
-
+    join: Join?,
+    split: Split?
+) : DecoupledNodeExecution(activity, join, split) {
     override fun execute() = instance.execute(join, split)
 }

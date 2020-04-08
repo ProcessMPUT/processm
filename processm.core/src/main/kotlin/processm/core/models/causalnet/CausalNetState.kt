@@ -11,4 +11,13 @@ class CausalNetState : HashMultiSet<Dependency>, AbstractState {
 
     constructor(stateBefore: CausalNetState) : super(stateBefore)
 
+    internal fun execute(join: Join?, split: Split?) {
+        if (join != null) {
+            check(this.containsAll(join.dependencies)) { "It is impossible to execute this join in the current state" }
+            for (d in join.dependencies)
+                this.remove(d)
+        }
+        if (split != null)
+            this.addAll(split.dependencies)
+    }
 }
