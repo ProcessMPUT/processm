@@ -615,4 +615,53 @@ class ModelTest {
             }.endActivities.toSet()
         )
     }
+
+    private fun kotlin.sequences.Sequence<InternalNode>.expecting(vararg outcomes: List<Node>) =
+        assertEquals(
+            outcomes.toList(),
+            this.filter { it.isStrict }.map { it.possibleOutcomes.map { it.node } }.toList()
+        )
+
+
+    @Test
+    fun `decision points ⟲(⟲(a1,a2,a3),⟲(b1,b2,b3),⟲(c1,c2,c3))`() {
+        val a1 = Activity("a1")
+        val a2 = Activity("a2")
+        val a3 = Activity("a3")
+        val b1 = Activity("b1")
+        val b2 = Activity("b2")
+        val b3 = Activity("b3")
+        val c1 = Activity("c1")
+        val c2 = Activity("c2")
+        val c3 = Activity("c3")
+        val a = RedoLoop(a1, a2, a3)
+        val b = RedoLoop(b1, b2, b3)
+        val c = RedoLoop(c1, c2, c3)
+        val top = RedoLoop(a, b, c)
+        processTree { top }.decisionPoints.expecting(
+            listOf(top.endLoopActivity, b, c),
+            listOf(a.endLoopActivity, a2, a3),
+            listOf(b.endLoopActivity, b2, b3),
+            listOf(c.endLoopActivity, c2, c3)
+        )
+    }
+
+    @Test
+    fun `decision points ∧(a,×(b,c),⟲(d,e,f))`() {
+        val a = Activity("a")
+        val b = Activity("b")
+        val c = Activity("c")
+        val d = Activity("d")
+        val e = Activity("e")
+        val f = Activity("f")
+        val loop = RedoLoop(d, e, f)
+        val tree = processTree {
+            Parallel(
+                a,
+                Exclusive(b, c),
+                loop
+            )
+        }
+        tree.decisionPoints.expecting(listOf(b, c), listOf(loop.endLoopActivity, e, f))
+    }
 }

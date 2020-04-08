@@ -1,9 +1,9 @@
 package processm.core.models.bpmn
 
 import processm.core.models.bpmn.jaxb.*
-import processm.core.models.commons.AbstractActivity
 import java.util.*
 import javax.xml.bind.JAXBElement
+import javax.xml.namespace.QName
 
 class BPMNProcess(base: TProcess) {
 
@@ -18,23 +18,35 @@ class BPMNProcess(base: TProcess) {
         }
     }
 
-    val flowElements = base.flowElement.asSequence().map { it.value }
-    val allActivities = recursiveFlowElements.filterIsInstance<TActivity>().map { BPMNActivity(it) }
-    val allEvents = recursiveFlowElements.filterIsInstance<TEvent>().map { BPMNEvent(it) }
-    val allGateways = recursiveFlowElements.filterIsInstance<TGateway>().map { BPMNGateway(it) }
+    private fun create(inp: TFlowNode): BPMNFlowNode =
+        when (inp) {
+            is TEvent -> BPMNEvent(inp)
+            is TActivity -> BPMNActivity(inp)
+            is TGateway -> BPMNGateway(inp, this)
+            else -> throw IllegalArgumentException("Cannot handle ${inp.javaClass}")
+        }
+
+    val flowElements = base.flowElement.map { it.value }
+    val flowNodes = flowElements.filterIsInstance<TFlowNode>().map { create(it) }.toList()
+    val allActivities = recursiveFlowElements.filterIsInstance<TFlowNode>().map { create(it) }.toList()
 
 
     /**
      * Note we consistently ignore triggers of start events. We also do not look into subprocesses, so we report a subprocess instead of a start event of the subprocess.
      */
-    val startActivities: Sequence<AbstractActivity> =
-        flowElements.filterIsInstance<TStartEvent>().map { BPMNEvent(it) } +
-                flowElements.filterIsInstance<TActivity>().filter { it.incoming.isEmpty() }.map { BPMNActivity(it) }
+    val startActivities: Sequence<BPMNFlowNode> =
+        flowNodes.asSequence().filter { it.base is TStartEvent || it.base.incoming.isEmpty() }
 
     /**
      * Note we consistently ignore triggers of end events. We also do not look into subprocesses, so we report a subprocess instead of an end event of the subprocess.
      */
-    val endActivities: Sequence<AbstractActivity> =
-        flowElements.filterIsInstance<TEndEvent>().map { BPMNEvent(it) } +
-                flowElements.filterIsInstance<TActivity>().filter { it.outgoing.isEmpty() }.map { BPMNActivity(it) }
+    val endActivities: Sequence<BPMNFlowNode> =
+        flowNodes.asSequence().filter { it.base is TEndEvent || it.base.outgoing.isEmpty() }
+
+    internal inline fun <reified ExpectedType> flowByName(qname: QName) =
+        flowElements.filter { it.id == qname.toString() }.filterIsInstance<ExpectedType>().single()
+
+    fun get(base: TFlowNode) =
+        allActivities.single { it.base === base }
+
 }

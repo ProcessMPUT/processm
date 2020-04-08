@@ -2,6 +2,7 @@ package processm.core.models.causalnet
 
 import processm.core.models.commons.AbstractDecisionPoint
 
-data class DecisionPoint(val node: Node, val bindings: Set<Binding>) : AbstractDecisionPoint {
-    override val isStrict: Boolean = bindings.size > 1
+class DecisionPoint(val node: Node, bindings: Set<Binding>) : AbstractDecisionPoint {
+    override val possibleOutcomes: List<BindingDecision> = bindings.map { BindingDecision(it, this) }
+    override val isStrict: Boolean = possibleOutcomes.size > 1
 }

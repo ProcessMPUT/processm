@@ -23,12 +23,10 @@ abstract class Model(
      * If artificial, it is up to the user to populate [outgoing] and [incoming]
      */
     val end: Node,
-    metadataHandler: MetadataHandler,
-    decisionModel: DecisionModel
+    metadataHandler: MetadataHandler
 ) :
     AbstractModel,
-    MetadataHandler by metadataHandler,
-    DecisionModel by decisionModel {
+    MetadataHandler by metadataHandler {
     protected val _instances = HashSet(listOf(start, end))
 
     /**

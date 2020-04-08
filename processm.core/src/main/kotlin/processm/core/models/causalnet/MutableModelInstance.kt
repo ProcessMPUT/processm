@@ -9,7 +9,11 @@ import processm.core.models.metadata.MutableMetadataHandler
 /**
  * A mutable model instance equipped with metadata providers corresponding to basic statistics
  */
-class MutableModelInstance(model: Model, metadataHandler: MutableMetadataHandler) :
+class MutableModelInstance(
+    model: Model,
+    metadataHandler: MutableMetadataHandler,
+    val initialState: CausalNetState = CausalNetState()
+) :
     ModelInstance(model, metadataHandler),
     MutableMetadataHandler by metadataHandler {
 
@@ -18,7 +22,11 @@ class MutableModelInstance(model: Model, metadataHandler: MutableMetadataHandler
             addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
     }
 
-    internal var state = CausalNetState()
+    internal var state: CausalNetState=CausalNetState()
+
+    init {
+        resetExecution()
+    }
 
     override val currentState: AbstractState
         get() = state
@@ -28,6 +36,7 @@ class MutableModelInstance(model: Model, metadataHandler: MutableMetadataHandler
 
     override fun resetExecution() {
         state.clear()
+        state.addAll(initialState)
     }
 
     internal fun execute(join: Join?, split: Split?) {

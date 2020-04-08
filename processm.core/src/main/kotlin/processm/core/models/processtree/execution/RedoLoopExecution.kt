@@ -12,20 +12,13 @@ class RedoLoopExecution(override val base: RedoLoop, parent: ExecutionNode?) : E
 
     private var current: ExecutionNode? = base.children[0].executionNode(this)
 
-    private val completionActivity = EndLoopSilentActivity(base).executionNode(this)
-
-    init {
-        completionActivity.base.parent = base
-    }
-
     override val available
         get() = if (!isComplete) {
             if (current != null)
                 current!!.available
             else {
                 assert(redoPhase)
-                sequenceOf(completionActivity) + base.children.subList(1, base.children.size).asSequence()
-                    .flatMap { it.executionNode(this).available }
+                base.possibleOutcomes.asSequence().flatMap { it.node.executionNode(this).available }
             }
         } else emptySequence()
 
@@ -35,7 +28,7 @@ class RedoLoopExecution(override val base: RedoLoop, parent: ExecutionNode?) : E
     override fun postExecution(child: ExecutionNode) {
         require(child.parent === this)
         require(current === null || child === current)
-        if (child === completionActivity) {
+        if (child.base === base.endLoopActivity) {
             check(redoPhase)
             isComplete = true
         }

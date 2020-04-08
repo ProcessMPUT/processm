@@ -14,5 +14,8 @@ class RedoLoop(vararg nodes: Node) : InternalNode(*nodes) {
 
     override fun executionNode(parent: ExecutionNode?): RedoLoopExecution = RedoLoopExecution(this, parent)
 
-    override val isStrict: Boolean = true
+    val endLoopActivity = EndLoopSilentActivity(this)
+
+    override val possibleOutcomes =
+        listOf(NodeDecision(endLoopActivity, this)) + children.subList(1, children.size).map { NodeDecision(it, this) }
 }

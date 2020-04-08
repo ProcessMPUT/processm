@@ -9,9 +9,8 @@ import processm.core.models.metadata.MutableMetadataHandler
 class MutableModel(
     start: Node = Node("start", special = true),
     end: Node = Node("end", special = true),
-    private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler(),
-    var decisionModel: DecisionModel = AlwaysFirstDecisionModel()
-) : Model(start, end, metadataHandler, decisionModel),
+    private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler()
+) : Model(start, end, metadataHandler),
     MutableMetadataHandler by metadataHandler {
 
     /**

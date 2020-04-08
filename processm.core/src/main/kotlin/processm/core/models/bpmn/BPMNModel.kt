@@ -17,17 +17,17 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Abstrac
     private val processes: List<BPMNProcess> =
         model.rootElement.map { it.value }.filterIsInstance<TProcess>().map { BPMNProcess(it) }
 
-    override val activities: Sequence<AbstractActivity>
-        get() = processes.asSequence().flatMap { it.allActivities + it.allEvents }
+    override val activities: Sequence<BPMNFlowNode>
+        get() = processes.asSequence().flatMap { it.allActivities.asSequence() }
 
-    override val startActivities: Sequence<AbstractActivity>
+    override val startActivities: Sequence<BPMNFlowNode>
         get() = processes.asSequence().flatMap { it.startActivities }
 
-    override val endActivities: Sequence<AbstractActivity>
+    override val endActivities: Sequence<BPMNFlowNode>
         get() = processes.asSequence().flatMap { it.endActivities }
 
     override val decisionPoints: Sequence<BPMNGateway>
-        get() = processes.asSequence().flatMap { it.allGateways }
+        get() = processes.asSequence().flatMap { it.allActivities.asSequence().filterIsInstance<BPMNGateway>() }
 
     override fun createInstance(): AbstractModelInstance =
         throw UnsupportedOperationException("BPMN model instances are not supported")

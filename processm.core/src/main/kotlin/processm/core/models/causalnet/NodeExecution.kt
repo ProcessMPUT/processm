@@ -2,7 +2,7 @@ package processm.core.models.causalnet
 
 import processm.core.models.commons.AbstractActivityExecution
 
-class NodeExecution internal constructor(
+data class NodeExecution internal constructor(
     override val activity: Node,
     val instance: MutableModelInstance,
     val join: Join?,

@@ -14,6 +14,4 @@ class Parallel(vararg nodes: Node) : InternalNode(*nodes) {
         get() = children.asSequence().flatMap { it.endActivities }
 
     override fun executionNode(parent: ExecutionNode?): ExecutionNode = ParallelExecution(this, parent)
-
-    override val isStrict: Boolean = false
 }

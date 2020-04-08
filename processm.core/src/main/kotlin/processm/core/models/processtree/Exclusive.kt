@@ -15,5 +15,5 @@ class Exclusive(vararg nodes: Node) : InternalNode(*nodes) {
 
     override fun executionNode(parent: ExecutionNode?): ExclusiveExecution = ExclusiveExecution(this, parent)
 
-    override val isStrict: Boolean = children.size > 1
+    override val possibleOutcomes = children.map { NodeDecision(it, this) }
 }

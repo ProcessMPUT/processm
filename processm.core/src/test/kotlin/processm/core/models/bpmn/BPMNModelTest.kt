@@ -1,9 +1,12 @@
 package processm.core.models.bpmn
 
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class BPMNModelTest {
 
@@ -43,7 +46,25 @@ class BPMNModelTest {
 
     @Test
     fun `bpmnio C10-export gateways`() {
-        assertEquals(3, c10export.decisionPoints.count())
+        val dps = c10export.decisionPoints
+        assertEquals(3, dps.count())
+        assertTrue { dps.all { it.isStrict && it.possibleOutcomes.size == 2 } }
+    }
+
+    @Test
+    fun `bpmnio A20-export gateways`() {
+        val dps =
+            BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.0-export.bpmn").inputStream()).decisionPoints
+        assertEquals(2, dps.count())
+        assertEquals(3, dps.filter { it.isStrict }.single().possibleOutcomes.size)
+    }
+
+    @Test
+    fun `bpmnio A21-export gateways`() {
+        val dps =
+            BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.1-export.bpmn").inputStream()).decisionPoints
+        assertEquals(2, dps.count())
+        assertEquals(3, dps.filter { it.isStrict }.single().possibleOutcomes.size)
     }
 
     @Test
@@ -60,4 +81,24 @@ class BPMNModelTest {
     fun `model instances are not supported`() {
         assertFailsWith<UnsupportedOperationException> { a40export.createInstance() }
     }
+
+    @TestFactory
+    fun `test for exceptions`(): Iterator<DynamicTest> =
+        (File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/").walk() +
+                File("src/test/resources/bpmn-miwg-test-suite/Reference/").walk())
+            .filter { it.extension.toLowerCase() == "bpmn" }
+            .sortedBy { it.name }
+            .iterator()
+            .asSequence()
+            .map { file ->
+                DynamicTest.dynamicTest(file.name, file.toURI()) {
+                    val p = BPMNModel.fromXML(file.inputStream())
+                    p.activities.toList()   //read activities
+                    p.startActivities.toList()
+                    p.endActivities.toList()
+                    p.decisionPoints.toList()   //read decision points
+                }
+            }
+            .iterator()
+
 }

@@ -13,6 +13,4 @@ class Sequence(vararg nodes: Node) : InternalNode(*nodes) {
         get() = children.last().endActivities
 
     override fun executionNode(parent: ExecutionNode?): SequenceExecution = SequenceExecution(this, parent)
-
-    override val isStrict: Boolean = false
 }
