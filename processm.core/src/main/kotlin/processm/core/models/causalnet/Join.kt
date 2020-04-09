@@ -24,4 +24,8 @@ data class Join(override val dependencies: Set<Dependency>) : Binding {
     val sources by lazy {
         dependencies.map { d -> d.source }.toSet()
     }
+
+    override fun toString(): String {
+        return "{${sources.map { it }} -> ${target}}"
+    }
 }

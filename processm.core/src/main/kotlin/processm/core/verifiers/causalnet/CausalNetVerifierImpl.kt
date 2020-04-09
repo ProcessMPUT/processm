@@ -2,7 +2,9 @@ package processm.core.verifiers.causalnet
 
 import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.withMemory
+import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.Node
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -14,37 +16,46 @@ typealias CausalNetSequence = List<ActivityBinding>
  *
  * Computations are potentially expensive, but to minimize impact, everything is initialized lazily and then stored
  */
-internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
+class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
 
     /**
      * By definition, a causal net model is safe
      */
     val isSafe: Boolean = true
+
     /**
      * If there exists at least one valid sequence, there is a possibility to complete
      */
     val hasOptionToComplete: Boolean by lazy { hasSingleStart() && hasSingleEnd() && validSequences.any() }
+
     /**
      * Each valid sequence, by definition, ensures proper completion
      */
     val hasProperCompletion: Boolean by lazy { validSequences.any() }
+
     /**
      * Based on Definition 3.8 and Definition 3.12 in PM of soundness of C-nets
      */
     val noDeadParts: Boolean by lazy { allDependenciesUsed() && checkAbsenceOfDeadParts() }
+
     /**
      * Based on Definition 3.8 and Definition 3.12 in PM of soundness of C-nets
      */
     val hasDeadParts: Boolean by lazy { !noDeadParts }
+
     /**
      * The only important thing is whether there are dead parts.
      * If there aren't, there are some valid sequences, so the rest is trivially satisfied.
      */
     val isSound: Boolean by lazy { isSafe && hasOptionToComplete && hasProperCompletion && !hasDeadParts }
+
     /**
      * The set of all valid sequences. There is a possiblity that this set is infinite.
      */
-    val validSequences: SequenceWithMemory<CausalNetSequence> by lazy { computeSetOfValidSequences(false).withMemory() }
+    val validSequences: SequenceWithMemory<CausalNetSequence> by lazy {
+        computeSetOfValidSequences(false, false).withMemory()
+    }
+
     /**
      * The set of all valid sequences without loops. This set should never be infinite.
      *
@@ -54,12 +65,65 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
      * and B contains no less of each obligations than A.
      * In simple terms, B is A plus something.
      */
-    val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> by lazy { computeSetOfValidSequences(true).withMemory() }
+    val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> by lazy {
+        computeSetOfValidSequences(true, false).withMemory()
+    }
+
+    /**
+     * @see processm.core.verifiers.CausalNetVerificationReport.validLoopFreeSequencesWithArbitrarySerialization
+     */
+    val validLoopFreeSequencesWithArbitrarySerialization: SequenceWithMemory<CausalNetSequence> by lazy {
+        computeSetOfValidSequences(true, true).withMemory()
+    }
+
+    /**
+     * True if, in the dependency graph, every node is reachable from start and end is reachable from every node.
+     *
+     * This is not consistent with the usual definition of connectivity for a directed graph, but seems to resemble it
+     * and I'm hacking it for the lack of a better term.
+     */
+    val isConnected: Boolean by lazy {
+        isEveryNodeReachableFromStart && isEndReachableFromEveryNode
+    }
+
+    /**
+     * True if, starting from start, one can visit all nodes while traveling forward through dependencies
+     */
+    val isEveryNodeReachableFromStart: Boolean by lazy {
+        val queue = ArrayDeque<Node>()
+        val visited = HashSet<Node>()
+        queue.add(model.start)
+        while (!queue.isEmpty()) {
+            val n = queue.poll()
+            if (visited.contains(n))
+                continue
+            visited.add(n)
+            queue.addAll(model.outgoing[n].orEmpty().map { it.target })
+        }
+        return@lazy visited.containsAll(model.instances)
+    }
+
+    /**
+     * True if, starting from end, one can visit all nodes while traveling backwards through dependencies
+     */
+    val isEndReachableFromEveryNode: Boolean by lazy {
+        val queue = ArrayDeque<Node>()
+        val visited = HashSet<Node>()
+        queue.add(model.end)
+        while (!queue.isEmpty()) {
+            val n = queue.poll()
+            if (visited.contains(n))
+                continue
+            visited.add(n)
+            queue.addAll(model.incoming[n].orEmpty().map { it.source })
+        }
+        return@lazy visited == model.instances
+    }
 
     /**
      * Based on Definition 3.8 in PM
      */
-    private fun allDependenciesUsed(): Boolean {
+    public fun allDependenciesUsed(): Boolean {
         val splitDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
         val joinDependencies = model.joins.values.flatten().flatMap { it.dependencies }.toSet()
         val allDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
@@ -80,7 +144,7 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
         return model.instances.filter { model.outgoing[it].isNullOrEmpty() }.size == 1
     }
 
-    private fun checkAbsenceOfDeadParts(): Boolean {
+    private fun checkAbsenceOfDeadParts(seqs: Sequence<CausalNetSequence>): Boolean {
         return model.instances.asSequence()
             .map { a ->
                 if (model.joins.containsKey(a))
@@ -89,7 +153,7 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
                     a to listOf(setOf())
             }.all { (a, joins) ->
                 joins.all { join ->
-                    validSequences.any { seq -> seq.any { ab -> ab.a == a && ab.i == join } }
+                    seqs.any { seq -> seq.any { ab -> ab.a == a && ab.i == join } }
                 }
             } &&
                 model.instances.asSequence()
@@ -100,13 +164,34 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
                             a to listOf(setOf())
                     }.all { (a, splits) ->
                         splits.all { split ->
-                            validSequences.any { seq -> seq.any { ab -> ab.a == a && ab.o == split } }
+                            seqs.any { seq -> seq.any { ab -> ab.a == a && ab.o == split } }
                         }
                     }
     }
 
-    private fun isBoringSuperset(subset: State, superset: State): Boolean {
-        return subset.uniqueSet() == superset.uniqueSet() && superset.containsAll(subset)
+    private fun checkAbsenceOfDeadParts(): Boolean {
+        if (checkAbsenceOfDeadParts(validLoopFreeSequencesWithArbitrarySerialization))
+            return true
+        return checkAbsenceOfDeadParts(validSequences)
+    }
+
+    private class CausalNetSequenceWithHash(other: CausalNetSequenceWithHash? = null) {
+        private val _data: ArrayList<ActivityBinding> = ArrayList(other?._data ?: emptyList())
+        private val states: HashMap<Int, ArrayList<State>> = HashMap(other?.states ?: emptyMap())
+        val data: List<ActivityBinding> = Collections.unmodifiableList(_data)
+
+        fun add(ab: ActivityBinding) {
+            _data.add(ab)
+            states.getOrPut(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
+        }
+
+        fun containsBoringSubset(superset: State): Boolean {
+            val candidates = states[superset.uniqueSet().hashCode()]
+            if (!candidates.isNullOrEmpty()) {
+                return candidates.any { superset.containsAll(it) }
+            }
+            return false
+        }
     }
 
     private val cache = HashMap<State, List<ActivityBinding>>()
@@ -114,21 +199,21 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
      */
-    private fun extensions(input: CausalNetSequence, avoidLoops: Boolean): List<ActivityBinding> {
-        val currentState = input.last().state
+    private fun extensions(input: CausalNetSequenceWithHash, avoidLoops: Boolean): List<ActivityBinding> {
+        val currentState = input.data.last().state
         if (useCache) {
             val fromCache = cache[currentState]
             if (fromCache != null)
                 return if (avoidLoops)
-                    fromCache.filter { ab -> input.all { !isBoringSuperset(it.state, ab.state) } }
+                    fromCache.filter { ab -> !input.containsBoringSubset(ab.state) }
                 else
                     fromCache
         }
         val result = ArrayList<ActivityBinding>()
-        val candidates = currentState.map { it.second }.intersect(model.joins.keys)
+        val candidates = currentState.map { it.target }.intersect(model.joins.keys)
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
-                val expected = join.sources.map { it to ak }
+                val expected = join.sources.map { Dependency(it , ak) }
                 if (currentState.containsAll(expected)) {
                     val splits = model.splits[ak]
                     if (splits != null) {
@@ -147,7 +232,7 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
             cache[currentState] = result
         }
         return if (avoidLoops)
-            result.filter { ab -> input.all { !isBoringSuperset(it.state, ab.state) } }
+            result.filter { ab -> !input.containsBoringSubset(ab.state) }
         else
             result
     }
@@ -158,24 +243,82 @@ internal class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = t
      * There is possiblity that there are infinitely many such sequences.
      * To circumvent this, this function uses breadth-first search (BFS) and lazy evaluation
      */
-    private fun computeSetOfValidSequences(avoidLoops: Boolean): Sequence<CausalNetSequence> {
-        val queue = ArrayDeque<CausalNetSequence>()
+    private fun computeSetOfValidSequences(
+        avoidLoops: Boolean,
+        chooseArbitrarySerialization: Boolean
+    ): Sequence<CausalNetSequence> {
+        val queue = ArrayDeque<CausalNetSequenceWithHash>()
         queue.addAll(model
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
-                listOf(ActivityBinding(model.start, setOf(), split.targets, State()))
+                val tmp = CausalNetSequenceWithHash()
+                tmp.add(ActivityBinding(model.start, setOf(), split.targets, State()))
+                tmp
             })
+        val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
         return sequence {
             while (queue.isNotEmpty()) {
                 val current = queue.pollFirst()
+                if (chooseArbitrarySerialization) {
+                    val key = current.data.map { it.a }.toSet() to current.data.last().state.uniqueSet()
+                    if (beenThereDoneThat.contains(key))
+                        continue
+                    beenThereDoneThat.add(key)
+                }
                 extensions(current, avoidLoops).forEach { last ->
                     if (last.a == model.end) {
                         if (last.state.isEmpty())
-                            yield(current + last)
-                    } else
-                        queue.addLast(current + last)
+                            yield(current.data + last)
+                    } else {
+                        val next = CausalNetSequenceWithHash(current)
+                        next.add(last)
+                        queue.addLast(next)
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * Checks whether the given list of [ActivityBinding]s is a valid, complete execution sequence for the considered model
+     */
+    fun isValid(seq: List<ActivityBinding>): Boolean {
+        for (ab in seq) {
+            val joins = model.joins[ab.a]
+            if (joins.isNullOrEmpty()) {
+                if (ab.i.isNotEmpty())
+                    return false
+            } else {
+                if (ab.i.isEmpty())
+                    return false
+                if (!joins.any { join -> join.sources == ab.i })
+                    return false
+            }
+            val splits = model.splits[ab.a]
+            if (splits.isNullOrEmpty()) {
+                if (ab.o.isNotEmpty())
+                    return false
+            } else {
+                if (ab.o.isEmpty())
+                    return false
+                if (!splits.any { split -> split.targets == ab.o })
+                    return false
+            }
+        }
+        if (seq.first().i.isNotEmpty())
+            return false
+        with(seq.last()) {
+            if (state.isNotEmpty() || o.isNotEmpty())
+                return false
+        }
+        var i = seq.iterator()
+        var prev = i.next()
+        while (i.hasNext()) {
+            val cur = i.next()
+            if (prev.state != cur.stateBefore)
+                return false
+            prev = cur
+        }
+        return true
     }
 }

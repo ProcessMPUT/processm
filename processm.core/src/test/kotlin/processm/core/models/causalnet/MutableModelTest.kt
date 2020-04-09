@@ -213,6 +213,70 @@ class MutableModelTest {
         }
     }
 
+    @Test
+    fun removeExistingJoin() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(b, a)
+        assertFalse { mm.contains(Join(setOf(d2))) }
+        mm.addJoin(Join(setOf(d1)))
+        mm.addJoin(Join(setOf(d2)))
+        assertTrue { mm.contains(Join(setOf(d2))) }
+        assertEquals(setOf(Join(setOf(d1)), Join(setOf(d2))), mm.joins[a])
+        mm.removeJoin(Join(setOf(d2)))
+        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+        assertFalse { mm.contains(Join(setOf(d2))) }
+    }
+
+    @Test
+    fun removeNonexistingJoin() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(b, a)
+        mm.addJoin(Join(setOf(d1)))
+        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+        mm.removeJoin(Join(setOf(d2)))
+        assertEquals(setOf(Join(setOf(d1))), mm.joins[a])
+    }
+
+    @Test
+    fun removeExistingSplit() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(mm.start, b)
+        assertFalse { mm.contains(Split(setOf(d2))) }
+        mm.addSplit(Split(setOf(d1)))
+        mm.addSplit(Split(setOf(d2)))
+        assertTrue { mm.contains(Split(setOf(d2))) }
+        assertEquals(setOf(Split(setOf(d1)), Split(setOf(d2))), mm.splits[mm.start])
+        mm.removeSplit(Split(setOf(d2)))
+        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+        assertFalse { mm.contains(Split(setOf(d2))) }
+    }
+
+    @Test
+    fun removeNonexistingSplit() {
+        val a = Node("a")
+        val mm = MutableModel()
+        mm.addInstance(a)
+        mm.addInstance(b)
+        val d1 = mm.addDependency(mm.start, a)
+        val d2 = mm.addDependency(mm.start, b)
+        mm.addSplit(Split(setOf(d1)))
+        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+        mm.removeSplit(Split(setOf(d2)))
+        assertEquals(setOf(Split(setOf(d1))), mm.splits[mm.start])
+    }
+
     @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun removeDependency() {
@@ -262,5 +326,111 @@ class MutableModelTest {
         assertFailsWith(IllegalArgumentException::class) {
             mm.addJoin(Join(setOf(d)))
         }
+    }
+
+    @Test
+    fun `remove all joins`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addJoin(Join(setOf(mm.addDependency(a, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(a, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(c, a))))
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        mm.clearSplits()
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        mm.clearJoins()
+        assertTrue { mm.joins.isEmpty() }
+        assertTrue { mm.joins[c].isNullOrEmpty() }
+        assertTrue { mm.joins[a].isNullOrEmpty() }
+    }
+
+    @Test
+    fun `remove all splits`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addSplit(Split(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, c))))
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearJoins()
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearSplits()
+        assertTrue { mm.splits.isEmpty() }
+        assertTrue { mm.splits[c].isNullOrEmpty() }
+        assertTrue { mm.splits[a].isNullOrEmpty() }
+    }
+
+    @Test
+    fun `remove all bindings`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addJoin(Join(setOf(mm.addDependency(a, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(a, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, c))))
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearBindings()
+        assertTrue { mm.joins.isEmpty() }
+        assertTrue { mm.joins[c].isNullOrEmpty() }
+        assertTrue { mm.joins[a].isNullOrEmpty() }
+        assertTrue { mm.splits.isEmpty() }
+        assertTrue { mm.splits[c].isNullOrEmpty() }
+        assertTrue { mm.splits[a].isNullOrEmpty() }
+    }
+
+    @Test
+    fun `remove all bindings for given node`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addJoin(Join(setOf(mm.addDependency(a, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(a, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, c))))
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearBindingsFor(c)
+        assertFalse { mm.joins.isEmpty() }
+        assertTrue { mm.joins[c].isNullOrEmpty() }
+        assertFalse { mm.joins[a].isNullOrEmpty() }
+        assertFalse { mm.splits.isEmpty() }
+        assertTrue { mm.splits[c].isNullOrEmpty() }
+        assertFalse { mm.splits[a].isNullOrEmpty() }
     }
 }
