@@ -1,6 +1,9 @@
 package processm.core.models.bpmn
 
+import processm.core.helpers.allSubsets
 import processm.core.models.bpmn.jaxb.*
+import processm.core.models.causalnet.*
+import processm.core.models.causalnet.Node
 import java.util.*
 import javax.xml.bind.JAXBElement
 import javax.xml.namespace.QName
@@ -23,8 +26,8 @@ internal class BPMNProcess internal constructor(base: TProcess) {
 
     private fun create(inp: TFlowNode): BPMNFlowNode =
         when (inp) {
-            is TEvent -> BPMNEvent(inp)
-            is TActivity -> BPMNActivity(inp)
+            is TEvent -> BPMNEvent(inp, this)
+            is TActivity -> BPMNActivity(inp, this)
             is TGateway -> BPMNGateway(inp, this)
             else -> throw IllegalArgumentException("Cannot handle ${inp.javaClass}")
         }
@@ -51,5 +54,7 @@ internal class BPMNProcess internal constructor(base: TProcess) {
 
     fun get(base: TFlowNode) =
         allActivities.single { it.base === base }
+
+    fun toCausalNet(): MutableModel = BPMN2CausalNet(this).convert()
 
 }

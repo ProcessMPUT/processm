@@ -5,7 +5,7 @@ import processm.core.models.bpmn.jaxb.TActivity
 /**
  * A public wrapper for [TActivity]
  */
-internal class BPMNActivity internal constructor(override val base: TActivity) : BPMNFlowNode() {
+internal class BPMNActivity internal constructor(override val base: TActivity, process:BPMNProcess) : BPMNFlowNode(process) {
     override val name: String
         get() = base.name
 

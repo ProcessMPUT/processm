@@ -1,6 +1,5 @@
 package processm.core.models.causalnet
 
-import processm.core.models.commons.AbstractActivity
 import processm.core.models.commons.AbstractModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -112,20 +111,20 @@ abstract class Model(
         } else
             yieldAll(
                 splits.getValue(start)
-                    .map { split -> DecoupledNodeExecution(start,  null, split) })
+                    .map { split -> DecoupledNodeExecution(start, null, split) })
     }
 
     /**
      * Returns true if the given join is present in the model and false otherwise
      */
-    fun contains(join: Join): Boolean {
+    operator fun contains(join: Join): Boolean {
         return _joins[join.target]?.contains(join) == true
     }
 
     /**
      * Returns true if the given split is present in the model and false otherwise
      */
-    fun contains(split: Split): Boolean {
+    operator fun contains(split: Split): Boolean {
         return _splits[split.source]?.contains(split) == true
     }
 
@@ -146,4 +145,13 @@ abstract class Model(
         }
         return result
     }
+
+    fun structurallyEquals(other: Model): Boolean {
+        return instances == other.instances &&
+                incoming == other.incoming &&
+                outgoing == other.outgoing &&
+                splits == other.splits &&
+                joins == other.joins
+    }
+
 }

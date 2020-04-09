@@ -7,18 +7,14 @@ import processm.core.models.commons.AbstractDecisionPoint
 /**
  * A wrapper for [TGateway]. Implements [AbstractDecisionPoint], but not resulting decision points are strict
  */
-class BPMNGateway internal constructor(override val base: TGateway, internal val process: BPMNProcess) : BPMNFlowNode(), AbstractDecisionPoint {
+class BPMNGateway internal constructor(override val base: TGateway, process: BPMNProcess) : BPMNFlowNode(process), AbstractDecisionPoint {
 
     override val name: String
         get() = base.name
 
+
+
     override val possibleOutcomes: List<Decision> by lazy {
-        val outgoing =
-            base.outgoing.map { process.get(process.flowByName<TSequenceFlow>(it).targetRef as TFlowNode) }
-        val incoming =
-            base.incoming.map { process.get(process.flowByName<TSequenceFlow>(it).sourceRef as TFlowNode) }
-        val isSplit = outgoing.size > 1
-        val isJoin = incoming.size > 1
         check(isSplit xor isJoin) {
             "BPMN spec.: \"A Gateway MUST have either multiple incoming Sequence Flows or multiple outgoing Sequence Flows\n" +
                     "        (i.e., it MUST merge or split the flow).\""

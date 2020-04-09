@@ -2,6 +2,7 @@ package processm.core.models.bpmn
 
 import processm.core.models.bpmn.jaxb.TDefinitions
 import processm.core.models.bpmn.jaxb.TProcess
+import processm.core.models.causalnet.MutableModel
 import processm.core.models.commons.AbstractModel
 import processm.core.models.commons.AbstractModelInstance
 import java.io.InputStream
@@ -54,4 +55,8 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Abstrac
     override fun createInstance(): AbstractModelInstance =
         throw UnsupportedOperationException("BPMN model instances are not supported")
 
+    fun toCausalNet(): MutableModel {
+        require(processes.size == 1) { "BPMN models with multiple processes are currently not supported" }
+        return processes.single().toCausalNet()
+    }
 }
