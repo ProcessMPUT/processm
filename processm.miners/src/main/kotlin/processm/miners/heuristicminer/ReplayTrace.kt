@@ -2,7 +2,6 @@ package processm.miners.heuristicminer
 
 import org.apache.commons.collections4.MultiSet
 import processm.core.models.causalnet.Dependency
-import processm.core.verifiers.causalnet.State
 
 typealias ActiveDependencies = Collection<Dependency>
 

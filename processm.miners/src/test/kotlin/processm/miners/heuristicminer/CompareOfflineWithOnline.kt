@@ -222,7 +222,8 @@ class CompareOfflineWithOnline {
         }
         if (log.traces.count() <= maxLogSizeForPermutations) {
             val (offline, eq) = prepareOffline()
-            return DynamicContainer.dynamicContainer("seed=$seed",
+            return DynamicContainer.dynamicContainer(
+                "seed=$seed",
                 log.traces.toList().allPermutations().mapIndexed { idx, traces ->
                     DynamicTest.dynamicTest("$idx") {
                         Assumptions.assumeTrue(eq)

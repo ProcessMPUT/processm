@@ -26,14 +26,14 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             val nextStates = ArrayList<ReplayTrace>()
             for ((state, joins, splits) in currentStates) {
                 for (consume in consumeCandidates(model, currentNode, state.uniqueSet())) {
-                    if(state.containsAll(consume))
-                    for (produce in produceCandidates) {
-                        val ns = State(state)
-                        ns.removeAll(consume)
-                        ns.addAll(produce)
+                    if (state.containsAll(consume))
+                        for (produce in produceCandidates) {
+                            val ns = State(state)
+                            ns.removeAll(consume)
+                            ns.addAll(produce)
 
-                        nextStates.add(ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce)))
-                    }
+                            nextStates.add(ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce)))
+                        }
                 }
             }
             currentStates = nextStates

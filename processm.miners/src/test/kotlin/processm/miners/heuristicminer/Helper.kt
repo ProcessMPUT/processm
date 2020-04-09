@@ -9,7 +9,6 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
 import processm.core.verifiers.CausalNetVerifier
-import processm.miners.heuristicminer.longdistance.LongDistanceDependencyMiner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 

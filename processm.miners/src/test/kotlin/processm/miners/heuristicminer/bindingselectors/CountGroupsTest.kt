@@ -2,7 +2,9 @@ package processm.miners.heuristicminer.bindingselectors
 
 import io.mockk.mockk
 import processm.core.models.causalnet.Split
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CountGroupsTest {
 

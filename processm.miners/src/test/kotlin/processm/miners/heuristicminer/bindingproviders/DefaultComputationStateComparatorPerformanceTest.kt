@@ -12,7 +12,6 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.miners.heuristicminer.Helper.logFromModel
 import processm.miners.heuristicminer.OfflineHeuristicMiner
-import processm.miners.heuristicminer.OnlineHeuristicMiner
 import processm.miners.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import java.io.File
