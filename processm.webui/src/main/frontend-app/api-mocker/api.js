@@ -101,7 +101,11 @@ const api = {
     const { userEmail, organizationName } = req.body.data;
 
     if (organizationName != "org1" && userEmail != "user1@example.com") {
-      users[userEmail] = { organizationName, password: "pass" };
+      users[userEmail] = {
+        organizationName,
+        password: "pass",
+        locale: "en_US"
+      };
       res.status(201).json();
     } else {
       res.status(400).json();
@@ -126,6 +130,14 @@ const api = {
     }
 
     users[username].password = newPassword;
+
+    return res.status(202).json();
+  },
+  "PATCH /api/users/me/locale": (req, res) => {
+    const { locale } = req.body.data;
+    const username = _.get(_.keys(users), 0);
+
+    users[username].locale = locale;
 
     return res.status(202).json();
   }

@@ -78,4 +78,14 @@ export default class AccountService {
       throw new Error(response.statusText);
     }
   }
+
+  public async changeLocale(locale: string) {
+    const response = await this.usersApi.changeUserLocale({
+      data: { locale }
+    });
+
+    if (response.status != 202) {
+      throw new Error(response.statusText);
+    }
+  }
 }

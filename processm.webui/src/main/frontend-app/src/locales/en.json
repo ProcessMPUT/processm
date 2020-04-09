@@ -1,6 +1,7 @@
 {
   "language-name": "English",
-  "iso": "gb",
+  "code": "en_GB",
+  "flag": "gb",
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
@@ -20,8 +21,7 @@
   },
   "user-profile": {
     "language": "Language",
-    "change-password": "Change password",
-    "save": "Save changes"
+    "change-password": "Change password"
   },
   "rename-dialog": {
     "dialog-title": "Rename",

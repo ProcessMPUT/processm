@@ -1,6 +1,7 @@
 {
   "language-name": "Polski",
-  "iso": "pl",
+  "code": "pl_PL",
+  "flag": "pl",
   "navigation": {
     "workspaces": "Przestrzenie robocze",
     "about": "@:about.page-title"
@@ -18,8 +19,7 @@
   },
   "user-profile": {
     "language": "Język",
-    "change-password": "Zmień hasło",
-    "save": "Zapisz zmiany"
+    "change-password": "Zmień hasło"
   },
   "rename-dialog": {
     "dialog-title": "Zmień nazwę",

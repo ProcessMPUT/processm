@@ -12,13 +12,14 @@
                 v-model="selectedLocale"
                 :items="$i18n.availableLocales | objectify"
                 :label="$t('user-profile.language')"
+                @change="updateLocale"
                 dense
                 outlined
               >
                 <template v-slot:selection="data">
                   <span
                     v-bind:class="[
-                      'flag-icon flag-icon-' + $t('iso', data.item.value),
+                      'flag-icon flag-icon-' + $t('flag', data.item.value),
                       'mr-2'
                     ]"
                   />
@@ -27,7 +28,7 @@
                 <template v-slot:item="data">
                   <span
                     v-bind:class="[
-                      'flag-icon flag-icon-' + $t('iso', data.item.value),
+                      'flag-icon flag-icon-' + $t('flag', data.item.value),
                       'mr-2'
                     ]"
                   />
@@ -43,10 +44,6 @@
                 {{ $t("user-profile.change-password") }}
               </v-btn>
               <v-spacer></v-spacer>
-              <v-btn color="primary" @click.stop="updateSettings">
-                <v-icon left dark>save</v-icon>
-                {{ $t("user-profile.save") }}
-              </v-btn>
             </v-layout>
           </v-container>
         </v-card-text>
@@ -93,9 +90,16 @@ export default class UserProfile extends Vue {
     this.selectedLocale = this.$i18n.locale; // .$i18n.locale;
   }
 
-  updateSettings() {
+  async updateLocale() {
     if (this.$i18n.availableLocales.includes(this.selectedLocale)) {
       this.$i18n.locale = this.selectedLocale;
+
+      try {
+        const locale = this.$t("code", this.selectedLocale).toString();
+        await this.accountService.changeLocale(locale);
+      } catch (error) {
+        //TODO: display the error on the global snackbar
+      }
     }
   }
 

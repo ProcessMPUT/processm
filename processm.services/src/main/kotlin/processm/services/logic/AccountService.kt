@@ -1,16 +1,18 @@
 package processm.services.logic
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import org.apache.commons.lang3.LocaleUtils
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.DBConnectionPool
 import processm.services.models.*
+import java.util.*
 
 class AccountService {
     private val passwordHashingComplexity = 8
-    private val defaultLocale = "en-US"
+    private val defaultLocale = Locale("en", "US")
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
         val user = User.find(Op.build { Users.username eq username }).firstOrNull()
@@ -38,7 +40,7 @@ class AccountService {
             val userId = Users.insertAndGetId {
                 it[username] = userEmail
                 it[password] = calculatePasswordHash("pass")
-                it[locale] = accountLocale ?: defaultLocale
+                it[locale] = accountLocale ?: defaultLocale.toString()
             }
 
             val organizationId = Organizations.insertAndGetId {
@@ -69,6 +71,20 @@ class AccountService {
         }
 
         user.password = calculatePasswordHash(newPassword)
+
+        return@transaction true
+    }
+
+    fun changeLocale(userId: Long, locale: String) = transaction(DBConnectionPool.database) {
+        val user = getAccountDetails(userId)
+        val normalizedLocale = locale.replace('_', '-')
+        val localeObject: Locale = Locale.Builder().setLanguageTag(normalizedLocale).build()
+
+        if (!LocaleUtils.isAvailableLocale(localeObject) || localeObject.language.isNullOrEmpty()) {
+            return@transaction false
+        }
+
+        user.locale = localeObject.toString()
 
         return@transaction true
     }

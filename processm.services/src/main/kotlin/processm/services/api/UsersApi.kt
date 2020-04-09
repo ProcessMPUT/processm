@@ -86,17 +86,37 @@ fun Route.UsersApi() {
                 userAccountDetails.locale)))
         }
 
-        route("/users/me/password") {
-            patch {
-                val principal = call.authentication.principal<ApiUser>()!!
-                val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
-                    ?: throw ApiException("The provided password data cannot be parsed")
+        route("/users/me") {
+            route ("/password") {
+                patch {
+                    val principal = call.authentication.principal<ApiUser>()!!
+                    val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
+                        ?: throw ApiException("The provided password data cannot be parsed")
 
-                if (accountService.changePassword(principal.userId, passwordData.currentPassword, passwordData.newPassword)) {
-                    call.respond(HttpStatusCode.Accepted)
+                    if (accountService.changePassword(
+                            principal.userId,
+                            passwordData.currentPassword,
+                            passwordData.newPassword
+                        )
+                    ) {
+                        call.respond(HttpStatusCode.Accepted)
+                    } else {
+                        call.respond(HttpStatusCode.Forbidden)
+                    }
                 }
-                else {
-                    call.respond(HttpStatusCode.Forbidden)
+            }
+            route ("/locale") {
+                patch {
+                    val principal = call.authentication.principal<ApiUser>()!!
+                    val localeData = call.receiveOrNull<LocaleChangeMessageBody>()?.data
+                        ?: throw ApiException("The provided locale data cannot be parsed")
+
+                    if (accountService.changeLocale(principal.userId, localeData.locale)
+                    ) {
+                        call.respond(HttpStatusCode.Accepted)
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest)
+                    }
                 }
             }
         }
