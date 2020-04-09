@@ -311,4 +311,98 @@ class DirectlyFollowsSubGraph(
 
         return connectionsMatrix
     }
+
+    /**
+     * Detect sequential cut in directly-follows graph
+     *
+     * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
+     */
+    fun calculateSequentialCut(stronglyConnectedComponents: List<Set<ProcessTreeActivity>>): Map<ProcessTreeActivity, Int> {
+        // Activities and assigned label
+        val activitiesWithLabels = HashMap<ProcessTreeActivity, Int>()
+
+        // This makes sense only if more than one strongly connected component
+        if (stronglyConnectedComponents.size > 1) {
+            // Connection matrix between components in graph
+            val matrix = connectionMatrix(stronglyConnectedComponents)
+            // List with components - we will manipulate it
+            val components = LinkedList<LinkedList<Int>>()
+            // Groups already analyzed
+            val closedGroups = HashSet<Int>()
+
+            // Analyze rows of connection matrix and find
+            // After this block we expect to receive list with zero or one element
+            // If one element - contain all groups (indexes) with max value == 0
+            matrix.forEachIndexed { index, group ->
+                // 0 and -1 allowed here
+                if (group.max()?.compareTo(0) ?: 1 == 0) {
+                    if (components.isEmpty()) {
+                        components.add(LinkedList<Int>())
+                    }
+                    components.last().add(index)
+                    closedGroups.add(index)
+                }
+            }
+
+            // Analyze each component
+            var continueAnalyze = components.isNotEmpty()
+            while (continueAnalyze) {
+                continueAnalyze = false
+                val currentIterationComponents = LinkedList<Int>()
+
+                matrix.forEachIndexed { index, _ ->
+                    // If group not closed
+                    if (!closedGroups.contains(index)) {
+                        val temp = HashSet<Int>()
+                        matrix.forEachIndexed { j, _ ->
+                            if (matrix[index][j].compareTo(1) == 0) {
+                                temp.add(j)
+                            }
+                        }
+                        if (temp.minus(closedGroups).isEmpty()) {
+                            currentIterationComponents.add(index)
+                            closedGroups.add(index)
+                        }
+                    }
+                }
+
+                if (currentIterationComponents.isNotEmpty()) {
+                    continueAnalyze = true
+                    components.add(currentIterationComponents)
+                }
+            }
+
+            var notAddYet = true
+            matrix.forEachIndexed { index, _ ->
+                if (!closedGroups.contains(index)) {
+                    if (notAddYet) {
+                        notAddYet = false
+                        components.add(LinkedList())
+                    }
+                    components.last().add(index)
+                }
+            }
+
+            // Analyze prepared components and build response
+            if (components.size > 1) {
+                var labelGroup = 1
+                components.forEach { group ->
+                    group.forEach { index ->
+                        stronglyConnectedComponents[index].forEach { activity ->
+                            activitiesWithLabels[activity] = labelGroup
+                        }
+                    }
+
+                    // Increment group ID
+                    labelGroup++
+                }
+
+                return activitiesWithLabels
+            }
+        }
+
+        // Return default value - all activities in the same group
+        activities.forEach { activity -> activitiesWithLabels[activity] = 1 }
+        return activitiesWithLabels
+    }
 }
