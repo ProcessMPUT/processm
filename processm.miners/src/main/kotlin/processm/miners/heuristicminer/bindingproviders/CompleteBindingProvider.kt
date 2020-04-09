@@ -21,7 +21,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             val currentNode = trace[idx]
             val available = trace.subList(idx, trace.size).toSet()
             val produceCandidates = produceCandidates(model, currentNode, available)
-            // zjedz dowolny niepusty podzbiór consumable albo consumable jest puste
+            // zużyj dowolny niepusty podzbiór consumable albo consumable jest puste
             // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
             val nextStates = ArrayList<ReplayTrace>()
             for ((state, joins, splits) in currentStates) {

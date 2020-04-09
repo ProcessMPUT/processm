@@ -11,7 +11,7 @@ import processm.core.log.Trace as BaseTrace
 annotation class InMemoryXESProcessing
 
 /**
- * Honey badger doesn't give a ... about memory consumption and keeps everything in memory.
+ * Honey badger doesn't care about memory consumption and keeps everything in memory.
  *
  * Suitable for testing and development. Unsuitable for production. Possibly buggy. Use at your own risk.
  */
