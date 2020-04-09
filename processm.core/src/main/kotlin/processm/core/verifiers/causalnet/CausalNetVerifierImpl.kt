@@ -100,7 +100,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
             visited.add(n)
             queue.addAll(model.outgoing[n].orEmpty().map { it.target })
         }
-        return@lazy visited == model.instances
+        return@lazy visited.containsAll(model.instances)
     }
 
     /**
