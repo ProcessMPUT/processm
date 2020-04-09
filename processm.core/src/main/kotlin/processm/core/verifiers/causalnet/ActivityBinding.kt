@@ -20,7 +20,7 @@ class ActivityBinding(
     val a: Node,
     val i: Collection<Node>,
     val o: Collection<Node>,
-    private val stateBefore: CausalNetState
+    val stateBefore: CausalNetState
 ) {
 
     /**

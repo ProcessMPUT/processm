@@ -69,4 +69,59 @@ class MutableModel(
      */
     override fun createInstance() = MutableModelInstance(this, metadataHandler)
 
+    /**
+     * Removes the given split.
+     *
+     * Silently ignores if the split is not present in the model.
+     */
+    fun removeSplit(split: Split) {
+        _splits[split.source]?.remove(split)
+    }
+
+    /**
+     * Removes the given join.
+     *
+     * Silently ignores if the join is not present in the model.
+     */
+    fun removeJoin(join: Join) {
+        _joins[join.target]?.remove(join)
+    }
+
+    /**
+     * Remove all bindings from the model
+     */
+    fun clearBindings() {
+        clearSplits()
+        clearJoins()
+    }
+
+    /**
+     * Remove all splits from the model
+     */
+    fun clearSplits() {
+        _splits.clear()
+    }
+
+    /**
+     * Remove all joins from the model
+     */
+    fun clearJoins() {
+        _joins.clear()
+    }
+
+    /**
+     * Removes all bindings for a given node
+     */
+    fun clearBindingsFor(node: Node) {
+        _joins.remove(node)
+        _splits.remove(node)
+    }
+
+    fun clearDependencies() {
+        _incoming.clear()
+        _outgoing.clear()
+        clearSplits()
+        clearJoins()
+    }
+
 }

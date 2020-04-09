@@ -29,9 +29,7 @@ class ActivityBindingTest {
         val b = Node("b")
         val d = Node("d")
         val e = Node("e")
-        val s1 = ActivityBinding(a, setOf(), setOf(b, d),
-            CausalNetState()
-        ).state
+        val s1 = ActivityBinding(a, setOf(), setOf(b, d), CausalNetState()).state
         assertEquals(setOf(Dependency(a, b), Dependency(a, d)), s1.toSet())
         val s2 = ActivityBinding(d, setOf(a), setOf(e), s1).state
         assertEquals(setOf(Dependency(a, b), Dependency(d, e)), s2.toSet())

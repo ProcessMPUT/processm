@@ -26,6 +26,6 @@ data class Join(override val dependencies: Set<Dependency>) : Binding {
     }
 
     override fun toString(): String {
-        return "{${sources.map { it.activity }} -> ${target.activity}}"
+        return "{${sources.map { it }} -> ${target}}"
     }
 }

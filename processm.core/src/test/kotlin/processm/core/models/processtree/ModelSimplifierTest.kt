@@ -579,6 +579,37 @@ class ModelSimplifierTest {
     }
 
     @Test
+    fun `Validate indexes`() {
+        val model = processTree {
+            Parallel(
+                Parallel(
+                    Parallel(
+                        Activity("A"),
+                        Activity("B")
+                    ),
+                    Activity("C"),
+                    Activity("D")
+                ),
+                Activity("E")
+            )
+        }
+
+        ModelSimplifier().simplify(model)
+
+        val expected = processTree {
+            Parallel(
+                Activity("A"),
+                Activity("B"),
+                Activity("C"),
+                Activity("D"),
+                Activity("E")
+            )
+        }
+        assertEquals("∧(A,B,C,D,E)", model.toString())
+        assertTrue(model.languageEqual(expected))
+    }
+
+    @Test
     fun `Move up activity if sequence operators`() {
         val model = processTree {
             Sequence(
