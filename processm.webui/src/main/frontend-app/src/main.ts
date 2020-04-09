@@ -1,16 +1,20 @@
 import Vue from "vue";
-import App from "./App.vue";
-import router from "./router";
-import store from "./store";
+import App from "@/App.vue";
+import router from "@/router";
+import store from "@/store";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Vuetify from "vuetify";
-import vuetify from "./plugins/vuetify";
+import vuetify from "@/plugins/vuetify";
 import "material-design-icons-iconfont/dist/material-design-icons.css";
 import "typeface-roboto";
-import i18n from "./i18n";
-import WorkspaceService from "./services/WorkspaceService";
+import "flag-icon-css/css/flag-icon.min.css";
+import i18n from "@/i18n";
+import SessionStorage from "@/plugins/SessionStorage";
+import WorkspaceService from "@/services/WorkspaceService";
+import AccountService from "@/services/AccountService";
 
 Vue.config.productionTip = false;
+Vue.use(SessionStorage, { persist: true });
 
 new Vue({
   router,
@@ -18,7 +22,8 @@ new Vue({
   vuetify,
   i18n,
   provide: () => ({
-    workspaceService: new WorkspaceService()
+    workspaceService: new WorkspaceService(),
+    accountService: new AccountService()
   }),
   render: h => h(App)
 }).$mount("#app");

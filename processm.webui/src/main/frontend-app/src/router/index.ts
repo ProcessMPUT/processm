@@ -1,27 +1,54 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Vue from "vue";
 import VueRouter from "vue-router";
-import Workspaces from "../views/Workspaces.vue";
 
 Vue.use(VueRouter);
 
 const routes = [
   {
     path: "/",
-    component: Workspaces
+    name: "home",
+    component: () => import("@/views/Workspaces.vue")
   },
   {
     path: "/about",
-    name: "About",
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () =>
-      import(/* webpackChunkName: "about" */ "../views/About.vue")
+    name: "about",
+    component: () => import("@/views/About.vue")
+  },
+  {
+    path: "/profile",
+    name: "profile",
+    component: () => import("@/views/UserProfile.vue")
+  },
+  {
+    path: "/login",
+    name: "login",
+    component: () => import("@/views/Login.vue"),
+    beforeEnter: (_to: any, _from: any, next: any) => {
+      Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
+    },
+    meta: { allowUnauthenticated: true }
+  },
+  {
+    path: "/register",
+    name: "register",
+    component: () => import("@/views/Registration.vue"),
+    beforeEnter: (_to: any, _from: any, next: any) => {
+      Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
+    },
+    meta: { allowUnauthenticated: true }
   }
 ];
 
 const router = new VueRouter({
   routes
+});
+
+router.beforeEach((to, _from, next) => {
+  Vue.prototype.$sessionStorage.sessionExists ||
+  to.matched.some(record => record.meta.allowUnauthenticated)
+    ? next()
+    : next({ name: "login" });
 });
 
 export default router;

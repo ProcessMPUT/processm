@@ -12,7 +12,9 @@
                 <v-text-field
                   v-model="newName"
                   :label="$t('rename-dialog.new-name-placeholder')"
-                  :rules="[v => !!v || 'Name cannot be empty']"
+                  :rules="[
+                    v => !!v || $t('rename-dialog.validation.name-empty')
+                  ]"
                   required
                 />
               </v-col>
