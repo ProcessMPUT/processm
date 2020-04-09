@@ -330,9 +330,115 @@ class MutableModelTest {
 
     @Test
     fun `common interface`() {
-        val mm=MutableModel()
+        val mm = MutableModel()
         assertEquals(setOf(mm.start), mm.startActivities.toSet())
         assertEquals(setOf(mm.end), mm.endActivities.toSet())
         assertEquals(mm.instances, mm.activities.toSet())
+    }
+
+    @Test
+    fun `remove all joins`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addJoin(Join(setOf(mm.addDependency(a, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(a, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(c, a))))
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        mm.clearSplits()
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        mm.clearJoins()
+        assertTrue { mm.joins.isEmpty() }
+        assertTrue { mm.joins[c].isNullOrEmpty() }
+        assertTrue { mm.joins[a].isNullOrEmpty() }
+    }
+
+    @Test
+    fun `remove all splits`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addSplit(Split(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, c))))
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearJoins()
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearSplits()
+        assertTrue { mm.splits.isEmpty() }
+        assertTrue { mm.splits[c].isNullOrEmpty() }
+        assertTrue { mm.splits[a].isNullOrEmpty() }
+    }
+
+    @Test
+    fun `remove all bindings`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addJoin(Join(setOf(mm.addDependency(a, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(a, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, c))))
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearBindings()
+        assertTrue { mm.joins.isEmpty() }
+        assertTrue { mm.joins[c].isNullOrEmpty() }
+        assertTrue { mm.joins[a].isNullOrEmpty() }
+        assertTrue { mm.splits.isEmpty() }
+        assertTrue { mm.splits[c].isNullOrEmpty() }
+        assertTrue { mm.splits[a].isNullOrEmpty() }
+    }
+
+    @Test
+    fun `remove all bindings for given node`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableModel()
+        mm.addInstance(a, b, c)
+        mm.addJoin(Join(setOf(mm.addDependency(a, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, c))))
+        mm.addJoin(Join(setOf(mm.addDependency(a, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(b, a))))
+        mm.addJoin(Join(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(c, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, a))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, b))))
+        mm.addSplit(Split(setOf(mm.addDependency(a, c))))
+        assertEquals(2, mm.joins[c]?.size)
+        assertEquals(3, mm.joins[a]?.size)
+        assertEquals(2, mm.splits[c]?.size)
+        assertEquals(3, mm.splits[a]?.size)
+        mm.clearBindingsFor(c)
+        assertFalse { mm.joins.isEmpty() }
+        assertTrue { mm.joins[c].isNullOrEmpty() }
+        assertFalse { mm.joins[a].isNullOrEmpty() }
+        assertFalse { mm.splits.isEmpty() }
+        assertTrue { mm.splits[c].isNullOrEmpty() }
+        assertFalse { mm.splits[a].isNullOrEmpty() }
     }
 }

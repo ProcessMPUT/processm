@@ -1,8 +1,8 @@
 package processm.core.log
 
-import kotlinx.io.InputStream
 import processm.core.log.attribute.*
 import processm.core.logging.logger
+import java.io.InputStream
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.format.DateTimeFormatter

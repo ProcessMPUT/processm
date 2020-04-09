@@ -106,10 +106,12 @@ class ModelSimplifier {
                         // Change parent reference
                         it.parent = node
                     }
-                }
 
-                // Update index reference - iteration complete
-                ++index
+                    // Ignore moved up nodes
+                    index += child.childrenInternal.size
+                } else {
+                    ++index
+                }
             }
         }
 

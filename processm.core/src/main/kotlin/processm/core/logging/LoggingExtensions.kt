@@ -33,3 +33,11 @@ fun Logger.exit() {
     assert(stack[1].methodName == ::exit.name)
     this.trace("EXITING  ${stack[2].methodName}")
 }
+
+/**
+ * Calls [lazy] to produce the message only if tracing is enabled.
+ */
+fun Logger.trace(lazy: () -> String) {
+    if (isTraceEnabled)
+        trace(lazy())
+}
