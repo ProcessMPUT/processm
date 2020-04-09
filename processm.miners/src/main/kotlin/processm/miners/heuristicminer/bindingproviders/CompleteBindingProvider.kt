@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer.bindingproviders
 
+import processm.core.helpers.HierarchicalIterable
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
@@ -19,21 +20,32 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             listOf(ReplayTrace(State(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
         for (idx in trace.indices) {
             val currentNode = trace[idx]
-            val available = trace.subList(idx, trace.size).toSet()
+            val remainder = trace.subList(idx + 1, trace.size).toSet()
+            val available = remainder + currentNode
             val produceCandidates = produceCandidates(model, currentNode, available)
             // zużyj dowolny niepusty podzbiór consumable albo consumable jest puste
             // uzupełnij state o dowolny niepusty podzbiór producible albo producible jest puste
             val nextStates = ArrayList<ReplayTrace>()
             for ((state, joins, splits) in currentStates) {
                 for (consume in consumeCandidates(model, currentNode, state.uniqueSet())) {
-                    if (state.containsAll(consume))
-                        for (produce in produceCandidates) {
-                            val ns = State(state)
-                            ns.removeAll(consume)
-                            ns.addAll(produce)
+                    assert(state.containsAll(consume))
+                    val intermediate = State(state)
+                    for (c in consume)
+                        intermediate.remove(c)
+                    for (produce in produceCandidates) {
+                        val ns = State(intermediate)
+                        ns.addAll(produce)
 
-                            nextStates.add(ReplayTrace(ns, joins + setOf(consume), splits + setOf(produce)))
-                        }
+                        if (!remainder.containsAll(ns.map { it.target }.toSet()))
+                            continue
+                        nextStates.add(
+                            ReplayTrace(
+                                ns,
+                                HierarchicalIterable(joins, consume),
+                                HierarchicalIterable(splits, produce)
+                            )
+                        )
+                    }
                 }
             }
             currentStates = nextStates
