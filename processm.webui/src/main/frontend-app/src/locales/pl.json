@@ -1,7 +1,13 @@
 {
+  "language-name": "Polski",
+  "iso": "pl",
   "navigation": {
     "workspaces": "Przestrzenie robocze",
     "about": "@:about.page-title"
+  },
+  "topbar": {
+    "user-profile": "Ustawienia konta",
+    "sign-out": "Wyloguj"
   },
   "workspace": {
     "default-name": "Przestrzeń robocza",
@@ -10,14 +16,48 @@
   "about": {
     "page-title": "O aplikacji"
   },
+  "user-profile": {
+    "language": "Język",
+    "save": "Zapisz zmiany"
+  },
   "rename-dialog": {
     "dialog-title": "Zmień nazwę",
-    "new-name-placeholder": "Nowa nazwa"
+    "new-name-placeholder": "Nowa nazwa",
+    "validation": {
+      "name-empty": "Nazwa nie może być pusta"
+    }
+  },
+  "login-form": {
+    "title": "Panel logowania",
+    "email": "Email",
+    "password": "Hasło",
+    "login": "Zaloguj",
+    "validation": {
+      "email-format": "Nieprawidłowy format adresu email",
+      "password-empty": "Hasło nie może być puste"
+    },
+    "error-box": {
+      "failed": "Nieprawidłowy email lub hasło"
+    }
+  },
+  "registration-form": {
+    "title": "Rejestracja konta",
+    "organization-name": "Nazwa organizacji",
+    "admin-email": "Email administratora",
+    "register": "Zarejestruj",
+    "validation": {
+      "email-format": "Nieprawidłowy format adresu email",
+      "organization-empty": "Nazwa organizacji nie może być pusta"
+    },
+    "error-box": {
+      "failed": "Inorrect organization name"
+    }
   },
   "common": {
     "cancel": "Anuluj",
     "save": "Zapisz",
     "rename": "Zmień nazwę",
-    "remove": "Usuń"
+    "remove": "Usuń",
+    "close": "Zamknij"
   }
 }

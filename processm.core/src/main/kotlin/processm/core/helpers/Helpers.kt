@@ -87,3 +87,87 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
     if (it1.hasNext() || it2.hasNext())
         throw IllegalArgumentException("Inconsistent sizes of the given sequences.")
 }
+
+/**
+ * Generates the power-set of the collection (incl. the empty set and the full set)
+ */
+fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
+    if (this@allSubsets.size >= Long.SIZE_BITS)
+        throw IllegalArgumentException("This implementation of power set supports sets of up to 63 items.")
+    if (this@allSubsets.isEmpty()) {
+        yield(listOf<T>())
+        return@sequence
+    }
+
+    val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this@allSubsets.size)
+
+    var mask = 0L
+    while (true) {
+        yield(this@allSubsets.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L })
+
+        if (++mask > lastBucketMask || mask < 0L)
+            return@sequence
+    }
+}
+
+/**
+ * Eagerly computes powerset. The empty set is included if [filterEmpty] is true.
+ *
+ * This seems to be more efficient if one knows that the whole powerset is going to be used.
+ * Otherwise, [allSubsets] should be the preferred solution, as it does not perform eager materialization.
+ */
+fun <T> Collection<T>.materializedAllSubsets(filterEmpty: Boolean): List<List<T>> {
+    require(this.size < Int.SIZE_BITS) { "This implementation of power set supports sets of up to 31 items." }
+    if (this.isEmpty()) {
+        return if (filterEmpty)
+            emptyList()
+        else
+            listOf(emptyList())
+    }
+
+    val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this.size)
+
+    var mask = 0L
+    val result = ArrayList<List<T>>(1 shl (this.size + 1))
+    while (true) {
+        val tmp = this.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L }
+        if (!filterEmpty || tmp.isNotEmpty())
+            result.add(tmp)
+
+        if (++mask > lastBucketMask || mask < 0L)
+            return result
+    }
+}
+
+/**
+ * Generate all permutations of the given list
+ */
+fun <T> Collection<T>.allPermutations(): Sequence<ArrayList<T>> = sequence {
+    if (this@allPermutations.isEmpty())
+        return@sequence
+
+    yield(ArrayList(this@allPermutations))
+
+    var A = this@allPermutations.toMutableList()
+    val n = A.size
+    val c = IntArray(n)
+
+    var i = 0
+    while (i < n) {
+        if (c[i] < i) {
+            A.swap((i and 1) * c[i], i)
+            yield(ArrayList(A))
+            ++c[i]
+            i = 0
+        } else {
+            c[i] = 0
+            ++i
+        }
+    }
+}
+
+private inline fun <T> MutableList<T>.swap(i: Int, j: Int) {
+    val tmp = this[i]
+    this[i] = this[j]
+    this[j] = tmp
+}

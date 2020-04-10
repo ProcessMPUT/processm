@@ -7,6 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.Ignore
 
 class FromModelToLogAndBackAgain {
     val a = Node("a")
@@ -325,6 +326,7 @@ class FromModelToLogAndBackAgain {
         }).validSequences.count(), 3 * 1 + 3 * 2 * 2 + 3 * 2 * 3 * 2)
     }
 
+    @Ignore("Too expensive")
     @Test
     fun `binary to unary decoder`() {
         test(

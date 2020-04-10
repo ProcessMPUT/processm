@@ -118,6 +118,10 @@ class CausalNetVerifierImplTest {
             ), seqs
         )
         assertTrue { v.isSound }
+        v.validSequences.forEach { seq -> assertTrue { v.isValid(seq) } }
+        v.validSequences.forEach { seq -> assertFalse { v.isValid(seq.subList(1, seq.size)) } }
+        v.validSequences.forEach { seq -> assertFalse { v.isValid(seq.subList(0, seq.size - 1)) } }
+        v.validSequences.forEach { seq -> assertFalse { v.isValid(seq.subList(0, 1) + seq.subList(seq.size-1, seq.size)) } }
     }
 
     private fun displayValidSequences(vs: Sequence<List<ActivityBinding>>) {
@@ -199,13 +203,14 @@ class CausalNetVerifierImplTest {
         assertTrue { v.validSequences.any() }
     }
 
+    val a = Node("a")
+    val b = Node("b")
+    val c = Node("c")
+    val d = Node("d")
+    val e = Node("e")
+
     @Test
     fun `Fig 3_16`() {
-        val a = Node("a")
-        val b = Node("b")
-        val c = Node("c")
-        val d = Node("d")
-        val e = Node("e")
         val model = MutableModel(start = a, end = e)
         model.addInstance(a, b, c, d, e)
         val ab = model.addDependency(a, b)
@@ -252,5 +257,70 @@ class CausalNetVerifierImplTest {
         val v = CausalNetVerifierImpl(model)
         assertFalse { v.isSound }
         assertTrue { v.validSequences.none() }
+    }
+
+    @Test
+    fun `sequences with arbitrary serialization in presence of paralleism`() {
+        val model = causalnet {
+            start = a
+            end = d
+            a splits b + c
+            b splits d
+            c splits d
+            a joins b
+            a joins c
+            b + c join d
+        }
+        assertEquals(1, CausalNetVerifierImpl(model).validLoopFreeSequencesWithArbitrarySerialization.count())
+    }
+
+    @Test
+    fun `sequences with arbitrary serialization in absence of paralleism`() {
+        val model = causalnet {
+            start = a
+            end = d
+            a splits b or c
+            b splits d
+            c splits d
+            a joins b
+            a joins c
+            b or c join d
+        }
+        assertEquals(2, CausalNetVerifierImpl(model).validLoopFreeSequencesWithArbitrarySerialization.count())
+    }
+
+    @Test
+    fun `single L2 loop`() {
+        val model = causalnet {
+            start splits a
+            a splits b
+            b splits a or end
+            start or b join a
+            a joins b
+            b joins end
+        }
+        assertTrue(CausalNetVerifierImpl(model).noDeadParts)
+    }
+
+    @Test
+    fun connectivity() {
+        val model = MutableModel(start = a, end = d)
+        model.addInstance(a, b, c, d)
+        model.addDependency(a, b)
+        model.addDependency(a, c)
+        val v1 = CausalNetVerifierImpl(model)
+        assertFalse(v1.isEveryNodeReachableFromStart)
+        assertFalse(v1.isEndReachableFromEveryNode)
+        assertFalse(v1.isConnected)
+        model.addDependency(c, d)
+        val v2 = CausalNetVerifierImpl(model)
+        assertTrue(v2.isEveryNodeReachableFromStart)
+        assertFalse(v2.isEndReachableFromEveryNode)
+        assertFalse(v2.isConnected)
+        model.addDependency(b, d)
+        val v3 = CausalNetVerifierImpl(model)
+        assertTrue(v3.isEveryNodeReachableFromStart)
+        assertTrue(v3.isEndReachableFromEveryNode)
+        assertTrue(v3.isConnected)
     }
 }

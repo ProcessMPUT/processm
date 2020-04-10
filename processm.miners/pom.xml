@@ -18,9 +18,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${parent.groupId}</groupId>
             <artifactId>core</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

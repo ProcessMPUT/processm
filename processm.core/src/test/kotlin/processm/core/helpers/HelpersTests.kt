@@ -80,4 +80,65 @@ class HelpersTests {
             }
         }
     }
+
+    @Test
+    fun subsets() {
+        assertEquals(
+            setOf(
+                setOf(),
+                setOf("a"), setOf("b"), setOf("c"),
+                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
+                setOf("a", "b", "c")
+            ),
+            setOf("a", "b", "c").allSubsets().map { it.toSet() }.toSet()
+        )
+    }
+
+    @Test
+    fun `materialized subsets`() {
+        assertEquals(
+            setOf(
+                setOf(),
+                setOf("a"), setOf("b"), setOf("c"),
+                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
+                setOf("a", "b", "c")
+            ),
+            setOf("a", "b", "c").materializedAllSubsets(false).map { it.toSet() }.toSet()
+        )
+    }
+
+    @Test
+    fun `materialized subsets wihtout empty`() {
+        assertEquals(
+            setOf(
+                setOf("a"), setOf("b"), setOf("c"),
+                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
+                setOf("a", "b", "c")
+            ),
+            setOf("a", "b", "c").materializedAllSubsets(true).map { it.toSet() }.toSet()
+        )
+    }
+
+    @Test
+    fun `subsets of empty`() {
+        assertEquals(
+            setOf(setOf()),
+            setOf<Int>().allSubsets().map { it.toSet() }.toSet()
+        )
+    }
+
+    @Test
+    fun permutations() {
+        assertEquals(
+            setOf(
+                listOf("a", "b", "c"),
+                listOf("a", "c", "b"),
+                listOf("b", "a", "c"),
+                listOf("b", "c", "a"),
+                listOf("c", "a", "b"),
+                listOf("c", "b", "a")
+            ),
+            listOf("a", "b", "c").allPermutations().toSet()
+        )
+    }
 }
