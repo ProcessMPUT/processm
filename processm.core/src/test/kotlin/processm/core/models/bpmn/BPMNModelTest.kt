@@ -48,7 +48,7 @@ class BPMNModelTest {
     fun `bpmnio C10-export gateways`() {
         val dps = c10export.decisionPoints
         assertEquals(3, dps.count())
-        assertTrue { dps.all { it.isStrict && it.possibleOutcomes.size == 2 } }
+        assertTrue { dps.all { it.isRealDecision && it.possibleOutcomes.size == 2 } }
     }
 
     @Test
@@ -56,7 +56,7 @@ class BPMNModelTest {
         val dps =
             BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.0-export.bpmn").inputStream()).decisionPoints
         assertEquals(2, dps.count())
-        assertEquals(3, dps.filter { it.isStrict }.single().possibleOutcomes.size)
+        assertEquals(3, dps.filter { it.isRealDecision }.single().possibleOutcomes.size)
     }
 
     @Test
@@ -64,7 +64,7 @@ class BPMNModelTest {
         val dps =
             BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.1-export.bpmn").inputStream()).decisionPoints
         assertEquals(2, dps.count())
-        assertEquals(3, dps.filter { it.isStrict }.single().possibleOutcomes.size)
+        assertEquals(3, dps.filter { it.isRealDecision }.single().possibleOutcomes.size)
     }
 
     @Test

@@ -3,7 +3,7 @@ package processm.core.models.processtree
 /**
  * This class is responsible for make process tree model simpler and generate it without extra activities
  */
-class ModelSimplifier {
+class ProcessTreeSimplifier {
     /**
      * Simplify process tree
      * WARNING: This action can modify internal structure of given process tree model!
@@ -15,11 +15,11 @@ class ModelSimplifier {
      *   (for example op(op(a, b, c), d) == op(a, b, c, d) if op == ∧ or ×
      * * Replace nodes without children by τ activity
      */
-    fun simplify(model: Model) {
+    fun simplify(model: ProcessTree) {
         val root = model.root
 
         // Ignore
-        if (root != null && root !is Activity) {
+        if (root != null && root !is ProcessTreeActivity) {
             // Simplify process tree
             simplifyProcessTree(root)
 
@@ -50,7 +50,7 @@ class ModelSimplifier {
      * * The tree ×(A,τ,B,τ) will be reduced to ×(A,τ,B), such that at least one τ remains.
      * * The tree ⟲(τ,A,τ,τ,τ,C,τ) will be reduced to ⟲(τ,A,τ,C), such that at least one τ remains as non-first child.
      */
-    fun reduceTauLeafs(model: Model) {
+    fun reduceTauLeafs(model: ProcessTree) {
         if (model.root != null) {
             // Reduce tree
             reduceTauLeafsInModel(model.root!!)
@@ -84,7 +84,7 @@ class ModelSimplifier {
 
             // Replace empty operator with silent activity and move one level up alone child
             when (child.childrenInternal.size) {
-                0 -> if (child !is Activity) replaceChildInNode(node, replaced = child, replacement = SilentActivity())
+                0 -> if (child !is ProcessTreeActivity) replaceChildInNode(node, replaced = child, replacement = SilentActivity())
                 1 -> replaceChildInNode(node, replaced = child, replacement = child.childrenInternal.first())
             }
         }
@@ -96,7 +96,7 @@ class ModelSimplifier {
                 val child = node.childrenInternal[index]
 
                 // If is operator and operator's type like node's type
-                if (child !is Activity && node.symbol == child.symbol) {
+                if (child !is ProcessTreeActivity && node.symbol == child.symbol) {
                     // Remove old node from children list
                     node.childrenInternal.removeAt(index)
 

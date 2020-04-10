@@ -1,9 +1,8 @@
 package processm.core.models.causalnet
 
-import processm.core.models.metadata.DefaultMutableMetadataHandler
 import kotlin.test.*
 
-class MutableModelInstanceTest {
+class MutableCausalNetInstanceTest {
 
     val a = Node("a")
     val b = Node("b")
@@ -19,7 +18,7 @@ class MutableModelInstanceTest {
         a joins c
         b + c join d
     }
-    lateinit var instance: MutableModelInstance
+    lateinit var instance: MutableCausalNetInstance
 
     @BeforeTest
     fun before() {

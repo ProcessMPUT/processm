@@ -55,8 +55,8 @@ abstract class Node(vararg nodes: Node) {
                 yieldAll(child.chilrenRecursive)
         }
 
-    internal abstract val startActivities: kotlin.sequences.Sequence<Activity>
-    internal abstract val endActivities: kotlin.sequences.Sequence<Activity>
+    internal abstract val startActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
+    internal abstract val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
 
     internal abstract fun executionNode(parent: ExecutionNode?): ExecutionNode
 }

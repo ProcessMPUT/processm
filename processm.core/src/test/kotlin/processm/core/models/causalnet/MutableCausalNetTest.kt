@@ -3,7 +3,7 @@ package processm.core.models.causalnet
 import java.lang.IllegalArgumentException
 import kotlin.test.*
 
-class MutableModelTest {
+class MutableCausalNetTest {
 
     //activities inspired by Fig 3.12 in "Process Mining" by Van van der Alst
     private val a = Node("register request")
@@ -19,7 +19,7 @@ class MutableModelTest {
     //constructing model represented at Fig 3.12 in "Process Mining" by Wil van der Aalst
     @Test
     fun constructModel() {
-        var mm = MutableModel(start = a, end = z)
+        var mm = MutableCausalNet(start = a, end = z)
         mm.addInstance(a, b, c, d, e, f, g, h, z)
         listOf(
             a to b, a to c, a to d, b to e, c to e, d to e, e to f, e to g,
@@ -74,7 +74,7 @@ class MutableModelTest {
     @Test
     fun addDependencyWithUnknownTarget() {
         assertFailsWith(IllegalArgumentException::class) {
-            val mm = MutableModel()
+            val mm = MutableCausalNet()
             mm.addInstance(a)
             mm.addDependency(a, b)
         }
@@ -83,7 +83,7 @@ class MutableModelTest {
     @Test
     fun addDependencyWithUnknownSource() {
         assertFailsWith(IllegalArgumentException::class) {
-            val mm = MutableModel()
+            val mm = MutableCausalNet()
             mm.addInstance(b)
             mm.addDependency(Dependency(a, b))
         }
@@ -92,7 +92,7 @@ class MutableModelTest {
     @Test
     fun addSplitWithNoInstance() {
         assertFailsWith(NoSuchElementException::class) {
-            val mm = MutableModel()
+            val mm = MutableCausalNet()
             mm.addInstance(a)
             mm.addSplit(Split(setOf(Dependency(a, b))))
         }
@@ -101,7 +101,7 @@ class MutableModelTest {
     @Test
     fun addSplitWithNoDependency() {
         assertFailsWith(NoSuchElementException::class) {
-            val mm = MutableModel()
+            val mm = MutableCausalNet()
             mm.addInstance(a, b)
             mm.addSplit(Split(setOf(Dependency(a, b))))
         }
@@ -111,7 +111,7 @@ class MutableModelTest {
     @Test
     fun addJoinWithNoInstance() {
         assertFailsWith(NoSuchElementException::class) {
-            val mm = MutableModel()
+            val mm = MutableCausalNet()
             mm.addInstance(a)
             mm.addJoin(Join(setOf(Dependency(a, b))))
         }
@@ -120,7 +120,7 @@ class MutableModelTest {
     @Test
     fun addJoinWithNoDependency() {
         assertFailsWith(NoSuchElementException::class) {
-            val mm = MutableModel()
+            val mm = MutableCausalNet()
             mm.addInstance(a, b)
             mm.addJoin(Join(setOf(Dependency(a, b))))
         }
@@ -128,7 +128,7 @@ class MutableModelTest {
 
     @Test
     fun defaultStartAndEnd() {
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         assertTrue { mm.start in mm.instances }
         assertTrue { mm.end in mm.instances }
         assertTrue { mm.start.special }
@@ -137,7 +137,7 @@ class MutableModelTest {
 
     @Test
     fun multipleActivityInstancesWithSelfLoop() {
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         val a = "a"
         val a1 = Node(a, "1")
         val a2 = Node(a, "2")
@@ -165,7 +165,7 @@ class MutableModelTest {
     @Test
     fun singleActivityInstanceGraph() {
         val a = Node("a")
-        val mm = MutableModel(start = a, end = a)
+        val mm = MutableCausalNet(start = a, end = a)
         mm.addInstance(a)
         assertEquals(setOf(a), mm.instances)
         assertTrue { mm.outgoing[a].isNullOrEmpty() }
@@ -183,7 +183,7 @@ class MutableModelTest {
     @Test
     fun removeSplit() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         val d = mm.addDependency(mm.start, a)
         val s = Split(setOf(d))
@@ -200,7 +200,7 @@ class MutableModelTest {
     @Test
     fun removeJoin() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         val d = mm.addDependency(mm.start, a)
         val s = Join(setOf(d))
@@ -216,7 +216,7 @@ class MutableModelTest {
     @Test
     fun removeExistingJoin() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         mm.addInstance(b)
         val d1 = mm.addDependency(mm.start, a)
@@ -234,7 +234,7 @@ class MutableModelTest {
     @Test
     fun removeNonexistingJoin() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         mm.addInstance(b)
         val d1 = mm.addDependency(mm.start, a)
@@ -248,7 +248,7 @@ class MutableModelTest {
     @Test
     fun removeExistingSplit() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         mm.addInstance(b)
         val d1 = mm.addDependency(mm.start, a)
@@ -266,7 +266,7 @@ class MutableModelTest {
     @Test
     fun removeNonexistingSplit() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         mm.addInstance(b)
         val d1 = mm.addDependency(mm.start, a)
@@ -281,7 +281,7 @@ class MutableModelTest {
     @Test
     fun removeDependency() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         val d = mm.addDependency(mm.start, a)
         assertFailsWith(UnsupportedOperationException::class) {
@@ -301,7 +301,7 @@ class MutableModelTest {
     @Test
     fun removeActivityInstance() {
         val a = Node("a")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a)
         assertFailsWith(UnsupportedOperationException::class) {
             (mm.instances as MutableSet).remove(a)
@@ -310,7 +310,7 @@ class MutableModelTest {
 
     @Test
     fun addSameSplitTwice() {
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         val d = mm.addDependency(mm.start, mm.end)
         mm.addSplit(Split(setOf(d)))
         assertFailsWith(IllegalArgumentException::class) {
@@ -320,7 +320,7 @@ class MutableModelTest {
 
     @Test
     fun addSameJoinTwice() {
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         val d = mm.addDependency(mm.start, mm.end)
         mm.addJoin(Join(setOf(d)))
         assertFailsWith(IllegalArgumentException::class) {
@@ -330,7 +330,7 @@ class MutableModelTest {
 
     @Test
     fun `common interface`() {
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         assertEquals(setOf(mm.start), mm.startActivities.toSet())
         assertEquals(setOf(mm.end), mm.endActivities.toSet())
         assertEquals(mm.instances, mm.activities.toSet())
@@ -341,7 +341,7 @@ class MutableModelTest {
         val a = Node("a")
         val b = Node("b")
         val c = Node("c")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a, b, c)
         mm.addJoin(Join(setOf(mm.addDependency(a, c))))
         mm.addJoin(Join(setOf(mm.addDependency(b, c))))
@@ -364,7 +364,7 @@ class MutableModelTest {
         val a = Node("a")
         val b = Node("b")
         val c = Node("c")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a, b, c)
         mm.addSplit(Split(setOf(mm.addDependency(c, a))))
         mm.addSplit(Split(setOf(mm.addDependency(c, b))))
@@ -387,7 +387,7 @@ class MutableModelTest {
         val a = Node("a")
         val b = Node("b")
         val c = Node("c")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a, b, c)
         mm.addJoin(Join(setOf(mm.addDependency(a, c))))
         mm.addJoin(Join(setOf(mm.addDependency(b, c))))
@@ -417,7 +417,7 @@ class MutableModelTest {
         val a = Node("a")
         val b = Node("b")
         val c = Node("c")
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         mm.addInstance(a, b, c)
         mm.addJoin(Join(setOf(mm.addDependency(a, c))))
         mm.addJoin(Join(setOf(mm.addDependency(b, c))))

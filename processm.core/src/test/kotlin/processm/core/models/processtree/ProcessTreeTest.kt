@@ -2,11 +2,11 @@ package processm.core.models.processtree
 
 import kotlin.test.*
 
-class ModelTest {
+class ProcessTreeTest {
     @Test
     fun `Silent activity and activity without name are different`() {
         val firstModel = processTree { SilentActivity() }
-        val secondModel = processTree { Activity("") }
+        val secondModel = processTree { ProcessTreeActivity("") }
 
         assertFalse(firstModel.languageEqual(secondModel))
         assertFalse(secondModel.languageEqual(firstModel))
@@ -23,8 +23,8 @@ class ModelTest {
 
     @Test
     fun `Models with different activities (single activity in tree) can not be language equal`() {
-        val firstModel = processTree { Activity("A") }
-        val secondModel = processTree { Activity("B") }
+        val firstModel = processTree { ProcessTreeActivity("A") }
+        val secondModel = processTree { ProcessTreeActivity("B") }
 
         assertFalse(firstModel.languageEqual(secondModel))
         assertFalse(secondModel.languageEqual(firstModel))
@@ -34,16 +34,16 @@ class ModelTest {
     fun `Models with XOR can store children in any order`() {
         val firstModel = processTree {
             Exclusive(
-                Activity("A"),
-                Activity("B"),
-                Activity("C")
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C")
             )
         }
         val secondModel = processTree {
             Exclusive(
-                Activity("C"),
-                Activity("B"),
-                Activity("A")
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("A")
             )
         }
 
@@ -55,14 +55,14 @@ class ModelTest {
     fun `Models must store the same attributes, not only the same count`() {
         val firstModel = processTree {
             Exclusive(
-                Activity("A"),
-                Activity("B")
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B")
             )
         }
         val secondModel = processTree {
             Exclusive(
-                Activity("C"),
-                Activity("D")
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("D")
             )
         }
 
@@ -74,23 +74,23 @@ class ModelTest {
     fun `Models with SEQUENCE must store children in the same order`() {
         val firstModel = processTree {
             Sequence(
-                Activity("A"),
-                Activity("B"),
-                Activity("C")
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C")
             )
         }
         val secondModel = processTree {
             Sequence(
-                Activity("B"),
-                Activity("C"),
-                Activity("A")
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("A")
             )
         }
         val extraModel = processTree {
             Sequence(
-                Activity("A"),
-                Activity("B"),
-                Activity("C")
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C")
             )
         }
 
@@ -107,17 +107,17 @@ class ModelTest {
             RedoLoop(
                 SilentActivity(),
                 Exclusive(
-                    Activity("A"),
-                    Activity("B")
+                    ProcessTreeActivity("A"),
+                    ProcessTreeActivity("B")
                 )
             )
         }
         val secondModel = processTree {
             RedoLoop(
-                Activity(""),
+                ProcessTreeActivity(""),
                 Exclusive(
-                    Activity("B"),
-                    Activity("A")
+                    ProcessTreeActivity("B"),
+                    ProcessTreeActivity("A")
                 )
             )
         }
@@ -132,12 +132,12 @@ class ModelTest {
             RedoLoop(
                 SilentActivity(),
                 Exclusive(
-                    Activity("A"),
-                    Activity("B")
+                    ProcessTreeActivity("A"),
+                    ProcessTreeActivity("B")
                 ),
                 Sequence(
-                    Activity("C"),
-                    Activity("D")
+                    ProcessTreeActivity("C"),
+                    ProcessTreeActivity("D")
                 )
             )
         }
@@ -145,12 +145,12 @@ class ModelTest {
             RedoLoop(
                 SilentActivity(),
                 Sequence(
-                    Activity("C"),
-                    Activity("D")
+                    ProcessTreeActivity("C"),
+                    ProcessTreeActivity("D")
                 ),
                 Exclusive(
-                    Activity("B"),
-                    Activity("A")
+                    ProcessTreeActivity("B"),
+                    ProcessTreeActivity("A")
                 )
             )
         }
@@ -164,26 +164,26 @@ class ModelTest {
         val firstModel = processTree {
             Parallel(
                 Exclusive(
-                    Activity("A"),
-                    Activity("B")
+                    ProcessTreeActivity("A"),
+                    ProcessTreeActivity("B")
                 ),
                 Sequence(
-                    Activity("C"),
-                    Activity("D")
+                    ProcessTreeActivity("C"),
+                    ProcessTreeActivity("D")
                 ),
-                Activity("X")
+                ProcessTreeActivity("X")
             )
         }
         val secondModel = processTree {
             Parallel(
-                Activity("X"),
+                ProcessTreeActivity("X"),
                 Sequence(
-                    Activity("C"),
-                    Activity("D")
+                    ProcessTreeActivity("C"),
+                    ProcessTreeActivity("D")
                 ),
                 Exclusive(
-                    Activity("B"),
-                    Activity("A")
+                    ProcessTreeActivity("B"),
+                    ProcessTreeActivity("A")
                 )
             )
         }
@@ -194,7 +194,7 @@ class ModelTest {
 
     @Test
     fun `Node without reference to own parent if root`() {
-        val a = Activity("A")
+        val a = ProcessTreeActivity("A")
         with(processTree { Sequence(a) }) {
             assertNull(root!!.parent)
             assertEquals(toString(), "→(A)")
@@ -203,8 +203,8 @@ class ModelTest {
 
     @Test
     fun `Node with reference to own parent`() {
-        val a = Activity("A")
-        val b = Activity("B")
+        val a = ProcessTreeActivity("A")
+        val b = ProcessTreeActivity("B")
         val model = processTree { Sequence(a, b) }
 
         with(model.root!!) {
@@ -230,7 +230,7 @@ class ModelTest {
         val model = processTree {
             RedoLoop(
                 SilentActivity(),
-                Activity("A")
+                ProcessTreeActivity("A")
             )
         }
 
@@ -241,7 +241,7 @@ class ModelTest {
                 assertTrue(children.isEmpty())
             }
 
-            with(children[1] as Activity) {
+            with(children[1] as ProcessTreeActivity) {
                 assertEquals(name, "A")
                 assertTrue(children.isEmpty())
             }
@@ -253,10 +253,10 @@ class ModelTest {
     @Test
     fun `Model with activity as root - only activity in model`() {
         val model = processTree {
-            Activity("A")
+            ProcessTreeActivity("A")
         }
 
-        with(model.root as Activity) {
+        with(model.root as ProcessTreeActivity) {
             assertEquals(name, "A")
             assertTrue(children.isEmpty())
         }
@@ -269,15 +269,15 @@ class ModelTest {
         // Log file: [{a,b,c,d}, {a,c,b,d}, {a,e,d}]
         val model = processTree {
             Sequence(
-                Activity("A"),
+                ProcessTreeActivity("A"),
                 Exclusive(
                     Parallel(
-                        Activity("B"),
-                        Activity("C")
+                        ProcessTreeActivity("B"),
+                        ProcessTreeActivity("C")
                     ),
-                    Activity("E")
+                    ProcessTreeActivity("E")
                 ),
-                Activity("D")
+                ProcessTreeActivity("D")
             )
         }
 
@@ -287,7 +287,7 @@ class ModelTest {
             assert(this is Sequence)
             assertEquals(children.size, 3)
 
-            with(children[0] as Activity) {
+            with(children[0] as ProcessTreeActivity) {
                 assertEquals(name, "A")
                 assertTrue(children.isEmpty())
             }
@@ -300,24 +300,24 @@ class ModelTest {
                     assert(this is Parallel)
                     assertEquals(children.size, 2)
 
-                    with(children[0] as Activity) {
+                    with(children[0] as ProcessTreeActivity) {
                         assertEquals(name, "B")
                         assertTrue(children.isEmpty())
                     }
 
-                    with(children[1] as Activity) {
+                    with(children[1] as ProcessTreeActivity) {
                         assertEquals(name, "C")
                         assertTrue(children.isEmpty())
                     }
                 }
 
-                with(children[1] as Activity) {
+                with(children[1] as ProcessTreeActivity) {
                     assertEquals(name, "E")
                     assertTrue(children.isEmpty())
                 }
             }
 
-            with(children[2] as Activity) {
+            with(children[2] as ProcessTreeActivity) {
                 assertEquals(name, "D")
                 assertTrue(children.isEmpty())
             }
@@ -329,18 +329,18 @@ class ModelTest {
         // Log file: [{a,b,c,d}, {a,c,b,d}, {a,b,c,e,f,b,c,d}, {a,c,b,e,f,b,c,d}, {a,b,c,e,f,c,b,d}, {a,c,b,e,f,b,c,e,f,c,b,d}]
         val model = processTree {
             Sequence(
-                Activity("A"),
+                ProcessTreeActivity("A"),
                 RedoLoop(
                     Parallel(
-                        Activity("B"),
-                        Activity("C")
+                        ProcessTreeActivity("B"),
+                        ProcessTreeActivity("C")
                     ),
                     Sequence(
-                        Activity("E"),
-                        Activity("F")
+                        ProcessTreeActivity("E"),
+                        ProcessTreeActivity("F")
                     )
                 ),
-                Activity("D")
+                ProcessTreeActivity("D")
             )
         }
 
@@ -350,7 +350,7 @@ class ModelTest {
             assert(this is Sequence)
             assertEquals(children.size, 3)
 
-            with(children[0] as Activity) {
+            with(children[0] as ProcessTreeActivity) {
                 assertEquals(name, "A")
                 assertTrue(children.isEmpty())
             }
@@ -363,12 +363,12 @@ class ModelTest {
                     assert(this is Parallel)
                     assertEquals(children.size, 2)
 
-                    with(children[0] as Activity) {
+                    with(children[0] as ProcessTreeActivity) {
                         assertEquals(name, "B")
                         assertTrue(children.isEmpty())
                     }
 
-                    with(children[1] as Activity) {
+                    with(children[1] as ProcessTreeActivity) {
                         assertEquals(name, "C")
                         assertTrue(children.isEmpty())
                     }
@@ -378,19 +378,19 @@ class ModelTest {
                     assert(this is Sequence)
                     assertEquals(children.size, 2)
 
-                    with(children[0] as Activity) {
+                    with(children[0] as ProcessTreeActivity) {
                         assertEquals(name, "E")
                         assertTrue(children.isEmpty())
                     }
 
-                    with(children[1] as Activity) {
+                    with(children[1] as ProcessTreeActivity) {
                         assertEquals(name, "F")
                         assertTrue(children.isEmpty())
                     }
                 }
             }
 
-            with(children[2] as Activity) {
+            with(children[2] as ProcessTreeActivity) {
                 assertEquals(name, "D")
                 assertTrue(children.isEmpty())
             }
@@ -402,23 +402,23 @@ class ModelTest {
         // Log file: [{a,b,d,e,h}, {a,d,c,e,g}, {a,c,d,e,f,b,d,e,g}, {a,d,b,e,h}, {a,c,d,e,f,d,c,e,f,c,d,e,h}, {a,c,d,e,g}]
         val model = processTree {
             Sequence(
-                Activity("A"),
+                ProcessTreeActivity("A"),
                 RedoLoop(
                     Sequence(
                         Parallel(
                             Exclusive(
-                                Activity("B"),
-                                Activity("C")
+                                ProcessTreeActivity("B"),
+                                ProcessTreeActivity("C")
                             ),
-                            Activity("D")
+                            ProcessTreeActivity("D")
                         ),
-                        Activity("E")
+                        ProcessTreeActivity("E")
                     ),
-                    Activity("F")
+                    ProcessTreeActivity("F")
                 ),
                 Exclusive(
-                    Activity("G"),
-                    Activity("H")
+                    ProcessTreeActivity("G"),
+                    ProcessTreeActivity("H")
                 )
             )
         }
@@ -429,7 +429,7 @@ class ModelTest {
             assert(this is Sequence)
             assertEquals(children.size, 3)
 
-            with(children[0] as Activity) {
+            with(children[0] as ProcessTreeActivity) {
                 assertEquals(name, "A")
                 assertTrue(children.isEmpty())
             }
@@ -450,30 +450,30 @@ class ModelTest {
                             assert(this is Exclusive)
                             assertEquals(children.size, 2)
 
-                            with(children[0] as Activity) {
+                            with(children[0] as ProcessTreeActivity) {
                                 assertEquals(name, "B")
                                 assertTrue(children.isEmpty())
                             }
 
-                            with(children[1] as Activity) {
+                            with(children[1] as ProcessTreeActivity) {
                                 assertEquals(name, "C")
                                 assertTrue(children.isEmpty())
                             }
                         }
 
-                        with(children[1] as Activity) {
+                        with(children[1] as ProcessTreeActivity) {
                             assertEquals(name, "D")
                             assertTrue(children.isEmpty())
                         }
                     }
 
-                    with(children[1] as Activity) {
+                    with(children[1] as ProcessTreeActivity) {
                         assertEquals(name, "E")
                         assertTrue(children.isEmpty())
                     }
                 }
 
-                with(children[1] as Activity) {
+                with(children[1] as ProcessTreeActivity) {
                     assertEquals(name, "F")
                     assertTrue(children.isEmpty())
                 }
@@ -483,12 +483,12 @@ class ModelTest {
                 assert(this is Exclusive)
                 assertEquals(children.size, 2)
 
-                with(children[0] as Activity) {
+                with(children[0] as ProcessTreeActivity) {
                     assertEquals(name, "G")
                     assertTrue(children.isEmpty())
                 }
 
-                with(children[1] as Activity) {
+                with(children[1] as ProcessTreeActivity) {
                     assertEquals(name, "H")
                     assertTrue(children.isEmpty())
                 }
@@ -499,58 +499,58 @@ class ModelTest {
     @Test
     fun `start nodes example from PM page 82`() {
         assertEquals(setOf(SilentActivity()), processTree { SilentActivity() }.startActivities.toSet())
-        assertEquals(setOf(Activity("a")), processTree { Activity("a") }.startActivities.toSet())
+        assertEquals(setOf(ProcessTreeActivity("a")), processTree { ProcessTreeActivity("a") }.startActivities.toSet())
         assertEquals(
-            setOf(Activity("a")),
-            processTree { Sequence(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+            setOf(ProcessTreeActivity("a")),
+            processTree { Sequence(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a"), Activity("b"), Activity("c")),
-            processTree { Exclusive(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+            setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
+            processTree { Exclusive(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a"), Activity("b"), Activity("c")),
-            processTree { Parallel(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+            setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
+            processTree { Parallel(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a")),
-            processTree { RedoLoop(Activity("a"), Activity("b"), Activity("c")) }.startActivities.toSet()
+            setOf(ProcessTreeActivity("a")),
+            processTree { RedoLoop(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a")),
+            setOf(ProcessTreeActivity("a")),
             processTree {
                 Sequence(
-                    Activity("a"),
-                    Exclusive(Activity("b"), Activity("c")),
-                    Parallel(Activity("a"), Activity("a"))
+                    ProcessTreeActivity("a"),
+                    Exclusive(ProcessTreeActivity("b"), ProcessTreeActivity("c")),
+                    Parallel(ProcessTreeActivity("a"), ProcessTreeActivity("a"))
                 )
             }.startActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a"), Activity("c"), SilentActivity()),
+            setOf(ProcessTreeActivity("a"), ProcessTreeActivity("c"), SilentActivity()),
             processTree {
                 Exclusive(
                     SilentActivity(),
-                    Activity("a"),
+                    ProcessTreeActivity("a"),
                     SilentActivity(),
                     Sequence(
                         SilentActivity(),
-                        Activity("b")
+                        ProcessTreeActivity("b")
                     ),
                     Parallel(
-                        Activity("c"),
+                        ProcessTreeActivity("c"),
                         SilentActivity()
                     )
                 )
             }.startActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a")),
+            setOf(ProcessTreeActivity("a")),
             processTree {
                 RedoLoop(
-                    Activity("a"),
+                    ProcessTreeActivity("a"),
                     SilentActivity(),
-                    Activity("c")
+                    ProcessTreeActivity("c")
                 )
             }.startActivities.toSet()
         )
@@ -559,58 +559,58 @@ class ModelTest {
     @Test
     fun `end nodes example from PM page 82`() {
         assertEquals(setOf(SilentActivity()), processTree { SilentActivity() }.endActivities.toSet())
-        assertEquals(setOf(Activity("a")), processTree { Activity("a") }.endActivities.toSet())
+        assertEquals(setOf(ProcessTreeActivity("a")), processTree { ProcessTreeActivity("a") }.endActivities.toSet())
         assertEquals(
-            setOf(Activity("c")),
-            processTree { Sequence(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+            setOf(ProcessTreeActivity("c")),
+            processTree { Sequence(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a"), Activity("b"), Activity("c")),
-            processTree { Exclusive(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+            setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
+            processTree { Exclusive(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a"), Activity("b"), Activity("c")),
-            processTree { Parallel(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+            setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
+            processTree { Parallel(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a")),
-            processTree { RedoLoop(Activity("a"), Activity("b"), Activity("c")) }.endActivities.toSet()
+            setOf(ProcessTreeActivity("a")),
+            processTree { RedoLoop(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a")),
+            setOf(ProcessTreeActivity("a")),
             processTree {
                 Sequence(
-                    Activity("a"),
-                    Exclusive(Activity("b"), Activity("c")),
-                    Parallel(Activity("a"), Activity("a"))
+                    ProcessTreeActivity("a"),
+                    Exclusive(ProcessTreeActivity("b"), ProcessTreeActivity("c")),
+                    Parallel(ProcessTreeActivity("a"), ProcessTreeActivity("a"))
                 )
             }.endActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a"), Activity("b"), Activity("c"), SilentActivity()),
+            setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c"), SilentActivity()),
             processTree {
                 Exclusive(
                     SilentActivity(),
-                    Activity("a"),
+                    ProcessTreeActivity("a"),
                     SilentActivity(),
                     Sequence(
                         SilentActivity(),
-                        Activity("b")
+                        ProcessTreeActivity("b")
                     ),
                     Parallel(
-                        Activity("c"),
+                        ProcessTreeActivity("c"),
                         SilentActivity()
                     )
                 )
             }.endActivities.toSet()
         )
         assertEquals(
-            setOf(Activity("a")),
+            setOf(ProcessTreeActivity("a")),
             processTree {
                 RedoLoop(
-                    Activity("a"),
+                    ProcessTreeActivity("a"),
                     SilentActivity(),
-                    Activity("c")
+                    ProcessTreeActivity("c")
                 )
             }.endActivities.toSet()
         )
@@ -619,21 +619,21 @@ class ModelTest {
     private fun kotlin.sequences.Sequence<InternalNode>.expecting(vararg outcomes: List<Node>) =
         assertEquals(
             outcomes.toList(),
-            this.filter { it.isStrict }.map { it.possibleOutcomes.map { it.node } }.toList()
+            this.filter { it.isRealDecision }.map { it.possibleOutcomes.map { it.node } }.toList()
         )
 
 
     @Test
     fun `decision points ⟲(⟲(a1,a2,a3),⟲(b1,b2,b3),⟲(c1,c2,c3))`() {
-        val a1 = Activity("a1")
-        val a2 = Activity("a2")
-        val a3 = Activity("a3")
-        val b1 = Activity("b1")
-        val b2 = Activity("b2")
-        val b3 = Activity("b3")
-        val c1 = Activity("c1")
-        val c2 = Activity("c2")
-        val c3 = Activity("c3")
+        val a1 = ProcessTreeActivity("a1")
+        val a2 = ProcessTreeActivity("a2")
+        val a3 = ProcessTreeActivity("a3")
+        val b1 = ProcessTreeActivity("b1")
+        val b2 = ProcessTreeActivity("b2")
+        val b3 = ProcessTreeActivity("b3")
+        val c1 = ProcessTreeActivity("c1")
+        val c2 = ProcessTreeActivity("c2")
+        val c3 = ProcessTreeActivity("c3")
         val a = RedoLoop(a1, a2, a3)
         val b = RedoLoop(b1, b2, b3)
         val c = RedoLoop(c1, c2, c3)
@@ -648,12 +648,12 @@ class ModelTest {
 
     @Test
     fun `decision points ∧(a,×(b,c),⟲(d,e,f))`() {
-        val a = Activity("a")
-        val b = Activity("b")
-        val c = Activity("c")
-        val d = Activity("d")
-        val e = Activity("e")
-        val f = Activity("f")
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val c = ProcessTreeActivity("c")
+        val d = ProcessTreeActivity("d")
+        val e = ProcessTreeActivity("e")
+        val f = ProcessTreeActivity("f")
         val loop = RedoLoop(d, e, f)
         val tree = processTree {
             Parallel(

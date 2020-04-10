@@ -2,13 +2,13 @@ package processm.core.models.causalnet
 
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
-import processm.core.models.commons.AbstractReplayer
+import processm.core.models.commons.Replayer
 import java.util.*
 
 /**
  * A simple CausalNet replayer. Unable to skip and not optimized.
  */
-class BasicReplayer(override val model: Model) : AbstractReplayer {
+class BasicReplayer(override val model: CausalNet) : Replayer {
 
     private data class ExecutionState(
         val state: CausalNetState,

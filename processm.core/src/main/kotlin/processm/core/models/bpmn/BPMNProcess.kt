@@ -55,6 +55,6 @@ internal class BPMNProcess internal constructor(base: TProcess) {
     fun get(base: TFlowNode) =
         allActivities.single { it.base === base }
 
-    fun toCausalNet(): MutableModel = BPMN2CausalNet(this).convert()
+    fun toCausalNet(): MutableCausalNet = BPMN2CausalNet(this).convert()
 
 }

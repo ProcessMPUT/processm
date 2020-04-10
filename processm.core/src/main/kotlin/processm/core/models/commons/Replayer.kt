@@ -3,9 +3,9 @@ package processm.core.models.commons
 import processm.core.log.hierarchical.Trace
 
 
-interface AbstractReplayer {
+interface Replayer {
 
-    val model:AbstractModel
+    val model:ProcessModel
 
     /**
      * Returns decisions that need to be made in [model] in order to arrive at [trace].
@@ -14,5 +14,5 @@ interface AbstractReplayer {
      * It may also be impossible to replay given trace in the given model, then depending on the implementation,
      * it may return an empty sequence, or make some skips.
      */
-    fun replay(trace: Trace): Sequence<Sequence<AbstractDecision>>
+    fun replay(trace: Trace): Sequence<Sequence<Decision>>
 }

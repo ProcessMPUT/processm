@@ -2,12 +2,12 @@ package processm.core.models.bpmn
 
 import processm.core.models.bpmn.jaxb.TFlowNode
 import processm.core.models.bpmn.jaxb.TSequenceFlow
-import processm.core.models.commons.AbstractActivity
+import processm.core.models.commons.Activity
 
 /**
  * A base class for warappers of [TFlowNode]
  */
-abstract class BPMNFlowNode internal constructor(internal val process: BPMNProcess) : AbstractActivity {
+abstract class BPMNFlowNode internal constructor(internal val process: BPMNProcess) : Activity {
 
     internal abstract val base: TFlowNode
 

@@ -21,7 +21,7 @@ class CausalNetVerifierImplTest {
         val g = Node("pay compensation")
         val h = Node("reject request")
         val z = Node("end")
-        val mm = MutableModel(start = a, end = z)
+        val mm = MutableCausalNet(start = a, end = z)
         mm.addInstance(a, b, c, d, e, f, g, h, z)
         listOf(
             a to b, a to c, a to d, b to e, c to e, d to e, e to f, e to g,
@@ -68,7 +68,7 @@ class CausalNetVerifierImplTest {
         val c = Node("c")
         val d = Node("d")
         val e = Node("e")
-        val model = MutableModel(start = a, end = e)
+        val model = MutableCausalNet(start = a, end = e)
         model.addInstance(a, b, c, d, e)
         val ab = model.addDependency(a, b)
         val ac = model.addDependency(a, c)
@@ -135,7 +135,7 @@ class CausalNetVerifierImplTest {
         val c = Node("book car")
         val d = Node("book hotel")
         val e = Node("complete booking")
-        val model = MutableModel(start = a, end = e)
+        val model = MutableCausalNet(start = a, end = e)
         model.addInstance(a, b, c, d, e)
         val ab = model.addDependency(a, b)
         val ac = model.addDependency(a, c)
@@ -172,7 +172,7 @@ class CausalNetVerifierImplTest {
         val c = Node("book car")
         val d = Node("book hotel")
         val e = Node("complete booking")
-        val model = MutableModel(start = a, end = e)
+        val model = MutableCausalNet(start = a, end = e)
         model.addInstance(a, b, c, d, e)
         val ab = model.addDependency(a, b)
         val ac = model.addDependency(a, c)
@@ -211,7 +211,7 @@ class CausalNetVerifierImplTest {
 
     @Test
     fun `Fig 3_16`() {
-        val model = MutableModel(start = a, end = e)
+        val model = MutableCausalNet(start = a, end = e)
         model.addInstance(a, b, c, d, e)
         val ab = model.addDependency(a, b)
         val bb = model.addDependency(b, b)
@@ -253,7 +253,7 @@ class CausalNetVerifierImplTest {
 
     @Test
     fun `empty model`() {
-        val model = MutableModel()
+        val model = MutableCausalNet()
         val v = CausalNetVerifierImpl(model)
         assertFalse { v.isSound }
         assertTrue { v.validSequences.none() }
@@ -304,7 +304,7 @@ class CausalNetVerifierImplTest {
 
     @Test
     fun connectivity() {
-        val model = MutableModel(start = a, end = d)
+        val model = MutableCausalNet(start = a, end = d)
         model.addInstance(a, b, c, d)
         model.addDependency(a, b)
         model.addDependency(a, c)

@@ -8,13 +8,13 @@ import processm.core.models.bpmn.jaxb.TSequenceFlow
 import processm.core.models.causalnet.*
 
 
-private fun MutableModel.addDependencies(deps: Iterable<Dependency>) {
+private fun MutableCausalNet.addDependencies(deps: Iterable<Dependency>) {
     for (dep in deps)
         this.addDependency(dep)
 }
 
 internal class BPMN2CausalNet(val bpmn: BPMNProcess) {
-    private lateinit var cnet: MutableModel
+    private lateinit var cnet: MutableCausalNet
     private lateinit var nodes: Map<BPMNFlowNode, Node>
 
     private fun fillNodes() {
@@ -84,8 +84,8 @@ internal class BPMN2CausalNet(val bpmn: BPMNProcess) {
             }
     }
 
-    fun convert(): MutableModel {
-        cnet = MutableModel()
+    fun convert(): MutableCausalNet {
+        cnet = MutableCausalNet()
         fillNodes()
         fillDependencies()
         fillStart()

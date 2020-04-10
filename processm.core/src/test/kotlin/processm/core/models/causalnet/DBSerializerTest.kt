@@ -21,7 +21,7 @@ class DBSerializerTest {
     //constructing model represented at Fig 3.12 in "Process Mining" by Wil van der Aalst
     @Test
     fun `insert fetch and compare`() {
-        var mm = MutableModel(start = a, end = z)
+        var mm = MutableCausalNet(start = a, end = z)
         mm.addInstance(a, b, c, d, e, f, g, h, z)
         listOf(
             a to b, a to c, a to d, b to e, c to e, d to e, e to f, e to g,
@@ -71,7 +71,7 @@ class DBSerializerTest {
 
     @Test
     fun `special nodes handling`() {
-        val orig = MutableModel()
+        val orig = MutableCausalNet()
         val id = DBSerializer.insert(orig)
         val copy = DBSerializer.fetch(id)
         assertEquals(orig.instances, copy.instances)
@@ -83,7 +83,7 @@ class DBSerializerTest {
 
     @Test
     fun `insert fetch delete fetch`() {
-        val mm = MutableModel()
+        val mm = MutableCausalNet()
         val id = DBSerializer.insert(mm)
         DBSerializer.fetch(id)
         DBSerializer.delete(id)

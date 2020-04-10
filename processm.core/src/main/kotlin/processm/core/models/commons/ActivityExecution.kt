@@ -3,8 +3,8 @@ package processm.core.models.commons
 /**
  * Represents the possiblity to execute [activity] in some context
  */
-interface AbstractActivityExecution {
-    val activity: AbstractActivity
+interface ActivityExecution {
+    val activity: Activity
 
     /**
      * Execute [activity] and change the underlying context accordingly.

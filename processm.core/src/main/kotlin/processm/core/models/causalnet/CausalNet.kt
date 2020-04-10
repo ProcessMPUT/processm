@@ -1,6 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.models.commons.AbstractModel
+import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
 import kotlin.collections.HashMap
@@ -9,7 +9,7 @@ import kotlin.collections.HashSet
 /**
  * A read-only causal net model
  */
-abstract class Model(
+abstract class CausalNet(
     /**
      * A unique start activity instance, either real or artificial.
      *
@@ -24,7 +24,7 @@ abstract class Model(
     val end: Node,
     metadataHandler: MetadataHandler
 ) :
-    AbstractModel,
+    ProcessModel,
     MetadataHandler by metadataHandler {
     protected val _instances = HashSet(listOf(start, end))
 
@@ -88,7 +88,7 @@ abstract class Model(
 
     /**
      * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to chose a [Split].
-     * Some of them may be not strict.
+     * Some of them may be not real decisions, i.e., at most one possible outcome.
      */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
@@ -146,7 +146,7 @@ abstract class Model(
         return result
     }
 
-    fun structurallyEquals(other: Model): Boolean {
+    fun structurallyEquals(other: CausalNet): Boolean {
         return instances == other.instances &&
                 incoming == other.incoming &&
                 outgoing == other.outgoing &&

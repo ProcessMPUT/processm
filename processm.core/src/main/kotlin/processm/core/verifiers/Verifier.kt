@@ -1,10 +1,10 @@
 package processm.core.verifiers
 
-import processm.core.models.commons.AbstractModel
+import processm.core.models.commons.ProcessModel
 
 /**
  * Verifies properties of a any model.
  */
-interface Verifier<T : AbstractModel> {
+interface Verifier<T : ProcessModel> {
     fun verify(model: T): VerificationReport
 }

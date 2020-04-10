@@ -1,6 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.models.commons.AbstractState
+import processm.core.models.commons.ProcessModelState
 import processm.core.models.metadata.BasicStatistics
 import processm.core.models.metadata.DefaultMetadataProvider
 import processm.core.models.metadata.IntMetadata
@@ -9,11 +9,11 @@ import processm.core.models.metadata.MutableMetadataHandler
 /**
  * A mutable model instance equipped with metadata providers corresponding to basic statistics
  */
-class MutableModelInstance(
-    model: Model,
-    metadataHandler: MutableMetadataHandler
+class MutableCausalNetInstance(
+        model: CausalNet,
+        metadataHandler: MutableMetadataHandler
 ) :
-    ModelInstance(model, metadataHandler),
+    CausalNetInstance(model, metadataHandler),
     MutableMetadataHandler by metadataHandler {
 
     init {
@@ -27,7 +27,7 @@ class MutableModelInstance(
         resetExecution()
     }
 
-    override val currentState: AbstractState
+    override val currentState: ProcessModelState
         get() = state
 
     override val availableActivities

@@ -1,12 +1,12 @@
 package processm.core.models.causalnet
 
 import org.apache.commons.collections4.multiset.HashMultiSet
-import processm.core.models.commons.AbstractState
+import processm.core.models.commons.ProcessModelState
 
 /**
  * State is a multi-set of pending obligations (the PM book, Definition 3.10)
  */
-class CausalNetState : HashMultiSet<Dependency>, AbstractState {
+class CausalNetState : HashMultiSet<Dependency>, ProcessModelState {
     constructor() : super()
 
     constructor(stateBefore: CausalNetState) : super(stateBefore)
