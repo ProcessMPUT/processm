@@ -22,7 +22,7 @@ class ProcessTreeVerifierTest {
 
     @Test
     fun `Model with single activity is correct process tree`() {
-        val model = processTree { Activity("A") }
+        val model = processTree { ProcessTreeActivity("A") }
 
         with(ProcessTreeVerifier().verify(model) as ProcessTreeVerificationReport) {
             assertTrue(isTree)
@@ -39,15 +39,15 @@ class ProcessTreeVerifierTest {
         val model = processTree {
             Sequence(
                 Exclusive(
-                    Activity("A"),
-                    Activity("B")
+                    ProcessTreeActivity("A"),
+                    ProcessTreeActivity("B")
                 ),
                 RedoLoop(
                     SilentActivity(),
-                    Activity("C"),
-                    Activity("D")
+                    ProcessTreeActivity("C"),
+                    ProcessTreeActivity("D")
                 ),
-                Activity("K")
+                ProcessTreeActivity("K")
             )
         }
 
@@ -64,14 +64,14 @@ class ProcessTreeVerifierTest {
     @Test
     fun `Correct tree built in two steps`() {
         val seq = Sequence(
-            Activity("A"),
-            Activity("B")
+            ProcessTreeActivity("A"),
+            ProcessTreeActivity("B")
         )
 
         val model = processTree {
             Exclusive(
                 seq,
-                Activity("C")
+                ProcessTreeActivity("C")
             )
         }
 
@@ -87,13 +87,13 @@ class ProcessTreeVerifierTest {
 
     @Test
     fun `Invalid tree - child used twice`() {
-        val a = Activity("A")
+        val a = ProcessTreeActivity("A")
         val model = processTree {
             Sequence(
                 a,
                 Exclusive(
                     a,
-                    Activity("B")
+                    ProcessTreeActivity("B")
                 )
             )
         }

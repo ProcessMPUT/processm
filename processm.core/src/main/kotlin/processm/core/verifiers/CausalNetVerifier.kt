@@ -1,6 +1,6 @@
 package processm.core.verifiers
 
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 
 /**
@@ -8,8 +8,8 @@ import processm.core.verifiers.causalnet.CausalNetVerifierImpl
  *
  * Potentially computationally expensive.
  */
-class CausalNetVerifier : Verifier<Model> {
-    override fun verify(model: Model): CausalNetVerificationReport {
+class CausalNetVerifier : Verifier<CausalNet> {
+    override fun verify(model: CausalNet): CausalNetVerificationReport {
         return CausalNetVerificationReport(CausalNetVerifierImpl(model))
     }
 }

@@ -14,7 +14,7 @@ import processm.miners.heuristicminer.bindingproviders.hypothesisselector.Replay
  */
 class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelector) : AbstractBindingProvider() {
 
-    override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
+    override fun computeBindings(model: CausalNet, trace: List<Node>): List<Binding> {
         var currentStates =
             listOf(ReplayTrace(CausalNetState(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
         for (idx in trace.indices) {

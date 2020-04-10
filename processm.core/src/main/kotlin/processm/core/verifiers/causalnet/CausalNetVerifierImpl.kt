@@ -4,7 +4,7 @@ import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.withMemory
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import java.util.*
 import kotlin.collections.HashMap
@@ -17,7 +17,7 @@ typealias CausalNetSequence = List<ActivityBinding>
  *
  * Computations are potentially expensive, but to minimize impact, everything is initialized lazily and then stored
  */
-class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
+class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) {
 
     /**
      * By definition, a causal net model is safe

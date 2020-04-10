@@ -3,7 +3,7 @@ package processm.miners.heuristicminer.bindingproviders
 import processm.core.helpers.allSubsets
 import processm.core.helpers.materializedAllSubsets
 import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 
 abstract class AbstractBindingProvider : BindingProvider {
@@ -13,9 +13,9 @@ abstract class AbstractBindingProvider : BindingProvider {
      * the target of these dependencies must be [currentNode] and they all must be present in [available]
      */
     protected fun consumeCandidates(
-        model: Model,
-        currentNode: Node,
-        available: Set<Dependency>
+            model: CausalNet,
+            currentNode: Node,
+            available: Set<Dependency>
     ): Sequence<Collection<Dependency>> {
         val consumable =
             model.incoming.getOrDefault(currentNode, setOf())
@@ -35,9 +35,9 @@ abstract class AbstractBindingProvider : BindingProvider {
      * the source of these dependencies must be [currentNode] and their targets must be present in [available]
      */
     protected fun produceCandidates(
-        model: Model,
-        currentNode: Node,
-        available: Set<Node>
+            model: CausalNet,
+            currentNode: Node,
+            available: Set<Node>
     ): List<Collection<Dependency>> {
         val producible =
             model.outgoing.getOrDefault(currentNode, setOf())

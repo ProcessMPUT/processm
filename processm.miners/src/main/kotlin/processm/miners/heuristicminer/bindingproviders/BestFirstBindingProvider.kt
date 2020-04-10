@@ -47,7 +47,7 @@ class DefaultComputationStateComparator : Comparator<ComputationState> {
 class BestFirstBindingProvider(val comparator: Comparator<ComputationState> = DefaultComputationStateComparator()) :
     AbstractBindingProvider() {
 
-    override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
+    override fun computeBindings(model: CausalNet, trace: List<Node>): List<Binding> {
         val queue = PriorityQueue(comparator)
         queue.add(ComputationState(0, ReplayTrace(CausalNetState(), listOf(), listOf()), trace))
 

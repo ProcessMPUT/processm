@@ -4,9 +4,9 @@ import processm.core.models.processtree.execution.ActivityExecution
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ModelInstanceTest {
+class CausalNetInstanceTest {
 
-    fun ModelInstance.expecting(vararg what: Activity): List<ActivityExecution> {
+    fun ProcessTreeInstance.expecting(vararg what: ProcessTreeActivity): List<ActivityExecution> {
         val result = this.availableActivityExecutions.toList()
         assertEquals(what.toList(), this.availableActivities.toList())
         assertEquals(what.toList(), result.map { it.base })
@@ -15,10 +15,10 @@ class ModelInstanceTest {
 
     @Test
     fun `×(⟲(a,b),⟲(c,d))`() {
-        val a = Activity("a")
-        val b = Activity("b")
-        val c = Activity("c")
-        val d = Activity("d")
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val c = ProcessTreeActivity("c")
+        val d = ProcessTreeActivity("d")
         val l1 = RedoLoop(a, b)
         val l2 = RedoLoop(c, d)
         val top = Exclusive(l1, l2)

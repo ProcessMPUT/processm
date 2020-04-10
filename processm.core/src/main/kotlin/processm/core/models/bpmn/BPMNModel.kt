@@ -2,14 +2,14 @@ package processm.core.models.bpmn
 
 import processm.core.models.bpmn.jaxb.TDefinitions
 import processm.core.models.bpmn.jaxb.TProcess
-import processm.core.models.commons.AbstractModel
-import processm.core.models.commons.AbstractModelInstance
+import processm.core.models.commons.ProcessModel
+import processm.core.models.commons.ProcessModelInstance
 import java.io.InputStream
 
 /**
  * An entry point for processing a BPMN file. Aggregates multiple BPMN models into a single object.
  */
-class BPMNModel internal constructor(internal val model: TDefinitions) : AbstractModel {
+class BPMNModel internal constructor(internal val model: TDefinitions) : ProcessModel {
 
     companion object {
         /**
@@ -51,7 +51,7 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Abstrac
     /**
      * Instances of BPMN models are currently not supported, as BPMN support is for import/export only.
      */
-    override fun createInstance(): AbstractModelInstance =
+    override fun createInstance(): ProcessModelInstance =
         throw UnsupportedOperationException("BPMN model instances are not supported")
 
 }

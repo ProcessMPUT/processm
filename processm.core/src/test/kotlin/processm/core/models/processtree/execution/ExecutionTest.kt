@@ -8,7 +8,7 @@ import kotlin.test.assertFailsWith
 class ExecutionTest {
 
 
-    private fun ExecutionNode.expecting(vararg what: Activity): List<ActivityExecution> {
+    private fun ExecutionNode.expecting(vararg what: ProcessTreeActivity): List<ActivityExecution> {
         val result = this.available.toList()
         assertEquals(what.toList(), result.map { it.base })
         assertEquals(what.isEmpty(), this.isComplete)
@@ -17,12 +17,12 @@ class ExecutionTest {
 
     @Test
     fun `∧(a,×(b,c),⟲(d,e,f))`() {
-        val a = Activity("a")
-        val b = Activity("b")
-        val c = Activity("c")
-        val d = Activity("d")
-        val e = Activity("e")
-        val f = Activity("f")
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val c = ProcessTreeActivity("c")
+        val d = ProcessTreeActivity("d")
+        val e = ProcessTreeActivity("e")
+        val f = ProcessTreeActivity("f")
         val loop = RedoLoop(d, e, f)
         val tree = processTree {
             Parallel(
@@ -44,15 +44,15 @@ class ExecutionTest {
 
     @Test
     fun `⟲(⟲(a1,a2,a3),⟲(b1,b2,b3),⟲(c1,c2,c3))`() {
-        val a1 = Activity("a1")
-        val a2 = Activity("a2")
-        val a3 = Activity("a3")
-        val b1 = Activity("b1")
-        val b2 = Activity("b2")
-        val b3 = Activity("b3")
-        val c1 = Activity("c1")
-        val c2 = Activity("c2")
-        val c3 = Activity("c3")
+        val a1 = ProcessTreeActivity("a1")
+        val a2 = ProcessTreeActivity("a2")
+        val a3 = ProcessTreeActivity("a3")
+        val b1 = ProcessTreeActivity("b1")
+        val b2 = ProcessTreeActivity("b2")
+        val b3 = ProcessTreeActivity("b3")
+        val c1 = ProcessTreeActivity("c1")
+        val c2 = ProcessTreeActivity("c2")
+        val c3 = ProcessTreeActivity("c3")
         val a = RedoLoop(a1, a2, a3)
         val b = RedoLoop(b1, b2, b3)
         val c = RedoLoop(c1, c2, c3)
@@ -73,15 +73,15 @@ class ExecutionTest {
 
     @Test
     fun `⟲(→(a1,a2,a3),→(b1,b2,b3),→(c1,c2,c3))`() {
-        val a1 = Activity("a1")
-        val a2 = Activity("a2")
-        val a3 = Activity("a3")
-        val b1 = Activity("b1")
-        val b2 = Activity("b2")
-        val b3 = Activity("b3")
-        val c1 = Activity("c1")
-        val c2 = Activity("c2")
-        val c3 = Activity("c3")
+        val a1 = ProcessTreeActivity("a1")
+        val a2 = ProcessTreeActivity("a2")
+        val a3 = ProcessTreeActivity("a3")
+        val b1 = ProcessTreeActivity("b1")
+        val b2 = ProcessTreeActivity("b2")
+        val b3 = ProcessTreeActivity("b3")
+        val c1 = ProcessTreeActivity("c1")
+        val c2 = ProcessTreeActivity("c2")
+        val c3 = ProcessTreeActivity("c3")
         val a = Sequence(a1, a2, a3)
         val b = Sequence(b1, b2, b3)
         val c = Sequence(c1, c2, c3)
@@ -101,16 +101,16 @@ class ExecutionTest {
 
     @Test
     fun `→(a,∧(→(b1,∧(c1,d1),e1),→(b2,∧(c2,d2),e2)),f)`() {
-        val a = Activity("a")
-        val b1 = Activity("b1")
-        val b2 = Activity("b2")
-        val c1 = Activity("c1")
-        val c2 = Activity("c2")
-        val d1 = Activity("d1")
-        val d2 = Activity("d2")
-        val e1 = Activity("e1")
-        val e2 = Activity("e2")
-        val f = Activity("f")
+        val a = ProcessTreeActivity("a")
+        val b1 = ProcessTreeActivity("b1")
+        val b2 = ProcessTreeActivity("b2")
+        val c1 = ProcessTreeActivity("c1")
+        val c2 = ProcessTreeActivity("c2")
+        val d1 = ProcessTreeActivity("d1")
+        val d2 = ProcessTreeActivity("d2")
+        val e1 = ProcessTreeActivity("e1")
+        val e2 = ProcessTreeActivity("e2")
+        val f = ProcessTreeActivity("f")
         val model = processTree {
             Sequence(
                 a,
@@ -139,10 +139,10 @@ class ExecutionTest {
 
     @Test
     fun `×(⟲(a,b),⟲(c,d))`() {
-        val a = Activity("a")
-        val b = Activity("b")
-        val c = Activity("c")
-        val d = Activity("d")
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val c = ProcessTreeActivity("c")
+        val d = ProcessTreeActivity("d")
         val l1 = RedoLoop(a, b)
         val l2 = RedoLoop(c, d)
         val top = Exclusive(l1, l2)
@@ -164,8 +164,8 @@ class ExecutionTest {
 
     @Test
     fun `children of an Activity are not supported`() {
-        val a = Activity("a")
-        val b = Activity("b")
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
         assertFailsWith<UnsupportedOperationException> { b.executionNode(a.executionNode(null)).execute() }
     }
 }

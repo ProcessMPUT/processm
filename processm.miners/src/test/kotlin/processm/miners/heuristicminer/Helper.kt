@@ -6,7 +6,7 @@ import processm.core.log.Event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.verifiers.CausalNetVerifier
 import kotlin.test.assertEquals
@@ -18,7 +18,7 @@ object Helper {
         return inp.map { seq -> seq.map { it.activity } }.toString()
     }
 
-    fun logFromModel(model: Model): Log {
+    fun logFromModel(model: CausalNet): Log {
         val tmp = CausalNetVerifier().verify(model).validLoopFreeSequences.map { seq -> seq.map { it.a } }
             .toSet()
         return Log(tmp.map { seq -> Trace(seq.asSequence().map { event(it.activity) }) }.asSequence())
@@ -31,7 +31,7 @@ object Helper {
                 .asSequence()
         )
 
-    fun compareWithReference(reference: Model, miner: (Log) -> Model) {
+    fun compareWithReference(reference: CausalNet, miner: (Log) -> CausalNet) {
         logger().debug("REFERENCE:\n${reference}")
         val referenceVerifier = CausalNetVerifier().verify(reference)
         val expectedSequences =

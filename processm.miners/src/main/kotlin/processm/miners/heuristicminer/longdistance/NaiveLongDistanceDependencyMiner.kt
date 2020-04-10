@@ -2,7 +2,7 @@ package processm.miners.heuristicminer.longdistance
 
 import processm.core.helpers.Counter
 import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 import processm.miners.heuristicminer.longdistance.avoidability.ValidSequenceBasedAvoidabilityChecker
@@ -26,7 +26,7 @@ class NaiveLongDistanceDependencyMiner(
         }.flatten())
     }
 
-    override fun mine(model: Model): Collection<Dependency> {
+    override fun mine(model: CausalNet): Collection<Dependency> {
         val known = (model.outgoing + model.incoming)
             .values
             .flatten()

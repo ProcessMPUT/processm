@@ -1,11 +1,11 @@
 package processm.core.models.processtree
 
-import processm.core.models.commons.AbstractModel
+import processm.core.models.commons.ProcessModel
 
 /**
  * Process Tree model with `root` reference
  */
-class Model(root: Node? = null) : AbstractModel {
+class ProcessTree(root: Node? = null) : ProcessModel {
     var root: Node? = root
         internal set
 
@@ -16,7 +16,7 @@ class Model(root: Node? = null) : AbstractModel {
     /**
      * Check language equal between two models (two process tree)
      */
-    fun languageEqual(other: Model): Boolean {
+    fun languageEqual(other: ProcessTree): Boolean {
         return isLanguageEqual(root, other.root)
     }
 
@@ -33,7 +33,7 @@ class Model(root: Node? = null) : AbstractModel {
         if (model.children.size != other.children.size) return false
 
         // Compare only if both activities
-        if (model is Activity)
+        if (model is ProcessTreeActivity)
             return model == other
 
         // Sequence should contain the same order of children
@@ -86,19 +86,19 @@ class Model(root: Node? = null) : AbstractModel {
                 emptySequence()
         }
 
-    override val activities: kotlin.sequences.Sequence<Activity>
-        get() = allNodes.filterIsInstance<Activity>()
+    override val activities: kotlin.sequences.Sequence<ProcessTreeActivity>
+        get() = allNodes.filterIsInstance<ProcessTreeActivity>()
 
-    override val startActivities: kotlin.sequences.Sequence<Activity>
+    override val startActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
         get() = root?.startActivities.orEmpty()
 
-    override val endActivities: kotlin.sequences.Sequence<Activity>
+    override val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
         get() = root?.endActivities.orEmpty()
 
     override val decisionPoints: kotlin.sequences.Sequence<InternalNode>
         get() = allNodes.filterIsInstance<InternalNode>()
 
-    override fun createInstance() = ModelInstance(this)
+    override fun createInstance() = ProcessTreeInstance(this)
 
 
 }

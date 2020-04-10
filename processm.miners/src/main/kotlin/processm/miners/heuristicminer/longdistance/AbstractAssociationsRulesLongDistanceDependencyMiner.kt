@@ -2,7 +2,7 @@ package processm.miners.heuristicminer.longdistance
 
 import processm.core.logging.logger
 import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 
@@ -46,7 +46,7 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
         return latest.single()
     }
 
-    override fun mine(currentModel: Model): Collection<Dependency> {
+    override fun mine(currentModel: CausalNet): Collection<Dependency> {
         isAvoidable.setContext(currentModel)
         val result = ArrayList<Dependency>()
         for ((premises, conclusions) in deps) {

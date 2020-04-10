@@ -2,12 +2,12 @@ package processm.core.models.bpmn
 
 import processm.core.helpers.allSubsets
 import processm.core.models.bpmn.jaxb.*
-import processm.core.models.commons.AbstractDecisionPoint
+import processm.core.models.commons.DecisionPoint
 
 /**
- * A wrapper for [TGateway]. Implements [AbstractDecisionPoint], but not always this is a real decision point.
+ * A wrapper for [TGateway]. Implements [DecisionPoint], but not always this is a real decision point.
  */
-class BPMNGateway internal constructor(override val base: TGateway, internal val process: BPMNProcess) : BPMNFlowNode(), AbstractDecisionPoint {
+class BPMNGateway internal constructor(override val base: TGateway, internal val process: BPMNProcess) : BPMNFlowNode(), DecisionPoint {
 
     override val name: String
         get() = base.name

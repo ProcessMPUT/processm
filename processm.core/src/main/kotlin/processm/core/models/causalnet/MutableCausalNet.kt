@@ -6,11 +6,11 @@ import processm.core.models.metadata.MutableMetadataHandler
 /**
  * The default implementation of a causal net model
  */
-class MutableModel(
+class MutableCausalNet(
     start: Node = Node("start", special = true),
     end: Node = Node("end", special = true),
     private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler()
-) : Model(start, end, metadataHandler),
+) : CausalNet(start, end, metadataHandler),
     MutableMetadataHandler by metadataHandler {
 
     /**
@@ -67,7 +67,7 @@ class MutableModel(
     /**
      * Creates an instance of this model with the same [metadataHandler]
      */
-    override fun createInstance() = MutableModelInstance(this, metadataHandler)
+    override fun createInstance() = MutableCausalNetInstance(this, metadataHandler)
 
     /**
      * Removes the given split.

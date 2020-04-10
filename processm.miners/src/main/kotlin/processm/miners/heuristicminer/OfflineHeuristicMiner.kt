@@ -38,7 +38,7 @@ class OfflineHeuristicMiner(
 
     private fun mineBindings(
         logWithNodes: Sequence<List<Node>>,
-        model: MutableModel
+        model: MutableCausalNet
     ) {
         joinSelector.reset()
         splitSelector.reset()
@@ -58,13 +58,13 @@ class OfflineHeuristicMiner(
                 model.addSplit(split)
     }
 
-    private fun removeUnusedParts(model: MutableModel): MutableModel {
+    private fun removeUnusedParts(model: MutableCausalNet): MutableCausalNet {
         val usedDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
         val usedNodes = (usedDependencies.map { it.source } + usedDependencies.map { it.target }).toSet()
         //If start or end are not used something went horribly wrong and we may as well throw, as the final model won't even have a connected dependency graph
         check(usedNodes.contains(model.start))
         check(usedNodes.contains(model.end))
-        val finalModel = MutableModel(start = model.start, end = model.end)
+        val finalModel = MutableCausalNet(start = model.start, end = model.end)
         finalModel.addInstance(*usedNodes.toTypedArray())
         val dep2finalDep = HashMap<Dependency, Dependency>()
         for (dep in usedDependencies) {
@@ -88,8 +88,8 @@ class OfflineHeuristicMiner(
         return finalModel
     }
 
-    override val result: MutableModel by lazy {
-        val model = MutableModel(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
+    override val result: MutableCausalNet by lazy {
+        val model = MutableCausalNet(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
         model.addInstance(*dependencyGraphProvider.nodes.toTypedArray())
         for (dep in dependencyGraphProvider.computeDependencyGraph())
             model.addDependency(dep)

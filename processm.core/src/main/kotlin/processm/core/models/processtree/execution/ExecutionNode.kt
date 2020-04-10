@@ -1,9 +1,9 @@
 package processm.core.models.processtree.execution
 
-import processm.core.models.commons.AbstractState
+import processm.core.models.commons.ProcessModelState
 import processm.core.models.processtree.Node
 
-abstract class ExecutionNode(open val base: Node, internal val parent: ExecutionNode?) : AbstractState {
+abstract class ExecutionNode(open val base: Node, internal val parent: ExecutionNode?) : ProcessModelState {
     /**
      * Activities (possibly silent) that can be currently executed in the process tree rooted at [base].
      * Empty if [isComplete] is true

@@ -2,14 +2,14 @@ package processm.core.models.causalnet
 
 import processm.core.helpers.Counter
 import processm.core.log.hierarchical.Trace
-import processm.core.models.commons.AbstractDecision
-import processm.core.models.commons.AbstractDecisionModel
-import processm.core.models.commons.AbstractExplanation
+import processm.core.models.commons.Decision
+import processm.core.models.commons.DecisionModel
+import processm.core.models.commons.Explanation
 
 /**
- * This is a proof-of-concept of [AbstractDecisionModel] to showcase its API
+ * This is a proof-of-concept of [DecisionModel] to showcase its API
  */
-class PoCDecisionModel(val featureName: String) : AbstractDecisionModel {
+class PoCDecisionModel(val featureName: String) : DecisionModel {
 
     private class Stump<Feature, Outcome> {
         private val backend = HashMap<Feature, Counter<Outcome>>()
@@ -21,13 +21,13 @@ class PoCDecisionModel(val featureName: String) : AbstractDecisionModel {
         fun distribution(f: Feature) = backend.getOrPut(f, { Counter() })
     }
 
-    private data class TextualExplanation(val text: String) : AbstractExplanation {
+    private data class TextualExplanation(val text: String) : Explanation {
         override fun toString(): String = text
     }
 
     private val stumps = HashMap<DecisionPoint, Stump<Any?, Binding?>>()
 
-    override fun train(trace: Trace, seqdecisions: Sequence<AbstractDecision>) {
+    override fun train(trace: Trace, seqdecisions: Sequence<Decision>) {
         val events = trace.events.toList()
         for ((pos, dec) in seqdecisions.withIndex()) {
             check(dec is BindingDecision)
@@ -39,7 +39,7 @@ class PoCDecisionModel(val featureName: String) : AbstractDecisionModel {
         }
     }
 
-    override fun explain(trace: Trace, decisions: Sequence<AbstractDecision>): Sequence<AbstractExplanation> =
+    override fun explain(trace: Trace, decisions: Sequence<Decision>): Sequence<Explanation> =
         sequence {
             val events = trace.events.toList()
             for ((pos, dec) in decisions.withIndex()) {

@@ -3,7 +3,7 @@ package processm.miners.processtree.directlyfollowsgraph
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.logging.logger
-import processm.core.models.processtree.Activity
+import processm.core.models.processtree.ProcessTreeActivity
 import java.util.*
 
 /**
@@ -21,7 +21,7 @@ class DirectlyFollowsGraph {
      *  B -> B, cardinality 2
      *  B -> C, cardinality 1
      */
-    val graph = HashMap<Activity, HashMap<Activity, Arc>>()
+    val graph = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -32,7 +32,7 @@ class DirectlyFollowsGraph {
      * Log <A, B, C> will be build as:
      *  A, cardinality 1
      */
-    val startActivities = HashMap<Activity, Arc>()
+    val startActivities = HashMap<ProcessTreeActivity, Arc>()
 
     /**
      * Map with end activities (last activity in trace) + arc statistics
@@ -43,7 +43,7 @@ class DirectlyFollowsGraph {
      * Log <A, B, C> will be build as:
      *  C, cardinality 1
      */
-    val endActivities = HashMap<Activity, Arc>()
+    val endActivities = HashMap<ProcessTreeActivity, Arc>()
 
     /**
      * Build directly-follows graph
@@ -57,12 +57,12 @@ class DirectlyFollowsGraph {
 
     private fun discoverGraph(log: Log) {
         log.traces.forEach { trace ->
-            var previousActivity: Activity? = null
+            var previousActivity: ProcessTreeActivity? = null
 
             // Iterate over all events in current trace
             trace.events.forEach { event ->
                 // TODO: we should receive activity instead of build it here
-                val activity = Activity(event.conceptName!!)
+                val activity = ProcessTreeActivity(event.conceptName!!)
 
                 // Add connection
                 if (previousActivity == null)
@@ -83,7 +83,7 @@ class DirectlyFollowsGraph {
     /**
      * Add connection between two activities in trace and increment statistics of arc.
      */
-    private fun addConnectionInGraph(from: Activity, to: Activity) {
+    private fun addConnectionInGraph(from: ProcessTreeActivity, to: ProcessTreeActivity) {
         graph.getOrPut(from, { HashMap() }).getOrPut(to, { Arc() }).increment()
     }
 
@@ -91,7 +91,7 @@ class DirectlyFollowsGraph {
      * Add connection from source and first seen activity in trace.
      * Increment statistics of arc in activities map.
      */
-    private fun addConnectionFromSource(activity: Activity) {
+    private fun addConnectionFromSource(activity: ProcessTreeActivity) {
         startActivities.getOrPut(activity, { Arc() }).increment()
     }
 
@@ -99,7 +99,7 @@ class DirectlyFollowsGraph {
      * Add connection from last seen activity in trace to sink.
      * Increment statistics of arc in end activities map.
      */
-    private fun addConnectionToSink(activity: Activity) {
+    private fun addConnectionToSink(activity: ProcessTreeActivity) {
         endActivities.getOrPut(activity, { Arc() }).increment()
     }
 

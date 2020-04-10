@@ -1,10 +1,10 @@
 package processm.core.models.processtree
 
-import processm.core.models.commons.AbstractActivity
+import processm.core.models.commons.Activity
 import processm.core.models.processtree.execution.ActivityExecution
 import processm.core.models.processtree.execution.ExecutionNode
 
-open class Activity(name: String) : Node(), AbstractActivity {
+open class ProcessTreeActivity(name: String) : Node(), Activity {
     /**
      * The name of an activity as a representation of an object
      */
@@ -18,7 +18,7 @@ open class Activity(name: String) : Node(), AbstractActivity {
 
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
-        if (other !is Activity) return false
+        if (other !is ProcessTreeActivity) return false
         return name == other.name && super.equals(other)
     }
 
@@ -28,9 +28,9 @@ open class Activity(name: String) : Node(), AbstractActivity {
         return result
     }
 
-    override val startActivities: kotlin.sequences.Sequence<Activity> = sequenceOf(this)
+    override val startActivities: kotlin.sequences.Sequence<ProcessTreeActivity> = sequenceOf(this)
 
-    override val endActivities: kotlin.sequences.Sequence<Activity> = sequenceOf(this)
+    override val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity> = sequenceOf(this)
 
     override fun executionNode(parent: ExecutionNode?): ActivityExecution = ActivityExecution(this, parent)
 }

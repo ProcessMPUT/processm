@@ -6,4 +6,4 @@ package processm.core.models.commons
  * This is inspired by PM, chapter 9 "Mining additional perspectives", which hints that, e.g., a decision model is not an inherent property of a model,
  * but rather another view on the same underlying business process
  */
-class MultiPerspectiveModel(val processModel: AbstractModel, val decisionModel: AbstractDecisionModel?)
+class MultiPerspectiveModel(val processModel: ProcessModel, val decisionModel: DecisionModel?)

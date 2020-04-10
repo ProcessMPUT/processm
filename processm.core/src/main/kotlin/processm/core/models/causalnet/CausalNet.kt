@@ -1,7 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.models.commons.AbstractActivity
-import processm.core.models.commons.AbstractModel
+import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
 import kotlin.collections.HashMap
@@ -10,7 +9,7 @@ import kotlin.collections.HashSet
 /**
  * A read-only causal net model
  */
-abstract class Model(
+abstract class CausalNet(
     /**
      * A unique start activity instance, either real or artificial.
      *
@@ -25,7 +24,7 @@ abstract class Model(
     val end: Node,
     metadataHandler: MetadataHandler
 ) :
-    AbstractModel,
+    ProcessModel,
     MetadataHandler by metadataHandler {
     protected val _instances = HashSet(listOf(start, end))
 
