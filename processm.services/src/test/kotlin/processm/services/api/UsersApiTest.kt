@@ -1,17 +1,17 @@
 package processm.services.api
 
-import io.ktor.config.MapApplicationConfig
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.request.header
 import io.ktor.server.testing.handleRequest
-import io.ktor.server.testing.withTestApplication
+import io.mockk.every
+import io.mockk.mockk
 import org.awaitility.Awaitility.await
+import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import processm.services.api.models.*
-import processm.services.apiModule
 import java.util.stream.Stream
 import kotlin.random.Random
 import kotlin.random.nextInt
@@ -26,13 +26,15 @@ class UsersApiTest : BaseApiTest() {
         HttpMethod.Get to "/api/users/me"
     )
 
-    override fun endpointsWithNoImplementation() = Stream.of(
-        HttpMethod.Post to "/api/users",
-        HttpMethod.Delete to "/api/users/session"
-    )
+    override fun endpointsWithNoImplementation() = Stream.of<Pair<HttpMethod, String>?>(null)
 
     @Test
     fun `responds to successful authentication with 201 and token`() = withConfiguredTestApplication {
+        every { accountService.verifyUsersCredentials("user", "pass") } returns mockk {
+            every { id } returns EntityID<Long>(1, mockk())
+            every { this@mockk.username } returns "user"
+        }
+
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             withSerializedBody(UserCredentialsMessageBody(UserCredentials("user", "pass")))
@@ -44,6 +46,8 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to unsuccessful authentication with 401 and error message`() = withConfiguredTestApplication {
+        every { accountService.verifyUsersCredentials(username = any(), password = any()) } returns null
+
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             withSerializedBody(UserCredentialsMessageBody(UserCredentials("user", "wrong_password")))
@@ -54,15 +58,9 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to request with expired token with 401`() = withTestApplication {
+    fun `responds to request with expired token with 401`() = withConfiguredTestApplication({
         // token expires one second after creation
-        (environment.config as MapApplicationConfig).apply {
-            put("ktor.jwt.issuer", "issuer")
-            put("ktor.jwt.realm", "test")
-            put("ktor.jwt.secret", "secretkey123")
-            put("ktor.jwt.tokenTtl", "PT1S")
-        }
-        application.apiModule()
+        put("ktor.jwt.tokenTtl", "PT1S") }) {
 
         withAuthentication {
             // wait till the current token expires
@@ -79,15 +77,9 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to authentication request with valid expired token with 201 and renewed token`() = withTestApplication {
+    fun `responds to authentication request with valid expired token with 201 and renewed token`() = withConfiguredTestApplication({
         // token expires two seconds after creation
-        (environment.config as MapApplicationConfig).apply {
-            put("ktor.jwt.issuer", "issuer")
-            put("ktor.jwt.realm", "test")
-            put("ktor.jwt.secret", "secretkey123")
-            put("ktor.jwt.tokenTtl", "PT2S")
-        }
-        application.apiModule()
+        put("ktor.jwt.tokenTtl", "PT2S") }) {
 
         var renewedToken: String? = null
 
@@ -158,7 +150,7 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds with 200 and users list`() = withConfiguredTestApplication {
+    fun `responds to users list request with 200 and users list`() = withConfiguredTestApplication {
         withAuthentication {
             with(handleRequest(HttpMethod.Get, "/api/users")) {
                 assertEquals(HttpStatusCode.OK, response.status())
@@ -168,13 +160,20 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds with 200 and current user account details`() = withConfiguredTestApplication {
+    fun `responds to user details request with 200 and current user account details`() = withConfiguredTestApplication {
+
+        every { accountService.getAccountDetails(1) } returns mockk {
+            every { username } returns "user1"
+            every { locale } returns "en_US"
+        }
+
         withAuthentication {
             with(handleRequest(HttpMethod.Get, "/api/users/me")) {
+
                 assertEquals(HttpStatusCode.OK, response.status())
                 val deserializedContent = response.deserializeContent<UserAccountInfoMessageBody>()
-                assertEquals("user", deserializedContent.data.username)
-                assertEquals(OrganizationRole.owner, deserializedContent.data.organizationRoles!!["org1"])
+                assertEquals("user1", deserializedContent.data.username)
+                assertEquals("en_US", deserializedContent.data.locale)
             }
         }
     }

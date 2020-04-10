@@ -8,23 +8,42 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.*
+import io.mockk.MockKAnnotations
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkClass
+import org.jetbrains.exposed.dao.id.EntityID
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.koin.test.AutoCloseKoinTest
+import org.koin.test.mock.MockProvider
+import org.koin.test.mock.declareMock
 import processm.services.api.models.AuthenticationResult
 import processm.services.apiModule
+import processm.services.logic.AccountService
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-abstract class BaseApiTest {
+abstract class BaseApiTest : AutoCloseKoinTest() {
 
-    protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>>
-    protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>>
+    protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
+    protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
 
+    @BeforeEach
+    open fun setUp() {
+        MockKAnnotations.init(this, relaxUnitFun = true)
+        MockProvider.register { mockedClass -> mockkClass(mockedClass) }
+    }
 
     @ParameterizedTest
     @MethodSource("endpointsWithAuthentication")
-    fun `responds to not authenticated requests with 403`(requestEndpoint: Pair<HttpMethod, String>) = withConfiguredTestApplication {
+    fun `responds to not authenticated requests with 403`(requestEndpoint: Pair<HttpMethod, String>?) = withConfiguredTestApplication {
+        if (requestEndpoint == null) {
+            return@withConfiguredTestApplication
+        }
+
         val (method, path) = requestEndpoint
         with(handleRequest(method, path)) {
             assertEquals(HttpStatusCode.Unauthorized, response.status())
@@ -33,7 +52,11 @@ abstract class BaseApiTest {
 
     @ParameterizedTest
     @MethodSource("endpointsWithNoImplementation")
-    fun `responds to not implemented requests with 501`(requestEndpoint: Pair<HttpMethod, String>) = withConfiguredTestApplication {
+    fun `responds to not implemented requests with 501`(requestEndpoint: Pair<HttpMethod, String>?) = withConfiguredTestApplication {
+        if (requestEndpoint == null) {
+            return@withConfiguredTestApplication
+        }
+
         withAuthentication {
             val (method, path) = requestEndpoint
             with(handleRequest(method, path)) {
@@ -42,22 +65,38 @@ abstract class BaseApiTest {
         }
     }
 
-    protected fun <R> withConfiguredTestApplication(test: TestApplicationEngine.() -> R): R = withTestApplication {
-        (environment.config as MapApplicationConfig).apply {
+    protected lateinit var accountService: AccountService
+
+    protected fun <R> withConfiguredTestApplication(
+        configurationCustomization: (MapApplicationConfig.() -> Unit)? = null,
+        testLogic: TestApplicationEngine.() -> R): R = withTestApplication {
+
+        val configuration = (environment.config as MapApplicationConfig).apply {
             put("ktor.jwt.issuer", "issuer")
             put("ktor.jwt.realm", "test")
             put("ktor.jwt.secret", "secretkey123")
             put("ktor.jwt.tokenTtl", "PT10S")
         }
+        configurationCustomization?.invoke(configuration)
+
         application.apiModule()
-        test(this)
+        accountService = declareMock { }
+
+        testLogic(this)
     }
 
     protected fun TestApplicationEngine.withAuthentication(
         username: String = "user",
         password: String = "pass",
-        callback: JwtAuthenticationTrackingEngine.() -> Unit) =
+        callback: JwtAuthenticationTrackingEngine.() -> Unit) {
+
+        every { accountService.verifyUsersCredentials(username, password) } returns mockk {
+            every { id } returns EntityID<Long>(1, mockk())
+            every { this@mockk.username } returns username
+        }
+
         callback(JwtAuthenticationTrackingEngine(this, username, password))
+    }
 
     protected class JwtAuthenticationTrackingEngine(
         private val engine: TestApplicationEngine,

@@ -2,10 +2,11 @@ package processm.services.api
 
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.content.resolveResource
 import org.junit.Test
 import org.junit.jupiter.api.TestInstance
-import processm.services.api.models.*
+import processm.services.api.models.GroupCollectionMessageBody
+import processm.services.api.models.GroupMessageBody
+import processm.services.api.models.GroupRole
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
