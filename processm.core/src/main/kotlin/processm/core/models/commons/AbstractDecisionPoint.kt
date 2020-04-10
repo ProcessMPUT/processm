@@ -13,6 +13,6 @@ interface AbstractDecisionPoint {
     /**
      * True if there is real decision to make here, e.g., an exclusive choice with more than one possible outcome
      */
-    val isStrict: Boolean
+    val isRealDecision: Boolean
         get() = possibleOutcomes.size > 1
 }

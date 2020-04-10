@@ -43,7 +43,7 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Abstrac
         get() = processes.asSequence().flatMap { it.endActivities }
 
     /**
-     * Lists all decisions points of the model, i.e., all the gateways. Some of them may not be strict decision points.
+     * Lists all decisions points of the model, i.e., all the gateways. Some of them may be not real decision points.
      */
     override val decisionPoints: Sequence<BPMNGateway>
         get() = processes.asSequence().flatMap { it.allActivities.asSequence().filterIsInstance<BPMNGateway>() }

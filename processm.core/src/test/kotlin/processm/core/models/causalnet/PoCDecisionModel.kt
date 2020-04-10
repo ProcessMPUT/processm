@@ -31,7 +31,7 @@ class PoCDecisionModel(val featureName: String) : AbstractDecisionModel {
         val events = trace.events.toList()
         for ((pos, dec) in seqdecisions.withIndex()) {
             check(dec is BindingDecision)
-            if (!dec.decisionPoint.isStrict)
+            if (!dec.decisionPoint.isRealDecision)
                 continue
             val event = events[pos / 2]
             val feature = event.attributes[featureName]?.getValue()
@@ -45,7 +45,7 @@ class PoCDecisionModel(val featureName: String) : AbstractDecisionModel {
             for ((pos, dec) in decisions.withIndex()) {
                 check(dec is BindingDecision)
                 val event = events[pos / 2]
-                if (dec.decisionPoint.isStrict) {
+                if (dec.decisionPoint.isRealDecision) {
                     val feature = event.attributes[featureName]?.getValue()
                     val dist =
                         stumps.getOrPut(dec.decisionPoint, { Stump<Any?,Binding?>() }).distribution(feature)

@@ -89,7 +89,7 @@ abstract class Model(
 
     /**
      * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to chose a [Split].
-     * Some of them may be not strict.
+     * Some of them may be not real decisions, i.e., at most one possible outcome.
      */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +

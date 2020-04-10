@@ -619,7 +619,7 @@ class ModelTest {
     private fun kotlin.sequences.Sequence<InternalNode>.expecting(vararg outcomes: List<Node>) =
         assertEquals(
             outcomes.toList(),
-            this.filter { it.isStrict }.map { it.possibleOutcomes.map { it.node } }.toList()
+            this.filter { it.isRealDecision }.map { it.possibleOutcomes.map { it.node } }.toList()
         )
 
 
