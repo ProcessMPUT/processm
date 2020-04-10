@@ -16,7 +16,7 @@ import java.sql.ResultSet
  * of traces associated in property [Log.traces], and every trace has a sequence of events associated
  * with property [Trace.events]. All sequences can be empty, but none of them will be null.
  * This implementation ensures certain guarantees:
- * * All sequences are lazy-evaluated and the references to [XESElement]s are cleared after yielded,
+ * * All sequences are lazy-evaluated and the references to [XESElement]s once yielded are cleared,
  * * Repeatable reads are ensured - each time this sequence is evaluated it yields exactly the same attribute values,
  * * Phantom reads are prevented - each time this sequence is evaluated it yields exactly the same [XESElement]s,
  * * The resulting view on [XESElement]s is read-only.
@@ -30,20 +30,21 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
      * use is discouraged in new code.
      * @param logId is the database id of the log. Not to be confused with log:identity:id.
      */
+    @Suppress("DEPRECATION")
     @Deprecated("Use the primary constructor instead.", level = DeprecationLevel.WARNING)
     constructor(logId: Int) : this(Query(logId))
 
     private val logger = logger()
     private val translator = TranslatedQuery(query)
 
-    override fun iterator(): Iterator<Log> = getLogs().map { it.second }.iterator()
+    override fun iterator(): Iterator<Log> = getLogs().iterator()
 
-    private fun getLogs(): Sequence<Pair<Int, Log>> = sequence {
+    private fun getLogs(): Sequence<Log> = sequence {
         logger.enter()
 
         val executor = translator.getLogs()
         var hasNext = false
-        var log: Pair<Int, Log>?
+        var log: Log?
         do {
             log = null
             // Execute log query
@@ -55,19 +56,19 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             } // close()
             if (log === null)
                 break
-            logger.debug("Yielding log id=${log!!.first}")
+            logger.debug("Yielding log: $log")
             yield(log!!)
         } while (hasNext)
 
         logger.exit()
     }
 
-    private fun getTraces(logId: Int): Sequence<Pair<Long, Trace>> = sequence {
+    private fun getTraces(logId: Int): Sequence<Trace> = sequence {
         logger.enter()
 
         val executor = translator.getTraces(logId)
         var hasNext = false
-        var trace: Pair<Long, Trace>?
+        var trace: Trace?
         do {
             trace = null
             // Execute traces query
@@ -79,7 +80,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             } // close()
             if (trace === null)
                 break
-            logger.debug("Yielding trace id=${trace!!.first}")
+            logger.debug("Yielding trace: $trace")
             yield(trace!!)
         } while (hasNext)
 
@@ -91,7 +92,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
 
         val executor = translator.getEvents(logId, traceId)
         var hasNext = false
-        var event: Pair<Long, Event>?
+        var event: Event?
         do {
             event = null
             // Execute events query
@@ -103,14 +104,14 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             } // close()
             if (event === null)
                 break
-            logger.debug("Yielding event id=${event!!.first}")
-            yield(event!!.second)
+            logger.debug("Yielding event: $event")
+            yield(event!!)
         } while (hasNext)
 
         logger.exit()
     }
 
-    private fun readLog(result: LogQueryResult): Pair<Int, Log>? {
+    private fun readLog(result: LogQueryResult): Log {
         logger.enter()
 
         result.entity.next().let { assert(it) { "By contract exactly one row must exist." } }
@@ -130,10 +131,10 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             readLogAttributes(result.attributes, this)
 
             // getTraces is a sequence, so it will be actually called when one reads it
-            traces = getTraces(logId).map { it.second }
+            traces = getTraces(logId)
 
             logger.exit()
-            return Pair(logId, this)
+            return this
         }
     }
 
@@ -198,7 +199,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
     private fun readLogAttributes(resultSet: ResultSet, element: Log) =
         readAttributes(resultSet, { r: ResultSet, k: String -> r.getInt(k) }, element)
 
-    private fun readTrace(result: QueryResult, logId: Int): Pair<Long, Trace> {
+    private fun readTrace(result: QueryResult, logId: Int): Trace {
         logger.enter()
 
         result.entity.next().let { assert(it) { "By contract exactly one row must exist." } }
@@ -218,11 +219,11 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             events = getEvents(logId, traceId)
 
             logger.exit()
-            return Pair(traceId, this)
+            return this
         }
     }
 
-    private fun readEvent(result: QueryResult): Pair<Long, Event> {
+    private fun readEvent(result: QueryResult): Event {
         logger.enter()
 
         result.entity.next().let { assert(it) { "By contract exactly one row must exist." } }
@@ -240,12 +241,12 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             orgGroup = result.entity.getString("org:group")
             orgResource = result.entity.getString("org:resource")
             timeTimestamp = result.entity.getTimestamp("time:timestamp")
-            val eventId = result.entity.getLong("id")
+            // val eventId = result.entity.getLong("id")
 
             readTracesEventsAttributes(result.attributes, this)
 
             logger.exit()
-            return Pair(eventId, this)
+            return this
         }
     }
 
