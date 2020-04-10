@@ -1,11 +1,14 @@
 package processm.core.models.bpmn
 
+import processm.core.models.bpmn.converters.BPMNModel2CausalNet
 import processm.core.models.bpmn.jaxb.TDefinitions
+import processm.core.models.bpmn.jaxb.TFlowNode
 import processm.core.models.bpmn.jaxb.TProcess
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
 import java.io.InputStream
+import javax.xml.namespace.QName
 
 /**
  * An entry point for processing a BPMN file. Aggregates multiple BPMN models into a single object.
@@ -20,7 +23,7 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
                 BPMNModel(BPMNXMLService.load(xml).value)
     }
 
-    private val processes: List<BPMNProcess> =
+    internal val processes: List<BPMNProcess> =
             model.rootElement.map { it.value }.filterIsInstance<TProcess>().map { BPMNProcess(it) }
 
     /**
@@ -55,8 +58,15 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
     override fun createInstance(): ProcessModelInstance =
             throw UnsupportedOperationException("BPMN model instances are not supported")
 
-    fun toCausalNet(): MutableCausalNet {
-        require(processes.size == 1) { "BPMN models with multiple processes are currently not supported" }
-        return processes.single().toCausalNet()
-    }
+    internal fun byName(name: QName) = processes
+            .asSequence()
+            .flatMap { p ->
+                p.recursiveFlowElements
+                        .filterIsInstance<TFlowNode>()
+                        .filter { it.id == name.toString() }
+                        .map { p to p.get(it) }
+            }
+            .single()
+
+    fun toCausalNet(): MutableCausalNet = BPMNModel2CausalNet(this).toCausalNet()
 }

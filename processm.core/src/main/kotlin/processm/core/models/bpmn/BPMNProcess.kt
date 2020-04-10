@@ -1,9 +1,8 @@
 package processm.core.models.bpmn
 
-import processm.core.helpers.allSubsets
+import processm.core.models.bpmn.converters.BPMN2CausalNet
 import processm.core.models.bpmn.jaxb.*
-import processm.core.models.causalnet.*
-import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.MutableCausalNet
 import java.util.*
 import javax.xml.bind.JAXBElement
 import javax.xml.namespace.QName
@@ -25,12 +24,12 @@ internal class BPMNProcess internal constructor(base: TProcess) {
     }
 
     private fun create(inp: TFlowNode): BPMNFlowNode =
-        when (inp) {
-            is TEvent -> BPMNEvent(inp, this)
-            is TActivity -> BPMNActivity(inp, this)
-            is TGateway -> BPMNGateway(inp, this)
-            else -> throw IllegalArgumentException("Cannot handle ${inp.javaClass}")
-        }
+            when (inp) {
+                is TEvent -> BPMNEvent(inp, this)
+                is TActivity -> BPMNActivity(inp, this)
+                is TGateway -> BPMNGateway(inp, this)
+                else -> throw IllegalArgumentException("Cannot handle ${inp.javaClass}")
+            }
 
     val flowElements = base.flowElement.map { it.value }
     val flowNodes = flowElements.filterIsInstance<TFlowNode>().map { create(it) }.toList()
@@ -41,19 +40,25 @@ internal class BPMNProcess internal constructor(base: TProcess) {
      * Note we consistently ignore triggers of start events. We also do not look into subprocesses, so we report a subprocess instead of a start event of the subprocess.
      */
     val startActivities: Sequence<BPMNFlowNode> =
-        flowNodes.asSequence().filter { it.base is TStartEvent || it.base.incoming.isEmpty() }
+            flowNodes.asSequence().filter { it.base is TStartEvent || it.base.incoming.isEmpty() }
 
     /**
      * Note we consistently ignore triggers of end events. We also do not look into subprocesses, so we report a subprocess instead of an end event of the subprocess.
      */
     val endActivities: Sequence<BPMNFlowNode> =
-        flowNodes.asSequence().filter { it.base is TEndEvent || it.base.outgoing.isEmpty() }
+            flowNodes.asSequence().filter { it.base is TEndEvent || it.base.outgoing.isEmpty() }
 
-    internal inline fun <reified ExpectedType> flowByName(qname: QName) =
-        flowElements.filter { it.id == qname.toString() }.filterIsInstance<ExpectedType>().single()
+    internal inline fun <reified ExpectedType> flowByName(qname: QName): ExpectedType {
+        try {
+            return recursiveFlowElements.filter { it.id == qname.toString() }.filterIsInstance<ExpectedType>().single()
+        } catch (e: NoSuchElementException) {
+            println("Missing $qname")
+            throw e
+        }
+    }
 
     fun get(base: TFlowNode) =
-        allActivities.single { it.base === base }
+            allActivities.single { it.base === base }
 
     fun toCausalNet(): MutableCausalNet = BPMN2CausalNet(this).convert()
 

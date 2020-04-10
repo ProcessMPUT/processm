@@ -158,3 +158,10 @@ private inline fun <T> MutableList<T>.swap(i: Int, j: Int) {
     this[i] = this[j]
     this[j] = tmp
 }
+
+
+inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
+        if (this.isNullOrEmpty())
+            default()
+        else
+            this

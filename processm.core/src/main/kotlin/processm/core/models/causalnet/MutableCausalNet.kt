@@ -123,4 +123,18 @@ class MutableCausalNet(
         clearSplits()
         clearJoins()
     }
+
+    /**
+     * Removes all splits for [node]
+     */
+    fun clearSplitsFor(node: Node) {
+        _splits.remove(node)
+    }
+
+    /**
+     * Removes all joins for [node]
+     */
+    fun clearJoinsFor(node: Node) {
+        _joins.remove(node)
+    }
 }
