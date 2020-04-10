@@ -41,5 +41,6 @@
     </root>
     <!-- Level for our classes -->
     <logger name="processm" level="DEBUG" />
+    <logger name="kotlin.sequences" level="DEBUG"/>
 
 </configuration>

@@ -45,6 +45,10 @@ fun loadConfiguration(overwriteIfAlreadyLoaded: Boolean = false) {
     }
 }
 
+/**
+ * Compares two logs.
+ * @return True of the logs equal, false otherwise.
+ */
 fun hierarchicalCompare(seq1: Sequence<Log>, seq2: Sequence<Log>): Boolean =
     try {
         (seq1 zipOrThrow seq2).all { (l1, l2) ->
@@ -59,9 +63,19 @@ fun hierarchicalCompare(seq1: Sequence<Log>, seq2: Sequence<Log>): Boolean =
             }
         }
     } catch (e: IllegalArgumentException) {
+        Helpers.logger().debug(e.message)
         false
     }
 
+/**
+ * Combines two sequences element-wise into pairs. Differs from [zip] in that it throws [IllegalArgumentException] if
+ * the length of the sequences differ.
+ *
+ * @receiver The left-hand part sequence.
+ * @param seq2 The right-hand part sequence.
+ * @return A sequence of pairs of the corresponding elements from the given sequences.
+ * @throws IllegalArgumentException If the lengths of the sequences differ.
+ */
 infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>> = sequence {
     val it1: Iterator<T> = this@zipOrThrow.iterator()
     val it2: Iterator<R> = seq2.iterator()
@@ -71,5 +85,5 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
         yield(a to b)
     }
     if (it1.hasNext() || it2.hasNext())
-        throw IllegalArgumentException("Inconsistent sizes of the given sequences")
+        throw IllegalArgumentException("Inconsistent sizes of the given sequences.")
 }

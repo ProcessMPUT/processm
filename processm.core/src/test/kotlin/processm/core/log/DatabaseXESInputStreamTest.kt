@@ -254,6 +254,8 @@ internal class DatabaseXESInputStreamTest {
             assertTrue(date.compareTo(timeTimestamp) == 0)
             assertEquals(orgGroup, "Radiotherapy")
         }
+
+        assertFalse(stream.hasNext())
     }
 
     @Test

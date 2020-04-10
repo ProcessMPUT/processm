@@ -5,10 +5,10 @@ import processm.core.log.Event
 import processm.core.log.Extension
 import processm.core.log.XESElement
 import processm.core.log.attribute.*
-import processm.core.persistence.DBConnectionPool
+import processm.core.logging.enter
+import processm.core.logging.exit
+import processm.core.logging.logger
 import processm.core.querylanguage.Query
-import java.sql.Connection
-import java.sql.PreparedStatement
 import java.sql.ResultSet
 
 /**
@@ -20,6 +20,8 @@ import java.sql.ResultSet
  * * Repeatable reads are ensured - each time this sequence is evaluated it yields exactly the same attribute values,
  * * Phantom reads are prevented - each time this sequence is evaluated it yields exactly the same [XESElement]s,
  * * The resulting view on [XESElement]s is read-only.
+ *
+ * @property query An instance of a PQL query.
  */
 class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
 
@@ -31,152 +33,86 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
     @Deprecated("Use the primary constructor instead.", level = DeprecationLevel.WARNING)
     constructor(logId: Int) : this(Query(logId))
 
+    private val logger = logger()
     private val translator = TranslatedQuery(query)
 
     override fun iterator(): Iterator<Log> = getLogs().map { it.second }.iterator()
 
     private fun getLogs(): Sequence<Pair<Int, Log>> = sequence {
+        logger.enter()
+
         val executor = translator.getLogs()
-        var hasNext: Boolean = false
+        var hasNext = false
         var log: Pair<Int, Log>?
         do {
             log = null
-            openReadOnlyConnection().use { conn ->
-                // Execute log query
-                executor.use(conn) {
-                    if (!it.hasNext())
-                        return@use // in the first iteration we do not know if there is data
-                    log = parseLog(it.next())
-                    hasNext = it.hasNext() // prevent reconnecting in the next iteration if there is no more data
-                }
+            // Execute log query
+            executor.use {
+                if (!it.hasNext())
+                    return@use // in the first iteration we do not know if there is data
+                log = readLog(it.next())
+                hasNext = it.hasNext() // prevent reconnecting in the next iteration if there is no more data
             } // close()
             if (log === null)
                 break
+            logger.debug("Yielding log id=${log!!.first}")
             yield(log!!)
         } while (hasNext)
+
+        logger.exit()
     }
 
     private fun getTraces(logId: Int): Sequence<Pair<Long, Trace>> = sequence {
+        logger.enter()
+
         val executor = translator.getTraces(logId)
         var hasNext = false
         var trace: Pair<Long, Trace>?
         do {
             trace = null
-            openReadOnlyConnection().use { conn ->
-                // Execute traces query
-                executor.use(conn) {
-                    if (!it.hasNext())
-                        return@use // in the first iteration we do not know if there is data
-                    trace = parseTrace(it.next(), logId)
-                    hasNext = it.hasNext() // prevent reconnecting in the next iteration if there is no more data
-                }
+            // Execute traces query
+            executor.use {
+                if (!it.hasNext())
+                    return@use // in the first iteration we do not know if there is data
+                trace = readTrace(it.next(), logId)
+                hasNext = it.hasNext() // prevent reconnecting in the next iteration if there is no more data
             } // close()
             if (trace === null)
                 break
+            logger.debug("Yielding trace id=${trace!!.first}")
             yield(trace!!)
         } while (hasNext)
+
+        logger.exit()
     }
 
     private fun getEvents(logId: Int, traceId: Long): Sequence<Event> = sequence {
+        logger.enter()
+
         val executor = translator.getEvents(logId, traceId)
         var hasNext = false
         var event: Pair<Long, Event>?
         do {
             event = null
-            openReadOnlyConnection().use { conn ->
-                // Execute events query
-                executor.use(conn) {
-                    if (!it.hasNext())
-                        return@use // in the first iteration we do not know if there is data
-                    event = parseEvent(it.next())
-                    hasNext = it.hasNext() // prevent reconnecting in the next iteration if there is no more data
-                }
+            // Execute events query
+            executor.use {
+                if (!it.hasNext())
+                    return@use // in the first iteration we do not know if there is data
+                event = readEvent(it.next())
+                hasNext = it.hasNext() // prevent reconnecting in the next iteration if there is no more data
             } // close()
             if (event === null)
                 break
+            logger.debug("Yielding event id=${event!!.first}")
             yield(event!!.second)
         } while (hasNext)
+
+        logger.exit()
     }
 
-    private fun openReadOnlyConnection(): Connection =
-        DBConnectionPool.getConnection().apply {
-            autoCommit = false
-            prepareStatement("START TRANSACTION READ ONLY").execute()
-        }
+    private fun readLog(result: LogQueryResult): Pair<Int, Log>? {
+        logger.enter()
 
-    private fun getLogAttributesStatement(connection: Connection, logId: Int): PreparedStatement =
-        connection.prepareStatement(
-            """
-            SELECT
-                id,
-                parent_id,
-                type,
-                key,
-                string_value,
-                date_value,
-                int_value,
-                bool_value,
-                real_value,
-                in_list_attr 
-            FROM
-                logs_attributes
-            WHERE
-                log_id = ?
-            ORDER BY id;
-            """.trimIndent()
-        ).apply {
-            setInt(1, logId)
-        }
-
-    private fun getTraceAttributesStatement(connection: Connection, traceId: Long): PreparedStatement =
-        connection.prepareStatement(
-            """
-            SELECT
-                id,
-                parent_id,
-                type,
-                key,
-                string_value,
-                date_value,
-                int_value,
-                bool_value,
-                real_value,
-                in_list_attr 
-            FROM
-                traces_attributes
-            WHERE
-                trace_id = ?
-            ORDER BY id;
-            """.trimIndent()
-        ).apply {
-            setLong(1, traceId)
-        }
-
-    private fun getEventAttributesStatement(connection: Connection, eventId: Long): PreparedStatement =
-        connection.prepareStatement(
-            """
-            SELECT
-                id,
-                parent_id,
-                type,
-                key,
-                string_value,
-                date_value,
-                int_value,
-                bool_value,
-                real_value,
-                in_list_attr 
-            FROM
-                events_attributes
-            WHERE
-                event_id = ?
-            ORDER BY id;
-            """.trimIndent()
-        ).apply {
-            setLong(1, eventId)
-        }
-
-    private fun parseLog(result: LogQueryResult): Pair<Int, Log>? {
         result.entity.next().let { assert(it) { "By contract exactly one row must exist." } }
         assert(result.entity.isLast) { "By contract exactly one row must exist." }
 
@@ -188,18 +124,20 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             val logId = result.entity.getInt("id")
 
             // Load classifiers, extensions, globals and attributes inside log structure
-            parseClassifiers(result.classifiers, this)
-            parseExtensions(result.extensions, this)
-            parseGlobals(result.globals, this)
-            parseLogAttributes(result.attributes, this)
+            readClassifiers(result.classifiers, this)
+            readExtensions(result.extensions, this)
+            readGlobals(result.globals, this)
+            readLogAttributes(result.attributes, this)
 
+            // getTraces is a sequence, so it will be actually called when one reads it
             traces = getTraces(logId).map { it.second }
 
+            logger.exit()
             return Pair(logId, this)
         }
     }
 
-    private fun parseClassifiers(resultSet: ResultSet?, log: Log) {
+    private fun readClassifiers(resultSet: ResultSet?, log: Log) {
         resultSet ?: return
 
         while (resultSet.next()) {
@@ -219,7 +157,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         }
     }
 
-    private fun parseExtensions(resultSet: ResultSet?, log: Log) {
+    private fun readExtensions(resultSet: ResultSet?, log: Log) {
         resultSet ?: return
 
         while (resultSet.next()) {
@@ -236,7 +174,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         }
     }
 
-    private fun parseGlobals(resultSet: ResultSet?, log: Log) {
+    private fun readGlobals(resultSet: ResultSet?, log: Log) {
         resultSet ?: return
 
         val fn = { r: ResultSet, k: String -> r.getInt(k) }
@@ -244,7 +182,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
 
         while (!resultSet.isAfterLast) {
             val scope = resultSet.getString("scope")
-            val attribute = parseRecordsIntoAttributes(resultSet, fn)
+            val attribute = readRecordsIntoAttributes(resultSet, fn)
 
             when (scope) {
                 "event" ->
@@ -257,10 +195,12 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         }
     }
 
-    private fun parseLogAttributes(resultSet: ResultSet, element: Log) =
-        parseAttributes(resultSet, { r: ResultSet, k: String -> r.getInt(k) }, element)
+    private fun readLogAttributes(resultSet: ResultSet, element: Log) =
+        readAttributes(resultSet, { r: ResultSet, k: String -> r.getInt(k) }, element)
 
-    private fun parseTrace(result: QueryResult, logId: Int): Pair<Long, Trace> {
+    private fun readTrace(result: QueryResult, logId: Int): Pair<Long, Trace> {
+        logger.enter()
+
         result.entity.next().let { assert(it) { "By contract exactly one row must exist." } }
         assert(result.entity.isLast) { "By contract exactly one row must exist." }
 
@@ -272,14 +212,19 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             isEventStream = result.entity.getBoolean("event_stream")
             val traceId = result.entity.getLong("id")
 
-            parseTracesEventsAttributes(result.attributes, this)
+            readTracesEventsAttributes(result.attributes, this)
+
+            // getEvents is a sequence, so it will be actually called when one reads it
             events = getEvents(logId, traceId)
 
+            logger.exit()
             return Pair(traceId, this)
         }
     }
 
-    private fun parseEvent(result: QueryResult): Pair<Long, Event> {
+    private fun readEvent(result: QueryResult): Pair<Long, Event> {
+        logger.enter()
+
         result.entity.next().let { assert(it) { "By contract exactly one row must exist." } }
         assert(result.entity.isLast) { "By contract exactly one row must exist." }
 
@@ -297,16 +242,17 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             timeTimestamp = result.entity.getTimestamp("time:timestamp")
             val eventId = result.entity.getLong("id")
 
-            parseTracesEventsAttributes(result.attributes, this)
+            readTracesEventsAttributes(result.attributes, this)
 
+            logger.exit()
             return Pair(eventId, this)
         }
     }
 
-    private fun parseTracesEventsAttributes(resultSet: ResultSet, element: XESElement) =
-        parseAttributes(resultSet, { r: ResultSet, k: String -> r.getLong(k) }, element)
+    private fun readTracesEventsAttributes(resultSet: ResultSet, element: XESElement) =
+        readAttributes(resultSet, { r: ResultSet, k: String -> r.getLong(k) }, element)
 
-    private fun parseAttributes(
+    private fun readAttributes(
         resultSet: ResultSet,
         fn: (ResultSet, String) -> Number,
         element: XESElement
@@ -314,7 +260,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         if (!resultSet.next()) return element
 
         while (!resultSet.isAfterLast) {
-            with(parseRecordsIntoAttributes(resultSet, fn)) {
+            with(readRecordsIntoAttributes(resultSet, fn)) {
                 element.attributesInternal[this.key] = this
             }
         }
@@ -322,7 +268,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         return element
     }
 
-    private fun parseRecordsIntoAttributes(resultSet: ResultSet, fn: (ResultSet, String) -> Number): Attribute<*> {
+    private fun readRecordsIntoAttributes(resultSet: ResultSet, fn: (ResultSet, String) -> Number): Attribute<*> {
         val attr = attributeFromRecord(resultSet.getString("key"), resultSet)
         val attrId = fn(resultSet, "id")
 
@@ -333,7 +279,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         } else {
             do {
                 val isInsideList = resultSet.getBoolean("in_list_attr")
-                with(parseRecordsIntoAttributes(resultSet, fn)) {
+                with(readRecordsIntoAttributes(resultSet, fn)) {
                     if (isInsideList) {
                         assert(attr is ListAttr)
                         (attr as ListAttr).valueInternal.add(this)
