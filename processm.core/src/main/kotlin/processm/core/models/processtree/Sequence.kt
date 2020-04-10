@@ -7,7 +7,7 @@ class Sequence(vararg nodes: Node) : InternalNode(*nodes) {
     override val symbol: String
         get() = "→"
     override val startActivities: kotlin.sequences.Sequence<Activity>
-        get() = children[0].startActivities
+        get() = children.first().startActivities
 
     override val endActivities: kotlin.sequences.Sequence<Activity>
         get() = children.last().endActivities

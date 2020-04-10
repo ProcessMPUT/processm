@@ -10,7 +10,6 @@ class ExecutionTest {
 
     private fun ExecutionNode.expecting(vararg what: Activity): List<ActivityExecution> {
         val result = this.available.toList()
-        println(result.map { it.base })
         assertEquals(what.toList(), result.map { it.base })
         assertEquals(what.isEmpty(), this.isComplete)
         return result
@@ -32,7 +31,6 @@ class ExecutionTest {
                 loop
             )
         }
-        println(tree)
         with(tree.root!!.executionNode(null)) {
             expecting(a, b, c, d)[3].execute()
             expecting(a, b, c, EndLoopSilentActivity(loop), e, f)[2].execute()
@@ -60,7 +58,6 @@ class ExecutionTest {
         val c = RedoLoop(c1, c2, c3)
         val top = RedoLoop(a, b, c)
         val model = processTree { top }
-        println(model)
         with(top.executionNode(null)) {
             expecting(a1)[0].execute()
             expecting(EndLoopSilentActivity(a), a2, a3)[1].execute()
@@ -90,7 +87,6 @@ class ExecutionTest {
         val c = Sequence(c1, c2, c3)
         val top = RedoLoop(a, b, c)
         val model = processTree { top }
-        println(model)
         val root = top.executionNode(null)
         with(root) {
             expecting(a1)[0].execute()
@@ -125,7 +121,6 @@ class ExecutionTest {
                 f
             )
         }
-        println(model)
         val e =
             with(model.root!!.executionNode(null)) {
                 expecting(a)[0].execute()
@@ -151,7 +146,6 @@ class ExecutionTest {
         val l1 = RedoLoop(a, b)
         val l2 = RedoLoop(c, d)
         val top = Exclusive(l1, l2)
-        println(processTree { top })
         with(top.executionNode(null)) {
             expecting(a, c)[0].execute()
             expecting(EndLoopSilentActivity(l1), b)[1].execute()
