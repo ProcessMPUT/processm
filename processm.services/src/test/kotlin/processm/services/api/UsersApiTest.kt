@@ -6,12 +6,12 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.request.header
 import io.ktor.server.testing.handleRequest
-import io.mockk.every
-import io.mockk.mockk
+import io.mockk.*
 import org.awaitility.Awaitility.await
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import processm.services.api.models.*
+import processm.services.logic.ValidationException
 import java.util.stream.Stream
 import kotlin.random.Random
 import kotlin.random.nextInt
@@ -23,7 +23,9 @@ class UsersApiTest : BaseApiTest() {
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/users",
         HttpMethod.Delete to "/api/users/session",
-        HttpMethod.Get to "/api/users/me"
+        HttpMethod.Get to "/api/users/me",
+        HttpMethod.Patch to "/api/users/me/password",
+        HttpMethod.Patch to "/api/users/me/locale"
     )
 
     override fun endpointsWithNoImplementation() = Stream.of<Pair<HttpMethod, String>?>(null)
@@ -42,6 +44,8 @@ class UsersApiTest : BaseApiTest() {
             assertEquals(HttpStatusCode.Created, response.status())
             assertTrue(response.deserializeContent<AuthenticationResultMessageBody>().data.authorizationToken.isNotBlank())
         }
+
+        verify { accountService.verifyUsersCredentials("user", "pass") }
     }
 
     @Test
@@ -55,6 +59,8 @@ class UsersApiTest : BaseApiTest() {
             assertEquals(HttpStatusCode.Unauthorized, response.status())
             assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("Invalid username or password"))
         }
+
+        verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
     }
 
     @Test
@@ -160,9 +166,9 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to user details request with 200 and current user account details`() = withConfiguredTestApplication {
+    fun `responds to current user details request with 200 and current user account details`() = withConfiguredTestApplication {
 
-        every { accountService.getAccountDetails(1) } returns mockk {
+        every { accountService.getAccountDetails(userId = 1) } returns mockk {
             every { username } returns "user1"
             every { locale } returns "en_US"
         }
@@ -176,5 +182,192 @@ class UsersApiTest : BaseApiTest() {
                 assertEquals("en_US", deserializedContent.data.locale)
             }
         }
+
+        verify { accountService.getAccountDetails(userId = 1) }
+    }
+
+    @Test
+    fun `responds to non-existing user details request with 404 and error message`() = withConfiguredTestApplication {
+
+        every { accountService.getAccountDetails(userId = any()) } throws ValidationException(
+            ValidationException.Reason.ResourceNotFound,
+            "Specified user account does not exist")
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Get, "/api/users/me")) {
+
+                assertEquals(HttpStatusCode.NotFound, response.status())
+                assertTrue(response.deserializeContent<ErrorMessageBody>().error
+                    .contains("Specified user account does not exist"))
+            }
+        }
+
+        verify { accountService.getAccountDetails(userId = any()) }
+    }
+
+    @Test
+    fun `responds to successful account registration attempt with 201`() = withConfiguredTestApplication {
+
+        every { accountService.createAccount("user@example.com", "OrgName1", accountLocale = any()) } just Runs
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Post, "/api/users") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(AccountRegistrationInfoMessageBody(
+                    AccountRegistrationInfo("user@example.com", "OrgName1")))
+            }) {
+                assertEquals(HttpStatusCode.Created, response.status())
+            }
+        }
+
+        verify { accountService.createAccount("user@example.com", "OrgName1") }
+    }
+
+    @Test
+    fun `responds to account registration attempt with already existing user or organization with 409 and error message`() = withConfiguredTestApplication {
+
+        every { accountService.createAccount("user@example.com", "OrgName1", accountLocale = any()) } throws
+                ValidationException(
+                    ValidationException.Reason.ResourceAlreadyExists,
+                    "User and/or organization with specified name already exists")
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Post, "/api/users") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(AccountRegistrationInfoMessageBody(
+                        AccountRegistrationInfo("user@example.com", "OrgName1")))
+            }) {
+                assertEquals(HttpStatusCode.Conflict, response.status())
+                assertTrue(response.deserializeContent<ErrorMessageBody>().error
+                        .contains("User and/or organization with specified name already exists"))
+            }
+        }
+
+        verify { accountService.createAccount("user@example.com", "OrgName1") }
+    }
+
+    @Test
+    fun `responds to account registration attempt with invalid data with 400 and error message`() = withConfiguredTestApplication {
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Post, "/api/users") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(Object())
+            }) {
+                assertEquals(HttpStatusCode.BadRequest, response.status())
+                assertTrue(response.deserializeContent<ErrorMessageBody>().error
+                    .contains("The provided account details cannot be parsed"))
+            }
+        }
+
+        verify(exactly = 0) { accountService.createAccount(userEmail = any(), organizationName = any()) }
+    }
+
+    @Test
+    fun `responds to successful password change with 202`() = withConfiguredTestApplication {
+
+        every { accountService.changePassword(userId = any(), currentPassword = "current", newPassword = "new") } returns true
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Patch, "/api/users/me/password") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(PasswordChangeMessageBody(
+                    PasswordChange("current", "new")))
+            }) {
+                assertEquals(HttpStatusCode.Accepted, response.status())
+            }
+        }
+
+        verify { accountService.changePassword(userId = any(), currentPassword = "current", newPassword = "new") }
+    }
+
+    @Test
+    fun `responds to password change attempt with incorrect password with 403 and error message`() = withConfiguredTestApplication {
+
+        every { accountService.changePassword(userId = any(), currentPassword = "wrong_password", newPassword = "new") } returns false
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Patch, "/api/users/me/password") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(PasswordChangeMessageBody(
+                    PasswordChange("wrong_password", "new")))
+            }) {
+                assertEquals(HttpStatusCode.Forbidden, response.status())
+                assertTrue(response.deserializeContent<ErrorMessageBody>().error
+                    .contains("The current password could not be changed"))
+            }
+        }
+
+        verify { accountService.changePassword(userId = any(), currentPassword = "wrong_password", newPassword = "new") }
+    }
+
+    @Test
+    fun `responds to password change attempt with invalid data with 400 and error message`() = withConfiguredTestApplication {
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Patch, "/api/users/me/password") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(Object())
+            }) {
+                assertEquals(HttpStatusCode.BadRequest, response.status())
+                assertTrue(response.deserializeContent<ErrorMessageBody>().error
+                    .contains("The provided password data cannot be parsed"))
+            }
+        }
+
+        verify(exactly = 0) { accountService.changePassword(userId = any(), currentPassword = any(), newPassword = any()) }
+    }
+
+    @Test
+    fun `responds to successful locale change with 202`() = withConfiguredTestApplication {
+
+        every { accountService.changeLocale(userId = any(), locale = "pl_PL") } returns true
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(LocaleChangeMessageBody(LocaleChange("pl_PL")))
+            }) {
+                assertEquals(HttpStatusCode.Accepted, response.status())
+            }
+        }
+
+        verify { accountService.changeLocale(userId = any(), locale = "pl_PL") }
+    }
+
+    @Test
+    fun `responds to locale change attempt with invalid locale with 400 and error message`() = withConfiguredTestApplication {
+
+        every { accountService.changeLocale(userId = any(), locale = "goofy_LOCALE") } returns false
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(LocaleChangeMessageBody(LocaleChange("goofy_LOCALE")))
+            }) {
+                assertEquals(HttpStatusCode.BadRequest, response.status())
+                assertTrue(response.deserializeContent<ErrorMessageBody>().error
+                    .contains("The current locale could not be changed"))
+            }
+        }
+
+        verify { accountService.changeLocale(userId = any(), locale = "goofy_LOCALE") }
+    }
+
+    @Test
+    fun `responds to locale change attempt with invalid data with 400 and error message`() = withConfiguredTestApplication {
+
+        withAuthentication {
+            with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(Object())
+            }) {
+                assertEquals(HttpStatusCode.BadRequest, response.status())
+                assertTrue(response.deserializeContent<ErrorMessageBody>().error
+                    .contains("The provided locale data cannot be parsed"))
+            }
+        }
+
+        verify(exactly = 0) { accountService.changeLocale(userId = any(), locale = any()) }
     }
 }

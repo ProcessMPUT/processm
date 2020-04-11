@@ -13,6 +13,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkClass
 import org.jetbrains.exposed.dao.id.EntityID
+import org.junit.Before
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -31,6 +32,9 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
 
+    // @Before causes the setUp() method to be called when running tests individually
+    // @BeforeEach causes the setUp() method to be called before @ParameterizedTest tests
+    @Before
     @BeforeEach
     open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)

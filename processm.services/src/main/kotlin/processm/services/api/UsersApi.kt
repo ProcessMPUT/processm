@@ -101,7 +101,7 @@ fun Route.UsersApi() {
                     ) {
                         call.respond(HttpStatusCode.Accepted)
                     } else {
-                        call.respond(HttpStatusCode.Forbidden)
+                        call.respond(HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed"))
                     }
                 }
             }
@@ -115,7 +115,7 @@ fun Route.UsersApi() {
                     ) {
                         call.respond(HttpStatusCode.Accepted)
                     } else {
-                        call.respond(HttpStatusCode.BadRequest)
+                        call.respond(HttpStatusCode.BadRequest, ErrorMessageBody("The current locale could not be changed"))
                     }
                 }
             }
