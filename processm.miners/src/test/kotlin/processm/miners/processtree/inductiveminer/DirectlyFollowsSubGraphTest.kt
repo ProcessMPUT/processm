@@ -107,13 +107,9 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val noAssignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
-        val expectedLabel = assignment[ProcessTreeActivity("A")]!!
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("B")])
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("C")])
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("D")])
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("E")])
+        assertNull(noAssignment)
     }
 
     @Test
@@ -153,14 +149,9 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val noAssignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
-        val expectedLabel = assignment[ProcessTreeActivity("A")]!!
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("B")])
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("C")])
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("D")])
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("E")])
-        assertEquals(expectedLabel, assignment[ProcessTreeActivity("F")])
+        assertNull(noAssignment)
     }
 
     @Test
@@ -187,39 +178,13 @@ internal class DirectlyFollowsSubGraphTest {
 
         val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
+        assertNotNull(assignment)
+
         // B & C in group
         assertEquals(assignment[ProcessTreeActivity("B")], assignment[ProcessTreeActivity("C")])
 
         // E with different label
         assertNotEquals(assignment[ProcessTreeActivity("B")], assignment[ProcessTreeActivity("E")])
-    }
-
-    @Test
-    fun `Split graph based on list of activities - all activity in the same group`() {
-        val activities = activitiesSet(
-            listOf(
-                ProcessTreeActivity("B"),
-                ProcessTreeActivity("C"),
-                ProcessTreeActivity("E")
-            )
-        )
-
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[ProcessTreeActivity("C")] = Arc()
-                arcs[ProcessTreeActivity("E")] = Arc()
-                conn[ProcessTreeActivity("B")] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[ProcessTreeActivity("B")] = Arc()
-                conn[ProcessTreeActivity("C")] = arcs
-            }
-        }
-
-        val graph = DirectlyFollowsSubGraph(activities, connections)
-        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut())
-
-        assertEquals(1, result.size)
     }
 
     @Test
@@ -244,7 +209,7 @@ internal class DirectlyFollowsSubGraphTest {
         }
 
         val graph = DirectlyFollowsSubGraph(activities, connections)
-        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut())
+        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut()!!)
 
         assertEquals(2, result.size)
     }
@@ -505,15 +470,17 @@ internal class DirectlyFollowsSubGraphTest {
 
         val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
-        val result = graph.calculateSequentialCut(stronglyConnected)
+        val assignment = graph.calculateSequentialCut(stronglyConnected)
 
-        assertEquals(1, result[ProcessTreeActivity("A")])
+        assertNotNull(assignment)
 
-        assertEquals(2, result[ProcessTreeActivity("B")])
-        assertEquals(2, result[ProcessTreeActivity("C")])
-        assertEquals(2, result[ProcessTreeActivity("E")])
+        assertEquals(1, assignment[ProcessTreeActivity("A")])
 
-        assertEquals(3, result[ProcessTreeActivity("D")])
+        assertEquals(2, assignment[ProcessTreeActivity("B")])
+        assertEquals(2, assignment[ProcessTreeActivity("C")])
+        assertEquals(2, assignment[ProcessTreeActivity("E")])
+
+        assertEquals(3, assignment[ProcessTreeActivity("D")])
     }
 
     @Test
@@ -544,11 +511,9 @@ internal class DirectlyFollowsSubGraphTest {
 
         val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
-        val result = graph.calculateSequentialCut(stronglyConnected)
+        val noAssignment = graph.calculateSequentialCut(stronglyConnected)
 
-        assertEquals(1, result[ProcessTreeActivity("A")])
-        assertEquals(1, result[ProcessTreeActivity("B")])
-        assertEquals(1, result[ProcessTreeActivity("C")])
+        assertNull(noAssignment)
     }
 
     @Test
@@ -610,17 +575,19 @@ internal class DirectlyFollowsSubGraphTest {
 
         val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
-        val result = graph.calculateSequentialCut(stronglyConnected)
+        val assignment = graph.calculateSequentialCut(stronglyConnected)
 
-        assertEquals(1, result[ProcessTreeActivity("A")])
-        assertEquals(1, result[ProcessTreeActivity("B")])
-        assertEquals(1, result[ProcessTreeActivity("E")])
+        assertNotNull(assignment)
 
-        assertEquals(2, result[ProcessTreeActivity("C")])
-        assertEquals(2, result[ProcessTreeActivity("D")])
-        assertEquals(2, result[ProcessTreeActivity("H")])
+        assertEquals(1, assignment[ProcessTreeActivity("A")])
+        assertEquals(1, assignment[ProcessTreeActivity("B")])
+        assertEquals(1, assignment[ProcessTreeActivity("E")])
 
-        assertEquals(3, result[ProcessTreeActivity("F")])
-        assertEquals(3, result[ProcessTreeActivity("G")])
+        assertEquals(2, assignment[ProcessTreeActivity("C")])
+        assertEquals(2, assignment[ProcessTreeActivity("D")])
+        assertEquals(2, assignment[ProcessTreeActivity("H")])
+
+        assertEquals(3, assignment[ProcessTreeActivity("F")])
+        assertEquals(3, assignment[ProcessTreeActivity("G")])
     }
 }
