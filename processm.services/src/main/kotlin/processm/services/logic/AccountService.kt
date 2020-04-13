@@ -78,15 +78,21 @@ class AccountService {
     fun changeLocale(userId: Long, locale: String) = transaction(DBConnectionPool.database) {
         val user = getAccountDetails(userId)
         val normalizedLocale = locale.replace('_', '-')
-        val localeObject: Locale = Locale.Builder().setLanguageTag(normalizedLocale).build()
 
-        if (!LocaleUtils.isAvailableLocale(localeObject) || localeObject.language.isNullOrEmpty()) {
+        try {
+            val localeObject: Locale = Locale.Builder().setLanguageTag(normalizedLocale).build()
+
+            if (!LocaleUtils.isAvailableLocale(localeObject) || localeObject.language.isNullOrEmpty()) {
+                return@transaction false
+            }
+
+            user.locale = localeObject.toString()
+
+            return@transaction true
+        }
+        catch (e: IllformedLocaleException) {
             return@transaction false
         }
-
-        user.locale = localeObject.toString()
-
-        return@transaction true
     }
 
     private fun calculatePasswordHash(password: String) =
