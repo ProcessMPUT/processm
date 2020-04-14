@@ -6,6 +6,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ProcessTreeVerifierTest {
+    private val A = ProcessTreeActivity("A")
+    private val B = ProcessTreeActivity("B")
+    private val C = ProcessTreeActivity("C")
+    private val D = ProcessTreeActivity("D")
+    private val E = ProcessTreeActivity("E")
+
     @Test
     fun `Model without nodes is correct process tree`() {
         val model = processTree { null }
@@ -22,7 +28,7 @@ class ProcessTreeVerifierTest {
 
     @Test
     fun `Model with single activity is correct process tree`() {
-        val model = processTree { ProcessTreeActivity("A") }
+        val model = processTree { A }
 
         with(ProcessTreeVerifier().verify(model) as ProcessTreeVerificationReport) {
             assertTrue(isTree)
@@ -38,16 +44,9 @@ class ProcessTreeVerifierTest {
     fun `Correct process tree - in response isTree is set`() {
         val model = processTree {
             Sequence(
-                Exclusive(
-                    ProcessTreeActivity("A"),
-                    ProcessTreeActivity("B")
-                ),
-                RedoLoop(
-                    SilentActivity(),
-                    ProcessTreeActivity("C"),
-                    ProcessTreeActivity("D")
-                ),
-                ProcessTreeActivity("K")
+                Exclusive(A, B),
+                RedoLoop(SilentActivity(), C, D),
+                E
             )
         }
 
@@ -63,17 +62,8 @@ class ProcessTreeVerifierTest {
 
     @Test
     fun `Correct tree built in two steps`() {
-        val seq = Sequence(
-            ProcessTreeActivity("A"),
-            ProcessTreeActivity("B")
-        )
-
-        val model = processTree {
-            Exclusive(
-                seq,
-                ProcessTreeActivity("C")
-            )
-        }
+        val seq = Sequence(A, B)
+        val model = processTree { Exclusive(seq, C) }
 
         with(ProcessTreeVerifier().verify(model) as ProcessTreeVerificationReport) {
             assertTrue(isTree)
@@ -87,16 +77,7 @@ class ProcessTreeVerifierTest {
 
     @Test
     fun `Invalid tree - child used twice`() {
-        val a = ProcessTreeActivity("A")
-        val model = processTree {
-            Sequence(
-                a,
-                Exclusive(
-                    a,
-                    ProcessTreeActivity("B")
-                )
-            )
-        }
+        val model = processTree { Sequence(A, Exclusive(A, B)) }
 
         with(ProcessTreeVerifier().verify(model) as ProcessTreeVerificationReport) {
             assertFalse(isTree)
