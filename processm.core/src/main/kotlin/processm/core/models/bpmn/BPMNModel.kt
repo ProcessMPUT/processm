@@ -61,9 +61,8 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
     internal fun byName(name: QName) = processes
             .asSequence()
             .flatMap { p ->
-                p.recursiveFlowElements
+                p.byName(name)
                         .filterIsInstance<TFlowNode>()
-                        .filter { it.id == name.toString() }
                         .map { p to p.get(it) }
             }
             .single()

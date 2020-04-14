@@ -1,7 +1,6 @@
 package processm.core.models.bpmn
 
-import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.causalnet
+import processm.core.models.causalnet.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -158,6 +157,79 @@ class ToCausalNetConversionTest {
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
+        assertTrue { expected.structurallyEquals(converted) }
+    }
+
+    @Test
+    fun a41() {
+        val esp1start = Node("Expanded Sub-Process 1", "start")
+        val esp1end = Node("Expanded Sub-Process 1", "end")
+        val esp2start = Node("Expanded Sub-Process 2", "start")
+        val esp2end = Node("Expanded Sub-Process 2", "end")
+        val expected = causalnet {
+            start splits startEvent(1) + startEvent(2)
+            startEvent(1) splits task(1)
+            startEvent(2) splits task(3)
+            task(1) splits task(2) + task(3)
+            task(2) splits endEvent(1)
+            endEvent(1) splits end
+            task(3) splits esp1start + esp2start
+            esp1start splits startEvent(3)
+            esp2start splits startEvent(4)
+            startEvent(3) splits task(4)
+            task(4) splits endEvent(3)
+            endEvent(3) splits esp1end
+            esp1end splits task(5)
+            task(5) splits task(2) + endEvent(2)
+            endEvent(2) splits end
+            startEvent(4) splits task(6)
+            task(6) splits endEvent(4)
+            endEvent(4) splits esp2end
+            esp2end splits endEvent(5)
+            endEvent(5) splits end
+            start joins startEvent(1)
+            start joins startEvent(2)
+            startEvent(1) joins task(1)
+            task(1) + task(5) join task(2)
+            task(1) + startEvent(2) join task(3)
+            task(2) joins endEvent(1)
+            task(3) joins esp1start
+            esp1start joins startEvent(3)
+            startEvent(3) joins task(4)
+            task(4) joins endEvent(3)
+            endEvent(3) joins esp1end
+            esp1end joins task(5)
+            task(5) joins endEvent(2)
+            task(3) joins esp2start
+            esp2start joins startEvent(4)
+            startEvent(4) joins task(6)
+            task(6) joins endEvent(4)
+            endEvent(4) joins esp2end
+            esp2end joins endEvent(5)
+            endEvent(1) or
+                    endEvent(2) or
+                    endEvent(5) or
+                    endEvent(1) + endEvent(2) or
+                    endEvent(1) + endEvent(5) or
+                    endEvent(2) + endEvent(5) or
+                    endEvent(1) + endEvent(2) + endEvent(5) join end
+        }
+        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.4.1.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        // Apparently, names in A.4.1 contain trailing spaces. The sole purpose of the code below is to rewrite the obtained cnet renaming nodes
+        val tmp = bpmnModel.toCausalNet()
+        val converted = MutableCausalNet()
+        val n2n = tmp.instances.associateWith { node -> Node(node.activity.trim(), node.instanceId.trim(), node.special) }
+        converted.addInstance(*n2n.values.toTypedArray())
+        val d2d = tmp.outgoing.values.flatten().associateWith { dep -> Dependency(n2n.getValue(dep.source), n2n.getValue(dep.target)) }
+        for (dep in d2d.values)
+            converted.addDependency(dep)
+        for (split in tmp.splits.values.flatten())
+            converted.addSplit(Split(split.dependencies.map { d2d.getValue(it) }.toSet()))
+        for (join in tmp.joins.values.flatten())
+            converted.addJoin(Join(join.dependencies.map { d2d.getValue(it) }.toSet()))
+
         assertTrue { expected.structurallyEquals(converted) }
     }
 

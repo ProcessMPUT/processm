@@ -48,9 +48,11 @@ internal class BPMNProcess internal constructor(base: TProcess) {
     val endActivities: Sequence<BPMNFlowNode> =
             flowNodes.asSequence().filter { it.base is TEndEvent || it.base.outgoing.isEmpty() }
 
+    internal inline fun byName(qname: QName) = recursiveFlowElements.filter { it.id == qname.localPart }
+
     internal inline fun <reified ExpectedType> flowByName(qname: QName): ExpectedType {
         try {
-            return recursiveFlowElements.filter { it.id == qname.toString() }.filterIsInstance<ExpectedType>().single()
+            return byName(qname).filterIsInstance<ExpectedType>().single()
         } catch (e: NoSuchElementException) {
             println("Missing $qname")
             throw e
