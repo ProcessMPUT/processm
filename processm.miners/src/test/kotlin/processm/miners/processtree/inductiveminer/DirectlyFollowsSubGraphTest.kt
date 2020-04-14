@@ -590,4 +590,136 @@ internal class DirectlyFollowsSubGraphTest {
         assertEquals(3, assignment[ProcessTreeActivity("F")])
         assertEquals(3, assignment[ProcessTreeActivity("G")])
     }
+
+    @Test
+    fun `Prepare negated connections - eliminate loops from graph`() {
+        val registerRequest = ProcessTreeActivity("register request")
+        val checkTicket = ProcessTreeActivity("check ticket")
+        val examineThoroughly = ProcessTreeActivity("examine thoroughly")
+        val examineCasually = ProcessTreeActivity("examine casually")
+        val decide = ProcessTreeActivity("decide")
+        val rejectRequest = ProcessTreeActivity("reject request")
+        val reinitiateRequest = ProcessTreeActivity("reinitiate request")
+        val payCompensation = ProcessTreeActivity("pay compensation")
+
+        val activities = activitiesSet(
+            listOf(
+                registerRequest,
+                checkTicket,
+                examineThoroughly,
+                examineCasually,
+                decide,
+                reinitiateRequest,
+                payCompensation,
+                rejectRequest
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[decide] = Arc()
+                arcs[examineCasually] = Arc()
+                arcs[examineThoroughly] = Arc()
+                conn[checkTicket] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[decide] = Arc()
+                arcs[checkTicket] = Arc()
+                conn[examineThoroughly] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[decide] = Arc()
+                arcs[checkTicket] = Arc()
+                conn[examineCasually] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[checkTicket] = Arc()
+                arcs[examineCasually] = Arc()
+                arcs[examineThoroughly] = Arc()
+                conn[registerRequest] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[reinitiateRequest] = Arc()
+                arcs[payCompensation] = Arc()
+                arcs[rejectRequest] = Arc()
+                conn[decide] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[checkTicket] = Arc()
+                arcs[examineCasually] = Arc()
+                arcs[examineThoroughly] = Arc()
+                conn[reinitiateRequest] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val response = graph.negateDFGConnections()
+
+        assertEquals(16, connections.values.sumBy { it.size })
+        assertEquals(12, response.values.sumBy { it.size })
+
+        assertFalse(response[checkTicket]!!.containsKey(examineCasually))
+        assertFalse(response[checkTicket]!!.containsKey(examineThoroughly))
+        assertFalse(response[examineCasually]!!.containsKey(checkTicket))
+        assertFalse(response[examineThoroughly]!!.containsKey(checkTicket))
+
+        assertTrue(response[checkTicket]!!.containsKey(decide))
+        assertTrue(response[examineThoroughly]!!.containsKey(decide))
+        assertTrue(response[examineCasually]!!.containsKey(decide))
+        assertTrue(response[registerRequest]!!.containsKey(checkTicket))
+        assertTrue(response[registerRequest]!!.containsKey(examineCasually))
+        assertTrue(response[registerRequest]!!.containsKey(examineThoroughly))
+        assertTrue(response[decide]!!.containsKey(reinitiateRequest))
+        assertTrue(response[decide]!!.containsKey(rejectRequest))
+        assertTrue(response[decide]!!.containsKey(payCompensation))
+        assertTrue(response[reinitiateRequest]!!.containsKey(examineCasually))
+        assertTrue(response[reinitiateRequest]!!.containsKey(examineThoroughly))
+        assertTrue(response[reinitiateRequest]!!.containsKey(checkTicket))
+    }
+
+    @Test
+    fun `Graph without loops between activities - no changes in connections mapping`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("D"),
+                ProcessTreeActivity("E"),
+                ProcessTreeActivity("F")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                arcs[ProcessTreeActivity("C")] = Arc()
+                conn[ProcessTreeActivity("A")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("C")] = Arc()
+                arcs[ProcessTreeActivity("E")] = Arc()
+                conn[ProcessTreeActivity("D")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("E")] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val response = graph.negateDFGConnections()
+
+        assertEquals(7, connections.values.sumBy { it.size })
+        assertEquals(7, response.values.sumBy { it.size })
+        assertEquals(connections, response)
+    }
 }
