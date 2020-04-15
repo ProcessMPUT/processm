@@ -50,7 +50,7 @@ class DirectlyFollowsSubGraph(
             }
         }
 
-        // No initial activities assigned - we should generate assigment
+        // No initial activities assigned - we should generate assignment
         if (initialStartActivities.isEmpty()) inferStartActivities()
         if (initialEndActivities.isEmpty()) inferEndActivities()
     }
@@ -216,7 +216,7 @@ class DirectlyFollowsSubGraph(
         val alreadyAssigned = HashSet<ProcessTreeActivity>()
         // Stack - activities to analyze
         val stack = ArrayDeque<ProcessTreeActivity>()
-        // Activities waiting to assigment
+        // Activities waiting to assignment
         val stronglyConnectedQueue = ArrayDeque<ProcessTreeActivity>()
         // Last label assigned
         var counter = 0
