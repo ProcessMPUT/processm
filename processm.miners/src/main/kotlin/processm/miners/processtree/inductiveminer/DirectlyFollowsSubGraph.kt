@@ -480,4 +480,20 @@ class DirectlyFollowsSubGraph(
 
         return startActivities
     }
+
+    /**
+     * Prepare a set of activities marked as end based on initial DFG and current connections (in sub graph)
+     */
+    fun currentEndActivities(): Set<ProcessTreeActivity> {
+        val endActivities = HashSet<ProcessTreeActivity>()
+
+        initialConnections.forEach outside@{ (from, toActivities) ->
+            if (from in activities) {
+                val found = toActivities.keys.firstOrNull { it !in activities }
+                if (found !== null) endActivities.add(from)
+            }
+        }
+
+        return endActivities
+    }
 }
