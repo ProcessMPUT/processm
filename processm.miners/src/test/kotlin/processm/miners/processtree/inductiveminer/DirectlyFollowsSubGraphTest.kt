@@ -1,0 +1,196 @@
+package processm.miners.processtree.inductiveminer
+
+import org.junit.jupiter.api.assertThrows
+import processm.core.models.processtree.ProcessTreeActivity
+import processm.miners.processtree.directlyfollowsgraph.Arc
+import kotlin.test.*
+
+internal class DirectlyFollowsSubGraphTest {
+    private fun activitiesSet(l: Collection<ProcessTreeActivity>) = HashSet<ProcessTreeActivity>().also {
+        it.addAll(l)
+    }
+
+    @Test
+    fun `Possible to finish calculations if contains only one activity`() {
+        val activities = activitiesSet(listOf(ProcessTreeActivity("A")))
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+
+        assertTrue(graph.canFinishCalculationsOnSubGraph())
+    }
+
+    @Test
+    fun `NOT possible to finish calculations - more than one activity on graph`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B")
+            )
+        )
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+
+        assertFalse(graph.canFinishCalculationsOnSubGraph())
+    }
+
+    @Test
+    fun `NOT possible to finish calculations - connection between activity`() {
+        val activities = activitiesSet(listOf(ProcessTreeActivity("A")))
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arc ->
+                arc[ProcessTreeActivity("A")] = Arc().increment()
+                conn[ProcessTreeActivity("A")] = arc
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+
+        assertFalse(graph.canFinishCalculationsOnSubGraph())
+    }
+
+    @Test
+    fun `Fetch alone activity from graph`() {
+        val activities = activitiesSet(listOf(ProcessTreeActivity("A")))
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+
+        assertEquals(ProcessTreeActivity("A"), graph.finishCalculations())
+    }
+
+    @Test
+    fun `Exception if can't fetch activity`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B")
+            )
+        )
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+
+        assertThrows<IllegalStateException> {
+            graph.finishCalculations()
+        }.also { exception ->
+            assertEquals("SubGraph is not split yet. Can't fetch activity!", exception.message)
+        }
+    }
+
+    @Test
+    fun `Graph without separated parts`() {
+        // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]}, part G1
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("D"),
+                ProcessTreeActivity("E")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                arcs[ProcessTreeActivity("C")] = Arc()
+                arcs[ProcessTreeActivity("E")] = Arc()
+                conn[ProcessTreeActivity("A")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("C")] = Arc()
+                arcs[ProcessTreeActivity("D")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                arcs[ProcessTreeActivity("D")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("D")] = Arc()
+                conn[ProcessTreeActivity("E")] = arcs
+            }
+        }
+
+        val assigment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+
+        val expectedLabel = assigment[ProcessTreeActivity("A")]!!
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("B")])
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("C")])
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("D")])
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("E")])
+    }
+
+    @Test
+    fun `Graph without separated parts but with not ordered activity`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("D"),
+                ProcessTreeActivity("E"),
+                ProcessTreeActivity("F")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                arcs[ProcessTreeActivity("C")] = Arc()
+                conn[ProcessTreeActivity("A")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("E")] = Arc()
+                conn[ProcessTreeActivity("D")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("F")] = Arc()
+                conn[ProcessTreeActivity("E")] = arcs
+            }
+        }
+
+        val assigment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+
+        val expectedLabel = assigment[ProcessTreeActivity("A")]!!
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("B")])
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("C")])
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("D")])
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("E")])
+        assertEquals(expectedLabel, assigment[ProcessTreeActivity("F")])
+    }
+
+    @Test
+    fun `Graph with separated parts`() {
+        // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]} part G1b
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("E")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("C")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+        }
+
+        val assigment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+
+        // B & C in group
+        assertEquals(assigment[ProcessTreeActivity("B")], assigment[ProcessTreeActivity("C")])
+
+        // E with different label
+        assertNotEquals(assigment[ProcessTreeActivity("B")], assigment[ProcessTreeActivity("E")])
+    }
+}
