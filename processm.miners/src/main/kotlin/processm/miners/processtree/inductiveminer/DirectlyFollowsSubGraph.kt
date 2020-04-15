@@ -1,6 +1,6 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.models.processtree.Activity
+import processm.core.models.processtree.ProcessTreeActivity
 import processm.miners.processtree.directlyfollowsgraph.Arc
 import java.util.*
 import kotlin.collections.HashMap
@@ -10,17 +10,17 @@ class DirectlyFollowsSubGraph(
     /**
      * Activities in directly-follows subGraph
      */
-    private val activities: HashSet<Activity>,
+    private val activities: HashSet<ProcessTreeActivity>,
     /**
      * Connections between activities in graph
      * Outgoing - `key` activity has reference to activities which it directly points to.
      */
-    private val outgoingConnections: HashMap<Activity, HashMap<Activity, Arc>>
+    private val outgoingConnections: HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>
 ) {
     /**
      * Activities pointed (with connection) to `key` activity
      */
-    private val ingoingConnections = HashMap<Activity, HashMap<Activity, Arc>>()
+    private val ingoingConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
 
     init {
         outgoingConnections.forEach { (from, hashMap) ->
@@ -42,7 +42,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Finish calculations and return activity
      */
-    fun finishCalculations(): Activity {
+    fun finishCalculations(): ProcessTreeActivity {
         // Check can finish condition
         check(canFinishCalculationsOnSubGraph()) { "SubGraph is not split yet. Can't fetch activity!" }
 
@@ -57,18 +57,18 @@ class DirectlyFollowsSubGraph(
      *
      * This function generates a map of activity => label reference.
      */
-    fun calculateExclusiveCut(): HashMap<Activity, Int> {
+    fun calculateExclusiveCut(): HashMap<ProcessTreeActivity, Int> {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
         // Activities and assigned label
-        val activitiesWithLabels = HashMap<Activity, Int>()
+        val activitiesWithLabels = HashMap<ProcessTreeActivity, Int>()
 
         // Not labeled yet activities
-        val nonLabeledActivities = HashSet<Activity>(activities)
+        val nonLabeledActivities = HashSet<ProcessTreeActivity>(activities)
 
         // Temp list with activities to check - will be a FIFO queue
-        val toCheckActivitiesListFIFO = LinkedList<Activity>()
+        val toCheckActivitiesListFIFO = LinkedList<ProcessTreeActivity>()
 
         // Iterate until all activity receive own label
         while (nonLabeledActivities.isNotEmpty()) {
