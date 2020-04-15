@@ -1,7 +1,6 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.models.processtree.Activity
-import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.Arc
 import java.util.*
 import kotlin.collections.HashMap
@@ -14,16 +13,30 @@ class DirectlyFollowsSubGraph(
     private val activities: HashSet<Activity>,
     /**
      * Connections between activities in graph
+     * Outgoing - `key` activity has reference to activities which it directly points to.
      */
-    private val connections: HashMap<Activity, HashMap<Activity, Arc>>
+    private val outgoingConnections: HashMap<Activity, HashMap<Activity, Arc>>
 ) {
+    /**
+     * Activities pointed (with connection) to `key` activity
+     */
+    private val ingoingConnections = HashMap<Activity, HashMap<Activity, Arc>>()
+
+    init {
+        outgoingConnections.forEach { (from, hashMap) ->
+            hashMap.forEach { (to, arc) ->
+                ingoingConnections.getOrPut(to, { HashMap() })[from] = arc
+            }
+        }
+    }
+
     /**
      * Check is possible to finish calculation.
      *
-     * Possible only if connections are empty (no self-loop) AND in activities ZERO or ONE activity.
+     * Possible only if connections are empty (no self-loop) AND in activities only one activity.
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
-        return connections.isEmpty() && activities.size <= 1
+        return outgoingConnections.isEmpty() && activities.size == 1
     }
 
     /**
@@ -31,11 +44,7 @@ class DirectlyFollowsSubGraph(
      */
     fun finishCalculations(): Activity {
         // Check can finish condition
-        if (!canFinishCalculationsOnSubGraph())
-            throw IllegalStateException("SubGraph is not split yet. Can't fetch activity!")
-
-        // Empty graph - return silent activity
-        if (activities.isEmpty()) return SilentActivity()
+        check(canFinishCalculationsOnSubGraph()) { "SubGraph is not split yet. Can't fetch activity!" }
 
         // Return activity
         return activities.first()
@@ -43,7 +52,10 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Method based on Flood fill (read more: https://en.wikipedia.org/wiki/Flood_fill)
-     * This function with generate map with activity => label reference.
+     * Each activity will receive labels - we want to assign a number as low as possible.
+     * Based on assigned labels activities connected into groups.
+     *
+     * This function generates a map of activity => label reference.
      */
     fun calculateExclusiveCut(): HashMap<Activity, Int> {
         // Last assigned label, on start 0 (not assigned yet)
@@ -53,10 +65,7 @@ class DirectlyFollowsSubGraph(
         val activitiesWithLabels = HashMap<Activity, Int>()
 
         // Not labeled yet activities
-        val nonLabeledActivities = HashSet<Activity>()
-
-        // Add each activity on graph
-        activities.forEach { nonLabeledActivities.add(it) }
+        val nonLabeledActivities = HashSet<Activity>(activities)
 
         // Temp list with activities to check - will be a FIFO queue
         val toCheckActivitiesListFIFO = LinkedList<Activity>()
@@ -84,20 +93,28 @@ class DirectlyFollowsSubGraph(
                     nonLabeledActivities.remove(current)
                 }
 
-                // Iterate over not labeled yet activities
-                val iter = nonLabeledActivities.iterator()
-                while (iter.hasNext()) {
-                    val activity = iter.next()
-
-                    if (areConnected(current, activity)) {
+                // Iterate over activities connected with my `current` (current -> activity)
+                outgoingConnections[current].orEmpty().keys.forEach { activity ->
+                    // If not assigned label yet
+                    if (nonLabeledActivities.contains(activity)) {
                         // Assign label
                         activitiesWithLabels[activity] = label
-
                         // Add activity to check list
                         toCheckActivitiesListFIFO.add(activity)
-
                         // Remove activity from not labeled yet activities list
-                        iter.remove()
+                        nonLabeledActivities.remove(activity)
+                    }
+                }
+
+                ingoingConnections[current].orEmpty().keys.forEach { activity ->
+                    // If not assigned label yet
+                    if (nonLabeledActivities.contains(activity)) {
+                        // Assign label
+                        activitiesWithLabels[activity] = label
+                        // Add activity to check list
+                        toCheckActivitiesListFIFO.add(activity)
+                        // Remove activity from not labeled yet activities list
+                        nonLabeledActivities.remove(activity)
                     }
                 }
             }
@@ -105,13 +122,5 @@ class DirectlyFollowsSubGraph(
 
         // Return activities and assigned labels
         return activitiesWithLabels
-    }
-
-    /**
-     * Check in connections exists `from` -> `to` or `to` -> `from` connection
-     */
-    private fun areConnected(from: Activity?, to: Activity): Boolean {
-        return (connections.containsKey(from) && connections[from]!!.containsKey(to)) ||
-                (connections.containsKey(to) && connections[to]!!.containsKey(from))
     }
 }

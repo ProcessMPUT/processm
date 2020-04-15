@@ -12,13 +12,6 @@ internal class DirectlyFollowsSubGraphTest {
     }
 
     @Test
-    fun `Possible to finish calculations if not contains activities`() {
-        val graph = DirectlyFollowsSubGraph(activitiesSet(emptyList()), hashMapOf())
-
-        assertTrue(graph.canFinishCalculationsOnSubGraph())
-    }
-
-    @Test
     fun `Possible to finish calculations if contains only one activity`() {
         val activities = activitiesSet(listOf(Activity("A")))
         val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
@@ -52,13 +45,6 @@ internal class DirectlyFollowsSubGraphTest {
         val graph = DirectlyFollowsSubGraph(activities, connections)
 
         assertFalse(graph.canFinishCalculationsOnSubGraph())
-    }
-
-    @Test
-    fun `Fetch silent activity from graph - no activities in graph`() {
-        val graph = DirectlyFollowsSubGraph(activitiesSet(listOf()), hashMapOf())
-
-        assertEquals(SilentActivity(), graph.finishCalculations())
     }
 
     @Test
