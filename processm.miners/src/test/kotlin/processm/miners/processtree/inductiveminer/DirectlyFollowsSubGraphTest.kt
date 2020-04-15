@@ -752,4 +752,50 @@ internal class DirectlyFollowsSubGraphTest {
         val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
         assertTrue(graph.isStartAndEndActivityInEachGroup(assignment))
     }
+
+    @Test
+    fun `Calculate parallel cut based on Process Mining 7-21 book - activities B and C with different labels`() {
+        // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]}, part G1d
+        val activities = activitiesSet(listOf(B, C))
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[C] = Arc()
+                conn[B] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[B] = Arc()
+                conn[C] = arcs
+            }
+        }
+        val initialConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[B] = Arc()
+                arcs[C] = Arc()
+                arcs[E] = Arc()
+                conn[A] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[C] = Arc()
+                arcs[D] = Arc()
+                conn[B] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[B] = Arc()
+                arcs[D] = Arc()
+                conn[C] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[D] = Arc()
+                conn[E] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val assignment = graph.calculateParallelCut()
+
+        assertNotNull(assignment)
+
+        assertEquals(2, assignment.size)
+        assertNotEquals(assignment[B], assignment[C])
+    }
 }

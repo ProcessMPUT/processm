@@ -520,14 +520,91 @@ class DirectlyFollowsSubGraph(
         }
     }
 
-    private fun verifyParallelCutInAllRelations(connectedComponents: Map<ProcessTreeActivity, Int>) {
+    private fun verifyParallelCutInAllRelations(connectedComponents: MutableMap<ProcessTreeActivity, Int>): Boolean {
+        var changedAssignment: Boolean
+        val groups = componentsToGroup(connectedComponents)
+        // Prepare set with unique labels
+        val uniqueGroupIdsSet = HashSet<Int>(connectedComponents.values)
+        // Set to list + apply sort ascending
+        val uniqueGroupIds = uniqueGroupIdsSet.toMutableList()
+        uniqueGroupIds.sort()
+
+        do {
+            // Reset variable
+            changedAssignment = false
+
+            var indexFirstGroup = 0
+            while (indexFirstGroup < uniqueGroupIds.size) {
+                val fullyOkGroups = HashSet<Int>()
+                val partiallyOkGroups = HashSet<Int>()
+                val notOkGroups = HashSet<Int>()
+
+                val firstGroupID = uniqueGroupIds[indexFirstGroup]
+                var indexSecondGroup = indexFirstGroup + 1
+
+                while (indexSecondGroup < uniqueGroupIds.size) {
+                    var countGood = 0
+                    var countNotGood = 0
+
+                    // Iterate until end of collection OR (found connected AND not connected elements)
+                    groups[firstGroupID].orEmpty().forEach outside@{ from ->
+                        groups[uniqueGroupIds[indexSecondGroup]].orEmpty().forEach { to ->
+                            if (ingoingConnections[from].orEmpty().containsKey(to) && ingoingConnections[to].orEmpty()
+                                    .containsKey(from)
+                            ) {
+                                countGood++
+                                if (countNotGood > 0) return@outside
+                            } else {
+                                countNotGood++
+                                if (countGood > 0) return@outside
+                            }
+                        }
+                    }
+
+                    // Analyze output - add to group
+                    when {
+                        countNotGood == 0 -> {
+                            fullyOkGroups.add(indexSecondGroup)
+                        }
+                        countGood > 0 -> {
+                            partiallyOkGroups.add(indexSecondGroup)
+                        }
+                        else -> {
+                            notOkGroups.add(indexSecondGroup)
+                        }
+                    }
+
+                    indexSecondGroup++
+                }
+
+                if (notOkGroups.isNotEmpty()) return false
+                if (partiallyOkGroups.isNotEmpty()) {
+                    val index = partiallyOkGroups.first()
+                    // Update components
+                    connectedComponents.forEach {
+                        if (it.value == index) connectedComponents[it.key] = firstGroupID
+                    }
+                    // Update groups assigment
+                    groups[index]?.let { groups[firstGroupID]?.addAll(it) }
+                    groups.remove(index)
+
+                    changedAssignment = true
+                    continue
+                }
+
+                indexFirstGroup++
+            }
+        } while (changedAssignment)
+
+        // One group - activities in the same assignment. We want to find at least two groups
+        return groups.size >= 2
     }
 
     /**
      * Based on assignment activity to group prepare a hashmap
      * This will make checks simpler
      */
-    private fun componentsToGroup(connectedComponents: Map<ProcessTreeActivity, Int>): Map<Int, Set<ProcessTreeActivity>> {
+    private fun componentsToGroup(connectedComponents: Map<ProcessTreeActivity, Int>): HashMap<Int, HashSet<ProcessTreeActivity>> {
         val connectedComponentsGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
         connectedComponents.forEach { (activity, label) ->
             connectedComponentsGroups.getOrPut(label, { HashSet() }).add(activity)
@@ -636,7 +713,9 @@ class DirectlyFollowsSubGraph(
         if (connectedComponents === null) return null
 
         mergeUnConnectedComponents(connectedComponents)
-        verifyParallelCutInAllRelations(connectedComponents)
+
+        // Assignment with only one group or not allowed connections in parallel cut
+        if (!verifyParallelCutInAllRelations(connectedComponents)) return null
 
         // Verify each group with StartActivity and EndActivity, otherwise can not generate assignment to group
         return if (isStartAndEndActivityInEachGroup(connectedComponents)) connectedComponents else null
