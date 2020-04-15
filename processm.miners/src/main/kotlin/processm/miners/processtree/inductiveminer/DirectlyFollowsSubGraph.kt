@@ -438,6 +438,30 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+     * Validate - start and end activity in each group
+     * Will be used by parallel cut check
+     */
+    fun isStartAndEndActivityInEachGroup(connectedComponents: Map<ProcessTreeActivity, Int>): Boolean {
+        val startWithInitials = currentStartActivities().also { it.addAll(initialStartActivities) }
+        val endWithInitials = currentEndActivities().also { it.addAll(initialEndActivities) }
+
+        // Prepare assignment activity to component as hashmap - will make check simpler
+        val connectedComponentsGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
+        connectedComponents.forEach { (activity, label) ->
+            connectedComponentsGroups.getOrPut(label, { HashSet() }).add(activity)
+        }
+
+        connectedComponentsGroups.values.forEach { group ->
+            val containsStart = (startWithInitials.firstOrNull { it in group } !== null)
+            val containsEnd = (endWithInitials.firstOrNull { it in group } !== null)
+
+            if (containsStart && containsEnd) return true
+        }
+
+        return false
+    }
+
+    /**
      * Infer start activities based on initial connection in DFG
      * This should be done only if initial start activities not assigned yet
      */
@@ -467,7 +491,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Prepare a set of activities marked as start based on initial DFG and current connections (in sub graph)
      */
-    fun currentStartActivities(): Set<ProcessTreeActivity> {
+    fun currentStartActivities(): MutableSet<ProcessTreeActivity> {
         val startActivities = HashSet<ProcessTreeActivity>()
 
         // Start activity - only ingoing connection, no one outgoing
@@ -484,7 +508,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Prepare a set of activities marked as end based on initial DFG and current connections (in sub graph)
      */
-    fun currentEndActivities(): Set<ProcessTreeActivity> {
+    fun currentEndActivities(): MutableSet<ProcessTreeActivity> {
         val endActivities = HashSet<ProcessTreeActivity>()
 
         initialConnections.forEach outside@{ (from, toActivities) ->
