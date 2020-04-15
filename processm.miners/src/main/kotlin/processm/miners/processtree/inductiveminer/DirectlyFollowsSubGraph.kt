@@ -464,7 +464,6 @@ class DirectlyFollowsSubGraph(
         secondGroup: Int,
         assignment: Map<ProcessTreeActivity, Int>
     ): Boolean {
-        val bothMatch = { a: Boolean, b: Boolean -> a.and(b) } // TODO: or czy and?
         val groups = componentsToGroup(assignment)
 
         groups[firstGroup].orEmpty().forEach { from ->
@@ -479,6 +478,43 @@ class DirectlyFollowsSubGraph(
 
         // True if not found connection between activities
         return true
+    }
+
+    /**
+     * Merge unconnected components into group
+     *
+     * Warning!
+     * This function will override assignment activity to group given as a parameter `assignment` - no extra copy here to speed-up function.
+     */
+    private fun mergeUnConnectedComponents(assignment: HashMap<ProcessTreeActivity, Int>) {
+        // Prepare set with unique labels
+        val uniqueGroupIdsSet = HashSet<Int>()
+        uniqueGroupIdsSet.addAll(assignment.values)
+        // Set to list + apply sort ascending
+        val uniqueGroupIds = uniqueGroupIdsSet.toMutableList()
+        uniqueGroupIds.sort()
+
+        var indexFirstGroup = 0
+        while (indexFirstGroup < uniqueGroupIds.size) {
+            val firstGroupID = uniqueGroupIds[indexFirstGroup]
+            var indexSecondGroup = indexFirstGroup + 1
+
+            while (indexSecondGroup < uniqueGroupIds.size) {
+                val secondGroupID = uniqueGroupIds[indexSecondGroup]
+                if (isCompletelyUnConnected(firstGroupID, secondGroupID, assignment)) {
+                    // Add group with `secondGroupID` to group with lower label value (firstGroupID)
+                    assignment.forEach { if (it.value == secondGroupID) assignment[it.key] = firstGroupID }
+                    // Remove group from analyze step - prevent duplicates and reassignment
+                    uniqueGroupIds.removeAt(indexSecondGroup)
+                    // Next iteration
+                    continue
+                }
+
+                indexSecondGroup++
+            }
+
+            indexFirstGroup++
+        }
     }
 
     /**
