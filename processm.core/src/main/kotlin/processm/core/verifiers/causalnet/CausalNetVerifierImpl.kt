@@ -2,9 +2,10 @@ package processm.core.verifiers.causalnet
 
 import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.withMemory
+import processm.core.logging.logger
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import java.util.*
 import kotlin.collections.HashMap
@@ -122,27 +123,51 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     }
 
     /**
+     * True if the structure of the causal net is correct: it has a single start, a single end,
+     * all dependencies are used in splits and joins and the underlying dependency graph is connected
+     */
+    val isStructurallySound: Boolean by lazy {
+        allDependenciesUsed() && hasSingleEnd() && hasSingleStart() && isConnected
+    }
+
+    /**
      * Based on Definition 3.8 in PM
      */
-    public fun allDependenciesUsed(): Boolean {
+    private fun allDependenciesUsed(): Boolean {
         val splitDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
         val joinDependencies = model.joins.values.flatten().flatMap { it.dependencies }.toSet()
         val allDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
-        return splitDependencies == allDependencies && joinDependencies == allDependencies
+        val unusedInSplits = allDependencies - splitDependencies
+        val unusedInJoins = allDependencies - joinDependencies
+        if (unusedInJoins.isEmpty() && unusedInSplits.isEmpty())
+            return true
+        else {
+            logger().debug("Not used in splits: $unusedInSplits")
+            logger().debug("Not used in joins: $unusedInJoins")
+            return false
+        }
     }
 
     /**
      * Over all nodes, there should be exactly one with no predecessor
      */
     private fun hasSingleStart(): Boolean {
-        return model.instances.filter { model.incoming[it].isNullOrEmpty() }.size == 1
+        val starts = model.instances.filter { model.incoming[it].isNullOrEmpty() }
+        if (starts.size == 1)
+            return true
+        logger().debug("There is an unexpected number of starts: $starts")
+        return false
     }
 
     /**
      * Over all nodes, there should be exactly one with no successor
      */
     private fun hasSingleEnd(): Boolean {
-        return model.instances.filter { model.outgoing[it].isNullOrEmpty() }.size == 1
+        val ends = model.instances.filter { model.outgoing[it].isNullOrEmpty() }
+        if (ends.size == 1)
+            return true
+        logger().debug("There is an unexpected number of ends: $ends")
+        return false
     }
 
     private fun checkAbsenceOfDeadParts(seqs: Sequence<CausalNetSequence>): Boolean {
