@@ -453,6 +453,35 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+     * Checks - two connected components are completely unconnected each other
+     *
+     * Unconnected:
+     * * no connection between elements
+     * * connections only in one side (no loops)
+     */
+    private fun isCompletelyUnConnected(
+        firstGroup: Int,
+        secondGroup: Int,
+        assignment: Map<ProcessTreeActivity, Int>
+    ): Boolean {
+        val bothMatch = { a: Boolean, b: Boolean -> a.and(b) } // TODO: or czy and?
+        val groups = componentsToGroup(assignment)
+
+        groups[firstGroup].orEmpty().forEach { from ->
+            groups[secondGroup].orEmpty().forEach { to ->
+                if (ingoingConnections[from].orEmpty().containsKey(to) && ingoingConnections[to].orEmpty()
+                        .containsKey(from)
+                ) {
+                    return false
+                }
+            }
+        }
+
+        // True if not found connection between activities
+        return true
+    }
+
+    /**
      * Based on assignment activity to group prepare a hashmap
      * This will make checks simpler
      */
