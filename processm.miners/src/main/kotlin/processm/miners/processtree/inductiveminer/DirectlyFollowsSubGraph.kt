@@ -173,7 +173,14 @@ class DirectlyFollowsSubGraph(
                 connectionsHashMap[activity] = outgoingConnections[activity].orEmpty().filter { it.key in activities }
             }
 
-            subGraphs[groupToListPosition[groupId]!!] = DirectlyFollowsSubGraph(activities, connectionsHashMap)
+            subGraphs[groupToListPosition[groupId]!!] =
+                DirectlyFollowsSubGraph(
+                    activities = activities,
+                    outgoingConnections = connectionsHashMap,
+                    initialConnections = initialConnections,
+                    initialStartActivities = initialStartActivities,
+                    initialEndActivities = initialEndActivities
+                )
         }
 
         return subGraphs
