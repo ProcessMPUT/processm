@@ -453,18 +453,26 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+     * Based on assignment activity to group prepare a hashmap
+     * This will make checks simpler
+     */
+    private fun componentsToGroup(connectedComponents: Map<ProcessTreeActivity, Int>): Map<Int, Set<ProcessTreeActivity>> {
+        val connectedComponentsGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
+        connectedComponents.forEach { (activity, label) ->
+            connectedComponentsGroups.getOrPut(label, { HashSet() }).add(activity)
+        }
+
+        return connectedComponentsGroups
+    }
+
+    /**
      * Validate - start and end activity in each group
      * Will be used by parallel cut check
      */
     fun isStartAndEndActivityInEachGroup(connectedComponents: Map<ProcessTreeActivity, Int>): Boolean {
         val startWithInitials = currentStartActivities().also { it.addAll(initialStartActivities) }
         val endWithInitials = currentEndActivities().also { it.addAll(initialEndActivities) }
-
-        // Prepare assignment activity to component as hashmap - will make check simpler
-        val connectedComponentsGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
-        connectedComponents.forEach { (activity, label) ->
-            connectedComponentsGroups.getOrPut(label, { HashSet() }).add(activity)
-        }
+        val connectedComponentsGroups = componentsToGroup(connectedComponents)
 
         connectedComponentsGroups.values.forEach { group ->
             val containsStart = (startWithInitials.firstOrNull { it in group } !== null)
