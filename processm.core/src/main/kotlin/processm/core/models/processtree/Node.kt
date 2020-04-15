@@ -1,5 +1,6 @@
 package processm.core.models.processtree
 
+import processm.core.models.processtree.execution.ExecutionNode
 import java.util.*
 
 abstract class Node(vararg nodes: Node) {
@@ -46,4 +47,16 @@ abstract class Node(vararg nodes: Node) {
     override fun toString(): String {
         return if (childrenInternal.isNotEmpty()) childrenInternal.joinToString(",", "$symbol(", ")") else symbol
     }
+
+    internal val chilrenRecursive: kotlin.sequences.Sequence<Node>
+        get() = sequence {
+            yieldAll(childrenInternal)
+            for (child in children)
+                yieldAll(child.chilrenRecursive)
+        }
+
+    internal abstract val startActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
+    internal abstract val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
+
+    internal abstract fun executionNode(parent: ExecutionNode?): ExecutionNode
 }

@@ -5,7 +5,7 @@ import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.DatabaseHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.models.processtree.Activity
+import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.persistence.DBConnectionPool
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import kotlin.test.Test
@@ -71,11 +71,11 @@ class DirectlyFollowsGraphTest {
 
     @Test
     fun `Build directly follows graph based on log from Definition 6,3 PM book`() {
-        val a = Activity("A")
-        val b = Activity("B")
-        val c = Activity("C")
-        val d = Activity("D")
-        val e = Activity("E")
+        val a = ProcessTreeActivity("A")
+        val b = ProcessTreeActivity("B")
+        val c = ProcessTreeActivity("C")
+        val d = ProcessTreeActivity("D")
+        val e = ProcessTreeActivity("E")
 
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
@@ -142,7 +142,7 @@ class DirectlyFollowsGraphTest {
 
     @Test
     fun `Start activities stored in special map`() {
-        val a = Activity("A")
+        val a = ProcessTreeActivity("A")
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
@@ -154,7 +154,7 @@ class DirectlyFollowsGraphTest {
 
     @Test
     fun `Last activities stored in special map`() {
-        val d = Activity("D")
+        val d = ProcessTreeActivity("D")
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 

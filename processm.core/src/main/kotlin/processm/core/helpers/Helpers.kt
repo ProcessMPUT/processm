@@ -128,6 +128,7 @@ fun <T> Collection<T>.materializedAllSubsets(filterEmpty: Boolean): List<List<T>
 /**
  * Generate all permutations of the given list
  */
+
 fun <T> Collection<T>.allPermutations(): Sequence<ArrayList<T>> = sequence {
     if (this@allPermutations.isEmpty())
         return@sequence

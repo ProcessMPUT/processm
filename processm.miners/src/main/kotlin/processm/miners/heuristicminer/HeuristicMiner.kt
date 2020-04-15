@@ -1,7 +1,7 @@
 package processm.miners.heuristicminer
 
 import processm.core.log.hierarchical.Log
-import processm.core.models.causalnet.MutableModel
+import processm.core.models.causalnet.MutableCausalNet
 
 /**
  * Common interface for heuristic miners.
@@ -15,5 +15,5 @@ interface HeuristicMiner {
     /**
      * The mined model
      */
-    val result: MutableModel
+    val result: MutableCausalNet
 }

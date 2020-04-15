@@ -15,7 +15,7 @@ class Counter<K> : HashMap<K, Int>() {
     }
 
     /**
-     * Incremenets the value stored for [key] by [n]
+     * Increments the value stored for [key] by [n]
      */
     fun inc(key: K, n: Int = 1) {
         this[key] += n

@@ -1,6 +1,6 @@
 package processm.miners.heuristicminer.longdistance.avoidability
 
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 
 /**
@@ -12,7 +12,7 @@ interface AvoidabilityChecker {
     /**
      * Sets the model to consider. Calling [invoke] without calling [setContext] first should lead to [IllegalStateException]
      */
-    fun setContext(model: Model)
+    fun setContext(model: CausalNet)
 
     /**
      * Returns true if the dependency is already enfoced by the model provided via [setContext], and false otherwise.

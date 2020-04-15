@@ -31,8 +31,8 @@ class OnlineHeuristicMiner(
 
     private var unableToReplay = ArrayList<List<Node>>()
     private var currentBindings = setOf<Binding>()
-    private val model = MutableModel(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
-    override val result: MutableModel = model
+    private val model = MutableCausalNet(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
+    override val result: MutableCausalNet = model
 
     override fun processLog(log: Log) {
         for (trace in log.traces)

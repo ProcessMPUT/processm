@@ -2,8 +2,9 @@ package processm.core.verifiers.causalnet
 
 import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.withMemory
+import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import java.util.*
 import kotlin.collections.HashMap
@@ -16,7 +17,7 @@ typealias CausalNetSequence = List<ActivityBinding>
  *
  * Computations are potentially expensive, but to minimize impact, everything is initialized lazily and then stored
  */
-class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
+class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) {
 
     /**
      * By definition, a causal net model is safe
@@ -177,7 +178,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
 
     private class CausalNetSequenceWithHash(other: CausalNetSequenceWithHash? = null) {
         private val _data: ArrayList<ActivityBinding> = ArrayList(other?._data ?: emptyList())
-        private val states: HashMap<Int, ArrayList<State>> = HashMap(other?.states ?: emptyMap())
+        private val states: HashMap<Int, ArrayList<CausalNetState>> = HashMap(other?.states ?: emptyMap())
         val data: List<ActivityBinding> = Collections.unmodifiableList(_data)
 
         fun add(ab: ActivityBinding) {
@@ -185,7 +186,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
             states.getOrPut(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
         }
 
-        fun containsBoringSubset(superset: State): Boolean {
+        fun containsBoringSubset(superset: CausalNetState): Boolean {
             val candidates = states[superset.uniqueSet().hashCode()]
             if (!candidates.isNullOrEmpty()) {
                 return candidates.any { superset.containsAll(it) }
@@ -194,7 +195,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
         }
     }
 
-    private val cache = HashMap<State, List<ActivityBinding>>()
+    private val cache = HashMap<CausalNetState, List<ActivityBinding>>()
 
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
@@ -213,8 +214,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
         val candidates = currentState.map { it.target }.intersect(model.joins.keys)
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
-                val expected = join.sources.map { Dependency(it , ak) }
-                if (currentState.containsAll(expected)) {
+                if (currentState.containsAll(join.dependencies)) {
                     val splits = model.splits[ak]
                     if (splits != null) {
                         for (split in splits) {
@@ -252,7 +252,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
                 val tmp = CausalNetSequenceWithHash()
-                tmp.add(ActivityBinding(model.start, setOf(), split.targets, State()))
+                tmp.add(ActivityBinding(model.start, setOf(), split.targets, CausalNetState()))
                 tmp
             })
         val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()

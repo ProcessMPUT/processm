@@ -1,7 +1,7 @@
 package processm.core.verifiers
 
 import processm.core.models.processtree.Node
-import processm.core.models.processtree.Model as ProcessTree
+import processm.core.models.processtree.ProcessTree as ProcessTree
 
 /**
  * Process Tree verifier

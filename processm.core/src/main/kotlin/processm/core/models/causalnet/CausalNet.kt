@@ -1,6 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.models.commons.AbstractModel
+import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
 import kotlin.collections.HashMap
@@ -9,7 +9,7 @@ import kotlin.collections.HashSet
 /**
  * A read-only causal net model
  */
-abstract class Model(
+abstract class CausalNet(
     /**
      * A unique start activity instance, either real or artificial.
      *
@@ -22,12 +22,10 @@ abstract class Model(
      * If artificial, it is up to the user to populate [outgoing] and [incoming]
      */
     val end: Node,
-    metadataHandler: MetadataHandler,
-    decisionModel: DecisionModel
+    metadataHandler: MetadataHandler
 ) :
-    AbstractModel,
-    MetadataHandler by metadataHandler,
-    DecisionModel by decisionModel {
+    ProcessModel,
+    MetadataHandler by metadataHandler {
     protected val _instances = HashSet(listOf(start, end))
 
     /**
@@ -71,6 +69,50 @@ abstract class Model(
      */
     val joins: Map<Node, Set<Join>>
         get() = Collections.unmodifiableMap(_joins)
+
+    /**
+     * Same as [instances]
+     */
+    override val activities: Sequence<Node>
+        get() = instances.asSequence()
+
+    /**
+     * A single-element sequence consisting of [start]
+     */
+    override val startActivities: Sequence<Node> = sequenceOf(start)
+
+    /**
+     * A single-element sequence consisting of [end]
+     */
+    override val endActivities: Sequence<Node> = sequenceOf(end)
+
+    /**
+     * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to chose a [Split].
+     * Some of them may be not real decisions, i.e., at most one possible outcome.
+     */
+    override val decisionPoints: Sequence<DecisionPoint>
+        get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
+                joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
+
+    /**
+     * In the given [state], list of nodes that can be executed, along with corresponding split and join
+     */
+    internal fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
+        if (state.isNotEmpty()) {
+            for (node in state.map { it.target }.toSet())
+                for (join in joins[node].orEmpty())
+                    if (state.containsAll(join.dependencies)) {
+                        val splits = if (node != end) splits[node].orEmpty() else setOf(null)
+                        yieldAll(splits.map { split ->
+                            DecoupledNodeExecution(node, join, split)
+                        })
+                    }
+
+        } else
+            yieldAll(
+                splits.getValue(start)
+                    .map { split -> DecoupledNodeExecution(start,  null, split) })
+    }
 
     /**
      * Returns true if the given join is present in the model and false otherwise

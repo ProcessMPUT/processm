@@ -25,7 +25,7 @@ class RandomGenerator(
     private val allowLongDistanceDependencies: Boolean = false
 ) {
 
-    private fun enforceSoundness(model: MutableModel, seqs: Sequence<ActivityBinding>) {
+    private fun enforceSoundness(model: MutableCausalNet, seqs: Sequence<ActivityBinding>) {
         val usedJoins = HashSet<Join>()
         val usedSplits = HashSet<Split>()
         for (ab in seqs) {
@@ -42,7 +42,7 @@ class RandomGenerator(
         usedSplits.forEach { model.addSplit(it) }
     }
 
-    private fun enforceSoundness(model: MutableModel) {
+    private fun enforceSoundness(model: MutableCausalNet) {
         // use CausalNetVerifierImpl instead of CausalNetVerifier because the later is eager and performs soundness verification
         enforceSoundness(
             model,
@@ -52,7 +52,7 @@ class RandomGenerator(
 
     private val nodes = List(nNodes) { Node((it + 'a'.toInt()).toChar().toString()) }
 
-    private fun withLongDistanceDependencies(model: MutableModel) {
+    private fun withLongDistanceDependencies(model: MutableCausalNet) {
         for (i in 0 until nAdditionalDependencies) {
             while (true) {
                 val x = rnd.nextInt(0, nNodes - 1)
@@ -66,7 +66,7 @@ class RandomGenerator(
         }
     }
 
-    private fun withoutLongDistanceDependencies(model: MutableModel) {
+    private fun withoutLongDistanceDependencies(model: MutableCausalNet) {
         val used = TreeSet(setOf(0, nNodes - 1))
         val unused = TreeSet(nodes.indices.toSet() - used)
         while (unused.isNotEmpty()) {
@@ -89,8 +89,8 @@ class RandomGenerator(
         }
     }
 
-    fun generate(): MutableModel {
-        val result = MutableModel(start = nodes[0], end = nodes[nodes.size - 1])
+    fun generate(): MutableCausalNet {
+        val result = MutableCausalNet(start = nodes[0], end = nodes[nodes.size - 1])
         result.addInstance(*nodes.toTypedArray())
         for (i in 1 until nNodes)
             result.addDependency(nodes[i - 1], nodes[i])
