@@ -10,9 +10,7 @@ import processm.core.models.commons.DecisionPoint
 class BPMNGateway internal constructor(override val base: TGateway, process: BPMNProcess) : BPMNFlowNode(process), DecisionPoint {
 
     override val name: String
-        get() = base.name
-
-
+        get() = base.name ?: base.id
 
     override val possibleOutcomes: List<Decision> by lazy {
         check(isSplit xor isJoin) {

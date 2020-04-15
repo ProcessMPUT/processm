@@ -1,8 +1,13 @@
 package processm.core.models.bpmn
 
-import processm.core.models.causalnet.*
+import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.MutableCausalNet
+import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.causalnet
+import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ToCausalNetConversionTest {
@@ -17,7 +22,6 @@ class ToCausalNetConversionTest {
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
-        println(converted)
         val expected = causalnet {
             start splits startEvent()
             startEvent() splits task(1)
@@ -32,6 +36,7 @@ class ToCausalNetConversionTest {
             task(3) joins endEvent()
             endEvent() joins end
         }
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
         assertTrue { expected.structurallyEquals(converted) }
     }
 
@@ -59,11 +64,11 @@ class ToCausalNetConversionTest {
             task(2) or mergeFlow or task(2) + mergeFlow join endEvent()
             endEvent() joins end
         }
-        println(expected)
         val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.2.0.bpmn").inputStream().use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
         assertTrue { expected.structurallyEquals(converted) }
     }
 
@@ -76,26 +81,26 @@ class ToCausalNetConversionTest {
             startEvent() splits task(1)
             task(1) splits splitFlow
             splitFlow splits task(2) or task(3) or task(4)
-            task(2) splits endEvent()
+            task(2) splits task(3) or endEvent()
             task(3) splits mergeFlow
-            task(4) splits mergeFlow
+            task(4) splits task(3) or mergeFlow
             mergeFlow splits endEvent()
             endEvent() splits end
             start joins startEvent()
             startEvent() joins task(1)
             task(1) joins splitFlow
             splitFlow joins task(2)
-            splitFlow joins task(3)
+            splitFlow or task(2) or task(4) join task(3)
             splitFlow joins task(4)
             task(3) or task(4) join mergeFlow
             task(2) or mergeFlow or task(2) + mergeFlow join endEvent()
             endEvent() joins end
         }
-        println(expected)
         val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.2.1.bpmn").inputStream().use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
         assertTrue { expected.structurallyEquals(converted) }
     }
 
@@ -157,6 +162,7 @@ class ToCausalNetConversionTest {
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
         assertTrue { expected.structurallyEquals(converted) }
     }
 
@@ -220,17 +226,151 @@ class ToCausalNetConversionTest {
         // Apparently, names in A.4.1 contain trailing spaces. The sole purpose of the code below is to rewrite the obtained cnet renaming nodes
         val tmp = bpmnModel.toCausalNet()
         val converted = MutableCausalNet()
-        val n2n = tmp.instances.associateWith { node -> Node(node.activity.trim(), node.instanceId.trim(), node.special) }
-        converted.addInstance(*n2n.values.toTypedArray())
-        val d2d = tmp.outgoing.values.flatten().associateWith { dep -> Dependency(n2n.getValue(dep.source), n2n.getValue(dep.target)) }
-        for (dep in d2d.values)
-            converted.addDependency(dep)
-        for (split in tmp.splits.values.flatten())
-            converted.addSplit(Split(split.dependencies.map { d2d.getValue(it) }.toSet()))
-        for (join in tmp.joins.values.flatten())
-            converted.addJoin(Join(join.dependencies.map { d2d.getValue(it) }.toSet()))
+        converted.copyFrom(tmp) { node -> Node(node.activity.trim(), node.instanceId.trim(), node.special) }
 
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
         assertTrue { expected.structurallyEquals(converted) }
+    }
+
+    @Test
+    fun `b10`() {
+        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/B.1.0.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        assertFailsWith<UnsupportedOperationException> { bpmnModel.toCausalNet() }
+    }
+
+    @Test
+    fun `c10`() {
+        val expected = causalnet {
+            Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") joins Node("7 days")
+            Node("7 days") splits Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D")
+            Node("Review\u000asuccessful?") or Node("Assign\u000aApprover") join Node("Approve Invoice")
+            Node("Approve Invoice") splits Node("Invoice\u000aapproved?")
+            Node("Archive\u000aoriginal") + Node("Assign\u000aApprover") join Node("Approver to \u000abe assigned")
+            Node("Approver to \u000abe assigned") splits Node("Assign approver")
+            Node("Prepare\u000d\u000aBank\u000d\u000aTransfer") joins Node("Archive\u000aInvoice")
+            Node("Archive\u000aInvoice") splits Node("Invoice\u000aprocessed")
+            Node("Scan Invoice") joins Node("Archive\u000aoriginal")
+            Node("Archive\u000aoriginal") splits Node("Approver to \u000abe assigned")
+            Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false) + Node("Assign approver") join Node("Assign\u000aApprover")
+            Node("Assign\u000aApprover") splits Node("Approve Invoice") + Node("Approver to \u000abe assigned")
+            Node("Approver to \u000abe assigned") joins Node("Assign approver")
+            Node("Assign approver") splits Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") + Node("Assign\u000aApprover")
+            Node("Review and document result") joins Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817")
+            Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") splits end
+            Node("7 days") joins Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D")
+            Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") splits end
+            Node("Approve Invoice") joins Node("Invoice\u000aapproved?")
+            Node("Invoice\u000aapproved?") splits Node("Rechnung kl\u00e4ren") or Node("Prepare\u000d\u000aBank\u000d\u000aTransfer")
+            Node("Archive\u000aInvoice") joins Node("Invoice\u000aprocessed")
+            Node("Invoice\u000aprocessed") splits end
+            start joins Node("Invoice\u000areceived", "NAME:Team-Assistant", false)
+            Node("Invoice\u000areceived", "NAME:Team-Assistant", false) splits Node("Scan Invoice")
+            start + Node("Scan Invoice") join Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false)
+            Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false) splits Node("Assign\u000aApprover")
+            Node("Review\u000asuccessful?") joins Node("Invoice not\u000aprocessed")
+            Node("Invoice not\u000aprocessed") splits end
+            Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") + Node("Rechnung kl\u00e4ren") join Node("Invoice review\u000a needed")
+            Node("Invoice review\u000a needed") splits Node("Review and document result")
+            Node("Invoice\u000aapproved?") joins Node("Prepare\u000d\u000aBank\u000d\u000aTransfer")
+            Node("Prepare\u000d\u000aBank\u000d\u000aTransfer") splits Node("Archive\u000aInvoice")
+            Node("Invoice\u000aapproved?") + Node("Review and document result") join Node("Rechnung kl\u00e4ren")
+            Node("Rechnung kl\u00e4ren") splits Node("Review\u000asuccessful?") + Node("Invoice review\u000a needed")
+            Node("Rechnung kl\u00e4ren") joins Node("Review\u000asuccessful?")
+            Node("Review\u000asuccessful?") splits Node("Approve Invoice") or Node("Invoice not\u000aprocessed")
+            Node("Invoice review\u000a needed") joins Node("Review and document result")
+            Node("Review and document result") splits Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Rechnung kl\u00e4ren")
+            Node("Invoice\u000areceived", "NAME:Team-Assistant", false) joins Node("Scan Invoice")
+            Node("Scan Invoice") splits Node("Archive\u000aoriginal") + Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false)
+            Node("Invoice\u000aprocessed") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("Invoice not\u000aprocessed") or Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") or Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") or Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") join end
+            Node("Assign approver") joins Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A")
+            Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") splits Node("Invoice review\u000a needed") or Node("7 days")
+            start splits Node("Invoice\u000areceived", "NAME:Team-Assistant", false) + Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false)
+        }
+        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.1.0.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
+        assertTrue { expected.structurallyEquals(converted) }
+    }
+
+    @Test
+    fun `c11`() {
+        val expected = causalnet {
+            Node("Review\u000asuccessful?") or Node("Assign\u000d\u000aApprover") join Node("Approve Invoice")
+            Node("Approve Invoice") splits Node("Invoice\u000d\u000aapproved?")
+            Node("Prepare\u000d\u000aBank\u000d\u000aTransfer") joins Node("Archive\u000aInvoice")
+            Node("Archive\u000aInvoice") splits Node("Invoice\u000aprocessed")
+            Node("Invoice\u000d\u000areceived") joins Node("Assign\u000d\u000aApprover")
+            Node("Assign\u000d\u000aApprover") splits Node("Approve Invoice")
+            Node("Archive\u000aInvoice") joins Node("Invoice\u000aprocessed")
+            Node("Invoice\u000aprocessed") splits end
+            Node("Approve Invoice") joins Node("Invoice\u000d\u000aapproved?")
+            Node("Invoice\u000d\u000aapproved?") splits Node("Rechnung kl\u00e4ren") or Node("Prepare\u000d\u000aBank\u000d\u000aTransfer")
+            start joins Node("Invoice\u000d\u000areceived")
+            Node("Invoice\u000d\u000areceived") splits Node("Assign\u000d\u000aApprover")
+            Node("Review\u000asuccessful?") joins Node("Invoice not\u000aprocessed")
+            Node("Invoice not\u000aprocessed") splits end
+            Node("Invoice\u000d\u000aapproved?") joins Node("Prepare\u000d\u000aBank\u000d\u000aTransfer")
+            Node("Prepare\u000d\u000aBank\u000d\u000aTransfer") splits Node("Archive\u000aInvoice")
+            Node("Invoice\u000d\u000aapproved?") joins Node("Rechnung kl\u00e4ren")
+            Node("Rechnung kl\u00e4ren") splits Node("Review\u000asuccessful?")
+            Node("Rechnung kl\u00e4ren") joins Node("Review\u000asuccessful?")
+            Node("Review\u000asuccessful?") splits Node("Approve Invoice") or Node("Invoice not\u000aprocessed")
+            Node("Invoice not\u000aprocessed") + Node("Invoice\u000aprocessed") or Node("Invoice\u000aprocessed") or Node("Invoice not\u000aprocessed") join end
+            start splits Node("Invoice\u000d\u000areceived")
+        }
+        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.1.1.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
+        assertTrue { expected.structurallyEquals(converted) }
+    }
+
+    @Test
+    fun `c20`() {
+       val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.2.0.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
+    }
+
+    @Test
+    fun `c30`() {
+       val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.3.0.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
+    }
+
+    @Test
+    fun `c40`() {
+        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.4.0.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        val converted = bpmnModel.toCausalNet()
+        assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
+    }
+
+    @Test
+    fun `c50`() {
+        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.5.0.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        assertFailsWith<UnsupportedOperationException> { bpmnModel.toCausalNet() }
+    }
+
+    @Test
+    fun `c60`() {
+        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.6.0.bpmn").inputStream().use { xml ->
+            BPMNModel.fromXML(xml)
+        }
+        assertFailsWith<UnsupportedOperationException> { bpmnModel.toCausalNet() }
     }
 
     @Test

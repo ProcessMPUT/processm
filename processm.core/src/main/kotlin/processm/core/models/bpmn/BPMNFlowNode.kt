@@ -21,14 +21,23 @@ abstract class BPMNFlowNode internal constructor(internal val process: BPMNProce
     override fun hashCode(): Int = base.hashCode()
 
     internal val outgoing by lazy {
-        base.outgoing.map { process.get(process.flowByName<TSequenceFlow>(it).targetRef as TFlowNode) }
+        var qnames = base.outgoing +
+                process.eventsFor(this)
+                        .toList()
+                        .flatMap { it.outgoing }
+        qnames.map { process.get(process.flowByName<TSequenceFlow>(it).targetRef as TFlowNode) }
     }
+
     internal val incoming by lazy {
-        base.incoming.map { process.get(process.flowByName<TSequenceFlow>(it).sourceRef as TFlowNode) }
+        val a = base.incoming.map { process.get(process.flowByName<TSequenceFlow>(it).sourceRef as TFlowNode) }
+        val b = process.associations.filter { hasId(base, it.targetRef) }.map { process.get(process.flowByName<TFlowNode>(it.sourceRef)) }
+        return@lazy a + b
     }
+
     internal val isSplit by lazy {
         outgoing.size > 1
     }
+
     internal val isJoin by lazy {
         incoming.size > 1
     }

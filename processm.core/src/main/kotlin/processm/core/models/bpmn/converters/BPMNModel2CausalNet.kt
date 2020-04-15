@@ -4,7 +4,9 @@ import processm.core.helpers.allSubsets
 import processm.core.helpers.ifNullOrEmpty
 import processm.core.models.bpmn.BPMNModel
 import processm.core.models.bpmn.BPMNProcess
+import processm.core.models.bpmn.jaxb.TCallActivity
 import processm.core.models.bpmn.jaxb.TCollaboration
+import processm.core.models.bpmn.jaxb.TProcess
 import processm.core.models.causalnet.*
 
 internal class BPMNModel2CausalNet(val model: BPMNModel) {
@@ -14,17 +16,10 @@ internal class BPMNModel2CausalNet(val model: BPMNModel) {
 
     private fun copy(causalNets: Collection<CausalNet>) {
         for (cnet in causalNets) {
-            for (node in cnet.instances)
-                combined.addInstance(node)
-            for (dependency in cnet.outgoing.values.flatten())
-                combined.addDependency(dependency)
-            for (split in cnet.splits.values.flatten())
-                if (split.source != cnet.start)
-                    combined.addSplit(split)
-            for (join in cnet.joins.values.flatten())
-                if (join.target != cnet.end)
-                    combined.addJoin(join)
+            combined.copyFrom(cnet) { localToGlobal.getValue(cnet to it) }
         }
+        combined.clearJoinsFor(combined.end)
+        combined.clearSplitsFor(combined.start)
     }
 
     private fun terminalBindings() {
@@ -41,10 +36,12 @@ internal class BPMNModel2CausalNet(val model: BPMNModel) {
                 .flatMap { it.messageFlow }
         val newDependencies = messageflows.map { mf ->
             val src = model.byName(mf.sourceRef)
-            val nsrc = converters.getValue(src.first).nodes.getValue(src.second)
+            val csrc = converters.getValue(src.first)
+            val nsrc = csrc.nodes.getValue(src.second)
             val dst = model.byName(mf.targetRef)
-            val ndst = converters.getValue(dst.first).nodes.getValue(dst.second)
-            Dependency(nsrc.end, ndst.start)
+            val cdst = converters.getValue(dst.first)
+            val ndst = cdst.nodes.getValue(dst.second)
+            Dependency(localToGlobal.getValue(csrc.cnet to nsrc.end), localToGlobal.getValue(cdst.cnet to ndst.start))
         }
         for (dep in newDependencies)
             combined.addDependency(dep)
@@ -68,18 +65,36 @@ internal class BPMNModel2CausalNet(val model: BPMNModel) {
         }
     }
 
+    private val localToGlobal = HashMap<Pair<CausalNet, Node>, Node>()
+
+    internal fun prefix(p: TProcess): String {
+        if (!p.name.isNullOrBlank())
+            return "NAME:${p.name}"
+        if (!p.id.isNullOrBlank())
+            return "ID:${p.id}"
+        val idx = model.processes.indexOfFirst { it.base === p }
+        check(idx >= 0) { "Somehow we are processing an unknown TProcess" }
+        return "IDX:${idx}"
+    }
+
     fun toCausalNet(): MutableCausalNet {
         converters = model.processes.associateWith { BPMN2CausalNet(it) }
         val causalNets = converters.values.map { it.convert() }
         if (causalNets.size == 1)
             return causalNets.single()
-        check(causalNets
-                .mapIndexed { leftidx, left ->
-                    causalNets
-                            .filterIndexed { rightidx, right -> leftidx < rightidx }
-                            .map { right -> left.instances.filter { !it.special }.intersect(right.instances) }
-                }
-                .flatten().all { it.isEmpty() }) { "Two processes within the same model share the same instance. Possibly perform some renaming or what?" }
+        for (cnet in causalNets)
+            localToGlobal.putAll(cnet.instances.associateBy { (cnet to it) })
+        val node2converter = HashMap<Node, MutableList<BPMN2CausalNet>>()
+        for (conv in converters.values)
+            for (node in conv.cnet.instances) {
+                node2converter.getOrPut(node, { ArrayList() }).add(conv)
+            }
+        for ((node, convs) in node2converter.filter { !it.key.special && it.value.size >= 2 }) {
+            for (conv in convs) {
+                val prefix = prefix(conv.bpmn.base)
+                localToGlobal[conv.cnet to node] = Node(node.activity, prefix + (if (node.instanceId.isNotEmpty()) ":${node.instanceId}" else ""), node.special)
+            }
+        }
         combined = MutableCausalNet()
         copy(causalNets)
         terminalBindings()
