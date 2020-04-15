@@ -463,4 +463,21 @@ class DirectlyFollowsSubGraph(
         // Reduce end activities - drop activity with outgoing connection
         initialEndActivities.removeAll(initialConnections.keys)
     }
+
+    /**
+     * Prepare a set of activities marked as start based on initial DFG and current connections (in sub graph)
+     */
+    fun currentStartActivities(): Set<ProcessTreeActivity> {
+        val startActivities = HashSet<ProcessTreeActivity>()
+
+        // Start activity - only ingoing connection, no one outgoing
+        initialConnections.forEach { (from, toActivities) ->
+            // `from` activity must not be inside activities
+            if (!activities.contains(from)) {
+                startActivities.addAll(toActivities.keys.filter { to -> to in activities })
+            }
+        }
+
+        return startActivities
+    }
 }

@@ -611,4 +611,46 @@ internal class DirectlyFollowsSubGraphTest {
         assertEquals(7, response.values.sumBy { it.size })
         assertEquals(connections, response)
     }
+
+    @Test
+    fun `Start activities in current sub graph`() {
+        val activities = activitiesSet(listOf(B, C, D))
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[C] = Arc()
+                arcs[D] = Arc()
+                conn[B] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[B] = Arc()
+                arcs[D] = Arc()
+                conn[C] = arcs
+            }
+        }
+        val initialConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[B] = Arc()
+                arcs[C] = Arc()
+                conn[A] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[C] = Arc()
+                arcs[D] = Arc()
+                conn[B] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[B] = Arc()
+                arcs[D] = Arc()
+                conn[C] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val response = graph.currentStartActivities()
+
+        assertEquals(2, response.size)
+
+        assertTrue(response.contains(B))
+        assertTrue(response.contains(C))
+    }
 }
