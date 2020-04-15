@@ -90,7 +90,10 @@ class DirectlyFollowsSubGraph(
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
-    fun calculateExclusiveCut(): Map<ProcessTreeActivity, Int>? {
+    fun calculateExclusiveCut(
+        outgoing: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
+        ingoing: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = ingoingConnections
+    ): MutableMap<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
@@ -127,7 +130,7 @@ class DirectlyFollowsSubGraph(
                 }
 
                 // Iterate over activities connected with my `current` (current -> activity)
-                outgoingConnections[current].orEmpty().keys.forEach { activity ->
+                outgoing[current].orEmpty().keys.forEach { activity ->
                     // If not assigned label yet
                     if (nonLabeledActivities.contains(activity)) {
                         // Assign label
@@ -139,7 +142,7 @@ class DirectlyFollowsSubGraph(
                     }
                 }
 
-                ingoingConnections[current].orEmpty().keys.forEach { activity ->
+                ingoing[current].orEmpty().keys.forEach { activity ->
                     // If not assigned label yet
                     if (nonLabeledActivities.contains(activity)) {
                         // Assign label
@@ -486,7 +489,7 @@ class DirectlyFollowsSubGraph(
      * Warning!
      * This function will override assignment activity to group given as a parameter `assignment` - no extra copy here to speed-up function.
      */
-    private fun mergeUnConnectedComponents(assignment: HashMap<ProcessTreeActivity, Int>) {
+    private fun mergeUnConnectedComponents(assignment: MutableMap<ProcessTreeActivity, Int>) {
         // Prepare set with unique labels
         val uniqueGroupIdsSet = HashSet<Int>()
         uniqueGroupIdsSet.addAll(assignment.values)
@@ -515,6 +518,9 @@ class DirectlyFollowsSubGraph(
 
             indexFirstGroup++
         }
+    }
+
+    private fun verifyParallelCutInAllRelations(connectedComponents: Map<ProcessTreeActivity, Int>) {
     }
 
     /**
@@ -607,5 +613,32 @@ class DirectlyFollowsSubGraph(
         }
 
         return endActivities
+    }
+
+    /**
+     * Detect parallel cut in directly-follows graph
+     * This function with generate map with activity => label reference.
+     */
+    fun calculateParallelCut(): Map<ProcessTreeActivity, Int>? {
+        // Negated connections in DFG required to analyze parallel cut
+        val negatedOutgoingConnections = negateDFGConnections()
+        val negatedIngoingConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+        negatedOutgoingConnections.forEach { (from, hashMap) ->
+            hashMap.forEach { (to, arc) ->
+                negatedIngoingConnections.getOrPut(to, { HashMap() })[from] = arc
+            }
+        }
+        // Connected components in graph - THIS ASSIGNMENT WILL BE MODIFY INTERNALLY!
+        val connectedComponents =
+            calculateExclusiveCut(outgoing = negatedOutgoingConnections, ingoing = negatedIngoingConnections)
+
+        // If only one unique label assigned - no assignment also here
+        if (connectedComponents === null) return null
+
+        mergeUnConnectedComponents(connectedComponents)
+        verifyParallelCutInAllRelations(connectedComponents)
+
+        // Verify each group with StartActivity and EndActivity, otherwise can not generate assignment to group
+        return if (isStartAndEndActivityInEachGroup(connectedComponents)) connectedComponents else null
     }
 }
