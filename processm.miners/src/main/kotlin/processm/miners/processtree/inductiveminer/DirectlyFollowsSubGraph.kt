@@ -22,8 +22,16 @@ class DirectlyFollowsSubGraph(
     /**
      * Initial connections between activities in graph (initial DFG)
      */
-    private val initialConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = HashMap(),
+    private val initialConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
+    /**
+     * Initial start activities.
+     * If not given - will be calculate based on initial connections map.
+     */
     private val initialStartActivities: MutableSet<ProcessTreeActivity> = HashSet(),
+    /**
+     * Initial end activities.
+     * If not given - will be calculate based on initial connections map.
+     */
     private val initialEndActivities: MutableSet<ProcessTreeActivity> = HashSet()
 ) {
     companion object {
