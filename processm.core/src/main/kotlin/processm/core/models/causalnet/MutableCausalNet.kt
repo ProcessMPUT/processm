@@ -137,4 +137,19 @@ class MutableCausalNet(
     fun clearJoinsFor(node: Node) {
         _joins.remove(node)
     }
+
+    /**
+     * Adds all nodes, dependencies and bindings from [origin] to this, using [translate] to map from nodes of [origin] to nodes of this
+     */
+    fun copyFrom(origin: CausalNet, translate: (Node) -> Node) {
+        val n2n = origin.instances.associateWith(translate)
+        addInstance(*n2n.values.toTypedArray())
+        val d2d = origin.outgoing.values.flatten().associateWith { dep -> Dependency(n2n.getValue(dep.source), n2n.getValue(dep.target)) }
+        for (dep in d2d.values)
+            addDependency(dep)
+        for (split in origin.splits.values.flatten())
+            addSplit(Split(split.dependencies.map { d2d.getValue(it) }.toSet()))
+        for (join in origin.joins.values.flatten())
+            addJoin(Join(join.dependencies.map { d2d.getValue(it) }.toSet()))
+    }
 }
