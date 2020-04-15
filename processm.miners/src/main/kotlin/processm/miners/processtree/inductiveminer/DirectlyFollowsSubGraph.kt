@@ -18,7 +18,13 @@ class DirectlyFollowsSubGraph(
      * Connections between activities in graph
      * Outgoing - `key` activity has reference to activities which it directly points to.
      */
-    private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>
+    private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>,
+    /**
+     * Initial connections between activities in graph (initial DFG)
+     */
+    private val initialConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = HashMap(),
+    private val initialStartActivities: MutableSet<ProcessTreeActivity> = HashSet(),
+    private val initialEndActivities: MutableSet<ProcessTreeActivity> = HashSet()
 ) {
     companion object {
         /**
@@ -43,6 +49,10 @@ class DirectlyFollowsSubGraph(
                 ingoingConnections.getOrPut(to, { HashMap() })[from] = arc
             }
         }
+
+        // No initial activities assigned - we should generate assigment
+        if (initialStartActivities.isEmpty()) inferStartActivities()
+        if (initialEndActivities.isEmpty()) inferEndActivities()
     }
 
     /**
@@ -425,5 +435,32 @@ class DirectlyFollowsSubGraph(
         }
 
         return negatedConnections
+    }
+
+    /**
+     * Infer start activities based on initial connection in DFG
+     * This should be done only if initial start activities not assigned yet
+     */
+    private fun inferStartActivities() {
+        // Add each activity with outgoing connection to initial start activities
+        initialStartActivities.addAll(initialConnections.keys)
+
+        val activitiesWithIngoingConnections = HashSet<ProcessTreeActivity>()
+        initialConnections.values.forEach { activitiesWithIngoingConnections.addAll(it.keys) }
+
+        // Reduce start activities - drop activity with ingoing connection
+        initialStartActivities.removeAll(activitiesWithIngoingConnections)
+    }
+
+    /**
+     * Infer end activities based on initial connection in DFG
+     * This should be done only if initial end activities not assigned yet
+     */
+    private fun inferEndActivities() {
+        // Add ingoing connections to initial end activities
+        initialConnections.values.forEach { initialEndActivities.addAll(it.keys) }
+
+        // Reduce end activities - drop activity with outgoing connection
+        initialEndActivities.removeAll(initialConnections.keys)
     }
 }
