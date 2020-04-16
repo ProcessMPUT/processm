@@ -248,4 +248,37 @@ internal class DirectlyFollowsSubGraphTest {
 
         assertEquals(2, result.size)
     }
+
+    @Test
+    fun `Redo loop operator as default rule of subGraph cut`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                arcs[ProcessTreeActivity("C")] = Arc()
+                conn[ProcessTreeActivity("A")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("A")] = Arc()
+                arcs[ProcessTreeActivity("C")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("A")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val result = graph.finishWithDefaultRule()
+
+        assertEquals("⟲(τ,A,B,C)", result.toString())
+    }
 }
