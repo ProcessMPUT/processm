@@ -107,13 +107,13 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val assigment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
-        val expectedLabel = assigment[ProcessTreeActivity("A")]!!
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("B")])
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("C")])
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("D")])
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("E")])
+        val expectedLabel = assignment[ProcessTreeActivity("A")]!!
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("B")])
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("C")])
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("D")])
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("E")])
     }
 
     @Test
@@ -153,14 +153,14 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val assigment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
-        val expectedLabel = assigment[ProcessTreeActivity("A")]!!
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("B")])
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("C")])
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("D")])
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("E")])
-        assertEquals(expectedLabel, assigment[ProcessTreeActivity("F")])
+        val expectedLabel = assignment[ProcessTreeActivity("A")]!!
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("B")])
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("C")])
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("D")])
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("E")])
+        assertEquals(expectedLabel, assignment[ProcessTreeActivity("F")])
     }
 
     @Test
@@ -185,12 +185,67 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val assigment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
         // B & C in group
-        assertEquals(assigment[ProcessTreeActivity("B")], assigment[ProcessTreeActivity("C")])
+        assertEquals(assignment[ProcessTreeActivity("B")], assignment[ProcessTreeActivity("C")])
 
         // E with different label
-        assertNotEquals(assigment[ProcessTreeActivity("B")], assigment[ProcessTreeActivity("E")])
+        assertNotEquals(assignment[ProcessTreeActivity("B")], assignment[ProcessTreeActivity("E")])
+    }
+
+    @Test
+    fun `Split graph based on list of activities - all activity in the same group`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C"),
+                ProcessTreeActivity("E")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("C")] = Arc()
+                arcs[ProcessTreeActivity("E")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                conn[ProcessTreeActivity("C")] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut())
+
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `Split graph based on list of activities - separated groups`() {
+        val activities = activitiesSet(
+            listOf(
+                ProcessTreeActivity("A"),
+                ProcessTreeActivity("B"),
+                ProcessTreeActivity("C")
+            )
+        )
+
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("B")] = Arc()
+                conn[ProcessTreeActivity("A")] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[ProcessTreeActivity("A")] = Arc()
+                conn[ProcessTreeActivity("B")] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut())
+
+        assertEquals(2, result.size)
     }
 }
