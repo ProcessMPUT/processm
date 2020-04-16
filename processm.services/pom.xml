@@ -22,6 +22,7 @@
         <openapi-tools.version>4.2.3</openapi-tools.version>
         <swagger-ui.version>3.25.0</swagger-ui.version>
         <koin.version>2.1.5</koin.version>
+        <jargon2.version>1.1.1</jargon2.version>
         <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
 
@@ -284,9 +285,15 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>at.favre.lib</groupId>
-            <artifactId>bcrypt</artifactId>
-            <version>0.9.0</version>
+            <groupId>com.kosprov.jargon2</groupId>
+            <artifactId>jargon2-api</artifactId>
+            <version>${jargon2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kosprov.jargon2</groupId>
+            <artifactId>jargon2-native-ri-backend</artifactId>
+            <version>${jargon2.version}</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>

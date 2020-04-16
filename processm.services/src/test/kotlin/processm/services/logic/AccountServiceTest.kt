@@ -23,7 +23,7 @@ import kotlin.test.*
 class AccountServiceTest {
 
     private val correctPassword = "pass"
-    private val correctPasswordHash = "\$2a\$08\$NTtoKfUlI95/LQQfgkrK8OEh7GJjmCtOvgI0JyCOj78qpnltQFzre"
+    private val correctPasswordHash = "\$argon2d\$v=19\$m=65536,t=3,p=1\$P0P1NSt1aP8ONWirWMbAWQ\$bDvD/v5/M7T3gRq8BXqbQA"
 
     @Before
     @BeforeEach

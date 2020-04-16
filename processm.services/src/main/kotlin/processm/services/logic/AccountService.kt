@@ -1,6 +1,6 @@
 package processm.services.logic
 
-import at.favre.lib.crypto.bcrypt.BCrypt
+import com.kosprov.jargon2.api.Jargon2.*
 import org.apache.commons.lang3.LocaleUtils
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.insert
@@ -11,7 +11,13 @@ import processm.services.models.*
 import java.util.*
 
 class AccountService {
-    private val passwordHashingComplexity = 8
+    private val passwordHasher = jargon2Hasher()
+        .type(Type.ARGON2d)
+        .memoryCost(65536)
+        .timeCost(3)
+        .saltLength(16)
+        .hashLength(16)
+    private val passwordVerifier = jargon2Verifier();
     private val defaultLocale = Locale("en", "US")
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
@@ -96,8 +102,8 @@ class AccountService {
     }
 
     private fun calculatePasswordHash(password: String) =
-        BCrypt.withDefaults().hashToString(passwordHashingComplexity, password.toCharArray())
+        passwordHasher.password(password.toByteArray()).encodedHash()
 
     private fun verifyPassword(password: String, passwordHash: String) =
-        BCrypt.verifyer().verify(password.toByteArray(), passwordHash.toByteArray()).verified
+        passwordVerifier.hash(passwordHash).password(password.toByteArray()).verifyEncoded()
 }
