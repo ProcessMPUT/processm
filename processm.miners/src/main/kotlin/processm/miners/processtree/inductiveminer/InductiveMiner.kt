@@ -1,7 +1,7 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.Log
-import processm.core.models.processtree.Model
+import processm.core.models.processtree.ProcessTree
 
 /**
  * Common interface for Inductive miners.
@@ -16,5 +16,5 @@ interface InductiveMiner {
     /**
      * The mined model
      */
-    val result: Model
+    val result: ProcessTree
 }
