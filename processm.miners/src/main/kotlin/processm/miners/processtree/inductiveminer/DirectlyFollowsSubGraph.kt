@@ -125,14 +125,14 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
-     * Split graph into subGraphs based on assigment map [ProcessTreeActivity] => [Int]
+     * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
-    fun splitIntoSubGraphs(assigment: Map<ProcessTreeActivity, Int>): Map<Int, DirectlyFollowsSubGraph> {
+    fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>): Map<Int, DirectlyFollowsSubGraph> {
         val subGraphs = HashMap<Int, DirectlyFollowsSubGraph>()
         val activityGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
 
         // Add each activity to designated group
-        assigment.forEach { (activity, groupId) ->
+        assignment.forEach { (activity, groupId) ->
             activityGroups.getOrPut(groupId, { HashSet() }).add(activity)
         }
 
@@ -145,8 +145,6 @@ class DirectlyFollowsSubGraph(
                 connectionsHashMap[activity] = outgoingConnections[activity].orEmpty().filter { it.key in activities }
             }
 
-            // Add prepared subGraph to map.
-            // Use the same key as a group to prevent swapping order
             subGraphs[groupId] = DirectlyFollowsSubGraph(activities, connectionsHashMap)
         }
 
