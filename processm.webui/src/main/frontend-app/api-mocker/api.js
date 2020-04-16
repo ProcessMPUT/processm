@@ -69,7 +69,7 @@ const api = {
 
     if (
       !_.has(users, credentials.username) ||
-      credentials.password != users[credentials.username].password
+      credentials.password !== users[credentials.username].password
     ) {
       return res.status(401).json();
     }
@@ -100,7 +100,7 @@ const api = {
   "POST /api/users": (req, res) => {
     const { userEmail, organizationName } = req.body.data;
 
-    if (organizationName != "org1" && userEmail != "user1@example.com") {
+    if (organizationName !== "org1" && userEmail !== "user1@example.com") {
       users[userEmail] = {
         organizationName,
         password: "pass",
@@ -123,7 +123,7 @@ const api = {
     const { currentPassword, newPassword } = req.body.data;
     const username = _.get(_.keys(users), 0);
 
-    if (users[username].password != currentPassword) {
+    if (users[username].password !== currentPassword) {
       return res
         .status(403)
         .json({ error: "The current password is not valid" });
