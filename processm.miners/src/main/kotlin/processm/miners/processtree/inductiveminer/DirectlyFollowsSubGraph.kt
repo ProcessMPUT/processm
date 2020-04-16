@@ -274,9 +274,10 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Prepare the connection matrix between strongly connected components
-     * As return you will receive matrix reporting the connections (as list of list)
+     * It returns a group_id x group_id matrix, where an element in ith row and jth column
+     * indicates that reference between groups.
      */
-    fun connectionMatrix(stronglyConnectedComponents: List<Set<ProcessTreeActivity>>): List<IntArray> {
+    fun connectionMatrix(stronglyConnectedComponents: List<Set<ProcessTreeActivity>>): Array<ByteArray> {
         // Mapping activity -> group ID
         val activityToGroupIndex = HashMap<ProcessTreeActivity, Int>()
         // Assign group ID to activity
@@ -288,10 +289,7 @@ class DirectlyFollowsSubGraph(
 
         // Prepare matrix with connections between groups
         val size = stronglyConnectedComponents.size
-        val connectionsMatrix = ArrayList<IntArray>()
-        for (i in 0 until size) {
-            connectionsMatrix.add(IntArray(size))
-        }
+        val connectionsMatrix = Array(size) { ByteArray(size) }
 
         // Iterate over connections in graph
         outgoingConnections.forEach { connection ->
@@ -304,7 +302,7 @@ class DirectlyFollowsSubGraph(
                     connectionsMatrix[indicatedGroupID][activityGroupID] = 1
 
                     // Reversed connection check - if not stored yet - set -1 in matrix
-                    if (connectionsMatrix[activityGroupID][indicatedGroupID] == 0) {
+                    if ((connectionsMatrix[activityGroupID][indicatedGroupID]).compareTo(0) == 0) {
                         connectionsMatrix[activityGroupID][indicatedGroupID] = -1
                     }
                 }

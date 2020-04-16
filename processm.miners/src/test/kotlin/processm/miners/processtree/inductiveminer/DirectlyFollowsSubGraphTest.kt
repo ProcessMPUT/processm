@@ -407,7 +407,7 @@ internal class DirectlyFollowsSubGraphTest {
 
         val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
-        val result: List<IntArray> = graph.connectionMatrix(stronglyConnected)
+        val result = graph.connectionMatrix(stronglyConnected)
 
         assertEquals(3, result.size)
         assertEquals(0, result[0][0])
