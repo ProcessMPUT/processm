@@ -10,12 +10,12 @@ class DirectlyFollowsSubGraph(
     /**
      * Activities in directly-follows subGraph
      */
-    private val activities: HashSet<ProcessTreeActivity>,
+    private val activities: Set<ProcessTreeActivity>,
     /**
      * Connections between activities in graph
      * Outgoing - `key` activity has reference to activities which it directly points to.
      */
-    private val outgoingConnections: HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>
+    private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>
 ) {
     /**
      * Activities pointed (with connection) to `key` activity
@@ -52,12 +52,12 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Method based on Flood fill (read more: https://en.wikipedia.org/wiki/Flood_fill)
-     * Each activity will receive labels - we want to assign a number as low as possible.
-     * Based on assigned labels activities connected into groups.
+     * Each activity will receive label - we want to assign a number as low as possible.
+     * Based on assigned label activities merged into groups.
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
-    fun calculateExclusiveCut(): HashMap<ProcessTreeActivity, Int> {
+    fun calculateExclusiveCut(): Map<ProcessTreeActivity, Int> {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
@@ -125,10 +125,9 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
-     * Split graph into map of subGraphs based on assigment map [ProcessTreeActivity] => [Int]
-     * where value as number of group.
+     * Split graph into subGraphs based on assigment map [ProcessTreeActivity] => [Int]
      */
-    fun splitIntoSubGraphs(assigment: HashMap<ProcessTreeActivity, Int>): HashMap<Int, DirectlyFollowsSubGraph> {
+    fun splitIntoSubGraphs(assigment: Map<ProcessTreeActivity, Int>): Map<Int, DirectlyFollowsSubGraph> {
         val subGraphs = HashMap<Int, DirectlyFollowsSubGraph>()
         val activityGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
 
@@ -139,16 +138,11 @@ class DirectlyFollowsSubGraph(
 
         activityGroups.forEach { (groupId, activities) ->
             // Prepare connections map
-            val connectionsHashMap = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+            val connectionsHashMap = HashMap<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>()
 
             // For each activity add connection with another activities from group
             activities.forEach { activity ->
-                connectionsHashMap.getOrPut(activity, { HashMap() }).also { connections ->
-                    outgoingConnections[activity].orEmpty().forEach { (pointedActivity, arc) ->
-                        if (activities.contains(pointedActivity))
-                            connections[pointedActivity] = arc
-                    }
-                }
+                connectionsHashMap[activity] = outgoingConnections[activity].orEmpty().filter { it.key in activities }
             }
 
             // Add prepared subGraph to map.
