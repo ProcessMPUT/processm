@@ -129,6 +129,11 @@ abstract class CausalNet(
     }
 
     /**
+     * True if the causal net contains [dependency]
+     */
+    operator fun contains(dependency: Dependency): Boolean = outgoing[dependency.source]?.contains(dependency) == true
+
+    /**
      * A simplified textual representation of the model.
      *
      * Useful for debugging tests, not useful for displaying complete information to the user

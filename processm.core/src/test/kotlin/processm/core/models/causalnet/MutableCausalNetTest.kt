@@ -475,4 +475,18 @@ class MutableCausalNetTest {
         }
         assertEquals(expected.toString(), cnet1.toString())
     }
+
+    @Test
+    fun `contains dependency`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableCausalNet()
+        mm.addInstance(a, b, c)
+        assertFalse { Dependency(a, b) in mm }
+        assertFalse { Dependency(b, c) in mm }
+        mm.addDependency(Dependency(a, b))
+        assertTrue { Dependency(a, b) in mm }
+        assertFalse { Dependency(b, c) in mm }
+    }
 }
