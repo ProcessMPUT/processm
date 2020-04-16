@@ -193,9 +193,9 @@ class DirectlyFollowsSubGraph(
         // Already assigned activities
         val alreadyAssigned = HashSet<ProcessTreeActivity>()
         // Stack - activities to analyze
-        val stack = LinkedList<ProcessTreeActivity>()
+        val stack = ArrayDeque<ProcessTreeActivity>()
         // Activities waiting to assigment
-        val stronglyConnectedQueue = LinkedList<ProcessTreeActivity>()
+        val stronglyConnectedQueue = ArrayDeque<ProcessTreeActivity>()
         // Last label assigned
         var counter = 0
 
@@ -221,17 +221,10 @@ class DirectlyFollowsSubGraph(
                         preOrder[v] = counter
                     }
 
-                    // Will be true if not added new activity in next block
-                    var done = true
-                    outgoingConnections[v].orEmpty().keys.forEach checkV@{ w ->
-                        if (!preOrder.containsKey(w)) {
-                            stack.add(w)
-                            done = false
-                            return@checkV
-                        }
-                    }
-
-                    if (done) {
+                    val w = outgoingConnections[v]?.keys?.firstOrNull { !preOrder.containsKey(it) }
+                    if (w !== null) {
+                        stack.add(w)
+                    } else {
                         // Assign lowLink based on preOrder - this will be maximal value which can be stored here
                         lowLink[v] = preOrder[v]!!
 
