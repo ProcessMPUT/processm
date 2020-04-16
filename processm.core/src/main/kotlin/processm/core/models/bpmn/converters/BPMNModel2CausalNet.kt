@@ -4,7 +4,6 @@ import processm.core.helpers.allSubsets
 import processm.core.helpers.ifNullOrEmpty
 import processm.core.models.bpmn.BPMNModel
 import processm.core.models.bpmn.BPMNProcess
-import processm.core.models.bpmn.jaxb.TCallActivity
 import processm.core.models.bpmn.jaxb.TCollaboration
 import processm.core.models.bpmn.jaxb.TProcess
 import processm.core.models.causalnet.*

@@ -2,13 +2,10 @@ package processm.core.models.bpmn.converters
 
 import processm.core.helpers.Counter
 import processm.core.helpers.allSubsets
-import processm.core.models.bpmn.BPMNEvent
+import processm.core.models.bpmn.BPMNActivity
 import processm.core.models.bpmn.BPMNFlowNode
-import processm.core.models.bpmn.BPMNGateway
 import processm.core.models.bpmn.BPMNProcess
-import processm.core.models.bpmn.jaxb.*
 import processm.core.models.causalnet.*
-import processm.core.models.causalnet.Node
 
 
 private fun MutableCausalNet.addDependencies(deps: Iterable<Dependency>) {
@@ -37,7 +34,7 @@ internal class BPMN2CausalNet(val bpmn: BPMNProcess) {
         val nodes = HashMap<BPMNFlowNode, SplitNode>()
         for (bpmnActivity in bpmn.allActivities) {
             val name = createName(bpmnActivity)
-            if (bpmnActivity.base is TSubProcess) {
+            if (bpmnActivity.isComposite) {
                 val startNode = Node(name, "start")
                 val endNode = Node(name, "end")
                 nodes[bpmnActivity] = SplitNode(startNode, endNode)
@@ -51,10 +48,24 @@ internal class BPMN2CausalNet(val bpmn: BPMNProcess) {
         this.nodes = nodes
     }
 
+    private fun startBindings(startDeps: Collection<Dependency>) {
+        // TODO check semantics with the spec
+        cnet.addSplit(Split(startDeps.toSet()))
+        for (dep in startDeps)
+            cnet.addJoin(Join(setOf(dep)))
+    }
+
     private fun fillStart() {
         val startDeps = bpmn.startActivities.map { Dependency(cnet.start, nodes.getValue(it).start) }.toSet()
         cnet.addDependencies(startDeps)
-        cnet.addSplit(Split(startDeps))   // TODO check semantics with the spec
+        startBindings(startDeps)
+    }
+
+    private fun endBindings(endDeps: Collection<Dependency>) {
+        for (dep in endDeps)
+            cnet.addSplit(Split(setOf(dep)))
+        for (subset in endDeps.allSubsets().filter { it.isNotEmpty() })
+            cnet.addJoin(Join(subset.toSet()))
     }
 
     private fun fillEnd() {
@@ -62,106 +73,50 @@ internal class BPMN2CausalNet(val bpmn: BPMNProcess) {
         // I think this calls for the powerset of incoming dependencies - this possibly will generate some dead joins, but otherwise we need to know here what are the possible paths
         val endDeps = bpmn.endActivities.map { Dependency(nodes.getValue(it).end, cnet.end) }.toSet()
         cnet.addDependencies(endDeps)
-        for (subset in endDeps.allSubsets().filter { it.isNotEmpty() })
-            cnet.addJoin(Join(subset.toSet()))
-        for (endevent in bpmn.endActivities.filterIsInstance<BPMNEvent>().filter { it.base is TEndEvent }) {
-            val endeventnode = nodes.getValue(endevent)
-            for (subset in endevent.incoming.map { Dependency(nodes.getValue(it).end, endeventnode.start) }.allSubsets().filter { it.isNotEmpty() })
-                cnet.addJoin(Join(subset.toSet()))
-        }
+        endBindings(endDeps)
     }
 
-    private val boundaryEventDependencies = HashSet<Dependency>()
-
     private fun fillDependencies() {
-        boundaryEventDependencies.clear()
-        for (seqflow in bpmn.recursiveFlowElements.filterIsInstance<TSequenceFlow>()) {
-            val src = nodes.getValue(bpmn.get(seqflow.sourceRef as TFlowNode))
-            val dst = nodes.getValue(bpmn.get(seqflow.targetRef as TFlowNode))
-            cnet.addDependency(src.end, dst.start)
-        }
-        for (event in bpmn.recursiveFlowElements.filterIsInstance<TBoundaryEvent>()) {
-            val src = nodes.getValue(bpmn.get(bpmn.flowByName(event.attachedToRef)))
-            val dst = nodes.getValue(bpmn.get(event))
-            val dep = cnet.addDependency(src.end, dst.start)
-            boundaryEventDependencies.add(dep)
+        for ((gateway, gnode) in nodes) {
+            for (split in gateway.split.possibleOutcomes) {
+                val deps = split.activities.map { Dependency(gnode.end, nodes.getValue(it).start) }.toSet()
+                cnet.addDependencies(deps)
+                cnet.addSplit(Split(deps))
+            }
+            for (join in gateway.join.possibleOutcomes) {
+                val deps = join.activities.map { Dependency(nodes.getValue(it).end, gnode.start) }.toSet()
+                cnet.addDependencies(deps)
+                cnet.addJoin(Join(deps))
+            }
         }
     }
 
     private fun fillTerminalDependenciesForSubprocesses() {
-        for ((bpmnActivity, snode) in nodes) {
-            val base = bpmnActivity.base
-            if (base is TSubProcess) {
-                val children = base.flowElement.map { it.value }.filterIsInstance<TFlowNode>().map { nodes.getValue(bpmn.get(it)) }
-                if (children.isNotEmpty()) { // Distinguish between expanded and collapsed subprocess
-                    println(cnet)
-                    val startChildren = children.filter { cnet.incoming[it.start].isNullOrEmpty() }
-                    check(startChildren.isNotEmpty()) { "Subprocess ${base.name} with seemingly no start elements" }
-                    val endChildren = children.filter { cnet.outgoing[it.end].isNullOrEmpty() }
-                    check(endChildren.isNotEmpty()) { "Subprocess with seemingly no end elements" }
-                    for (child in startChildren)
-                        cnet.addDependency(snode.start, child.start)
-                    val endDeps = endChildren.map { child -> Dependency(child.end, snode.end) }
-                    cnet.addDependencies(endDeps)
-                    //TODO check semantics
-                    for (subset in endDeps.allSubsets().filter { it.isNotEmpty() })
-                        cnet.addJoin(Join(subset.toSet()))
-                } else {
-                    val dep = cnet.addDependency(snode.start, snode.end)
-                    cnet.addSplit(Split(setOf(dep)))
-                    cnet.addJoin(Join(setOf(dep)))
-                }
+        for ((bpmnActivity, snode) in nodes.filterKeys { it.isComposite }) {
+            val children = bpmnActivity.children.map { nodes.getValue(it) }
+            if (children.isNotEmpty()) { // Distinguish between expanded and collapsed subprocess
+                val startChildren = children.filter { cnet.incoming[it.start].isNullOrEmpty() }
+                check(startChildren.isNotEmpty()) { "Subprocess with seemingly no start elements" }
+                val endChildren = children.filter { cnet.outgoing[it.end].isNullOrEmpty() }
+                check(endChildren.isNotEmpty()) { "Subprocess with seemingly no end elements" }
+                val startDeps = startChildren.map { child -> Dependency(snode.start, child.start) }
+                cnet.addDependencies(startDeps)
+                startBindings(startDeps)
+                val endDeps = endChildren.map { child -> Dependency(child.end, snode.end) }
+                cnet.addDependencies(endDeps)
+                endBindings(endDeps)
+            } else {
+                val dep = cnet.addDependency(snode.start, snode.end)
+                cnet.addSplit(Split(setOf(dep)))
+                cnet.addJoin(Join(setOf(dep)))
             }
         }
-    }
-
-    private fun processGateways() {
-        for ((gateway, gnode) in nodes) {
-            if (gateway is BPMNGateway) {
-                val base = gateway.base
-                if (base is TExclusiveGateway || (base is TEventBasedGateway && base.eventGatewayType == TEventBasedGatewayType.EXCLUSIVE)) {
-                    for (src in gateway.incoming)
-                        cnet.addJoin(Join(setOf(Dependency(nodes.getValue(src).end, gnode.start))))
-                    for (dst in gateway.outgoing)
-                        cnet.addSplit(Split(setOf(Dependency(gnode.end, nodes.getValue(dst).start))))
-                } else if (gateway.base is TParallelGateway || (base is TEventBasedGateway && base.eventGatewayType == TEventBasedGatewayType.PARALLEL)) {
-                    cnet.addJoin(Join(gateway.incoming.map { src -> Dependency(nodes.getValue(src).end, gnode.start) }.toSet()))
-                    cnet.addSplit(Split(gateway.outgoing.map { dst -> Dependency(gnode.end, nodes.getValue(dst).start) }.toSet()))
-                } else
-                    TODO("You lazy bum, implement ${gateway.base::class}")
-            }
-        }
-        for (dep in boundaryEventDependencies)
-            cnet.addSplit(Split(setOf(dep)))
-        for (other in nodes.filter { it.key !is BPMNGateway }) {
-            val tmp = cnet.outgoing.getValue(other.value.end) - boundaryEventDependencies
-            val s = Split(tmp)
-            if (s !in cnet)
-                cnet.addSplit(s)
-            for (dep in cnet.incoming.getValue(other.value.start)) {
-                val j = Join(setOf(dep))
-                if (j !in cnet)
-                    cnet.addJoin(j)
-            }
-        }
-        for ((node, deps) in cnet.outgoing)
-            if (deps.size == 1) {
-                val s = Split(deps)
-                if (s !in cnet)
-                    cnet.addSplit(s)
-            }
-        for ((node, deps) in cnet.incoming)
-            if (deps.size == 1) {
-                val j = Join(deps)
-                if (j !in cnet)
-                    cnet.addJoin(j)
-            }
     }
 
     fun convert(): MutableCausalNet {
-        if (bpmn.recursiveFlowElements.any { it is TActivity && it.isIsForCompensation })
+        if (bpmn.allActivities.filterIsInstance<BPMNActivity>().any { it.isForCompensation })
             throw UnsupportedOperationException("Compensations are not supported")
-        if (bpmn.recursiveFlowElements.any { it is TCallActivity })
+        if (bpmn.allActivities.filterIsInstance<BPMNActivity>().any { it.isCallable })
             throw UnsupportedOperationException("Callable elements are not supported")
         cnet = MutableCausalNet()
         fillNodes()
@@ -169,7 +124,6 @@ internal class BPMN2CausalNet(val bpmn: BPMNProcess) {
         fillTerminalDependenciesForSubprocesses()
         fillStart()
         fillEnd()
-        processGateways()
         return cnet
     }
 }

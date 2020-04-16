@@ -1,9 +1,6 @@
 package processm.core.models.bpmn
 
-import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.MutableCausalNet
-import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.causalnet
+import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import java.io.File
 import kotlin.test.Test
@@ -74,7 +71,7 @@ class ToCausalNetConversionTest {
 
     @Test
     fun a21() {
-        val splitFlow = Node("Gateway\n(Split Flow)")
+        val splitFlow = Node("Gateway\r\n(Split Flow)")
         val mergeFlow = Node("Gateway\n(Merge Flows)")
         val expected = causalnet {
             start splits startEvent()
@@ -243,7 +240,7 @@ class ToCausalNetConversionTest {
     @Test
     fun `c10`() {
         val expected = causalnet {
-            Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") joins Node("7 days")
+            Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A") joins Node("7 days")
             Node("7 days") splits Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D")
             Node("Review\u000asuccessful?") or Node("Assign\u000aApprover") join Node("Approve Invoice")
             Node("Approve Invoice") splits Node("Invoice\u000aapproved?")
@@ -256,7 +253,7 @@ class ToCausalNetConversionTest {
             Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false) + Node("Assign approver") join Node("Assign\u000aApprover")
             Node("Assign\u000aApprover") splits Node("Approve Invoice") + Node("Approver to \u000abe assigned")
             Node("Approver to \u000abe assigned") joins Node("Assign approver")
-            Node("Assign approver") splits Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") + Node("Assign\u000aApprover")
+            Node("Assign approver") splits Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A") + Node("Assign\u000aApprover")
             Node("Review and document result") joins Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817")
             Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") splits end
             Node("7 days") joins Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D")
@@ -271,7 +268,7 @@ class ToCausalNetConversionTest {
             Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false) splits Node("Assign\u000aApprover")
             Node("Review\u000asuccessful?") joins Node("Invoice not\u000aprocessed")
             Node("Invoice not\u000aprocessed") splits end
-            Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") + Node("Rechnung kl\u00e4ren") join Node("Invoice review\u000a needed")
+            Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A") + Node("Rechnung kl\u00e4ren") join Node("Invoice review\u000a needed")
             Node("Invoice review\u000a needed") splits Node("Review and document result")
             Node("Invoice\u000aapproved?") joins Node("Prepare\u000d\u000aBank\u000d\u000aTransfer")
             Node("Prepare\u000d\u000aBank\u000d\u000aTransfer") splits Node("Archive\u000aInvoice")
@@ -284,8 +281,8 @@ class ToCausalNetConversionTest {
             Node("Invoice\u000areceived", "NAME:Team-Assistant", false) joins Node("Scan Invoice")
             Node("Scan Invoice") splits Node("Archive\u000aoriginal") + Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false)
             Node("Invoice\u000aprocessed") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("Invoice not\u000aprocessed") or Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") or Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") or Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") join end
-            Node("Assign approver") joins Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A")
-            Node("sid-F0D29912-929D-491C-8D23-73BD80CF980A") splits Node("Invoice review\u000a needed") or Node("7 days")
+            Node("Assign approver") joins Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A")
+            Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A") splits Node("Invoice review\u000a needed") or Node("7 days")
             start splits Node("Invoice\u000areceived", "NAME:Team-Assistant", false) + Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false)
         }
         val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.1.0.bpmn").inputStream().use { xml ->

@@ -49,8 +49,8 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
     /**
      * Lists all decisions points of the model, i.e., all the gateways. Some of them may be not real decision points.
      */
-    override val decisionPoints: Sequence<BPMNGateway>
-        get() = processes.asSequence().flatMap { it.allActivities.asSequence().filterIsInstance<BPMNGateway>() }
+    override val decisionPoints: Sequence<BPMNDecisionPoint>
+        get() = processes.asSequence().flatMap { proc -> proc.allActivities.asSequence().map { it.split } }
 
     /**
      * Instances of BPMN models are currently not supported, as BPMN support is for import/export only.
@@ -59,7 +59,6 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
             throw UnsupportedOperationException("BPMN model instances are not supported")
 
     internal fun byName(name: QName) = processes
-            .asSequence()
             .flatMap { p ->
                 p.byName(name)
                         .filterIsInstance<TFlowNode>()
