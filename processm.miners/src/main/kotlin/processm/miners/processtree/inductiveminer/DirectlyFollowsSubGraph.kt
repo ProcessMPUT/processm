@@ -411,15 +411,11 @@ class DirectlyFollowsSubGraph(
      * Negated directly follows graph required for parallel cut detection
      */
     fun negateDFGConnections(): Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> {
-        val negatedConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+        val negatedConnections = HashMap<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>()
 
-        outgoingConnections.forEach { (activity, group) ->
-            group.forEach { (to, arc) ->
-                val containsLoopConnection = ingoingConnections[activity]?.containsKey(to) ?: false
-                if (!containsLoopConnection) {
-                    negatedConnections.getOrPut(activity, { HashMap() })[to] = arc
-                }
-            }
+        outgoingConnections.keys.forEach { activity ->
+            negatedConnections[activity] =
+                outgoingConnections[activity].orEmpty().filter { it.key !in ingoingConnections[activity].orEmpty() }
         }
 
         return negatedConnections
