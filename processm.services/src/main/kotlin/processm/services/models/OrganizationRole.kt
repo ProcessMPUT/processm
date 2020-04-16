@@ -9,11 +9,11 @@ object OrganizationRoles : LongIdTable("organization_roles") {
 }
 
 fun OrganizationRoles.getIdByName(organizationRole: OrganizationRole) : EntityID<Long> {
-    return OrganizationRoles.select { name eq organizationRole.name.toLowerCase() }.map { it[id] }.first()
+    return OrganizationRoles.select { name eq organizationRole.nameInDatabase }.map { it[id] }.first()
 }
 
-enum class OrganizationRole {
-    Owner,
-    Writer,
-    Reader
+enum class OrganizationRole(val nameInDatabase: String) {
+    Owner("owner"),
+    Writer("writer"),
+    Reader("reader")
 }
