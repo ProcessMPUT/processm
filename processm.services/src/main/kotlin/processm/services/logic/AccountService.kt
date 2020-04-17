@@ -1,7 +1,6 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
-import org.apache.commons.lang3.LocaleUtils
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
@@ -18,7 +17,7 @@ class AccountService {
         .saltLength(16)
         .hashLength(16)
     private val passwordVerifier = jargon2Verifier();
-    private val defaultLocale = Locale("en", "US")
+    private val defaultLocale = Locale.UK
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
         val user = User.find(Op.build { Users.username eq username }).firstOrNull()
@@ -83,22 +82,9 @@ class AccountService {
 
     fun changeLocale(userId: Long, locale: String) = transaction(DBConnectionPool.database) {
         val user = getAccountDetails(userId)
-        val normalizedLocale = locale.replace('_', '-')
+        val localeObject = parseLocale(locale)
 
-        try {
-            val localeObject: Locale = Locale.Builder().setLanguageTag(normalizedLocale).build()
-
-            if (!LocaleUtils.isAvailableLocale(localeObject) || localeObject.language.isNullOrEmpty()) {
-                return@transaction false
-            }
-
-            user.locale = localeObject.toString()
-
-            return@transaction true
-        }
-        catch (e: IllformedLocaleException) {
-            return@transaction false
-        }
+        user.locale = localeObject.toString()
     }
 
     private fun calculatePasswordHash(password: String) =
@@ -106,4 +92,28 @@ class AccountService {
 
     private fun verifyPassword(password: String, passwordHash: String) =
         passwordVerifier.hash(passwordHash).password(password.toByteArray()).verifyEncoded()
+
+    private fun parseLocale(locale: String): Locale {
+        val localeTags = locale.split("_", "-")
+        val localeObject = when (localeTags.size) {
+            3 -> Locale(localeTags[0], localeTags[1], localeTags[2])
+            2 -> Locale(localeTags[0], localeTags[1])
+            1 -> Locale(localeTags[0])
+            else -> throw ValidationException(
+                ValidationException.Reason.ResourceFormatInvalid,
+                "The provided locale string is in invalid format")
+        }
+
+        try {
+            localeObject.getISO3Language()
+            localeObject.getISO3Country()
+        }
+        catch (e: MissingResourceException) {
+            throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The current locale could not be changed: ${e.message.orEmpty()}")
+        }
+
+        return localeObject
+    }
 }

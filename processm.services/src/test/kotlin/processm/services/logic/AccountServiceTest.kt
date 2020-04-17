@@ -14,6 +14,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import processm.core.persistence.DBConnectionPool
@@ -202,8 +204,8 @@ class AccountServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = arrayOf("pl_PL", "en", "de-DE"))
-    fun `successful locale change returns true`(supportedLocale: String) = transaction(DBConnectionPool.database) {
+    @ValueSource(strings = ["pl_PL", "en", "de-DE", "es-ES_tradnl", "eng", "eng_US"])
+    fun `successful locale change runs successfully`(supportedLocale: String) = transaction(DBConnectionPool.database) {
 
         SchemaUtils.create(Users)
         val userId= Users.insertAndGetId {
@@ -212,12 +214,12 @@ class AccountServiceTest {
             it[locale] = "en_US"
         }
 
-        assertTrue(accountService.changeLocale(userId.value, supportedLocale))
+        assertDoesNotThrow { accountService.changeLocale(userId.value, supportedLocale) }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = arrayOf("goofy", "US", "ab_YZ", "en_"))
-    fun `changing locale returns false if locale is not supported`(unsupportedLocale: String) = transaction(DBConnectionPool.database) {
+    @ValueSource(strings = ["goofy", "US", "ab_YZ", "yz_AB", "eng-ENG"])
+    fun `changing locale throws if locale is not supported`(unsupportedLocale: String) = transaction(DBConnectionPool.database) {
 
         SchemaUtils.create(Users)
         val userId= Users.insertAndGetId {
@@ -226,7 +228,28 @@ class AccountServiceTest {
             it[locale] = "en_US"
         }
 
-        assertFalse(accountService.changeLocale(userId.value, unsupportedLocale))
+
+        val exception = assertFailsWith<ValidationException> {
+            accountService.changeLocale(userId.value, unsupportedLocale)
+        }
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["de_DE_DE_de", "de-DE-DE-de"])
+    fun `changing locale throws if locale is not properly_formatted`(unsupportedLocale: String) = transaction(DBConnectionPool.database) {
+
+        SchemaUtils.create(Users)
+        val userId= Users.insertAndGetId {
+            it[username] = "user1"
+            it[password] = correctPasswordHash
+            it[locale] = "en_US"
+        }
+
+        val exception = assertFailsWith<ValidationException> {
+            accountService.changeLocale(userId.value, unsupportedLocale)
+        }
+        assertEquals(ValidationException.Reason.ResourceFormatInvalid, exception.reason)
     }
 
     @Test

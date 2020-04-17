@@ -47,6 +47,7 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
             val responseStatusCode = when(cause.reason) {
                 ValidationException.Reason.ResourceAlreadyExists -> HttpStatusCode.Conflict
                 ValidationException.Reason.ResourceNotFound -> HttpStatusCode.NotFound
+                ValidationException.Reason.ResourceFormatInvalid -> HttpStatusCode.BadRequest
             }
             logger().trace(cause.message)
             call.respond(responseStatusCode, ErrorMessageBody(cause.userMessage))

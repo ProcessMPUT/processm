@@ -9,7 +9,7 @@ import org.jetbrains.exposed.dao.id.LongIdTable
 object Users : LongIdTable("users") {
     val username = text("username")
     val password = text("password")
-    val locale = varchar("locale", 5)
+    val locale = varchar("locale", 30)
 }
 
 class User(id: EntityID<Long>) : LongEntity(id) {

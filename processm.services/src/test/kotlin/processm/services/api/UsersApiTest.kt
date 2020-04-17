@@ -321,7 +321,7 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to successful locale change with 200`() = withConfiguredTestApplication {
 
-        every { accountService.changeLocale(userId = any(), locale = "pl_PL") } returns true
+        every { accountService.changeLocale(userId = any(), locale = "pl_PL") } just runs
 
         withAuthentication {
             with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
@@ -336,14 +336,17 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to locale change attempt with invalid locale with 400 and error message`() = withConfiguredTestApplication {
+    fun `responds to locale change attempt with invalid locale format with 404 and error message`() = withConfiguredTestApplication {
 
-        every { accountService.changeLocale(userId = any(), locale = "goofy_LOCALE") } returns false
+        every { accountService.changeLocale(userId = any(), locale = "eng_ENG") } throws
+                ValidationException(
+                    ValidationException.Reason.ResourceFormatInvalid,
+                    "The current locale could not be changed")
 
         withAuthentication {
             with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                withSerializedBody(LocaleChangeMessageBody(LocaleChange("goofy_LOCALE")))
+                withSerializedBody(LocaleChangeMessageBody(LocaleChange("eng_ENG")))
             }) {
                 assertEquals(HttpStatusCode.BadRequest, response.status())
                 assertTrue(response.deserializeContent<ErrorMessageBody>().error
@@ -351,7 +354,7 @@ class UsersApiTest : BaseApiTest() {
             }
         }
 
-        verify { accountService.changeLocale(userId = any(), locale = "goofy_LOCALE") }
+        verify { accountService.changeLocale(userId = any(), locale = "eng_ENG") }
     }
 
     @Test

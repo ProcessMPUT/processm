@@ -4,7 +4,8 @@ class ValidationException(val reason: Reason, val userMessage: String, message: 
 
     enum class Reason {
         ResourceAlreadyExists,
-        ResourceNotFound
+        ResourceNotFound,
+        ResourceFormatInvalid
     }
 }
 

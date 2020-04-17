@@ -111,12 +111,8 @@ fun Route.UsersApi() {
                     val localeData = call.receiveOrNull<LocaleChangeMessageBody>()?.data
                         ?: throw ApiException("The provided locale data cannot be parsed")
 
-                    if (accountService.changeLocale(principal.userId, localeData.locale)
-                    ) {
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, ErrorMessageBody("The current locale could not be changed"))
-                    }
+                    accountService.changeLocale(principal.userId, localeData.locale)
+                    call.respond(HttpStatusCode.OK)
                 }
             }
         }
