@@ -47,6 +47,12 @@ abstract class CausalNet(
     val instances: Set<Node> = Collections.unmodifiableSet(_instances)
 
     /**
+     * Convenience wrapper to retrieve all dependencies
+     */
+    val dependencies: List<Dependency>
+        get() = Collections.unmodifiableList(_outgoing.values.flatten())
+
+    /**
      * Outgoing arcs AKA what depends on a given node
      */
     val outgoing: Map<Node, Set<Dependency>>
@@ -158,5 +164,11 @@ abstract class CausalNet(
                 splits == other.splits &&
                 joins == other.joins
     }
+
+
+    /**
+     * True if [right] is isomorphic with [this], starting with [inital] as a (possibly empty) mapping from [this] to [right].
+     */
+    fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? = Isomorphism(this, right).run(initial)
 
 }

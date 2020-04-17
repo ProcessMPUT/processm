@@ -489,4 +489,17 @@ class MutableCausalNetTest {
         assertTrue { Dependency(a, b) in mm }
         assertFalse { Dependency(b, c) in mm }
     }
+
+    @Test
+    fun dependencies() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val dep = Dependency(a, b)
+        val mm = MutableCausalNet()
+        mm.addInstance(a, b, c)
+        assertTrue { mm.dependencies.isEmpty() }
+        mm.addDependency(dep)
+        assertEquals(setOf(dep), mm.dependencies.toSet())
+    }
 }
