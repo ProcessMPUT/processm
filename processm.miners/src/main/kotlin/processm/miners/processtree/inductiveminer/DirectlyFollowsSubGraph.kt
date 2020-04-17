@@ -83,7 +83,7 @@ class DirectlyFollowsSubGraph(
      * Possible only if connections are empty (no self-loop) AND in activities only one activity.
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
-        return outgoingConnections.isEmpty() && activities.size == 1
+        return ingoingConnections.isEmpty() && activities.size == 1
     }
 
     /**
@@ -728,7 +728,10 @@ class DirectlyFollowsSubGraph(
         return if (isStartAndEndActivityInEachGroup(connectedComponents)) connectedComponents else null
     }
 
-    fun detectCuts() {
+    /**
+     * Detect cuts in graph
+     */
+    private fun detectCuts() {
         if (canFinishCalculationsOnSubGraph()) {
             detectedCut = CutType.Activity
             return
@@ -756,11 +759,8 @@ class DirectlyFollowsSubGraph(
             return splitIntoSubGraphs(parallelAssigment)
         }
 
-        // redo
-        // TODO: redo
-//        {
-//            detectedCut = CutType.RedoLoop
-//        }
+        // Redo-loop cut
+        // TODO: redo detectedCut = CutType.RedoLoop
 
         // Flower model - default cut
         detectedCut = CutType.FlowerModel
