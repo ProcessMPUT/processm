@@ -41,29 +41,29 @@
   },
   "login-form": {
     "title": "Panel logowania",
-    "email": "Email",
+    "email": "E-mail",
     "password": "Hasło",
     "login": "Zaloguj",
     "register-account": "Zarejestruj konto",
     "validation": {
-      "email-format": "Nieprawidłowy format adresu email",
+      "email-format": "Nieprawidłowy format adresu e-mail",
       "password-empty": "Hasło nie może być puste"
     },
     "error-box": {
-      "failed": "Nieprawidłowy email lub hasło"
+      "failed": "Nieprawidłowy e-mail lub hasło"
     }
   },
   "registration-form": {
     "title": "Rejestracja konta",
     "organization-name": "Nazwa organizacji",
-    "admin-email": "Email administratora",
+    "admin-email": "E-mail administratora",
     "register": "Zarejestruj",
     "validation": {
-      "email-format": "Nieprawidłowy format adresu email",
+      "email-format": "Nieprawidłowy format adresu e-mail",
       "organization-empty": "Nazwa organizacji nie może być pusta"
     },
     "error-box": {
-      "failed": "Nieprawidłowy adres email lub nazwa organizacji"
+      "failed": "Nieprawidłowy adres e-mail lub nazwa organizacji"
     },
     "success-box": {
       "registered": "Rejestracja konta zakończona powodzeniem"
