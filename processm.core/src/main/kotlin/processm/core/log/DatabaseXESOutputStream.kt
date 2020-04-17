@@ -3,6 +3,7 @@ package processm.core.log
 import processm.core.log.attribute.*
 import processm.core.persistence.DBConnectionPool
 import java.sql.PreparedStatement
+import java.sql.Statement
 import java.sql.Timestamp
 import java.sql.Types
 
@@ -60,13 +61,19 @@ class DatabaseXESOutputStream : XESOutputStream {
      * Prepared query with insert new log's classifier into database
      */
     private val classifierQuery =
-        connection.prepareStatement("INSERT INTO CLASSIFIERS (log_id, scope, name, keys) VALUES (?, ?::scope_type, ?, ?)")
+        connection.prepareStatement(
+            "INSERT INTO CLASSIFIERS (log_id, scope, name, keys) VALUES (?, ?::scope_type, ?, ?)",
+            Statement.NO_GENERATED_KEYS
+        )
 
     /**
      * Prepared query with insert new log's extension into database
      */
     private val extensionQuery =
-        connection.prepareStatement("INSERT INTO EXTENSIONS (log_id, name, prefix, uri) VALUES (?, ?, ?, ?)")
+        connection.prepareStatement(
+            "INSERT INTO EXTENSIONS (log_id, name, prefix, uri) VALUES (?, ?, ?, ?)",
+            Statement.NO_GENERATED_KEYS
+        )
 
     /**
      * Prepared query with insert new Trace into database

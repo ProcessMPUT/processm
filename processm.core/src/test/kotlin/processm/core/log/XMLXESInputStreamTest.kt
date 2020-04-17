@@ -1,9 +1,9 @@
 package processm.core.log
 
 import org.junit.jupiter.api.assertThrows
+import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
-import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -132,7 +132,7 @@ internal class XMLXESInputStreamTest {
             assertEquals(receivedLog.eventGlobals.getValue("org:group").value, "__INVALID__")
             assertEquals(
                 receivedLog.eventGlobals.getValue("time:timestamp").value,
-                Instant.parse("1970-01-01T01:00:00.000+01:00")
+                "1970-01-01T01:00:00.000+01:00".parseISO8601()
             )
         }
     }
@@ -269,7 +269,7 @@ internal class XMLXESInputStreamTest {
 
             assertEquals(
                 receivedTrace.attributes.getValue("End date").value,
-                Instant.parse("2006-01-04T23:45:36.000+01:00")
+                "2006-01-04T23:45:36.000+01:00".parseISO8601()
             )
             assertEquals(receivedTrace.attributes.getValue("Age").value, 33L)
             assertEquals(receivedTrace.attributes.getValue("conceptowy:name").value, "00000001")
@@ -293,7 +293,7 @@ internal class XMLXESInputStreamTest {
 
             assertEquals(
                 receivedEvent.attributes.getValue("time:timestamp").value,
-                Instant.parse("2005-01-03T00:00:00+01:00")
+                "2005-01-03T00:00:00+01:00".parseISO8601()
             )
             assertEquals(receivedEvent.attributes.getValue("Activity code").value, 410100L)
             assertEquals(receivedEvent.attributes.getValue("lifecycle:transition").value, "complete")

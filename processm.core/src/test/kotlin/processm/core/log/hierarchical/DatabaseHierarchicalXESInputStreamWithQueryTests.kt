@@ -2,12 +2,12 @@ package processm.core.log.hierarchical
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import processm.core.helpers.parseISO8601
 import processm.core.log.DatabaseLogCleaner
 import processm.core.log.DatabaseXESOutputStream
 import processm.core.log.XMLXESInputStream
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.Query
-import java.time.Instant
 import kotlin.test.*
 
 class DatabaseHierarchicalXESInputStreamWithQueryTests {
@@ -53,7 +53,6 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
     }
 
     @Test
-    @Ignore
     fun basicSelectTest() {
         val query = Query("select l:name, t:name, e:name, e:timestamp where l:concept:name='JournalReview'")
         val stream = DatabaseHierarchicalXESInputStream(query)
@@ -77,7 +76,7 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
             assertTrue(trace.events.count() > 0)
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
-                assertTrue(event.timeTimestamp!!.isAfter(Instant.parse("2006-01-01T00:00:00.000Z")))
+                assertTrue(event.timeTimestamp!!.isAfter("2006-01-01T00:00:00.000Z".parseISO8601()))
                 assertNull(event.conceptInstance)
                 assertNull(event.costCurrency)
                 assertNull(event.costTotal)

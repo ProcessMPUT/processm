@@ -3,6 +3,8 @@ package processm.core.helpers
 import processm.core.log.attribute.deepEquals
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -171,3 +173,8 @@ private inline fun <T> MutableList<T>.swap(i: Int, j: Int) {
     this[i] = this[j]
     this[j] = tmp
 }
+
+/**
+ * Parses a timestamp with timezone in ISO-8601 format into [Instant].
+ */
+inline fun String.parseISO8601(): Instant = DateTimeFormatter.ISO_DATE_TIME.parse(this, Instant::from)

@@ -1,11 +1,11 @@
 package processm.core.log
 
+import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.Query
 import java.time.Instant
-import java.time.format.DateTimeFormatter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -144,7 +144,7 @@ internal class DatabaseXESInputStreamTest {
                 assertEquals(children.getValue("Specialism code").value, 61L)
                 assertEquals(children.getValue("conceptowy:name").value, "1e consult poliklinisch")
                 assertEquals(children.getValue("Activity code").value, 410100L)
-                assertEquals(Instant.parse("2005-01-03T00:00:00.000+01:00"), children.getValue("time:timestamp").value)
+                assertEquals("2005-01-03T00:00:00.000+01:00".parseISO8601(), children.getValue("time:timestamp").value)
                 assertEquals(children.getValue("lifecycle:transition").value, "complete")
 
                 with(children.getValue("listKey") as ListAttr) {
@@ -228,7 +228,7 @@ internal class DatabaseXESInputStreamTest {
         assert(stream.next() is Trace)
 
         val receivedEvent = stream.next() as Event
-        val date = Instant.from(DateTimeFormatter.ISO_DATE_TIME.parse("2005-01-03T00:00:00.000+01:00"))
+        val date = "2005-01-03T00:00:00.000+01:00".parseISO8601()
 
         with(receivedEvent.attributes) {
             assertEquals(size, 6)
