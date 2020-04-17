@@ -1,7 +1,6 @@
 package processm.core.log.attribute
 
 import java.time.Instant
-import java.util.*
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,12 +11,12 @@ internal class DateTimeAttrTest {
     private val attr1: DateTimeAttr =
         DateTimeAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = Date.from(Instant.now())
+            value = Instant.now()
         )
     private val attr2: DateTimeAttr =
         DateTimeAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = Date.from(Instant.now())
+            value = Instant.now()
         )
 
     @Test

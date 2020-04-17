@@ -7,70 +7,98 @@ import java.sql.Timestamp
 import java.sql.Types
 
 class DatabaseXESOutputStream : XESOutputStream {
+    companion object {
+        private val ID = arrayOf("id")
+    }
+
     /**
      * Connection with the database
      */
     private val connection = DBConnectionPool.getConnection()
+
     /**
      * Log ID of inserted Log record
      */
     private var logId: Int? = null
+
     /**
      * Trace ID of inserted Trace record
      */
     private var traceId: Long? = null
+
     /**
      * Event ID of inserted Event record
      */
     private var eventId: Long? = null
+
     /**
      * Prepared query with insert new Log into database
      * As return we expect to receive LogId
      */
     private val logQuery =
         connection.prepareStatement("""INSERT INTO LOGS (features, "concept:name", "identity:id", "lifecycle:model") VALUES (?, ?, ?, ?) RETURNING ID""")
+
     /**
      * Prepared query with insert new log's attribute into database
      */
     private val logAttributeQuery =
-        connection.prepareStatement("""INSERT INTO LOGS_ATTRIBUTES (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+        connection.prepareStatement(
+            "INSERT INTO LOGS_ATTRIBUTES (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?)",
+            ID
+        )
+
     /**
      * Prepared query with insert new log's global into database
      */
     private val globalQuery =
-        connection.prepareStatement("""INSERT INTO GLOBALS (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr, scope) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?, ?::scope_type) RETURNING ID""")
+        connection.prepareStatement(
+            "INSERT INTO GLOBALS (log_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr, scope) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?, ?::scope_type)",
+            ID
+        )
+
     /**
      * Prepared query with insert new log's classifier into database
      */
     private val classifierQuery =
-        connection.prepareStatement("""INSERT INTO CLASSIFIERS (log_id, scope, name, keys) VALUES (?, ?::scope_type, ?, ?)""")
+        connection.prepareStatement("INSERT INTO CLASSIFIERS (log_id, scope, name, keys) VALUES (?, ?::scope_type, ?, ?)")
+
     /**
      * Prepared query with insert new log's extension into database
      */
     private val extensionQuery =
-        connection.prepareStatement("""INSERT INTO EXTENSIONS (log_id, name, prefix, uri) VALUES (?, ?, ?, ?)""")
+        connection.prepareStatement("INSERT INTO EXTENSIONS (log_id, name, prefix, uri) VALUES (?, ?, ?, ?)")
+
     /**
      * Prepared query with insert new Trace into database
      * As return we expect to receive TraceId
      */
     private val traceQuery =
         connection.prepareStatement("""INSERT INTO TRACES (log_id, "concept:name", "cost:total", "cost:currency", "identity:id", event_stream) VALUES (?, ?, ?, ?, ?, ?) RETURNING ID""")
+
     /**
      * Prepared query with insert new trace's attribute into database
      */
     private val traceAttributeQuery =
-        connection.prepareStatement("""INSERT INTO TRACES_ATTRIBUTES (trace_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+        connection.prepareStatement(
+            "INSERT INTO TRACES_ATTRIBUTES (trace_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?)",
+            ID
+        )
+
     /**
      * Prepared query with insert new Event into database
      * As return we expect to receive EventId
      */
     private val eventQuery =
         connection.prepareStatement("""INSERT INTO EVENTS (trace_id, "concept:name", "concept:instance", "cost:total", "cost:currency", "identity:id", "lifecycle:transition", "lifecycle:state", "org:resource", "org:role", "org:group", "time:timestamp") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+
     /**
      * Prepared query with insert new event's attribute into database
      */
     private val eventAttributeQuery =
-        connection.prepareStatement("""INSERT INTO EVENTS_ATTRIBUTES (event_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+        connection.prepareStatement(
+            "INSERT INTO EVENTS_ATTRIBUTES (event_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) VALUES (?, ?, ?::attribute_type, ?, ?, ?, ?, ?, ?, ?) RETURNING ID",
+            ID
+        )
 
     init {
         // Disable autoCommit on connection - we want to add whole XES log structure
@@ -83,8 +111,9 @@ class DatabaseXESOutputStream : XESOutputStream {
     override fun write(element: XESElement) {
         when (element) {
             is Event -> {
-                // We expect to already store Trace object in the database - if only Log added == we have event stream now
-                if (traceId == null) {
+                // We expect that the corresponding Trace object is already stored in the database.
+                // If only Log is stored then we encountered an event stream.
+                if (traceId === null) {
                     val eventStreamTraceElement = Trace()
                     // Set trace as event stream - special boolean flag
                     eventStreamTraceElement.isEventStream = true
@@ -95,23 +124,24 @@ class DatabaseXESOutputStream : XESOutputStream {
                 for (attribute in element.attributes.values) {
                     storeTraceEventAttributes(eventAttributeQuery, eventId!!, attribute)
                 }
+                eventAttributeQuery.executeBatch() // in case the batch is not flushed yet
             }
             is Trace -> {
                 // We expect to already store Log object in the database
-                if (logId == null) {
-                    throw IllegalStateException("Log ID not set. Can not add trace to the database")
-                }
+                check(logId !== null) { "Log ID not set. Can not add trace to the database" }
 
                 storeTrace(element)
                 for (attribute in element.attributes.values) {
                     storeTraceEventAttributes(traceAttributeQuery, traceId!!, attribute)
                 }
+                traceAttributeQuery.executeBatch() // in case the batch is not flushed yet
             }
             is Log -> {
                 storeLog(element)
                 storeExtensions(element.extensions)
                 storeClassifiers("event", element.eventClassifiers)
                 storeClassifiers("trace", element.traceClassifiers)
+                classifierQuery.executeBatch()
 
                 for (globalAttribute in element.eventGlobals.values) {
                     storeGlobals("event", globalAttribute)
@@ -119,10 +149,12 @@ class DatabaseXESOutputStream : XESOutputStream {
                 for (globalAttribute in element.traceGlobals.values) {
                     storeGlobals("trace", globalAttribute)
                 }
+                globalQuery.executeBatch() // in case the batch is not flushed yet
 
                 for (attribute in element.attributes.values) {
                     storeLogAttributes(attribute)
                 }
+                logAttributeQuery.executeBatch() // in case the batch is not flushed yet
             }
             else ->
                 throw IllegalArgumentException("Unsupported XESElement found. Expected 'Log', 'Trace' or 'Event' but received ${element.javaClass}")
@@ -136,11 +168,9 @@ class DatabaseXESOutputStream : XESOutputStream {
         parentId: Long? = null,
         insideListTag: Boolean? = null
     ) {
-        var parentRecordID: Long? = parentId
-
         // If has parent - set it, otherwise set null value
-        if (parentRecordID != null) {
-            query.setLong(9, parentRecordID)
+        if (parentId != null) {
+            query.setLong(9, parentId)
         } else {
             query.setNull(9, Types.NULL)
         }
@@ -155,18 +185,25 @@ class DatabaseXESOutputStream : XESOutputStream {
         query.setLong(1, refID)
         setAttributeValueInQuery(query, attribute)
 
-        if (query.execute() && query.resultSet.next()) {
-            parentRecordID = query.resultSet.getLong(1)
-            for (child in attribute.children.values) {
-                storeTraceEventAttributes(query, refID, child, parentRecordID)
-            }
-        } else {
-            throw IllegalStateException("Not received expected AttributeId from the database")
-        }
+        query.addBatch()
+        if (attribute.children.isNotEmpty() || attribute is ListAttr) {
+            query.executeBatch()
+            query.generatedKeys.use {
+                // the cursor for generated keys is forward-only
+                while (it.next() && !it.isLast) Unit /* Unit = no-op */
+                check(it.isLast) { "Not received expected AttributeId from the database" }
 
-        if (attribute is ListAttr) {
-            for (attrInList in attribute.getValue()) {
-                storeTraceEventAttributes(query, refID, attrInList, parentRecordID, insideListTag = true)
+                val parentRecordID = it.getLong(1)
+                for (child in attribute.children.values) {
+                    storeTraceEventAttributes(query, refID, child, parentRecordID)
+                }
+
+                if (attribute is ListAttr) {
+                    for (attrInList in attribute.getValue()) {
+                        storeTraceEventAttributes(query, refID, attrInList, parentRecordID, insideListTag = true)
+                    }
+                }
+
             }
         }
     }
@@ -175,11 +212,9 @@ class DatabaseXESOutputStream : XESOutputStream {
      * Store Log's attributes
      */
     private fun storeLogAttributes(attribute: Attribute<*>, parentId: Int? = null, insideListTag: Boolean? = null) {
-        var parentRecordID: Int? = parentId
-
         // If has parent - set it, otherwise set null value
-        if (parentRecordID != null) {
-            logAttributeQuery.setInt(9, parentRecordID)
+        if (parentId != null) {
+            logAttributeQuery.setInt(9, parentId)
         } else {
             logAttributeQuery.setNull(9, Types.NULL)
         }
@@ -194,20 +229,25 @@ class DatabaseXESOutputStream : XESOutputStream {
         logAttributeQuery.setInt(1, logId!!)
         setAttributeValueInQuery(logAttributeQuery, attribute)
 
-        // Execute query and fetch recordId - required to be able to add children
-        if (logAttributeQuery.execute() && logAttributeQuery.resultSet.next()) {
-            parentRecordID = logAttributeQuery.resultSet.getInt(1)
-            for (child in attribute.children.values) {
-                storeLogAttributes(child, parentRecordID)
-            }
-        } else {
-            throw IllegalStateException("Not received expected AttributeId from the database")
-        }
+        logAttributeQuery.addBatch()
+        if (attribute.children.isNotEmpty() || attribute is ListAttr) {
+            logAttributeQuery.executeBatch()
+            logAttributeQuery.generatedKeys.use {
+                // the cursor for generated keys is forward-only
+                while (it.next() && !it.isLast) Unit /* Unit = no-op */
+                check(it.isLast) { "Not received expected AttributeId from the database" }
 
-        // If list attribute store also ordered attributes from <values> tag
-        if (attribute is ListAttr) {
-            for (attrInList in attribute.getValue()) {
-                storeLogAttributes(attrInList, parentRecordID, insideListTag = true)
+                val parentRecordID = it.getInt(1)
+                for (child in attribute.children.values) {
+                    storeLogAttributes(child, parentRecordID)
+                }
+
+                // If list attribute store also ordered attributes from <values> tag
+                if (attribute is ListAttr) {
+                    for (attrInList in attribute.getValue()) {
+                        storeLogAttributes(attrInList, parentRecordID, insideListTag = true)
+                    }
+                }
             }
         }
     }
@@ -238,7 +278,7 @@ class DatabaseXESOutputStream : XESOutputStream {
             classifierQuery.setString(3, classifier.name)
             classifierQuery.setString(4, classifier.keys)
 
-            classifierQuery.execute()
+            classifierQuery.addBatch()
         }
     }
 
@@ -252,8 +292,9 @@ class DatabaseXESOutputStream : XESOutputStream {
             extensionQuery.setString(3, extension.prefix)
             extensionQuery.setString(4, extension.uri)
 
-            extensionQuery.execute()
+            extensionQuery.addBatch()
         }
+        extensionQuery.executeBatch()
     }
 
     /**
@@ -265,15 +306,13 @@ class DatabaseXESOutputStream : XESOutputStream {
         parentId: Int? = null,
         insideListTag: Boolean? = null
     ) {
-        var parentRecordID: Int? = parentId
-
         // Set LogId and scope
         globalQuery.setInt(1, logId!!)
         globalQuery.setString(11, scope)
 
         // If has parent - set it, otherwise set null value
-        if (parentRecordID != null) {
-            globalQuery.setInt(9, parentRecordID)
+        if (parentId != null) {
+            globalQuery.setInt(9, parentId)
         } else {
             globalQuery.setNull(9, Types.NULL)
         }
@@ -288,22 +327,26 @@ class DatabaseXESOutputStream : XESOutputStream {
         // Set value attributes, key and type
         setAttributeValueInQuery(globalQuery, attribute)
 
-        // Execute query and fetch recordId - required to be able to add children
-        if (globalQuery.execute() && globalQuery.resultSet.next()) {
-            parentRecordID = globalQuery.resultSet.getInt(1)
+        globalQuery.addBatch()
+        if (attribute.children.isNotEmpty() || attribute is ListAttr) {
+            globalQuery.executeBatch()
+            globalQuery.generatedKeys.use {
+                // the cursor for generated keys is forward-only
+                while (it.next() && !it.isLast) Unit /* Unit = no-op */
+                check(it.isLast) { "Not received expected ID from the database" }
 
-            // Store children attribute with this record as parent
-            for (child in attribute.children.values) {
-                storeGlobals(scope, child, parentRecordID)
-            }
-        } else {
-            throw IllegalStateException("Not received expected ID from the database")
-        }
+                val parentRecordID = it.getInt(1)
+                // Store children attribute with this record as parent
+                for (child in attribute.children.values) {
+                    storeGlobals(scope, child, parentRecordID)
+                }
 
-        // If list attribute store also ordered attributes from <values> tag
-        if (attribute is ListAttr) {
-            for (attrInList in attribute.getValue()) {
-                storeGlobals(scope, attrInList, parentRecordID, insideListTag = true)
+                // If list attribute store also ordered attributes from <values> tag
+                if (attribute is ListAttr) {
+                    for (attrInList in attribute.getValue()) {
+                        storeGlobals(scope, attrInList, parentRecordID, insideListTag = true)
+                    }
+                }
             }
         }
     }
@@ -333,7 +376,7 @@ class DatabaseXESOutputStream : XESOutputStream {
                 query.setString(4, attribute.value as String?)
             }
             is DateTimeAttr -> {
-                query.setTimestamp(5, Timestamp(attribute.value.time))
+                query.setTimestamp(5, Timestamp.from(attribute.value))
             }
             is BoolAttr -> {
                 query.setBoolean(7, attribute.value)
@@ -384,7 +427,7 @@ class DatabaseXESOutputStream : XESOutputStream {
         eventQuery.setString(9, element.orgResource)
         eventQuery.setString(10, element.orgRole)
         eventQuery.setString(11, element.orgGroup)
-        eventQuery.setTimestamp(12, element.timeTimestamp?.time?.let { Timestamp(it) })
+        eventQuery.setTimestamp(12, element.timeTimestamp?.let { Timestamp.from(it) })
 
         if (eventQuery.execute() && eventQuery.resultSet.next()) {
             eventId = eventQuery.resultSet.getLong(1)

@@ -240,7 +240,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             orgRole = result.entity.getString("org:role")
             orgGroup = result.entity.getString("org:group")
             orgResource = result.entity.getString("org:resource")
-            timeTimestamp = result.entity.getTimestamp("time:timestamp")
+            timeTimestamp = result.entity.getTimestamp("time:timestamp")?.toInstant()
             // val eventId = result.entity.getLong("id")
 
             readTracesEventsAttributes(result.attributes, this)
@@ -302,7 +302,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
                 "string" -> StringAttr(key, getString("string_value"))
                 "bool" -> BoolAttr(key, getBoolean("bool_value"))
                 "float" -> RealAttr(key, getDouble("real_value"))
-                "date" -> DateTimeAttr(key, getTimestamp("date_value"))
+                "date" -> DateTimeAttr(key, getTimestamp("date_value").toInstant())
                 "list" -> ListAttr(key)
                 else -> throw IllegalStateException("Invalid attribute type stored in the database")
             }

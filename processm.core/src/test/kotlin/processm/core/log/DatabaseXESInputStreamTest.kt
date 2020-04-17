@@ -4,10 +4,8 @@ import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.Query
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -121,8 +119,6 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains trace global attributes`() {
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
-        dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
         val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
@@ -148,10 +144,7 @@ internal class DatabaseXESInputStreamTest {
                 assertEquals(children.getValue("Specialism code").value, 61L)
                 assertEquals(children.getValue("conceptowy:name").value, "1e consult poliklinisch")
                 assertEquals(children.getValue("Activity code").value, 410100L)
-                assertTrue(
-                    dateFormatter.parse("2005-01-03T00:00:00.000+01:00")
-                        .compareTo(children.getValue("time:timestamp").value as Date?) == 0
-                )
+                assertEquals(Instant.parse("2005-01-03T00:00:00.000+01:00"), children.getValue("time:timestamp").value)
                 assertEquals(children.getValue("lifecycle:transition").value, "complete")
 
                 with(children.getValue("listKey") as ListAttr) {
@@ -235,7 +228,7 @@ internal class DatabaseXESInputStreamTest {
         assert(stream.next() is Trace)
 
         val receivedEvent = stream.next() as Event
-        val date = Date.from(Instant.from(DateTimeFormatter.ISO_DATE_TIME.parse("2005-01-03T00:00:00.000+01:00")))
+        val date = Instant.from(DateTimeFormatter.ISO_DATE_TIME.parse("2005-01-03T00:00:00.000+01:00"))
 
         with(receivedEvent.attributes) {
             assertEquals(size, 6)
@@ -245,7 +238,7 @@ internal class DatabaseXESInputStreamTest {
             assertEquals(getValue("conceptowy:name").value, "administratief tarief - eerste pol")
             assertEquals(getValue("lifecycle:transition").value, "complete")
             assertEquals(getValue("Activity code").value, 419100L)
-            assertTrue(date.compareTo(getValue("time:timestamp").value as Date?) == 0)
+            assertTrue(date.compareTo(getValue("time:timestamp").value as Instant?) == 0)
         }
 
         with(receivedEvent) {
