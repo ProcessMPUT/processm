@@ -15,7 +15,6 @@ import org.junit.Test
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import processm.core.persistence.DBConnectionPool
@@ -91,10 +90,7 @@ class AccountServiceTest {
     @Test
     fun `successful account registration returns`(): Unit = transaction(DBConnectionPool.database) {
 
-        SchemaUtils.create(Users)
-        SchemaUtils.create(Organizations)
-        SchemaUtils.create(UsersRolesInOrganizations)
-        SchemaUtils.create(OrganizationRoles)
+        SchemaUtils.create(Users, Organizations, OrganizationRoles, UsersRolesInOrganizations)
         OrganizationRole.values().forEach {
                 roleName -> OrganizationRoles.insert { it[name] = roleName.toString().toLowerCase() }
         }

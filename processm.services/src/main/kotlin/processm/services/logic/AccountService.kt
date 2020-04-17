@@ -4,6 +4,7 @@ import com.kosprov.jargon2.api.Jargon2.*
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.DBConnectionPool
 import processm.services.models.*
@@ -16,7 +17,7 @@ class AccountService {
         .timeCost(3)
         .saltLength(16)
         .hashLength(16)
-    private val passwordVerifier = jargon2Verifier();
+    private val passwordVerifier = jargon2Verifier()
     private val defaultLocale = Locale.UK
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
@@ -30,8 +31,8 @@ class AccountService {
 
     fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null) {
         transaction(DBConnectionPool.database) {
-            val organizationsCount = Organization.count( Op.build { Organizations.name eq organizationName })
-            val usersCount = User.count(Op.build { Users.username eq userEmail })
+            val organizationsCount = Organizations.select { Organizations.name eq organizationName }.limit(1).count()
+            val usersCount = Users.select { Users.username eq userEmail }.limit(1).count()
 
             if (usersCount > 0 || organizationsCount > 0) {
                 throw ValidationException(
