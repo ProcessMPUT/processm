@@ -47,6 +47,12 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+     * Detected cut in subGraph
+     */
+    var detectedCut: CutType? = null
+        private set
+
+    /**
      * SubGraphs created based on this sub graph
      */
     lateinit var children: Array<DirectlyFollowsSubGraph?>
@@ -67,6 +73,8 @@ class DirectlyFollowsSubGraph(
         // No initial activities assigned - we should generate assignment
         if (initialStartActivities.isEmpty()) inferStartActivities()
         if (initialEndActivities.isEmpty()) inferEndActivities()
+
+        detectCuts()
     }
 
     /**
@@ -722,36 +730,39 @@ class DirectlyFollowsSubGraph(
 
     fun detectCuts() {
         if (canFinishCalculationsOnSubGraph()) {
-            println("FINISH")
-            println(finishCalculations())
+            detectedCut = CutType.Activity
+            return
         }
 
+        // Try to perform exclusive cut
         val connectedComponents = calculateExclusiveCut()
-        // X
         if (connectedComponents !== null) {
-            println("X")
-            println(splitIntoSubGraphs(connectedComponents))
+            detectedCut = CutType.Exclusive
+            return splitIntoSubGraphs(connectedComponents)
         }
 
-        // ->
+        // Sequence cut
         val stronglyConnectedComponents = stronglyConnectedComponents()
         val seqAssigment = calculateSequentialCut(stronglyConnectedComponents)
         if (seqAssigment !== null) {
-            println("->")
-            println(splitIntoSubGraphs(seqAssigment))
+            detectedCut = CutType.Sequence
+            return splitIntoSubGraphs(seqAssigment)
         }
 
-        // ^
+        // Parallel cut
         val parallelAssigment = calculateParallelCut()
         if (parallelAssigment !== null) {
-            println("^")
-            println(splitIntoSubGraphs(parallelAssigment))
+            detectedCut = CutType.Parallel
+            return splitIntoSubGraphs(parallelAssigment)
         }
 
         // redo
         // TODO: redo
+//        {
+//            detectedCut = CutType.RedoLoop
+//        }
 
-        // flower-model
-        finishWithDefaultRule()
+        // Flower model - default cut
+        detectedCut = CutType.FlowerModel
     }
 }
