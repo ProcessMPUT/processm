@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class OrganizationsApiTest : BaseApiTest() {
+class OrganizationsApiTest: BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/organizations",
@@ -21,8 +21,7 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Delete to "/api/organizations/1",
         HttpMethod.Get to "/api/organizations/1/members",
         HttpMethod.Post to "/api/organizations/1/members",
-        HttpMethod.Delete to "/api/organizations/1/members/1"
-    )
+        HttpMethod.Delete to "/api/organizations/1/members/1")
 
     override fun endpointsWithNoImplementation() = Stream.of(
         HttpMethod.Post to "/api/organizations",
@@ -30,8 +29,7 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Delete to "/api/organizations/1",
         HttpMethod.Get to "/api/organizations/1/members",
         HttpMethod.Post to "/api/organizations/1/members",
-        HttpMethod.Delete to "/api/organizations/1/members/1"
-    )
+        HttpMethod.Delete to "/api/organizations/1/members/1")
 
     @Test
     fun `responds with 200 and group list`() = withConfiguredTestApplication {

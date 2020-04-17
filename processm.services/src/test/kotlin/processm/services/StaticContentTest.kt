@@ -36,11 +36,7 @@ class StaticContentTest {
             engine {
                 customizeClient {
                     setSSLContext(
-                        SSLContextBuilder
-                            .create()
-                            .loadTrustMaterial(TrustSelfSignedStrategy())
-                            .build()
-                    )
+                        SSLContextBuilder.create().loadTrustMaterial(TrustSelfSignedStrategy()).build())
                     setSSLHostnameVerifier(NoopHostnameVerifier())
                     connectTimeout = 1000
                     connectionRequestTimeout = 1000
@@ -48,7 +44,6 @@ class StaticContentTest {
                 }
             }
         }
-
         val httpGetDoc = client.get<String>(baseURI)
         val httpsGetDoc = client.get<String>(baseURIs)
 

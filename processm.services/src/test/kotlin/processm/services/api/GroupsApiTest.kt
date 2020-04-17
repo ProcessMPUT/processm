@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class GroupsApiTest : BaseApiTest() {
+class GroupsApiTest: BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/groups",
@@ -25,8 +25,7 @@ class GroupsApiTest : BaseApiTest() {
         HttpMethod.Delete to "/api/groups/1/members/1",
         HttpMethod.Get to "/api/groups/1/subgroups",
         HttpMethod.Post to "/api/groups/1/subgroups",
-        HttpMethod.Delete to "/api/groups/1/subgroups/1"
-    )
+        HttpMethod.Delete to "/api/groups/1/subgroups/1")
 
     override fun endpointsWithNoImplementation() = Stream.of(
         HttpMethod.Post to "/api/groups",
@@ -37,8 +36,7 @@ class GroupsApiTest : BaseApiTest() {
         HttpMethod.Delete to "/api/groups/1/members/1",
         HttpMethod.Get to "/api/groups/1/subgroups",
         HttpMethod.Post to "/api/groups/1/subgroups",
-        HttpMethod.Delete to "/api/groups/1/subgroups/1"
-    )
+        HttpMethod.Delete to "/api/groups/1/subgroups/1")
 
     @Test
     fun `responds with 200 and group list`() = withConfiguredTestApplication {

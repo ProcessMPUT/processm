@@ -12,11 +12,12 @@ import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
-import processm.services.api.models.*
+import processm.services.api.models.Organization
+import processm.services.api.models.OrganizationCollectionMessageBody
+import processm.services.api.models.OrganizationMessageBody
 
 @KtorExperimentalLocationsAPI
 fun Route.OrganizationsApi() {
-
     authenticate {
         route("/organizations/{organizationId}/members") {
             post {
@@ -39,11 +40,10 @@ fun Route.OrganizationsApi() {
         get<Paths.getOrganization> { organization: Paths.getOrganization ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.OK, OrganizationMessageBody(Organization(
-                organization.organizationId,
-                false,
-                organization.organizationId))
-            )
+            call.respond(
+                HttpStatusCode.OK, OrganizationMessageBody(
+                    Organization(
+                        organization.organizationId, false, organization.organizationId)))
         }
 
 

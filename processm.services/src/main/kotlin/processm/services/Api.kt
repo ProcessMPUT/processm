@@ -14,12 +14,10 @@ import io.ktor.routing.route
 import io.ktor.routing.routing
 import org.koin.dsl.module
 import org.koin.ktor.ext.Koin
-import org.koin.ktor.ext.get
 import processm.services.api.*
 import processm.services.logic.AccountService
 
 fun Application.apiModule() {
-
     install(DefaultHeaders)
     install(ContentNegotiation) {
         register(ContentType.Application.Json, GsonConverter())

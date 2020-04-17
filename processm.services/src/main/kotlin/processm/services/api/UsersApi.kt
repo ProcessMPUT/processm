@@ -20,15 +20,13 @@ import processm.services.logic.AccountService
 import java.time.Duration
 import java.time.Instant
 
-
 @KtorExperimentalLocationsAPI
 fun Route.UsersApi() {
     val accountService by inject<AccountService>()
     val jwtIssuer = application.environment.config.property("ktor.jwt.issuer").getString()
     val jwtSecret = application.environment.config.propertyOrNull("ktor.jwt.secret")?.getString()
-        ?: JwtAuthentication.generateSecretKey()
-    val jwtTokenTtl = Duration.parse(
-        application.environment.config.property("ktor.jwt.tokenTtl").getString())
+                    ?: JwtAuthentication.generateSecretKey()
+    val jwtTokenTtl = Duration.parse(application.environment.config.property("ktor.jwt.tokenTtl").getString())
 
     route("/users/session") {
         post {
@@ -37,26 +35,22 @@ fun Route.UsersApi() {
             when {
                 credentials != null -> {
                     var user = accountService.verifyUsersCredentials(credentials.username, credentials.password)
-                        ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
+                               ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
                     val token = JwtAuthentication.createToken(
-                        user.id.value,
-                        user.username,
-                        Instant.now().plus(jwtTokenTtl),
-                        jwtIssuer,
-                        jwtSecret)
+                        user.id.value, user.username, Instant.now().plus(jwtTokenTtl), jwtIssuer, jwtSecret)
 
-                    call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token)))
+                    call.respond(
+                        HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token)))
                 }
                 call.request.authorization() != null -> {
-                    val authorizationHeader = call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single
-                        ?: throw ApiException("Invalid authorization token format", HttpStatusCode.Unauthorized)
+                    val authorizationHeader =
+                        call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
+                            "Invalid authorization token format", HttpStatusCode.Unauthorized)
                     val prolongedToken = JwtAuthentication.verifyAndProlongToken(
-                        authorizationHeader.blob,
-                        jwtIssuer,
-                        jwtSecret,
-                        jwtTokenTtl)
+                        authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl)
 
-                    call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(prolongedToken)))
+                    call.respond(
+                        HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(prolongedToken)))
                 }
                 else -> {
                     throw ApiException("Either user credentials or authentication token needs to be provided")
@@ -68,7 +62,7 @@ fun Route.UsersApi() {
     route("/users") {
         post {
             val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
-                ?: throw ApiException("The provided account details cannot be parsed")
+                              ?: throw ApiException("The provided account details cannot be parsed")
             val locale = call.request.acceptLanguageItems().getOrNull(0)
 
             accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName, locale?.value)
@@ -81,35 +75,33 @@ fun Route.UsersApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             val userAccountDetails = accountService.getAccountDetails(principal.userId)
 
-            call.respond(HttpStatusCode.OK, UserAccountInfoMessageBody(UserAccountInfo(
-                userAccountDetails.username,
-                userAccountDetails.locale)))
+            call.respond(
+                HttpStatusCode.OK, UserAccountInfoMessageBody(
+                    UserAccountInfo(
+                        userAccountDetails.username, userAccountDetails.locale)))
         }
 
         route("/users/me") {
-            route ("/password") {
+            route("/password") {
                 patch {
                     val principal = call.authentication.principal<ApiUser>()!!
                     val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
-                        ?: throw ApiException("The provided password data cannot be parsed")
+                                       ?: throw ApiException("The provided password data cannot be parsed")
 
                     if (accountService.changePassword(
-                            principal.userId,
-                            passwordData.currentPassword,
-                            passwordData.newPassword
-                        )
-                    ) {
+                            principal.userId, passwordData.currentPassword, passwordData.newPassword)) {
                         call.respond(HttpStatusCode.OK)
                     } else {
-                        call.respond(HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed"))
+                        call.respond(
+                            HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed"))
                     }
                 }
             }
-            route ("/locale") {
+            route("/locale") {
                 patch {
                     val principal = call.authentication.principal<ApiUser>()!!
                     val localeData = call.receiveOrNull<LocaleChangeMessageBody>()?.data
-                        ?: throw ApiException("The provided locale data cannot be parsed")
+                                     ?: throw ApiException("The provided locale data cannot be parsed")
 
                     accountService.changeLocale(principal.userId, localeData.locale)
                     call.respond(HttpStatusCode.OK)

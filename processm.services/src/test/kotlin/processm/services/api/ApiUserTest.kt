@@ -7,7 +7,6 @@ class ApiUserTest {
 
     @Test
     fun `object creation throws if insufficient claims are provided`() {
-
         assertFailsWith<ApiException> {
             ApiUser(mapOf())
         }

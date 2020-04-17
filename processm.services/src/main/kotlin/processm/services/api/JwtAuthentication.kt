@@ -10,41 +10,28 @@ import java.util.*
 
 object JwtAuthentication {
 
-    private fun createProlongingTokenVerifier(issuer: String, secret: String, acceptableExpiration: Duration): JWTVerifier = JWT
-        .require(Algorithm.HMAC512(secret))
-        .acceptExpiresAt(acceptableExpiration.seconds)
-        .withIssuer(issuer)
-        .build()
+    private fun createProlongingTokenVerifier(
+        issuer: String, secret: String, acceptableExpiration: Duration): JWTVerifier =
+        JWT.require(Algorithm.HMAC512(secret)).acceptExpiresAt(acceptableExpiration.seconds).withIssuer(issuer).build()
 
-    fun verifyAndProlongToken(encodedToken: String, issuer: String, secret: String, acceptableExpiration: Duration): String {
-        var expiredToken = createProlongingTokenVerifier(issuer, secret, acceptableExpiration)
-            .verify(encodedToken)
+    fun verifyAndProlongToken(
+        encodedToken: String, issuer: String, secret: String, acceptableExpiration: Duration): String {
+        var expiredToken = createProlongingTokenVerifier(issuer, secret, acceptableExpiration).verify(encodedToken)
 
         if (Duration.between(expiredToken.expiresAt.toInstant(), Instant.now()) > acceptableExpiration) {
             throw ApiException("The token exceeded allowed expiration", HttpStatusCode.Unauthorized)
         }
-
         val apiUser = ApiUser(expiredToken.claims)
-        val newExpirationDate = Instant
-            .now()
-            .plusMillis(expiredToken.expiresAt.time - expiredToken.issuedAt.time)
+        val newExpirationDate = Instant.now().plusMillis(expiredToken.expiresAt.time - expiredToken.issuedAt.time)
 
-        return createToken(
-            apiUser.userId,
-            apiUser.username,
-            newExpirationDate,
-            expiredToken.issuer,
-            secret
-        )
+        return createToken(apiUser.userId, apiUser.username, newExpirationDate, expiredToken.issuer, secret)
     }
 
-    fun createVerifier(issuer: String, secret: String): JWTVerifier = JWT
-        .require(Algorithm.HMAC512(secret))
-        .withIssuer(issuer)
-        .acceptLeeway(0)
-        .build()
+    fun createVerifier(issuer: String, secret: String): JWTVerifier =
+        JWT.require(Algorithm.HMAC512(secret)).withIssuer(issuer).acceptLeeway(0).build()
 
-    fun createToken(userId: Long, username: String, expiration: Instant, issuer: String, secret: String): String = JWT.create()
+    fun createToken(
+        userId: Long, username: String, expiration: Instant, issuer: String, secret: String): String = JWT.create()
         .withSubject("Authentication")
         .withIssuer(issuer)
         .withClaim("userId", userId)

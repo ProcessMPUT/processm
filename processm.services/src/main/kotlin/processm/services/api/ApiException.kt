@@ -9,6 +9,8 @@ import io.ktor.http.HttpStatusCode
  * @property responseCode HTTP status code to be sent with response. 400 Bad Request by default.
  * @property message message passed to parent [Exception]. If not provided, [publicMessage] is used.
  */
-class ApiException(val publicMessage: String?, val responseCode: HttpStatusCode = HttpStatusCode.BadRequest,  message: String? = null)
-    : Exception(message ?: publicMessage)
+class ApiException(
+    val publicMessage: String?,
+    val responseCode: HttpStatusCode = HttpStatusCode.BadRequest,
+    message: String? = null): Exception(message ?: publicMessage)
 

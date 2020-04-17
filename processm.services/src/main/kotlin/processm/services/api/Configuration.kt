@@ -1,5 +1,4 @@
 package processm.services.api
-
 // Use this file to hold package-level internal functions that return receiver object passed to the `install` method.
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.ktor.application.call
@@ -22,7 +21,6 @@ internal fun ApplicationHstsConfiguration(): HSTS.Configuration.() -> Unit {
         maxAge = Duration.ofDays(365)
         includeSubDomains = true
         preload = false
-
         // You may also apply any custom directives supported by specific user-agent. For example:
         // customDirectives.put("redirectHttpToHttps", "false")
     }
@@ -44,7 +42,7 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
     return {
         logger().enter()
         exception<ValidationException> { cause ->
-            val responseStatusCode = when(cause.reason) {
+            val responseStatusCode = when (cause.reason) {
                 ValidationException.Reason.ResourceAlreadyExists -> HttpStatusCode.Conflict
                 ValidationException.Reason.ResourceNotFound -> HttpStatusCode.NotFound
                 ValidationException.Reason.ResourceFormatInvalid -> HttpStatusCode.BadRequest
@@ -66,17 +64,17 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
     }
 }
 
-internal fun ApplicationAuthenticationConfiguration(config: ApplicationConfig): Authentication.Configuration.() -> Unit {
+internal fun ApplicationAuthenticationConfiguration(
+    config: ApplicationConfig): Authentication.Configuration.() -> Unit {
     return {
         val jwtIssuer = config.property("issuer").getString()
         val jwtRealm = config.property("realm").getString()
-        val jwtSecret = config.propertyOrNull("secret")?.getString()
-            ?: JwtAuthentication.generateSecretKey()
+        val jwtSecret = config.propertyOrNull("secret")?.getString() ?: JwtAuthentication.generateSecretKey()
 
         jwt {
             realm = jwtRealm
             verifier(JwtAuthentication.createVerifier(jwtIssuer, jwtSecret))
-            validate { credentials ->  ApiUser(credentials.payload.claims) }
+            validate { credentials -> ApiUser(credentials.payload.claims) }
         }
     }
 }

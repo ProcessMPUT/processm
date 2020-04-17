@@ -18,7 +18,6 @@ import processm.services.api.models.WorkspaceMessageBody
 
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
-
     authenticate {
         route("/workspaces") {
             post {
@@ -39,7 +38,8 @@ fun Route.WorkspacesApi() {
         get<Paths.getWorkspace> { workspace: Paths.getWorkspace ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.OK, WorkspaceMessageBody(Workspace(workspace.workspaceId, workspace.workspaceId)))
+            call.respond(
+                HttpStatusCode.OK, WorkspaceMessageBody(Workspace(workspace.workspaceId, workspace.workspaceId)))
         }
 
 

@@ -11,21 +11,19 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class WorkspacesApiTest : BaseApiTest() {
+class WorkspacesApiTest: BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/workspaces",
         HttpMethod.Post to "/api/workspaces",
         HttpMethod.Get to "/api/workspaces/1",
         HttpMethod.Put to "/api/workspaces/1",
-        HttpMethod.Delete to "/api/workspaces/1"
-    )
+        HttpMethod.Delete to "/api/workspaces/1")
 
     override fun endpointsWithNoImplementation() = Stream.of(
         HttpMethod.Post to "/api/workspaces",
         HttpMethod.Put to "/api/workspaces/1",
-        HttpMethod.Delete to "/api/workspaces/1"
-    )
+        HttpMethod.Delete to "/api/workspaces/1")
 
     @Test
     fun `responds with 200 and workspace list`() = withConfiguredTestApplication {
