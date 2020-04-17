@@ -33,7 +33,7 @@ paths:
     post:
       tags:
         - users
-      summary: Regisiter account
+      summary: Register account
       operationId: createAccount
       requestBody:
         description: User email and organization name
@@ -49,8 +49,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
   /users/session:
     post:
       tags:
@@ -528,8 +526,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
       security:
         - bearerAuth: []
   /organizations/{organizationId}:
@@ -633,8 +629,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
       security:
         - bearerAuth: []
   /organizations/{organizationId}/members/{userId}:
@@ -882,12 +876,6 @@ components:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
       description: resource with sepcified identifier already exists
-      content:
-        'application/json':
-          schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
-    UnprocessableEntity:
-      description: request had valid format but included semantic error
       content:
         'application/json':
           schema:
