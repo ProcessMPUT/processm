@@ -264,7 +264,7 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to successful password change with 202`() = withConfiguredTestApplication {
+    fun `responds to successful password change with 200`() = withConfiguredTestApplication {
 
         every { accountService.changePassword(userId = any(), currentPassword = "current", newPassword = "new") } returns true
 
@@ -274,7 +274,7 @@ class UsersApiTest : BaseApiTest() {
                 withSerializedBody(PasswordChangeMessageBody(
                     PasswordChange("current", "new")))
             }) {
-                assertEquals(HttpStatusCode.Accepted, response.status())
+                assertEquals(HttpStatusCode.OK, response.status())
             }
         }
 
@@ -319,7 +319,7 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to successful locale change with 202`() = withConfiguredTestApplication {
+    fun `responds to successful locale change with 200`() = withConfiguredTestApplication {
 
         every { accountService.changeLocale(userId = any(), locale = "pl_PL") } returns true
 
@@ -328,7 +328,7 @@ class UsersApiTest : BaseApiTest() {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(LocaleChangeMessageBody(LocaleChange("pl_PL")))
             }) {
-                assertEquals(HttpStatusCode.Accepted, response.status())
+                assertEquals(HttpStatusCode.OK, response.status())
             }
         }
 
