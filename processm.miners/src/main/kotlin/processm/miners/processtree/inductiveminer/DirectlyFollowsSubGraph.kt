@@ -47,6 +47,12 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+     * SubGraphs created based on this sub graph
+     */
+    lateinit var children: Array<DirectlyFollowsSubGraph?>
+        private set
+
+    /**
      * Activities pointed (with connection) to `key` activity
      */
     private val ingoingConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
@@ -163,11 +169,13 @@ class DirectlyFollowsSubGraph(
     /**
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
-    fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>): Array<DirectlyFollowsSubGraph?> {
+    fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>) {
+        check(!this::children.isInitialized) { "SubGraph already split. Action cannot be performed again!" }
+
         val groupToListPosition = TreeMap<Int, Int>()
         assignment.values.toSortedSet().withIndex().forEach { (index, groupId) -> groupToListPosition[groupId] = index }
 
-        val subGraphs = arrayOfNulls<DirectlyFollowsSubGraph>(size = groupToListPosition.size)
+        children = arrayOfNulls<DirectlyFollowsSubGraph>(size = groupToListPosition.size)
         val activityGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
 
         // Add each activity to designated group
@@ -184,7 +192,7 @@ class DirectlyFollowsSubGraph(
                 connectionsHashMap[activity] = outgoingConnections[activity].orEmpty().filter { it.key in activities }
             }
 
-            subGraphs[groupToListPosition[groupId]!!] =
+            children[groupToListPosition[groupId]!!] =
                 DirectlyFollowsSubGraph(
                     activities = activities,
                     outgoingConnections = connectionsHashMap,
@@ -193,8 +201,6 @@ class DirectlyFollowsSubGraph(
                     initialEndActivities = initialEndActivities
                 )
         }
-
-        return subGraphs
     }
 
     /**
@@ -712,5 +718,40 @@ class DirectlyFollowsSubGraph(
 
         // Verify each group with StartActivity and EndActivity, otherwise can not generate assignment to group
         return if (isStartAndEndActivityInEachGroup(connectedComponents)) connectedComponents else null
+    }
+
+    fun detectCuts() {
+        if (canFinishCalculationsOnSubGraph()) {
+            println("FINISH")
+            println(finishCalculations())
+        }
+
+        val connectedComponents = calculateExclusiveCut()
+        // X
+        if (connectedComponents !== null) {
+            println("X")
+            println(splitIntoSubGraphs(connectedComponents))
+        }
+
+        // ->
+        val stronglyConnectedComponents = stronglyConnectedComponents()
+        val seqAssigment = calculateSequentialCut(stronglyConnectedComponents)
+        if (seqAssigment !== null) {
+            println("->")
+            println(splitIntoSubGraphs(seqAssigment))
+        }
+
+        // ^
+        val parallelAssigment = calculateParallelCut()
+        if (parallelAssigment !== null) {
+            println("^")
+            println(splitIntoSubGraphs(parallelAssigment))
+        }
+
+        // redo
+        // TODO: redo
+
+        // flower-model
+        finishWithDefaultRule()
     }
 }

@@ -183,9 +183,35 @@ internal class DirectlyFollowsSubGraphTest {
         }
 
         val graph = DirectlyFollowsSubGraph(activities, connections)
-        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut()!!)
+        graph.splitIntoSubGraphs(graph.calculateExclusiveCut()!!)
 
-        assertEquals(2, result.size)
+        assertEquals(2, graph.children.size)
+    }
+
+    @Test
+    fun `Split graph can be perform only once`() {
+        val activities = activitiesSet(listOf(A, B, C))
+        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[B] = Arc()
+                conn[A] = arcs
+            }
+            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
+                arcs[A] = Arc()
+                conn[B] = arcs
+            }
+        }
+
+        val graph = DirectlyFollowsSubGraph(activities, connections)
+        graph.splitIntoSubGraphs(graph.calculateExclusiveCut()!!)
+
+        assertEquals(2, graph.children.size)
+
+        assertThrows<IllegalStateException> {
+            graph.splitIntoSubGraphs(graph.calculateExclusiveCut()!!)
+        }.also { exception ->
+            assertEquals("SubGraph already split. Action cannot be performed again!", exception.message)
+        }
     }
 
     @Test

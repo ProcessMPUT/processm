@@ -36,45 +36,10 @@ class OfflineInductiveMiner : InductiveMiner {
             initialEndActivities = dfg.endActivities.keys.toHashSet()
         )
 
-        // TODO
-        detectCut(graph)
+        // Run graph's detections
+        graph.detectCuts()
 
-        // TODO
+        // TODO transform children from graph into nodes
         return ProcessTree()
-    }
-
-    private fun detectCut(graph: DirectlyFollowsSubGraph) {
-        if (graph.canFinishCalculationsOnSubGraph()) {
-            println("FINISH")
-            println(graph.finishCalculations())
-        }
-
-        val connectedComponents = graph.calculateExclusiveCut()
-        // X
-        if (connectedComponents !== null) {
-            println("X")
-            println(graph.splitIntoSubGraphs(connectedComponents))
-        }
-
-        // ->
-        val stronglyConnectedComponents = graph.stronglyConnectedComponents()
-        val seqAssigment = graph.calculateSequentialCut(stronglyConnectedComponents)
-        if (seqAssigment !== null) {
-            println("->")
-            println(graph.splitIntoSubGraphs(seqAssigment))
-        }
-
-        // ^
-        val parallelAssigment = graph.calculateParallelCut()
-        if (parallelAssigment !== null) {
-            println("^")
-            println(graph.splitIntoSubGraphs(parallelAssigment))
-        }
-
-        // redo
-        // TODO: redo
-
-        // flower-model
-        graph.finishWithDefaultRule()
     }
 }
