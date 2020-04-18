@@ -727,6 +727,49 @@ class DirectlyFollowsSubGraph(
         return if (isStartAndEndActivityInEachGroup(connectedComponents)) connectedComponents else null
     }
 
+    fun calculateLoopCut(): Pair<CutType, java.util.HashMap<ProcessTreeActivity, Int>>? {
+        // TODO: In parallel also start/end activities - we can store it as variable instead of x2 calculations
+        val startActivities = currentStartActivities()
+        val endActivities = currentEndActivities()
+
+        val fullyEndActivities = HashSet<ProcessTreeActivity>(endActivities.minus(startActivities))
+
+        val doPart = HashSet<ProcessTreeActivity>(startActivities)
+        val redoPart = HashSet<ProcessTreeActivity>()
+        val exitPart = HashSet<ProcessTreeActivity>(fullyEndActivities)
+
+        activities.forEach { activity ->
+            if (activity !in startActivities && activity !in fullyEndActivities) {
+                if (outgoingConnections[activity]?.keys?.firstOrNull { it !in startActivities } === null && startActivities.containsAll(
+                        outgoingConnections[activity].orEmpty().keys
+                    )) {
+                    redoPart.add(activity)
+                } else {
+                    doPart.add(activity)
+                }
+            }
+        }
+
+        if (doPart.isNotEmpty() && (redoPart.isNotEmpty() || exitPart.isNotEmpty())) {
+            val assignment = HashMap<ProcessTreeActivity, Int>()
+            // DoPart in first group, redoPart in second
+            doPart.forEach { assignment[it] = 1 }
+            redoPart.forEach { assignment[it] = 2 }
+
+            return if (redoPart.isNotEmpty()) {
+                // Add exitPart to group 1 (with doPart)
+                exitPart.forEach { assignment[it] = 1 }
+                Pair(CutType.RedoLoop, assignment)
+            } else {
+                // Add exitPart to group 2 (with redoPart)
+                exitPart.forEach { assignment[it] = 2 }
+                Pair(CutType.Sequence, assignment)
+            }
+        }
+
+        return null
+    }
+
     /**
      * Detect cuts in graph
      */
@@ -759,7 +802,11 @@ class DirectlyFollowsSubGraph(
         }
 
         // Redo-loop cut
-        // TODO: redo detectedCut = CutType.RedoLoop
+        val loopAssigment = calculateLoopCut()
+        if (loopAssigment !== null) {
+            detectedCut = loopAssigment.first
+            return splitIntoSubGraphs(loopAssigment.second)
+        }
 
         // Flower model - default cut
         detectedCut = CutType.FlowerModel

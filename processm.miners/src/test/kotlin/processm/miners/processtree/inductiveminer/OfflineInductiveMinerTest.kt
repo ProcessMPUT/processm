@@ -67,4 +67,30 @@ internal class OfflineInductiveMinerTest {
             }
         }
     }
+
+    @Test
+    fun `Process Mining - Figure 7 point 24`() {
+        val log = logFromString(
+            """
+         A B C D
+         A B C D
+         A B C D
+         A C B D
+         A C B D
+         A C B D
+         A C B D
+         A B C E F B C D
+         A B C E F B C D
+         A C B E F B C D
+         A C B E F B C D
+         A B C E F C B D
+         A C B E F C B E F C B D
+        """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals(inductiveMiner.result.toString(), "→(A,⟲(∧(B,C),→(E,F)), D)")
+    }
 }
