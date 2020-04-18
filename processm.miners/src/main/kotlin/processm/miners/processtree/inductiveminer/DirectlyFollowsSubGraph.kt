@@ -727,47 +727,64 @@ class DirectlyFollowsSubGraph(
         return if (isStartAndEndActivityInEachGroup(connectedComponents)) connectedComponents else null
     }
 
-    fun calculateLoopCut(): Pair<CutType, java.util.HashMap<ProcessTreeActivity, Int>>? {
+    /**
+     * Detect loop-cut in graph.
+     *
+     * Temporarily removing the start and end activities (connection from this activities to each non start/end activity)
+     * and computing the connected components.
+     *
+     * In the resulting graph roughly gives the loop cut.
+     */
+    private fun calculateLoopCut(): MutableMap<ProcessTreeActivity, Int>? {
         // TODO: In parallel also start/end activities - we can store it as variable instead of x2 calculations
         val startActivities = currentStartActivities()
         val endActivities = currentEndActivities()
 
-        val fullyEndActivities = HashSet<ProcessTreeActivity>(endActivities.minus(startActivities))
+        // Temporarily remove the start and end activities from connections
+        val outgoingWithoutStartAndEnd = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+        val ingoingWithoutStartAndEnd = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
 
-        val doPart = HashSet<ProcessTreeActivity>(startActivities)
-        val redoPart = HashSet<ProcessTreeActivity>()
-        val exitPart = HashSet<ProcessTreeActivity>(fullyEndActivities)
+        removeConnectionsFromToStartEndActivities(
+            source = ingoingConnections,
+            out = ingoingWithoutStartAndEnd,
+            startActivities = startActivities,
+            endActivities = endActivities
+        )
+        removeConnectionsFromToStartEndActivities(
+            source = outgoingConnections,
+            out = outgoingWithoutStartAndEnd,
+            startActivities = startActivities,
+            endActivities = endActivities
+        )
 
-        activities.forEach { activity ->
-            if (activity !in startActivities && activity !in fullyEndActivities) {
-                if (outgoingConnections[activity]?.keys?.firstOrNull { it !in startActivities } === null && startActivities.containsAll(
-                        outgoingConnections[activity].orEmpty().keys
-                    )) {
-                    redoPart.add(activity)
-                } else {
-                    doPart.add(activity)
+        // TODO: Should we check all conditions defined in rule?
+        // TODO: 1 Done | 2, 3, 5, 6 NOT DONE | 4 done by XOR cut
+        return calculateExclusiveCut(outgoing = outgoingWithoutStartAndEnd, ingoing = ingoingWithoutStartAndEnd)
+    }
+
+    private fun removeConnectionsFromToStartEndActivities(
+        source: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>,
+        out: HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>,
+        startActivities: Set<ProcessTreeActivity>,
+        endActivities: Set<ProcessTreeActivity>
+    ) {
+        source.forEach { (from, toActivities) ->
+            out[from] = HashMap()
+
+            if (from in startActivities || from in endActivities) {
+                toActivities.forEach { (to, arc) ->
+                    if (to in startActivities || to in endActivities) {
+                        out[from]!![to] = arc
+                    }
+                }
+            } else {
+                toActivities.forEach { (to, arc) ->
+                    if (to !in startActivities || to !in endActivities) {
+                        out[from]!![to] = arc
+                    }
                 }
             }
         }
-
-        if (doPart.isNotEmpty() && (redoPart.isNotEmpty() || exitPart.isNotEmpty())) {
-            val assignment = HashMap<ProcessTreeActivity, Int>()
-            // DoPart in first group, redoPart in second
-            doPart.forEach { assignment[it] = 1 }
-            redoPart.forEach { assignment[it] = 2 }
-
-            return if (redoPart.isNotEmpty()) {
-                // Add exitPart to group 1 (with doPart)
-                exitPart.forEach { assignment[it] = 1 }
-                Pair(CutType.RedoLoop, assignment)
-            } else {
-                // Add exitPart to group 2 (with redoPart)
-                exitPart.forEach { assignment[it] = 2 }
-                Pair(CutType.Sequence, assignment)
-            }
-        }
-
-        return null
     }
 
     /**
@@ -804,8 +821,8 @@ class DirectlyFollowsSubGraph(
         // Redo-loop cut
         val loopAssigment = calculateLoopCut()
         if (loopAssigment !== null) {
-            detectedCut = loopAssigment.first
-            return splitIntoSubGraphs(loopAssigment.second)
+            detectedCut = CutType.RedoLoop
+            return splitIntoSubGraphs(loopAssigment)
         }
 
         // Flower model - default cut
