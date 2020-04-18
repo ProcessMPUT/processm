@@ -49,7 +49,8 @@ class OfflineInductiveMiner : InductiveMiner {
             it.addAll(dfg.endActivities.keys)
         }
 
-        return ProcessTree(
+        // Discover processTree model
+        val processTree = ProcessTree(
             assignChildrenToNode(
                 DirectlyFollowsSubGraph(
                     activities = activities,
@@ -60,6 +61,11 @@ class OfflineInductiveMiner : InductiveMiner {
                 )
             )
         )
+
+        // Simplify processTree model
+        ProcessTreeSimplifier().simplify(processTree)
+
+        return processTree
     }
 
     /**
