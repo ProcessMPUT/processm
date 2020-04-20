@@ -30,7 +30,6 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
         @BeforeAll
         @JvmStatic
         fun setUp() {
-            Thread.sleep(10000)
             val stream = javaClass.getResourceAsStream("/xes-logs/JournalReview.xes")
             DatabaseXESOutputStream().use {
                 it.write(XMLXESInputStream(stream))

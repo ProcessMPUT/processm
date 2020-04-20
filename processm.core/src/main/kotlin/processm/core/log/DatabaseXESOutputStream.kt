@@ -6,6 +6,7 @@ import java.sql.PreparedStatement
 import java.sql.Statement
 import java.sql.Timestamp
 import java.sql.Types
+import java.util.*
 
 class DatabaseXESOutputStream : XESOutputStream {
     companion object {
@@ -112,6 +113,105 @@ class DatabaseXESOutputStream : XESOutputStream {
         connection.autoCommit = false
     }
 
+    private fun writeEvent(element: Event) {
+        val sql = StringBuilder()
+        val params = LinkedList<Any>()
+
+        // event
+        with(sql) {
+            append("WITH event AS (")
+            append("""INSERT INTO EVENTS (trace_id, "concept:name", "concept:instance", "cost:total", "cost:currency", "identity:id", "lifecycle:transition", "lifecycle:state", "org:resource", "org:role", "org:group", "time:timestamp") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
+            append(')')
+        }
+
+        with(params) {
+            addLast(traceId)
+            addLast(element.conceptName)
+            addLast(element.conceptInstance)
+            addLast(element.costTotal)
+            addLast(element.costCurrency)
+            addLast(element.identityId)
+            addLast(element.lifecycleTransition)
+            addLast(element.lifecycleState)
+            addLast(element.orgResource)
+            addLast(element.orgRole)
+            addLast(element.orgGroup)
+            addLast(element.timeTimestamp?.let { Timestamp.from(it) })
+        }
+
+        // attributes
+        var number: Int = 0
+        fun addAttributes(
+            attributes: Iterable<Attribute<*>>,
+            parentNumber: Int = 0,
+            topMost: Boolean = true,
+            inList: Boolean? = null
+        ) {
+            var insertOpen = false
+            var myNumber: Int = -1
+            for (attribute in attributes) {
+                if (!insertOpen) {
+                    insertOpen = true
+                    myNumber = ++number
+                    with(sql) {
+                        append(", attributes$myNumber AS (")
+                        append("INSERT INTO EVENTS_ATTRIBUTES (event_id, key, type, string_value, date_value, int_value, bool_value, real_value, parent_id, in_list_attr) ")
+                        append("SELECT event.id, a.key, a.type, a.string_value, a.date_value, a.int_value, a.bool_value, a.real_value, ${if (topMost) "NULL" else "MAX(attributes$parentNumber.id)"}, a.in_list_attr FROM event, ")
+                        if (!topMost)
+                            append("attributes$parentNumber, ")
+                        append("(VALUES ")
+                    }
+                }
+
+                sql.append("(?, ?::attribute_type, ?, ?::timestamp, ?::integer, ?::boolean, ?::double precision, ?::boolean), ")
+                with(params) {
+                    addLast(attribute.key)
+                    addLast(attribute.xesTag)
+                    addLast((attribute as? StringAttr)?.value ?: (attribute as? IDAttr)?.value)
+                    addLast((attribute as? DateTimeAttr)?.value?.let { Timestamp.from(it) })
+                    addLast((attribute as? IntAttr)?.value)
+                    addLast((attribute as? BoolAttr)?.value)
+                    addLast((attribute as? RealAttr)?.value)
+                    addLast(inList)
+                }
+
+                if (attribute.children.isNotEmpty() || attribute is ListAttr) {
+                    insertOpen = false
+                    with(sql) {
+                        delete(sql.length - 2, sql.length)
+                        append(") a(key, type, string_value, date_value, int_value, bool_value, real_value, in_list_attr) ")
+                        if (!topMost)
+                            append("GROUP BY event.id, a.key, a.type, a.string_value, a.date_value, a.int_value, a.bool_value, a.real_value, a.in_list_attr ")
+                        append("RETURNING ID)")
+                    }
+
+                    addAttributes(attribute.children.values, myNumber, false)
+                    if (attribute is ListAttr) {
+                        addAttributes(attribute.getValue(), myNumber, false, true)
+                    }
+                }
+            }
+            if (insertOpen) {
+                with(sql) {
+                    delete(sql.length - 2, sql.length)
+                    append(") a(key, type, string_value, date_value, int_value, bool_value, real_value, in_list_attr) ")
+                    if (!topMost)
+                        append("GROUP BY event.id, a.key, a.type, a.string_value, a.date_value, a.int_value, a.bool_value, a.real_value, a.in_list_attr ")
+                    append("RETURNING ID)")
+                }
+            }
+        }
+
+        addAttributes(element.attributes.values)
+
+        sql.append(" SELECT 1") // just a dummy statement
+        val statement = connection.prepareStatement(sql.toString())
+        for ((i, obj) in params.withIndex()) {
+            statement.setObject(i + 1, obj)
+        }
+        statement.execute()
+    }
+
     /**
      * Write XES Element into the database
      */
@@ -127,11 +227,12 @@ class DatabaseXESOutputStream : XESOutputStream {
                     write(eventStreamTraceElement)
                 }
 
-                storeEvent(element)
+                /*storeEvent(element)
                 for (attribute in element.attributes.values) {
                     storeTraceEventAttributes(eventAttributeQuery, eventId!!, attribute)
                 }
-                eventAttributeQuery.executeBatch() // in case the batch is not flushed yet
+                eventAttributeQuery.executeBatch() // in case the batch is not flushed yet*/
+                writeEvent(element)
             }
             is Trace -> {
                 // We expect to already store Log object in the database

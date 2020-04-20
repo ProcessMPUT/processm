@@ -288,7 +288,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
                         attr.childrenInternal[this.key] = this
                     }
                 }
-            } while (fn(resultSet, "parent_id") == attrId)
+            } while (!resultSet.isAfterLast && fn(resultSet, "parent_id") == attrId)
         }
 
         return attr

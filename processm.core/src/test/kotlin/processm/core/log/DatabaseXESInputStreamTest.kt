@@ -5,7 +5,6 @@ import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.Query
-import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -222,10 +221,10 @@ internal class DatabaseXESInputStreamTest {
         val stream = DatabaseXESInputStream(Query(logId)).iterator()
 
         // Ignore Log element
-        assert(stream.next() is Log)
+        assertTrue(stream.next() is Log)
 
         // Ignore Trace element
-        assert(stream.next() is Trace)
+        assertTrue(stream.next() is Trace)
 
         val receivedEvent = stream.next() as Event
         val date = "2005-01-03T00:00:00.000+01:00".parseISO8601()
@@ -233,12 +232,14 @@ internal class DatabaseXESInputStreamTest {
         with(receivedEvent.attributes) {
             assertEquals(size, 6)
 
-            assertEquals(getValue("org:group").value, "Radiotherapy")
-            assertEquals(getValue("Specialism code").value, 61L)
-            assertEquals(getValue("conceptowy:name").value, "administratief tarief - eerste pol")
-            assertEquals(getValue("lifecycle:transition").value, "complete")
-            assertEquals(getValue("Activity code").value, 419100L)
-            assertTrue(date.compareTo(getValue("time:timestamp").value as Instant?) == 0)
+            assertEquals("Radiotherapy", getValue("org:group").value)
+            assertEquals(61L, getValue("Specialism code").value)
+            assertEquals(1, getValue("Specialism code").children.size)
+            assertEquals(20.20, getValue("Specialism code").children.getValue("fl-y").value)
+            assertEquals("administratief tarief - eerste pol", getValue("conceptowy:name").value)
+            assertEquals("complete", getValue("lifecycle:transition").value)
+            assertEquals(419100L, getValue("Activity code").value)
+            assertEquals(date, getValue("time:timestamp").value)
         }
 
         with(receivedEvent) {
