@@ -42,27 +42,6 @@ internal class TranslatedQuery(private val pql: Query) {
             ORDER BY id"""
             )
         }
-        private val queryLogGlobals: SQLQuery = SQLQuery {
-            it.query.append(
-                """SELECT
-                id,
-                parent_id,
-                scope,
-                type,
-                key,
-                string_value,
-                date_value,
-                int_value,
-                bool_value,
-                real_value,
-                in_list_attr 
-            FROM
-                globals
-            WHERE
-                log_id=?
-            ORDER BY id"""
-            )
-        }
     }
 
     private val connection: NestableAutoCloseable<Connection> = NestableAutoCloseable {
@@ -82,6 +61,7 @@ internal class TranslatedQuery(private val pql: Query) {
      */
     private val queryLogIds: SQLQuery by lazy(NONE) { idQuery(Scope.Log, null, null) }
     private val queryLogEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Log, null) }
+    private val queryLogGlobals: SQLQuery by lazy(NONE) { attributesQuery(Scope.Log, null, "GLOBALS", setOf("scope")) }
     private val queryLogAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Log, null) }
     private val queryLogExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log, null) }
     private val queryLogGroupEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Log, null, null) }
@@ -256,36 +236,51 @@ internal class TranslatedQuery(private val pql: Query) {
     // endregion
 
     // region select attributes
-    private fun attributesQuery(scope: Scope, logId: Int?): SQLQuery = SQLQuery {
-        selectAttributes(it)
-        fromAttributes(scope, it)
-        whereAttributes(scope, it, logId)
-        orderByAttributes(it)
+    private fun attributesQuery(
+        scope: Scope,
+        logId: Int?,
+        table: String? = null,
+        extraColumns: Set<String> = emptySet()
+    ): SQLQuery = SQLQuery {
+        val attrTable = table ?: (scope.toString() + "s_attributes")
+        with(it.query) {
+            append("WITH RECURSIVE tmp AS (")
+            selectAttributes(attrTable, extraColumns, it)
+            append(", ARRAY[$attrTable.id] AS path")
+            append(" FROM $attrTable")
+            whereAttributes(scope, it, logId)
+            append("UNION ALL ")
+            selectAttributes(attrTable, extraColumns, it)
+            append(", path || $attrTable.id")
+            append(" FROM $attrTable")
+            append(" JOIN tmp ON $attrTable.parent_id=tmp.id")
+            append(") ")
+            selectAttributes("tmp", extraColumns, it)
+            append(" FROM tmp")
+            orderByAttributes(it)
+        }
     }
 
-    private fun selectAttributes(sql: MutableSQLQuery) {
+    private fun selectAttributes(table: String, extraColumns: Set<String>, sql: MutableSQLQuery) {
         sql.query.append(
             """SELECT
-                id,
-                parent_id,
-                type,
-                key,
-                string_value,
-                date_value,
-                int_value,
-                bool_value,
-                real_value,
-                in_list_attr"""
+                $table.id,
+                $table.parent_id,
+                $table.type,
+                $table.key,
+                $table.string_value,
+                $table.date_value,
+                $table.int_value,
+                $table.bool_value,
+                $table.real_value,
+                $table.in_list_attr
+                ${extraColumns.join { "$table.$it" }}"""
         )
-    }
-
-    private fun fromAttributes(scope: Scope, sql: MutableSQLQuery) {
-        sql.query.append(" FROM ${scope}s_attributes")
     }
 
     private fun whereAttributes(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
         with(sql.query) {
-            append(" WHERE ${scope}_id=?")
+            append(" WHERE ${scope}_id=? AND parent_id IS NULL ")
 
             if (pql.selectAll[scope]!!)
                 return@with
@@ -306,13 +301,13 @@ internal class TranslatedQuery(private val pql: Query) {
             if (other.isEmpty())
                 return@with
 
-            append(" AND parent_id IS NULL AND key=ANY(?)")
+            append(" AND key=ANY(?)")
             sql.params.add(other.toTypedArray() /* copy */)
         }
     }
 
     private fun orderByAttributes(sql: MutableSQLQuery) {
-        sql.query.append(" ORDER BY id")
+        sql.query.append(" ORDER BY path")
     }
     // endregion
 
@@ -722,6 +717,13 @@ internal class TranslatedQuery(private val pql: Query) {
             val queryEventGroupEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Event, logId, traceId) }
             val queryEventGroupAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Event, logId) }
             val queryEventGroupExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Event, logId) }
+        }
+    }
+
+    private fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
+        for (item in this@join) {
+            append(", ")
+            append(transform(item))
         }
     }
 
