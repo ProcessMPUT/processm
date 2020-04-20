@@ -11,16 +11,69 @@ import kotlin.test.assertTrue
 
 internal class OfflineInductiveMinerTest {
     @Test
-    fun `Process Mining - Figure 7 point 20`() {
+    fun `PM book Figure 2-6 | Figure 7-26`() {
         val log = logFromString(
             """
-         A B C D
-         A B C D
-         A B C D
-         A C B D
-         A C B D
-         A E D
-        """.trimIndent()
+            A B D E H
+            A D C E G
+            A C D E F B D E G
+            A D B E H
+            A C D E F D C E F C D E H
+            A C D E G
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 2-7`() {
+        val log = logFromString(
+            """
+            A B D E H
+            A D B E H
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,∧(B,D),E,H)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 7-3`() {
+        val log = logFromString(
+            """
+            A E
+            A B E
+            A C E
+            A D E
+            A D D E
+            A D D D E
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,×(B,C,⟲(τ,D)),E)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 7-20`() {
+        val log = logFromString(
+            """
+             A B C D
+             A B C D
+             A B C D
+             A C B D
+             A C B D
+             A E D
+            """.trimIndent()
         )
         val inductiveMiner = OfflineInductiveMiner()
         inductiveMiner.processLog(listOf(log))
@@ -69,28 +122,214 @@ internal class OfflineInductiveMinerTest {
     }
 
     @Test
-    fun `Process Mining - Figure 7 point 24`() {
+    fun `PM book Figure 7-24`() {
         val log = logFromString(
             """
-         A B C D
-         A B C D
-         A B C D
-         A C B D
-         A C B D
-         A C B D
-         A C B D
-         A B C E F B C D
-         A B C E F B C D
-         A C B E F B C D
-         A C B E F B C D
-         A B C E F C B D
-         A C B E F B C E F C B D
-        """.trimIndent()
+             A B C D
+             A B C D
+             A B C D
+             A C B D
+             A C B D
+             A C B D
+             A C B D
+             A B C E F B C D
+             A B C E F B C D
+             A C B E F B C D
+             A C B E F B C D
+             A B C E F C B D
+             A C B E F B C E F C B D
+            """.trimIndent()
         )
 
         val inductiveMiner = OfflineInductiveMiner()
         inductiveMiner.processLog(log)
 
         assertEquals("→(A,⟲(∧(B,C),→(E,F)),D)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 6-5 | 7-29 Q3`() {
+        val log = logFromString(
+            """
+            A B C D E F B D C E G
+            A B D C E G
+            A B D C E G
+            A B C D E F B C D E F B D C E G
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,⟲(→(B,∧(C,D),E),F),G)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 6-6 | 7-29 Q4`() {
+        val log = logFromString(
+            """
+            A C D
+            B C D
+            A C E
+            B C E
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(×(A,B),C,×(D,E))", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 6-8 | 7-29 Q5`() {
+        val log = logFromString(
+            """
+            A B E F
+            A B E F
+            A B E C D B F
+            A B E C D B F
+            A B E C D B F
+            A B C E D B F
+            A B C E D B F
+            A B C D E B F
+            A B C D E B F
+            A B C D E B F
+            A B C D E B F
+            A E B C D B F
+            A E B C D B F
+            A E B C D B F
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,∧(⟲(B,→(C,D)),E),F)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 7-29 Q6`() {
+        val log = logFromString(
+            """
+            A C E G
+            A C E G
+            A E C G
+            A E C G
+            A E C G
+            B D F G
+            B D F G
+            B F D G
+            B F D G
+            B F D G
+            B F D G
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F)),G)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 6-11 | 7-29 Q7`() {
+        val log = logFromString(
+            """
+            A C
+            A C
+            A B C
+            A B C
+            A B C
+            A B B C
+            A B B C
+            A B B B B C
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,⟲(τ,B),C)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 6-12 | 7-29 Q8`() {
+        val log = logFromString(
+            """
+            A B D
+            A B D
+            A B D
+            A B C B D
+            A B C B D
+            A B C B C B D
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,⟲(B,C),D)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 7-29 Q9`() {
+        val log = logFromString(
+            """
+            A C D
+            B C E
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(×(A,B),C,×(D,E))", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 7-29 Q10`() {
+        val log = logFromString(
+            """
+            A A
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("⟲(A,τ)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 6-21 | 7-29 Q11`() {
+        val log = logFromString(
+            """
+            A C
+            A B C
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,×(τ,B),C)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `PM book Figure 7-30 F1`() {
+        val log = logFromString(
+            """
+            A B C D
+            A C B D
+            A E F D
+            A E D
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(log)
+
+        assertEquals("→(A,×(∧(B,C),→(E,×(F,τ))),D)", inductiveMiner.result.toString())
     }
 }
