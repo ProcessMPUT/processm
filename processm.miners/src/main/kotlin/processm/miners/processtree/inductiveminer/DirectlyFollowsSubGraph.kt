@@ -20,6 +20,18 @@ class DirectlyFollowsSubGraph(
      */
     private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>
 ) {
+    companion object {
+        /**
+         * Zero as byte to eliminate `compareTo` in code (we have byteArrays and not be able to compare byte and Int).
+         */
+        private const val zeroByte: Byte = 0
+
+        /**
+         * One as byte to eliminate `compareTo` in code (we have byteArrays and not be able to compare byte and Int).
+         */
+        private const val oneByte: Byte = 1
+    }
+
     /**
      * Activities pointed (with connection) to `key` activity
      */
@@ -302,7 +314,7 @@ class DirectlyFollowsSubGraph(
                     connectionsMatrix[indicatedGroupID][activityGroupID] = 1
 
                     // Reversed connection check - if not stored yet - set -1 in matrix
-                    if ((connectionsMatrix[activityGroupID][indicatedGroupID]).compareTo(0) == 0) {
+                    if (connectionsMatrix[activityGroupID][indicatedGroupID] == zeroByte) {
                         connectionsMatrix[activityGroupID][indicatedGroupID] = -1
                     }
                 }
@@ -329,17 +341,17 @@ class DirectlyFollowsSubGraph(
         val components = LinkedList<LinkedList<Int>>()
         // Groups already analyzed
         val closedGroups = HashSet<Int>()
+        // Ensure at least one element in collection
+        if (components.isEmpty()) {
+            components.add(LinkedList<Int>())
+        }
+        val lastElement = components.last
 
         // Analyze rows of connection matrix and find
-        // After this block we expect to receive list with zero or one element
-        // If one element - contain all groups (indexes) with max value == 0
         matrix.forEachIndexed { index, group ->
             // 0 and -1 allowed here
-            if (group.max()?.compareTo(0) ?: 1 == 0) {
-                if (components.isEmpty()) {
-                    components.add(LinkedList<Int>())
-                }
-                components.last().add(index)
+            if (group.max() ?: 1 <= zeroByte) {
+                lastElement.add(index)
                 closedGroups.add(index)
             }
         }
@@ -353,13 +365,7 @@ class DirectlyFollowsSubGraph(
             matrix.forEachIndexed { index, _ ->
                 // If group not closed
                 if (!closedGroups.contains(index)) {
-                    val temp = HashSet<Int>()
-                    matrix.forEachIndexed { j, _ ->
-                        if (matrix[index][j].compareTo(1) == 0) {
-                            temp.add(j)
-                        }
-                    }
-                    if (temp.minus(closedGroups).isEmpty()) {
+                    if (matrix.indices.none { j -> matrix[index][j] == oneByte && j !in closedGroups }) {
                         currentIterationComponents.add(index)
                         closedGroups.add(index)
                     }
