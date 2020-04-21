@@ -20,6 +20,18 @@ class DirectlyFollowsSubGraph(
      */
     private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>
 ) {
+    companion object {
+        /**
+         * Zero as byte to eliminate `compareTo` in code (we have byteArrays and not be able to compare byte and Int).
+         */
+        private const val zeroByte: Byte = 0
+
+        /**
+         * One as byte to eliminate `compareTo` in code (we have byteArrays and not be able to compare byte and Int).
+         */
+        private const val oneByte: Byte = 1
+    }
+
     /**
      * Activities pointed (with connection) to `key` activity
      */
@@ -60,7 +72,7 @@ class DirectlyFollowsSubGraph(
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
-    fun calculateExclusiveCut(): Map<ProcessTreeActivity, Int> {
+    fun calculateExclusiveCut(): Map<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
@@ -123,8 +135,8 @@ class DirectlyFollowsSubGraph(
             }
         }
 
-        // Return activities and assigned labels
-        return activitiesWithLabels
+        // Return assignment only if more than two groups
+        return if (lastLabelId >= 2) activitiesWithLabels else null
     }
 
     /**
@@ -302,7 +314,7 @@ class DirectlyFollowsSubGraph(
                     connectionsMatrix[indicatedGroupID][activityGroupID] = 1
 
                     // Reversed connection check - if not stored yet - set -1 in matrix
-                    if ((connectionsMatrix[activityGroupID][indicatedGroupID]).compareTo(0) == 0) {
+                    if (connectionsMatrix[activityGroupID][indicatedGroupID] == zeroByte) {
                         connectionsMatrix[activityGroupID][indicatedGroupID] = -1
                     }
                 }
@@ -310,5 +322,91 @@ class DirectlyFollowsSubGraph(
         }
 
         return connectionsMatrix
+    }
+
+    /**
+     * Detect sequential cut in directly-follows graph
+     *
+     * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
+     */
+    fun calculateSequentialCut(stronglyConnectedComponents: List<Set<ProcessTreeActivity>>): Map<ProcessTreeActivity, Int>? {
+        // This makes sense only if more than one strongly connected component
+        if (stronglyConnectedComponents.size <= 1) return null
+
+        // Activities and assigned label
+        val activitiesWithLabels = HashMap<ProcessTreeActivity, Int>()
+        // Connection matrix between components in graph
+        val matrix = connectionMatrix(stronglyConnectedComponents)
+        // List with components - we will manipulate it
+        val components = LinkedList<LinkedList<Int>>()
+        // Groups already analyzed
+        val closedGroups = HashSet<Int>()
+        // Ensure at least one element in collection
+        if (components.isEmpty()) {
+            components.add(LinkedList<Int>())
+        }
+        val lastElement = components.last
+
+        // Analyze rows of connection matrix and find
+        matrix.forEachIndexed { index, group ->
+            // 0 and -1 allowed here
+            if (group.max() ?: 1 <= zeroByte) {
+                lastElement.add(index)
+                closedGroups.add(index)
+            }
+        }
+
+        // Analyze each component
+        var continueAnalyze = components.isNotEmpty()
+        while (continueAnalyze) {
+            continueAnalyze = false
+            val currentIterationComponents = LinkedList<Int>()
+
+            matrix.forEachIndexed { index, _ ->
+                // If group not closed
+                if (!closedGroups.contains(index)) {
+                    if (matrix.indices.none { j -> matrix[index][j] == oneByte && j !in closedGroups }) {
+                        currentIterationComponents.add(index)
+                        closedGroups.add(index)
+                    }
+                }
+            }
+
+            if (currentIterationComponents.isNotEmpty()) {
+                continueAnalyze = true
+                components.add(currentIterationComponents)
+            }
+        }
+
+        var notAddYet = true
+        matrix.forEachIndexed { index, _ ->
+            if (!closedGroups.contains(index)) {
+                if (notAddYet) {
+                    notAddYet = false
+                    components.add(LinkedList())
+                }
+                components.last().add(index)
+            }
+        }
+
+        // Analyze prepared components and build response
+        if (components.size > 1) {
+            var labelGroup = 1
+            components.forEach { group ->
+                group.forEach { index ->
+                    stronglyConnectedComponents[index].forEach { activity ->
+                        activitiesWithLabels[activity] = labelGroup
+                    }
+                }
+
+                // Increment group ID
+                labelGroup++
+            }
+
+            return activitiesWithLabels
+        }
+
+        // No assignment
+        return null
     }
 }
