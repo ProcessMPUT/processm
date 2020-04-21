@@ -1,30 +1,12 @@
 import Vue from "vue";
-import { UsersApiFactory, UsersApi, Configuration } from "@/openapi";
 import UserAccount from "@/models/UserAccount";
+import BaseService from "./BaseService";
 
-export default class AccountService {
-  private get usersApi(): UsersApi {
-    const token = Vue.prototype.$sessionStorage.sessionToken;
-
-    return UsersApiFactory({ accessToken: token }, "/api") as UsersApi;
-  }
-
+export default class AccountService extends BaseService {
   public async signIn(username: string, password: string) {
     const response = await this.usersApi.signUserIn(undefined, {
       data: { username, password }
     });
-
-    if (response.status != 201) {
-      throw new Error(response.statusText);
-    }
-
-    Vue.prototype.$sessionStorage.sessionToken =
-      response.data.data.authorizationToken;
-  }
-
-  public async prolongSession() {
-    const expiredToken = Vue.prototype.$sessionStorage.sessionToken;
-    const response = await this.usersApi.signUserIn(expiredToken);
 
     if (response.status != 201) {
       throw new Error(response.statusText);

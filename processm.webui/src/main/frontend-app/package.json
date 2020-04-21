@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "axios": "^0.19.2",
+    "axios-auth-refresh": "^2.2.5",
     "core-js": "^3.6.4",
     "flag-icon-css": "^3.4.6",
     "lodash": "^4.17.15",
