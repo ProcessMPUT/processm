@@ -33,20 +33,20 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to successful authentication with 201 and token`() = withConfiguredTestApplication {
-        every { accountService.verifyUsersCredentials("user", "pass") } returns mockk {
+        every { accountService.verifyUsersCredentials("user@example.com", "pass") } returns mockk {
             every { id } returns EntityID<UUID>(UUID.randomUUID(), mockk())
-            every { this@mockk.username } returns "user"
+            every { email } returns "user@example.com"
         }
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            withSerializedBody(UserCredentialsMessageBody(UserCredentials("user", "pass")))
+            withSerializedBody(UserCredentialsMessageBody(UserCredentials("user@example.com", "pass")))
         }) {
             assertEquals(HttpStatusCode.Created, response.status())
             assertTrue(response.deserializeContent<AuthenticationResultMessageBody>().data.authorizationToken.isNotBlank())
         }
 
-        verify { accountService.verifyUsersCredentials("user", "pass") }
+        verify { accountService.verifyUsersCredentials("user@example.com", "pass") }
     }
 
     @Test
@@ -167,7 +167,7 @@ class UsersApiTest : BaseApiTest() {
     fun `responds to current user details request with 200 and current user account details`() =
         withConfiguredTestApplication {
             every { accountService.getAccountDetails(userId = any()) } returns mockk {
-                every { username } returns "user1"
+                every { email } returns "user@example.com"
                 every { locale } returns "en_US"
             }
 
@@ -175,7 +175,7 @@ class UsersApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/users/me")) {
                     assertEquals(HttpStatusCode.OK, response.status())
                     val deserializedContent = response.deserializeContent<UserAccountInfoMessageBody>()
-                    assertEquals("user1", deserializedContent.data.username)
+                    assertEquals("user@example.com", deserializedContent.data.userEmail)
                     assertEquals("en_US", deserializedContent.data.locale)
                 }
             }

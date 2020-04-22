@@ -93,18 +93,18 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     }
 
     protected fun TestApplicationEngine.withAuthentication(
-        username: String = "user", password: String = "pass", callback: JwtAuthenticationTrackingEngine.() -> Unit
+        login: String = "user@example.com", password: String = "pass", callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
-        every { accountService.verifyUsersCredentials(username, password) } returns mockk {
+        every { accountService.verifyUsersCredentials(login, password) } returns mockk {
             every { id } returns EntityID<UUID>(UUID.randomUUID(), mockk())
-            every { this@mockk.username } returns username
+            every { email } returns login
         }
 
-        callback(JwtAuthenticationTrackingEngine(this, username, password))
+        callback(JwtAuthenticationTrackingEngine(this, login, password))
     }
 
     protected class JwtAuthenticationTrackingEngine(
-        private val engine: TestApplicationEngine, private val username: String, private val password: String
+        private val engine: TestApplicationEngine, private val login: String, private val password: String
     ) {
 
         private var authenticationHeader: Pair<String, String>? = null
@@ -115,7 +115,7 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
             if (authenticationHeader == null) {
                 with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("""{"data":{"username":"$username","password":"$password"}}""")
+                    setBody("""{"data":{"login":"$login","password":"$password"}}""")
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
                     assertTrue(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))

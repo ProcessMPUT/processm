@@ -43,25 +43,25 @@ class AccountServiceTest {
     @Test
     fun `password verification returns user object if password is correct`() = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
-        createUser("user1", correctPasswordHash)
+        createUser("user@example.com", correctPasswordHash)
 
-        val user = assertNotNull(accountService.verifyUsersCredentials("user1", correctPassword))
-        assertEquals("user1", user.username)
+        val user = assertNotNull(accountService.verifyUsersCredentials("user@example.com", correctPassword))
+        assertEquals("user@example.com", user.email)
     }
 
     @Test
     fun `password verification returns null reference if password is incorrect`() =
         transaction(DBConnectionPool.database) {
             SchemaUtils.create(Users)
-            createUser("user1", correctPasswordHash)
+            createUser("user@example.com", correctPasswordHash)
 
-            assertNull(accountService.verifyUsersCredentials("user1", "incorrect_pass"))
+            assertNull(accountService.verifyUsersCredentials("user@example.com", "incorrect_pass"))
         }
 
     @Test
     fun `password verification throws if nonexistent user`(): Unit = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
-        createUser("user1", correctPasswordHash)
+        createUser("user@example.com", correctPasswordHash)
 
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.verifyUsersCredentials("user2", correctPassword)
@@ -77,7 +77,7 @@ class AccountServiceTest {
         }
 
         accountService.createAccount("user@example.com", "Org1")
-        val user = assertNotNull(User.find(Users.username eq "user@example.com").firstOrNull())
+        val user = assertNotNull(User.find(Users.email eq "user@example.com").firstOrNull())
         val organization = assertNotNull(Organization.find(Organizations.name eq "Org1").firstOrNull())
         assertEquals(user.id.value, organization.users.first().id.value)
         assertEquals(organization.id.value, user.organizations.first().id.value)
@@ -113,9 +113,9 @@ class AccountServiceTest {
     @Test
     fun `returns account details of existing user`() = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
-        val userId = createUser("user1", correctPasswordHash)
+        val userId = createUser("user@example.com", correctPasswordHash)
         val user = assertNotNull(accountService.getAccountDetails(userId.value))
-        assertEquals("user1", user.username)
+        assertEquals("user@example.com", user.email)
     }
 
     @Test
@@ -141,7 +141,7 @@ class AccountServiceTest {
     @Test
     fun `changing password returns false if current password is incorrect`() = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
-        val userId = createUser("user1", correctPasswordHash)
+        val userId = createUser("user@example.com", correctPasswordHash)
 
         assertFalse(accountService.changePassword(userId.value, "incorrect_pass", "new_pass"))
     }
@@ -149,7 +149,7 @@ class AccountServiceTest {
     @Test
     fun `successful password change returns true`() = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
-        val userId = createUser("user1", correctPasswordHash)
+        val userId = createUser("user@example.com", correctPasswordHash)
 
         assertTrue(accountService.changePassword(userId.value, correctPassword, "new_pass"))
         assertNotEquals(correctPasswordHash, User.findById(userId)!!.password)
@@ -159,7 +159,7 @@ class AccountServiceTest {
     @ValueSource(strings = ["pl_PL", "en", "de-DE", "es-ES_tradnl", "eng", "eng_US"])
     fun `successful locale change runs successfully`(supportedLocale: String) = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
-        val userId = createUser("user1", correctPasswordHash)
+        val userId = createUser("user@example.com", correctPasswordHash)
 
         assertDoesNotThrow { accountService.changeLocale(userId.value, supportedLocale) }
     }
@@ -169,7 +169,7 @@ class AccountServiceTest {
     fun `changing locale throws if locale is not supported`(unsupportedLocale: String) =
         transaction(DBConnectionPool.database) {
             SchemaUtils.create(Users)
-            val userId = createUser("user1", correctPasswordHash)
+            val userId = createUser("user@example.com", correctPasswordHash)
 
             val exception = assertFailsWith<ValidationException> {
                 accountService.changeLocale(userId.value, unsupportedLocale)
@@ -182,7 +182,7 @@ class AccountServiceTest {
     fun `changing locale throws if locale is not properly_formatted`(unsupportedLocale: String) =
         transaction(DBConnectionPool.database) {
             SchemaUtils.create(Users)
-            val userId = createUser("user1", correctPasswordHash, "en_US")
+            val userId = createUser("user@example.com", correctPasswordHash, "en_US")
 
             val exception = assertFailsWith<ValidationException> {
                 accountService.changeLocale(userId.value, unsupportedLocale)
@@ -199,10 +199,10 @@ class AccountServiceTest {
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
 
-    private fun Transaction.createUser(username: String, passwordHash: String, locale: String = "en_US") =
+    private fun Transaction.createUser(userEmail: String, passwordHash: String, locale: String = "en_US") =
         Users.insertAndGetId {
-            it[Users.username] = username
-            it[Users.password] = passwordHash
+            it[email] = userEmail
+            it[password] = passwordHash
             it[Users.locale] = locale
         }
 }

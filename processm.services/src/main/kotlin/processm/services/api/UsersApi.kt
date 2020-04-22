@@ -34,10 +34,10 @@ fun Route.UsersApi() {
 
             when {
                 credentials != null -> {
-                    var user = accountService.verifyUsersCredentials(credentials.username, credentials.password)
+                    val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
                         ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
                     val token = JwtAuthentication.createToken(
-                        user.id.value, user.username, Instant.now().plus(jwtTokenTtl), jwtIssuer, jwtSecret
+                        user.id.value, user.email, Instant.now().plus(jwtTokenTtl), jwtIssuer, jwtSecret
                     )
 
                     call.respond(
@@ -83,7 +83,7 @@ fun Route.UsersApi() {
             call.respond(
                 HttpStatusCode.OK, UserAccountInfoMessageBody(
                     UserAccountInfo(
-                        userAccountDetails.username, userAccountDetails.locale
+                        userAccountDetails.email, userAccountDetails.locale
                     )
                 )
             )

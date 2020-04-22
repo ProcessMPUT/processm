@@ -3,9 +3,9 @@ import UserAccount from "@/models/UserAccount";
 import BaseService from "./BaseService";
 
 export default class AccountService extends BaseService {
-  public async signIn(username: string, password: string) {
+  public async signIn(login: string, password: string) {
     const response = await this.usersApi.signUserIn(undefined, {
-      data: { username, password }
+      data: { login, password }
     });
 
     if (response.status != 201) {
@@ -46,7 +46,7 @@ export default class AccountService extends BaseService {
     const accountDetails = response.data.data;
 
     return (Vue.prototype.$sessionStorage.userInfo = new UserAccount(
-      accountDetails.username,
+      accountDetails.userEmail,
       accountDetails.locale
     ));
   }

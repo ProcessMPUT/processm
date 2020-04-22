@@ -703,9 +703,9 @@ components:
           $ref: '#/components/schemas/AccountRegistrationInfo'
     UserCredentials:
       type: object
-      required: [username, password]
+      required: [login, password]
       properties:
-        username:
+        login:
           type: string
         password:
           type: string
@@ -718,9 +718,11 @@ components:
           $ref: '#/components/schemas/UserCredentials'
     UserAccountInfo:
       type: object
-      required: [username, locale]
+      required: [userEmail, locale]
       properties:
         username:
+          type: string
+        userEmail:
           type: string
         locale:
           type: string
@@ -770,12 +772,14 @@ components:
           $ref: '#/components/schemas/LocaleChange'
     UserInfo:
       type: object
-      required: [username, organization, organizationRole]
+      required: [userEmail, organization, organizationRole]
       properties:
         id:
           type: string
           format: uuid
         username:
+          type: string
+        userEmail:
           type: string
         organization:
           type: string
