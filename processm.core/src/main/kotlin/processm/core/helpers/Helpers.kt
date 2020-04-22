@@ -5,6 +5,7 @@ import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoField
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -175,6 +176,19 @@ private inline fun <T> MutableList<T>.swap(i: Int, j: Int) {
 }
 
 /**
- * Parses a timestamp with timezone in ISO-8601 format into [Instant].
+ * Parses a timestamp with timezone in the ISO-8601 format into [Instant].
  */
 inline fun String.parseISO8601(): Instant = DateTimeFormatter.ISO_DATE_TIME.parse(this, Instant::from)
+
+/**
+ * Parses a timestamp with timezone in the ISO-8601 format into [Instant].
+ * This function trades some safety-checks for performance. E.g.,
+ * * The exception messages may be less detailed than these thrown by [parseISO8601] but the normal results of both
+ * methods should equal.
+ */
+inline fun String.fastParseISO8601(): Instant =
+    DateTimeFormatter.ISO_DATE_TIME.parse(this) { temporal ->
+        val instantSecs = temporal.getLong(ChronoField.INSTANT_SECONDS)
+        val nanoOfSecond = temporal.get(ChronoField.NANO_OF_SECOND).toLong()
+        Instant.ofEpochSecond(instantSecs, nanoOfSecond)
+    }

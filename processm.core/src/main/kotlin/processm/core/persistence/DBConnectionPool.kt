@@ -9,7 +9,6 @@ import org.apache.commons.pool2.impl.GenericObjectPool
 import org.jetbrains.exposed.sql.Database
 import processm.core.helpers.loadConfiguration
 import java.sql.Connection
-import java.util.*
 import javax.management.ObjectName
 import javax.sql.DataSource
 
@@ -32,11 +31,7 @@ object DBConnectionPool {
         // using the connect string passed in the command line
         // arguments.
         val connectURI = System.getProperty("processm.core.persistence.connection.URL")
-        val properties = Properties()
-        // This will change batch inserts from insert into foo (col1, col2, col3) values (1,2,3) into
-        // insert into foo (col1, col2, col3) values (1,2,3), (4,5,6) this provides 2-3x performance improvement
-        properties["reWriteBatchedInserts"] = true
-        val connectionFactory = DriverManagerConnectionFactory(connectURI, properties)
+        val connectionFactory = DriverManagerConnectionFactory(connectURI)
 
         // Next we'll create the PoolableConnectionFactory, which wraps
         // the "real" Connections created by the ConnectionFactory with

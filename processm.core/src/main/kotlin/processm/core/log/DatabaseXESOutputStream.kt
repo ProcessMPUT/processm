@@ -6,6 +6,10 @@ import java.sql.Timestamp
 import java.util.*
 
 class DatabaseXESOutputStream : XESOutputStream {
+    companion object {
+        private const val batchSize = 16
+    }
+
     /**
      * Connection with the database
      */
@@ -20,6 +24,8 @@ class DatabaseXESOutputStream : XESOutputStream {
      * Trace ID of inserted Trace record
      */
     private var traceId: Long? = null
+
+    private val eventQueue = ArrayList<Event>(batchSize)
 
     init {
         // Disable autoCommit on connection - we want to add whole XES log structure
@@ -41,21 +47,24 @@ class DatabaseXESOutputStream : XESOutputStream {
                     write(eventStreamTraceElement)
                 }
 
-                val sql = SQL()
-                writeEvent(element, sql)
-                writeAttributes("EVENTS_ATTRIBUTES", "event", element.attributes.values, sql)
-                sql.execute("event")
+                eventQueue.add(element)
+                if (eventQueue.size >= batchSize)
+                    flushEvents()
             }
             is Trace -> {
                 // We expect to already store Log object in the database
                 check(logId !== null) { "Log ID not set. Can not add trace to the database" }
 
+                flushEvents() // flush events from the previous trace
+
                 val sql = SQL()
                 writeTrace(element, sql)
-                writeAttributes("TRACES_ATTRIBUTES", "trace", element.attributes.values, sql)
-                traceId = sql.execute("trace")
+                writeAttributes("TRACES_ATTRIBUTES", "trace", 0, element.attributes.values, sql)
+                traceId = sql.executeQuery("trace")
             }
             is Log -> {
+                flushEvents() // flush events from the previous log
+
                 val sql = SQL()
                 writeLog(element, sql)
                 writeExtensions(element.extensions.values, sql)
@@ -63,8 +72,8 @@ class DatabaseXESOutputStream : XESOutputStream {
                 writeClassifiers("trace", element.traceClassifiers.values, sql)
                 writeGlobals("event", element.eventGlobals.values, sql)
                 writeGlobals("trace", element.traceGlobals.values, sql)
-                writeAttributes("LOGS_ATTRIBUTES", "log", element.attributes.values, sql)
-                logId = sql.execute("log").toInt()
+                writeAttributes("LOGS_ATTRIBUTES", "log", 0, element.attributes.values, sql)
+                logId = sql.executeQuery("log").toInt()
             }
             else ->
                 throw IllegalArgumentException("Unsupported XESElement found. Expected 'Log', 'Trace' or 'Event' but received ${element.javaClass}")
@@ -75,6 +84,7 @@ class DatabaseXESOutputStream : XESOutputStream {
      * Commit and close connection with the database
      */
     override fun close() {
+        flushEvents()
         connection.commit()
         connection.close()
     }
@@ -89,33 +99,56 @@ class DatabaseXESOutputStream : XESOutputStream {
         connection.close()
     }
 
-    private fun writeEvent(element: Event, to: SQL) {
+    private fun flushEvents() {
+        if (eventQueue.isEmpty())
+            return
+
+        val sql = SQL()
+        writeEvents(eventQueue, sql)
+        for ((index, event) in eventQueue.withIndex()) {
+            writeAttributes("EVENTS_ATTRIBUTES", "event", index, event.attributes.values, sql)
+        }
+        eventQueue.clear()
+        sql.execute()
+
+        assert(eventQueue.isEmpty())
+    }
+
+    private fun writeEvents(events: Iterable<Event>, to: SQL) {
         with(to.sql) {
             append("WITH event AS (")
-            append("""INSERT INTO EVENTS (trace_id, "concept:name", "concept:instance", "cost:total", "cost:currency", "identity:id", "lifecycle:transition", "lifecycle:state", "org:resource", "org:role", "org:group", "time:timestamp") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ID""")
-            append(')')
+            append("""INSERT INTO EVENTS(trace_id, "concept:name", "concept:instance", "cost:total", "cost:currency", "identity:id", "lifecycle:transition", "lifecycle:state", "org:resource", "org:role", "org:group", "time:timestamp") VALUES """)
         }
 
-        with(to.params) {
-            addLast(traceId)
-            addLast(element.conceptName)
-            addLast(element.conceptInstance)
-            addLast(element.costTotal)
-            addLast(element.costCurrency)
-            addLast(element.identityId)
-            addLast(element.lifecycleTransition)
-            addLast(element.lifecycleState)
-            addLast(element.orgResource)
-            addLast(element.orgRole)
-            addLast(element.orgGroup)
-            addLast(element.timeTimestamp?.let { Timestamp.from(it) })
+        for (event in events) {
+            to.sql.append("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), ")
+
+            with(to.params) {
+                addLast(traceId)
+                addLast(event.conceptName)
+                addLast(event.conceptInstance)
+                addLast(event.costTotal)
+                addLast(event.costCurrency)
+                addLast(event.identityId)
+                addLast(event.lifecycleTransition)
+                addLast(event.lifecycleState)
+                addLast(event.orgResource)
+                addLast(event.orgRole)
+                addLast(event.orgGroup)
+                addLast(event.timeTimestamp?.let { Timestamp.from(it) })
+            }
+        }
+
+        with(to.sql) {
+            delete(length - 2, length)
+            append(" RETURNING ID)")
         }
     }
 
     private fun writeTrace(element: Trace, to: SQL) {
         with(to.sql) {
             append("WITH trace AS (")
-            append("""INSERT INTO TRACES (log_id, "concept:name", "cost:total", "cost:currency", "identity:id", event_stream) VALUES (?, ?, ?, ?, ?, ?) RETURNING ID""")
+            append("""INSERT INTO TRACES(log_id, "concept:name", "cost:total", "cost:currency", "identity:id", event_stream) VALUES (?, ?, ?, ?, ?, ?) RETURNING ID""")
             append(')')
         }
 
@@ -132,7 +165,7 @@ class DatabaseXESOutputStream : XESOutputStream {
     private fun writeLog(element: Log, to: SQL) {
         with(to.sql) {
             append("WITH log AS (")
-            append("""INSERT INTO LOGS (features, "concept:name", "identity:id", "lifecycle:model") VALUES (?, ?, ?, ?) RETURNING ID""")
+            append("""INSERT INTO LOGS(features, "concept:name", "identity:id", "lifecycle:model") VALUES (?, ?, ?, ?) RETURNING ID""")
             append(')')
         }
 
@@ -147,6 +180,7 @@ class DatabaseXESOutputStream : XESOutputStream {
     private fun writeAttributes(
         destinationTable: String,
         rootTempTable: String,
+        rootIndex: Int,
         attributes: Collection<Attribute<*>>,
         to: SQL,
         extraColumns: Map<String, String> = emptyMap()
@@ -171,7 +205,7 @@ class DatabaseXESOutputStream : XESOutputStream {
             // “see” one another's effects on the target tables. This alleviates the effects of the unpredictability of
             // the actual order of row updates, and means that RETURNING data is the only way to communicate changes
             // between different WITH sub-statements and the main query.
-            val myTableNumber = ++to.seq
+            val myTableNumber = ++to.attrSeq
             with(to.sql) {
                 append(", attributes$myTableNumber AS (")
                 append(
@@ -180,12 +214,11 @@ class DatabaseXESOutputStream : XESOutputStream {
                             "parent_id, in_list_attr ${extraColumns.keys.join()}) "
                 )
                 append(
-                    "SELECT $rootTempTable.id, a.key, a.type, " +
+                    "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
                             "a.string_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
                             "${if (topMost) "NULL" else "(SELECT id FROM attributes$parentTableNumber ORDER BY id LIMIT 1 OFFSET $parentRowIndex)"}, " +
-                            "a.in_list_attr ${extraColumns.values.join { "'$it'" }} FROM $rootTempTable, "
+                            "a.in_list_attr ${extraColumns.values.join { "'$it'" }} FROM (VALUES "
                 )
-                append("(VALUES ")
             }
             for (attribute in attributes) {
                 to.sql.append("(?, ?::attribute_type, ?, ?::timestamp, ?::integer, ?::boolean, ?::double precision, ?::boolean), ")
@@ -265,7 +298,7 @@ class DatabaseXESOutputStream : XESOutputStream {
     }
 
     private fun writeGlobals(scope: String, globals: Collection<Attribute<*>>, to: SQL) =
-        writeAttributes("GLOBALS", "log", globals, to, mapOf("scope" to scope))
+        writeAttributes("GLOBALS", "log", 0, globals, to, mapOf("scope" to scope))
 
     private fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
         for (item in this@join) {
@@ -275,20 +308,29 @@ class DatabaseXESOutputStream : XESOutputStream {
     }
 
     private inner class SQL {
-        var seq: Int = 0
+        var attrSeq: Int = 0
         val sql: StringBuilder = StringBuilder()
         val params: LinkedList<Any> = LinkedList()
 
         @Suppress("SqlResolve")
-        fun execute(table: String): Long {
+        fun executeQuery(table: String): Long {
             connection.prepareStatement("$sql SELECT id FROM $table").use {
                 for ((i, obj) in params.withIndex()) {
                     it.setObject(i + 1, obj)
                 }
                 it.executeQuery().use { r ->
                     check(r.next()) { "Write unsuccessful." }
-                    return@execute r.getLong(1)
+                    return@executeQuery r.getLong(1)
                 }
+            }
+        }
+
+        fun execute() {
+            connection.prepareStatement("$sql SELECT 1 LIMIT 0").use {
+                for ((i, obj) in params.withIndex()) {
+                    it.setObject(i + 1, obj)
+                }
+                check(it.execute()) { "Write unsuccessful." }
             }
         }
     }

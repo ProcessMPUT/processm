@@ -1,6 +1,6 @@
 package processm.core.log
 
-import processm.core.helpers.parseISO8601
+import processm.core.helpers.fastParseISO8601
 import processm.core.log.attribute.*
 import processm.core.logging.logger
 import java.io.InputStream
@@ -286,7 +286,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             "list" ->
                 ListAttr(key)
             "date" -> {
-                DateTimeAttr(key, value.parseISO8601())
+                DateTimeAttr(key, value.fastParseISO8601())
             }
             else ->
                 throw Exception("Attribute not recognized. Received $type type.")
