@@ -406,7 +406,7 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Based on DFG prepare negated DFG
-     * Remove every dual edge, and add double edges where there was no or a single edge present.
+     * Remove every dual edge and prevent loops length <= 2.
      *
      * Negated directly follows graph required for parallel cut detection
      */
