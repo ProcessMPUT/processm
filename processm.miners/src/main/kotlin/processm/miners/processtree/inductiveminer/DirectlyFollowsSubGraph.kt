@@ -49,8 +49,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Detected cut in subGraph
      */
-    var detectedCut: CutType? = null
-        private set
+    lateinit var detectedCut: CutType
 
     /**
      * SubGraphs created based on this sub graph
@@ -177,8 +176,8 @@ class DirectlyFollowsSubGraph(
     /**
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
-    fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>) {
-        check(!this::children.isInitialized) { "SubGraph already split. Action cannot be performed again!" }
+    private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>) {
+        assert(!this::children.isInitialized) { "SubGraph already split. Action cannot be performed again!" }
 
         val groupToListPosition = TreeMap<Int, Int>()
         assignment.values.toSortedSet().withIndex().forEach { (index, groupId) -> groupToListPosition[groupId] = index }

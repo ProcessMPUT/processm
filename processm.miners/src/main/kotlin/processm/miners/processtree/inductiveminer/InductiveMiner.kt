@@ -11,7 +11,7 @@ interface InductiveMiner {
     /**
      * Perform mining on a given log.
      */
-    fun processLog(log: Log)
+    fun processLog(log: Iterable<Log>)
 
     /**
      * The mined model

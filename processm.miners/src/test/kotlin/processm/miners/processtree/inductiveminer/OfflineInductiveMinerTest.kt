@@ -23,7 +23,7 @@ internal class OfflineInductiveMinerTest {
         """.trimIndent()
         )
         val inductiveMiner = OfflineInductiveMiner()
-        inductiveMiner.processLog(log)
+        inductiveMiner.processLog(listOf(log))
 
         assertEquals(inductiveMiner.result.toString(), "→(A,×(∧(B,C),E),D)")
 

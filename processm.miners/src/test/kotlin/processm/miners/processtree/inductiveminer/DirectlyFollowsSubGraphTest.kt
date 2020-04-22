@@ -188,29 +188,6 @@ internal class DirectlyFollowsSubGraphTest {
     }
 
     @Test
-    fun `Split graph can be perform only once`() {
-        val activities = activitiesSet(listOf(A, B, C))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                conn[B] = arcs
-            }
-        }
-
-        val graph = DirectlyFollowsSubGraph(activities, connections)
-
-        assertThrows<IllegalStateException> {
-            graph.splitIntoSubGraphs(graph.calculateExclusiveCut()!!)
-        }.also { exception ->
-            assertEquals("SubGraph already split. Action cannot be performed again!", exception.message)
-        }
-    }
-
-    @Test
     fun `Redo loop operator as default rule of subGraph cut`() {
         val activities = activitiesSet(listOf(A, B, C))
         val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->

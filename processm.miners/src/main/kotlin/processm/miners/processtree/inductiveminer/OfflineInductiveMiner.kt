@@ -17,12 +17,12 @@ class OfflineInductiveMiner : InductiveMiner {
     /**
      * Log which we should analyze
      */
-    private lateinit var log: Log
+    private lateinit var log: Iterable<Log>
 
     /**
      * Add reference to log file
      */
-    override fun processLog(log: Log) {
+    override fun processLog(log: Iterable<Log>) {
         this.log = log
     }
 
@@ -38,7 +38,7 @@ class OfflineInductiveMiner : InductiveMiner {
     private fun discoverProcessTreeModel(): ProcessTree {
         // Build directly follows graph
         val dfg = DirectlyFollowsGraph()
-        dfg.discover(sequenceOf(this.log))
+        dfg.discover(this.log.asSequence())
 
         // DFG without activities - return empty process tree model
         if (dfg.startActivities.isEmpty() || dfg.endActivities.isEmpty()) return ProcessTree()
@@ -92,7 +92,7 @@ class OfflineInductiveMiner : InductiveMiner {
             CutType.Sequence -> Sequence()
             CutType.Parallel -> Parallel()
             CutType.RedoLoop -> RedoLoop()
-            else -> graph.finishWithDefaultRule()
+            CutType.FlowerModel -> graph.finishWithDefaultRule()
         }
     }
 }
