@@ -491,11 +491,7 @@ class DirectlyFollowsSubGraph(
      */
     private fun mergeUnConnectedComponents(assignment: MutableMap<ProcessTreeActivity, Int>) {
         // Prepare set with unique labels
-        val uniqueGroupIdsSet = HashSet<Int>()
-        uniqueGroupIdsSet.addAll(assignment.values)
-        // Set to list + apply sort ascending
-        val uniqueGroupIds = uniqueGroupIdsSet.toMutableList()
-        uniqueGroupIds.sort()
+        val uniqueGroupIds = TreeSet(assignment.values).toMutableList()
 
         var indexFirstGroup = 0
         while (indexFirstGroup < uniqueGroupIds.size) {
@@ -524,10 +520,7 @@ class DirectlyFollowsSubGraph(
         var changedAssignment: Boolean
         val groups = componentsToGroup(connectedComponents)
         // Prepare set with unique labels
-        val uniqueGroupIdsSet = HashSet<Int>(connectedComponents.values)
-        // Set to list + apply sort ascending
-        val uniqueGroupIds = uniqueGroupIdsSet.toMutableList()
-        uniqueGroupIds.sort()
+        val uniqueGroupIds = TreeSet(connectedComponents.values).toMutableList()
 
         do {
             // Reset variable
@@ -705,7 +698,7 @@ class DirectlyFollowsSubGraph(
                 negatedIngoingConnections.getOrPut(to, { HashMap() })[from] = arc
             }
         }
-        // Connected components in graph - THIS ASSIGNMENT WILL BE MODIFY INTERNALLY!
+        // Connected components in graph - THIS ASSIGNMENT WILL BE MODIFIED INTERNALLY!
         val connectedComponents =
             calculateExclusiveCut(outgoing = negatedOutgoingConnections, ingoing = negatedIngoingConnections)
 
