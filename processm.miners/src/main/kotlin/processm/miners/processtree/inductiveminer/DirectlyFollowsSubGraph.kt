@@ -409,4 +409,21 @@ class DirectlyFollowsSubGraph(
         // No assignment
         return null
     }
+
+    /**
+     * Based on DFG prepare negated DFG
+     * Remove every dual edge and prevent loops length <= 2.
+     *
+     * Negated directly follows graph required for parallel cut detection
+     */
+    fun negateDFGConnections(): Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> {
+        val negatedConnections = HashMap<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>()
+
+        outgoingConnections.keys.forEach { activity ->
+            negatedConnections[activity] =
+                outgoingConnections[activity].orEmpty().filter { it.key !in ingoingConnections[activity].orEmpty() }
+        }
+
+        return negatedConnections
+    }
 }
