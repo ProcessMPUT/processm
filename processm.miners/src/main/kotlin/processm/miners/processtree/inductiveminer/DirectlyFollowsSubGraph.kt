@@ -18,7 +18,21 @@ class DirectlyFollowsSubGraph(
      * Connections between activities in graph
      * Outgoing - `key` activity has reference to activities which it directly points to.
      */
-    private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>
+    private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>,
+    /**
+     * Initial connections between activities in graph (initial DFG)
+     */
+    private val initialConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
+    /**
+     * Initial start activities.
+     * If not given - will be calculate based on initial connections map.
+     */
+    private val initialStartActivities: MutableSet<ProcessTreeActivity> = HashSet(),
+    /**
+     * Initial end activities.
+     * If not given - will be calculate based on initial connections map.
+     */
+    private val initialEndActivities: MutableSet<ProcessTreeActivity> = HashSet()
 ) {
     companion object {
         /**
@@ -43,6 +57,10 @@ class DirectlyFollowsSubGraph(
                 ingoingConnections.getOrPut(to, { HashMap() })[from] = arc
             }
         }
+
+        // No initial activities assigned - we should generate assignment
+        if (initialStartActivities.isEmpty()) inferStartActivities()
+        if (initialEndActivities.isEmpty()) inferEndActivities()
     }
 
     /**
@@ -72,7 +90,10 @@ class DirectlyFollowsSubGraph(
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
-    fun calculateExclusiveCut(): Map<ProcessTreeActivity, Int>? {
+    fun calculateExclusiveCut(
+        outgoing: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
+        ingoing: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = ingoingConnections
+    ): MutableMap<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
@@ -109,7 +130,7 @@ class DirectlyFollowsSubGraph(
                 }
 
                 // Iterate over activities connected with my `current` (current -> activity)
-                outgoingConnections[current].orEmpty().keys.forEach { activity ->
+                outgoing[current].orEmpty().keys.forEach { activity ->
                     // If not assigned label yet
                     if (nonLabeledActivities.contains(activity)) {
                         // Assign label
@@ -121,7 +142,7 @@ class DirectlyFollowsSubGraph(
                     }
                 }
 
-                ingoingConnections[current].orEmpty().keys.forEach { activity ->
+                ingoing[current].orEmpty().keys.forEach { activity ->
                     // If not assigned label yet
                     if (nonLabeledActivities.contains(activity)) {
                         // Assign label
@@ -163,7 +184,14 @@ class DirectlyFollowsSubGraph(
                 connectionsHashMap[activity] = outgoingConnections[activity].orEmpty().filter { it.key in activities }
             }
 
-            subGraphs[groupToListPosition[groupId]!!] = DirectlyFollowsSubGraph(activities, connectionsHashMap)
+            subGraphs[groupToListPosition[groupId]!!] =
+                DirectlyFollowsSubGraph(
+                    activities = activities,
+                    outgoingConnections = connectionsHashMap,
+                    initialConnections = initialConnections,
+                    initialStartActivities = initialStartActivities,
+                    initialEndActivities = initialEndActivities
+                )
         }
 
         return subGraphs
@@ -206,7 +234,7 @@ class DirectlyFollowsSubGraph(
         val alreadyAssigned = HashSet<ProcessTreeActivity>()
         // Stack - activities to analyze
         val stack = ArrayDeque<ProcessTreeActivity>()
-        // Activities waiting to assigment
+        // Activities waiting to assignment
         val stronglyConnectedQueue = ArrayDeque<ProcessTreeActivity>()
         // Last label assigned
         var counter = 0
@@ -425,5 +453,264 @@ class DirectlyFollowsSubGraph(
         }
 
         return negatedConnections
+    }
+
+    /**
+     * Checks - two connected components are completely unconnected each other
+     *
+     * Unconnected:
+     * * no connection between elements
+     * * connections only in one side (no loops)
+     */
+    private fun isCompletelyUnConnected(
+        firstGroup: Int,
+        secondGroup: Int,
+        assignment: Map<ProcessTreeActivity, Int>
+    ): Boolean {
+        val groups = componentsToGroup(assignment)
+
+        groups[firstGroup].orEmpty().forEach { from ->
+            groups[secondGroup].orEmpty().forEach { to ->
+                if (ingoingConnections[from].orEmpty().containsKey(to) && ingoingConnections[to].orEmpty()
+                        .containsKey(from)
+                ) {
+                    return false
+                }
+            }
+        }
+
+        // True if not found connection between activities
+        return true
+    }
+
+    /**
+     * Merge unconnected components into group
+     *
+     * Warning!
+     * This function will override assignment activity to group given as a parameter `assignment` - no extra copy here to speed-up function.
+     */
+    private fun mergeUnConnectedComponents(assignment: MutableMap<ProcessTreeActivity, Int>) {
+        // Prepare set with unique labels
+        val uniqueGroupIds = TreeSet(assignment.values).toMutableList()
+
+        var indexFirstGroup = 0
+        while (indexFirstGroup < uniqueGroupIds.size) {
+            val firstGroupID = uniqueGroupIds[indexFirstGroup]
+            var indexSecondGroup = indexFirstGroup + 1
+
+            while (indexSecondGroup < uniqueGroupIds.size) {
+                val secondGroupID = uniqueGroupIds[indexSecondGroup]
+                if (isCompletelyUnConnected(firstGroupID, secondGroupID, assignment)) {
+                    // Add group with `secondGroupID` to group with lower label value (firstGroupID)
+                    assignment.forEach { if (it.value == secondGroupID) assignment[it.key] = firstGroupID }
+                    // Remove group from analyze step - prevent duplicates and reassignment
+                    uniqueGroupIds.removeAt(indexSecondGroup)
+                    // Next iteration
+                    continue
+                }
+
+                indexSecondGroup++
+            }
+
+            indexFirstGroup++
+        }
+    }
+
+    private fun verifyParallelCutInAllRelations(connectedComponents: MutableMap<ProcessTreeActivity, Int>): Boolean {
+        var changedAssignment: Boolean
+        val groups = componentsToGroup(connectedComponents)
+        // Prepare set with unique labels
+        val uniqueGroupIds = TreeSet(connectedComponents.values).toMutableList()
+
+        do {
+            // Reset variable
+            changedAssignment = false
+
+            var indexFirstGroup = 0
+            while (indexFirstGroup < uniqueGroupIds.size) {
+                val fullyOkGroups = HashSet<Int>()
+                val partiallyOkGroups = HashSet<Int>()
+                val notOkGroups = HashSet<Int>()
+
+                val firstGroupID = uniqueGroupIds[indexFirstGroup]
+                var indexSecondGroup = indexFirstGroup + 1
+
+                while (indexSecondGroup < uniqueGroupIds.size) {
+                    var countGood = 0
+                    var countNotGood = 0
+
+                    // Iterate until end of collection OR (found connected AND not connected elements)
+                    groups[firstGroupID].orEmpty().forEach outside@{ from ->
+                        groups[uniqueGroupIds[indexSecondGroup]].orEmpty().forEach { to ->
+                            if (ingoingConnections[from].orEmpty().containsKey(to) && ingoingConnections[to].orEmpty()
+                                    .containsKey(from)
+                            ) {
+                                countGood++
+                                if (countNotGood > 0) return@outside
+                            } else {
+                                countNotGood++
+                                if (countGood > 0) return@outside
+                            }
+                        }
+                    }
+
+                    // Analyze output - add to group
+                    when {
+                        countNotGood == 0 -> {
+                            fullyOkGroups.add(indexSecondGroup)
+                        }
+                        countGood > 0 -> {
+                            partiallyOkGroups.add(indexSecondGroup)
+                        }
+                        else -> {
+                            notOkGroups.add(indexSecondGroup)
+                        }
+                    }
+
+                    indexSecondGroup++
+                }
+
+                if (notOkGroups.isNotEmpty()) return false
+                if (partiallyOkGroups.isNotEmpty()) {
+                    val index = partiallyOkGroups.first()
+                    // Update components
+                    connectedComponents.forEach {
+                        if (it.value == index) connectedComponents[it.key] = firstGroupID
+                    }
+                    // Update groups assigment
+                    groups[index]?.let { groups[firstGroupID]?.addAll(it) }
+                    groups.remove(index)
+
+                    changedAssignment = true
+                    continue
+                }
+
+                indexFirstGroup++
+            }
+        } while (changedAssignment)
+
+        // One group - activities in the same assignment. We want to find at least two groups
+        return groups.size >= 2
+    }
+
+    /**
+     * Based on assignment activity to group prepare a hashmap
+     * This will make checks simpler
+     */
+    private fun componentsToGroup(connectedComponents: Map<ProcessTreeActivity, Int>): HashMap<Int, HashSet<ProcessTreeActivity>> {
+        val connectedComponentsGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
+        connectedComponents.forEach { (activity, label) ->
+            connectedComponentsGroups.getOrPut(label, { HashSet() }).add(activity)
+        }
+
+        return connectedComponentsGroups
+    }
+
+    /**
+     * Validate - start and end activity in each group
+     * Will be used by parallel cut check
+     */
+    fun isStartAndEndActivityInEachGroup(connectedComponents: Map<ProcessTreeActivity, Int>): Boolean {
+        val startWithInitials = currentStartActivities().also { it.addAll(initialStartActivities) }
+        val endWithInitials = currentEndActivities().also { it.addAll(initialEndActivities) }
+        val connectedComponentsGroups = componentsToGroup(connectedComponents)
+
+        connectedComponentsGroups.values.forEach { group ->
+            val containsStart = (startWithInitials.firstOrNull { it in group } !== null)
+            val containsEnd = (endWithInitials.firstOrNull { it in group } !== null)
+
+            if (containsStart && containsEnd) return true
+        }
+
+        return false
+    }
+
+    /**
+     * Infer start activities based on initial connection in DFG
+     * This should be done only if initial start activities not assigned yet
+     */
+    private fun inferStartActivities() {
+        // Add each activity with outgoing connection to initial start activities
+        initialStartActivities.addAll(initialConnections.keys)
+
+        val activitiesWithIngoingConnections = HashSet<ProcessTreeActivity>()
+        initialConnections.values.forEach { activitiesWithIngoingConnections.addAll(it.keys) }
+
+        // Reduce start activities - drop activity with ingoing connection
+        initialStartActivities.removeAll(activitiesWithIngoingConnections)
+    }
+
+    /**
+     * Infer end activities based on initial connection in DFG
+     * This should be done only if initial end activities not assigned yet
+     */
+    private fun inferEndActivities() {
+        // Add ingoing connections to initial end activities
+        initialConnections.values.forEach { initialEndActivities.addAll(it.keys) }
+
+        // Reduce end activities - drop activity with outgoing connection
+        initialEndActivities.removeAll(initialConnections.keys)
+    }
+
+    /**
+     * Prepare a set of activities marked as start based on initial DFG and current connections (in sub graph)
+     */
+    fun currentStartActivities(): MutableSet<ProcessTreeActivity> {
+        val startActivities = HashSet<ProcessTreeActivity>()
+
+        // Start activity - only ingoing connection, no one outgoing
+        initialConnections.forEach { (from, toActivities) ->
+            // `from` activity must not be inside activities
+            if (!activities.contains(from)) {
+                startActivities.addAll(toActivities.keys.filter { to -> to in activities })
+            }
+        }
+
+        return startActivities
+    }
+
+    /**
+     * Prepare a set of activities marked as end based on initial DFG and current connections (in sub graph)
+     */
+    fun currentEndActivities(): MutableSet<ProcessTreeActivity> {
+        val endActivities = HashSet<ProcessTreeActivity>()
+
+        initialConnections.forEach outside@{ (from, toActivities) ->
+            if (from in activities) {
+                val found = toActivities.keys.firstOrNull { it !in activities }
+                if (found !== null) endActivities.add(from)
+            }
+        }
+
+        return endActivities
+    }
+
+    /**
+     * Detect parallel cut in directly-follows graph
+     * This function with generate map with activity => label reference.
+     */
+    fun calculateParallelCut(): Map<ProcessTreeActivity, Int>? {
+        // Negated connections in DFG required to analyze parallel cut
+        val negatedOutgoingConnections = negateDFGConnections()
+        val negatedIngoingConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+        negatedOutgoingConnections.forEach { (from, hashMap) ->
+            hashMap.forEach { (to, arc) ->
+                negatedIngoingConnections.getOrPut(to, { HashMap() })[from] = arc
+            }
+        }
+        // Connected components in graph - THIS ASSIGNMENT WILL BE MODIFIED INTERNALLY!
+        val connectedComponents =
+            calculateExclusiveCut(outgoing = negatedOutgoingConnections, ingoing = negatedIngoingConnections)
+
+        // If only one unique label assigned - no assignment also here
+        if (connectedComponents === null) return null
+
+        mergeUnConnectedComponents(connectedComponents)
+
+        // Assignment with only one group or not allowed connections in parallel cut
+        if (!verifyParallelCutInAllRelations(connectedComponents)) return null
+
+        // Verify each group with StartActivity and EndActivity, otherwise can not generate assignment to group
+        return if (isStartAndEndActivityInEachGroup(connectedComponents)) connectedComponents else null
     }
 }
