@@ -23,10 +23,16 @@ abstract class Node(vararg nodes: Node) {
     abstract val symbol: String
 
     init {
-        nodes.forEach { node ->
-            childrenInternal.add(node)
-            node.parent = this
-        }
+        nodes.forEach { addChild(it) }
+    }
+
+    /**
+     * Add child to children list
+     * Assign parent as current node object
+     */
+    fun addChild(node: Node) {
+        childrenInternal.add(node)
+        node.parent = this
     }
 
     override fun equals(other: Any?): Boolean {

@@ -183,9 +183,8 @@ internal class DirectlyFollowsSubGraphTest {
         }
 
         val graph = DirectlyFollowsSubGraph(activities, connections)
-        val result = graph.splitIntoSubGraphs(graph.calculateExclusiveCut()!!)
 
-        assertEquals(2, result.size)
+        assertEquals(2, graph.children.size)
     }
 
     @Test
