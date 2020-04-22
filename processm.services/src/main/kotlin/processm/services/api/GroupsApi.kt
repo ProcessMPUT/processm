@@ -51,7 +51,8 @@ fun Route.GroupsApi() {
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(
-                HttpStatusCode.OK, GroupMessageBody(Group(group.groupId, GroupRole.owner, group.groupId)))
+                HttpStatusCode.OK, GroupMessageBody(Group(group.groupId.toString(), GroupRole.owner, group.groupId))
+            )
         }
 
 

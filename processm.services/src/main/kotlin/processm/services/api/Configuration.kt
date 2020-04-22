@@ -8,6 +8,8 @@ import io.ktor.config.ApplicationConfig
 import io.ktor.features.*
 import io.ktor.http.HttpStatusCode
 import io.ktor.response.respond
+import io.ktor.util.DataConversionException
+import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.error
 import processm.core.logging.enter
 import processm.core.logging.exit
@@ -15,6 +17,7 @@ import processm.core.logging.logger
 import processm.services.api.models.ErrorMessageBody
 import processm.services.logic.ValidationException
 import java.time.Duration
+import java.util.*
 
 internal fun ApplicationHstsConfiguration(): HSTS.Configuration.() -> Unit {
     return {
@@ -65,7 +68,8 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
 }
 
 internal fun ApplicationAuthenticationConfiguration(
-    config: ApplicationConfig): Authentication.Configuration.() -> Unit {
+    config: ApplicationConfig
+): Authentication.Configuration.() -> Unit {
     return {
         val jwtIssuer = config.property("issuer").getString()
         val jwtRealm = config.property("realm").getString()
@@ -75,6 +79,25 @@ internal fun ApplicationAuthenticationConfiguration(
             realm = jwtRealm
             verifier(JwtAuthentication.createVerifier(jwtIssuer, jwtSecret))
             validate { credentials -> ApiUser(credentials.payload.claims) }
+        }
+    }
+}
+
+@KtorExperimentalAPI
+internal fun ApplicationDataConversionConfiguration(): DataConversion.Configuration.() -> Unit {
+    return {
+        convert<UUID> {
+            decode { values, _ ->
+                values.singleOrNull().let { UUID.fromString(it) }
+            }
+
+            encode { value ->
+                when (value) {
+                    null -> listOf()
+                    is UUID -> listOf(value.toString())
+                    else -> throw DataConversionException("Cannot convert $value as UUID")
+                }
+            }
         }
     }
 }

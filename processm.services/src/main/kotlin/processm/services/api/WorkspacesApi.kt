@@ -39,7 +39,9 @@ fun Route.WorkspacesApi() {
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(
-                HttpStatusCode.OK, WorkspaceMessageBody(Workspace(workspace.workspaceId, workspace.workspaceId)))
+                HttpStatusCode.OK,
+                WorkspaceMessageBody(Workspace(workspace.workspaceId.toString(), workspace.workspaceId))
+            )
         }
 
 

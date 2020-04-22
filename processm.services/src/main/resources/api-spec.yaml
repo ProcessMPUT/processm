@@ -197,6 +197,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - workspaces
@@ -296,6 +297,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - groups
@@ -355,6 +357,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - groups
@@ -381,6 +384,7 @@ paths:
             schema:
               description: User ID
               type: string
+              format: uuid
         required: true
       responses:
         '201':
@@ -399,12 +403,14 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - name: userId
         in: path
         description: User ID
         required: true
         schema:
           type: string
+          format: uuid
     delete:
       tags:
         - groups
@@ -427,6 +433,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - groups
@@ -472,12 +479,14 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - name: subgroupId
         in: path
         description: Subgroup ID
         required: true
         schema:
           type: string
+          format: uuid
     delete:
       tags:
         - groups
@@ -536,6 +545,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - organizations
@@ -595,6 +605,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - organizations
@@ -639,12 +650,14 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - name: userId
         in: path
         description: User ID
         required: true
         schema:
           type: string
+          format: uuid
     delete:
       tags:
         - organizations
@@ -761,6 +774,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         username:
           type: string
         organization:
@@ -783,6 +797,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type: string
     WorkspaceMessageBody:
@@ -805,6 +820,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type: string
         groupRole:
@@ -829,6 +845,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type: string
         contact:

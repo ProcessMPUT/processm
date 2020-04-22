@@ -23,11 +23,12 @@ import org.koin.test.mock.declareMock
 import processm.services.api.models.AuthenticationResult
 import processm.services.apiModule
 import processm.services.logic.AccountService
+import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-abstract class BaseApiTest: AutoCloseKoinTest() {
+abstract class BaseApiTest : AutoCloseKoinTest() {
 
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
@@ -75,7 +76,8 @@ abstract class BaseApiTest: AutoCloseKoinTest() {
 
     protected fun <R> withConfiguredTestApplication(
         configurationCustomization: (MapApplicationConfig.() -> Unit)? = null,
-        testLogic: TestApplicationEngine.() -> R): R = withTestApplication {
+        testLogic: TestApplicationEngine.() -> R
+    ): R = withTestApplication {
         val configuration = (environment.config as MapApplicationConfig).apply {
             put("ktor.jwt.issuer", "issuer")
             put("ktor.jwt.realm", "test")
@@ -91,9 +93,10 @@ abstract class BaseApiTest: AutoCloseKoinTest() {
     }
 
     protected fun TestApplicationEngine.withAuthentication(
-        username: String = "user", password: String = "pass", callback: JwtAuthenticationTrackingEngine.() -> Unit) {
+        username: String = "user", password: String = "pass", callback: JwtAuthenticationTrackingEngine.() -> Unit
+    ) {
         every { accountService.verifyUsersCredentials(username, password) } returns mockk {
-            every { id } returns EntityID<Long>(1, mockk())
+            every { id } returns EntityID<UUID>(UUID.randomUUID(), mockk())
             every { this@mockk.username } returns username
         }
 
@@ -101,12 +104,14 @@ abstract class BaseApiTest: AutoCloseKoinTest() {
     }
 
     protected class JwtAuthenticationTrackingEngine(
-        private val engine: TestApplicationEngine, private val username: String, private val password: String) {
+        private val engine: TestApplicationEngine, private val username: String, private val password: String
+    ) {
 
         private var authenticationHeader: Pair<String, String>? = null
 
         fun handleRequest(
-            method: HttpMethod, uri: String, test: TestApplicationRequest.() -> Unit = {}): TestApplicationCall {
+            method: HttpMethod, uri: String, test: TestApplicationRequest.() -> Unit = {}
+        ): TestApplicationCall {
             if (authenticationHeader == null) {
                 with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -131,10 +136,10 @@ abstract class BaseApiTest: AutoCloseKoinTest() {
     }
 
     protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T {
-        return Gson().fromJson(content, object: TypeToken<T>() {}.type)
+        return Gson().fromJson(content, object : TypeToken<T>() {}.type)
     }
 
-    protected inline fun <T: Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
+    protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
         setBody(Gson().toJson(requestBody))
     }
 

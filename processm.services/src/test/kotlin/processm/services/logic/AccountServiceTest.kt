@@ -3,7 +3,6 @@ package processm.services.logic
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import org.h2.command.ddl.CreateUser
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -17,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import processm.core.persistence.DBConnectionPool
 import processm.services.models.*
+import java.util.*
 import kotlin.test.*
 
 class AccountServiceTest {
@@ -122,7 +122,7 @@ class AccountServiceTest {
     fun `account details throws if nonexistent user`() = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
-            accountService.getAccountDetails(userId = 1)
+            accountService.getAccountDetails(userId = UUID.randomUUID())
         }
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
@@ -132,7 +132,8 @@ class AccountServiceTest {
         SchemaUtils.create(Users)
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.changePassword(
-                userId = 1, currentPassword = correctPassword, newPassword = "new_pass")
+                userId = UUID.randomUUID(), currentPassword = correctPassword, newPassword = "new_pass"
+            )
         }
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
@@ -193,14 +194,14 @@ class AccountServiceTest {
     fun `changing locale throws if nonexistent user`() = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users)
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
-            accountService.changeLocale(userId = 1, locale = "en_US")
+            accountService.changeLocale(userId = UUID.randomUUID(), locale = "en_US")
         }
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
 
     private fun Transaction.createUser(username: String, passwordHash: String, locale: String = "en_US") =
-         Users.insertAndGetId {
-            it[Users.username] =username
+        Users.insertAndGetId {
+            it[Users.username] = username
             it[Users.password] = passwordHash
             it[Users.locale] = locale
         }

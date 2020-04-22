@@ -12,27 +12,29 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import processm.services.api.models.*
 import processm.services.logic.ValidationException
+import java.util.*
 import java.util.stream.Stream
 import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class UsersApiTest: BaseApiTest() {
+class UsersApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/users",
         HttpMethod.Delete to "/api/users/session",
         HttpMethod.Get to "/api/users/me",
         HttpMethod.Patch to "/api/users/me/password",
-        HttpMethod.Patch to "/api/users/me/locale")
+        HttpMethod.Patch to "/api/users/me/locale"
+    )
 
     override fun endpointsWithNoImplementation() = Stream.of<Pair<HttpMethod, String>?>(null)
 
     @Test
     fun `responds to successful authentication with 201 and token`() = withConfiguredTestApplication {
         every { accountService.verifyUsersCredentials("user", "pass") } returns mockk {
-            every { id } returns EntityID<Long>(1, mockk())
+            every { id } returns EntityID<UUID>(UUID.randomUUID(), mockk())
             every { this@mockk.username } returns "user"
         }
 
@@ -164,7 +166,7 @@ class UsersApiTest: BaseApiTest() {
     @Test
     fun `responds to current user details request with 200 and current user account details`() =
         withConfiguredTestApplication {
-            every { accountService.getAccountDetails(userId = 1) } returns mockk {
+            every { accountService.getAccountDetails(userId = any()) } returns mockk {
                 every { username } returns "user1"
                 every { locale } returns "en_US"
             }
@@ -178,13 +180,14 @@ class UsersApiTest: BaseApiTest() {
                 }
             }
 
-            verify { accountService.getAccountDetails(userId = 1) }
+            verify { accountService.getAccountDetails(userId = any()) }
         }
 
     @Test
     fun `responds to non-existing user details request with 404 and error message`() = withConfiguredTestApplication {
         every { accountService.getAccountDetails(userId = any()) } throws ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist")
+            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
+        )
 
         withAuthentication {
             with(handleRequest(HttpMethod.Get, "/api/users/me")) {
@@ -200,7 +203,8 @@ class UsersApiTest: BaseApiTest() {
     fun `responds to successful account registration attempt with 201`() = withConfiguredTestApplication {
         every {
             accountService.createAccount(
-                "user@example.com", "OrgName1", accountLocale = any())
+                "user@example.com", "OrgName1", accountLocale = any()
+            )
         } just Runs
 
         withAuthentication {
@@ -209,7 +213,10 @@ class UsersApiTest: BaseApiTest() {
                 withSerializedBody(
                     AccountRegistrationInfoMessageBody(
                         AccountRegistrationInfo(
-                            "user@example.com", "OrgName1")))
+                            "user@example.com", "OrgName1"
+                        )
+                    )
+                )
             }) {
                 assertEquals(HttpStatusCode.Created, response.status())
             }
@@ -223,10 +230,12 @@ class UsersApiTest: BaseApiTest() {
         withConfiguredTestApplication {
             every {
                 accountService.createAccount(
-                    "user@example.com", "OrgName1", accountLocale = any())
+                    "user@example.com", "OrgName1", accountLocale = any()
+                )
             } throws ValidationException(
                 ValidationException.Reason.ResourceAlreadyExists,
-                "User and/or organization with specified name already exists")
+                "User and/or organization with specified name already exists"
+            )
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Post, "/api/users") {
@@ -234,7 +243,10 @@ class UsersApiTest: BaseApiTest() {
                     withSerializedBody(
                         AccountRegistrationInfoMessageBody(
                             AccountRegistrationInfo(
-                                "user@example.com", "OrgName1")))
+                                "user@example.com", "OrgName1"
+                            )
+                        )
+                    )
                 }) {
                     assertEquals(HttpStatusCode.Conflict, response.status())
                     assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("User and/or organization with specified name already exists"))
@@ -264,7 +276,8 @@ class UsersApiTest: BaseApiTest() {
     fun `responds to successful password change with 200`() = withConfiguredTestApplication {
         every {
             accountService.changePassword(
-                userId = any(), currentPassword = "current", newPassword = "new")
+                userId = any(), currentPassword = "current", newPassword = "new"
+            )
         } returns true
 
         withAuthentication {
@@ -278,7 +291,8 @@ class UsersApiTest: BaseApiTest() {
 
         verify {
             accountService.changePassword(
-                userId = any(), currentPassword = "current", newPassword = "new")
+                userId = any(), currentPassword = "current", newPassword = "new"
+            )
         }
     }
 
@@ -287,7 +301,8 @@ class UsersApiTest: BaseApiTest() {
         withConfiguredTestApplication {
             every {
                 accountService.changePassword(
-                    userId = any(), currentPassword = "wrong_password", newPassword = "new")
+                    userId = any(), currentPassword = "wrong_password", newPassword = "new"
+                )
             } returns false
 
             withAuthentication {
@@ -302,7 +317,8 @@ class UsersApiTest: BaseApiTest() {
 
             verify {
                 accountService.changePassword(
-                    userId = any(), currentPassword = "wrong_password", newPassword = "new")
+                    userId = any(), currentPassword = "wrong_password", newPassword = "new"
+                )
             }
         }
 
@@ -321,7 +337,8 @@ class UsersApiTest: BaseApiTest() {
 
             verify(exactly = 0) {
                 accountService.changePassword(
-                    userId = any(), currentPassword = any(), newPassword = any())
+                    userId = any(), currentPassword = any(), newPassword = any()
+                )
             }
         }
 
@@ -346,9 +363,11 @@ class UsersApiTest: BaseApiTest() {
         withConfiguredTestApplication {
             every {
                 accountService.changeLocale(
-                    userId = any(), locale = "eng_ENG")
+                    userId = any(), locale = "eng_ENG"
+                )
             } throws ValidationException(
-                ValidationException.Reason.ResourceFormatInvalid, "The current locale could not be changed")
+                ValidationException.Reason.ResourceFormatInvalid, "The current locale could not be changed"
+            )
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {

@@ -11,7 +11,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}")
-    class getGroup(val groupId: kotlin.String)
+    class getGroup(val groupId: java.util.UUID)
 
     /**
      * Get members of specified group
@@ -20,7 +20,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/members")
-    class getGroupMembers(val groupId: kotlin.String)
+    class getGroupMembers(val groupId: java.util.UUID)
 
     /**
      * Get groups belonging to user organization
@@ -37,7 +37,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/subgroups")
-    class getSubgroups(val groupId: kotlin.String)
+    class getSubgroups(val groupId: java.util.UUID)
 
     /**
      * Remove user group
@@ -46,7 +46,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}")
-    class removeGroup(val groupId: kotlin.String)
+    class removeGroup(val groupId: java.util.UUID)
 
     /**
      * Remove member from group
@@ -56,7 +56,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/members/{userId}")
-    class removeGroupMember(val groupId: kotlin.String, val userId: kotlin.String)
+    class removeGroupMember(val groupId: java.util.UUID, val userId: java.util.UUID)
 
     /**
      * Remove speciified subgroup
@@ -66,7 +66,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/subgroups/{subgroupId}")
-    class removeSubgroup(val groupId: kotlin.String, val subgroupId: kotlin.String)
+    class removeSubgroup(val groupId: java.util.UUID, val subgroupId: java.util.UUID)
 
     /**
      * Get specified organization
@@ -75,7 +75,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}")
-    class getOrganization(val organizationId: kotlin.String)
+    class getOrganization(val organizationId: java.util.UUID)
 
     /**
      * Get members of specified organization
@@ -84,7 +84,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/members")
-    class getOrganizationMembers(val organizationId: kotlin.String)
+    class getOrganizationMembers(val organizationId: java.util.UUID)
 
     /**
      * Get organizations
@@ -101,7 +101,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}")
-    class removeOrganization(val organizationId: kotlin.String)
+    class removeOrganization(val organizationId: java.util.UUID)
 
     /**
      * Remove member from organization
@@ -111,7 +111,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/members/{userId}")
-    class removeOrganizationMember(val organizationId: kotlin.String, val userId: kotlin.String)
+    class removeOrganizationMember(val organizationId: java.util.UUID, val userId: java.util.UUID)
 
     /**
      * Get details about current user
@@ -144,7 +144,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/workspaces/{workspaceId}")
-    class deleteWorkspace(val workspaceId: kotlin.String)
+    class deleteWorkspace(val workspaceId: java.util.UUID)
 
     /**
      * Get specified workspace
@@ -153,7 +153,7 @@ object Paths {
      */
     @KtorExperimentalLocationsAPI
     @Location("/workspaces/{workspaceId}")
-    class getWorkspace(val workspaceId: kotlin.String)
+    class getWorkspace(val workspaceId: java.util.UUID)
 
     /**
      * Get workspaces which user has access to

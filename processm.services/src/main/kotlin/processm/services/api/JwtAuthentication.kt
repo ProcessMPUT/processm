@@ -11,11 +11,13 @@ import java.util.*
 object JwtAuthentication {
 
     private fun createProlongingTokenVerifier(
-        issuer: String, secret: String, acceptableExpiration: Duration): JWTVerifier =
+        issuer: String, secret: String, acceptableExpiration: Duration
+    ): JWTVerifier =
         JWT.require(Algorithm.HMAC512(secret)).acceptExpiresAt(acceptableExpiration.seconds).withIssuer(issuer).build()
 
     fun verifyAndProlongToken(
-        encodedToken: String, issuer: String, secret: String, acceptableExpiration: Duration): String {
+        encodedToken: String, issuer: String, secret: String, acceptableExpiration: Duration
+    ): String {
         var expiredToken = createProlongingTokenVerifier(issuer, secret, acceptableExpiration).verify(encodedToken)
 
         if (Duration.between(expiredToken.expiresAt.toInstant(), Instant.now()) > acceptableExpiration) {
@@ -31,10 +33,11 @@ object JwtAuthentication {
         JWT.require(Algorithm.HMAC512(secret)).withIssuer(issuer).acceptLeeway(0).build()
 
     fun createToken(
-        userId: Long, username: String, expiration: Instant, issuer: String, secret: String): String = JWT.create()
+        userId: UUID, username: String, expiration: Instant, issuer: String, secret: String
+    ): String = JWT.create()
         .withSubject("Authentication")
         .withIssuer(issuer)
-        .withClaim("userId", userId)
+        .withClaim("userId", userId.toString())
         .withClaim("username", username)
         .withExpiresAt(Date(expiration.toEpochMilli()))
         .withIssuedAt(Date())

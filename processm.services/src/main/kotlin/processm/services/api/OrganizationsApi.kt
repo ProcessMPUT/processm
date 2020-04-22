@@ -43,7 +43,10 @@ fun Route.OrganizationsApi() {
             call.respond(
                 HttpStatusCode.OK, OrganizationMessageBody(
                     Organization(
-                        organization.organizationId, false, organization.organizationId)))
+                        organization.organizationId.toString(), false, organization.organizationId
+                    )
+                )
+            )
         }
 
 

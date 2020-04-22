@@ -16,7 +16,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 @UseExperimental(KtorExperimentalAPI::class)
-class WebServicesHost: Service {
+class WebServicesHost : Service {
 
     companion object {
         private const val keyStoreProperty = "ktor.security.ssl.keyStore"
@@ -52,7 +52,8 @@ class WebServicesHost: Service {
             }
             val keyPassword = (1..100).map { _ ->
                 kotlin.random.Random.nextInt(
-                    Char.MIN_VALUE.toInt(), Char.MAX_VALUE.toInt())
+                    Char.MIN_VALUE.toInt(), Char.MAX_VALUE.toInt()
+                )
             }.map { i -> i.toChar() }.joinToString("")
 
             logger().debug("Generating certificate and writing into file ${certFile.canonicalPath}")
@@ -62,7 +63,9 @@ class WebServicesHost: Service {
                 args + arrayOf(
                     "-P:ktor.security.ssl.keyStore=${certFile.canonicalPath}",
                     "-P:ktor.security.ssl.privateKeyPassword=${keyPassword}",
-                    "-P:ktor.security.ssl.keyStorePassword=${keyPassword}"))
+                    "-P:ktor.security.ssl.keyStorePassword=${keyPassword}"
+                )
+            )
             assert(env.config.propertyOrNull(keyStoreProperty) != null)
         }
 
@@ -71,7 +74,8 @@ class WebServicesHost: Service {
         status = ServiceStatus.Started
 
         logger().info(
-            "HTTP server started on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}")
+            "HTTP server started on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}"
+        )
         logger().exit()
     }
 
@@ -79,13 +83,15 @@ class WebServicesHost: Service {
         logger().enter()
 
         logger().info(
-            "Stopping HTTP server on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}")
+            "Stopping HTTP server on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}"
+        )
         engine.stop(3, 30, TimeUnit.SECONDS)
         env.stop()
         status = ServiceStatus.Stopped
 
         logger().info(
-            "HTTP server stopped on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}")
+            "HTTP server stopped on port ${engine.environment.config.property("ktor.deployment.sslPort").getString()}"
+        )
         logger().exit()
     }
 }

@@ -6,24 +6,27 @@ import org.junit.Test
 import org.junit.jupiter.api.TestInstance
 import processm.services.api.models.WorkspaceCollectionMessageBody
 import processm.services.api.models.WorkspaceMessageBody
+import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class WorkspacesApiTest: BaseApiTest() {
+class WorkspacesApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/workspaces",
         HttpMethod.Post to "/api/workspaces",
-        HttpMethod.Get to "/api/workspaces/1",
-        HttpMethod.Put to "/api/workspaces/1",
-        HttpMethod.Delete to "/api/workspaces/1")
+        HttpMethod.Get to "/api/workspaces/${UUID.randomUUID()}",
+        HttpMethod.Put to "/api/workspaces/${UUID.randomUUID()}",
+        HttpMethod.Delete to "/api/workspaces/${UUID.randomUUID()}"
+    )
 
     override fun endpointsWithNoImplementation() = Stream.of(
         HttpMethod.Post to "/api/workspaces",
-        HttpMethod.Put to "/api/workspaces/1",
-        HttpMethod.Delete to "/api/workspaces/1")
+        HttpMethod.Put to "/api/workspaces/${UUID.randomUUID()}",
+        HttpMethod.Delete to "/api/workspaces/${UUID.randomUUID()}"
+    )
 
     @Test
     fun `responds with 200 and workspace list`() = withConfiguredTestApplication {
@@ -38,9 +41,10 @@ class WorkspacesApiTest: BaseApiTest() {
     @Test
     fun `responds with 200 and specified workspace`() = withConfiguredTestApplication {
         withAuthentication {
-            with(handleRequest(HttpMethod.Get, "/api/workspaces/2")) {
+            val workspaceId = UUID.randomUUID()
+            with(handleRequest(HttpMethod.Get, "/api/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                assertEquals("2", response.deserializeContent<WorkspaceMessageBody>().data.id)
+                assertEquals(workspaceId, response.deserializeContent<WorkspaceMessageBody>().data.id)
             }
         }
     }

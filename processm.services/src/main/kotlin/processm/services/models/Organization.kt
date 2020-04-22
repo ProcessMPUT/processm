@@ -1,18 +1,19 @@
 package processm.services.models
 
-import org.jetbrains.exposed.dao.LongEntity
-import org.jetbrains.exposed.dao.LongEntityClass
+import org.jetbrains.exposed.dao.UUIDEntity
+import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.LongIdTable
+import org.jetbrains.exposed.dao.id.UUIDTable
+import java.util.*
 
-object Organizations: LongIdTable("organizations") {
+object Organizations : UUIDTable("organizations") {
     val name = text("name")
     val parentOrganizationId = long("parent_organization_id").nullable()
     val isPrivate = bool("is_private")
 }
 
-class Organization(id: EntityID<Long>): LongEntity(id) {
-    companion object: LongEntityClass<Organization>(Organizations)
+class Organization(id: EntityID<UUID>) : UUIDEntity(id) {
+    companion object : UUIDEntityClass<Organization>(Organizations)
 
     var name by Organizations.name
     var parentOrganizationId by Organizations.parentOrganizationId

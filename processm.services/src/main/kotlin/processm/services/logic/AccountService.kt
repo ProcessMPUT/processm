@@ -18,7 +18,8 @@ class AccountService {
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
         val user = User.find(Op.build { Users.username eq username }).firstOrNull() ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist")
+            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
+        )
 
         if (verifyPassword(password, user.password)) user else null
     }
@@ -31,7 +32,8 @@ class AccountService {
             if (usersCount > 0 || organizationsCount > 0) {
                 throw ValidationException(
                     ValidationException.Reason.ResourceAlreadyExists,
-                    "User and/or organization with specified name already exists")
+                    "User and/or organization with specified name already exists"
+                )
             }
             //TODO: registered accounts should be stored as "pending' until confirmed
             // user password should be specified upon successful confirmation
@@ -53,12 +55,13 @@ class AccountService {
         }
     }
 
-    fun getAccountDetails(userId: Long) = transaction(DBConnectionPool.database) {
+    fun getAccountDetails(userId: UUID) = transaction(DBConnectionPool.database) {
         User.findById(userId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist")
+            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
+        )
     }
 
-    fun changePassword(userId: Long, currentPassword: String, newPassword: String) =
+    fun changePassword(userId: UUID, currentPassword: String, newPassword: String) =
         transaction(DBConnectionPool.database) {
             val user = getAccountDetails(userId)
 
@@ -71,7 +74,7 @@ class AccountService {
             return@transaction true
         }
 
-    fun changeLocale(userId: Long, locale: String) = transaction(DBConnectionPool.database) {
+    fun changeLocale(userId: UUID, locale: String) = transaction(DBConnectionPool.database) {
         val user = getAccountDetails(userId)
         val localeObject = parseLocale(locale)
 
@@ -90,7 +93,8 @@ class AccountService {
             2 -> Locale(localeTags[0], localeTags[1])
             1 -> Locale(localeTags[0])
             else -> throw ValidationException(
-                ValidationException.Reason.ResourceFormatInvalid, "The provided locale string is in invalid format")
+                ValidationException.Reason.ResourceFormatInvalid, "The provided locale string is in invalid format"
+            )
         }
 
         try {
@@ -99,7 +103,8 @@ class AccountService {
         } catch (e: MissingResourceException) {
             throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
-                "The current locale could not be changed: ${e.message.orEmpty()}")
+                "The current locale could not be changed: ${e.message.orEmpty()}"
+            )
         }
 
         return localeObject

@@ -6,30 +6,33 @@ import org.junit.Test
 import org.junit.jupiter.api.TestInstance
 import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.OrganizationMessageBody
+import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class OrganizationsApiTest: BaseApiTest() {
+class OrganizationsApiTest : BaseApiTest() {
 
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/organizations",
         HttpMethod.Post to "/api/organizations",
-        HttpMethod.Get to "/api/organizations/1",
-        HttpMethod.Put to "/api/organizations/1",
-        HttpMethod.Delete to "/api/organizations/1",
-        HttpMethod.Get to "/api/organizations/1/members",
-        HttpMethod.Post to "/api/organizations/1/members",
-        HttpMethod.Delete to "/api/organizations/1/members/1")
+        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}",
+        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}",
+        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}",
+        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/members",
+        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
+        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
+    )
 
     override fun endpointsWithNoImplementation() = Stream.of(
         HttpMethod.Post to "/api/organizations",
-        HttpMethod.Put to "/api/organizations/1",
-        HttpMethod.Delete to "/api/organizations/1",
-        HttpMethod.Get to "/api/organizations/1/members",
-        HttpMethod.Post to "/api/organizations/1/members",
-        HttpMethod.Delete to "/api/organizations/1/members/1")
+        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}",
+        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}",
+        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/members",
+        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
+        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
+    )
 
     @Test
     fun `responds with 200 and group list`() = withConfiguredTestApplication {
@@ -44,9 +47,10 @@ class OrganizationsApiTest: BaseApiTest() {
     @Test
     fun `responds with 200 and specified workspace`() = withConfiguredTestApplication {
         withAuthentication {
-            with(handleRequest(HttpMethod.Get, "/api/organizations/2")) {
+            val organizationId = UUID.randomUUID()
+            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                assertEquals("2", response.deserializeContent<OrganizationMessageBody>().data.id)
+                assertEquals(organizationId, response.deserializeContent<OrganizationMessageBody>().data.id)
             }
         }
     }

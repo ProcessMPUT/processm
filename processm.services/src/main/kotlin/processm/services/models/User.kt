@@ -1,18 +1,19 @@
 package processm.services.models
 
-import org.jetbrains.exposed.dao.LongEntity
-import org.jetbrains.exposed.dao.LongEntityClass
+import org.jetbrains.exposed.dao.UUIDEntity
+import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.LongIdTable
+import org.jetbrains.exposed.dao.id.UUIDTable
+import java.util.*
 
-object Users: LongIdTable("users") {
+object Users : UUIDTable("users") {
     val username = text("username")
     val password = text("password")
     val locale = varchar("locale", 30)
 }
 
-class User(id: EntityID<Long>): LongEntity(id) {
-    companion object: LongEntityClass<User>(Users)
+class User(id: EntityID<UUID>) : UUIDEntity(id) {
+    companion object : UUIDEntityClass<User>(Users)
 
     var username by Users.username
     var password by Users.password
