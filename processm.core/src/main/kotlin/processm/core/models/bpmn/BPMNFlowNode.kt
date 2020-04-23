@@ -30,7 +30,7 @@ abstract class BPMNFlowNode internal constructor(override val name:String, inter
     protected val incomingSequenceFlows
         get() = base.incoming.map { process.flowByName<TSequenceFlow>(it) }
 
-    protected fun nodes(inp: List<TFlowNode>) = inp.map { process.get(it) }
+    protected fun nodes(inp: Collection<TFlowNode>) = inp.map { process.get(it) }.toSet()
 
     internal val isStart
         get() = base is TStartEvent || (base.incoming.isEmpty() && base !is TBoundaryEvent)
@@ -46,8 +46,8 @@ abstract class BPMNFlowNode internal constructor(override val name:String, inter
     //TODO probably write separate code for BPMNEvent and move this to BPMNActivity
     open val split: BPMNDecisionPoint by lazy {
         val result = BPMNDecisionPoint(this)
-        val boundaryEvents = nodes(process.boundaryEventsFor(this@BPMNFlowNode).toList())
-        val default = nodes(listOf((base as? TActivity)?.default).filterNotNull().filterIsInstance<TSequenceFlow>().map { it.targetRef as TFlowNode })
+        val boundaryEvents = nodes(process.boundaryEventsFor(this@BPMNFlowNode))
+        val default = nodes(listOfNotNull((base as? TActivity)?.default).filterIsInstance<TSequenceFlow>().map { it.targetRef as TFlowNode })
         val (tmpcond, tmpuncond) = outgoingSequenceFlows.partition { it.conditionExpression != null }
         val conditional = nodes(tmpcond.map { it.targetRef as TFlowNode })
         val unconditional = nodes(tmpuncond.map { it.targetRef as TFlowNode }) - default
@@ -58,9 +58,9 @@ abstract class BPMNFlowNode internal constructor(override val name:String, inter
         3. All unconditional + default
          */
         for (event in boundaryEvents)
-            result.add(listOf(event))
+            result.add(setOf(event))
         for (subset in conditional.allSubsets().filter { it.isNotEmpty() })
-            result.add(subset + unconditional)
+            result.add(subset.toSet() + unconditional)
         if (unconditional.isNotEmpty() || default.isNotEmpty())
             result.add(unconditional + default)
         return@lazy result
@@ -69,7 +69,7 @@ abstract class BPMNFlowNode internal constructor(override val name:String, inter
     open val join: BPMNDecisionPoint by lazy {
         val result = BPMNDecisionPoint(this)
         for (flow in incomingSequenceFlows)
-            result.add(nodes(listOf(flow.sourceRef as TFlowNode)))
+            result.add(nodes(setOf(flow.sourceRef as TFlowNode)))
         return@lazy result
     }
 

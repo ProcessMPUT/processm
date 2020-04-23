@@ -17,12 +17,12 @@ internal class BPMNEvent internal constructor(override val base: TEvent, name: S
             val result = BPMNDecisionPoint(this)
             val nodes = nodes(incomingSequenceFlows.map { it.sourceRef as TFlowNode })
             for (subset in nodes.allSubsets().filter { it.isNotEmpty() })
-                result.add(subset)
+                result.add(subset.toSet())
             return@lazy result
         } else if (base is TBoundaryEvent) {
             check(incomingSequenceFlows.isEmpty())
             val result = BPMNDecisionPoint(this)
-            val nodes = nodes(process.byName(base.attachedToRef).filterIsInstance<TFlowNode>().toList())
+            val nodes = nodes(process.byName(base.attachedToRef).filterIsInstance<TFlowNode>())
             result.add(BPMNDecision(nodes, result))
             return@lazy result
         } else
