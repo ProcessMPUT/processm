@@ -2,7 +2,6 @@ package processm.core.models.bpmn
 
 import processm.core.helpers.allSubsets
 import processm.core.models.bpmn.jaxb.*
-import processm.core.models.commons.DecisionPoint
 
 /**
  * A wrapper for [TGateway].
@@ -27,6 +26,19 @@ class BPMNGateway internal constructor(override val base: TGateway, name: String
             throw IllegalArgumentException("A gateway of unknown type ${base::class}")
         }
         return@lazy result
+    }
+
+    override val join: BPMNDecisionPoint by lazy {
+        val result = BPMNDecisionPoint(this)
+        val nodes = nodes(incomingSequenceFlows.map { it.sourceRef as TFlowNode })
+        if (base is TParallelGateway || (base is TEventBasedGateway && base.eventGatewayType == TEventBasedGatewayType.PARALLEL)) {
+            result.add(nodes)
+            return@lazy result
+        } else {
+            for (n in nodes)
+                result.add(setOf(n))
+            return@lazy result
+        }
     }
 
 }
