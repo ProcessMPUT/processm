@@ -2,7 +2,6 @@ package processm.miners.processtree.directlyfollowsgraph
 
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.LogInputStream
-import processm.core.logging.logger
 import processm.core.models.processtree.ProcessTreeActivity
 import java.util.*
 
@@ -50,9 +49,6 @@ class DirectlyFollowsGraph {
      */
     fun discover(log: LogInputStream) {
         log.forEach { discoverGraph(it) }
-
-        // TODO: debug only
-        logGraphInDotForm()
     }
 
     private fun discoverGraph(log: Log) {
@@ -101,24 +97,5 @@ class DirectlyFollowsGraph {
      */
     private fun addConnectionToSink(activity: ProcessTreeActivity) {
         endActivities.getOrPut(activity, { Arc() }).increment()
-    }
-
-    /**
-     * Log on console graph in dot language (which we can use to prepare PNG visualisation)
-     */
-    private fun logGraphInDotForm() {
-        logger().debug("digraph Output {")
-        startActivities.forEach { start ->
-            logger().debug("SOURCE -> ${start.key.name} [label=\"${start.value.cardinality}\"]")
-        }
-        graph.forEach { from ->
-            from.value.forEach { to ->
-                logger().debug("${from.key.name} -> ${to.key.name} [label=\"${to.value.cardinality}\"]")
-            }
-        }
-        endActivities.forEach { end ->
-            logger().debug("${end.key.name} -> SINK [label=\"${end.value.cardinality}\"]")
-        }
-        logger().debug("}")
     }
 }

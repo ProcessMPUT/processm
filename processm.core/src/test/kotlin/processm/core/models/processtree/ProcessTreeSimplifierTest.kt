@@ -6,16 +6,27 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProcessTreeSimplifierTest {
+    private val A = ProcessTreeActivity("A")
+    private val B = ProcessTreeActivity("B")
+    private val C = ProcessTreeActivity("C")
+    private val D = ProcessTreeActivity("D")
+    private val E = ProcessTreeActivity("E")
+    private val F = ProcessTreeActivity("F")
+    private val G = ProcessTreeActivity("G")
+    private val H = ProcessTreeActivity("H")
+    private val I = ProcessTreeActivity("I")
+    private val silentActivity = SilentActivity()
+
     @Test
     fun `Remove tau from sequence with two activities`() {
         val tree = processTree {
             Sequence(
-                SilentActivity(),
-                ProcessTreeActivity("A"),
-                SilentActivity(),
-                SilentActivity(),
-                ProcessTreeActivity("B"),
-                SilentActivity()
+                silentActivity,
+                A,
+                silentActivity,
+                silentActivity,
+                B,
+                silentActivity
             )
         }
 
@@ -24,58 +35,40 @@ class ProcessTreeSimplifierTest {
         with(tree.root!!) {
             assertEquals(children.size, 2)
 
-            assertEquals(children[0], ProcessTreeActivity("A"))
-            assertEquals(children[1], ProcessTreeActivity("B"))
+            assertEquals(children[0], A)
+            assertEquals(children[1], B)
         }
 
-        val expectedTree = processTree {
-            Sequence(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B")
-            )
-        }
+        val expectedTree = processTree { Sequence(A, B) }
         assertTrue(tree.languageEqual(expectedTree))
     }
 
     @Test
     fun `Remove tau and generate sequence with one activity`() {
-        val tree = processTree {
-            Sequence(
-                SilentActivity(),
-                ProcessTreeActivity("C")
-            )
-        }
+        val tree = processTree { Sequence(silentActivity, C) }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
         with(tree.root!!) {
             assertEquals(children.size, 1)
 
-            assertEquals(children[0], ProcessTreeActivity("C"))
+            assertEquals(children[0], C)
         }
 
-        val expectedTree = processTree {
-            Sequence(
-                ProcessTreeActivity("C")
-            )
-        }
+        val expectedTree = processTree { Sequence(C) }
         assertTrue(tree.languageEqual(expectedTree))
     }
 
     @Test
     fun `Can not remove tau if only child`() {
-        val tree = processTree {
-            Sequence(
-                SilentActivity()
-            )
-        }
+        val tree = processTree { Sequence(silentActivity) }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
         with(tree.root!!) {
             assertEquals(children.size, 1)
 
-            assertEquals(children[0], SilentActivity())
+            assertEquals(children[0], silentActivity)
         }
     }
 
@@ -83,25 +76,14 @@ class ProcessTreeSimplifierTest {
     fun `Remove tau from sequence and parallel but not from other operators`() {
         val tree = processTree {
             RedoLoop(
-                SilentActivity(),
-                Exclusive(
-                    SilentActivity(),
-                    ProcessTreeActivity("A")
-                ),
-                Parallel(
-                    ProcessTreeActivity("B"),
-                    SilentActivity(),
-                    ProcessTreeActivity("C")
-                ),
-                ProcessTreeActivity("D"),
+                silentActivity,
+                Exclusive(silentActivity, A),
+                Parallel(B, silentActivity, C),
+                D,
                 Sequence(
-                    SilentActivity(),
-                    ProcessTreeActivity("E"),
-                    Sequence(
-                        ProcessTreeActivity("F"),
-                        ProcessTreeActivity("G"),
-                        SilentActivity()
-                    )
+                    silentActivity,
+                    E,
+                    Sequence(F, G, silentActivity)
                 )
             )
         }
@@ -110,23 +92,11 @@ class ProcessTreeSimplifierTest {
 
         val expectedTree = processTree {
             RedoLoop(
-                SilentActivity(),
-                Exclusive(
-                    SilentActivity(),
-                    ProcessTreeActivity("A")
-                ),
-                Parallel(
-                    ProcessTreeActivity("B"),
-                    ProcessTreeActivity("C")
-                ),
-                ProcessTreeActivity("D"),
-                Sequence(
-                    ProcessTreeActivity("E"),
-                    Sequence(
-                        ProcessTreeActivity("F"),
-                        ProcessTreeActivity("G")
-                    )
-                )
+                silentActivity,
+                Exclusive(silentActivity, A),
+                Parallel(B, C),
+                D,
+                Sequence(E, Sequence(F, G))
             )
         }
 
@@ -138,13 +108,13 @@ class ProcessTreeSimplifierTest {
     fun `In redo loop can remove duplicated silent activities but only in loop part`() {
         val tree = processTree {
             RedoLoop(
-                SilentActivity(),
-                ProcessTreeActivity("A"),
-                SilentActivity(),
-                SilentActivity(),
-                SilentActivity(),
-                ProcessTreeActivity("C"),
-                SilentActivity()
+                silentActivity,
+                A,
+                silentActivity,
+                silentActivity,
+                silentActivity,
+                C,
+                silentActivity
             )
         }
 
@@ -152,10 +122,10 @@ class ProcessTreeSimplifierTest {
 
         val expectedTree = processTree {
             RedoLoop(
-                SilentActivity(),
-                ProcessTreeActivity("A"),
-                SilentActivity(),
-                ProcessTreeActivity("C")
+                silentActivity,
+                A,
+                silentActivity,
+                C
             )
         }
 
@@ -167,24 +137,18 @@ class ProcessTreeSimplifierTest {
     fun `Redo-Loop with not tau as first element`() {
         val tree = processTree {
             RedoLoop(
-                ProcessTreeActivity("A"),
-                SilentActivity(),
-                SilentActivity(),
-                SilentActivity(),
-                ProcessTreeActivity("C"),
-                SilentActivity()
+                A,
+                silentActivity,
+                silentActivity,
+                silentActivity,
+                C,
+                silentActivity
             )
         }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
-        val expectedTree = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A"),
-                SilentActivity(),
-                ProcessTreeActivity("C")
-            )
-        }
+        val expectedTree = processTree { RedoLoop(A, silentActivity, C) }
 
         assertEquals("⟲(A,τ,C)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
@@ -192,23 +156,11 @@ class ProcessTreeSimplifierTest {
 
     @Test
     fun `Redo-loop without any silent activity`() {
-        val tree = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B"),
-                ProcessTreeActivity("C")
-            )
-        }
+        val tree = processTree { RedoLoop(A, B, C) }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
-        val expectedTree = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B"),
-                ProcessTreeActivity("C")
-            )
-        }
+        val expectedTree = processTree { RedoLoop(A, B, C) }
 
         assertEquals("⟲(A,B,C)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
@@ -216,19 +168,11 @@ class ProcessTreeSimplifierTest {
 
     @Test
     fun `Redo-loop with only silent activity`() {
-        val tree = processTree {
-            RedoLoop(
-                SilentActivity()
-            )
-        }
+        val tree = processTree { RedoLoop(silentActivity) }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
-        val expectedTree = processTree {
-            RedoLoop(
-                SilentActivity()
-            )
-        }
+        val expectedTree = processTree { RedoLoop(silentActivity) }
 
         assertEquals("⟲(τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
@@ -238,18 +182,14 @@ class ProcessTreeSimplifierTest {
     fun `Redo-loop with only two silent activity`() {
         val tree = processTree {
             RedoLoop(
-                SilentActivity(),
-                SilentActivity()
+                silentActivity,
+                silentActivity
             )
         }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
-        val expectedTree = processTree {
-            RedoLoop(
-                SilentActivity()
-            )
-        }
+        val expectedTree = processTree { RedoLoop(silentActivity) }
 
         assertEquals("⟲(τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
@@ -259,21 +199,17 @@ class ProcessTreeSimplifierTest {
     fun `Redo-loop with only silent activities`() {
         val tree = processTree {
             RedoLoop(
-                SilentActivity(),
-                SilentActivity(),
-                SilentActivity(),
-                SilentActivity(),
-                SilentActivity()
+                silentActivity,
+                silentActivity,
+                silentActivity,
+                silentActivity,
+                silentActivity
             )
         }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
-        val expectedTree = processTree {
-            RedoLoop(
-                SilentActivity()
-            )
-        }
+        val expectedTree = processTree { RedoLoop(silentActivity) }
 
         assertEquals("⟲(τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
@@ -281,21 +217,11 @@ class ProcessTreeSimplifierTest {
 
     @Test
     fun `Redo-loop with silent and non silent activities`() {
-        val tree = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A"),
-                SilentActivity()
-            )
-        }
+        val tree = processTree { RedoLoop(A, silentActivity) }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
-        val expectedTree = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A"),
-                SilentActivity()
-            )
-        }
+        val expectedTree = processTree { RedoLoop(A, silentActivity) }
 
         assertEquals("⟲(A,τ)", tree.toString())
         assertTrue(tree.languageEqual(expectedTree))
@@ -303,35 +229,29 @@ class ProcessTreeSimplifierTest {
 
     @Test
     fun `Ignore action if root is activity (activity as root in process tree)`() {
-        val model = processTree { ProcessTreeActivity("A") }
+        val model = processTree { A }
         ProcessTreeSimplifier().simplify(model)
 
         assertEquals("A", model.toString())
-        assertTrue(model.languageEqual(processTree { ProcessTreeActivity("A") }))
+        assertTrue(model.languageEqual(processTree { A }))
     }
 
     @Test
     fun `In exclusive choice operator can remove duplicated silent activities`() {
         val tree = processTree {
             Exclusive(
-                SilentActivity(),
-                ProcessTreeActivity("A"),
-                SilentActivity(),
-                SilentActivity(),
-                ProcessTreeActivity("C"),
-                SilentActivity()
+                silentActivity,
+                A,
+                silentActivity,
+                silentActivity,
+                C,
+                silentActivity
             )
         }
 
         ProcessTreeSimplifier().reduceTauLeafs(tree)
 
-        val expectedTree = processTree {
-            Exclusive(
-                SilentActivity(),
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("C")
-            )
-        }
+        val expectedTree = processTree { Exclusive(SilentActivity(), A, C) }
 
         assertEquals(tree.toString(), "×(τ,A,C)")
         assertTrue(tree.languageEqual(expectedTree))
@@ -347,11 +267,11 @@ class ProcessTreeSimplifierTest {
 
     @Test
     fun `Tree with single activity can not be simpler`() {
-        val model = processTree { ProcessTreeActivity("A") }
+        val model = processTree { A }
         ProcessTreeSimplifier().simplify(model)
 
-        assertEquals(ProcessTreeActivity("A"), model.root)
-        assertTrue(model.languageEqual(processTree { ProcessTreeActivity("A") }))
+        assertEquals(A, model.root)
+        assertTrue(model.languageEqual(processTree { A }))
     }
 
     @Test
@@ -360,96 +280,55 @@ class ProcessTreeSimplifierTest {
         ProcessTreeSimplifier().simplify(model)
 
         assertEquals("τ", model.toString())
-        assertTrue(model.languageEqual(processTree { SilentActivity() }))
+        assertTrue(model.languageEqual(processTree { silentActivity }))
     }
 
     @Test
     fun `Tree with operator contain single activity can be simplify to just one activity`() {
-        val model = processTree {
-            Sequence(
-                ProcessTreeActivity("A")
-            )
-        }
+        val model = processTree { Sequence(A) }
         ProcessTreeSimplifier().simplify(model)
 
-        assertEquals(ProcessTreeActivity("A"), model.root)
-        assertTrue(model.languageEqual(processTree { ProcessTreeActivity("A") }))
+        assertEquals(A, model.root)
+        assertTrue(model.languageEqual(processTree { A }))
     }
 
     @Test
     fun `Move activity to parent if only child in operator node`() {
-        val model = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                Sequence(
-                    ProcessTreeActivity("B")
-                )
-            )
-        }
+        val model = processTree { Exclusive(A, Sequence(B)) }
         ProcessTreeSimplifier().simplify(model)
 
-        val expected = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B")
-            )
-        }
+        val expected = processTree { Exclusive(A, B) }
+
         assertEquals("×(A,B)", model.toString())
         assertTrue(model.languageEqual(expected))
     }
 
     @Test
     fun `Empty operator can be replaced by silent activity`() {
-        val model = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                Sequence()
-            )
-        }
-
+        val model = processTree { Exclusive(A, Sequence()) }
         ProcessTreeSimplifier().simplify(model)
 
-        val expected = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                SilentActivity()
-            )
-        }
+        val expected = processTree { Exclusive(A, silentActivity) }
+
         assertTrue(model.languageEqual(expected))
     }
 
     @Test
     fun `Redo loop with single activity can be transform to just activity`() {
-        val model = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A")
-            )
-        }
-
+        val model = processTree { RedoLoop(A) }
         ProcessTreeSimplifier().simplify(model)
 
         assertEquals("A", model.toString())
-        assertTrue(model.languageEqual(processTree { ProcessTreeActivity("A") }))
+        assertTrue(model.languageEqual(processTree { A }))
     }
 
     @Test
     fun `Redo loop operator transformed to loop with activity and tau`() {
-        val model = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A"),
-                Sequence(),
-                SilentActivity()
-            )
-        }
-
+        val model = processTree { RedoLoop(A, Sequence(), silentActivity) }
         ProcessTreeSimplifier().simplify(model)
 
-        val expected = processTree {
-            RedoLoop(
-                ProcessTreeActivity("A"),
-                SilentActivity()
-            )
-        }
+        val expected = processTree { RedoLoop(A, silentActivity) }
+
         assertEquals("⟲(A,τ)", model.toString())
         assertTrue(model.languageEqual(expected))
     }
@@ -458,124 +337,73 @@ class ProcessTreeSimplifierTest {
     fun `Redo loop operator with tau only can be simplify to tau`() {
         val model = processTree {
             RedoLoop(
-                SilentActivity(),
-                SilentActivity()
+                silentActivity,
+                silentActivity
             )
         }
 
         ProcessTreeSimplifier().simplify(model)
 
         assertEquals("τ", model.toString())
-        assertTrue(model.languageEqual(processTree { SilentActivity() }))
+        assertTrue(model.languageEqual(processTree { silentActivity }))
     }
 
     @Test
     fun `Sequence with activity and tau is equal to just alone activity`() {
-        val model = processTree {
-            Sequence(
-                ProcessTreeActivity("A"),
-                SilentActivity()
-            )
-        }
-
+        val model = processTree { Sequence(A, silentActivity) }
         ProcessTreeSimplifier().simplify(model)
 
         assertEquals("A", model.toString())
-        assertTrue(model.languageEqual(processTree { ProcessTreeActivity("A") }))
+        assertTrue(model.languageEqual(processTree { A }))
     }
 
     @Test
     fun `Exclusive choice with activity and empty operator`() {
-        val model = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                Exclusive()
-            )
-        }
-
+        val model = processTree { Exclusive(A, Exclusive()) }
         ProcessTreeSimplifier().simplify(model)
 
-        val expected = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                SilentActivity()
-            )
-        }
         assertEquals("×(A,τ)", model.toString())
-        assertTrue(model.languageEqual(expected))
+        assertTrue(model.languageEqual(processTree { Exclusive(A, silentActivity) }))
     }
 
     @Test
     fun `Parallel operator activity and empty operator`() {
-        val model = processTree {
-            Parallel(
-                ProcessTreeActivity("A"),
-                Exclusive()
-            )
-        }
-
+        val model = processTree { Parallel(A, Exclusive()) }
         ProcessTreeSimplifier().simplify(model)
 
         assertEquals("A", model.toString())
-        assertTrue(model.languageEqual(processTree { ProcessTreeActivity("A") }))
+        assertTrue(model.languageEqual(processTree { A }))
     }
 
     @Test
     fun `Move up activity if exclusive choice operators`() {
-        val model = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                Exclusive(
-                    ProcessTreeActivity("B"),
-                    ProcessTreeActivity("C")
-                )
-            )
-        }
-
+        val model = processTree { Exclusive(A, Exclusive(B, C)) }
         ProcessTreeSimplifier().simplify(model)
 
-        val expected = processTree {
-            Exclusive(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B"),
-                ProcessTreeActivity("C")
-            )
-        }
         assertEquals("×(A,B,C)", model.toString())
-        assertTrue(model.languageEqual(expected))
+        assertTrue(model.languageEqual(processTree { Exclusive(A, B, C) }))
     }
 
     @Test
     fun `Move up activity if parallel operators`() {
         val model = processTree {
             Parallel(
-                ProcessTreeActivity("A"),
+                A,
                 Parallel(
-                    ProcessTreeActivity("B"),
-                    ProcessTreeActivity("C"),
+                    B,
+                    C,
                     Parallel(
-                        ProcessTreeActivity("D"),
-                        ProcessTreeActivity("E")
+                        D,
+                        E
                     )
                 ),
-                ProcessTreeActivity("F")
+                F
             )
         }
-
         ProcessTreeSimplifier().simplify(model)
 
-        val expected = processTree {
-            Parallel(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B"),
-                ProcessTreeActivity("C"),
-                ProcessTreeActivity("D"),
-                ProcessTreeActivity("E"),
-                ProcessTreeActivity("F")
-            )
-        }
         assertEquals("∧(A,B,C,D,E,F)", model.toString())
-        assertTrue(model.languageEqual(expected))
+        assertTrue(model.languageEqual(processTree { Parallel(A, B, C, D, E, F) }))
     }
 
     @Test
@@ -584,49 +412,40 @@ class ProcessTreeSimplifierTest {
             Parallel(
                 Parallel(
                     Parallel(
-                        ProcessTreeActivity("A"),
-                        ProcessTreeActivity("B")
+                        A,
+                        B
                     ),
-                    ProcessTreeActivity("C"),
-                    ProcessTreeActivity("D")
+                    C,
+                    D
                 ),
-                ProcessTreeActivity("E")
+                E
             )
         }
 
         ProcessTreeSimplifier().simplify(model)
 
-        val expected = processTree {
-            Parallel(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B"),
-                ProcessTreeActivity("C"),
-                ProcessTreeActivity("D"),
-                ProcessTreeActivity("E")
-            )
-        }
         assertEquals("∧(A,B,C,D,E)", model.toString())
-        assertTrue(model.languageEqual(expected))
+        assertTrue(model.languageEqual(processTree { Parallel(A, B, C, D, E) }))
     }
 
     @Test
     fun `Move up activity if sequence operators`() {
         val model = processTree {
             Sequence(
-                ProcessTreeActivity("A"),
+                A,
                 Sequence(
-                    ProcessTreeActivity("B"),
+                    B,
                     Parallel(
-                        ProcessTreeActivity("D"),
-                        ProcessTreeActivity("E"),
-                        ProcessTreeActivity("I")
+                        D,
+                        E,
+                        I
                     ),
-                    ProcessTreeActivity("C")
+                    C
                 ),
-                ProcessTreeActivity("F"),
+                F,
                 Sequence(
-                    ProcessTreeActivity("G"),
-                    ProcessTreeActivity("H")
+                    G,
+                    H
                 )
             )
         }
@@ -635,17 +454,17 @@ class ProcessTreeSimplifierTest {
 
         val expected = processTree {
             Sequence(
-                ProcessTreeActivity("A"),
-                ProcessTreeActivity("B"),
+                A,
+                B,
                 Parallel(
-                    ProcessTreeActivity("D"),
-                    ProcessTreeActivity("E"),
-                    ProcessTreeActivity("I")
+                    D,
+                    E,
+                    I
                 ),
-                ProcessTreeActivity("C"),
-                ProcessTreeActivity("F"),
-                ProcessTreeActivity("G"),
-                ProcessTreeActivity("H")
+                C,
+                F,
+                G,
+                H
             )
         }
         assertEquals("→(A,B,∧(D,E,I),C,F,G,H)", model.toString())
