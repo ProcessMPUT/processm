@@ -70,6 +70,15 @@ class AccountServiceTest {
     }
 
     @Test
+    fun `password verification is insensitive to username case`() = transaction(DBConnectionPool.database) {
+        SchemaUtils.create(Users)
+        createUser("user@example.com", correctPasswordHash)
+
+        val user = assertNotNull(accountService.verifyUsersCredentials("UsEr@eXaMple.com", correctPassword))
+        assertEquals("user@example.com", user.email)
+    }
+
+    @Test
     fun `successful account registration returns`(): Unit = transaction(DBConnectionPool.database) {
         SchemaUtils.create(Users, Organizations, OrganizationRoles, UsersRolesInOrganizations)
         OrganizationRole.values().forEach { roleName ->
@@ -109,6 +118,18 @@ class AccountServiceTest {
                 }
             assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
         }
+
+    @Test
+    fun `account registration is sensitive to user email case`(): Unit = transaction(DBConnectionPool.database) {
+        SchemaUtils.create(Users, Organizations)
+        createUser("user@example.com", correctPasswordHash)
+
+        val exception =
+            assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
+                accountService.createAccount("uSeR@eXaMpLe.com", "Org1")
+            }
+        assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
+    }
 
     @Test
     fun `returns account details of existing user`() = transaction(DBConnectionPool.database) {

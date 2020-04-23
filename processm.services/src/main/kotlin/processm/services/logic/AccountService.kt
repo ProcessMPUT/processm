@@ -1,12 +1,12 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
-import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.DBConnectionPool
+import processm.services.ilike
 import processm.services.models.*
 import java.util.*
 
@@ -17,7 +17,7 @@ class AccountService {
     private val defaultLocale = Locale.UK
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
-        val user = User.find(Op.build { Users.email eq username }).firstOrNull() ?: throw ValidationException(
+        val user = User.find(Users.email ilike username).firstOrNull() ?: throw ValidationException(
             ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
         )
 
@@ -27,7 +27,7 @@ class AccountService {
     fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null) {
         transaction(DBConnectionPool.database) {
             val organizationsCount = Organizations.select { Organizations.name eq organizationName }.limit(1).count()
-            val usersCount = Users.select { Users.email eq userEmail }.limit(1).count()
+            val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
 
             if (usersCount > 0 || organizationsCount > 0) {
                 throw ValidationException(
