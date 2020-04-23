@@ -2,6 +2,7 @@ package processm.core.models.bpmn
 
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.AttributesImpl
+import processm.core.models.bpmn.jaxb.ObjectFactory
 import processm.core.models.bpmn.jaxb.TDefinitions
 import java.io.InputStream
 import java.io.OutputStream
@@ -140,11 +141,7 @@ object BPMNXMLService {
      * Serialize a BPMN model to an XML using StAX
      */
     internal fun save(def: TDefinitions, out: OutputStream) {
-        val wrap = JAXBElement<TDefinitions>(
-                QName("http://www.omg.org/spec/BPMN/20100524/MODEL", "definitions"),
-                def.javaClass,
-                def
-        )
+        val wrap = ObjectFactory().createDefinitions(def)
         val writer = XMLOutputFactory.newInstance().createXMLEventWriter(out)
         JAXBContext.newInstance(TDefinitions::class.java).createMarshaller().marshal(wrap, writer)
     }
