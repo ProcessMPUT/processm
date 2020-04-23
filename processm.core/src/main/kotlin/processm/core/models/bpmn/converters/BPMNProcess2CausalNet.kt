@@ -49,10 +49,10 @@ internal class BPMN2CausalNet(val bpmn: BPMNProcess) {
     }
 
     private fun startBindings(startDeps: Collection<Dependency>) {
-        // TODO check semantics with the spec
-        cnet.addSplit(Split(startDeps.toSet()))
-        for (dep in startDeps)
+        for (dep in startDeps) {
+            cnet.addSplit(Split(setOf(dep)))
             cnet.addJoin(Join(setOf(dep)))
+        }
     }
 
     private fun fillStart() {

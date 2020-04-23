@@ -1,5 +1,6 @@
-package processm.core.models.bpmn
+package processm.core.models.bpmn.converters
 
+import processm.core.models.bpmn.BPMNModel
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import java.io.File
@@ -7,7 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class ToCausalNetConversionTest {
+class BPMNModel2CausalNetTest {
 
     private fun task(n: Int) = Node("Task $n")
     private fun startEvent(n: Int? = null) = Node("Start Event" + (if (n != null) " $n" else ""))
@@ -330,7 +331,7 @@ class ToCausalNetConversionTest {
     @Test
     fun `c20`() {
        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.2.0.bpmn").inputStream().use { xml ->
-            BPMNModel.fromXML(xml)
+           BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
         assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
@@ -339,7 +340,7 @@ class ToCausalNetConversionTest {
     @Test
     fun `c30`() {
        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.3.0.bpmn").inputStream().use { xml ->
-            BPMNModel.fromXML(xml)
+           BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
         assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
