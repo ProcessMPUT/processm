@@ -33,7 +33,7 @@ internal class BPMNProcess internal constructor(internal val base: TProcess) {
         if (!base.id.isNullOrBlank())
             return "ID:${base.id}"
         val idx = recursiveFlowElements.indexOf(base)
-        check(idx >= 0)
+        check(idx >= 0) { "An element not found in recursiveFlowElements." }
         return "IDX:${idx}"
     }
 
