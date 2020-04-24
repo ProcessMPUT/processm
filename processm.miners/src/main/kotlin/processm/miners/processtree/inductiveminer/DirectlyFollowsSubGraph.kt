@@ -555,12 +555,7 @@ class DirectlyFollowsSubGraph(
     private fun inferStartActivities() {
         // Add each activity with outgoing connection to initial start activities
         initialStartActivities.addAll(initialConnections.keys)
-
-        val activitiesWithIngoingConnections = HashSet<ProcessTreeActivity>()
-        initialConnections.values.forEach { activitiesWithIngoingConnections.addAll(it.keys) }
-
-        // Reduce start activities - drop activity with ingoing connection
-        initialStartActivities.removeAll(activitiesWithIngoingConnections)
+        initialConnections.values.forEach { initialStartActivities.removeAll(it.keys) }
     }
 
     /**
