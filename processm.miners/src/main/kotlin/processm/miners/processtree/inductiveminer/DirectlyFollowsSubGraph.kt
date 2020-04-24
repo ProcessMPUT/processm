@@ -62,6 +62,18 @@ class DirectlyFollowsSubGraph(
      */
     private val ingoingConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
 
+    /**
+     * Current start activities in graph.
+     * Calculated once, used by parallel and loop cut detection.
+     */
+    private val currentStartActivities by lazy { currentStartActivities() }
+
+    /**
+     * Current end activities in graph.
+     * Calculated once, used by parallel and loop cut detection.
+     */
+    private val currentEndActivities by lazy { currentEndActivities() }
+
     init {
         outgoingConnections.forEach { (from, hashMap) ->
             hashMap.forEach { (to, arc) ->
@@ -469,8 +481,6 @@ class DirectlyFollowsSubGraph(
      * Apply reassignment inside function => create component assignment.
      */
     private fun startAndEndActivityInEachReassignment(connectedComponents: MutableMap<ProcessTreeActivity, Int>): MutableMap<ProcessTreeActivity, Int>? {
-        val startWithInitials = currentStartActivities().also { it.addAll(initialStartActivities) }
-        val endWithInitials = currentEndActivities().also { it.addAll(initialEndActivities) }
         val connectedComponentsGroups = componentsToGroup(connectedComponents)
 
         val componentsWithStartEnd = LinkedList<MutableSet<ProcessTreeActivity>>()
@@ -480,8 +490,8 @@ class DirectlyFollowsSubGraph(
 
         // Analyze each group and create component assignment to one of 4 categories
         connectedComponentsGroups.values.forEach { group ->
-            val containsStart = (startWithInitials.firstOrNull { it in group } !== null)
-            val containsEnd = (endWithInitials.firstOrNull { it in group } !== null)
+            val containsStart = (currentStartActivities.firstOrNull { it in group } !== null)
+            val containsEnd = (currentEndActivities.firstOrNull { it in group } !== null)
 
             when (containsStart) {
                 true -> when (containsEnd) {
@@ -650,33 +660,29 @@ class DirectlyFollowsSubGraph(
      * In the resulting graph roughly gives the loop cut.
      */
     private fun calculateLoopCut(): Map<ProcessTreeActivity, Int>? {
-        // TODO: In parallel also start/end activities - we can store it as variable instead of x2 calculations
-        val startActivities = currentStartActivities()
-        val endActivities = currentEndActivities()
-
         // Without start / end we can't generate loop
-        if (startActivities.isEmpty() || endActivities.isEmpty()) return null
+        if (currentStartActivities.isEmpty() || currentEndActivities.isEmpty()) return null
 
         // Activities to components, each activity in own component
         val components = HashMap<ProcessTreeActivity, Int>()
         activities.withIndex().forEach { components[it.value] = it.index }
 
         // Merge all start and end activities into one component
-        components[startActivities.first()]!!.also { groupId ->
-            startActivities.forEach { components[it] = groupId }
-            endActivities.forEach { components[it] = groupId }
+        components[currentStartActivities.first()]!!.also { groupId ->
+            currentStartActivities.forEach { components[it] = groupId }
+            currentEndActivities.forEach { components[it] = groupId }
         }
 
         // Merge the other connected components
         outgoingConnections.forEach { (source, targets) ->
             targets.keys.forEach { target ->
-                if (source !in endActivities) {
-                    if (source in startActivities) {
+                if (source !in currentEndActivities) {
+                    if (source in currentStartActivities) {
                         // A redo cannot be reachable from a start activity that is not an end activity
                         mergeComponents(source, target, components)
                     } else {
                         // This is an edge inside a sub-component
-                        if (target !in startActivities) mergeComponents(source, target, components)
+                        if (target !in currentStartActivities) mergeComponents(source, target, components)
                     }
                 }
             }
@@ -697,7 +703,7 @@ class DirectlyFollowsSubGraph(
 
         // A sub-end activity of a redo should have connections to all start activities
         for (subEndActivity in subEndActivities.toTypedArray()) {
-            for (startActivity in startActivities) {
+            for (startActivity in currentStartActivities) {
                 if (components[subEndActivity] == components[startActivity]) {
                     // subEndActivity is already in the body
                     break
@@ -711,7 +717,7 @@ class DirectlyFollowsSubGraph(
 
         // A sub-start activity of a redo should be connections from all end activities
         for (subStartActivity in subStartActivities.toTypedArray()) {
-            for (endActivity in endActivities) {
+            for (endActivity in currentEndActivities) {
                 if (components[subStartActivity] == components[endActivity]) {
                     // subStartActivity is already in the body
                     break
@@ -724,7 +730,7 @@ class DirectlyFollowsSubGraph(
         }
 
         // Put the start and end activity component first
-        val startLabel = components[startActivities.first()]!!
+        val startLabel = components[currentStartActivities.first()]!!
         // Normally we have indexes 0, 1, 2...
         // If start group not first element - set as -1 to be first in ordered list
         if (startLabel > 0) {
