@@ -45,6 +45,21 @@ internal class OfflineInductiveMinerTest {
     }
 
     @Test
+    fun `PM book Figure 2-7 with moved E activity - prove start activities correctly recognized`() {
+        val log = logFromString(
+            """
+            A E B D H
+            A E D B H
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(listOf(log))
+
+        assertEquals("→(A,E,∧(B,D),H)", inductiveMiner.result.toString())
+    }
+
+    @Test
     fun `PM book Figure 7-3`() {
         val log = logFromString(
             """

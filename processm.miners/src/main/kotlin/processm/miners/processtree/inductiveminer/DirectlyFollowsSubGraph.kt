@@ -216,8 +216,8 @@ class DirectlyFollowsSubGraph(
                     activities = activities,
                     outgoingConnections = connectionsHashMap,
                     initialConnections = initialConnections,
-                    initialStartActivities = initialStartActivities,
-                    initialEndActivities = initialEndActivities
+                    initialStartActivities = currentStartActivities,
+                    initialEndActivities = currentEndActivities
                 )
         }
     }
@@ -574,33 +574,44 @@ class DirectlyFollowsSubGraph(
      * Prepare a set of activities marked as start based on initial DFG and current connections (in sub graph)
      */
     fun currentStartActivities(): MutableSet<ProcessTreeActivity> {
-        val startActivities = HashSet<ProcessTreeActivity>()
+        var collection = HashSet<ProcessTreeActivity>(initialStartActivities)
 
-        // Start activity - only ingoing connection, no one outgoing
-        initialConnections.forEach { (from, toActivities) ->
-            // `from` activity must not be inside activities
-            if (!activities.contains(from)) {
-                startActivities.addAll(toActivities.keys.filter { to -> to in activities })
+        while (true) {
+            collection.filter { it in activities }.also {
+                // If at least one start activity still in graph - return start activities
+                if (it.isNotEmpty()) return it.toMutableSet()
             }
-        }
 
-        return startActivities
+            // Else we should find activities connected to current StartActivities
+            val startActivities = HashSet<ProcessTreeActivity>()
+            collection.forEach { start ->
+                startActivities.addAll(initialConnections[start].orEmpty().keys)
+            }
+
+            collection = startActivities
+        }
     }
 
     /**
      * Prepare a set of activities marked as end based on initial DFG and current connections (in sub graph)
      */
     fun currentEndActivities(): MutableSet<ProcessTreeActivity> {
-        val endActivities = HashSet<ProcessTreeActivity>()
+        var collection = HashSet<ProcessTreeActivity>(initialEndActivities)
 
-        initialConnections.forEach outside@{ (from, toActivities) ->
-            if (from in activities) {
-                val found = toActivities.keys.firstOrNull { it !in activities }
-                if (found !== null) endActivities.add(from)
+        while (true) {
+            collection.filter { it in activities }.also {
+                // If at least one end activity still in graph - return start activities
+                if (it.isNotEmpty()) return it.toMutableSet()
             }
-        }
 
-        return endActivities
+            // Else we should find activities connected to current EndActivities
+            val endActivities = HashSet<ProcessTreeActivity>()
+            initialConnections.forEach { (from, to) ->
+                if (to.keys.firstOrNull { it in collection } !== null) endActivities.add(from)
+            }
+
+            collection = endActivities
+        }
     }
 
     /**
