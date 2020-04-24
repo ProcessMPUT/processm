@@ -500,6 +500,6 @@ class MutableCausalNetTest {
         mm.addInstance(a, b, c)
         assertTrue { mm.dependencies.isEmpty() }
         mm.addDependency(dep)
-        assertEquals(setOf(dep), mm.dependencies.toSet())
+        assertEquals(setOf(dep), mm.dependencies)
     }
 }

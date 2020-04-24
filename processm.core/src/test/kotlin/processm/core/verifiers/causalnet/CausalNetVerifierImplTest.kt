@@ -384,4 +384,28 @@ class CausalNetVerifierImplTest {
         model.addJoin(Join(setOf(dep)))
         assertFalse { CausalNetVerifierImpl(model).isStructurallySound }
     }
+
+    @Test
+    fun `structure - missing join`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+        }
+        assertEquals(setOf(Dependency(b, c)), CausalNetVerifierImpl(model).dependenciesUnusedInJoins)
+    }
+
+    @Test
+    fun `structure - missing split`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            a joins b
+            b joins c
+        }
+        assertEquals(setOf(Dependency(b, c)), CausalNetVerifierImpl(model).dependenciesUnusedInSplits)
+    }
 }

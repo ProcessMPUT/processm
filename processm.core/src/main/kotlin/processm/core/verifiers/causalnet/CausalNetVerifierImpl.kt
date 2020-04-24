@@ -136,17 +136,21 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     private fun allDependenciesUsed(): Boolean {
         val splitDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
         val joinDependencies = model.joins.values.flatten().flatMap { it.dependencies }.toSet()
-        val allDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
-        val unusedInSplits = allDependencies - splitDependencies
-        val unusedInJoins = allDependencies - joinDependencies
-        if (unusedInJoins.isEmpty() && unusedInSplits.isEmpty())
-            return true
-        else {
-            logger().debug("Not used in splits: $unusedInSplits")
-            logger().debug("Not used in joins: $unusedInJoins")
-            return false
-        }
+        val allDependencies = model.dependencies
+        return splitDependencies == allDependencies && joinDependencies == allDependencies
     }
+
+    /**
+     * Returns dependencies unused in splits. A helper for [isStructurallySound].
+     */
+    val dependenciesUnusedInSplits
+        get() = model.dependencies - model.splits.values.flatten().flatMap { it.dependencies }.toSet()
+
+    /**
+     * Returns dependencies unused in joins. A helper for [isStructurallySound].
+     */
+    val dependenciesUnusedInJoins
+        get() = model.dependencies - model.joins.values.flatten().flatMap { it.dependencies }.toSet()
 
     /**
      * Over all nodes, there should be exactly one with no predecessor

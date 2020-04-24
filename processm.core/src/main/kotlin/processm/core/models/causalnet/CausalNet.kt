@@ -49,8 +49,8 @@ abstract class CausalNet(
     /**
      * Convenience wrapper to retrieve all dependencies
      */
-    val dependencies: List<Dependency>
-        get() = Collections.unmodifiableList(_outgoing.values.flatten())
+    val dependencies: Set<Dependency>
+        get() = Collections.unmodifiableSet(_outgoing.values.flatten().toSet())
 
     /**
      * Outgoing arcs AKA what depends on a given node
