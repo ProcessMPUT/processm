@@ -649,56 +649,91 @@ class DirectlyFollowsSubGraph(
      *
      * In the resulting graph roughly gives the loop cut.
      */
-    private fun calculateLoopCut(): MutableMap<ProcessTreeActivity, Int>? {
+    private fun calculateLoopCut(): Map<ProcessTreeActivity, Int>? {
         // TODO: In parallel also start/end activities - we can store it as variable instead of x2 calculations
         val startActivities = currentStartActivities()
         val endActivities = currentEndActivities()
 
-        // Temporarily remove the start and end activities from connections
-        val outgoingWithoutStartAndEnd = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
-        val ingoingWithoutStartAndEnd = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+        // Without start / end we can't generate loop
+        if (startActivities.isEmpty() || endActivities.isEmpty()) return null
 
-        removeConnectionsFromToStartEndActivities(
-            source = ingoingConnections,
-            out = ingoingWithoutStartAndEnd,
-            startActivities = startActivities,
-            endActivities = endActivities
-        )
-        removeConnectionsFromToStartEndActivities(
-            source = outgoingConnections,
-            out = outgoingWithoutStartAndEnd,
-            startActivities = startActivities,
-            endActivities = endActivities
-        )
+        // Activities to components, each activity in own component
+        val components = HashMap<ProcessTreeActivity, Int>()
+        activities.withIndex().forEach { components[it.value] = it.index }
 
-        // TODO: Should we check all conditions defined in rule?
-        // TODO: 1 Done | 2, 3, 5, 6 NOT DONE | 4 done by XOR cut
-        return calculateExclusiveCut(outgoing = outgoingWithoutStartAndEnd, ingoing = ingoingWithoutStartAndEnd)
-    }
+        // Merge all start and end activities into one component
+        components[startActivities.first()]!!.also { groupId ->
+            startActivities.forEach { components[it] = groupId }
+            endActivities.forEach { components[it] = groupId }
+        }
 
-    private fun removeConnectionsFromToStartEndActivities(
-        source: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>,
-        out: HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>,
-        startActivities: Set<ProcessTreeActivity>,
-        endActivities: Set<ProcessTreeActivity>
-    ) {
-        source.forEach { (from, toActivities) ->
-            out[from] = HashMap()
-
-            if (from in startActivities || from in endActivities) {
-                toActivities.forEach { (to, arc) ->
-                    if (to in startActivities || to in endActivities) {
-                        out[from]!![to] = arc
-                    }
-                }
-            } else {
-                toActivities.forEach { (to, arc) ->
-                    if (to !in startActivities || to !in endActivities) {
-                        out[from]!![to] = arc
+        // Merge the other connected components
+        outgoingConnections.forEach { (source, targets) ->
+            targets.keys.forEach { target ->
+                if (source !in endActivities) {
+                    if (source in startActivities) {
+                        // A redo cannot be reachable from a start activity that is not an end activity
+                        mergeComponents(source, target, components)
+                    } else {
+                        // This is an edge inside a sub-component
+                        if (target !in startActivities) mergeComponents(source, target, components)
                     }
                 }
             }
         }
+
+        // We have merged all sub-components. We only have to find out whether each sub-component belongs to the body or the redo.
+        // Make a list of sub-start and sub-end activities
+        val subStartActivities = HashSet<ProcessTreeActivity>()
+        val subEndActivities = HashSet<ProcessTreeActivity>()
+        outgoingConnections.forEach { (source, targets) ->
+            targets.keys.forEach { target ->
+                if (components[source] != components[target]) {
+                    subEndActivities.add(source)
+                    subStartActivities.add(target)
+                }
+            }
+        }
+
+        // A sub-end activity of a redo should have connections to all start activities
+        for (subEndActivity in subEndActivities.toTypedArray()) {
+            for (startActivity in startActivities) {
+                if (components[subEndActivity] == components[startActivity]) {
+                    // subEndActivity is already in the body
+                    break
+                }
+                if (!outgoingConnections[subEndActivity].orEmpty().containsKey(startActivity)) {
+                    mergeComponents(subEndActivity, startActivity, components)
+                    break
+                }
+            }
+        }
+
+        // A sub-start activity of a redo should be connections from all end activities
+        for (subStartActivity in subStartActivities.toTypedArray()) {
+            for (endActivity in endActivities) {
+                if (components[subStartActivity] == components[endActivity]) {
+                    // subStartActivity is already in the body
+                    break
+                }
+                if (!outgoingConnections[endActivity].orEmpty().containsKey(subStartActivity)) {
+                    mergeComponents(subStartActivity, endActivity, components)
+                    break
+                }
+            }
+        }
+
+        // Put the start and end activity component first
+        val startLabel = components[startActivities.first()]!!
+        // Normally we have indexes 0, 1, 2...
+        // If start group not first element - set as -1 to be first in ordered list
+        if (startLabel > 0) {
+            for (c in components) {
+                if (c.value == startLabel) c.setValue(-1)
+            }
+        }
+
+        return if (components.values.toSet().size >= 2) components else null
     }
 
     /**
