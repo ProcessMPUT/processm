@@ -123,8 +123,12 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     }
 
     /**
-     * True if the structure of the causal net is correct: it has a single start, a single end,
-     * all dependencies are used in splits and joins and the underlying dependency graph is connected
+     * True if the structure of the causal net is correct:
+     *
+     * * has a single start,
+     * * has a single end,
+     * * all dependencies are used in splits and joins,
+     * * the underlying dependency graph is connected
      */
     val isStructurallySound: Boolean by lazy {
         allDependenciesUsed() && hasSingleEnd() && hasSingleStart() && isConnected
