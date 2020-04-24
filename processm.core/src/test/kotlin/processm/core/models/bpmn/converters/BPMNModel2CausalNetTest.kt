@@ -235,6 +235,7 @@ class BPMNModel2CausalNetTest {
         val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/B.1.0.bpmn").inputStream().use { xml ->
             BPMNModel.fromXML(xml)
         }
+        // B.1.0.bpmn contains TCallActivity, which is not supported in the current state of the converter
         assertFailsWith<UnsupportedOperationException> { bpmnModel.toCausalNet() }
     }
 
@@ -360,6 +361,7 @@ class BPMNModel2CausalNetTest {
         val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.5.0.bpmn").inputStream().use { xml ->
             BPMNModel.fromXML(xml)
         }
+        // C.5.0.bpmn contains TCallActivity, which is not supported in the current state of the converter
         assertFailsWith<UnsupportedOperationException> { bpmnModel.toCausalNet() }
     }
 
@@ -368,6 +370,7 @@ class BPMNModel2CausalNetTest {
         val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.6.0.bpmn").inputStream().use { xml ->
             BPMNModel.fromXML(xml)
         }
+        // C.6.0.bpmn contains compensations, which are not supported in the current state of the converter.
         assertFailsWith<UnsupportedOperationException> { bpmnModel.toCausalNet() }
     }
 
