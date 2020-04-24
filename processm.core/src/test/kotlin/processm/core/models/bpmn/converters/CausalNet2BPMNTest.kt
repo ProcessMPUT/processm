@@ -1,9 +1,14 @@
 package processm.core.models.bpmn.converters
 
-import org.junit.jupiter.api.Assumptions
-import processm.core.models.causalnet.*
+import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.MutableCausalNet
+import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import kotlin.test.*
+import kotlin.test.Ignore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class CausalNet2BPMNTest {
 
@@ -23,7 +28,7 @@ class CausalNet2BPMNTest {
                 return@copyFrom Node(it.name, it.instanceId, true)
         }
         val ve = CausalNetVerifierImpl(inp)
-        Assumptions.assumeTrue(ve.isSound)
+        check(ve.isSound) { "Reference causal net in compare is unsound." }
         val expected = ve.validLoopFreeSequences.map { seq -> seq.map { it.a }.filterNot { it.special } }.toSet()
         val actual = CausalNetVerifierImpl(reconstructed).validLoopFreeSequences.map { seq -> seq.map { it.a }.filterNot { it.special } }.toSet()
         assertEquals(expected, actual)
