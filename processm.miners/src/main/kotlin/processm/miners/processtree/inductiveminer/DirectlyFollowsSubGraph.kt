@@ -590,7 +590,7 @@ class DirectlyFollowsSubGraph(
                     connectedComponents.forEach {
                         if (it.value == index) connectedComponents[it.key] = firstGroupID
                     }
-                    // Update groups assigment
+                    // Update groups assignment
                     groups[index]?.let { groups[firstGroupID]?.addAll(it) }
                     groups.remove(index)
 
@@ -805,24 +805,24 @@ class DirectlyFollowsSubGraph(
 
         // Sequence cut
         val stronglyConnectedComponents = stronglyConnectedComponents()
-        val seqAssigment = calculateSequentialCut(stronglyConnectedComponents)
-        if (seqAssigment !== null) {
+        val seqAssignment = calculateSequentialCut(stronglyConnectedComponents)
+        if (seqAssignment !== null) {
             detectedCut = CutType.Sequence
-            return splitIntoSubGraphs(seqAssigment)
+            return splitIntoSubGraphs(seqAssignment)
         }
 
         // Parallel cut
-        val parallelAssigment = calculateParallelCut()
-        if (parallelAssigment !== null) {
+        val parallelAssignment = calculateParallelCut()
+        if (parallelAssignment !== null) {
             detectedCut = CutType.Parallel
-            return splitIntoSubGraphs(parallelAssigment)
+            return splitIntoSubGraphs(parallelAssignment)
         }
 
         // Redo-loop cut
-        val loopAssigment = calculateLoopCut()
-        if (loopAssigment !== null) {
+        val loopAssignment = calculateLoopCut()
+        if (loopAssignment !== null) {
             detectedCut = CutType.RedoLoop
-            return splitIntoSubGraphs(loopAssigment)
+            return splitIntoSubGraphs(loopAssignment)
         }
 
         // Flower model - default cut
