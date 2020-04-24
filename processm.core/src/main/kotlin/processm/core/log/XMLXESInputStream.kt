@@ -50,7 +50,8 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     }.iterator()
 
     private fun parseLog(reader: XMLStreamReader) = Log().also {
-        it.features = reader.getAttributeValue(null, "xes.features")
+        it.xesVersion = reader.getAttributeValue(null, "xes.version")
+        it.xesFeatures = reader.getAttributeValue(null, "xes.features")
 
         // Read until have next and do not find 'trace' or 'event' element
         while (reader.hasNext()) {

@@ -5,11 +5,13 @@ import processm.core.log.Event
 import processm.core.log.Extension
 import processm.core.log.XESElement
 import processm.core.log.attribute.*
+import processm.core.logging.debug
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
 import processm.core.querylanguage.Query
 import java.sql.ResultSet
+import java.util.*
 
 /**
  * Reads a sequence of [Log]s from database, filtered by the given query. Every [Log] has a sequence
@@ -24,6 +26,10 @@ import java.sql.ResultSet
  * @property query An instance of a PQL query.
  */
 class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
+    companion object {
+        private val logger = logger()
+        private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
+    }
 
     /**
      * This constructor is provided for backward-compatibility with the previous implementation of XES layer and its
@@ -34,7 +40,6 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
     @Deprecated("Use the primary constructor instead.", level = DeprecationLevel.WARNING)
     constructor(logId: Int) : this(Query(logId))
 
-    private val logger = logger()
     private val translator = TranslatedQuery(query)
 
     override fun iterator(): Iterator<Log> = getLogs().iterator()
@@ -56,7 +61,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             } // close()
             if (log === null)
                 break
-            logger.debug("Yielding log: $log")
+            logger.debug { "Yielding log: $log" }
             yield(log!!)
         } while (hasNext)
 
@@ -80,7 +85,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             } // close()
             if (trace === null)
                 break
-            logger.debug("Yielding trace: $trace")
+            logger.debug { "Yielding trace: $trace" }
             yield(trace!!)
         } while (hasNext)
 
@@ -104,7 +109,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             } // close()
             if (event === null)
                 break
-            logger.debug("Yielding event: $event")
+            logger.debug { "Yielding event: $event" }
             yield(event!!)
         } while (hasNext)
 
@@ -118,7 +123,8 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         assert(result.entity.isLast) { "By contract exactly one row must exist." }
 
         with(Log()) {
-            features = result.entity.getString("features")
+            xesVersion = result.entity.getString("xes:version")
+            xesFeatures = result.entity.getString("xes:features")
             conceptName = result.entity.getString("concept:name")
             identityId = result.entity.getString("identity:id")
             lifecycleModel = result.entity.getString("lifecycle:model")
@@ -208,7 +214,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         with(Trace()) {
             conceptName = result.entity.getString("concept:name")
             costCurrency = result.entity.getString("cost:currency")
-            costTotal = result.entity.getDouble("cost:total")
+            costTotal = result.entity.getDoubleOrNull("cost:total")
             identityId = result.entity.getString("identity:id")
             isEventStream = result.entity.getBoolean("event_stream")
             val traceId = result.entity.getLong("id")
@@ -232,7 +238,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         with(Event()) {
             conceptName = result.entity.getString("concept:name")
             conceptInstance = result.entity.getString("concept:instance")
-            costTotal = result.entity.getDouble("cost:total")
+            costTotal = result.entity.getDoubleOrNull("cost:total")
             costCurrency = result.entity.getString("cost:currency")
             identityId = result.entity.getString("identity:id")
             lifecycleState = result.entity.getString("lifecycle:state")
@@ -240,7 +246,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             orgRole = result.entity.getString("org:role")
             orgGroup = result.entity.getString("org:group")
             orgResource = result.entity.getString("org:resource")
-            timeTimestamp = result.entity.getTimestamp("time:timestamp")?.toInstant()
+            timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant()
             // val eventId = result.entity.getLong("id")
 
             readTracesEventsAttributes(result.attributes, this)
@@ -302,7 +308,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
                 "string" -> StringAttr(key, getString("string_value"))
                 "bool" -> BoolAttr(key, getBoolean("bool_value"))
                 "float" -> RealAttr(key, getDouble("real_value"))
-                "date" -> DateTimeAttr(key, getTimestamp("date_value").toInstant())
+                "date" -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant())
                 "list" -> ListAttr(key)
                 else -> throw IllegalStateException("Invalid attribute type stored in the database")
             }

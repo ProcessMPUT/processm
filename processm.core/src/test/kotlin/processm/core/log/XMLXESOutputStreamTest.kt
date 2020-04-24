@@ -78,7 +78,7 @@ internal class XMLXESOutputStreamTest {
     @Test
     fun `Abort will close the stream and user can close it again without any exception`() {
         val log = Log().also {
-            it.features = "nested-attributes"
+            it.xesFeatures = "nested-attributes"
         }
 
         StringWriter().use { received ->
@@ -103,7 +103,7 @@ internal class XMLXESOutputStreamTest {
     @Test
     fun `Write log without any events and attributes`() {
         val log = Log().also {
-            it.features = "nested-attributes"
+            it.xesFeatures = "nested-attributes"
         }
 
         StringWriter().use { received ->
@@ -115,7 +115,7 @@ internal class XMLXESOutputStreamTest {
             val output = XMLXESInputStream(received.toString().byteInputStream()).iterator()
 
             with(output.next() as Log) {
-                assertEquals(features, "nested-attributes")
+                assertEquals(xesFeatures, "nested-attributes")
             }
 
             assertFalse(output.hasNext())
@@ -141,7 +141,7 @@ internal class XMLXESOutputStreamTest {
             val output = XMLXESInputStream(received.toString().byteInputStream()).iterator()
 
             with(output.next() as Log) {
-                assertNull(features)
+                assertNull(xesFeatures)
             }
 
             with(output.next() as Event) {

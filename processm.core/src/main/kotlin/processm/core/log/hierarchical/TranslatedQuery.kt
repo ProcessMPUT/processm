@@ -4,6 +4,7 @@ import processm.core.helpers.NestableAutoCloseable
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
+import processm.core.logging.trace
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.*
 import processm.core.querylanguage.Function
@@ -201,11 +202,7 @@ internal class TranslatedQuery(private val pql: Query) {
     private fun selectEntity(scope: Scope, sql: MutableSQLQuery, logId: Int?, selectId: Boolean = true) {
         with(sql.query) {
             append("SELECT ")
-            if (!pql.selectAll[scope]!! && pql.selectStandardAttributes[scope]!!.isEmpty()) {
-                if (selectId)
-                    append("${scope.shortName}.id")
-                return@with
-            }
+
             sql.scopes.add(ScopeWithHoisting(scope, 0))
 
             if (pql.selectAll[scope]!!) {
@@ -213,8 +210,17 @@ internal class TranslatedQuery(private val pql: Query) {
                 return@with
             }
 
-            if (selectId)
-                append("${scope.shortName}.id,")
+            if (selectId) {
+                append("${scope.shortName}.id, ")
+                when (scope) {
+                    Scope.Trace -> append("event_stream, ")
+                }
+            }
+
+            if (!pql.selectAll[scope]!! && pql.selectStandardAttributes[scope]!!.isEmpty()) {
+                delete(length - 2, length)
+                return@with
+            }
 
             for (attribute in pql.selectStandardAttributes[scope]!!) {
                 attribute.toSQL(sql, logId)
@@ -444,12 +450,6 @@ internal class TranslatedQuery(private val pql: Query) {
             logger.exit()
         }
 
-        protected fun <N : Number> ResultSet.toIdList(): List<N> = sequence {
-            while (this@toIdList.next()) {
-                yield(this@toIdList.getObject(1) as N)
-            }
-        }.toList()
-
         protected abstract inner class IdBasedIterator<N : Number> : Iterator<T> {
             protected abstract val ids: Iterator<N>
             override fun hasNext(): Boolean = ids.hasNext()
@@ -464,38 +464,37 @@ internal class TranslatedQuery(private val pql: Query) {
             val regular = !pql.isImplicitGroupBy && pql.isGroupBy[Scope.Log] == false
             if (regular) {
                 iterator = object : IdBasedIterator<Int>() {
-                    override val ids: Iterator<Int> by lazy(NONE) {
-                        // fetch and store log ids
-                        cache.getLogIds {
-                            queryLogIds.execute(connection!!).toIdList<Int>().also {
-                                logger.debug("Retrieved log ids: ${it.joinToString()}.")
-                            }
-                        }.iterator()
-                    }
+                    override val ids: Iterator<Int> = cache.getLogIds().iterator()
 
                     override fun next(): LogQueryResult {
                         val id = this.ids.next()
-                        logger.debug("Retrieving log id: $id.")
+                        logger.trace { "Retrieving log id: $id." }
                         val parameters = listOf(id)
 
+                        val results = listOf(
+                            queryLogEntity,
+                            queryLogAttributes,
+                            queryLogExpressions,
+                            queryLogClassifiers,
+                            queryLogExtensions,
+                            queryLogGlobals
+                        ).executeMany(
+                            connection!!, parameters, parameters, parameters, parameters, parameters, parameters
+                        )
+
                         return LogQueryResult(
-                            queryLogEntity.execute(connection!!, parameters),
-                            queryLogAttributes.execute(connection!!, parameters),
-                            queryLogExpressions.execute(connection!!, parameters),
-                            queryLogClassifiers.execute(connection!!, parameters),
-                            queryLogExtensions.execute(connection!!, parameters),
-                            queryLogGlobals.execute(connection!!, parameters)
+                            ErrorSuppressingResultSet(results[0]),
+                            results[1], results[2], results[3], results[4], results[5]
                         )
                     }
                 }
             } else {
-                iterator = listOf(
-                    LogQueryResult(
-                        queryLogGroupEntity.execute(connection!!),
-                        queryLogGroupAttributes.execute(connection!!),
-                        queryLogGroupExpressions.execute(connection!!)
-                    )
-                ).iterator()
+                iterator = iterator<LogQueryResult> {
+                    val results =
+                        listOf(queryLogGroupEntity, queryLogGroupAttributes, queryLogGroupExpressions)
+                            .executeMany(connection!!)
+                    yield(LogQueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
+                }
             }
         }
     }
@@ -511,35 +510,35 @@ internal class TranslatedQuery(private val pql: Query) {
             val entry = cache[logId]
             if (regular) {
                 iterator = object : IdBasedIterator<Long>() {
-                    override val ids: Iterator<Long> by lazy(NONE) {
-                        // fetch and store trace ids
-                        cache.getTraceIds(logId) {
-                            entry.queryTraceIds.execute(connection!!).toIdList<Long>().also {
-                                logger.debug("Retrieved trace ids: ${it.joinToString()}.")
-                            }
-                        }.iterator()
-                    }
+                    override val ids: Iterator<Long> = cache.getTraceIds(logId).iterator()
 
                     override fun next(): QueryResult {
                         val id = this.ids.next()
-                        logger.debug("Retrieving trace id: $id.")
+                        logger.trace { "Retrieving trace id: $id." }
                         val parameters = listOf(id)
-                        return QueryResult(
-                            entry.queryTraceEntity.execute(connection!!, parameters),
-                            entry.queryTraceAttributes.execute(connection!!, parameters),
-                            entry.queryTraceExpressions.execute(connection!!, parameters)
-                        )
+
+                        val results = listOf(
+                            entry.queryTraceEntity,
+                            entry.queryTraceAttributes,
+                            entry.queryTraceExpressions
+                        ).executeMany(connection!!, parameters, parameters, parameters)
+
+                        return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
                     }
                 }
 
             } else {
-                iterator = listOf(
-                    QueryResult(
-                        entry.queryTraceGroupEntity.execute(connection!!),
-                        entry.queryTraceGroupAttributes.execute(connection!!),
-                        entry.queryTraceGroupExpressions.execute(connection!!)
+                iterator = iterator<QueryResult> {
+                    val results = listOf(
+                        entry.queryTraceGroupEntity,
+                        entry.queryTraceGroupAttributes,
+                        entry.queryTraceGroupExpressions
+                    ).executeMany(connection!!)
+
+                    yield(
+                        QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
                     )
-                ).iterator()
+                }
             }
         }
     }
@@ -556,34 +555,32 @@ internal class TranslatedQuery(private val pql: Query) {
             val entry = cache[logId].traces[traceId]!!
             if (regular) {
                 iterator = object : IdBasedIterator<Long>() {
-                    override val ids: Iterator<Long> by lazy(NONE) {
-                        // fetch and store event ids
-                        cache.getEventIds(logId, traceId) {
-                            entry.queryEventIds.execute(connection!!).toIdList<Long>().also {
-                                logger.debug("Retrieved event ids: ${it.joinToString()}.")
-                            }
-                        }.iterator()
-                    }
+                    override val ids: Iterator<Long> = cache.getEventIds(logId, traceId).iterator()
 
                     override fun next(): QueryResult {
                         val id = this.ids.next()
-                        logger.debug("Retrieving event id: $id.")
+                        logger.trace { "Retrieving event id: $id." }
                         val parameters = listOf(id)
-                        return QueryResult(
-                            entry.queryEventEntity.execute(connection!!, parameters),
-                            entry.queryEventAttributes.execute(connection!!, parameters),
-                            entry.queryEventExpressions.execute(connection!!, parameters)
-                        )
+
+                        val results = listOf(
+                            entry.queryEventEntity,
+                            entry.queryEventAttributes,
+                            entry.queryEventExpressions
+                        ).executeMany(connection!!, parameters, parameters, parameters)
+
+                        return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
                     }
                 }
             } else {
-                iterator = listOf(
-                    QueryResult(
-                        entry.queryEventGroupEntity.execute(connection!!),
-                        entry.queryEventGroupAttributes.execute(connection!!),
-                        entry.queryEventGroupExpressions.execute(connection!!)
-                    )
-                ).iterator()
+                iterator = iterator<QueryResult> {
+                    val results = listOf(
+                        entry.queryEventGroupEntity,
+                        entry.queryEventGroupAttributes,
+                        entry.queryEventGroupExpressions
+                    ).executeMany(connection!!)
+
+                    yield(QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
+                }
             }
         }
     }
@@ -600,26 +597,23 @@ internal class TranslatedQuery(private val pql: Query) {
         init {
             this@TranslatedQuery.connection.use { conn ->
                 conn.prepareStatement(
-                    """SELECT 
-                        MAX(l.id) AS max_log_id,
-                        MAX(t.id) AS max_trace_id,
-                        MAX(e.id) AS max_event_id
-                    FROM logs l 
-                    LEFT JOIN traces t ON l.id = t.log_id 
-                    LEFT JOIN events e ON t.id = e.trace_id"""
+                    "SELECT MAX(l.id), MAX(t.id), MAX(e.id) FROM logs l LEFT JOIN traces t ON l.id=t.log_id LEFT JOIN events e ON t.id=e.trace_id"
                 ).executeQuery()
                     .use {
                         @Suppress("ComplexRedundantLet")
                         it.next().let { success -> assert(success) }
-                        maxLogId = it.getInt("max_log_id")
-                        maxTraceId = it.getLong("max_trace_id")
-                        maxEventId = it.getLong("max_event_id")
+                        maxLogId = it.getInt(1)
+                        maxTraceId = it.getLong(2)
+                        maxEventId = it.getLong(3)
                     }
             }
         }
     }
 
     private inner class Cache {
+        private var tracesInitialized: Boolean = false
+        private var eventsInitialized: Boolean = false
+
         /**
          * key: logId
          * value: cached information
@@ -660,30 +654,61 @@ internal class TranslatedQuery(private val pql: Query) {
             }
         }
 
-        fun getLogIds(initializer: () -> List<Int>): Iterable<Int> {
-            if (entries.isEmpty())
-                entries.putAll(initializer().map { it to LogEntry(it) })
+        fun getLogIds(): Iterable<Int> {
+            if (entries.isEmpty()) {
+                connection.use {
+                    for (logId in queryLogIds.execute(it).toIdList<Int>())
+                        entries[logId] = LogEntry(logId)
+                }
+            }
+
             return entries.keys
         }
 
-        fun getTraceIds(logId: Int, initializer: () -> List<Long>): Iterable<Long> {
-            val log = get(logId)
-            if (log.traces.isEmpty())
-                log.traces.putAll(initializer().map { it to TraceEntry(logId, it) })
-            return log.traces.keys
+        fun getTraceIds(logId: Int): Iterable<Long> {
+            if (!tracesInitialized) {
+                tracesInitialized = true
+
+                connection.use {
+                    val results = entries.values.map { it.queryTraceIds }.executeMany(it)
+                    for ((index, lid) in entries.keys.withIndex())
+                        for (traceId in results[index].toIdList<Long>())
+                            entries[lid]!!.traces[traceId] = TraceEntry(lid, traceId)
+                }
+            }
+
+            return get(logId).traces.keys
         }
 
-        fun getEventIds(logId: Int, traceId: Long, initializer: () -> List<Long>): Iterable<Long> {
+        fun getEventIds(
+            logId: Int,
+            traceId: Long
+        ): Iterable<Long> {
             val log = get(logId)
-            val trace = log.traces[traceId]
-            checkNotNull(trace)
-            if (trace.events.isEmpty())
-                trace.events.addAll(initializer())
-            return trace.events
+            if (!eventsInitialized) {
+                eventsInitialized = true
+
+                connection.use {
+                    val results = log.traces.values.map { it.queryEventIds }.executeMany(it)
+                    for ((index, tid) in log.traces.keys.withIndex())
+                        for (eventId in results[index].toIdList<Long>())
+                            log.traces[tid]!!.events.add(eventId)
+                }
+            }
+
+            return checkNotNull(log.traces[traceId]).events
         }
 
         operator fun get(logId: Int): LogEntry =
             checkNotNull(entries[logId]) { "The cache entry for logId=$logId has not been initialized yet." }
+
+        private fun <N : Number> ResultSet.toIdList(): List<N> = ArrayList<N>().also { out ->
+            this@toIdList.use {
+                while (it.next())
+                    out.add(it.getObject(1) as N)
+            }
+        }
+
 
         inner class LogEntry(logId: Int) {
             val classifiers = HashMap<Attribute, List<Attribute>>()
@@ -756,7 +781,7 @@ internal class TranslatedQuery(private val pql: Query) {
                         sql.params.add(expression.value!!)
                         append('?')
                     }
-                    is Operator -> append(expression.value)
+                    is Operator -> append(" ${expression.value} ")
                     is Function -> {
                         append("${expression.name}(")
                         expression.children.forEach { walk(it); append(',') }

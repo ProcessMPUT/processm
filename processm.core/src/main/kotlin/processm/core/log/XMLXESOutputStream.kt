@@ -54,10 +54,10 @@ class XMLXESOutputStream(private val output: XMLStreamWriter) : XESOutputStream 
 
         seenTag = "log"
         output.writeStartElement("log")
-        output.writeAttribute("xes.version", "1.0")
+        output.writeAttribute("xes.version", log.xesVersion ?: "1.0")
         output.writeAttribute("xmlns", "http://www.xes-standard.org/")
-        if (log.features?.isNotBlank() == true)
-            output.writeAttribute("xes.features", log.features)
+        if (log.xesFeatures?.isNotBlank() == true)
+            output.writeAttribute("xes.features", log.xesFeatures)
 
         writeExtensions(log.extensions)
         writeGlobals("trace", log.traceGlobals)

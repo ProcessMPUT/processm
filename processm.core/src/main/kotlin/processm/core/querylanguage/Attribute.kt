@@ -13,7 +13,9 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
                 "concept" to "name",
                 "identity" to "id",
                 "lifecycle" to "model",
-                "db" to "id"
+                "db" to "id",
+                "xes" to "version",
+                "xes" to "features"
             ),
             Scope.Trace to setOf(
                 "concept" to "name",

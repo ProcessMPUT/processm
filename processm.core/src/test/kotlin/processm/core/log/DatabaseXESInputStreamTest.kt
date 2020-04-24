@@ -110,7 +110,7 @@ internal class DatabaseXESInputStreamTest {
 
         val receivedLog = stream.next() as Log
 
-        assertEquals(receivedLog.features, "nested-attributes")
+        assertEquals(receivedLog.xesFeatures, "nested-attributes")
         assertEquals(receivedLog.conceptName, "Some amazing log file")
         assertEquals(receivedLog.identityId, null)
         assertEquals(receivedLog.lifecycleModel, null)

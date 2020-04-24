@@ -1,6 +1,7 @@
 package processm.core.helpers
 
 import processm.core.logging.logger
+import processm.core.logging.trace
 
 /**
  * A decorator on an [AutoCloseable] that allows for nested [use] calls. The underlying object is initialized in the
@@ -11,6 +12,10 @@ import processm.core.logging.logger
  * @property initializer The initializer for the underlying [AutoCloseable] object. May be recalled.
  */
 class NestableAutoCloseable<T : AutoCloseable>(private val initializer: () -> T) {
+    companion object {
+        private val logger = logger()
+    }
+
     private var ref: T? = null
     private var counter: Byte = 0
 
@@ -31,16 +36,16 @@ class NestableAutoCloseable<T : AutoCloseable>(private val initializer: () -> T)
 
         try {
             if (counter++ == 0.toByte()) {
-                logger().debug("Initializing AutoCloseable with $initializer")
+                logger.trace { "Initializing AutoCloseable with $initializer" }
                 ref = initializer()
             }
-            logger().trace("Counter value $counter on enter to $callee")
+            logger.trace { "Counter value $counter on enter to $callee" }
             callee(ref!!)
         } finally {
-            logger().trace("Counter value $counter on exit from $callee")
+            logger.trace { "Counter value $counter on exit from $callee" }
             if (--counter == 0.toByte() && ref !== null) {
                 // we have to check the reference above, as the initializer may throw an exception
-                logger().debug("Reclaiming AutoCloseable $ref")
+                logger.trace { "Reclaiming AutoCloseable $ref" }
                 ref!!.close()
                 ref = null
             }

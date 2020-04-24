@@ -6,14 +6,20 @@ import processm.core.helpers.parseISO8601
 import processm.core.log.DatabaseLogCleaner
 import processm.core.log.DatabaseXESOutputStream
 import processm.core.log.XMLXESInputStream
+import processm.core.logging.logger
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.Query
+import java.util.*
+import kotlin.system.measureTimeMillis
 import kotlin.test.*
 
 class DatabaseHierarchicalXESInputStreamWithQueryTests {
     companion object {
+        private val logger = logger()
+
         // region test log
         private var logId: Int = -1
+        private val uuid: UUID = UUID.randomUUID()
         private val eventNames = setOf(
             "invite reviewers",
             "time-out 1", "time-out 2", "time-out 3",
@@ -30,10 +36,17 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
         @BeforeAll
         @JvmStatic
         fun setUp() {
-            val stream = javaClass.getResourceAsStream("/xes-logs/JournalReview.xes")
-            DatabaseXESOutputStream().use {
-                it.write(XMLXESInputStream(stream))
-            }
+            logger.info("Loading data")
+            measureTimeMillis {
+                val stream = javaClass.getResourceAsStream("/xes-logs/JournalReview.xes")
+                DatabaseXESOutputStream().use { output ->
+                    output.write(XMLXESInputStream(stream).map {
+                        if (it is processm.core.log.Log) /* The base class for log */
+                            it.identityId = uuid.toString()
+                        it
+                    })
+                }
+            }.also { logger.info("Data loaded in ${it}ms.") }
 
             DBConnectionPool.getConnection().use {
                 val response = it.prepareStatement("SELECT id FROM logs ORDER BY id DESC LIMIT 1").executeQuery()
@@ -53,7 +66,9 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun basicSelectTest() {
-        val query = Query("select l:name, t:name, e:name, e:timestamp where l:concept:name='JournalReview'")
+        val begin = "2005-12-31T00:00:00.000Z".parseISO8601()
+        val end = "2008-05-05T00:00:00.000Z".parseISO8601()
+        val query = Query("select l:name, t:name, e:name, e:timestamp where l:name='JournalReview' and l:id='$uuid'")
         val stream = DatabaseHierarchicalXESInputStream(query)
 
         assertEquals(1, stream.count()) // only one log
@@ -75,7 +90,8 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
             assertTrue(trace.events.count() > 0)
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
-                assertTrue(event.timeTimestamp!!.isAfter("2006-01-01T00:00:00.000Z".parseISO8601()))
+                assertTrue(event.timeTimestamp!!.isAfter(begin))
+                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
                 assertNull(event.conceptInstance)
                 assertNull(event.costCurrency)
                 assertNull(event.costTotal)

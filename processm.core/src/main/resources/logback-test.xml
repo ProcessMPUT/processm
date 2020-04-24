@@ -34,13 +34,18 @@
         </triggeringPolicy>
     </appender>
 
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
+    </appender>
+
+
     <!-- Default level -->
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
-        <appender-ref ref="FILE" />
+        <appender-ref ref="ASYNC"/>
     </root>
     <!-- Level for our classes -->
-    <logger name="processm" level="DEBUG" />
+    <logger name="processm" level="DEBUG"/>
     <logger name="kotlin.sequences" level="DEBUG"/>
 
 </configuration>

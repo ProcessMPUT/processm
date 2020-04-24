@@ -165,12 +165,13 @@ class DatabaseXESOutputStream : XESOutputStream {
     private fun writeLog(element: Log, to: SQL) {
         with(to.sql) {
             append("WITH log AS (")
-            append("""INSERT INTO LOGS(features, "concept:name", "identity:id", "lifecycle:model") VALUES (?, ?, ?, ?) RETURNING ID""")
+            append("""INSERT INTO LOGS("xes:version", "xes:features", "concept:name", "identity:id", "lifecycle:model") VALUES (?, ?, ?, ?, ?) RETURNING ID""")
             append(')')
         }
 
         with(to.params) {
-            addLast(element.features)
+            addLast(element.xesVersion)
+            addLast(element.xesFeatures)
             addLast(element.conceptName)
             addLast(element.identityId)
             addLast(element.lifecycleModel)
