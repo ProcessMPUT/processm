@@ -2,6 +2,7 @@ package processm.core.log
 
 import processm.core.log.attribute.*
 import processm.core.persistence.DBConnectionPool
+import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.*
 
@@ -28,6 +29,10 @@ class DatabaseXESOutputStream : XESOutputStream {
     private val eventQueue = ArrayList<Event>(batchSize)
 
     init {
+        assert(connection.metaData.supportsGetGeneratedKeys())
+        assert(connection.metaData.supportsTransactions())
+        assert(connection.metaData.ownInsertsAreVisible(ResultSet.TYPE_FORWARD_ONLY))
+
         // Disable autoCommit on connection - we want to add whole XES log structure
         connection.autoCommit = false
     }

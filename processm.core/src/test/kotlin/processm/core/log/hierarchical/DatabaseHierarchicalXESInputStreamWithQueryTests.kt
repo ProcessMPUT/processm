@@ -38,7 +38,7 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
         fun setUp() {
             logger.info("Loading data")
             measureTimeMillis {
-                val stream = javaClass.getResourceAsStream("/xes-logs/JournalReview.xes")
+                val stream = this::class.java.getResourceAsStream("/xes-logs/JournalReview.xes")
                 DatabaseXESOutputStream().use { output ->
                     output.write(XMLXESInputStream(stream).map {
                         if (it is processm.core.log.Log) /* The base class for log */
@@ -69,7 +69,14 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
         val begin = "2005-12-31T00:00:00.000Z".parseISO8601()
         val end = "2008-05-05T00:00:00.000Z".parseISO8601()
         val query = Query("select l:name, t:name, e:name, e:timestamp where l:name='JournalReview' and l:id='$uuid'")
-        val stream = DatabaseHierarchicalXESInputStream(query)
+        var _stream: DatabaseHierarchicalXESInputStream? = null
+
+        measureTimeMillis {
+            _stream = DatabaseHierarchicalXESInputStream(query)
+            _stream!!.toFlatSequence().forEach { _ -> }
+        }.let { logger.info("Log read in ${it}ms.") }
+
+        val stream = _stream!!
 
         assertEquals(1, stream.count()) // only one log
         val log = stream.first()

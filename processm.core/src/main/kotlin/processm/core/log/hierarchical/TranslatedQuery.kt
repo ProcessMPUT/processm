@@ -15,44 +15,40 @@ import kotlin.LazyThreadSafetyMode.NONE
 import kotlin.collections.LinkedHashSet
 
 @Suppress("MapGetWithNotNullAssertionOperator")
-internal class TranslatedQuery(private val pql: Query) {
+internal class TranslatedQuery(private val pql: Query, private val batchSize: Int = 1) {
     companion object {
+        private val logger = logger()
         private val queryLogClassifiers: SQLQuery = SQLQuery {
             it.query.append(
-                """SELECT
-                scope,
-                name,
-                keys
-            FROM
-                classifiers
-            WHERE
-                log_id=?
-            ORDER BY id"""
+                """SELECT log_id, scope, name, keys
+                FROM classifiers c
+                JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON c.log_id=ids.id
+                ORDER BY ids.ord, c.id"""
             )
         }
         private val queryLogExtensions: SQLQuery = SQLQuery {
             it.query.append(
-                """SELECT
-                name,
-                prefix,
-                uri
-            FROM
-                extensions
-            WHERE
-                log_id=?
-            ORDER BY id"""
+                """SELECT log_id, name, prefix, uri
+                FROM extensions e
+                JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON e.log_id=ids.id
+                ORDER BY ids.ord, e.id"""
             )
         }
     }
 
     private val connection: NestableAutoCloseable<Connection> = NestableAutoCloseable {
         DBConnectionPool.getConnection().apply {
+            assert(metaData.supportsMultipleResultSets())
+            assert(metaData.supportsCorrelatedSubqueries())
+            assert(metaData.supportsTransactions())
+            assert(metaData.supportsUnionAll())
+            assert(metaData.maxStatements == 0 || metaData.maxStatements >= 6)
+
             autoCommit = false
             prepareStatement("START TRANSACTION READ ONLY").execute()
         }
     }
     private val cache: Cache = Cache()
-    private val snapshot: Snapshot by lazy(NONE) { Snapshot() }
 
     // region SQL query generators
     /**
@@ -97,25 +93,17 @@ internal class TranslatedQuery(private val pql: Query) {
     private fun where(scope: Scope, sql: MutableSQLQuery, logId: Int?, traceId: Long?) {
         sql.scopes.add(ScopeWithHoisting(scope, 0))
         with(sql.query) {
-            append(" WHERE ${scope.shortName}.id <= ")
-            append(
-                when (scope) {
-                    Scope.Log -> snapshot.maxLogId
-                    Scope.Trace -> snapshot.maxTraceId
-                    Scope.Event -> snapshot.maxEventId
-                }
-            )
-
             // filter by trace id and log id if necessary
             when (scope) {
-                Scope.Trace -> append(" AND t.log_id=$logId")
-                Scope.Event -> append(" AND e.trace_id=$traceId")
+                Scope.Trace -> append(" WHERE t.log_id=$logId")
+                Scope.Event -> append(" WHERE e.trace_id=$traceId")
             }
 
             if (pql.whereExpression == Expression.empty)
                 return@with
 
-            append(" AND ")
+            append(if (scope == Scope.Log) " WHERE " else " AND ")
+
             pql.whereExpression.toSQL(sql, null)
         }
     }
@@ -196,7 +184,7 @@ internal class TranslatedQuery(private val pql: Query) {
 
         selectEntity(scope, it, logId)
         fromEntity(scope, it)
-        whereEntity(scope, it)
+        orderByEntity(it)
     }
 
     private fun selectEntity(scope: Scope, sql: MutableSQLQuery, logId: Int?, selectId: Boolean = true) {
@@ -234,10 +222,11 @@ internal class TranslatedQuery(private val pql: Query) {
         assert(sql.scopes.size == 1)
         assert(sql.scopes.first().scope == scope)
         sql.query.append(" FROM ${scope.table} ${scope.alias}")
+        sql.query.append(" JOIN unnest(?) WITH ORDINALITY ids(id, ord) USING (id)")
     }
 
-    private fun whereEntity(scope: Scope, sql: MutableSQLQuery) {
-        sql.query.append(" WHERE ${scope.alias}.id=?")
+    private fun orderByEntity(sql: MutableSQLQuery) {
+        sql.query.append(" ORDER BY ids.ord")
     }
     // endregion
 
@@ -251,42 +240,34 @@ internal class TranslatedQuery(private val pql: Query) {
         val attrTable = table ?: (scope.toString() + "s_attributes")
         with(it.query) {
             append("WITH RECURSIVE tmp AS (")
-            selectAttributes(attrTable, extraColumns, it)
-            append(", ARRAY[$attrTable.id] AS path")
+            selectAttributes(scope, attrTable, extraColumns, it)
+            append(", ARRAY[ids.ord, $attrTable.id] AS path")
             append(" FROM $attrTable")
+            append(" JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON ${scope}_id=ids.id")
             whereAttributes(scope, it, logId)
             append("UNION ALL ")
-            selectAttributes(attrTable, extraColumns, it)
+            selectAttributes(scope, attrTable, extraColumns, it)
             append(", path || $attrTable.id")
             append(" FROM $attrTable")
             append(" JOIN tmp ON $attrTable.parent_id=tmp.id")
             append(") ")
-            selectAttributes("tmp", extraColumns, it)
+            selectAttributes(scope, "tmp", extraColumns, it)
             append(" FROM tmp")
             orderByAttributes(it)
         }
     }
 
-    private fun selectAttributes(table: String, extraColumns: Set<String>, sql: MutableSQLQuery) {
+    private fun selectAttributes(scope: Scope, table: String, extraColumns: Set<String>, sql: MutableSQLQuery) {
         sql.query.append(
-            """SELECT
-                $table.id,
-                $table.parent_id,
-                $table.type,
-                $table.key,
-                $table.string_value,
-                $table.date_value,
-                $table.int_value,
-                $table.bool_value,
-                $table.real_value,
-                $table.in_list_attr
-                ${extraColumns.join { "$table.$it" }}"""
+            """SELECT $table.id, $table.${scope}_id, $table.parent_id, $table.type, $table.key,
+            $table.string_value, $table.date_value, $table.int_value, $table.bool_value, $table.real_value, $table.in_list_attr
+            ${extraColumns.join { "$table.$it" }}"""
         )
     }
 
     private fun whereAttributes(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
         with(sql.query) {
-            append(" WHERE ${scope}_id=? AND parent_id IS NULL ")
+            append(" WHERE parent_id IS NULL ")
 
             if (pql.selectAll[scope]!!)
                 return@with
@@ -327,7 +308,7 @@ internal class TranslatedQuery(private val pql: Query) {
 
     private fun selectExpressions(scope: Scope, sql: MutableSQLQuery) {
         //TODO()
-        sql.query.append("SELECT ? AS dummy")
+        sql.query.append("SELECT * FROM unnest(?)")
     }
 
     private fun fromExpressions(scope: Scope, sql: MutableSQLQuery) {
@@ -430,7 +411,6 @@ internal class TranslatedQuery(private val pql: Query) {
     fun getEvents(logId: Int, traceId: Long): Executor<QueryResult> = EventExecutor(logId, traceId)
 
     abstract inner class Executor<out T : QueryResult> {
-        protected val logger = logger()
         protected abstract val iterator: Iterator<T>
         protected var connection: Connection? = null
 
@@ -467,9 +447,9 @@ internal class TranslatedQuery(private val pql: Query) {
                     override val ids: Iterator<Int> = cache.getLogIds().iterator()
 
                     override fun next(): LogQueryResult {
-                        val id = this.ids.next()
-                        logger.trace { "Retrieving log id: $id." }
-                        val parameters = listOf(id)
+                        val ids = this.ids.take(batchSize)
+                        logger.trace { "Retrieving log ids: ${ids.joinToString()}." }
+                        val parameters = listOf(connection!!.createArrayOf("int", ids.toTypedArray()))
 
                         val results = listOf(
                             queryLogEntity,
@@ -513,9 +493,9 @@ internal class TranslatedQuery(private val pql: Query) {
                     override val ids: Iterator<Long> = cache.getTraceIds(logId).iterator()
 
                     override fun next(): QueryResult {
-                        val id = this.ids.next()
-                        logger.trace { "Retrieving trace id: $id." }
-                        val parameters = listOf(id)
+                        val ids = this.ids.take(batchSize)
+                        logger.trace { "Retrieving trace ids: ${ids.joinToString()}." }
+                        val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
 
                         val results = listOf(
                             entry.queryTraceEntity,
@@ -558,9 +538,9 @@ internal class TranslatedQuery(private val pql: Query) {
                     override val ids: Iterator<Long> = cache.getEventIds(logId, traceId).iterator()
 
                     override fun next(): QueryResult {
-                        val id = this.ids.next()
-                        logger.trace { "Retrieving event id: $id." }
-                        val parameters = listOf(id)
+                        val ids = this.ids.take(batchSize)
+                        logger.trace { "Retrieving event ids: $ids.joinToString()." }
+                        val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
 
                         val results = listOf(
                             entry.queryEventEntity,
@@ -585,30 +565,6 @@ internal class TranslatedQuery(private val pql: Query) {
         }
     }
     // endregion
-
-    private inner class Snapshot {
-        var maxLogId: Int = -1
-            private set
-        var maxTraceId: Long = -1L
-            private set
-        var maxEventId: Long = -1L
-            private set
-
-        init {
-            this@TranslatedQuery.connection.use { conn ->
-                conn.prepareStatement(
-                    "SELECT MAX(l.id), MAX(t.id), MAX(e.id) FROM logs l LEFT JOIN traces t ON l.id=t.log_id LEFT JOIN events e ON t.id=e.trace_id"
-                ).executeQuery()
-                    .use {
-                        @Suppress("ComplexRedundantLet")
-                        it.next().let { success -> assert(success) }
-                        maxLogId = it.getInt(1)
-                        maxTraceId = it.getLong(2)
-                        maxEventId = it.getLong(3)
-                    }
-            }
-        }
-    }
 
     private inner class Cache {
         private var tracesInitialized: Boolean = false
@@ -750,6 +706,13 @@ internal class TranslatedQuery(private val pql: Query) {
             append(", ")
             append(transform(item))
         }
+    }
+
+    private fun <T> Iterator<T>.take(limit: Int): List<T> {
+        val list = ArrayList<T>(limit)
+        while (list.size < limit && this.hasNext())
+            list.add(this.next())
+        return list
     }
 
     private fun IExpression.toSQL(sql: MutableSQLQuery, logId: Int?) {
