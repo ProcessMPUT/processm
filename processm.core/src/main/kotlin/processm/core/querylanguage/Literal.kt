@@ -1,5 +1,6 @@
 package processm.core.querylanguage
 
+import org.apache.commons.text.StringEscapeUtils
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -58,7 +59,7 @@ class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
             "Line $line position $charPositionInLine: Invalid format of string literal: $literal."
         }
 
-        return literal.substring(1, literal.length - 1)
+        return StringEscapeUtils.unescapeJava(literal.substring(1, literal.length - 1))
     }
 }
 
