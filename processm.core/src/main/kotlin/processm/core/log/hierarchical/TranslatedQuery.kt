@@ -410,8 +410,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     fun getTraces(logId: Int): Executor<QueryResult> = TraceExecutor(logId)
     fun getEvents(logId: Int, traceId: Long): Executor<QueryResult> = EventExecutor(logId, traceId)
 
-    abstract inner class Executor<out T : QueryResult> {
-        protected abstract val iterator: Iterator<T>
+    abstract inner class Executor<T : QueryResult> {
+        protected abstract val iterator: BaseIterator
         protected var connection: Connection? = null
 
         fun use(lambda: (iterator: Iterator<T>) -> Unit) {
@@ -430,14 +430,47 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             logger.exit()
         }
 
-        protected abstract inner class IdBasedIterator<N : Number> : Iterator<T> {
+        /**
+         * @return true if more elements are available, false otherwise.
+         */
+        fun hasNext() = iterator.hasNext()
+
+        /**
+         * Skips the [batchSize] elements without connecting to the database.
+         */
+        fun skipBatch() = iterator.skip(batchSize)
+
+        protected abstract inner class BaseIterator : Iterator<T> {
+            abstract fun skip(count: Int)
+        }
+
+        protected abstract inner class IdBasedIterator<N : Number> : BaseIterator() {
             protected abstract val ids: Iterator<N>
             override fun hasNext(): Boolean = ids.hasNext()
+            override fun skip(count: Int) {
+                var index = 0
+                while (index++ < count && ids.hasNext())
+                    ids.next()
+            }
+        }
+
+        protected inner class SingleValueIterator(var value: T?) : BaseIterator() {
+            override fun hasNext(): Boolean = value !== null
+            override fun skip(count: Int) {
+                check(count > 0)
+                value = null
+            }
+
+            override fun next(): T {
+                val v = value!!
+                value = null
+                return v
+            }
         }
     }
 
     private inner class LogExecutor : Executor<LogQueryResult>() {
-        override val iterator: Iterator<LogQueryResult>
+        override val iterator: BaseIterator
 
         init {
             // determine type of query: Regular or Grouped
@@ -469,18 +502,16 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     }
                 }
             } else {
-                iterator = iterator<LogQueryResult> {
-                    val results =
-                        listOf(queryLogGroupEntity, queryLogGroupAttributes, queryLogGroupExpressions)
-                            .executeMany(connection!!)
-                    yield(LogQueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
-                }
+                val results = listOf(queryLogGroupEntity, queryLogGroupAttributes, queryLogGroupExpressions)
+                    .executeMany(connection!!)
+                iterator =
+                    SingleValueIterator(LogQueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
             }
         }
     }
 
     private inner class TraceExecutor(logId: Int) : Executor<QueryResult>() {
-        override val iterator: Iterator<QueryResult>
+        override val iterator: BaseIterator
 
         init {
             // determine type of query: Regular or Grouped
@@ -508,23 +539,19 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 }
 
             } else {
-                iterator = iterator<QueryResult> {
-                    val results = listOf(
-                        entry.queryTraceGroupEntity,
-                        entry.queryTraceGroupAttributes,
-                        entry.queryTraceGroupExpressions
-                    ).executeMany(connection!!)
-
-                    yield(
-                        QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
-                    )
-                }
+                val results = listOf(
+                    entry.queryTraceGroupEntity,
+                    entry.queryTraceGroupAttributes,
+                    entry.queryTraceGroupExpressions
+                ).executeMany(connection!!)
+                iterator =
+                    SingleValueIterator(QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
             }
         }
     }
 
     private inner class EventExecutor(logId: Int, traceId: Long) : Executor<QueryResult>() {
-        override val iterator: Iterator<QueryResult>
+        override val iterator: BaseIterator
 
         init {
             // determine type of query: Regular or Grouped
@@ -552,15 +579,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     }
                 }
             } else {
-                iterator = iterator<QueryResult> {
-                    val results = listOf(
-                        entry.queryEventGroupEntity,
-                        entry.queryEventGroupAttributes,
-                        entry.queryEventGroupExpressions
-                    ).executeMany(connection!!)
-
-                    yield(QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
-                }
+                val results = listOf(
+                    entry.queryEventGroupEntity,
+                    entry.queryEventGroupAttributes,
+                    entry.queryEventGroupExpressions
+                ).executeMany(connection!!)
+                iterator =
+                    SingleValueIterator(QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
             }
         }
     }

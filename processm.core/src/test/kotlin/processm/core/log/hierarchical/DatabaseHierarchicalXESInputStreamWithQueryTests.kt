@@ -68,6 +68,7 @@ class DatabaseHierarchicalXESInputStreamWithQueryTests {
     fun basicSelectTest() {
         val begin = "2005-12-31T00:00:00.000Z".parseISO8601()
         val end = "2008-05-05T00:00:00.000Z".parseISO8601()
+
         val query = Query("select l:name, t:name, e:name, e:timestamp where l:name='JournalReview' and l:id='$uuid'")
         var _stream: DatabaseHierarchicalXESInputStream? = null
 
