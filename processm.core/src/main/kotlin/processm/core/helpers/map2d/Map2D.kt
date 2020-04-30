@@ -1,28 +1,48 @@
 package processm.core.helpers.map2d
 
+/**
+ * A 2D map, to replace awkward constructions such as HashMap of HashMaps.
+ * The default implementation is [DoublingMap2D].
+ */
 interface Map2D<Row, Column, Value> {
 
     /**
-     * A view for a particular row/column, modifications are reflected in the original DoubleMap
+     * A view for a particular row/column, modifications are reflected in the original DoubleMap.
+     * Implementing full [MutableMap] has a potential to be very complex due to the possibly intricate insertion semantics
      */
-    interface View<K, Value> {
-        operator fun get(k: K): Value?
+    interface View<K, Value> : Map<K, Value> {
         operator fun set(k: K, v: Value)
-        val keys: Collection<K>
-        fun toMap(): Map<K, Value> = keys.associateWith { get(it)!! }
     }
 
-    operator fun get(row: Row, col: Column): Value?
+    /**
+     * Returns value stored for ([row], [column]) key or null if there is no such value
+     */
+    operator fun get(row: Row, column: Column): Value?
 
+    /**
+     * Returns a view for [row]. The changes to the view are backed to the map.
+     */
     fun getRow(row: Row): View<Column, Value>
 
-    fun getColumn(col: Column): View<Row, Value>
+    /**
+     * Returns a view for [column]. The changes to the view are backed to the map.
+     */
+    fun getColumn(column: Column): View<Row, Value>
 
-    operator fun set(row: Row, col: Column, v: Value)
+    /**
+     * Updates the value stored for ([row], [column]).
+     *
+     * Observe that [value] is of non-nullable type, so one cannot remove an entry this way.
+     */
+    operator fun set(row: Row, column: Column, value: Value)
 
-    val rows: Collection<Row>
+    /**
+     * The set of all non-empty rows.
+     */
+    val rows: Set<Row>
 
-    val columns: Collection<Column>
-
-    fun toMoM(): Map<Row, Map<Column, Value>> = rows.associateWith { row -> getRow(row).toMap() }
+    /**
+     * The set of all non-empty columns.
+     */
+    val columns: Set<Column>
 }

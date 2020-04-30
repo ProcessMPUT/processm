@@ -30,7 +30,7 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
     }
 
     private fun resize(_newn: Int) {
-        nmod = _newn/10
+        nmod = _newn / 10
 //        var nsqrt = 1
 //        nshift = 0
 //        while (nsqrt * nsqrt < _newn) {
@@ -51,8 +51,8 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
 
     private fun indexrc(row: Int, col: Int): Int {
         val p = 87178291199L
-        val r = (row.toLong()*Int.MAX_VALUE) % p
-        val c=  col.toLong()
+        val r = (row.toLong() * Int.MAX_VALUE) % p
+        val c = col.toLong()
 //        val r = (((3 * row + 23) % p) and 0x7fff).toInt()
 //        val c = (((5 * col + 29) % p) and 0x7fff).toInt()
         val k = r + c
@@ -61,7 +61,8 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
 
     private fun slice(row: Row, col: Column) = data[indexrc(row.hashCode(), col.hashCode())]
 
-    override fun get(row: Row, col: Column): Value? = filterSlice(slice(row, col), row.hashCode(), col.hashCode(), row, col)?.value
+    override fun get(row: Row, col: Column): Value? =
+        filterSlice(slice(row, col), row.hashCode(), col.hashCode(), row, col)?.value
 
     private fun filterSlice(
         slice: ArrayList<Node<Row, Column, Value>>,
@@ -97,6 +98,24 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
 
         override val keys
             get() = _cols.filter { col -> slice(col).any { it.row == row } }.toSet()
+        override val entries: Set<Map.Entry<Column, Value>>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Value>
+            get() = TODO("Not yet implemented")
+
+        override fun containsKey(key: Column): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun containsValue(value: Value): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun isEmpty(): Boolean {
+            TODO("Not yet implemented")
+        }
 
     }
 
@@ -128,6 +147,24 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
 
         override val keys
             get() = _rows.filter { row -> slice(row).any { it.col == col } }.toSet()
+        override val entries: Set<Map.Entry<Row, Value>>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Value>
+            get() = TODO("Not yet implemented")
+
+        override fun containsKey(key: Row): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun containsValue(value: Value): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun isEmpty(): Boolean {
+            TODO("Not yet implemented")
+        }
 
     }
 
@@ -144,9 +181,9 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
         slice.add(Node(row, col, v))
     }
 
-    override val rows: Collection<Row>
+    override val rows
         get() = Collections.unmodifiableSet(_rows)
 
-    override val columns: Collection<Column>
+    override val columns
         get() = Collections.unmodifiableSet(_cols)
 }

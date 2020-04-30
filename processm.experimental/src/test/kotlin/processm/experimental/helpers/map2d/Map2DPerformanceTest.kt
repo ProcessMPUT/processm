@@ -1,39 +1,62 @@
 package processm.experimental.helpers.map2d
 
+import com.google.common.collect.HashBasedTable
+import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.map2d.Map2D
 import java.io.File
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.system.measureNanoTime
+import kotlin.test.Ignore
 import kotlin.test.Test
 
+/**
+ * By default Ignored - this is a performance comparison, not a real test. Waste of resources running it by default.
+ *
+ * To obtain a chart with performance comparison, set [statsDir] to a (possibly nonexisting) directory,
+ * and then use the following Python code to draw the actual charts (setting the same `statsDir` as well):
+ *
+#!/usr/bin/env python3
+
+import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+statsDir = "charts"
+dfs = []
+order = []
+for fn in Path(statsDir).glob("*.csv"):
+df = pd.read_csv(fn, header=0)
+test = fn.with_suffix('').name
+df['test'] = test
+df = df[df['n'] > df['n'].min()]    # The smallest values are prone to high variation. I suppose this is because they are first and some JVM magic is happening (gc? JIT?).
+dfs.append(df)
+order.append(test)
+df = pd.concat(dfs, ignore_index=True)
+sns.catplot(x="n", y="time", hue="name", kind="point", col="test", col_wrap=4, sharey=False, palette="bright", data=df)
+plt.show()
+ */
+@Ignore
 class Map2DPerformanceTest {
 
     fun createMaps(nRows: Int, nCols: Int) = listOf(
-//            "Wrapping with hashmap" to WrappingMap2D<String, String, String>(),
-//            "Doubling one update" to DoublingMap2DWithOneUpdate<String, String, String>(),
-//            "Guava hash" to GuavaWrappingMap2D(HashBasedTable.create<String, String, String>()),
-//            "Guava tree" to GuavaWrappingMap2D(TreeBasedTable.create<String, String, String>()),
-
-//            "Doubling two updates" to DoublingMap2DWithTwoUpdates<String, String, String>(),
-            "Dense" to DenseMap2D<String, String, String>(nRows, nCols)
-//            "Reinventing" to WheelReinventingMap2D<String, String, String>(nRows * nCols / 3)
+        "Guava hash" to GuavaWrappingMap2D(HashBasedTable.create<String, String, String>()),
+        "Doubling one update" to DoublingMap2DWithOneUpdate<String, String, String>(),
+        "Doubling two updates" to DoublingMap2D<String, String, String>(),
+        "Dense" to DenseMap2D<String, String, String>(nRows, nCols),
+        "Reinventing" to WheelReinventingMap2D<String, String, String>(nRows * nCols / 3)
     )
 
     private val statsDir: String?
 
     init {
         statsDir = null
-//        statsDir = "charts"
     }
 
     private fun measure(id: String, block: (Map2D<String, String, String>, List<Pair<String, String>>) -> Double) {
         val nReps = 10
-        val ns = IntProgression.fromClosedRange(100, 1000, 100)
-//        val ns = IntProgression.fromClosedRange(100, 2000, 100)
-//        val ns = IntProgression.fromClosedRange(100, 500, 200)
+        val ns = IntProgression.fromClosedRange(100, 2000, 100)
         // name -> n -> reps
         val times = HashMap<String, ArrayList<ArrayList<Double>>>()
         for ((nidx, n) in ns.withIndex()) {
@@ -195,9 +218,4 @@ class Map2DPerformanceTest {
             time / keys.size.toDouble()
         }
     }
-
-//    fun `doubling map performance`() {
-//        val n=100000
-//
-//    }
 }

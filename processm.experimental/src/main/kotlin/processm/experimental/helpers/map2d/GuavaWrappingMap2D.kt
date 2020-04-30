@@ -21,8 +21,26 @@ class GuavaWrappingMap2D<Row, Column, Value>(val backend: Table<Row, Column, Val
             row[k] = v
         }
 
-        override val keys: Collection<Column>
+        override val keys: Set<Column>
             get() = row.keys
+        override val entries: Set<Map.Entry<Column, Value>>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Value>
+            get() = TODO("Not yet implemented")
+
+        override fun containsKey(key: Column): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun containsValue(value: Value): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun isEmpty(): Boolean {
+            TODO("Not yet implemented")
+        }
     }
 
     override fun getColumn(c: Column): Map2D.View<Row, Value> = object :
@@ -35,8 +53,26 @@ class GuavaWrappingMap2D<Row, Column, Value>(val backend: Table<Row, Column, Val
             col[k] = v
         }
 
-        override val keys: Collection<Row>
+        override val keys: Set<Row>
             get() = col.keys
+        override val entries: Set<Map.Entry<Row, Value>>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Value>
+            get() = TODO("Not yet implemented")
+
+        override fun containsKey(key: Row): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun containsValue(value: Value): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun isEmpty(): Boolean {
+            TODO("Not yet implemented")
+        }
 
     }
 

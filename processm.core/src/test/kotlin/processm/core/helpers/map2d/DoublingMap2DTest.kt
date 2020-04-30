@@ -76,6 +76,46 @@ class DoublingMap2DTest {
     }
 
     @Test
+    fun `write and read same column`() {
+        val m = create()
+        with(m.getColumn(1)) {
+            set(2, 4)
+            assertEquals(4, get(2))
+        }
+    }
+
+    @Test
+    fun `write and read same row`() {
+        val m = create()
+        with(m.getRow(1)) {
+            set(2, 4)
+            assertEquals(4, get(2))
+        }
+    }
+
+    @Test
+    fun `interleaving column access`() {
+        val m = create()
+        val c1 = m.getColumn(1)
+        val c2 = m.getColumn(1)
+        c1[2] = 4
+        assertEquals(4, c2[2])
+        c2[1] = 3
+        assertEquals(3, c1[1])
+    }
+
+    @Test
+    fun `interleaving row access`() {
+        val m = create()
+        val c1 = m.getRow(1)
+        val c2 = m.getRow(1)
+        c1[2] = 4
+        assertEquals(4, c2[2])
+        c2[1] = 3
+        assertEquals(3, c1[1])
+    }
+
+    @Test
     fun rows() {
         val m = create()
         m[2, 1] = 3
@@ -91,5 +131,64 @@ class DoublingMap2DTest {
         assertEquals(setOf(1), m.columns)
         m[3, 2] = 3
         assertEquals(setOf(2, 1), m.columns)
+    }
+
+    @Test
+    fun `view isEmpty`() {
+        val m = create()
+        val c = m.getColumn(1)
+        assertTrue(c.isEmpty())
+        m[2, 1] = 1
+        assertFalse(c.isEmpty())
+    }
+
+    @Test
+    fun `list view keys`() {
+        val m = create()
+        val c = m.getColumn(1)
+        assertTrue(c.keys.isEmpty())
+        m[2, 1] = 1
+        assertEquals(setOf(2), c.keys)
+        m[3, 1] = 1
+        assertEquals(setOf(2, 3), c.keys)
+    }
+
+    @Test
+    fun `view contains keys`() {
+        val m = create()
+        val c = m.getColumn(1)
+        assertFalse(c.containsKey(2))
+        assertFalse(c.containsKey(3))
+        m[2, 1] = 1
+        assertTrue(c.containsKey(2))
+        assertFalse(c.containsKey(3))
+        m[3, 1] = 1
+        assertTrue(c.containsKey(2))
+        assertTrue(c.containsKey(3))
+    }
+
+    @Test
+    fun `list view values`() {
+        val m = create()
+        val c = m.getColumn(1)
+        assertTrue(c.values.isEmpty())
+        m[2, 1] = 2
+        assertEquals(setOf(2), c.values.toSet())
+        m[3, 1] = 3
+        assertEquals(setOf(2, 3), c.values.toSet())
+    }
+
+    @Test
+    fun `view contains values`() {
+        val m = create()
+        val c = m.getColumn(1)
+        assertFalse(c.containsValue(2))
+        assertFalse(c.containsValue(3))
+        m[2, 1] = 2
+        assertTrue(c.containsValue(2))
+        assertFalse(c.containsValue(3))
+        m[3, 1] = 3
+        assertTrue(c.containsValue(2))
+        assertTrue(c.containsValue(3))
     }
 }

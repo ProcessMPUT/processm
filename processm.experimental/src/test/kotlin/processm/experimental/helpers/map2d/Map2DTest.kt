@@ -43,8 +43,9 @@ interface Map2DTest<T : Map2D<Int, Int, Int>> {
         val m = create()
         m[1, 2] = 3
         m[1, 3] = 4
-        assertTrue(m.getRow(0).toMap().isEmpty())
-        assertEquals(mapOf(2 to 3, 3 to 4), m.getRow(1).toMap())
+        val r = m.getRow(1)
+        assertEquals(3, r[2])
+        assertEquals(4, r[3])
     }
 
     @Test
@@ -55,7 +56,9 @@ interface Map2DTest<T : Map2D<Int, Int, Int>> {
             set(2, 4)
             set(3, 5)
         }
-        assertEquals(mapOf(2 to 4, 3 to 5), m.getRow(1).toMap())
+        val r = m.getRow(1)
+        assertEquals(4, r[2])
+        assertEquals(5, r[3])
     }
 
     @Test
@@ -63,8 +66,10 @@ interface Map2DTest<T : Map2D<Int, Int, Int>> {
         val m = create()
         m[2, 1] = 3
         m[3, 1] = 4
-        assertTrue(m.getColumn(0).toMap().isEmpty())
-        assertEquals(mapOf(2 to 3, 3 to 4), m.getColumn(1).toMap())
+        val c = m.getColumn(1)
+        assertEquals(3, c[2])
+        assertEquals(4, c[3])
+        assertNull(c[4])
     }
 
     @Test
@@ -75,7 +80,10 @@ interface Map2DTest<T : Map2D<Int, Int, Int>> {
             set(2, 4)
             set(3, 5)
         }
-        assertEquals(mapOf(2 to 4, 3 to 5), m.getColumn(1).toMap())
+        val c = m.getColumn(1)
+        assertEquals(4, c[2])
+        assertEquals(5, c[3])
+        assertNull(c[4])
     }
 
     @Test

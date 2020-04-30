@@ -21,6 +21,24 @@ class DoublingMap2DWithOneUpdate<Row, Column, Value> :
 
         override val keys: Set<K>
             get() = data.keys
+        override val entries: Set<Map.Entry<K, V>>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<V>
+            get() = TODO("Not yet implemented")
+
+        override fun containsKey(key: K): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun containsValue(value: V): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun isEmpty(): Boolean {
+            TODO("Not yet implemented")
+        }
     }
 
     private val rcv = HashMap<Row, HashMap<Column, Reference<Value>>>()
@@ -31,25 +49,18 @@ class DoublingMap2DWithOneUpdate<Row, Column, Value> :
 
     override fun getRow(row: Row): Map2D.View<Column, Value> =
         View(rcv[row].orEmpty()) { col, value ->
-            set(
-                row,
-                col,
-                value
-            )
+            set(row, col, value)
         }
 
     override fun getColumn(col: Column): Map2D.View<Row, Value> =
         View(crv[col].orEmpty()) { row, value ->
-            set(
-                row,
-                col,
-                value
-            )
+            set(row, col, value)
         }
 
     override fun set(row: Row, col: Column, v: Value) {
         var rowMap = rcv[row]
-        var ref = rowMap?.get(col) //getOrPut seems to be no better with calling get and then put separately, without keeping any sort of pointer
+        var ref =
+            rowMap?.get(col) //getOrPut seems to be no better with calling get and then put separately, without keeping any sort of pointer
         if (rowMap == null) {
             rowMap = HashMap()
             rcv[row] = rowMap

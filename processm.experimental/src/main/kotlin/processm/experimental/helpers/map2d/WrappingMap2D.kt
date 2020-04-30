@@ -4,7 +4,8 @@ import processm.core.helpers.map2d.Map2D
 
 
 /**
- * The main purpose of this class is to define semantics of [Map2D]. All other implementations of this interface should behave identically.
+ * The main purpose of this class was to define semantics of [Map2D].
+ * After selecting [DoublingMap2D] as the implementation, [WrappingMap2D] is left here just in case.
  */
 class WrappingMap2D<Row, Column, Value>(private val data: MutableMap<Pair<Row, Column>, Value> = HashMap()) :
     Map2D<Row, Column, Value> {
@@ -17,6 +18,24 @@ class WrappingMap2D<Row, Column, Value>(private val data: MutableMap<Pair<Row, C
 
         override val keys: Set<Column>
             get() = base.data.keys.filter { it.first == row }.map { it.second }.toSet()
+        override val entries: Set<Map.Entry<Column, Value>>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Value>
+            get() = TODO("Not yet implemented")
+
+        override fun containsKey(key: Column): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun containsValue(value: Value): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun isEmpty(): Boolean {
+            TODO("Not yet implemented")
+        }
     }
 
     private class ColumnView<Row, Column, Value>(val base: WrappingMap2D<Row, Column, Value>, val col: Column) :
@@ -27,6 +46,24 @@ class WrappingMap2D<Row, Column, Value>(private val data: MutableMap<Pair<Row, C
 
         override val keys: Set<Row>
             get() = base.data.keys.filter { it.second == col }.map { it.first }.toSet()
+        override val entries: Set<Map.Entry<Row, Value>>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Value>
+            get() = TODO("Not yet implemented")
+
+        override fun containsKey(key: Row): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun containsValue(value: Value): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun isEmpty(): Boolean {
+            TODO("Not yet implemented")
+        }
     }
 
     override fun get(row: Row, col: Column): Value? = data[row to col]
