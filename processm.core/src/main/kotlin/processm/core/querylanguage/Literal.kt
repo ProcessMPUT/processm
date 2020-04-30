@@ -29,9 +29,11 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
     init {
         val match = scopePattern.matchEntire(literal)
         assert(match !== null)
-        scope = when (match!!.groups[1]) {
-            null -> null
-            else -> Scope.parse(match.groups[1]?.value)
+        scope = with(match!!.groups[1]) {
+            when (this) {
+                null -> null
+                else -> Scope.parse(this.value)
+            }
         }
         value = parse(match.groups[2]!!.value)
     }
