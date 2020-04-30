@@ -50,7 +50,7 @@ fun loadConfiguration(overwriteIfAlreadyLoaded: Boolean = false) {
 
 /**
  * Compares two logs.
- * @return True of the logs equal, false otherwise.
+ * @return True if the logs equal, false otherwise.
  */
 fun hierarchicalCompare(seq1: Sequence<Log>, seq2: Sequence<Log>): Boolean =
     try {
