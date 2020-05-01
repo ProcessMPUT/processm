@@ -95,13 +95,9 @@ class Event : XESElement() {
     /**
      * Equals if both are Event and contains the same attributes
      */
-    override fun equals(other: Any?): Boolean {
-        if (other === this) return true
-        if (other !is Event) return false
-        return attributesInternal == other.attributesInternal
-    }
+    override fun equals(other: Any?): Boolean = other === this
+            || other is Event
+            && attributesInternal == other.attributesInternal
 
-    override fun hashCode(): Int {
-        return attributesInternal.hashCode()
-    }
+    override fun hashCode(): Int = attributesInternal.hashCode()
 }

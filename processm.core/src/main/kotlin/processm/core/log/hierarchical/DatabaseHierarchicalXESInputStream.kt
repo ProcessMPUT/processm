@@ -353,6 +353,8 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
             }
         }
 
+        // TODO: include standard attributes in the set of attributes
+
         return element
     }
 

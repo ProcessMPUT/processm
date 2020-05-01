@@ -86,24 +86,25 @@ open class Log : XESElement() {
     /**
      * Equals if both are Log and contains the same attributes
      */
-    override fun equals(other: Any?): Boolean {
-        if (other === this) return true
-        if (other !is Log) return false
-        return xesVersion == other.xesVersion && xesFeatures == other.xesFeatures && extensionsInternal == other.extensionsInternal
-                && traceGlobalsInternal == other.traceGlobalsInternal && eventGlobalsInternal == other.eventGlobalsInternal
-                && traceClassifiersInternal == other.traceClassifiersInternal && eventClassifiersInternal == other.eventClassifiersInternal
-                && attributesInternal == other.attributesInternal
-    }
+    override fun equals(other: Any?): Boolean = other === this
+            || other is Log
+            && xesVersion == other.xesVersion
+            && xesFeatures == other.xesFeatures
+            && extensionsInternal == other.extensionsInternal
+            && traceGlobalsInternal == other.traceGlobalsInternal
+            && eventGlobalsInternal == other.eventGlobalsInternal
+            && traceClassifiersInternal == other.traceClassifiersInternal
+            && eventClassifiersInternal == other.eventClassifiersInternal
+            && attributesInternal == other.attributesInternal
 
-    override fun hashCode(): Int {
-        var result = extensionsInternal.hashCode()
-        result = 31 * result + traceGlobalsInternal.hashCode()
-        result = 31 * result + eventGlobalsInternal.hashCode()
-        result = 31 * result + traceClassifiersInternal.hashCode()
-        result = 31 * result + eventClassifiersInternal.hashCode()
-        result = 31 * result + attributesInternal.hashCode()
-        result = 31 * result + (xesFeatures?.hashCode() ?: 0)
-        result = 31 * result + (xesVersion?.hashCode() ?: 0)
-        return result
-    }
+    override fun hashCode(): Int = Objects.hash(
+        xesVersion,
+        xesFeatures,
+        extensionsInternal,
+        traceGlobalsInternal,
+        eventGlobalsInternal,
+        traceClassifiersInternal,
+        eventClassifiersInternal,
+        attributesInternal
+    )
 }

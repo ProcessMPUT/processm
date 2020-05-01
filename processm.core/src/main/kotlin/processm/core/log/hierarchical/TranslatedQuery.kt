@@ -222,7 +222,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         assert(sql.scopes.size == 1)
         assert(sql.scopes.first().scope == scope)
         sql.query.append(" FROM ${scope.table} ${scope.alias}")
-        sql.query.append(" JOIN unnest(?) WITH ORDINALITY ids(id, ord) USING (id)")
+        sql.query.append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) USING (id)")
     }
 
     private fun orderByEntity(sql: MutableSQLQuery) {
@@ -243,7 +243,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             selectAttributes(scope, attrTable, extraColumns, it)
             append(", ARRAY[ids.ord, $attrTable.id] AS path")
             append(" FROM $attrTable")
-            append(" JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON ${scope}_id=ids.id")
+            append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
             whereAttributes(scope, it, logId)
             append("UNION ALL ")
             selectAttributes(scope, attrTable, extraColumns, it)
