@@ -15,7 +15,7 @@ import java.lang.ref.Cleaner
 import java.lang.ref.SoftReference
 import java.sql.ResultSet
 import java.util.*
-import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Reads a sequence of [Log]s from database, filtered by the given [Query]. Every [Log] contains a sequence
@@ -94,11 +94,9 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
      * * bits (log2([maxCachedBatchesPerParent])-1)-0: the batch number.
      * The value is a [SoftReference] to a batch of the entities of the corresponding scope.
      *
-     * Note that [ConcurrentSkipListMap] is used because the [cacheCleaner] runs in a separate thread. However, this
-     * should not cause performance penalty, as [ConcurrentSkipListMap] ensures consistency by construction instead of
-     * synchronization.
+     * Note that [ConcurrentHashMap] is used because the [cacheCleaner] runs in a separate thread.
      */
-    private val cache: ConcurrentSkipListMap<Long, SoftReference<List<XESElement>>> = ConcurrentSkipListMap()
+    private val cache: ConcurrentHashMap<Long, SoftReference<List<XESElement>>> = ConcurrentHashMap()
     private fun <T : XESElement> getCachedBatch(
         scope: Scope,
         parentId: Long,
