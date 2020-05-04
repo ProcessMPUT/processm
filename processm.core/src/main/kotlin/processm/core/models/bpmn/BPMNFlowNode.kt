@@ -2,14 +2,14 @@ package processm.core.models.bpmn
 
 import processm.core.models.bpmn.jaxb.*
 import processm.core.models.commons.Activity
-import processm.core.models.commons.DecisionPoint
 
 /**
  * A base class for warappers of [TFlowNode].
  *
- * It is a [DecisionPoint], because an Activity in BPMN can contain a split with decisions (por. sec. 13.2.1 of BPMN spec.)
+ * It equals other [BPMNFlowNode] only if they reference exactly the same underlying [TFlowNode] within the same [BPMNProcess].
  */
-abstract class BPMNFlowNode internal constructor(override val name: String, internal val process: BPMNProcess) : Activity {
+abstract class BPMNFlowNode internal constructor(override val name: String, internal val process: BPMNProcess) :
+    Activity {
 
     protected abstract val base: TFlowNode
 
