@@ -54,8 +54,8 @@ class DoublingMap2D<Row, Column, Value> : Map2D<Row, Column, Value> {
         View({ crv[col] }, { row, value -> set(row, col, value) })
 
     override fun set(row: Row, col: Column, v: Value) {
-        rcv.getOrPut(row) { HashMap() }[col] = v
-        crv.getOrPut(col) { HashMap() }[row] = v
+        rcv.computeIfAbsent(row) { HashMap() }[col] = v
+        crv.computeIfAbsent(col) { HashMap() }[row] = v
     }
 
     override val rows: Set<Row>
