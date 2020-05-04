@@ -1,7 +1,7 @@
 package processm.core.verifiers.causalnet
 
 import processm.core.helpers.mapToSet
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import kotlin.test.*
@@ -29,7 +29,7 @@ class FromModelToLogAndBackAgain {
         return inp.map { seq -> seq.map { it.activity } }.toString()
     }
 
-    fun test(model: Model, expected: Set<List<Node>>) {
+    fun test(model: CausalNet, expected: Set<List<Node>>) {
         val v = CausalNetVerifierImpl(model)
         assertEquals(
             v.validSequences.mapToSet { seq -> seq.map { it.a } },

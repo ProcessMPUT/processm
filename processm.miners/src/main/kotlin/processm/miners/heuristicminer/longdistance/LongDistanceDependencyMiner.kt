@@ -1,7 +1,7 @@
 package processm.miners.heuristicminer.longdistance
 
 import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 
 /**
@@ -17,5 +17,5 @@ interface LongDistanceDependencyMiner {
      * For the model [currentModel] return dependencies that should be added to the model.
      * Should return an empty list if there are no dependencies to add.
      */
-    fun mine(currentModel: Model): Collection<Dependency>
+    fun mine(currentModel: CausalNet): Collection<Dependency>
 }

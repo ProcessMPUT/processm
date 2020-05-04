@@ -5,7 +5,7 @@ import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.CausalNetVerifier
@@ -43,7 +43,7 @@ class FromModelToLogAndBackAgain {
         return inp.map { seq -> seq.map { it.activity } }.toString()
     }
 
-    private fun test(reference: Model, hm: HeuristicMiner) {
+    private fun test(reference: CausalNet, hm: HeuristicMiner) {
         logger().debug("REFERENCE:\n${reference}")
         val referenceVerifier = CausalNetVerifier().verify(reference)
         val expectedSequences =

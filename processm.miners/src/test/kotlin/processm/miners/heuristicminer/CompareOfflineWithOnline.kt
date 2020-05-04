@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 
 class CompareOfflineWithOnline {
 
-    private fun seqs(model: Model) =
+    private fun seqs(model: CausalNet) =
         CausalNetVerifier().verify(model)
             .validLoopFreeSequences
             .map { seq -> seq.map { ab -> ab.a }.filter { !it.special } }
@@ -61,9 +61,9 @@ class CompareOfflineWithOnline {
         compare(logFromString(text), permuteLog = permuteLog, traceRegister = DifferentAdfixTraceRegister())
 
     private fun compare(
-        model: Model,
-        permuteLog: (Log) -> Boolean = { false },
-        traceRegister: TraceRegister = DifferentAdfixTraceRegister()
+            model: CausalNet,
+            permuteLog: (Log) -> Boolean = { false },
+            traceRegister: TraceRegister = DifferentAdfixTraceRegister()
     ) {
         val log = logFromModel(model)
         compare(log, traceRegister, permuteLog = permuteLog(log))
@@ -211,7 +211,7 @@ class CompareOfflineWithOnline {
     private fun helper(seed: Int, nNodes: Int): DynamicNode {
         val reference = RandomGenerator(Random(seed), nNodes = nNodes).generate()
         val log = logFromModel(reference)
-        fun prepareOffline(): Pair<MutableModel, Boolean> {
+        fun prepareOffline(): Pair<MutableCausalNet, Boolean> {
             val hm = OfflineHeuristicMiner(
                 bindingProvider = BestFirstBindingProvider(),
                 longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()

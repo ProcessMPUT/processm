@@ -1,13 +1,13 @@
 package processm.core.comparators
 
 import processm.core.helpers.mapToSet
-import processm.core.models.causalnet.Model
+import processm.core.models.causalnet.CausalNet
 import processm.core.verifiers.CausalNetVerifier
 
 /**
  * Compares loop-free traces (i.e., nodes visited in loop-free valid sequences) of [left] and [right]
  */
-class CausalNetTraceComparison(val left: Model, val right: Model) {
+class CausalNetTraceComparison(val left: CausalNet, val right: CausalNet) {
 
     /**
      * Verification report of [left]

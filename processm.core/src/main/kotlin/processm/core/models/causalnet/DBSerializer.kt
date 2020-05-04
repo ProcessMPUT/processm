@@ -97,7 +97,7 @@ object DBSerializer {
      *
      * Does not handle metadata nor decision models
      */
-    fun insert(model: Model): Int {
+    fun insert(model: CausalNet): Int {
         var result: Int? = null
         transaction(DBConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
@@ -142,8 +142,8 @@ object DBSerializer {
      *
      * Decision model and metadata handlers are left default
      */
-    fun fetch(modelId: Int): MutableModel {
-        var result: MutableModel? = null
+    fun fetch(modelId: Int): MutableCausalNet {
+        var result: MutableCausalNet? = null
         transaction(DBConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
             val daomodel = DAOModel.findById(modelId) ?: throw NoSuchElementException()
@@ -154,7 +154,7 @@ object DBSerializer {
             var end = daomodel.end
             if (start == null || end == null)
                 throw IllegalStateException("start or end is null") //this means that DB went bonkers
-            val mm = MutableModel(start = idNode.getValue(start), end = idNode.getValue(end))
+            val mm = MutableCausalNet(start = idNode.getValue(start), end = idNode.getValue(end))
             mm.addInstance(*idNode.values.toTypedArray())
             val idDep = daomodel.dependencies.map { row ->
                 row to mm.addDependency(

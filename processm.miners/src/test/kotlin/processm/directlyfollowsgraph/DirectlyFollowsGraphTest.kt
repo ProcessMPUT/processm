@@ -5,7 +5,7 @@ import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.DatabaseHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.models.processtree.Activity
+import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.persistence.DBConnectionPool
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import kotlin.test.Test
@@ -14,6 +14,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class DirectlyFollowsGraphTest {
+    private val A = ProcessTreeActivity("A")
+    private val B = ProcessTreeActivity("B")
+    private val C = ProcessTreeActivity("C")
+    private val D = ProcessTreeActivity("D")
+    private val E = ProcessTreeActivity("E")
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
         <log>
             <trace>
@@ -71,63 +76,57 @@ class DirectlyFollowsGraphTest {
 
     @Test
     fun `Build directly follows graph based on log from Definition 6,3 PM book`() {
-        val a = Activity("A")
-        val b = Activity("B")
-        val c = Activity("C")
-        val d = Activity("D")
-        val e = Activity("E")
-
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         miner.graph.also { graph ->
             assertEquals(graph.size, 4)
 
-            assertTrue(graph.contains(a))
-            assertTrue(graph.contains(b))
-            assertTrue(graph.contains(c))
-            assertTrue(graph.contains(e))
+            assertTrue(graph.contains(A))
+            assertTrue(graph.contains(B))
+            assertTrue(graph.contains(C))
+            assertTrue(graph.contains(E))
 
-            assertFalse(graph.contains(d))
+            assertFalse(graph.contains(D))
 
-            with(graph[a]!!) {
+            with(graph[A]!!) {
                 assertEquals(size, 3)
 
-                assertTrue(contains(b))
-                assertEquals(this[b]!!.cardinality, 1)
+                assertTrue(contains(B))
+                assertEquals(this[B]!!.cardinality, 1)
 
-                assertTrue(contains(c))
-                assertEquals(this[c]!!.cardinality, 2)
+                assertTrue(contains(C))
+                assertEquals(this[C]!!.cardinality, 2)
 
-                assertTrue(contains(e))
-                assertEquals(this[e]!!.cardinality, 1)
+                assertTrue(contains(E))
+                assertEquals(this[E]!!.cardinality, 1)
             }
 
-            with(graph[b]!!) {
+            with(graph[B]!!) {
                 assertEquals(size, 2)
 
-                assertTrue(contains(c))
-                assertEquals(this[c]!!.cardinality, 1)
+                assertTrue(contains(C))
+                assertEquals(this[C]!!.cardinality, 1)
 
-                assertTrue(contains(d))
-                assertEquals(this[d]!!.cardinality, 2)
+                assertTrue(contains(D))
+                assertEquals(this[D]!!.cardinality, 2)
             }
 
-            with(graph[c]!!) {
+            with(graph[C]!!) {
                 assertEquals(size, 2)
 
-                assertTrue(contains(b))
-                assertEquals(this[b]!!.cardinality, 2)
+                assertTrue(contains(B))
+                assertEquals(this[B]!!.cardinality, 2)
 
-                assertTrue(contains(d))
-                assertEquals(this[d]!!.cardinality, 1)
+                assertTrue(contains(D))
+                assertEquals(this[D]!!.cardinality, 1)
             }
 
-            with(graph[e]!!) {
+            with(graph[E]!!) {
                 assertEquals(size, 1)
 
-                assertTrue(contains(d))
-                assertEquals(this[d]!!.cardinality, 1)
+                assertTrue(contains(D))
+                assertEquals(this[D]!!.cardinality, 1)
             }
         }
     }
@@ -142,25 +141,23 @@ class DirectlyFollowsGraphTest {
 
     @Test
     fun `Start activities stored in special map`() {
-        val a = Activity("A")
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         assertEquals(miner.startActivities.size, 1)
 
-        assertTrue(miner.startActivities.contains(a))
-        assertEquals(miner.startActivities[a]!!.cardinality, 4)
+        assertTrue(miner.startActivities.contains(A))
+        assertEquals(miner.startActivities[A]!!.cardinality, 4)
     }
 
     @Test
     fun `Last activities stored in special map`() {
-        val d = Activity("D")
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         assertEquals(miner.endActivities.size, 1)
 
-        assertTrue(miner.endActivities.contains(d))
-        assertEquals(miner.endActivities[d]!!.cardinality, 4)
+        assertTrue(miner.endActivities.contains(D))
+        assertEquals(miner.endActivities[D]!!.cardinality, 4)
     }
 }

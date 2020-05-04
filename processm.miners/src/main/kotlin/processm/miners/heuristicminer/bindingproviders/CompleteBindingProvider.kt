@@ -4,7 +4,6 @@ import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.mapToSet
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.ReplayTrace
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.ReplayTraceHypothesisSelector
 
@@ -16,9 +15,9 @@ import processm.miners.heuristicminer.bindingproviders.hypothesisselector.Replay
  */
 class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelector) : AbstractBindingProvider() {
 
-    override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
+    override fun computeBindings(model: CausalNet, trace: List<Node>): List<Binding> {
         var currentStates =
-            listOf(ReplayTrace(State(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
+            listOf(ReplayTrace(CausalNetState(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
         for (idx in trace.indices) {
             val currentNode = trace[idx]
             val remainder = trace.subList(idx + 1, trace.size).toSet()
@@ -30,11 +29,11 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             for ((state, joins, splits) in currentStates) {
                 for (consume in consumeCandidates(model, currentNode, state.uniqueSet())) {
                     assert(state.containsAll(consume))
-                    val intermediate = State(state)
+                    val intermediate = CausalNetState(state)
                     for (c in consume)
                         intermediate.remove(c)
                     for (produce in produceCandidates) {
-                        val ns = State(intermediate)
+                        val ns = CausalNetState(intermediate)
                         ns.addAll(produce)
 
                         if (!remainder.containsAll(ns.mapToSet { it.target }))

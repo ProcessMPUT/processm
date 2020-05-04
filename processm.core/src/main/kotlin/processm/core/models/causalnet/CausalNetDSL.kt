@@ -52,7 +52,7 @@ import processm.core.helpers.mapToSet
  * The order of defining splits and joins does not matter, but `Start` and `End` are assignments to a variable
  * and thus, if one wants to use `start` and `end` as nodes, the assignment must go before the first usage.
  */
-fun causalnet(init: CausalNetDSL.() -> Unit): MutableModel {
+fun causalnet(init: CausalNetDSL.() -> Unit): MutableCausalNet {
     val modelDSL = CausalNetDSL()
     modelDSL.init()
     return modelDSL.result()
@@ -139,8 +139,8 @@ class CausalNetDSL {
     }
 
 
-    fun result(): MutableModel {
-        val model = MutableModel(start, end)
+    fun result(): MutableCausalNet {
+        val model = MutableCausalNet(start, end)
         (joins.map { j -> j.dependencies } + splits.map { s -> s.dependencies })
             .flatten()
             .forEach { dep ->

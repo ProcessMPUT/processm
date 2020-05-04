@@ -4,7 +4,6 @@ import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.mapToSet
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.core.verifiers.causalnet.State
 import processm.miners.heuristicminer.NodeTrace
 import processm.miners.heuristicminer.ReplayTrace
 import java.util.*
@@ -49,9 +48,9 @@ class DefaultComputationStateComparator : Comparator<ComputationState> {
 class BestFirstBindingProvider(val comparator: Comparator<ComputationState> = DefaultComputationStateComparator()) :
     AbstractBindingProvider() {
 
-    override fun computeBindings(model: Model, trace: List<Node>): List<Binding> {
+    override fun computeBindings(model: CausalNet, trace: List<Node>): List<Binding> {
         val queue = PriorityQueue(comparator)
-        queue.add(ComputationState(0, ReplayTrace(State(), listOf(), listOf()), trace))
+        queue.add(ComputationState(0, ReplayTrace(CausalNetState(), listOf(), listOf()), trace))
 
         val available = HashSet<Node>()
         val produceCandidates: MutableList<Iterable<Collection<Dependency>>> =
@@ -78,11 +77,11 @@ class BestFirstBindingProvider(val comparator: Comparator<ComputationState> = De
             val avail = traceSoFar.state.uniqueSet()
             for (consume in consumeCandidates(model, trace[currentNodeIdx], avail)) {
                 if (traceSoFar.state.containsAll(consume)) {
-                    val intermediate = State(traceSoFar.state)
+                    val intermediate = CausalNetState(traceSoFar.state)
                     for (c in consume)
                         intermediate.remove(c)
                     for (produce in produceCandidates[currentNodeIdx]) {
-                        val ns = State(intermediate)
+                        val ns = CausalNetState(intermediate)
                         ns.addAll(produce)
                         val it = ReplayTrace(
                             ns,
