@@ -1,6 +1,6 @@
 package processm.core.models.causalnet
 
-import java.lang.IllegalArgumentException
+import processm.core.helpers.mapToSet
 import kotlin.test.*
 
 class MutableModelTest {
@@ -38,7 +38,7 @@ class MutableModelTest {
             setOf(f to d, f to c),
             setOf(g to z),
             setOf(h to z)
-        ).map { split -> split.map { Dependency(it.first, it.second) }.toSet() }
+        ).map { split -> split.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addSplit(Split(it)) }
         listOf(
             setOf(a to b),
@@ -54,14 +54,14 @@ class MutableModelTest {
             setOf(e to h),
             setOf(g to z),
             setOf(h to z)
-        ).map { join -> join.map { Dependency(it.first, it.second) }.toSet() }
+        ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
         assertEquals(setOf(a, b, c, d, e, f, g, h, z), mm.instances)
         assertTrue(mm.outgoing[a]?.all { it.source == a } == true)
-        assertEquals(setOf(b, c, d), mm.outgoing[a]?.map { it.target }?.toSet())
+        assertEquals(setOf(b, c, d), mm.outgoing[a]?.mapToSet { it.target })
         assertFalse { z in mm.outgoing }
         assertTrue { mm.incoming[z]?.all { it.target == z } == true }
-        assertEquals(setOf(g, h), mm.incoming[z]?.map { it.source }?.toSet())
+        assertEquals(setOf(g, h), mm.incoming[z]?.mapToSet { it.source })
         assertEquals(2, mm.splits[a]?.size)
         assertEquals(1, mm.splits[b]?.size)
         assertFalse { z in mm.splits }

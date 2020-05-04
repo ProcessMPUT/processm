@@ -1,5 +1,6 @@
 package processm.core.verifiers.causalnet
 
+import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,7 +41,7 @@ class CausalNetVerifierImplTest {
             setOf(f to d, f to c),
             setOf(g to z),
             setOf(h to z)
-        ).map { split -> split.map { Dependency(it.first, it.second) }.toSet() }
+        ).map { split -> split.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addSplit(Split(it)) }
         listOf(
             setOf(a to b),
@@ -56,7 +57,7 @@ class CausalNetVerifierImplTest {
             setOf(e to h),
             setOf(g to z),
             setOf(h to z)
-        ).map { join -> join.map { Dependency(it.first, it.second) }.toSet() }
+        ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
         assertTrue { CausalNetVerifierImpl(mm).isSound }
     }
@@ -247,7 +248,7 @@ class CausalNetVerifierImplTest {
                 listOf(a, b, c, d, e),
                 listOf(a, b, b, c, c, d, d, e)
             ),
-            v.validLoopFreeSequences.map { seq -> seq.map { ab -> ab.a }.sortedBy { it.activity } }.toSet()
+            v.validLoopFreeSequences.mapToSet { seq -> seq.map { ab -> ab.a }.sortedBy { it.activity } }
         )
     }
 

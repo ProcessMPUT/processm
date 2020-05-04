@@ -2,6 +2,7 @@ package processm.miners.heuristicminer
 
 import org.junit.jupiter.api.Assumptions
 import processm.core.comparators.CausalNetTraceComparison
+import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
@@ -101,8 +102,8 @@ class OfflineHeuristicMinerTest {
         }
         val v = CausalNetVerifier().verify(reference)
         Assumptions.assumeTrue(v.isSound)
-        Assumptions.assumeTrue(v.validSequences.map { seq -> seq.map { it.a } }.toSet().size == 5)
-        v.validSequences.map { seq -> seq.map { it.a } }.toSet().forEach { println(it) }
+        Assumptions.assumeTrue(v.validSequences.mapToSet { seq -> seq.map { it.a } }.size == 5)
+        v.validSequences.map { seq -> seq.map { it.a } }.forEach { println(it) }
         val log = Helper.logFromModel(reference)
         val hmp = OfflineHeuristicMiner(
             bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),

@@ -92,7 +92,7 @@ class HelpersTests {
                 setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
                 setOf("a", "b", "c")
             ),
-            setOf("a", "b", "c").allSubsets().map { it.toSet() }.toSet()
+            setOf("a", "b", "c").allSubsets().mapToSet { it.toSet() }
         )
     }
 
@@ -104,7 +104,7 @@ class HelpersTests {
                 setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
                 setOf("a", "b", "c")
             ),
-            setOf("a", "b", "c").allSubsets(true).map { it.toSet() }.toSet()
+            setOf("a", "b", "c").allSubsets(true).mapToSet { it.toSet() }
         )
     }
 
@@ -117,7 +117,7 @@ class HelpersTests {
                 setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
                 setOf("a", "b", "c")
             ),
-            setOf("a", "b", "c").materializedAllSubsets(false).map { it.toSet() }.toSet()
+            setOf("a", "b", "c").materializedAllSubsets(false).mapToSet { it.toSet() }
         )
     }
 
@@ -129,7 +129,7 @@ class HelpersTests {
                 setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
                 setOf("a", "b", "c")
             ),
-            setOf("a", "b", "c").materializedAllSubsets(true).map { it.toSet() }.toSet()
+            setOf("a", "b", "c").materializedAllSubsets(true).mapToSet { it.toSet() }
         )
     }
 
@@ -150,7 +150,7 @@ class HelpersTests {
     fun `subsets of empty`() {
         assertEquals(
             setOf(setOf()),
-            setOf<Int>().allSubsets().map { it.toSet() }.toSet()
+            setOf<Int>().allSubsets().mapToSet { it.toSet() }
         )
     }
 

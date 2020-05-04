@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer.longdistance
 
+import processm.core.helpers.mapToSet
 import processm.core.logging.logger
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Model
@@ -41,7 +42,7 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
             }
         }
         val common = intersection(tmp.map { it.toSet() })
-        val latest = tmp.map { prefix -> prefix.last { common.contains(it) } }.toSet()
+        val latest = tmp.mapToSet { prefix -> prefix.last { common.contains(it) } }
         logger().debug("LATEST $latest")
         return latest.single()
     }

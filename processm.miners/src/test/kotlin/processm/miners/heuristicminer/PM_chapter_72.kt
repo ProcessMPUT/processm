@@ -2,6 +2,7 @@ package processm.miners.heuristicminer
 
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
@@ -167,18 +168,18 @@ class PM_chapter_72 {
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())
             with(outgoing) {
-                assertEquals(setOf(b, c, d, e), getValue(a).map { d -> d.target }.toSet())
-                assertEquals(setOf(e), getValue(b).map { d -> d.target }.toSet())
-                assertEquals(setOf(e), getValue(c).map { d -> d.target }.toSet())
-                assertEquals(setOf(d, e), getValue(d).map { d -> d.target }.toSet())
-                assertEquals(setOf(end), getValue(e).map { d -> d.target }.toSet())
+                assertEquals(setOf(b, c, d, e), getValue(a).mapToSet { d -> d.target })
+                assertEquals(setOf(e), getValue(b).mapToSet { d -> d.target })
+                assertEquals(setOf(e), getValue(c).mapToSet { d -> d.target })
+                assertEquals(setOf(d, e), getValue(d).mapToSet { d -> d.target })
+                assertEquals(setOf(end), getValue(e).mapToSet { d -> d.target })
             }
             with(incoming) {
-                assertEquals(setOf(start), getValue(a).map { d -> d.source }.toSet())
-                assertEquals(setOf(a), getValue(b).map { d -> d.source }.toSet())
-                assertEquals(setOf(a), getValue(c).map { d -> d.source }.toSet())
-                assertEquals(setOf(a, d), getValue(d).map { d -> d.source }.toSet())
-                assertEquals(setOf(b, c, d, a), getValue(e).map { d -> d.source }.toSet())
+                assertEquals(setOf(start), getValue(a).mapToSet { d -> d.source })
+                assertEquals(setOf(a), getValue(b).mapToSet { d -> d.source })
+                assertEquals(setOf(a), getValue(c).mapToSet { d -> d.source })
+                assertEquals(setOf(a, d), getValue(d).mapToSet { d -> d.source })
+                assertEquals(setOf(b, c, d, a), getValue(e).mapToSet { d -> d.source })
             }
             with(joins) {
                 assertEquals(setOf(Join(setOf(Dependency(a, b)))), getValue(b))
@@ -224,18 +225,18 @@ class PM_chapter_72 {
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())
             with(outgoing) {
-                assertEquals(setOf(b, c, d), getValue(a).map { d -> d.target }.toSet())
-                assertEquals(setOf(e), getValue(b).map { d -> d.target }.toSet())
-                assertEquals(setOf(e), getValue(c).map { d -> d.target }.toSet())
-                assertEquals(setOf(e), getValue(d).map { d -> d.target }.toSet())
-                assertEquals(setOf(end), getValue(e).map { d -> d.target }.toSet())
+                assertEquals(setOf(b, c, d), getValue(a).mapToSet { d -> d.target })
+                assertEquals(setOf(e), getValue(b).mapToSet { d -> d.target })
+                assertEquals(setOf(e), getValue(c).mapToSet { d -> d.target })
+                assertEquals(setOf(e), getValue(d).mapToSet { d -> d.target })
+                assertEquals(setOf(end), getValue(e).mapToSet { d -> d.target })
             }
             with(incoming) {
-                assertEquals(setOf(start), getValue(a).map { d -> d.source }.toSet())
-                assertEquals(setOf(a), getValue(b).map { d -> d.source }.toSet())
-                assertEquals(setOf(a), getValue(c).map { d -> d.source }.toSet())
-                assertEquals(setOf(a), getValue(d).map { d -> d.source }.toSet())
-                assertEquals(setOf(b, c, d), getValue(e).map { d -> d.source }.toSet())
+                assertEquals(setOf(start), getValue(a).mapToSet { d -> d.source })
+                assertEquals(setOf(a), getValue(b).mapToSet { d -> d.source })
+                assertEquals(setOf(a), getValue(c).mapToSet { d -> d.source })
+                assertEquals(setOf(a), getValue(d).mapToSet { d -> d.source })
+                assertEquals(setOf(b, c, d), getValue(e).mapToSet { d -> d.source })
             }
         }
     }

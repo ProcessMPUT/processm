@@ -1,6 +1,7 @@
 package processm.core.models.causalnet
 
 import processm.core.helpers.allSubsets
+import processm.core.helpers.mapToSet
 import processm.core.verifiers.causalnet.ActivityBinding
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import java.util.*
@@ -30,9 +31,9 @@ class RandomGenerator(
         val usedSplits = HashSet<Split>()
         for (ab in seqs) {
             if (ab.i.isNotEmpty())
-                usedJoins.add(Join(ab.i.map { Dependency(it, ab.a) }.toSet()))
+                usedJoins.add(Join(ab.i.mapToSet { Dependency(it, ab.a) }))
             if (ab.o.isNotEmpty())
-                usedSplits.add(Split(ab.o.map { Dependency(ab.a, it) }.toSet()))
+                usedSplits.add(Split(ab.o.mapToSet { Dependency(ab.a, it) }))
         }
         model.clearDependencies()
         (usedJoins.flatMap { it.dependencies } + usedSplits.flatMap { it.dependencies })
@@ -108,13 +109,13 @@ class RandomGenerator(
                     else if (p - pAND <= pXOR)
                         o.forEach { result.addSplit(Split(setOf(it))) }    //XOR
                     else
-                        o.allSubsets().filter { it.isNotEmpty() }.forEach { result.addSplit(Split(it.toSet())) }   //OR
+                        o.allSubsets(true).forEach { result.addSplit(Split(it.toSet())) }   //OR
                 } else
                     result.addSplit(Split(o))
 
             }
             val i = result.incoming[n]
-            i?.allSubsets()?.filter { it.isNotEmpty() }?.forEach { result.addJoin(Join(it.toSet())) }
+            i?.allSubsets(true)?.forEach { result.addJoin(Join(it.toSet())) }
         }
         if (!allowUnsound)
             enforceSoundness(result)

@@ -9,6 +9,7 @@ import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.helpers.mapToSet
 import processm.core.persistence.DBConnectionPool
 import java.util.*
 import kotlin.NoSuchElementException
@@ -162,7 +163,7 @@ object DBSerializer {
                 )
             }.toMap()
             daomodel.bindings.forEach { row ->
-                val deps = row.dependencies.map { idDep.getValue(it) }.toSet()
+                val deps = row.dependencies.mapToSet { idDep.getValue(it) }
                 if (row.isJoin)
                     mm.addJoin(Join(deps))
                 else

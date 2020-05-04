@@ -4,6 +4,7 @@ import io.mockk.every
 import io.mockk.mockkConstructor
 import processm.core.helpers.Counter
 import processm.core.helpers.allPermutations
+import processm.core.helpers.mapToSet
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -41,7 +42,7 @@ class DefaultComputationStateComparatorPerformanceTest {
             for (i in o.nextNode until o.nodeTrace.size)
                 targets.dec(o.nodeTrace[i])
             val nMissing = -targets.values.sum()
-            val targets2 = o.trace.state.map { it.target }.toSet()
+            val targets2 = o.trace.state.mapToSet { it.target }
             val nMissing2 =
                 (o.nodeTrace.subList(o.nextNode, o.nodeTrace.size).toSet() - targets).size
             val values = intArrayOf(nMissing, nTargets, o.nextNode, o.trace.state.size, targets.values.sum(), nMissing2)

@@ -215,3 +215,15 @@ inline fun String.fastParseISO8601(): Instant =
         val nanoOfSecond = temporal.get(ChronoField.NANO_OF_SECOND).toLong()
         Instant.ofEpochSecond(instantSecs, nanoOfSecond)
     }
+
+/**
+ * Returns a set containing the results of applying the given [transform] function
+ * to each element in the original collection.
+ */
+inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
+
+/**
+ * Returns a set containing the results of applying the given [transform] function
+ * to each element in the original sequence.
+ */
+inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)

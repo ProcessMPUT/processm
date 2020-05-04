@@ -1,7 +1,9 @@
 package processm.core.verifiers.causalnet
 
 import processm.core.helpers.SequenceWithMemory
+import processm.core.helpers.mapToSet
 import processm.core.helpers.withMemory
+import processm.core.models.causalnet.Binding
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Model
 import processm.core.models.causalnet.Node
@@ -123,11 +125,37 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
     /**
      * Based on Definition 3.8 in PM
      */
-    public fun allDependenciesUsed(): Boolean {
-        val splitDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
-        val joinDependencies = model.joins.values.flatten().flatMap { it.dependencies }.toSet()
-        val allDependencies = (model.outgoing.values.flatten() + model.incoming.values.flatten()).toSet()
+    fun allDependenciesUsed(): Boolean {
+        val splitDependencies = getDependencies(model.splits.values)
+        val joinDependencies = getDependencies(model.joins.values)
+        val allDependencies = getDependencies(model.outgoing.values, model.incoming.values)
         return splitDependencies == allDependencies && joinDependencies == allDependencies
+    }
+
+    private fun getDependencies(bindingCollection: Collection<Set<Binding>>): Set<Dependency> {
+        if (bindingCollection.isEmpty())
+            return emptySet()
+
+        val dependencies = HashSet<Dependency>()
+        for (setOfBindings in bindingCollection)
+            for (binding in setOfBindings)
+                dependencies.addAll(binding.dependencies)
+        return dependencies
+    }
+
+    private fun getDependencies(
+        outgoing: Collection<Set<Dependency>>,
+        incoming: Collection<Set<Dependency>>
+    ): Set<Dependency> {
+        if (outgoing.isEmpty() && incoming.isEmpty())
+            return emptySet()
+
+        val dependencies = HashSet<Dependency>(outgoing.size + incoming.size)
+        for (dependencySet in outgoing)
+            dependencies.addAll(dependencySet)
+        for (dependencySet in incoming)
+            dependencies.addAll(dependencySet)
+        return dependencies
     }
 
     /**
@@ -176,13 +204,13 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
     }
 
     private class CausalNetSequenceWithHash(other: CausalNetSequenceWithHash? = null) {
-        private val _data: ArrayList<ActivityBinding> = ArrayList(other?._data ?: emptyList())
-        private val states: HashMap<Int, ArrayList<State>> = HashMap(other?.states ?: emptyMap())
+        private val _data: MutableList<ActivityBinding> = LinkedList(other?._data ?: emptyList())
+        private val states: HashMap<Int, MutableList<State>> = HashMap(other?.states ?: emptyMap())
         val data: List<ActivityBinding> = Collections.unmodifiableList(_data)
 
         fun add(ab: ActivityBinding) {
             _data.add(ab)
-            states.getOrPut(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
+            states.computeIfAbsent(ab.state.uniqueSet().hashCode(), { LinkedList() }).add(ab.state)
         }
 
         fun containsBoringSubset(superset: State): Boolean {
@@ -213,7 +241,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
         val candidates = currentState.map { it.target }.intersect(model.joins.keys)
         for (ak in candidates) {
             for (join in model.joins.getValue(ak)) {
-                val expected = join.sources.map { Dependency(it , ak) }
+                val expected = join.sources.map { Dependency(it, ak) }
                 if (currentState.containsAll(expected)) {
                     val splits = model.splits[ak]
                     if (splits != null) {
@@ -260,7 +288,7 @@ class CausalNetVerifierImpl(val model: Model, val useCache: Boolean = true) {
             while (queue.isNotEmpty()) {
                 val current = queue.pollFirst()
                 if (chooseArbitrarySerialization) {
-                    val key = current.data.map { it.a }.toSet() to current.data.last().state.uniqueSet()
+                    val key = current.data.mapToSet { it.a } to current.data.last().state.uniqueSet()
                     if (beenThereDoneThat.contains(key))
                         continue
                     beenThereDoneThat.add(key)

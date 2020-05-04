@@ -1,5 +1,7 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
+
 /**
  * Constructs a Causal Net using a Domain Specific Language (DSL) defined by [CausalNetDSL].
  *
@@ -62,7 +64,7 @@ class SplitsDSL(val base: CausalNetDSL, val source: Node) {
     }
 
     infix fun or(targets: Collection<Node>): SplitsDSL {
-        base.splits.add(Split(targets.map { target -> Dependency(source, target) }.toSet()))
+        base.splits.add(Split(targets.mapToSet { target -> Dependency(source, target) }))
         return this
     }
 }
@@ -97,7 +99,7 @@ class CausalNetDSL {
     var end: Node = Node("end", special = true)
 
     infix fun Set<Node>.join(target: Node) {
-        this@CausalNetDSL.joins.add(Join(this.map { source -> Dependency(source, target) }.toSet()))
+        this@CausalNetDSL.joins.add(Join(this.mapToSet { source -> Dependency(source, target) }))
     }
 
     infix fun SetOfSetOfNodes.join(target: Node) {

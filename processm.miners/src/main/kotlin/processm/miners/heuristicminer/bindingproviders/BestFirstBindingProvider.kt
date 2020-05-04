@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.bindingproviders
 
 import processm.core.helpers.HierarchicalIterable
+import processm.core.helpers.mapToSet
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.verifiers.causalnet.State
@@ -67,9 +68,9 @@ class BestFirstBindingProvider(val comparator: Comparator<ComputationState> = De
                 if (traceSoFar.state.isEmpty()) {
                     val (_, joins, splits) = traceSoFar
                     val finalSplits = splits.filter { split -> split.isNotEmpty() }
-                        .map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
+                        .map { split -> Split(split.mapToSet { (a, b) -> Dependency(a, b) }) }
                     val finalJoins = joins.filter { join -> join.isNotEmpty() }
-                        .map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
+                        .map { join -> Join(join.mapToSet { (a, b) -> Dependency(a, b) }) }
                     return finalSplits + finalJoins
                 }
                 continue
