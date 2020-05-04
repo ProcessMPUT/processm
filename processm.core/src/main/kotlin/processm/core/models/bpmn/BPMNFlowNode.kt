@@ -13,12 +13,8 @@ abstract class BPMNFlowNode internal constructor(override val name: String, inte
 
     protected abstract val base: TFlowNode
 
-    override fun equals(other: Any?): Boolean {
-        if (other is BPMNFlowNode)
-            return this.base === other.base && this.process === other.process
-        else
-            return super.equals(other)
-    }
+    override fun equals(other: Any?): Boolean =
+        (other is BPMNFlowNode) && this.base === other.base && this.process === other.process
 
     override fun hashCode(): Int = base.hashCode()
 
