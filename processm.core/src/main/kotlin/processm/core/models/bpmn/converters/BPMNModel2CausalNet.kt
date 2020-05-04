@@ -72,7 +72,7 @@ internal class BPMNModel2CausalNet(val model: BPMNModel) {
         if (!p.id.isNullOrBlank())
             return "ID:${p.id}"
         val idx = model.processes.indexOfFirst { it.base === p }
-        check(idx >= 0) { "Somehow we are processing an unknown TProcess" }
+        check(idx >= 0) { "Encountered an unknown process $p." }
         return "IDX:${idx}"
     }
 
