@@ -18,7 +18,7 @@ internal class BPMNActivity internal constructor(override val base: TActivity, n
     val isCallable
         get() = base is TCallActivity
 
-    override val split: BPMNDecisionPoint by lazy {
+    override val split: BPMNDecisionPoint by lazy(LazyThreadSafetyMode.NONE) {
         val result = BPMNDecisionPoint(this)
         val boundaryEvents = nodes(process.boundaryEventsFor(this@BPMNActivity))
         val default = nodes(listOfNotNull(base.default as? TSequenceFlow).map { it.targetRef as TFlowNode })
@@ -41,7 +41,7 @@ internal class BPMNActivity internal constructor(override val base: TActivity, n
     }
 
 
-    override val join: BPMNDecisionPoint by lazy {
+    override val join: BPMNDecisionPoint by lazy(LazyThreadSafetyMode.NONE) {
         val result = BPMNDecisionPoint(this)
         for (flow in incomingSequenceFlows)
             result.add(nodes(setOf(flow.sourceRef as TFlowNode)))
