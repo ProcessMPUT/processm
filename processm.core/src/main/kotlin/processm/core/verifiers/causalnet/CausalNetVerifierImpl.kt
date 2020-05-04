@@ -3,11 +3,7 @@ package processm.core.verifiers.causalnet
 import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.mapToSet
 import processm.core.helpers.withMemory
-import processm.core.models.causalnet.Binding
-import processm.core.models.causalnet.CausalNetState
-import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.*
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -206,7 +202,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
 
     private class CausalNetSequenceWithHash(other: CausalNetSequenceWithHash? = null) {
         private val _data: MutableList<ActivityBinding> = LinkedList(other?._data ?: emptyList())
-        private val states: HashMap<Int, MutableList<State>> = HashMap(other?.states ?: emptyMap())
+        private val states: HashMap<Int, MutableList<CausalNetState>> = HashMap(other?.states ?: emptyMap())
         val data: List<ActivityBinding> = Collections.unmodifiableList(_data)
 
         fun add(ab: ActivityBinding) {
