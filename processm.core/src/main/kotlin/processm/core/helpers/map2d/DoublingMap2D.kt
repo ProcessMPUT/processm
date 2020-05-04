@@ -1,13 +1,16 @@
 package processm.core.helpers.map2d
 
 /**
- * The default implememtation of [Map2D], backed by two hasmaps of hasmaps: one from rows, to columns, to values, and the other from columns, to rows, to values.
+ * The default implementation of [Map2D], backed by two hashmaps of hashmaps: one from rows, to columns, to values, and the other from columns, to rows, to values.
  */
 class DoublingMap2D<Row, Column, Value> : Map2D<Row, Column, Value> {
 
     private class View<K, V>(private val get: () -> MutableMap<K, V>?, private val update: (K, V) -> Unit) :
         Map2D.View<K, V> {
 
+        /**
+         * This is to ensure that we are able to read an empty row/column without actually inserting it to the map.
+         */
         private var backend: MutableMap<K, V>? = null
             get() {
                 if (field == null)
@@ -16,22 +19,26 @@ class DoublingMap2D<Row, Column, Value> : Map2D<Row, Column, Value> {
             }
 
         override fun set(k: K, v: V) = update(k, v)
+
         override val entries: Set<Map.Entry<K, V>>
             get() = backend?.entries ?: emptySet()
+
         override val keys: Set<K>
             get() = backend?.keys ?: emptySet()
+
         override val size: Int
             get() = backend?.size ?: 0
+
         override val values: Collection<V>
             get() = backend?.values ?: emptyList()
 
-        override fun containsKey(key: K): Boolean = backend?.containsKey(key) ?: false
+        override fun containsKey(key: K): Boolean = backend?.containsKey(key) == true
 
-        override fun containsValue(value: V): Boolean = backend?.containsValue(value) ?: false
+        override fun containsValue(value: V): Boolean = backend?.containsValue(value) == true
 
-        override fun get(key: K): V? = backend?.get(key) ?: null
+        override fun get(key: K): V? = backend?.get(key)
 
-        override fun isEmpty(): Boolean = backend?.isEmpty() ?: true
+        override fun isEmpty(): Boolean = backend?.isEmpty() != false
     }
 
     private val rcv = HashMap<Row, HashMap<Column, Value>>()

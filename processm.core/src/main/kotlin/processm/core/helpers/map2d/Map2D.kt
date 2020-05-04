@@ -7,7 +7,7 @@ package processm.core.helpers.map2d
 interface Map2D<Row, Column, Value> {
 
     /**
-     * A view for a particular row/column, modifications are reflected in the original DoubleMap.
+     * A view for a particular row/column, modifications are reflected in the original Map2D.
      * Implementing full [MutableMap] has a potential to be very complex due to the possibly intricate insertion semantics
      */
     interface View<K, Value> : Map<K, Value> {
