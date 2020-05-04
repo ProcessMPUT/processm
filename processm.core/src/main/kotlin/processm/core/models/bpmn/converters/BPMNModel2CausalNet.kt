@@ -86,7 +86,7 @@ internal class BPMNModel2CausalNet(val model: BPMNModel) {
         val node2converter = HashMap<Node, MutableList<BPMN2CausalNet>>()
         for (conv in converters.values)
             for (node in conv.cnet.instances) {
-                node2converter.getOrPut(node, { ArrayList() }).add(conv)
+                node2converter.computeIfAbsent(node) { ArrayList() }.add(conv)
             }
         for ((node, convs) in node2converter.filter { !it.key.special && it.value.size >= 2 }) {
             for (conv in convs) {
