@@ -137,7 +137,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     /**
      * Based on Definition 3.8 in PM
      */
-    private fun allDependenciesUsed(): Boolean {
+    fun allDependenciesUsed(): Boolean {
         val splitDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
         val joinDependencies = model.joins.values.flatten().flatMap { it.dependencies }.toSet()
         val allDependencies = model.dependencies
