@@ -87,7 +87,7 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
         }
     }
 
-    private fun xgw(name: String): TExclusiveGateway {
+    private fun exclusiveGateway(name: String): TExclusiveGateway {
         val gw = TExclusiveGateway()
         if (nameGateways)
             gw.name = name
@@ -95,7 +95,7 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
         return gw
     }
 
-    private fun pgw(name: String): TParallelGateway {
+    private fun parallelGateway(name: String): TParallelGateway {
         val gw = TParallelGateway()
         if (nameGateways)
             gw.name = name
@@ -109,7 +109,7 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
         for ((src, splits) in cnet.splits) {
             val base = nodes.getValue(src)
             val exclusive = if (splits.size > 1) {
-                val gw = xgw("splits:$src")
+                val gw = exclusiveGateway("splits:$src")
                 link(base, gw)
                 gw
             } else
@@ -117,7 +117,7 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
             splitsExclusive[src] = exclusive
             for (split in splits) {
                 splitsParallel[split] = if (split.size > 1) {
-                    val gw = pgw("$split")
+                    val gw = parallelGateway("$split")
                     link(exclusive, gw)
                     gw
                 } else
@@ -132,7 +132,7 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
         for ((dst, joins) in cnet.joins) {
             val base = nodes.getValue(dst)
             val exclusive = if (joins.size > 1) {
-                val gw = xgw("joins:$dst")
+                val gw = exclusiveGateway("joins:$dst")
                 link(gw, base)
                 gw
             } else
@@ -140,7 +140,7 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
             joinsExclusive[dst] = exclusive
             for (join in joins) {
                 joinsParallel[join] = if (join.size >= 2) {
-                    val gw = pgw("$join")
+                    val gw = parallelGateway("$join")
                     link(gw, exclusive)
                     gw
                 } else
@@ -159,7 +159,7 @@ internal class CausalNet2BPMN(private val cnet: CausalNet, private val nameGatew
                 link(left, right)
                 return@associateWith left to right
             } else {
-                val tmp = xgw("$dep")
+                val tmp = exclusiveGateway("$dep")
                 return@associateWith tmp to tmp
             }
         }
