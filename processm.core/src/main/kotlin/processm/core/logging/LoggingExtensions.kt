@@ -21,7 +21,7 @@ inline fun <reified T : Any> T.logger(): Logger = getLogger(getClassForLogging(T
 /**
  * Logs on TRACE level the entrance to a function.
  */
-@Suppress("DuplicatedCode") // the code is duplicate for the purpose of simplified stack reading
+@Suppress("DuplicatedCode") // the code is duplicated for the purpose of simplified stack reading
 fun Logger.enter() {
     if (!isTraceEnabled)
         return
@@ -39,7 +39,7 @@ fun Logger.enter() {
 /**
  * Logs on TRACE level the exit from a function.
  */
-@Suppress("DuplicatedCode") // the code is duplicate for the purpose of simplified stack reading
+@Suppress("DuplicatedCode") // the code is duplicated for the purpose of simplified stack reading
 fun Logger.exit() {
     if (!isTraceEnabled)
         return

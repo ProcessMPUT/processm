@@ -12,7 +12,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 private const val EnvironmentVariablePrefix = "processm_"
 private var configurationLoaded = AtomicBoolean(false)
 
-private object Helpers
+private object Helpers {
+    internal val logger = logger()
+}
 
 
 /**
@@ -35,14 +37,14 @@ fun loadConfiguration(overwriteIfAlreadyLoaded: Boolean = false) {
     // Load from environment variables processm_* by replacing _ with .
     System.getenv().filterKeys { it.startsWith(EnvironmentVariablePrefix, true) }.forEach {
         val key = it.key.replace("_", ".")
-        Helpers.logger().debug("Setting parameter $key=${it.value} using environment variable ${it.key}")
+        Helpers.logger.debug("Setting parameter $key=${it.value} using environment variable ${it.key}")
         System.setProperty(key, it.value)
     }
 
     // Load from configuration file, possibly overriding the environment settings
     Helpers::class.java.classLoader.getResourceAsStream("config.properties").use {
         Properties().apply { load(it) }.forEach {
-            Helpers.logger().debug("Setting parameter ${it.key}=${it.value} using config.properties")
+            Helpers.logger.debug("Setting parameter ${it.key}=${it.value} using config.properties")
             System.setProperty(it.key as String, it.value as String)
         }
     }
@@ -66,7 +68,7 @@ fun hierarchicalCompare(seq1: Sequence<Log>, seq2: Sequence<Log>): Boolean =
             }
         }
     } catch (e: IllegalArgumentException) {
-        Helpers.logger().debug(e.message)
+        Helpers.logger.debug(e.message)
         false
     }
 
@@ -94,9 +96,8 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
 /**
  * Generates the power-set of the collection (incl. the empty set and the full set)
  */
-fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
-    if (this@allSubsets.size >= Long.SIZE_BITS)
-        throw IllegalArgumentException("This implementation of power set supports sets of up to 63 items.")
+fun <T> Collection<T>.allSubsets(filterOutEmpty: Boolean = false): Sequence<List<T>> = sequence {
+    require(this@allSubsets.size < Long.SIZE_BITS) { "This implementation of power set supports sets of up to 63 items." }
     if (this@allSubsets.isEmpty()) {
         yield(listOf<T>())
         return@sequence
@@ -104,7 +105,7 @@ fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
 
     val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this@allSubsets.size)
 
-    var mask = 0L
+    var mask = if (filterOutEmpty) 1L else 0L
     while (true) {
         yield(this@allSubsets.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L })
 
@@ -114,31 +115,53 @@ fun <T> Collection<T>.allSubsets(): Sequence<List<T>> = sequence {
 }
 
 /**
- * Eagerly computes powerset. The empty set is included if [filterEmpty] is true.
+ * Eagerly computes powerset. The empty set is excluded if [filterOutEmpty] is true.
  *
  * This seems to be more efficient if one knows that the whole powerset is going to be used.
  * Otherwise, [allSubsets] should be the preferred solution, as it does not perform eager materialization.
  */
-fun <T> Collection<T>.materializedAllSubsets(filterEmpty: Boolean): List<List<T>> {
-    require(this.size < Int.SIZE_BITS) { "This implementation of power set supports sets of up to 31 items." }
+fun <T> Collection<T>.materializedAllSubsets(filterOutEmpty: Boolean): List<List<T>> {
+    // The collection of size 31 cannot be handled this way, as Int is unable to hold 2^31 and the resulting ArrayList cannot be created
+    require(this.size <= 30) { "This implementation of power set supports sets of up to 30 items." }
     if (this.isEmpty()) {
-        return if (filterEmpty)
+        return if (filterOutEmpty)
             emptyList()
         else
             listOf(emptyList())
     }
 
     val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this.size)
+    var mask = if (filterOutEmpty) 1L else 0L
 
-    var mask = 0L
-    val result = ArrayList<List<T>>(1 shl (this.size + 1))
+    if (this.size >= 16) {
+        Helpers.logger.warn("Attempted to materialize the power set of the collection of size ${this.size}. Expect high memory pressure.")
+        if (this.size >= 24) // good luck
+            System.gc()
+        /*
+        The below table shows the expected memory usage if the compressed oops are on. These values roughly double for
+        disabled compressed oops. The memory usage is calculated as
+        2^size * (4 /*reference to a subset*/ + 16 /*internals of the ArrayList representing the subset*/ + size/2 * 4 /*the expected size of references hold by the subset*/)
+        | size | memory usage |
+        | 16   |        3.3MB |
+        | 18   |       14.0MB |
+        | 20   |       60.0MB |
+        | 22   |      256.0MB |
+        | 24   |        1.1GB |
+        | 26   |        4.5GB |
+        | 28   |       19.0GB |
+        | 30   |       80.0GB |
+        */
+    }
+
+    val result = ArrayList<List<T>>((1 shl this.size) - mask.toInt())
     while (true) {
-        val tmp = this.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L }
-        if (!filterEmpty || tmp.isNotEmpty())
-            result.add(tmp)
+        result.add(this.filterIndexed { index, _ -> (mask and (1L shl index)) != 0L })
 
-        if (++mask > lastBucketMask || mask < 0L)
+        assert((mask + 1L) >= 0L) { "Overflow should not happen here." }
+        if (++mask > lastBucketMask /*|| mask < 0L*/) {
+            assert(result.size == (1 shl this.size) - (if (filterOutEmpty) 1 else 0))
             return result
+        }
     }
 }
 
@@ -151,7 +174,7 @@ fun <T> Collection<T>.allPermutations(): Sequence<ArrayList<T>> = sequence {
 
     yield(ArrayList(this@allPermutations))
 
-    var A = this@allPermutations.toMutableList()
+    val A = this@allPermutations.toMutableList()
     val n = A.size
     val c = IntArray(n)
 
