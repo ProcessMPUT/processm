@@ -2,6 +2,7 @@ package processm.core.models.bpmn
 
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.AttributesImpl
+import processm.core.models.bpmn.jaxb.ObjectFactory
 import processm.core.models.bpmn.jaxb.TDefinitions
 import java.io.InputStream
 import java.io.OutputStream
@@ -71,9 +72,9 @@ object BPMNXMLService {
 
         fun endElement(element: EndElement) {
             handler.endElement(
-                element.name.namespaceURI,
-                element.name.localPart,
-                qname(element.name)
+                    element.name.namespaceURI,
+                    element.name.localPart,
+                    qname(element.name)
             )
             (element.namespaces as Iterator<Namespace>).forEach { handler.endPrefixMapping(it.prefix) }
         }
@@ -82,16 +83,16 @@ object BPMNXMLService {
             (element.namespaces as Iterator<Namespace>).forEach {
                 if (it.namespaceURI != null)
                     handler.startPrefixMapping(
-                        it.prefix,
-                        it.namespaceURI
+                            it.prefix,
+                            it.namespaceURI
                     )
             }
             try {
                 handler.startElement(
-                    element.name.namespaceURI,
-                    element.name.localPart,
-                    qname(element.name),
-                    attributes(element)
+                        element.name.namespaceURI,
+                        element.name.localPart,
+                        qname(element.name),
+                        attributes(element)
                 )
             } catch (e: NumberFormatException) {
                 _warnings.add(e)
@@ -140,11 +141,7 @@ object BPMNXMLService {
      * Serialize a BPMN model to an XML using StAX
      */
     internal fun save(def: TDefinitions, out: OutputStream) {
-        val wrap = JAXBElement<TDefinitions>(
-            QName("http://www.omg.org/spec/BPMN/20100524/MODEL", "definitions"),
-            def.javaClass,
-            def
-        )
+        val wrap = ObjectFactory().createDefinitions(def)
         val writer = XMLOutputFactory.newInstance().createXMLEventWriter(out)
         JAXBContext.newInstance(TDefinitions::class.java).createMarshaller().marshal(wrap, writer)
     }

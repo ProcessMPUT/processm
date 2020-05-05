@@ -23,15 +23,15 @@ internal class JaxbRecursiveComparer(val ignoreNSInQName: Boolean = false) {
 
     private fun processProp(left: Any, right: Any, prop: String, clazz: Class<in Any>): Boolean {
         val getters = clazz.declaredMethods
-            .filter { m -> m.canAccess(left) && m.canAccess(right) }
-            .filter { m -> m.parameterCount == 0 }
-            .filter { m ->
-                setOf(
-                    "get${prop.toLowerCase()}",
-                    "is${prop.toLowerCase()}",
-                    "has${prop.toLowerCase()}"
-                ).any { m.name.equals(it, true) }
-            }
+                .filter { m -> m.canAccess(left) && m.canAccess(right) }
+                .filter { m -> m.parameterCount == 0 }
+                .filter { m ->
+                    setOf(
+                            "get${prop.toLowerCase()}",
+                            "is${prop.toLowerCase()}",
+                            "has${prop.toLowerCase()}"
+                    ).any { m.name.equals(it, true) }
+                }
         logger().trace("PROP $prop #getters=${getters.size}")
         return getters.isNotEmpty() && getters.any { getter ->
             this(getter.invoke(left), getter.invoke(right))
@@ -51,14 +51,14 @@ internal class JaxbRecursiveComparer(val ignoreNSInQName: Boolean = false) {
         var result = true
         while (result && clazz != null && clazz.packageName == TDefinitions::class.java.packageName) {
             var props: Iterable<String> = clazz.annotations
-                .filterIsInstance<XmlType>()
-                .flatMap { clzAnn -> clzAnn.propOrder.toSet() }
+                    .filterIsInstance<XmlType>()
+                    .flatMap { clzAnn -> clzAnn.propOrder.toSet() }
             props += clazz.declaredFields
-                .flatMap { field -> processField(field) }
+                    .flatMap { field -> processField(field) }
             result = result && props
-                .toSet()
-                .filter { it.isNotEmpty() && it[0].isLetter() }
-                .all { prop -> processProp(left, right, prop, clazz!!) }
+                    .toSet()
+                    .filter { it.isNotEmpty() && it[0].isLetter() }
+                    .all { prop -> processProp(left, right, prop, clazz!!) }
             clazz = clazz.superclass
         }
         return result
