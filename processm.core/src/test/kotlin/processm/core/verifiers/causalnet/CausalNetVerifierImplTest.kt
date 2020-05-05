@@ -324,4 +324,89 @@ class CausalNetVerifierImplTest {
         assertTrue(v3.isEndReachableFromEveryNode)
         assertTrue(v3.isConnected)
     }
+
+    @Test
+    fun `structure - ok`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        assertTrue { CausalNetVerifierImpl(model).isStructurallySound }
+    }
+
+    @Test
+    fun `structure - unused dependency`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        model.addDependency(a, c)
+        assertFalse { CausalNetVerifierImpl(model).isStructurallySound }
+    }
+
+    @Test
+    fun `structure - two starts`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        model.addInstance(d)
+        val dep = model.addDependency(d, b)
+        model.addSplit(Split(setOf(dep)))
+        model.addJoin(Join(setOf(dep)))
+        assertFalse { CausalNetVerifierImpl(model).isStructurallySound }
+    }
+
+    @Test
+    fun `structure - two ends`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+            b joins c
+        }
+        model.addInstance(d)
+        val dep = model.addDependency(b, d)
+        model.addSplit(Split(setOf(dep)))
+        model.addJoin(Join(setOf(dep)))
+        assertFalse { CausalNetVerifierImpl(model).isStructurallySound }
+    }
+
+    @Test
+    fun `structure - missing join`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            b splits c
+            a joins b
+        }
+        assertEquals(setOf(Dependency(b, c)), CausalNetVerifierImpl(model).dependenciesUnusedInJoins)
+    }
+
+    @Test
+    fun `structure - missing split`() {
+        val model = causalnet {
+            start = a
+            end = c
+            a splits b
+            a joins b
+            b joins c
+        }
+        assertEquals(setOf(Dependency(b, c)), CausalNetVerifierImpl(model).dependenciesUnusedInSplits)
+    }
 }

@@ -229,3 +229,9 @@ inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(Hash
  * to each element in the original sequence.
  */
 inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
+
+inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
+        if (this.isNullOrEmpty())
+            default()
+        else
+            this

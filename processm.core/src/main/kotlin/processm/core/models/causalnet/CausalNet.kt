@@ -47,6 +47,12 @@ abstract class CausalNet(
     val instances: Set<Node> = Collections.unmodifiableSet(_instances)
 
     /**
+     * Convenience wrapper to retrieve all dependencies
+     */
+    val dependencies: Set<Dependency>
+        get() = Collections.unmodifiableSet(_outgoing.values.flatten().toSet())
+
+    /**
      * Outgoing arcs AKA what depends on a given node
      */
     val outgoing: Map<Node, Set<Dependency>>
@@ -117,16 +123,21 @@ abstract class CausalNet(
     /**
      * Returns true if the given join is present in the model and false otherwise
      */
-    fun contains(join: Join): Boolean {
+    operator fun contains(join: Join): Boolean {
         return _joins[join.target]?.contains(join) == true
     }
 
     /**
      * Returns true if the given split is present in the model and false otherwise
      */
-    fun contains(split: Split): Boolean {
+    operator fun contains(split: Split): Boolean {
         return _splits[split.source]?.contains(split) == true
     }
+
+    /**
+     * True if the causal net contains [dependency]
+     */
+    operator fun contains(dependency: Dependency): Boolean = outgoing[dependency.source]?.contains(dependency) == true
 
     /**
      * A simplified textual representation of the model.
@@ -143,5 +154,19 @@ abstract class CausalNet(
             append("$i/$j -> $n -> $o/$s\n")
         }
     }
+
+    fun structurallyEquals(other: CausalNet): Boolean {
+        return instances == other.instances &&
+                incoming == other.incoming &&
+                outgoing == other.outgoing &&
+                splits == other.splits &&
+                joins == other.joins
+    }
+
+
+    /**
+     * True if [right] is isomorphic with [this], starting with [inital] as a (possibly empty) mapping from [this] to [right].
+     */
+    fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? = Isomorphism(this, right).run(initial)
 
 }

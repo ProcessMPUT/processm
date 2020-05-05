@@ -441,4 +441,65 @@ class MutableCausalNetTest {
         assertTrue { mm.splits[c].isNullOrEmpty() }
         assertFalse { mm.splits[a].isNullOrEmpty() }
     }
+
+    @Test
+    fun copyFrom() {
+        val cnet1 = causalnet {
+            start = a
+            end = d
+            a splits b + c
+            a joins b
+            a joins c
+        }
+        val cnet2 = causalnet {
+            b splits d
+            c splits d
+            b + c join d
+        }
+        cnet1.copyFrom(cnet2) {
+            when (it) {
+                cnet2.start -> a
+                cnet2.end -> d
+                else -> it
+            }
+        }
+        val expected = causalnet {
+            start = a
+            end = d
+            a splits b + c
+            a joins b
+            a joins c
+            b splits d
+            c splits d
+            b + c join d
+        }
+        assertEquals(expected.toString(), cnet1.toString())
+    }
+
+    @Test
+    fun `contains dependency`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val mm = MutableCausalNet()
+        mm.addInstance(a, b, c)
+        assertFalse { Dependency(a, b) in mm }
+        assertFalse { Dependency(b, c) in mm }
+        mm.addDependency(Dependency(a, b))
+        assertTrue { Dependency(a, b) in mm }
+        assertFalse { Dependency(b, c) in mm }
+    }
+
+    @Test
+    fun dependencies() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val dep = Dependency(a, b)
+        val mm = MutableCausalNet()
+        mm.addInstance(a, b, c)
+        assertTrue { mm.dependencies.isEmpty() }
+        mm.addDependency(dep)
+        assertEquals(setOf(dep), mm.dependencies)
+    }
 }

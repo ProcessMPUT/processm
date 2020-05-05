@@ -46,10 +46,8 @@ class MutableCausalNet(
      * Adds a split between dependencies already present in the model
      */
     fun addSplit(split: Split) {
-        if (!_outgoing.getValue(split.source).containsAll(split.dependencies))
-            throw IllegalArgumentException()
-        if (_splits[split.source]?.any { it.dependencies == split.dependencies } == true)
-            throw IllegalArgumentException()
+        require(_outgoing.getValue(split.source).containsAll(split.dependencies)) { "Not all dependencies are in the causal net" }
+        require(_splits[split.source]?.any { it.dependencies == split.dependencies } != true) { "Split already present in the causal net" }
         _splits.computeIfAbsent(split.source, { HashSet() }).add(split)
     }
 
@@ -57,10 +55,8 @@ class MutableCausalNet(
      * Adds a join between dependencies already present in the model
      */
     fun addJoin(join: Join) {
-        if (!_incoming.getValue(join.target).containsAll(join.dependencies))
-            throw IllegalArgumentException()
-        if (_joins[join.target]?.any { it.dependencies == join.dependencies } == true)
-            throw IllegalArgumentException()
+        require(_incoming.getValue(join.target).containsAll(join.dependencies)) { "Not all dependencies are in the causal net" }
+        require(_joins[join.target]?.any { it.dependencies == join.dependencies } != true) {"Join already present in the causal net"}
         _joins.computeIfAbsent(join.target, { HashSet() }).add(join)
     }
 
@@ -124,4 +120,38 @@ class MutableCausalNet(
         clearJoins()
     }
 
+    /**
+     * Removes all splits for [node]
+     */
+    fun clearSplitsFor(node: Node) {
+        _splits.remove(node)
+    }
+
+    /**
+     * Removes all joins for [node]
+     */
+    fun clearJoinsFor(node: Node) {
+        _joins.remove(node)
+    }
+
+    /**
+     * Adds all nodes, dependencies and bindings from [origin] to this, using [translate] to map from nodes of [origin] to nodes of this
+     */
+    fun copyFrom(origin: CausalNet, translate: (Node) -> Node) {
+        val n2n = origin.instances.associateWith(translate)
+        addInstance(*n2n.values.toTypedArray())
+        val d2d = origin.outgoing.values.flatten().associateWith { dep -> Dependency(n2n.getValue(dep.source), n2n.getValue(dep.target)) }
+        for (dep in d2d.values)
+            addDependency(dep)
+        for (split in origin.splits.values.flatten()) {
+            val s = Split(split.dependencies.map { d2d.getValue(it) }.toSet())
+            if (s !in this)
+                addSplit(s)
+        }
+        for (join in origin.joins.values.flatten()) {
+            val j = Join(join.dependencies.map { d2d.getValue(it) }.toSet())
+            if (j !in this)
+                addJoin(j)
+        }
+    }
 }

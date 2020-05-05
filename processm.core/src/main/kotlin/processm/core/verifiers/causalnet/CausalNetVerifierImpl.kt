@@ -4,6 +4,7 @@ import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.mapToSet
 import processm.core.helpers.withMemory
 import processm.core.models.causalnet.*
+import processm.core.logging.logger
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -120,12 +121,24 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     }
 
     /**
+     * True if the structure of the causal net is correct:
+     *
+     * * has a single start,
+     * * has a single end,
+     * * all dependencies are used in splits and joins,
+     * * the underlying dependency graph is connected
+     */
+    val isStructurallySound: Boolean by lazy {
+        allDependenciesUsed() && hasSingleEnd() && hasSingleStart() && isConnected
+    }
+
+    /**
      * Based on Definition 3.8 in PM
      */
     fun allDependenciesUsed(): Boolean {
         val splitDependencies = getDependencies(model.splits.values)
         val joinDependencies = getDependencies(model.joins.values)
-        val allDependencies = getDependencies(model.outgoing.values, model.incoming.values)
+        val allDependencies = model.dependencies
         return splitDependencies == allDependencies && joinDependencies == allDependencies
     }
 
@@ -140,33 +153,38 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         return dependencies
     }
 
-    private fun getDependencies(
-        outgoing: Collection<Set<Dependency>>,
-        incoming: Collection<Set<Dependency>>
-    ): Set<Dependency> {
-        if (outgoing.isEmpty() && incoming.isEmpty())
-            return emptySet()
+    /**
+     * Returns dependencies unused in splits. A helper for [isStructurallySound].
+     */
+    val dependenciesUnusedInSplits
+        get() = model.dependencies - model.splits.values.flatten().flatMap { it.dependencies }.toSet()
 
-        val dependencies = HashSet<Dependency>(outgoing.size + incoming.size)
-        for (dependencySet in outgoing)
-            dependencies.addAll(dependencySet)
-        for (dependencySet in incoming)
-            dependencies.addAll(dependencySet)
-        return dependencies
-    }
+    /**
+     * Returns dependencies unused in joins. A helper for [isStructurallySound].
+     */
+    val dependenciesUnusedInJoins
+        get() = model.dependencies - model.joins.values.flatten().flatMap { it.dependencies }.toSet()
 
     /**
      * Over all nodes, there should be exactly one with no predecessor
      */
     private fun hasSingleStart(): Boolean {
-        return model.instances.filter { model.incoming[it].isNullOrEmpty() }.size == 1
+        val starts = model.instances.filter { model.incoming[it].isNullOrEmpty() }
+        if (starts.size == 1)
+            return true
+        logger().debug("There is an unexpected number of starts: $starts")
+        return false
     }
 
     /**
      * Over all nodes, there should be exactly one with no successor
      */
     private fun hasSingleEnd(): Boolean {
-        return model.instances.filter { model.outgoing[it].isNullOrEmpty() }.size == 1
+        val ends = model.instances.filter { model.outgoing[it].isNullOrEmpty() }
+        if (ends.size == 1)
+            return true
+        logger().debug("There is an unexpected number of ends: $ends")
+        return false
     }
 
     private fun checkAbsenceOfDeadParts(seqs: Sequence<CausalNetSequence>): Boolean {
