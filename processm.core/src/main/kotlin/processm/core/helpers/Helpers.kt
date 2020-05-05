@@ -99,7 +99,8 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
 fun <T> Collection<T>.allSubsets(filterOutEmpty: Boolean = false): Sequence<List<T>> = sequence {
     require(this@allSubsets.size < Long.SIZE_BITS) { "This implementation of power set supports sets of up to 63 items." }
     if (this@allSubsets.isEmpty()) {
-        yield(listOf<T>())
+        if (!filterOutEmpty)
+            yield(emptyList<T>())
         return@sequence
     }
 
