@@ -63,7 +63,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             return listOf()
         }
 
-        val (_, joins, splits) = hypothesisSelector(currentStates.toList())
+        val (_, joins, splits) = hypothesisSelector(currentStates)
         if (logger().isTraceEnabled) {
             logger().trace("WINNING JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
             logger().trace("WINNING SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })

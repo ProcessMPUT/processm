@@ -29,6 +29,10 @@ class OnlineHeuristicMiner(
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
 ) : HeuristicMiner {
 
+    companion object {
+        private val logger = logger()
+    }
+
     private var unableToReplay = ArrayList<List<Node>>()
     private var currentBindings = setOf<Binding>()
     private val model = MutableCausalNet(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
@@ -81,11 +85,11 @@ class OnlineHeuristicMiner(
             val trace = i.next()
             val bindings = bindingProvider.computeBindings(model, trace)
             if (bindings.isNotEmpty()) {
-                logger().trace("replaying succeeded: $trace")
+                logger.trace("replaying succeeded: $trace")
                 traceRegister.register(bindings, trace)
                 i.remove()
             } else
-                logger().trace("replaying failed: $trace")
+                logger.trace("replaying failed: $trace")
         }
     }
 
@@ -128,7 +132,7 @@ class OnlineHeuristicMiner(
             replay(toReplay)
             updateBindings()
         } else {
-            logger().trace("computing bindings failed, keeping for later: $nodeTrace")
+            logger.trace("computing bindings failed, keeping for later: $nodeTrace")
             unableToReplay.add(nodeTrace)
         }
     }

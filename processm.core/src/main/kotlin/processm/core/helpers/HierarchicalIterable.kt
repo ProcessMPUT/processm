@@ -4,7 +4,7 @@ import java.util.*
 
 
 /**
- * An read-only view to a collection consisting of [prefix] immediately followed by [suffix] (i.e., `prefix+suffix`).
+ * A read-only view to a collection consisting of [prefix] immediately followed by [suffix] (i.e., `prefix+suffix`).
  * It aims to save memory by sharing [prefix] and/or [suffix] with other collections.
  *
  * By depth of a list we understand number of prefixes one must visit before arriving at a prefix that is not a [HierarchicalIterable]

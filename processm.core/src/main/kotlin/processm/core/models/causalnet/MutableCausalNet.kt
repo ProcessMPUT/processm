@@ -30,8 +30,8 @@ class MutableCausalNet(
         if (d.target !in _instances) {
             throw IllegalArgumentException("Unknown activity instance ${d.target}")
         }
-        _outgoing.getOrPut(d.source, { HashSet() }).add(d)
-        _incoming.getOrPut(d.target, { HashSet() }).add(d)
+        _outgoing.computeIfAbsent(d.source, { HashSet() }).add(d)
+        _incoming.computeIfAbsent(d.target, { HashSet() }).add(d)
         return d
     }
 
@@ -50,7 +50,7 @@ class MutableCausalNet(
             throw IllegalArgumentException()
         if (_splits[split.source]?.any { it.dependencies == split.dependencies } == true)
             throw IllegalArgumentException()
-        _splits.getOrPut(split.source, { HashSet() }).add(split)
+        _splits.computeIfAbsent(split.source, { HashSet() }).add(split)
     }
 
     /**
@@ -61,7 +61,7 @@ class MutableCausalNet(
             throw IllegalArgumentException()
         if (_joins[join.target]?.any { it.dependencies == join.dependencies } == true)
             throw IllegalArgumentException()
-        _joins.getOrPut(join.target, { HashSet() }).add(join)
+        _joins.computeIfAbsent(join.target, { HashSet() }).add(join)
     }
 
     /**

@@ -10,14 +10,13 @@ abstract class CountingHypothesisSelector :
     ReplayTraceHypothesisSelector {
     fun invoke(currentStates: Collection<ReplayTrace>, crit: Collection<Int>.() -> Int?): ReplayTrace {
         val statesWithCounts = currentStates
-            .map { (state, joins, splits) ->
-                ReplayTrace(state, joins, splits) to joins.flatten().count() + splits.flatten().count()
+            .map { trace ->
+                trace to trace.joins.flatten().size + trace.splits.flatten().size
             }
         val best = statesWithCounts.map { (k, v) -> v }.crit()
         val result = statesWithCounts
             .filter { (k, v) -> v == best }
             .map { (k, v) -> k }
-            .toList()
         if (result.size != 1) {
             logger().warn("Multiple equally good hypotheses, picking first")
         }
