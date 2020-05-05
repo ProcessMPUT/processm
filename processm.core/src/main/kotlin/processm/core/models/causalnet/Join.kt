@@ -1,5 +1,7 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
+
 /**
  * A binding between dependencies incoming into a node in a causal net.
  *
@@ -22,7 +24,7 @@ data class Join(override val dependencies: Set<Dependency>) : Binding {
      * Sources of all the dependencies of this join
      */
     val sources by lazy {
-        dependencies.map { d -> d.source }.toSet()
+        dependencies.mapToSet { d -> d.source }
     }
 
     override fun toString(): String {

@@ -2,6 +2,7 @@ package processm.miners.heuristicminer.longdistance
 
 import org.apache.commons.collections4.bidimap.DualHashBidiMap
 import processm.core.helpers.allSubsets
+import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 import java.io.BufferedReader
@@ -81,8 +82,8 @@ private class SPMFLongDistanceDependencyMiner(
                 .map { m ->
                     if (m == null)
                         throw IllegalStateException()
-                    val pred = m.groupValues[1].split(',').map { it.toInt() }.toSet()
-                    val succ = m.groupValues[2].split(',').map { it.toInt() }.toSet()
+                    val pred = m.groupValues[1].split(',').mapToSet { it.toInt() }
+                    val succ = m.groupValues[2].split(',').mapToSet { it.toInt() }
                     val sup = m.groupValues[3].toInt()
                     val conf = m.groupValues[4].toDouble()
                     Rule(
@@ -141,7 +142,7 @@ private class SPMFLongDistanceDependencyMiner(
                     .flatMap { tmp.getOrDefault(it, setOf()) }.toSet()
                 v - redundant - vredundant
             }
-            .map { (pred, succ) -> pred.map { int2node(it) }.toSet() to succ.map { int2node(it) }.toSet() }
+            .map { (pred, succ) -> pred.mapToSet { int2node(it) } to succ.mapToSet { int2node(it) } }
         println()
         println("DEPS")
         deps.forEach { (p, s) -> println("${p.map { it.activity }} -> ${s.map { it.activity }}") }

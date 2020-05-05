@@ -144,17 +144,15 @@ abstract class CausalNet(
      *
      * Useful for debugging tests, not useful for displaying complete information to the user
      */
-    override fun toString(): String {
-        var result = ""
-        val model = this
+    override fun toString(): String = buildString {
+        val model = this@CausalNet
         for (n in model.instances.sortedBy { it.activity }) {
             val i = model.incoming.getOrDefault(n, setOf()).map { dep -> dep.source }
             val j = model.joins.getOrDefault(n, setOf()).map { join -> join.sources.map { it } }
             val o = model.outgoing.getOrDefault(n, setOf()).map { dep -> dep.target }
             val s = model.splits.getOrDefault(n, setOf()).map { split -> split.targets.map { it } }
-            result += "$i/$j -> $n -> $o/$s\n"
+            append("$i/$j -> $n -> $o/$s\n")
         }
-        return result
     }
 
     fun structurallyEquals(other: CausalNet): Boolean {

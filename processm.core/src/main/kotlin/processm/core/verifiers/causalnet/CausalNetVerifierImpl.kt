@@ -1,12 +1,10 @@
 package processm.core.verifiers.causalnet
 
 import processm.core.helpers.SequenceWithMemory
+import processm.core.helpers.mapToSet
 import processm.core.helpers.withMemory
 import processm.core.logging.logger
-import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.CausalNetState
-import processm.core.models.causalnet.Dependency
-import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.*
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -138,10 +136,21 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      * Based on Definition 3.8 in PM
      */
     fun allDependenciesUsed(): Boolean {
-        val splitDependencies = model.splits.values.flatten().flatMap { it.dependencies }.toSet()
-        val joinDependencies = model.joins.values.flatten().flatMap { it.dependencies }.toSet()
+        val splitDependencies = getDependencies(model.splits.values)
+        val joinDependencies = getDependencies(model.joins.values)
         val allDependencies = model.dependencies
         return splitDependencies == allDependencies && joinDependencies == allDependencies
+    }
+
+    private fun getDependencies(bindingCollection: Collection<Set<Binding>>): Set<Dependency> {
+        if (bindingCollection.isEmpty())
+            return emptySet()
+
+        val dependencies = HashSet<Dependency>()
+        for (setOfBindings in bindingCollection)
+            for (binding in setOfBindings)
+                dependencies.addAll(binding.dependencies)
+        return dependencies
     }
 
     /**
@@ -216,7 +225,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
 
         fun add(ab: ActivityBinding) {
             _data.add(ab)
-            states.getOrPut(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
+            states.computeIfAbsent(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
         }
 
         fun containsBoringSubset(superset: CausalNetState): Boolean {
@@ -293,7 +302,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             while (queue.isNotEmpty()) {
                 val current = queue.pollFirst()
                 if (chooseArbitrarySerialization) {
-                    val key = current.data.map { it.a }.toSet() to current.data.last().state.uniqueSet()
+                    val key = current.data.mapToSet { it.a } to current.data.last().state.uniqueSet()
                     if (beenThereDoneThat.contains(key))
                         continue
                     beenThereDoneThat.add(key)

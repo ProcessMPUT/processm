@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.bindingproviders
 
 import processm.core.helpers.HierarchicalIterable
+import processm.core.helpers.mapToSet
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.miners.heuristicminer.ReplayTrace
@@ -35,7 +36,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
                         val ns = CausalNetState(intermediate)
                         ns.addAll(produce)
 
-                        if (!remainder.containsAll(ns.map { it.target }.toSet()))
+                        if (!remainder.containsAll(ns.mapToSet { it.target }))
                             continue
                         nextStates.add(
                             ReplayTrace(
@@ -62,16 +63,16 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             return listOf()
         }
 
-        val (_, joins, splits) = hypothesisSelector(currentStates.toList())
+        val (_, joins, splits) = hypothesisSelector(currentStates)
         if (logger().isTraceEnabled) {
             logger().trace("WINNING JOINS: " + joins.map { join -> join.map { (a, b) -> a.activity to b.activity } })
             logger().trace("WINNING SPLITS: " + splits.map { split -> split.map { (a, b) -> a.activity to b.activity } })
         }
 
         val finalSplits = splits.filter { split -> split.isNotEmpty() }
-            .map { split -> Split(split.map { (a, b) -> Dependency(a, b) }.toSet()) }
+            .map { split -> Split(split.mapToSet { (a, b) -> Dependency(a, b) }) }
         val finalJoins = joins.filter { join -> join.isNotEmpty() }
-            .map { join -> Join(join.map { (a, b) -> Dependency(a, b) }.toSet()) }
+            .map { join -> Join(join.mapToSet { (a, b) -> Dependency(a, b) }) }
         return finalSplits + finalJoins
     }
 }

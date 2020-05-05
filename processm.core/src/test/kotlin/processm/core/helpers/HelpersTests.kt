@@ -1,7 +1,9 @@
 package processm.core.helpers
 
+import processm.core.logging.logger
 import java.lang.reflect.Field
 import java.util.*
+import kotlin.system.measureTimeMillis
 import kotlin.test.*
 
 class HelpersTests {
@@ -90,7 +92,19 @@ class HelpersTests {
                 setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
                 setOf("a", "b", "c")
             ),
-            setOf("a", "b", "c").allSubsets().map { it.toSet() }.toSet()
+            setOf("a", "b", "c").allSubsets().mapToSet { it.toSet() }
+        )
+    }
+
+    @Test
+    fun subsetsWithoutEmpty() {
+        assertEquals(
+            setOf(
+                setOf("a"), setOf("b"), setOf("c"),
+                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
+                setOf("a", "b", "c")
+            ),
+            setOf("a", "b", "c").allSubsets(true).mapToSet { it.toSet() }
         )
     }
 
@@ -103,27 +117,48 @@ class HelpersTests {
                 setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
                 setOf("a", "b", "c")
             ),
-            setOf("a", "b", "c").materializedAllSubsets(false).map { it.toSet() }.toSet()
+            setOf("a", "b", "c").materializedAllSubsets(false).mapToSet { it.toSet() }
         )
     }
 
     @Test
-    fun `materialized subsets wihtout empty`() {
+    fun `materialized subsets without empty`() {
         assertEquals(
             setOf(
                 setOf("a"), setOf("b"), setOf("c"),
                 setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
                 setOf("a", "b", "c")
             ),
-            setOf("a", "b", "c").materializedAllSubsets(true).map { it.toSet() }.toSet()
+            setOf("a", "b", "c").materializedAllSubsets(true).mapToSet { it.toSet() }
         )
+    }
+
+    @Test
+    fun `materializedAllSubsets performance`() {
+        val set = "ABCDEFGHIJKLMNOPQRSTU".toHashSet()
+        set.materializedAllSubsets(false) // warm up
+        measureTimeMillis {
+            set.materializedAllSubsets(false)
+        }.also { logger().info("Calculated power set with empty subset in $it ms.") }
+
+        measureTimeMillis {
+            set.materializedAllSubsets(true)
+        }.also { logger().info("Calculated power set without empty subset in $it ms.") }
     }
 
     @Test
     fun `subsets of empty`() {
         assertEquals(
             setOf(setOf()),
-            setOf<Int>().allSubsets().map { it.toSet() }.toSet()
+            setOf<Int>().allSubsets().mapToSet { it.toSet() }
+        )
+    }
+
+    @Test
+    fun `subsets of empty filtered for non-empty`() {
+        assertEquals(
+            setOf(),
+            setOf<Int>().allSubsets(true).mapToSet { it.toSet() }
         )
     }
 

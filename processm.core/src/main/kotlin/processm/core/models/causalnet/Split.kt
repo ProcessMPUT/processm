@@ -1,5 +1,7 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
+
 /**
  * A binding between dependencies outgoing from a node in a causal net.
  *
@@ -23,7 +25,7 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
      * Targets of all the dependencies of this split
      */
     val targets by lazy {
-        dependencies.map { d -> d.target }.toSet()
+        dependencies.mapToSet { d -> d.target }
     }
 
     override fun toString(): String {

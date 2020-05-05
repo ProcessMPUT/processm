@@ -22,44 +22,58 @@ open class Log : XESElement() {
      */
     val extensions: Map<String, Extension>
         get() = Collections.unmodifiableMap(extensionsInternal)
+
     /**
      * Global trace attributes for the log.
      */
     val traceGlobals: Map<String, Attribute<*>>
         get() = Collections.unmodifiableMap(traceGlobalsInternal)
+
     /**
      * Global event attributes for the log.
      */
     val eventGlobals: Map<String, Attribute<*>>
         get() = Collections.unmodifiableMap(eventGlobalsInternal)
+
     /**
      * Trace classifiers for the log.
      */
     val traceClassifiers: Map<String, Classifier>
         get() = Collections.unmodifiableMap(traceClassifiersInternal)
+
     /**
      * Event classifiers for the log.
      */
     val eventClassifiers: Map<String, Classifier>
         get() = Collections.unmodifiableMap(eventClassifiersInternal)
+
     /**
-     * A whitespace-separated list of optional XES features this document makes use of (e.g., nested-attributes).
+     * The version of the XES standard this log conforms to (e.g., 1.0).
+     */
+    var xesVersion: String? = null
+        internal set
+
+    /**
+     * A whitespace-separated list of optional XES features this log makes use of (e.g., nested-attributes).
      * If no optional features are used, this attribute shall have an empty value.
      */
-    var features: String? = null
+    var xesFeatures: String? = null
         internal set
+
     /**
      * Special attribute based on concept:name
      * Standard extension: Concept
      */
     override var conceptName: String? = null
         internal set
+
     /**
      * Special attribute based on identity:id
      * Standard extension: Identity
      */
     override var identityId: String? = null
         internal set
+
     /**
      * Special attribute based on lifecycle:model
      * Standard extension: Lifecycle
@@ -72,23 +86,25 @@ open class Log : XESElement() {
     /**
      * Equals if both are Log and contains the same attributes
      */
-    override fun equals(other: Any?): Boolean {
-        if (other === this) return true
-        if (other !is Log) return false
-        return features == other.features && extensionsInternal == other.extensionsInternal
-                && traceGlobalsInternal == other.traceGlobalsInternal && eventGlobalsInternal == other.eventGlobalsInternal
-                && traceClassifiersInternal == other.traceClassifiersInternal && eventClassifiersInternal == other.eventClassifiersInternal
-                && attributesInternal == other.attributesInternal
-    }
+    override fun equals(other: Any?): Boolean = other === this
+            || other is Log
+            && xesVersion == other.xesVersion
+            && xesFeatures == other.xesFeatures
+            && extensionsInternal == other.extensionsInternal
+            && traceGlobalsInternal == other.traceGlobalsInternal
+            && eventGlobalsInternal == other.eventGlobalsInternal
+            && traceClassifiersInternal == other.traceClassifiersInternal
+            && eventClassifiersInternal == other.eventClassifiersInternal
+            && attributesInternal == other.attributesInternal
 
-    override fun hashCode(): Int {
-        var result = extensionsInternal.hashCode()
-        result = 31 * result + traceGlobalsInternal.hashCode()
-        result = 31 * result + eventGlobalsInternal.hashCode()
-        result = 31 * result + traceClassifiersInternal.hashCode()
-        result = 31 * result + eventClassifiersInternal.hashCode()
-        result = 31 * result + attributesInternal.hashCode()
-        result = 31 * result + (features?.hashCode() ?: 0)
-        return result
-    }
+    override fun hashCode(): Int = Objects.hash(
+        xesVersion,
+        xesFeatures,
+        extensionsInternal,
+        traceGlobalsInternal,
+        eventGlobalsInternal,
+        traceClassifiersInternal,
+        eventClassifiersInternal,
+        attributesInternal
+    )
 }

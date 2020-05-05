@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer
 
 import org.opentest4j.AssertionFailedError
+import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
@@ -46,7 +47,7 @@ class FromModelToLogAndBackAgain {
         logger().debug("REFERENCE:\n${reference}")
         val referenceVerifier = CausalNetVerifier().verify(reference)
         val expectedSequences =
-            referenceVerifier.validSequences.map { seq -> seq.map { it.a }.filter { !it.special } }.toSet()
+            referenceVerifier.validSequences.mapToSet { seq -> seq.map { it.a }.filter { !it.special } }
         logger().debug("EXPECTED SEQUENCES: ${str(expectedSequences)}")
         assertTrue(referenceVerifier.noDeadParts)
         assertTrue(referenceVerifier.isSound)
@@ -57,7 +58,7 @@ class FromModelToLogAndBackAgain {
         hm.processLog(log)
         val v = CausalNetVerifier().verify(hm.result)
 
-        val actualSequences = v.validSequences.map { seq -> seq.map { ab -> ab.a }.filter { !it.special } }.toSet()
+        val actualSequences = v.validSequences.mapToSet { seq -> seq.map { ab -> ab.a }.filter { !it.special } }
         logger().debug("ACTUAL SEQUENCES: ${str(actualSequences)}")
         logger().debug("UNEXPECTED SEQUENCES: ${str(actualSequences - expectedSequences)}")
         logger().debug("MISSING SEQUENCES: ${str(expectedSequences - actualSequences)}")

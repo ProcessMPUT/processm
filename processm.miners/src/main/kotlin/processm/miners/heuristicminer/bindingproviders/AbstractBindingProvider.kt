@@ -22,7 +22,7 @@ abstract class AbstractBindingProvider : BindingProvider {
         val knownJoins = model.joins[currentNode]
         return if (knownJoins.isNullOrEmpty()) {
             if (consumable.isNotEmpty())
-                consumable.intersect(available).allSubsets().filter { it.isNotEmpty() }
+                consumable.intersect(available).allSubsets(true)
             else
                 sequenceOf(emptySet<Dependency>())
         } else {

@@ -1,5 +1,6 @@
 package processm.core.verifiers
 
+import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
@@ -71,7 +72,7 @@ class CausalNetVerifierTest {
         val vr2 = v.verify(model2)
         assertNotEquals(vr1, vr2)
         assertEquals(
-            vr2.validSequences.map { seq -> seq.map { ab -> ab.a } }.toSet(), setOf(
+            vr2.validSequences.mapToSet { seq -> seq.map { ab -> ab.a } }, setOf(
                 listOf(a, b1, c, e),
                 listOf(a, b2, c, e),
                 listOf(a, b1, b2, c, d, e),

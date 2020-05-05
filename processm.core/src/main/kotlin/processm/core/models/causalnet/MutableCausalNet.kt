@@ -30,8 +30,8 @@ class MutableCausalNet(
         if (d.target !in _instances) {
             throw IllegalArgumentException("Unknown activity instance ${d.target}")
         }
-        _outgoing.getOrPut(d.source, { HashSet() }).add(d)
-        _incoming.getOrPut(d.target, { HashSet() }).add(d)
+        _outgoing.computeIfAbsent(d.source, { HashSet() }).add(d)
+        _incoming.computeIfAbsent(d.target, { HashSet() }).add(d)
         return d
     }
 
@@ -48,7 +48,7 @@ class MutableCausalNet(
     fun addSplit(split: Split) {
         require(_outgoing.getValue(split.source).containsAll(split.dependencies)) { "Not all dependencies are in the causal net" }
         require(_splits[split.source]?.any { it.dependencies == split.dependencies } != true) { "Split already present in the causal net" }
-        _splits.getOrPut(split.source, { HashSet() }).add(split)
+        _splits.computeIfAbsent(split.source, { HashSet() }).add(split)
     }
 
     /**
@@ -57,7 +57,7 @@ class MutableCausalNet(
     fun addJoin(join: Join) {
         require(_incoming.getValue(join.target).containsAll(join.dependencies)) { "Not all dependencies are in the causal net" }
         require(_joins[join.target]?.any { it.dependencies == join.dependencies } != true) {"Join already present in the causal net"}
-        _joins.getOrPut(join.target, { HashSet() }).add(join)
+        _joins.computeIfAbsent(join.target, { HashSet() }).add(join)
     }
 
     /**

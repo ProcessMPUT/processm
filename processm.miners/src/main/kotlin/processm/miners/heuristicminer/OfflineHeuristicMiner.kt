@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer
 
+import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import processm.core.logging.trace
@@ -73,12 +74,12 @@ class OfflineHeuristicMiner(
             dep2finalDep[dep] = finalModel.addDependency(s, t)
         }
         for (split in model.splits.values.flatten()) {
-            val s = Split(split.dependencies.map { dep2finalDep.getValue(it) }.toSet())
+            val s = Split(split.dependencies.mapToSet { dep2finalDep.getValue(it) })
             if (!finalModel.contains(s))
                 finalModel.addSplit(s)
         }
         for (join in model.joins.values.flatten()) {
-            val j = Join(join.dependencies.map { dep2finalDep.getValue(it) }.toSet())
+            val j = Join(join.dependencies.mapToSet { dep2finalDep.getValue(it) })
             if (!finalModel.contains(j))
                 finalModel.addJoin(j)
         }

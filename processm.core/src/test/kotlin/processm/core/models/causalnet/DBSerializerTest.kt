@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -40,7 +41,7 @@ class DBSerializerTest {
             setOf(f to d, f to c),
             setOf(g to z),
             setOf(h to z)
-        ).map { split -> split.map { Dependency(it.first, it.second) }.toSet() }
+        ).map { split -> split.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addSplit(Split(it)) }
         listOf(
             setOf(a to b),
@@ -56,7 +57,7 @@ class DBSerializerTest {
             setOf(e to h),
             setOf(g to z),
             setOf(h to z)
-        ).map { join -> join.map { Dependency(it.first, it.second) }.toSet() }
+        ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
         val id = DBSerializer.insert(mm)
         val fetched = DBSerializer.fetch(id)

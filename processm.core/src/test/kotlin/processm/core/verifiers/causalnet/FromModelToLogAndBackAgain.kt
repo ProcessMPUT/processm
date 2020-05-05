@@ -1,13 +1,10 @@
 package processm.core.verifiers.causalnet
 
+import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlin.test.Ignore
+import kotlin.test.*
 
 class FromModelToLogAndBackAgain {
     val a = Node("a")
@@ -35,11 +32,11 @@ class FromModelToLogAndBackAgain {
     fun test(model: CausalNet, expected: Set<List<Node>>) {
         val v = CausalNetVerifierImpl(model)
         assertEquals(
-            v.validSequences.map { seq -> seq.map { it.a } }.toSet(),
+            v.validSequences.mapToSet { seq -> seq.map { it.a } },
             expected
         )
         assertEquals(
-            v.validLoopFreeSequences.map { seq -> seq.map { it.a } }.toSet(),
+            v.validLoopFreeSequences.mapToSet { seq -> seq.map { it.a } },
             expected
         )
         assertFalse(v.hasDeadParts)

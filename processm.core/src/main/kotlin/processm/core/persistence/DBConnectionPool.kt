@@ -31,7 +31,7 @@ object DBConnectionPool {
         // using the connect string passed in the command line
         // arguments.
         val connectURI = System.getProperty("processm.core.persistence.connection.URL")
-        val connectionFactory = DriverManagerConnectionFactory(connectURI, null)
+        val connectionFactory = DriverManagerConnectionFactory(connectURI)
 
         // Next we'll create the PoolableConnectionFactory, which wraps
         // the "real" Connections created by the ConnectionFactory with

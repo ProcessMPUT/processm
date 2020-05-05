@@ -5,6 +5,7 @@ import org.w3c.dom.NodeList
 import processm.core.log.extension.Extension
 import processm.core.log.extension.XesExtensionAttribute
 import processm.core.logging.logger
+import java.io.File
 import java.io.InputStream
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
@@ -15,11 +16,13 @@ object XESExtensionLoader {
      * Loaded extensions memory - concurrent map to prevent concurrent access to memory
      */
     private val loadedExtensions: ConcurrentHashMap<String, Extension> = ConcurrentHashMap()
+
     /**
      * Allowed tags in XML file which we are able to parse inside <log>, <trace>, <event>, <meta> tag.
      * Variable in object to reduce dynamic allocation list in each comparation.
      */
     private val allowedAttributesNames = listOf("string", "float", "int", "id", "list", "date")
+
     /**
      * xes-standard website regex - If URI match it, we can use resources as first (reduce HTTP transfers).
      */
@@ -92,6 +95,9 @@ object XESExtensionLoader {
             // Try to load from local resources - open stream
             val extensionName = xesWebsiteRegex.matchEntire(uri)?.groups?.get("ext")?.value?.toLowerCase()
             if (!extensionName.isNullOrEmpty()) {
+                // The path traversal attack should not be possible here, as xesWebsiteRegex does not allow for
+                // slashes and backslashes in the extension name but for security reasons we do the check below.
+                require(File.separatorChar !in extensionName) { "Path traversal attack detected." }
                 stream = javaClass.classLoader.getResourceAsStream("xes-extensions/$extensionName.xesext")
             }
 
