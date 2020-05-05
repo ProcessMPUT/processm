@@ -3,8 +3,8 @@ package processm.core.verifiers.causalnet
 import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.mapToSet
 import processm.core.helpers.withMemory
-import processm.core.models.causalnet.*
 import processm.core.logging.logger
+import processm.core.models.causalnet.*
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -219,13 +219,13 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     }
 
     private class CausalNetSequenceWithHash(other: CausalNetSequenceWithHash? = null) {
-        private val _data: MutableList<ActivityBinding> = LinkedList(other?._data ?: emptyList())
-        private val states: HashMap<Int, MutableList<CausalNetState>> = HashMap(other?.states ?: emptyMap())
+        private val _data: ArrayList<ActivityBinding> = ArrayList(other?._data ?: emptyList())
+        private val states: HashMap<Int, ArrayList<CausalNetState>> = HashMap(other?.states ?: emptyMap())
         val data: List<ActivityBinding> = Collections.unmodifiableList(_data)
 
         fun add(ab: ActivityBinding) {
             _data.add(ab)
-            states.computeIfAbsent(ab.state.uniqueSet().hashCode(), { LinkedList() }).add(ab.state)
+            states.computeIfAbsent(ab.state.uniqueSet().hashCode(), { ArrayList() }).add(ab.state)
         }
 
         fun containsBoringSubset(superset: CausalNetState): Boolean {
