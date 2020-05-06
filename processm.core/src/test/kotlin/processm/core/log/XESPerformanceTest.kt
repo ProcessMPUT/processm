@@ -18,7 +18,7 @@ class XESPerformanceTest {
                 if (file.canonicalPath.endsWith(".xes.gz")) {
                     println(file.canonicalPath)
 
-                    DatabaseXESOutputStream().use { db ->
+                    DBXESOutputStream().use { db ->
                         file.absoluteFile.inputStream().use { fileStream ->
                             GZIPInputStream(fileStream).use { stream ->
                                 db.write(XMLXESInputStream(stream))
@@ -26,7 +26,7 @@ class XESPerformanceTest {
                         }
                     }
 
-                    val dbInput = DatabaseXESInputStream(Query(getLogId()))
+                    val dbInput = DBXESInputStream(Query(getLogId()))
 
                     file.absoluteFile.inputStream().use { fileStream ->
                         GZIPInputStream(fileStream).use { stream ->

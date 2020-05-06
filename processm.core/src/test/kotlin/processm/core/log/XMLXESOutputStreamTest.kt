@@ -1,7 +1,7 @@
 package processm.core.log
 
 import processm.core.helpers.hierarchicalCompare
-import processm.core.log.hierarchical.DatabaseHierarchicalXESInputStream
+import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.Query
@@ -158,7 +158,7 @@ internal class XMLXESOutputStreamTest {
             storeLog(XMLXESInputStream(it).asSequence())
         }
         val firstLogId = getLastLogId()
-        val fromDB = DatabaseHierarchicalXESInputStream(Query(firstLogId))
+        val fromDB = DBHierarchicalXESInputStream(Query(firstLogId))
 
         // Log to XML file
         StringWriter().use { received ->
@@ -170,15 +170,15 @@ internal class XMLXESOutputStreamTest {
             storeLog(XMLXESInputStream(received.toString().byteInputStream()).asSequence())
         }
 
-        val logFromDB = DatabaseHierarchicalXESInputStream(Query(firstLogId))
-        val logFromXML = DatabaseHierarchicalXESInputStream(Query(getLastLogId()))
+        val logFromDB = DBHierarchicalXESInputStream(Query(firstLogId))
+        val logFromXML = DBHierarchicalXESInputStream(Query(getLastLogId()))
 
         assertTrue(hierarchicalCompare(logFromDB, logFromXML))
     }
 
 
     private fun storeLog(sequence: Sequence<XESElement>) {
-        DatabaseXESOutputStream().use {
+        DBXESOutputStream().use {
             it.write(sequence)
         }
     }

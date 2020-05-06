@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * @property query An instance of a PQL query.
  */
-class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
+class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
     companion object {
         private val logger = logger()
         private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
@@ -46,7 +46,7 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
          * approximately 4MB of RAM.
          *
          * Note that the actual memory consumption may be smaller, as it depends on the behavior of the consumer of this
-         * [DatabaseHierarchicalXESInputStream] because the nested sequences are fetched lazily.
+         * [DBHierarchicalXESInputStream] because the nested sequences are fetched lazily.
          * The actual memory consumption may also be larger, as reevaluations may bring more objects to the fetch pool.
          * However, this effect is to some extent alleviated by the [cache] of [SoftReference]s to batches, that may use
          * the same [XESElement] objects during reevaluations.
@@ -401,3 +401,6 @@ class DatabaseHierarchicalXESInputStream(val query: Query) : LogInputStream {
         // https://stackoverflow.com/a/15750832
         get() = this.isAfterLast || !this.isBeforeFirst && this.row == 0
 }
+
+@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")
+typealias DatabaseHierarchicalXESInputStream = DBHierarchicalXESInputStream

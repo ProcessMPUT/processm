@@ -6,7 +6,7 @@ import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.*
 
-class DatabaseXESOutputStream : XESOutputStream {
+class DBXESOutputStream : XESOutputStream {
     companion object {
         private const val batchSize = 16
     }
@@ -341,3 +341,6 @@ class DatabaseXESOutputStream : XESOutputStream {
         }
     }
 }
+
+@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")
+typealias DatabaseXESOutputStream = DBXESOutputStream

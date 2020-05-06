@@ -1,7 +1,7 @@
 package processm.core.log.hierarchical
 
 import processm.core.helpers.hierarchicalCompare
-import processm.core.log.DatabaseXESOutputStream
+import processm.core.log.DBXESOutputStream
 import processm.core.log.Event
 import processm.core.log.XESInputStream
 import processm.core.persistence.DBConnectionPool
@@ -11,7 +11,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class DatabaseHierarchicalXESInputStreamTests {
+class DBHierarchicalXESInputStreamTests {
     val log: Sequence<Log> =
         sequenceOf(Log(sequenceOf(
             Trace(sequenceOf(
@@ -21,7 +21,8 @@ class DatabaseHierarchicalXESInputStreamTests {
             )).apply {
                 conceptName = "T"
             },
-            Trace(sequenceOf(
+            Trace(
+                sequenceOf(
                 Event().apply { conceptName = "D" },
                 Event().apply { conceptName = "E" },
                 Event().apply { conceptName = "F" }
@@ -34,7 +35,7 @@ class DatabaseHierarchicalXESInputStreamTests {
     private val logId: Int by lazyOf(setUp())
 
     private fun setUp(): Int {
-        DatabaseXESOutputStream().use {
+        DBXESOutputStream().use {
             it.write(log.toFlatSequence())
         }
 
@@ -48,7 +49,7 @@ class DatabaseHierarchicalXESInputStreamTests {
 
     @Test
     fun castTest() {
-        val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
+        val fromDB = DBHierarchicalXESInputStream(Query(logId))
         var implicitCast: XESInputStream = fromDB
         assertNotNull(implicitCast)
 
@@ -58,14 +59,14 @@ class DatabaseHierarchicalXESInputStreamTests {
 
     @Test
     fun repeatableReadTest() {
-        val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
+        val fromDB = DBHierarchicalXESInputStream(Query(logId))
         assertTrue(hierarchicalCompare(log, fromDB))
         assertTrue(hierarchicalCompare(log, fromDB))
     }
 
     @Test
     fun repeatableInterleavedReadTest() {
-        val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
+        val fromDB = DBHierarchicalXESInputStream(Query(logId))
         assertTrue(hierarchicalCompare(fromDB, fromDB))
         assertTrue(hierarchicalCompare(fromDB, fromDB))
     }
@@ -74,7 +75,7 @@ class DatabaseHierarchicalXESInputStreamTests {
     fun phantomReadTest() {
         var traceId: Long = -1L
         try {
-            val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
+            val fromDB = DBHierarchicalXESInputStream(Query(logId))
             assertTrue(hierarchicalCompare(log, fromDB))
 
             // insert phantom event Z into trace T
@@ -105,7 +106,7 @@ class DatabaseHierarchicalXESInputStreamTests {
             // implementation should ensure that phantom reads do not occur
             assertTrue(hierarchicalCompare(log, fromDB))
             // but a new sequence should reflect changes
-            val fromDB2 = DatabaseHierarchicalXESInputStream(Query(logId))
+            val fromDB2 = DBHierarchicalXESInputStream(Query(logId))
             assertFalse(hierarchicalCompare(log, fromDB2))
         } finally {
             // Delete log with id $logId

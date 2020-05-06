@@ -1,8 +1,8 @@
 package processm.directlyfollowsgraph
 
-import processm.core.log.DatabaseXESOutputStream
+import processm.core.log.DBXESOutputStream
 import processm.core.log.XMLXESInputStream
-import processm.core.log.hierarchical.DatabaseHierarchicalXESInputStream
+import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.ProcessTreeActivity
@@ -48,7 +48,7 @@ class DirectlyFollowsGraphTest {
     """.trimIndent()
     private val logId: Int by lazyOf(setUp())
     private fun setUp(): Int {
-        DatabaseXESOutputStream().use { db ->
+        DBXESOutputStream().use { db ->
             content.byteInputStream().use { stream ->
                 db.write(XMLXESInputStream(stream))
             }
@@ -77,7 +77,7 @@ class DirectlyFollowsGraphTest {
     @Test
     fun `Build directly follows graph based on log from Definition 6,3 PM book`() {
         val miner = DirectlyFollowsGraph()
-        miner.discover(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DBHierarchicalXESInputStream(logId))
 
         miner.graph.also { graph ->
             assertEquals(graph.size, 4)
@@ -134,7 +134,7 @@ class DirectlyFollowsGraphTest {
     @Test
     fun `Graph contains only activities from log, no special added`() {
         val miner = DirectlyFollowsGraph()
-        miner.discover(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DBHierarchicalXESInputStream(logId))
 
         assertEquals(miner.graph.size, 4)
     }
@@ -142,7 +142,7 @@ class DirectlyFollowsGraphTest {
     @Test
     fun `Start activities stored in special map`() {
         val miner = DirectlyFollowsGraph()
-        miner.discover(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DBHierarchicalXESInputStream(logId))
 
         assertEquals(miner.startActivities.size, 1)
 
@@ -153,7 +153,7 @@ class DirectlyFollowsGraphTest {
     @Test
     fun `Last activities stored in special map`() {
         val miner = DirectlyFollowsGraph()
-        miner.discover(DatabaseHierarchicalXESInputStream(logId))
+        miner.discover(DBHierarchicalXESInputStream(logId))
 
         assertEquals(miner.endActivities.size, 1)
 
