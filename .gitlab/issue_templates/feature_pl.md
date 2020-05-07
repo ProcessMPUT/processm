@@ -1,3 +1,5 @@
+/title feat: Nazwa nowej funkcji
+
 Podsumowanie
 
 
@@ -20,5 +22,3 @@ Materiały powiązane:
 
 Powiązane zadania:
 #
-
-/title feat: Nazwa nowej funkcji

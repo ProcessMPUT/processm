@@ -1,3 +1,5 @@
+/title bug: Nazwa błędu
+
 Podsumowanie
 
 
@@ -34,6 +36,5 @@ Materiały powiązane:
 Powiązane zadania:
 #
 
-/title bug: Nazwa błędu
 /label ~bug ~"short-term roadmap"
 /due 14 days
