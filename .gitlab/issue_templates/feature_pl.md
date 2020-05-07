@@ -22,5 +22,3 @@ Powiązane zadania:
 #
 
 /title feat: Nazwa nowej funkcji
-/assign me
-/milestone %"0.99 Prototype" 

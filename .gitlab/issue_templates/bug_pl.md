@@ -35,8 +35,5 @@ Powiązane zadania:
 #
 
 /title bug: Nazwa błędu
-/assign me
 /label ~bug ~"short-term roadmap"
 /due 14 days
-
-
