@@ -708,7 +708,7 @@ class DirectlyFollowsSubGraph(
         }
 
         // A sub-end activity of a redo should have connections to all start activities
-        for (subEndActivity in subEndActivities.toTypedArray()) {
+        for (subEndActivity in subEndActivities) {
             for (startActivity in currentStartActivities) {
                 if (components[subEndActivity] == components[startActivity]) {
                     // subEndActivity is already in the body
@@ -722,7 +722,7 @@ class DirectlyFollowsSubGraph(
         }
 
         // A sub-start activity of a redo should be connections from all end activities
-        for (subStartActivity in subStartActivities.toTypedArray()) {
+        for (subStartActivity in subStartActivities) {
             for (endActivity in currentEndActivities) {
                 if (components[subStartActivity] == components[endActivity]) {
                     // subStartActivity is already in the body
