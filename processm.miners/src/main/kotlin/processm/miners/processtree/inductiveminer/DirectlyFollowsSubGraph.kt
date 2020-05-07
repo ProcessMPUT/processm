@@ -24,12 +24,12 @@ class DirectlyFollowsSubGraph(
      */
     private val initialConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
     /**
-     * Initial start activities.
+     * Initial start activities  in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
      */
     private val initialStartActivities: MutableSet<ProcessTreeActivity> = HashSet(),
     /**
-     * Initial end activities.
+     * Initial end activities in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
      */
     private val initialEndActivities: MutableSet<ProcessTreeActivity> = HashSet()
@@ -63,13 +63,13 @@ class DirectlyFollowsSubGraph(
     private val ingoingConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
 
     /**
-     * Current start activities in graph.
+     * Current start activities in this subGraph.
      * Calculated once, used by parallel and loop cut detection.
      */
     private val currentStartActivities by lazy { currentStartActivities() }
 
     /**
-     * Current end activities in graph.
+     * Current end activities in this subGraph.
      * Calculated once, used by parallel and loop cut detection.
      */
     private val currentEndActivities by lazy { currentEndActivities() }
