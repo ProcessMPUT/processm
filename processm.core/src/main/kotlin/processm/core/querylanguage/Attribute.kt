@@ -1,5 +1,8 @@
 package processm.core.querylanguage
 
+import java.util.*
+import kotlin.NoSuchElementException
+
 /**
  * Represents an attribute in a PQL query.
  */
@@ -8,37 +11,38 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
         private val pqlAttributePattern =
             Regex("^(?:(([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?((?:\\w+:)?\\w+))|(\\[([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?(.+?)]))$")
 
-        private val standardAttributes: Map<Scope, Set<Pair<String, String?>>> = mapOf(
-            Scope.Log to setOf(
-                "concept" to "name",
-                "identity" to "id",
-                "lifecycle" to "model",
-                "db" to "id",
-                "xes" to "version",
-                "xes" to "features"
-            ),
-            Scope.Trace to setOf(
-                "concept" to "name",
-                "cost" to "currency",
-                "cost" to "total",
-                "identity" to "id",
-                "classifier" to null
-            ),
-            Scope.Event to setOf(
-                "concept" to "name",
-                "concept" to "instance",
-                "cost" to "currency",
-                "cost" to "total",
-                "identity" to "id",
-                "lifecycle" to "transition",
-                "lifecycle" to "state",
-                "org" to "resource",
-                "org" to "role",
-                "org" to "group",
-                "time" to "timestamp",
-                "classifier" to null
-            )
-        )
+        private val standardAttributes: EnumMap<Scope, Set<Pair<String, String?>>> =
+            EnumMap<Scope, Set<Pair<String, String?>>>(Scope::class.java).also {
+                it[Scope.Log] = setOf(
+                    "concept" to "name",
+                    "identity" to "id",
+                    "lifecycle" to "model",
+                    "db" to "id",
+                    "xes" to "version",
+                    "xes" to "features"
+                )
+                it[Scope.Trace] = setOf(
+                    "concept" to "name",
+                    "cost" to "currency",
+                    "cost" to "total",
+                    "identity" to "id",
+                    "classifier" to null
+                )
+                it[Scope.Event] = setOf(
+                    "concept" to "name",
+                    "concept" to "instance",
+                    "cost" to "currency",
+                    "cost" to "total",
+                    "identity" to "id",
+                    "lifecycle" to "transition",
+                    "lifecycle" to "state",
+                    "org" to "resource",
+                    "org" to "role",
+                    "org" to "group",
+                    "time" to "timestamp",
+                    "classifier" to null
+                )
+            }
     }
 
     /**
@@ -76,7 +80,8 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
      * True if this is a classifier attribute.
      */
     val isClassifier: Boolean
-        get() = standardName.startsWith("classifier:") && (scope == Scope.Trace || scope == Scope.Event)
+        get() = (scope == Scope.Trace || scope == Scope.Event) &&
+                standardName.startsWith("classifier:") || !isStandard && name.startsWith("classifier:")
 
     init {
         val match = pqlAttributePattern.matchEntire(attribute)
@@ -89,17 +94,22 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
 
         assert(attribute.startsWith("[") == attribute.endsWith("]"))
 
-        standardName = if (offset == 2) {
-            standardAttributes[scope]?.firstOrNull {
-                // the classifiers
-                if (it.second === null) name.startsWith("${it.first}:") || name.startsWith("${it.first[0]}:")
-                // the remaining standard attributes
-                else name == "${it.first}:${it.second}" || name == it.second
-            }?.run { "$first:${second ?: name.substringAfterLast(':')}" }
+        if (offset == 2) {
+            // standard attribute
+            standardName = standardAttributes[scope]!!
+                .firstOrNull {
+                    // the classifiers
+                    if (it.second === null) name.startsWith("${it.first}:") || name.startsWith("${it.first[0]}:")
+                    // the remaining standard attributes
+                    else name == "${it.first}:${it.second}" || name == it.second
+                }?.run { "$first:${second ?: name.substringAfterLast(':')}" }
                 ?: throw NoSuchElementException(
                     "Line $line position $charPositionInLine: No such attribute: $attribute. Try using the square-bracket syntax for non-standard attributes."
                 )
-        } else ""
+        } else {
+            // other attribute
+            standardName = ""
+        }
     }
 
     override fun equals(other: Any?): Boolean =

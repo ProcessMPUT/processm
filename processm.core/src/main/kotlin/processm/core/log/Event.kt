@@ -1,6 +1,5 @@
 package processm.core.log
 
-import processm.core.log.attribute.Attribute
 import java.time.Instant
 
 /**
@@ -9,8 +8,6 @@ import java.time.Instant
  * Captures the event component from the XES metadata structure.
  */
 class Event : XESElement() {
-    override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
-
     /**
      * Special attribute based on concept:name
      * Standard extension: Concept
@@ -100,4 +97,23 @@ class Event : XESElement() {
             && attributesInternal == other.attributesInternal
 
     override fun hashCode(): Int = attributesInternal.hashCode()
+
+    override fun setStandardAttributes(nameMap: Map<String, String>) {
+        conceptName = attributes[nameMap["concept:name"]]?.getValue() as String?
+        conceptInstance = attributes[nameMap["concept:instance"]]?.getValue() as String?
+
+        costTotal = attributes[nameMap["cost:total"]]?.getValue() as Double?
+        costCurrency = attributes[nameMap["cost:currency"]]?.getValue() as String?
+
+        identityId = attributes[nameMap["identity:id"]]?.getValue() as String?
+
+        lifecycleState = attributes[nameMap["lifecycle:state"]]?.getValue() as String?
+        lifecycleTransition = attributes[nameMap["lifecycle:transition"]]?.getValue() as String?
+
+        orgRole = attributes[nameMap["org:role"]]?.getValue() as String?
+        orgGroup = attributes[nameMap["org:group"]]?.getValue() as String?
+        orgResource = attributes[nameMap["org:resource"]]?.getValue() as String?
+
+        timeTimestamp = attributes[nameMap["time:timestamp"]]?.getValue() as Instant?
+    }
 }

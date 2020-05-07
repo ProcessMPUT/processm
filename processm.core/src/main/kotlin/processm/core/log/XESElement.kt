@@ -30,5 +30,7 @@ abstract class XESElement {
     /**
      * A backing mutable field for [attributes].
      */
-    internal abstract val attributesInternal: MutableMap<String, Attribute<*>>
+    internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+
+    internal abstract fun setStandardAttributes(nameMap: Map<String, String>)
 }

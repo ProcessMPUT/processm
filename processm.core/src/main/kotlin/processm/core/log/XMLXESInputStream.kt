@@ -5,7 +5,6 @@ import processm.core.log.attribute.*
 import processm.core.logging.logger
 import java.io.InputStream
 import java.text.NumberFormat
-import java.time.Instant
 import java.util.*
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
@@ -93,19 +92,19 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             }
         }
 
-        addGeneralMeaningFieldsIntoLog(it)
+        it.setStandardAttributes(nameMap)
     }
 
     private fun parseTrace(reader: XMLStreamReader) = Trace().also {
         lastSeenElement = null
         parseTraceOrEventTag(reader, it)
-        addGeneralMeaningFieldsIntoTrace(it)
+        it.setStandardAttributes(nameMap)
     }
 
     private fun parseEvent(reader: XMLStreamReader) = Event().also {
         lastSeenElement = null
         parseTraceOrEventTag(reader, it)
-        addGeneralMeaningFieldsIntoEvent(it)
+        it.setStandardAttributes(nameMap)
     }
 
     private fun addExtensionToLogElement(log: Log, reader: XMLStreamReader) {
@@ -116,15 +115,15 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             reader.getAttributeValue(null, "uri")
         )
 
-        // Add mapping extension's URI -> user's prefix
+        // map standard attribute names to custom names in the log
         if (extension.extension != null) {
-            // this.nameMap[extension.extension.uri] = prefix
-            for (name in extension.extension.log.keys)
+            /*for (name in extension.extension.log.keys)
                 this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
             for (name in extension.extension.trace.keys)
                 this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
             for (name in extension.extension.event.keys)
-                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
+                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"*/
+            extension.mapStandardToCustomNames(this.nameMap)
         }
 
         log.extensionsInternal[prefix] = extension
@@ -207,41 +206,6 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
 
         return attribute
-    }
-
-    private fun addGeneralMeaningFieldsIntoLog(log: Log) {
-        log.conceptName = log.attributes[nameMap["concept:name"]]?.getValue() as String?
-        log.identityId = log.attributes[nameMap["identity:id"]]?.getValue() as String?
-        log.lifecycleModel = log.attributes[nameMap["lifecycle:model"]]?.getValue() as String?
-    }
-
-    private fun addGeneralMeaningFieldsIntoTrace(trace: Trace) {
-        trace.conceptName = trace.attributes[nameMap["concept:name"]]?.getValue() as String?
-
-        trace.costTotal = trace.attributes[nameMap["cost:total"]]?.getValue() as Double?
-        trace.costCurrency = trace.attributes[nameMap["cost:currency"]]?.getValue() as String?
-
-        trace.identityId = trace.attributes[nameMap["identity:id"]]?.getValue() as String?
-    }
-
-    private fun addGeneralMeaningFieldsIntoEvent(event: Event) {
-        event.conceptName = event.attributes[nameMap["concept:name"]]?.getValue() as String?
-        event.conceptInstance = event.attributes[nameMap["concept:instance"]]?.getValue() as String?
-
-        event.costTotal = event.attributes[nameMap["cost:total"]]?.getValue() as Double?
-        event.costCurrency = event.attributes[nameMap["cost:currency"]]?.getValue() as String?
-
-        event.identityId = event.attributes[nameMap["identity:id"]]?.getValue() as String?
-
-        event.lifecycleState = event.attributes[nameMap["lifecycle:state"]]?.getValue() as String?
-        event.lifecycleTransition =
-            event.attributes[nameMap["lifecycle:transition"]]?.getValue() as String?
-
-        event.orgRole = event.attributes[nameMap["org:role"]]?.getValue() as String?
-        event.orgGroup = event.attributes[nameMap["org:group"]]?.getValue() as String?
-        event.orgResource = event.attributes[nameMap["org:resource"]]?.getValue() as String?
-
-        event.timeTimestamp = event.attributes[nameMap["time:timestamp"]]?.getValue() as Instant?
     }
 
     private fun parseTraceOrEventTag(reader: XMLStreamReader, xesElement: XESElement) {

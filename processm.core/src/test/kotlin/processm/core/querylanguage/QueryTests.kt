@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Tag
 import kotlin.test.*
 
 @Tag("PQL")
+@Suppress("MapGetWithNotNullAssertionOperator")
 class QueryTests {
     @Test
     fun basicSelectTest() {
@@ -109,6 +110,38 @@ class QueryTests {
         assertTrue(query.selectStandardAttributes[Scope.Event]!!.all { it.isStandard })
         assertTrue(query.selectStandardAttributes[Scope.Event]!!.all { it.effectiveScope == Scope.Event })
         assertTrue(query.selectStandardAttributes[Scope.Event]!!.all { it.isClassifier })
+    }
+
+    @Test
+    fun selectUsingNonStandardClassifierTest() {
+        val query = Query("select [t:classifier:bu$1n3\$\$c4\$3], [e:classifier:concept:name+lifecycle:transition]")
+        assertFalse(query.isImplicitSelectAll)
+        assertFalse(query.selectAll[Scope.Log]!!)
+        assertFalse(query.selectAll[Scope.Trace]!!)
+        assertFalse(query.selectAll[Scope.Event]!!)
+        // log scope
+        assertEquals(0, query.selectStandardAttributes[Scope.Log]!!.size)
+        assertEquals(0, query.selectOtherAttributes[Scope.Log]!!.size)
+        assertEquals(0, query.selectExpressions[Scope.Log]!!.size)
+        // trace scope
+        assertEquals(0, query.selectStandardAttributes[Scope.Trace]!!.size)
+        assertEquals(1, query.selectOtherAttributes[Scope.Trace]!!.size)
+        assertEquals(0, query.selectExpressions[Scope.Trace]!!.size)
+        assertEquals("classifier:bu\$1n3\$\$c4\$3", query.selectOtherAttributes[Scope.Trace]!!.elementAt(0).name)
+        assertTrue(query.selectOtherAttributes[Scope.Trace]!!.none { it.isStandard })
+        assertTrue(query.selectOtherAttributes[Scope.Trace]!!.all { it.effectiveScope == Scope.Trace })
+        assertTrue(query.selectOtherAttributes[Scope.Trace]!!.all { it.isClassifier })
+        // event scope
+        assertEquals(0, query.selectStandardAttributes[Scope.Event]!!.size)
+        assertEquals(1, query.selectOtherAttributes[Scope.Event]!!.size)
+        assertEquals(0, query.selectExpressions[Scope.Event]!!.size)
+        assertEquals(
+            "classifier:concept:name+lifecycle:transition",
+            query.selectOtherAttributes[Scope.Event]!!.elementAt(0).name
+        )
+        assertTrue(query.selectOtherAttributes[Scope.Event]!!.none { it.isStandard })
+        assertTrue(query.selectOtherAttributes[Scope.Event]!!.all { it.effectiveScope == Scope.Event })
+        assertTrue(query.selectOtherAttributes[Scope.Event]!!.all { it.isClassifier })
     }
 
     @Test

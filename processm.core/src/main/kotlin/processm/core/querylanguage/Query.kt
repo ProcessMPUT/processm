@@ -536,9 +536,8 @@ class Query(val query: String) {
                         parseExpression(ctx.getChild(2))
                     )
                     else -> {
-                        val array =
-                            (0 until ctx.childCount).map { parseExpression(ctx.getChild(it)) }.toTypedArray()
-                        if (array.size == 1) array[0] else Expression(*array)
+                        if (ctx.childCount == 1) parseExpression(ctx.getChild(0))
+                        else Expression(*Array(ctx.childCount) { parseExpression(ctx.getChild(it)) })
                     }
                 }
             }

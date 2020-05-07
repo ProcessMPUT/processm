@@ -230,8 +230,25 @@ inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(Hash
  */
 inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
 
+/**
+ * Returns an array containing the results of applying the given [transform] function
+ * to each element in the original collection.
+ */
+inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
+    Array<R>(this.size) { _ -> transform(it.next()) }
+}
+
+/**
+ * Retuns a map whose keys refer to the values of the given map and values refer to the keys of the given map.
+ * @throws IllegalArgumentException If the mapping of the given map is non-injective.
+ */
+inline fun <K, V> Map<K, V>.inverse(): Map<V, K> = HashMap<V, K>().also {
+    for ((key, value) in this)
+        require(it.put(value, key) == null) { "The given mapping is non-injective." }
+}
+
 inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
-        if (this.isNullOrEmpty())
-            default()
-        else
-            this
+    if (this.isNullOrEmpty())
+        default()
+    else
+        this

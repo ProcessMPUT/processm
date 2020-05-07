@@ -1,9 +1,6 @@
 package processm.core.log.hierarchical
 
-import processm.core.log.Classifier
-import processm.core.log.Event
-import processm.core.log.Extension
-import processm.core.log.XESElement
+import processm.core.log.*
 import processm.core.log.attribute.*
 import processm.core.logging.enter
 import processm.core.logging.exit
@@ -168,7 +165,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         ::readLog
     )
 
-    private fun getTraces(logId: Int): Sequence<Trace> = get(
+    private fun getTraces(logId: Int, nameMap: Map<String, String>): Sequence<Trace> = get(
         { translator.getTraces(logId) },
         { batchIndex, initializer, skipAction ->
             getCachedBatch(
@@ -179,10 +176,10 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
                 skipAction
             )
         },
-        { readTrace(it, logId) }
+        { readTrace(it, logId, nameMap) }
     )
 
-    private fun getEvents(logId: Int, traceId: Long): Sequence<Event> = get(
+    private fun getEvents(logId: Int, traceId: Long, nameMap: Map<String, String>): Sequence<Event> = get(
         { translator.getEvents(logId, traceId) },
         { batchIndex, initializer, skipAction ->
             getCachedBatch(
@@ -193,7 +190,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
                 skipAction
             )
         },
-        ::readEvent
+        { readEvent(it, nameMap) }
     )
 
     private fun readLog(result: LogQueryResult): Log {
@@ -202,21 +199,24 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         assert(!result.entity.isEnded) { "By contract a row must exist." }
 
         with(Log()) {
-            xesVersion = result.entity.getString("xes:version")
-            xesFeatures = result.entity.getString("xes:features")
-            conceptName = result.entity.getString("concept:name")
-            identityId = result.entity.getString("identity:id")
-            lifecycleModel = result.entity.getString("lifecycle:model")
             val logId = result.entity.getInt("id")
-
             // Load classifiers, extensions, globals and attributes inside log structure
             readClassifiers(result.classifiers, this, logId)
             readExtensions(result.extensions, this, logId)
             readGlobals(result.globals, this, logId)
-            readLogAttributes(result.attributes, this, logId)
+            val nameMap = this.extensions.values.getStandardToCustomNameMap()
+            readLogAttributes(result.attributes, this, logId, nameMap)
+
+            // the standard attributes are to be read after all other attributes, as they may override the previous values
+            xesVersion = result.entity.getString("xes:version")
+            xesFeatures = result.entity.getString("xes:features")
+            conceptName = result.entity.getString("concept:name") ?: conceptName
+            identityId = result.entity.getString("identity:id") ?: identityId
+            lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
+
 
             // getTraces is a sequence, so it will be actually called when one reads it
-            traces = getTraces(logId)
+            traces = getTraces(logId, nameMap)
 
             logger.exit()
             return this
@@ -278,70 +278,73 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         }
     }
 
-    private fun readTrace(result: QueryResult, logId: Int): Trace {
+    private fun readTrace(result: QueryResult, logId: Int, nameMap: Map<String, String>): Trace {
         logger.enter()
 
         assert(!result.entity.isEnded) { "By contract a row must exist." }
 
         with(Trace()) {
-            conceptName = result.entity.getString("concept:name")
-            costCurrency = result.entity.getString("cost:currency")
-            costTotal = result.entity.getDoubleOrNull("cost:total")
-            identityId = result.entity.getString("identity:id")
-            isEventStream = result.entity.getBoolean("event_stream")
             val traceId = result.entity.getLong("id")
+            readTraceAttributes(result.attributes, this, traceId, nameMap)
 
-            readTraceAttributes(result.attributes, this, traceId)
+            // the standard attributes are to be read after all other attributes, as they may override the previous values
+            conceptName = result.entity.getString("concept:name") ?: conceptName
+            costCurrency = result.entity.getString("cost:currency") ?: costCurrency
+            costTotal = result.entity.getDoubleOrNull("cost:total") ?: costTotal
+            identityId = result.entity.getString("identity:id") ?: identityId
+            isEventStream = result.entity.getBoolean("event_stream")
 
             // getEvents is a sequence, so it will be actually called when one reads it
-            events = getEvents(logId, traceId)
+            events = getEvents(logId, traceId, nameMap)
 
             logger.exit()
             return this
         }
     }
 
-    private fun readEvent(result: QueryResult): Event {
+    private fun readEvent(result: QueryResult, nameMap: Map<String, String>): Event {
         logger.enter()
 
         assert(!result.entity.isEnded) { "By contract a row must exist." }
 
         with(Event()) {
-            conceptName = result.entity.getString("concept:name")
-            conceptInstance = result.entity.getString("concept:instance")
-            costTotal = result.entity.getDoubleOrNull("cost:total")
-            costCurrency = result.entity.getString("cost:currency")
-            identityId = result.entity.getString("identity:id")
-            lifecycleState = result.entity.getString("lifecycle:state")
-            lifecycleTransition = result.entity.getString("lifecycle:transition")
-            orgRole = result.entity.getString("org:role")
-            orgGroup = result.entity.getString("org:group")
-            orgResource = result.entity.getString("org:resource")
-            timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant()
             val eventId = result.entity.getLong("id")
+            readEventAttributes(result.attributes, this, eventId, nameMap)
 
-            readEventAttributes(result.attributes, this, eventId)
+            // the standard attributes are to be read after all other attributes, as they may override the previous values
+            conceptName = result.entity.getString("concept:name") ?: conceptName
+            conceptInstance = result.entity.getString("concept:instance") ?: conceptInstance
+            costTotal = result.entity.getDoubleOrNull("cost:total") ?: costTotal
+            costCurrency = result.entity.getString("cost:currency") ?: costCurrency
+            identityId = result.entity.getString("identity:id") ?: identityId
+            lifecycleState = result.entity.getString("lifecycle:state") ?: lifecycleState
+            lifecycleTransition = result.entity.getString("lifecycle:transition") ?: lifecycleTransition
+            orgRole = result.entity.getString("org:role") ?: orgRole
+            orgGroup = result.entity.getString("org:group") ?: orgGroup
+            orgResource = result.entity.getString("org:resource") ?: orgResource
+            timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant() ?: timeTimestamp
 
             logger.exit()
             return this
         }
     }
 
-    private fun readLogAttributes(resultSet: ResultSet, log: Log, logId: Int) =
-        readAttributes(resultSet, { it.getInt("log_id") }, log, logId)
+    private fun readLogAttributes(resultSet: ResultSet, log: Log, logId: Int, nameMap: Map<String, String>) =
+        readAttributes(resultSet, { it.getInt("log_id") }, log, logId, nameMap)
 
-    private fun readTraceAttributes(resultSet: ResultSet, trace: Trace, traceId: Long): XESElement =
-        readAttributes(resultSet, { it.getLong("trace_id") }, trace, traceId)
+    private fun readTraceAttributes(resultSet: ResultSet, trace: Trace, traceId: Long, nameMap: Map<String, String>) =
+        readAttributes(resultSet, { it.getLong("trace_id") }, trace, traceId, nameMap)
 
-    private fun readEventAttributes(resultSet: ResultSet, event: Event, eventId: Long): XESElement =
-        readAttributes(resultSet, { it.getLong("event_id") }, event, eventId)
+    private fun readEventAttributes(resultSet: ResultSet, event: Event, eventId: Long, nameMap: Map<String, String>) =
+        readAttributes(resultSet, { it.getLong("event_id") }, event, eventId, nameMap)
 
     private fun readAttributes(
         resultSet: ResultSet,
         getElementId: (ResultSet) -> Number,
         element: XESElement,
-        elementId: Number
-    ): XESElement {
+        elementId: Number,
+        nameMap: Map<String, String>
+    ) {
         if (resultSet.isBeforeFirst)
             resultSet.next()
 
@@ -351,9 +354,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             }
         }
 
-        // TODO: include standard attributes in the set of attributes
-
-        return element
+        element.setStandardAttributes(nameMap)
     }
 
     private fun readRecordsIntoAttributes(resultSet: ResultSet): Attribute<*> {
@@ -392,7 +393,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
                 "float" -> RealAttr(key, getDouble("real_value"))
                 "date" -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant())
                 "list" -> ListAttr(key)
-                else -> throw IllegalStateException("Invalid attribute type stored in the database")
+                else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
             }
         }
     }

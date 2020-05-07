@@ -1,6 +1,7 @@
 package processm.core.log.hierarchical
 
 import processm.core.helpers.NestableAutoCloseable
+import processm.core.helpers.mapToArray
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -237,6 +238,16 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         table: String? = null,
         extraColumns: Set<String> = emptySet()
     ): SQLQuery = SQLQuery {
+        if (pql.selectAll[scope] != true && pql.selectOtherAttributes[scope].isNullOrEmpty()) {
+            // dummy query that returns no data
+            it.query.append(
+                "SELECT NULL AS id, NULL AS ${scope}_id, NULL AS parent_id, NULL AS type, NULL AS key, " +
+                        "NULL AS string_value, NULL AS date_value, NULL AS int_value, NULL AS bool_value, NULL AS real_value, " +
+                        "NULL AS in_list_attr WHERE cardinality(?)=-1"
+            )
+            return@SQLQuery
+        }
+
         val attrTable = table ?: (scope.toString() + "s_attributes")
         with(it.query) {
             append("WITH RECURSIVE tmp AS (")
@@ -245,7 +256,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             append(" FROM $attrTable")
             append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
             whereAttributes(scope, it, logId)
-            append("UNION ALL ")
+            append(" UNION ALL ")
             selectAttributes(scope, attrTable, extraColumns, it)
             append(", path || $attrTable.id")
             append(" FROM $attrTable")
@@ -275,12 +286,15 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             val other = LinkedHashSet(pql.selectOtherAttributes[scope]!!)
             if (scope == Scope.Trace || scope == Scope.Event) {
                 assert(logId !== null)
-                for (attribute in pql.selectStandardAttributes[scope]!!) {
+                for (attribute in pql.selectStandardAttributes[scope]!! + pql.selectOtherAttributes[scope]!!) {
                     if (!attribute.isClassifier)
                         continue
                     for (inCls in cache.expandClassifier(logId!!, attribute)) {
-                        if (!inCls.isStandard)
-                            other.add(inCls)
+                        assert(!inCls.isStandard) {
+                            "Classifier $attribute refers a standard attribute $inCls. Classifiers use attribute names " +
+                                    "from the log, so they do not know the names of the standard attributes and cannot reference them."
+                        }
+                        other.add(inCls)
                     }
                 }
             }
@@ -288,8 +302,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             if (other.isEmpty())
                 return@with
 
-            append(" AND key=ANY(?)")
-            sql.params.add(other.toTypedArray() /* copy */)
+            append("AND key=ANY(?) ")
+            sql.params.add(other.mapToArray { it.name })
         }
     }
 
@@ -527,12 +541,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                         val ids = this.ids.take(batchSize)
                         logger.trace { "Retrieving trace ids: ${ids.joinToString()}." }
                         val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
+                        val attrParameters = parameters + entry.queryTraceAttributes.params
 
                         val results = listOf(
                             entry.queryTraceEntity,
                             entry.queryTraceAttributes,
                             entry.queryTraceExpressions
-                        ).executeMany(connection!!, parameters, parameters, parameters)
+                        ).executeMany(connection!!, parameters, attrParameters, parameters)
 
                         return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
                     }
@@ -566,14 +581,15 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
                     override fun next(): QueryResult {
                         val ids = this.ids.take(batchSize)
-                        logger.trace { "Retrieving event ids: $ids.joinToString()." }
+                        logger.trace { "Retrieving event ids: ${ids.joinToString()}." }
                         val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
+                        val attrParameters = parameters + entry.queryEventAttributes.params
 
                         val results = listOf(
                             entry.queryEventEntity,
                             entry.queryEventAttributes,
                             entry.queryEventExpressions
-                        ).executeMany(connection!!, parameters, parameters, parameters)
+                        ).executeMany(connection!!, parameters, attrParameters, parameters)
 
                         return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
                     }
@@ -610,18 +626,11 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 var attributes: List<Attribute>? = null
                 connection.use { conn ->
                     attributes = conn.prepareStatement(
-                        """SELECT
-                    keys
-                    FROM classifiers
-                    WHERE
-                        log_id=?
-                        AND scope=?
-                        AND name=?
-                    LIMIT 1"""
+                        "SELECT keys FROM classifiers WHERE log_id=? AND scope=?::scope_type AND name=? LIMIT 1"
                     ).apply {
                         setInt(1, logId)
                         setString(2, classifier.scope.toString())
-                        setString(3, classifier.name)
+                        setString(3, classifier.name.substringAfter("classifier:"))
                     }.executeQuery().use {
                         require(it.next()) { "Classifier $classifier is not found." }
                         it.getString("keys")

@@ -1,6 +1,5 @@
 package processm.core.log
 
-import processm.core.log.attribute.Attribute
 import java.util.*
 
 /**
@@ -9,8 +8,6 @@ import java.util.*
  * Captures the trace component from the XES metadata structure.
  */
 open class Trace : XESElement() {
-    override val attributesInternal: MutableMap<String, Attribute<*>> = TreeMap(String.CASE_INSENSITIVE_ORDER)
-
     /**
      * Special attribute based on concept:name
      * Standard extension: Concept
@@ -54,4 +51,11 @@ open class Trace : XESElement() {
             && attributesInternal == other.attributesInternal
 
     override fun hashCode(): Int = Objects.hash(isEventStream, attributesInternal)
+
+    override fun setStandardAttributes(nameMap: Map<String, String>) {
+        conceptName = attributes[nameMap["concept:name"]]?.getValue() as String?
+        costTotal = attributes[nameMap["cost:total"]]?.getValue() as Double?
+        costCurrency = attributes[nameMap["cost:currency"]]?.getValue() as String?
+        identityId = attributes[nameMap["identity:id"]]?.getValue() as String?
+    }
 }
