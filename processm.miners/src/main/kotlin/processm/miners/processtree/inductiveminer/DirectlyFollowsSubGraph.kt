@@ -199,7 +199,7 @@ class DirectlyFollowsSubGraph(
 
         // Add each activity to designated group
         assignment.forEach { (activity, groupId) ->
-            activityGroups.getOrPut(groupId, { HashSet() }).add(activity)
+            activityGroups.computeIfAbsent(groupId) { HashSet() }.add(activity)
         }
 
         activityGroups.forEach { (groupId, activities) ->
