@@ -237,14 +237,37 @@ internal class OfflineInductiveMinerTest {
             B F D G
             B F D G
             B F D G
-            B F D G
             """.trimIndent()
         )
 
         val inductiveMiner = OfflineInductiveMiner()
         inductiveMiner.processLog(log)
 
-        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F)),G)", inductiveMiner.result.toString())
+        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `Based on PM book Figure 7-29 Q6 - extra activities in sequence`() {
+        val log = logFromString(
+            """
+            A C E G X Y Z
+            A C E G X Y Z
+            A E C G X Y Z
+            A E C G X Y Z
+            A E C G X Y Z
+            B D F G X Y Z
+            B D F G X Y Z
+            B F D G X Y Z
+            B F D G X Y Z
+            B F D G X Y Z
+            B F D G X Y Z
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(listOf(log))
+
+        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G,X,Y,Z)", inductiveMiner.result.toString())
     }
 
     @Test

@@ -365,11 +365,7 @@ class DirectlyFollowsSubGraph(
                 // Different groups
                 if (activityGroupID != indicatedGroupID) {
                     connectionsMatrix[indicatedGroupID][activityGroupID] = 1
-
-                    // Reversed connection check - if not stored yet - set -1 in matrix
-                    if (connectionsMatrix[activityGroupID][indicatedGroupID] == zeroByte) {
-                        connectionsMatrix[activityGroupID][indicatedGroupID] = -1
-                    }
+                    connectionsMatrix[activityGroupID][indicatedGroupID] = -1
                 }
             }
         }
@@ -394,18 +390,19 @@ class DirectlyFollowsSubGraph(
         val components = LinkedList<LinkedList<Int>>()
         // Groups already analyzed
         val closedGroups = HashSet<Int>()
+        var previousGroup = HashSet<Int>()
         // Ensure at least one element in collection
         if (components.isEmpty()) {
             components.add(LinkedList<Int>())
         }
-        val lastElement = components.last
 
         // Analyze rows of connection matrix and find
         matrix.forEachIndexed { index, group ->
             // 0 and -1 allowed here
             if (group.max() ?: 1 <= zeroByte) {
-                lastElement.add(index)
+                components.last.add(index)
                 closedGroups.add(index)
+                previousGroup.add(index)
             }
         }
 
@@ -419,8 +416,15 @@ class DirectlyFollowsSubGraph(
                 // If group not closed
                 if (!closedGroups.contains(index)) {
                     if (matrix.indices.none { j -> matrix[index][j] == oneByte && j !in closedGroups }) {
-                        currentIterationComponents.add(index)
                         closedGroups.add(index)
+
+                        // Decide where add element - if one of previous group without connection
+                        // we will need to merge components
+                        if (previousGroup.all { j -> matrix[index][j] == oneByte }) {
+                            currentIterationComponents.add(index)
+                        } else {
+                            components.last.add(index)
+                        }
                     }
                 }
             }
@@ -429,6 +433,9 @@ class DirectlyFollowsSubGraph(
                 continueAnalyze = true
                 components.add(currentIterationComponents)
             }
+
+            // Update previous added group indexes
+            previousGroup = components.last.toHashSet()
         }
 
         var notAddYet = true
@@ -438,7 +445,7 @@ class DirectlyFollowsSubGraph(
                     notAddYet = false
                     components.add(LinkedList())
                 }
-                components.last().add(index)
+                components.last.add(index)
             }
         }
 
