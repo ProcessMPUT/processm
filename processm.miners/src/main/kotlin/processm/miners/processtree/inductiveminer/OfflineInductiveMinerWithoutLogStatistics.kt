@@ -7,8 +7,13 @@ import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 /**
  * Inductive Miner version Offline, without log split inside.
  * Build a process tree based on directly-follows graph only.
+ *
+ * Without analyze statistics, it can generate not fully correct models.
+ * Known issues:
+ * * If the activity does not exist in all traces should be as ×(τ,activity).
+ *   This IM will ignore [SilentActivity] and use only [ProcessTreeActivity].
  */
-class OfflineInductiveMiner : InductiveMiner {
+class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
     /**
      * Internal set of operations when we should analyze children stored in subGraph
      */
@@ -49,7 +54,8 @@ class OfflineInductiveMiner : InductiveMiner {
             it.addAll(dfg.endActivities.keys)
         }
 
-        return ProcessTree(
+        // Discover processTree model
+        val processTree = ProcessTree(
             assignChildrenToNode(
                 DirectlyFollowsSubGraph(
                     activities = activities,
@@ -60,6 +66,11 @@ class OfflineInductiveMiner : InductiveMiner {
                 )
             )
         )
+
+        // Simplify processTree model
+        ProcessTreeSimplifier().simplify(processTree)
+
+        return processTree
     }
 
     /**

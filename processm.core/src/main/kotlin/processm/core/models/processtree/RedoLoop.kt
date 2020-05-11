@@ -16,6 +16,9 @@ class RedoLoop(vararg nodes: Node) : InternalNode(*nodes) {
 
     val endLoopActivity = EndLoopSilentActivity(this)
 
-    override val possibleOutcomes =
+    override val possibleOutcomes: List<NodeDecision> by lazy(LazyThreadSafetyMode.NONE) {
+        check(children.size >= 2) { "RedoLoop should contain at least two nodes!" }
+        
         listOf(NodeDecision(endLoopActivity, this)) + children.subList(1, children.size).map { NodeDecision(it, this) }
+    }
 }
