@@ -66,13 +66,13 @@ class DirectlyFollowsSubGraph(
      * Current start activities in this subGraph.
      * Calculated once, used by parallel and loop cut detection.
      */
-    private val currentStartActivities by lazy { currentStartActivities() }
+    private val currentStartActivities by lazy(LazyThreadSafetyMode.NONE) { currentStartActivities() }
 
     /**
      * Current end activities in this subGraph.
      * Calculated once, used by parallel and loop cut detection.
      */
-    private val currentEndActivities by lazy { currentEndActivities() }
+    private val currentEndActivities by lazy(LazyThreadSafetyMode.NONE) { currentEndActivities() }
 
     init {
         outgoingConnections.forEach { (from, hashMap) ->
