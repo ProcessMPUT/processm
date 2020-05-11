@@ -61,7 +61,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                     DBXESOutputStream().use { output ->
                         output.write(XMLXESInputStream(stream).map {
                             if (it is processm.core.log.Log) /* The base class for log */
-                                it.identityId = uuid.toString()
+                                it.identityId = uuid
                             it
                         })
                     }
@@ -183,7 +183,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -375,11 +375,11 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     fun selectAllImplicitTest() {
         val stream = q("")
         assertTrue(stream.count() >= 1) // at least one log
-        val log = stream.first { it.identityId == uuid.toString() } // filter in the application layer
+        val log = stream.first { it.identityId == uuid } // filter in the application layer
 
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -703,7 +703,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -753,7 +753,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -804,7 +804,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -858,7 +858,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -905,7 +905,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -952,7 +952,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -1001,7 +1001,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -1041,7 +1041,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
         assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
@@ -1198,7 +1198,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(101, log.traces.count())
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         standardAndAllAttributesMatch(log, log)
 
         for (trace in log.traces) {
@@ -1293,7 +1293,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(101, log.traces.count())
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
-        assertEquals(uuid.toString(), log.identityId)
+        assertEquals(uuid, log.identityId)
         standardAndAllAttributesMatch(log, log)
 
         for (trace in log.traces) {

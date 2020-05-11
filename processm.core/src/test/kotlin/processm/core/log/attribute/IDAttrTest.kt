@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import java.util.*
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,12 +11,12 @@ internal class IDAttrTest {
     private val attr1: IDAttr =
         IDAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = (1..3).map { allowedStringCharacters.random(Random(120)) }.joinToString("")
+            value = UUID.randomUUID()
         )
     private val attr2: IDAttr =
         IDAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = (1..3).map { allowedStringCharacters.random(Random(120)) }.joinToString("")
+            value = UUID.randomUUID()
         )
 
     @Test

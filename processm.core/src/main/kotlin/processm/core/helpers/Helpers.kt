@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 private const val EnvironmentVariablePrefix = "processm_"
 private var configurationLoaded = AtomicBoolean(false)
 
-private object Helpers {
+internal object Helpers {
     internal val logger = logger()
 }
 

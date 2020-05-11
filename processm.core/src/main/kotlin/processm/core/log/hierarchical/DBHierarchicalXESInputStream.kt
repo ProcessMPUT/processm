@@ -1,5 +1,6 @@
 package processm.core.log.hierarchical
 
+import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.*
 import processm.core.logging.enter
@@ -213,7 +214,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             xesVersion = result.entity.getString("xes:version")
             xesFeatures = result.entity.getString("xes:features")
             conceptName = result.entity.getString("concept:name") ?: conceptName
-            identityId = result.entity.getString("identity:id") ?: identityId
+            identityId = result.entity.getString("identity:id").toUUID() ?: identityId
             lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
             count = result.entity.getIntOrNull("count") ?: 1
 
@@ -331,7 +332,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             conceptName = result.entity.getString("concept:name") ?: conceptName
             costCurrency = result.entity.getString("cost:currency") ?: costCurrency
             costTotal = result.entity.getDoubleOrNull("cost:total") ?: costTotal
-            identityId = result.entity.getString("identity:id") ?: identityId
+            identityId = result.entity.getString("identity:id").toUUID() ?: identityId
             isEventStream = result.entity.getBooleanOrNull("event_stream") ?: false
             count = result.entity.getIntOrNull("count") ?: 1
 
@@ -358,7 +359,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             conceptInstance = result.entity.getString("concept:instance") ?: conceptInstance
             costTotal = result.entity.getDoubleOrNull("cost:total") ?: costTotal
             costCurrency = result.entity.getString("cost:currency") ?: costCurrency
-            identityId = result.entity.getString("identity:id") ?: identityId
+            identityId = result.entity.getString("identity:id").toUUID() ?: identityId
             lifecycleState = result.entity.getString("lifecycle:state") ?: lifecycleState
             lifecycleTransition = result.entity.getString("lifecycle:transition") ?: lifecycleTransition
             orgRole = result.entity.getString("org:role") ?: orgRole
@@ -435,7 +436,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
                 'f' -> RealAttr(key, getDouble("real_value"))
                 'i' -> when (type[1]) {
                     'n' -> IntAttr(key, getLong("int_value"))
-                    'd' -> IDAttr(key, getString("string_value"))
+                    'd' -> IDAttr(key, getString("string_value").toUUID()!!)
                     else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
                 }
                 'd' -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant())

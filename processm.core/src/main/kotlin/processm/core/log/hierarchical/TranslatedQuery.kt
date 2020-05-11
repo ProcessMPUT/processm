@@ -17,7 +17,6 @@ import kotlin.LazyThreadSafetyMode.NONE
 import kotlin.collections.HashMap
 import kotlin.collections.LinkedHashMap
 import kotlin.collections.LinkedHashSet
-import kotlin.reflect.jvm.javaField
 
 @Suppress("MapGetWithNotNullAssertionOperator")
 internal class TranslatedQuery(private val pql: Query, private val batchSize: Int = 1) {
@@ -28,7 +27,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         private const val secondsPerDay: Int = 24 * 60 * 60
         private val queryLogClassifiers: SQLQuery = SQLQuery {
             it.query.append(
-                    """SELECT log_id, scope, name, keys
+                """SELECT log_id, scope, name, keys
                 FROM classifiers c
                 JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON c.log_id=ids.id
                 ORDER BY ids.ord, c.id"""
@@ -37,7 +36,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
         private val queryLogExtensions: SQLQuery = SQLQuery {
             it.query.append(
-                    """SELECT log_id, name, prefix, uri
+                """SELECT log_id, name, prefix, uri
                 FROM extensions e
                 JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON e.log_id=ids.id
                 ORDER BY ids.ord, e.id"""
@@ -125,7 +124,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         val effectiveTo = (0 until to.hoisting).fold(to.scope) { s, _ -> s.upper!! }
         while (current.scope != effectiveTo) {
             current =
-                    ScopeWithMetadata(if (current.scope < effectiveTo) current.scope.lower!! else current.scope.upper!!, 0)
+                ScopeWithMetadata(if (current.scope < effectiveTo) current.scope.lower!! else current.scope.upper!!, 0)
             add(current)
         }
 
@@ -148,7 +147,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun sorted(s1: ScopeWithMetadata, s2: ScopeWithMetadata) =
-            if (s1.scope < s2.scope) s1 to s2 else s2 to s1
+        if (s1.scope < s2.scope) s1 to s2 else s2 to s1
 
     private fun from(baseScope: Scope, sql: MutableSQLQuery): String = buildString {
         val existingAliases = HashSet<String>()
@@ -241,14 +240,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     // region select attributes
     private fun attributesQuery(
-            scope: Scope,
-            logId: Int?,
-            table: String? = null,
-            extraColumns: Set<String> = emptySet()
+        scope: Scope,
+        logId: Int?,
+        table: String? = null,
+        extraColumns: Set<String> = emptySet()
     ): SQLQuery = SQLQuery {
         if (pql.selectAll[scope] != true
-                && pql.selectOtherAttributes[scope].isNullOrEmpty()
-                && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
+            && pql.selectOtherAttributes[scope].isNullOrEmpty()
+            && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
         ) {
             // dummy query that returns no data
             it.query.append("SELECT NULL AS id WHERE 0=1")
@@ -278,8 +277,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     private fun selectAttributes(scope: Scope, table: String, extraColumns: Set<String>, sql: MutableSQLQuery) {
         sql.query.append(
-                """SELECT $table.id, $table.${scope}_id, $table.parent_id, $table.type, $table.key,
-            $table.string_value, $table.date_value, $table.int_value, $table.bool_value, $table.real_value, $table.in_list_attr
+            """SELECT $table.id, $table.${scope}_id, $table.parent_id, $table.type, $table.key,
+            $table.string_value, $table.uuid_value, $table.date_value, $table.int_value, $table.bool_value, $table.real_value, $table.in_list_attr
             ${extraColumns.join { "$table.$it" }}"""
         )
     }
@@ -365,10 +364,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // region select groups of ids
     private fun groupIdsQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
         assert(
-                pql.isImplicitGroupBy[scope]!!
-                        || pql.isGroupBy[Scope.Log]!!
-                        || scope == Scope.Trace && pql.isGroupBy[Scope.Trace]!!
-                        || scope == Scope.Event && pql.isGroupBy[Scope.Event]!!
+            pql.isImplicitGroupBy[scope]!!
+                    || pql.isGroupBy[Scope.Log]!!
+                    || scope == Scope.Trace && pql.isGroupBy[Scope.Trace]!!
+                    || scope == Scope.Event && pql.isGroupBy[Scope.Event]!!
         )
 
         it.query.append("SELECT array_agg(id) AS ids FROM (")
@@ -400,8 +399,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     private fun selectGroupIds(scope: Scope, sql: MutableSQLQuery, logId: Int?): Pair<Int, Int> {
         val upperScopeGroupBy =
-                scope > Scope.Log && (pql.isImplicitGroupBy[Scope.Log] == true || pql.isGroupBy[Scope.Log] == true)
-                        || scope > Scope.Trace && (pql.isImplicitGroupBy[Scope.Trace] == true || pql.isGroupBy[Scope.Trace] == true)
+            scope > Scope.Log && (pql.isImplicitGroupBy[Scope.Log] == true || pql.isGroupBy[Scope.Log] == true)
+                    || scope > Scope.Trace && (pql.isImplicitGroupBy[Scope.Trace] == true || pql.isGroupBy[Scope.Trace] == true)
 
         assert(upperScopeGroupBy || pql.isImplicitGroupBy[scope]!! || pql.isGroupBy[scope]!!)
 
@@ -413,23 +412,23 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             for (attribute in pql.groupByStandardAttributes[scope]!! + pql.groupByOtherAttributes[scope]!!) {
                 append(", ")
                 groupByCount += attribute.toSQL(
-                        sql,
-                        logId,
-                        Type.Any,
-                        Int.MAX_VALUE,
-                        { it.query.append("array_agg(") },
-                        {
-                            pql.orderByExpressions[attribute.scope]!!.toSQL(
-                                    it,
-                                    logId,
-                                    "${attribute.scope!!.alias}.id",
-                                    true,
-                                    true,
-                                    true
-                            )
-                            it.query.append(')')
-                        },
-                        true
+                    sql,
+                    logId,
+                    Type.Any,
+                    Int.MAX_VALUE,
+                    { it.query.append("array_agg(") },
+                    {
+                        pql.orderByExpressions[attribute.scope]!!.toSQL(
+                            it,
+                            logId,
+                            "${attribute.scope!!.alias}.id",
+                            true,
+                            true,
+                            true
+                        )
+                        it.query.append(')')
+                    },
+                    true
                 )
             }
 
@@ -464,10 +463,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             for (expression in pql.orderByExpressions[scope]!!) {
                 if (expression.base is Attribute) {
                     val attributes =
-                            if (expression.base.isClassifier)
-                                cache.expandClassifier(logId!!, expression.base)
-                            else
-                                listOf(expression.base)
+                        if (expression.base.isClassifier)
+                            cache.expandClassifier(logId!!, expression.base)
+                        else
+                            listOf(expression.base)
                     for (attribute in attributes) {
                         append("array_agg(o$index ORDER BY o$index)")
                         ++index
@@ -543,12 +542,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     // region select group attributes
     private fun groupAttributesQuery(
-            scope: Scope,
-            logId: Int?
+        scope: Scope,
+        logId: Int?
     ): SQLQuery = SQLQuery {
         if (pql.selectOtherAttributes[scope].isNullOrEmpty()
-                && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
-                && pql.selectAll[scope] == false
+            && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
+            && pql.selectAll[scope] == false
         ) {
             // dummy query that returns no data
             it.query.append("SELECT NULL AS id WHERE 0=1")
@@ -564,7 +563,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     private fun selectGroupAttributes(scope: Scope, sql: MutableSQLQuery) {
         sql.query.append(
-                """SELECT DISTINCT ON(ids.ord, a.key) ids.ord AS id, ids.ord+? AS ${scope}_id, NULL AS parent_id, 
+            """SELECT DISTINCT ON(ids.ord, a.key) ids.ord AS id, ids.ord+? AS ${scope}_id, NULL AS parent_id, 
             a.type, a.key, a.string_value, a.date_value, a.int_value, a.bool_value, a.real_value, a.in_list_attr"""
         )
         sql.params.add(idOffsetPlaceholder)
@@ -617,8 +616,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // region select grouped ids
     private fun <T> groupedIdsQuery(scope: Scope, outerScopeGroup: T, logId: Int?): SQLQuery = SQLQuery {
         assert(
-                (pql.isImplicitGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Log]!!) && scope > Scope.Log ||
-                        (pql.isImplicitGroupBy[Scope.Trace]!! || pql.isGroupBy[Scope.Trace]!!) && scope > Scope.Trace
+            (pql.isImplicitGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Log]!!) && scope > Scope.Log ||
+                    (pql.isImplicitGroupBy[Scope.Trace]!! || pql.isGroupBy[Scope.Trace]!!) && scope > Scope.Trace
         )
 
         it.query.append("SELECT array_agg(id) AS ids FROM (")
@@ -739,29 +738,29 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 offset += batchSize
 
                 val results = listOf(
-                        cache.topEntry.queryEntity,
-                        cache.topEntry.queryAttributes,
-                        cache.topEntry.queryExpressions,
-                        queryLogClassifiers,
-                        queryLogExtensions,
-                        cache.topEntry.queryGlobals
+                    cache.topEntry.queryEntity,
+                    cache.topEntry.queryAttributes,
+                    cache.topEntry.queryExpressions,
+                    queryLogClassifiers,
+                    queryLogExtensions,
+                    cache.topEntry.queryGlobals
                 ).executeMany(
-                        connection!!,
-                        entityParameters,
-                        attrParameters,
-                        exprParameters,
-                        idParamList,
-                        idParamList,
-                        globalsParameters
+                    connection!!,
+                    entityParameters,
+                    attrParameters,
+                    exprParameters,
+                    idParamList,
+                    idParamList,
+                    globalsParameters
                 )
 
                 return LogQueryResult(
-                        ErrorSuppressingResultSet(results[0]),
-                        results[1],
-                        results[2],
-                        results[3],
-                        results[4],
-                        results[5]
+                    ErrorSuppressingResultSet(results[0]),
+                    results[1],
+                    results[2],
+                    results[3],
+                    results[4],
+                    results[5]
                 )
             }
         }
@@ -782,9 +781,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 offset += batchSize
 
                 val results = listOf(
-                        log.queryEntity,
-                        log.queryAttributes,
-                        log.queryExpressions
+                    log.queryEntity,
+                    log.queryAttributes,
+                    log.queryExpressions
                 ).executeMany(connection!!, entityParameters, attrParameters, exprParameters)
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
@@ -807,9 +806,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 offset += batchSize
 
                 val results = listOf(
-                        trace.queryEntity,
-                        trace.queryAttributes,
-                        trace.queryExpressions
+                    trace.queryEntity,
+                    trace.queryAttributes,
+                    trace.queryExpressions
                 ).executeMany(connection!!, entityParameters, attrParameters, exprParameters)
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
@@ -834,7 +833,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 var attributes: List<Attribute>? = null
                 connection.use { conn ->
                     attributes = conn.prepareStatement(
-                            "SELECT keys FROM classifiers WHERE log_id=? AND scope=?::scope_type AND name=? LIMIT 1"
+                        "SELECT keys FROM classifiers WHERE log_id=? AND scope=?::scope_type AND name=? LIMIT 1"
                     ).apply {
                         val clsName = if (classifier.isStandard) classifier.standardName else classifier.name
                         setInt(1, logId)
@@ -844,7 +843,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                         require(it.next()) { "Classifier $classifier is not found." }
                         it.getString("keys")
                     }.split(" ", "\t", "\r", "\n")
-                            .map { Attribute("[${classifier.scope}:$it]", 0, 0) }
+                        .map { Attribute("[${classifier.scope}:$it]", 0, 0) }
                 }
 
                 assert(attributes !== null)
@@ -871,7 +870,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             }
         }
 
-        abstract inner class Entry() {
+        abstract inner class Entry {
             abstract val ids: Iterable<Any>?
             abstract val queryIds: SQLQuery
             abstract val queryEntity: SQLQuery
@@ -879,7 +878,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             abstract val queryExpressions: SQLQuery
         }
 
-        abstract inner class TopEntry() : Entry() {
+        abstract inner class TopEntry : Entry() {
             /**
              * key: logId or groupId
              * The order is important
@@ -889,7 +888,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             abstract val queryGlobals: SQLQuery
         }
 
-        inner class RegularTopEntry() : TopEntry() {
+        inner class RegularTopEntry : TopEntry() {
             init {
                 assert(!pql.isImplicitGroupBy[Scope.Log]!!)
                 assert(!pql.isGroupBy[Scope.Log]!!)
@@ -902,7 +901,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 LinkedHashMap<Int, LogEntry>().apply {
                     connection.use {
                         val nextCtor =
-                                if (pql.isImplicitGroupBy[Scope.Trace]!! || pql.isGroupBy[Scope.Trace]!!) ::GroupingLogEntry else ::RegularLogEntry
+                            if (pql.isImplicitGroupBy[Scope.Trace]!! || pql.isGroupBy[Scope.Trace]!!) ::GroupingLogEntry else ::RegularLogEntry
 
                         for (logId in queryIds.execute(it).toIdList { it.getInt(1) })
                             this[logId] = nextCtor(this@RegularTopEntry, logId)
@@ -918,7 +917,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log) }
         }
 
-        inner class GroupingTopEntry() : TopEntry() {
+        inner class GroupingTopEntry : TopEntry() {
             init {
                 assert(pql.isImplicitGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Log]!!)
             }
@@ -946,7 +945,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryIds: SQLQuery by lazy(NONE) { groupIdsQuery(Scope.Log, null, null) }
             override val queryEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Log) }
             override val queryGlobals: SQLQuery =
-                    SQLQuery { it.query.append("SELECT NULL AS id WHERE 0=1") } // FIXME: return empty ResultSet for this query
+                SQLQuery { it.query.append("SELECT NULL AS id WHERE 0=1") } // FIXME: return empty ResultSet for this query
             override val queryAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Log, null) }
             override val queryExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Log) }
         }
@@ -975,7 +974,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     if (field === null) {
                         assert(parent.logs[logId] === this)
                         val nextCtor =
-                                if (pql.isImplicitGroupBy[Scope.Event]!! || pql.isGroupBy[Scope.Event]!!) ::GroupingTraceEntry else ::RegularTraceEntry
+                            if (pql.isImplicitGroupBy[Scope.Event]!! || pql.isGroupBy[Scope.Event]!!) ::GroupingTraceEntry else ::RegularTraceEntry
 
                         // Initialize all sibling RegularLogEntries together
                         val queries = parent.logs.values.map { it.queryIds }
@@ -1144,7 +1143,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
 
         inner class GroupedTraceEntry(parent: LogEntry, logId: Int?, traceGroup: LongArray) :
-                GroupingTraceEntry(parent, logId, -1L) {
+            GroupingTraceEntry(parent, logId, -1L) {
 
             override fun assert() {
                 assert(pql.isImplicitGroupBy[Scope.Log]!! || pql.isImplicitGroupBy[Scope.Trace]!! || pql.isImplicitGroupBy[Scope.Event]!! || pql.isGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Trace]!!)
@@ -1155,13 +1154,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun Attribute.toSQL(
-            sql: MutableSQLQuery,
-            logId: Int?,
-            expectedType: Type,
-            limitCount: Int,
-            prefix: ((sql: MutableSQLQuery) -> Unit)? = null,
-            suffix: ((sql: MutableSQLQuery) -> Unit)? = null,
-            ignoreHoisting: Boolean = false
+        sql: MutableSQLQuery,
+        logId: Int?,
+        expectedType: Type,
+        limitCount: Int,
+        prefix: ((sql: MutableSQLQuery) -> Unit)? = null,
+        suffix: ((sql: MutableSQLQuery) -> Unit)? = null,
+        ignoreHoisting: Boolean = false
     ): Int {
         val sqlScope = ScopeWithMetadata(this.scope!!, if (ignoreHoisting) 0 else this.hoistingPrefix.length)
         sql.scopes.add(sqlScope)
@@ -1205,8 +1204,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             fun walk(expression: IExpression, expectedType: Type) {
                 when (expression) {
                     is Attribute -> expression.toSQL(
-                            sql, null, if (expression.type != Type.Unknown) expression.type else expectedType, 1,
-                            ignoreHoisting = ignoreHoisting
+                        sql, null, if (expression.type != Type.Unknown) expression.type else expectedType, 1,
+                        ignoreHoisting = ignoreHoisting
                     )
                     is Literal<*> -> {
                         if (expression.scope != null)
@@ -1235,7 +1234,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                                 assert(expression.children.size >= 2)
                                 append(' ')
                                 val isTemporalSubtract =
-                                        expression.value == "-" && expression.children.any { it.type == Type.Datetime }
+                                    expression.value == "-" && expression.children.any { it.type == Type.Datetime }
                                 if (isTemporalSubtract)
                                     append("extract(epoch from ")
                                 for (i in expression.children.indices) {
@@ -1312,7 +1311,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     is AnyExpression -> append(expression.value)
                     // Expression must be the last but one because other classes inherit from this one.
                     is Expression -> expression.children.withIndex()
-                            .forEach { walk(it.value, expression.expectedChildrenTypes[it.index]) }
+                        .forEach { walk(it.value, expression.expectedChildrenTypes[it.index]) }
                     else -> throw IllegalArgumentException("Unknown expression type: $expression")
                 }
             }
@@ -1321,12 +1320,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun Iterable<OrderedExpression>.toSQL(
-            sql: MutableSQLQuery,
-            logId: Int?,
-            expressionIfEmpty: String,
-            printOrderBy: Boolean,
-            printDirection: Boolean,
-            ignoreHoisting: Boolean
+        sql: MutableSQLQuery,
+        logId: Int?,
+        expressionIfEmpty: String,
+        printOrderBy: Boolean,
+        printDirection: Boolean,
+        ignoreHoisting: Boolean
     ): Int {
         with(sql.query) {
             if (printOrderBy)
@@ -1340,7 +1339,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                             it.query.append(" DESC")
                     }
                     orderByCount += expression.base.toSQL(
-                            sql, logId, Type.Any, Int.MAX_VALUE, null, suffix, ignoreHoisting
+                        sql, logId, Type.Any, Int.MAX_VALUE, null, suffix, ignoreHoisting
                     )
                 } else {
                     expression.base.toSQL(sql, Type.Any, ignoreHoisting)

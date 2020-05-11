@@ -20,7 +20,7 @@ abstract class XESComponent {
      * Standard attribute based on identity:id
      * Standard extension: Identity
      */
-    abstract val identityId: String?
+    abstract val identityId: UUID?
 
     /**
      * The number of elements (logs, traces, events) represented by this object.

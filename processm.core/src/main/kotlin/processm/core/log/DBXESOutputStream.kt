@@ -216,22 +216,23 @@ class DBXESOutputStream : XESOutputStream {
                 append(", attributes$myTableNumber AS (")
                 append(
                     "INSERT INTO $destinationTable(${rootTempTable}_id, key, type, " +
-                            "string_value, date_value, int_value, bool_value, real_value, " +
+                            "string_value, uuid_value, date_value, int_value, bool_value, real_value, " +
                             "parent_id, in_list_attr ${extraColumns.keys.join()}) "
                 )
                 append(
                     "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
-                            "a.string_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
+                            "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
                             "${if (topMost) "NULL" else "(SELECT id FROM attributes$parentTableNumber ORDER BY id LIMIT 1 OFFSET $parentRowIndex)"}, " +
                             "a.in_list_attr ${extraColumns.values.join { "'$it'" }} FROM (VALUES "
                 )
             }
             for (attribute in attributes) {
-                to.sql.append("(?, ?::attribute_type, ?, ?::timestamptz, ?::integer, ?::boolean, ?::double precision, ?::boolean), ")
+                to.sql.append("(?, ?::attribute_type, ?, ?::uuid, ?::timestamptz, ?::integer, ?::boolean, ?::double precision, ?::boolean), ")
                 with(to.params) {
                     addLast(attribute.key)
                     addLast(attribute.xesTag)
-                    addLast((attribute as? StringAttr)?.value ?: (attribute as? IDAttr)?.value)
+                    addLast((attribute as? StringAttr)?.value)
+                    addLast((attribute as? IDAttr)?.value)
                     addLast((attribute as? DateTimeAttr)?.value?.let { Timestamp.from(it) })
                     addLast((attribute as? IntAttr)?.value)
                     addLast((attribute as? BoolAttr)?.value)
@@ -242,7 +243,7 @@ class DBXESOutputStream : XESOutputStream {
 
             with(to.sql) {
                 delete(length - 2, length)
-                append(") a(key, type, string_value, date_value, int_value, bool_value, real_value, in_list_attr) ")
+                append(") a(key, type, string_value, uuid_value, date_value, int_value, bool_value, real_value, in_list_attr) ")
                 append("RETURNING id)")
             }
 
