@@ -10,7 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-internal class OfflineInductiveMinerTest {
+internal class OfflineInductiveMinerWithoutLogStatisticsTest {
     @Test
     fun `PM book Figure 2-6 | Figure 7-26`() {
         val log = logFromString(
@@ -24,7 +24,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))", inductiveMiner.result.toString())
@@ -39,7 +39,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,∧(B,D),E,H)", inductiveMiner.result.toString())
@@ -54,7 +54,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,E,∧(B,D),H)", inductiveMiner.result.toString())
@@ -73,7 +73,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,×(B,C,⟲(τ,D)),E)", inductiveMiner.result.toString())
@@ -91,7 +91,7 @@ internal class OfflineInductiveMinerTest {
              A E D
             """.trimIndent()
         )
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,×(∧(B,C),E),D)", inductiveMiner.result.toString())
@@ -157,7 +157,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,⟲(∧(B,C),→(E,F)),D)", inductiveMiner.result.toString())
@@ -174,7 +174,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,⟲(→(B,∧(C,D),E),F),G)", inductiveMiner.result.toString())
@@ -191,7 +191,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(×(A,B),C,×(D,E))", inductiveMiner.result.toString())
@@ -218,7 +218,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,∧(⟲(B,→(C,D)),E),F)", inductiveMiner.result.toString())
@@ -241,7 +241,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)", inductiveMiner.result.toString())
@@ -265,7 +265,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G,X,Y,Z)", inductiveMiner.result.toString())
@@ -286,7 +286,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,⟲(τ,B),C)", inductiveMiner.result.toString())
@@ -305,7 +305,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,⟲(B,C),D)", inductiveMiner.result.toString())
@@ -321,7 +321,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,⟲(τ,B,C),D)", inductiveMiner.result.toString())
@@ -336,7 +336,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(×(A,B),C,×(D,E))", inductiveMiner.result.toString())
@@ -351,7 +351,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("⟲(A,τ)", inductiveMiner.result.toString())
@@ -367,7 +367,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,×(τ,B),C)", inductiveMiner.result.toString())
@@ -385,7 +385,7 @@ internal class OfflineInductiveMinerTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMiner()
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,×(∧(B,C),→(E,×(F,τ))),D)", inductiveMiner.result.toString())
