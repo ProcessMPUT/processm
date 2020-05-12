@@ -583,7 +583,7 @@ class DirectlyFollowsSubGraph(
     fun currentStartActivities(): MutableSet<ProcessTreeActivity> {
         var collection = HashSet<ProcessTreeActivity>(initialStartActivities)
 
-        while (true) {
+        for (_i in 0..activities.size) {
             collection.filter { it in activities }.also {
                 // If at least one start activity still in graph - return start activities
                 if (it.isNotEmpty()) return it.toMutableSet()
@@ -597,6 +597,9 @@ class DirectlyFollowsSubGraph(
 
             collection = startActivities
         }
+
+        // Return empty set - not recognized start activities
+        return mutableSetOf()
     }
 
     /**
@@ -605,7 +608,7 @@ class DirectlyFollowsSubGraph(
     fun currentEndActivities(): MutableSet<ProcessTreeActivity> {
         var collection = HashSet<ProcessTreeActivity>(initialEndActivities)
 
-        while (true) {
+        for (_i in 0..activities.size) {
             collection.filter { it in activities }.also {
                 // If at least one end activity still in graph - return start activities
                 if (it.isNotEmpty()) return it.toMutableSet()
@@ -619,6 +622,9 @@ class DirectlyFollowsSubGraph(
 
             collection = endActivities
         }
+
+        // Return empty set - not recognized end activities
+        return mutableSetOf()
     }
 
     /**

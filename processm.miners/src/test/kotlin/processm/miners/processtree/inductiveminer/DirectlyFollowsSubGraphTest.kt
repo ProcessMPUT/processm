@@ -526,7 +526,7 @@ internal class DirectlyFollowsSubGraphTest {
         val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
         val response = graph.currentStartActivities()
 
-        assertEquals(0, graph.currentEndActivities().size)
+        assertEquals(1, graph.currentEndActivities().size)
         assertEquals(2, response.size)
 
         assertTrue(response.contains(B))
