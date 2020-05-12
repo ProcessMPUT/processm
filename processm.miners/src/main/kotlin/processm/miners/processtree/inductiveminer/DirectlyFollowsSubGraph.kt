@@ -1,5 +1,7 @@
 package processm.miners.processtree.inductiveminer
 
+import processm.core.helpers.map2d.DoublingMap2D
+import processm.core.helpers.map2d.Map2D
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.RedoLoop
 import processm.core.models.processtree.SilentActivity
@@ -60,7 +62,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Activities pointed (with connection) to `key` activity
      */
-    private val ingoingConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+    private val ingoingConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
 
     /**
      * Current start activities in this subGraph.
@@ -77,7 +79,7 @@ class DirectlyFollowsSubGraph(
     init {
         outgoingConnections.forEach { (from, hashMap) ->
             hashMap.forEach { (to, arc) ->
-                ingoingConnections.getOrPut(to, { HashMap() })[from] = arc
+                ingoingConnections[to, from] = arc
             }
         }
 
@@ -94,7 +96,7 @@ class DirectlyFollowsSubGraph(
      * Possible only if connections are empty (no self-loop) AND in activities only one activity.
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
-        return ingoingConnections.isEmpty() && activities.size == 1
+        return ingoingConnections.rows.isNullOrEmpty() && activities.size == 1
     }
 
     /**
@@ -117,7 +119,7 @@ class DirectlyFollowsSubGraph(
      */
     fun calculateExclusiveCut(
         outgoing: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
-        ingoing: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = ingoingConnections
+        ingoing: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = ingoingConnections
     ): MutableMap<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
@@ -167,7 +169,7 @@ class DirectlyFollowsSubGraph(
                     }
                 }
 
-                ingoing[current].orEmpty().keys.forEach { activity ->
+                ingoing.getRow(current).keys.forEach { activity ->
                     // If not assigned label yet
                     if (nonLabeledActivities.contains(activity)) {
                         // Assign label
