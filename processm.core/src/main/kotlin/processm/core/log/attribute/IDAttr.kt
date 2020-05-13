@@ -9,7 +9,7 @@ package processm.core.log.attribute
  * Tag inside XES file: <id>
  */
 class IDAttr(key: String, val value: String) : Attribute<String>(key) {
-    override fun getValue() = this.value
+    override fun getValue(): String = this.value
     override val xesTag: String
         get() = "id"
 

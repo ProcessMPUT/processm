@@ -3,8 +3,12 @@ package processm.core.log.attribute
 import java.util.*
 import kotlin.collections.HashMap
 
+/**
+ * The base class for the attribute compliant with the XES standard.
+ */
 abstract class Attribute<T : Any>(key: String) {
     internal val childrenInternal: MutableMap<String, Attribute<*>> = HashMap()
+
     /**
      * Attribute's key from XES file
      */
@@ -25,6 +29,7 @@ abstract class Attribute<T : Any>(key: String) {
      * Used as getter based on the internal representation of children
      */
     val children: Map<String, Attribute<*>> = Collections.unmodifiableMap(childrenInternal)
+
     /**
      * Tag in XES standard
      */

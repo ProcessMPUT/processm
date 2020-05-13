@@ -2,6 +2,7 @@ package processm.core.log.hierarchical
 
 import processm.core.helpers.NestableAutoCloseable
 import processm.core.helpers.mapToArray
+import processm.core.helpers.toLongRange
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -10,9 +11,10 @@ import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.*
 import processm.core.querylanguage.Function
 import java.sql.Connection
-import java.sql.ResultSet
 import java.util.*
 import kotlin.LazyThreadSafetyMode.NONE
+import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 import kotlin.collections.LinkedHashSet
 
 @Suppress("MapGetWithNotNullAssertionOperator")
@@ -52,20 +54,6 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     private val cache: Cache = Cache()
 
     // region SQL query generators
-    /**
-     * SQL query generators. They are lazy because:
-     * * We aim to initialize the necessary ones only,
-     * * We require connection context for some of them.
-     */
-    private val queryLogIds: SQLQuery by lazy(NONE) { idQuery(Scope.Log, null, null) }
-    private val queryLogEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Log, null) }
-    private val queryLogGlobals: SQLQuery by lazy(NONE) { attributesQuery(Scope.Log, null, "GLOBALS", setOf("scope")) }
-    private val queryLogAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Log, null) }
-    private val queryLogExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log, null) }
-    private val queryLogGroupEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Log, null, null) }
-    private val queryLogGroupAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Log, null) }
-    private val queryLogGroupExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Log, null) }
-
     // region select ids
     private fun idQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
         assert(!pql.isImplicitGroupBy)
@@ -179,16 +167,16 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // endregion
 
     // region select entity
-    private fun entityQuery(scope: Scope, logId: Int?): SQLQuery = SQLQuery {
+    private fun entityQuery(scope: Scope): SQLQuery = SQLQuery {
         assert(!pql.isImplicitGroupBy)
         assert(pql.isGroupBy[Scope.Log] == false)
 
-        selectEntity(scope, it, logId)
+        selectEntity(scope, it)
         fromEntity(scope, it)
         orderByEntity(it)
     }
 
-    private fun selectEntity(scope: Scope, sql: MutableSQLQuery, logId: Int?, selectId: Boolean = true) {
+    private fun selectEntity(scope: Scope, sql: MutableSQLQuery) {
         with(sql.query) {
             append("SELECT ")
 
@@ -199,23 +187,22 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 return@with
             }
 
-            if (selectId) {
-                append("${scope.shortName}.id, ")
-                when (scope) {
-                    Scope.Trace -> append("event_stream, ")
-                }
-            }
+            append("${scope.shortName}.id, ")
+            if (scope == Scope.Trace)
+                append("event_stream, ")
 
-            if (!pql.selectAll[scope]!! && pql.selectStandardAttributes[scope]!!.isEmpty()) {
-                delete(length - 2, length)
-                return@with
-            }
-
+            var fetchAnyAttr = false
             for (attribute in pql.selectStandardAttributes[scope]!!) {
-                attribute.toSQL(sql, logId)
-                append(',')
+                if (attribute.isClassifier)
+                    continue
+                fetchAnyAttr = true
+                append("${scope.alias}.\"${attribute.standardName}\", ")
             }
-            deleteCharAt(length - 1)
+            delete(length - 2, length)
+
+            if (!fetchAnyAttr && scope != Scope.Trace) {
+                // FIXME: potential optimization: for scope != Trace skip query, return in-memory ResultSet with ids only
+            }
         }
     }
 
@@ -238,13 +225,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         table: String? = null,
         extraColumns: Set<String> = emptySet()
     ): SQLQuery = SQLQuery {
-        if (pql.selectAll[scope] != true && pql.selectOtherAttributes[scope].isNullOrEmpty()) {
+        if (pql.selectAll[scope] != true
+            && pql.selectOtherAttributes[scope].isNullOrEmpty()
+            && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
+        ) {
             // dummy query that returns no data
-            it.query.append(
-                "SELECT NULL AS id, NULL AS ${scope}_id, NULL AS parent_id, NULL AS type, NULL AS key, " +
-                        "NULL AS string_value, NULL AS date_value, NULL AS int_value, NULL AS bool_value, NULL AS real_value, " +
-                        "NULL AS in_list_attr WHERE cardinality(?)=-1"
-            )
+            it.query.append("SELECT NULL AS id WHERE cardinality(?)=-1")
+            // FIXME: optimization: return empty in-memory ResultSet
             return@SQLQuery
         }
 
@@ -299,8 +286,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 }
             }
 
-            if (other.isEmpty())
-                return@with
+            if (other.isEmpty()) {
+                // FIXME: potential optimization: skip query, return in-memory ResultSet with no data
+                // return@with
+            }
 
             append("AND key=ANY(?) ")
             sql.params.add(other.mapToArray { it.name })
@@ -322,7 +311,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     private fun selectExpressions(scope: Scope, sql: MutableSQLQuery) {
         //TODO()
-        sql.query.append("SELECT * FROM unnest(?)")
+        sql.query.append("SELECT NULL FROM unnest(?)")
     }
 
     private fun fromExpressions(scope: Scope, sql: MutableSQLQuery) {
@@ -331,6 +320,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     private fun whereExpressions(scope: Scope, sql: MutableSQLQuery) {
         //TODO()
+        sql.query.append(" WHERE 1=0")
     }
 
     private fun orderByExpressions(scope: Scope, sql: MutableSQLQuery) {
@@ -338,8 +328,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
     // endregion
 
-    // region select group entity
-    private fun groupEntityQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
+    // region select groups
+    private fun groupIdsQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
         assert(
             pql.isImplicitGroupBy
                     || pql.isGroupBy[Scope.Log]!!
@@ -347,7 +337,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     || scope == Scope.Event && pql.isGroupBy[Scope.Event]!!
         )
 
-        selectEntity(scope, it, logId, false)
+        selectGroupIds(scope, it)
 
         val desiredFromPosition = it.query.length
 
@@ -358,8 +348,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         val from = from(scope, it)
         it.query.insert(desiredFromPosition, from)
 
-        offset(scope, it)
         limit(scope, it)
+        offset(scope, it)
+
+    }
+
+    private fun selectGroupIds(scope: Scope, sql: MutableSQLQuery) {
+        sql.query.append("SELECT row_number() AS group_id, array_agg(id) AS ids ")
     }
 
     private fun groupBy(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
@@ -375,13 +370,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             // expand classifiers
             val standard = LinkedHashSet<Attribute>()
             val other = LinkedHashSet<Attribute>(pql.groupByOtherAttributes[scope]!!)
-            pql.groupByStandardAttributes[scope]!!.forEach {
+            (pql.groupByStandardAttributes[scope]!! + pql.groupByOtherAttributes[scope]!!).forEach {
                 if (it.isClassifier) {
                     assert(scope > Scope.Log) { "A classifier cannot occur on the log scope." }
                     assert(logId !== null) { "The use of a classifier requires logId. " }
-                    cache.expandClassifier(logId!!, it).forEach {
-                        if (it.isStandard) standard.add(it)
-                        else other.add(it)
+                    cache.expandClassifier(logId!!, it).forEach { attr ->
+                        assert(!attr.isStandard)
+                        other.add(attr)
                     }
                 } else
                     standard.add(it)
@@ -405,15 +400,112 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
     // endregion
 
-    // region select group attributes
-    private fun groupAttributesQuery(scope: Scope, logId: Int?): SQLQuery = SQLQuery {
-        TODO("non-standard attributes")
+    // region select group entity
+    private fun groupEntityQuery(scope: Scope): SQLQuery = SQLQuery {
+        assert(
+            pql.isImplicitGroupBy
+                    || pql.isGroupBy[Scope.Log]!!
+                    || scope == Scope.Trace && pql.isGroupBy[Scope.Trace]!!
+                    || scope == Scope.Event && pql.isGroupBy[Scope.Event]!!
+        )
+
+        selectGroupEntity(scope, it)
+        fromGroupEntity(scope, it)
+        groupByGroupEntity(it)
+        orderByGroupEntity(it)
     }
+
+    private fun selectGroupEntity(scope: Scope, sql: MutableSQLQuery) {
+        with(sql.query) {
+            append("SELECT ")
+
+            sql.scopes.add(ScopeWithHoisting(scope, 0))
+
+            assert(pql.selectAll[scope] != true)
+
+            append("row_number() AS group_id, ")
+
+            var fetchAnyAttr = false
+            for (attribute in pql.selectStandardAttributes[scope]!!) {
+                if (attribute.isClassifier)
+                    continue
+                fetchAnyAttr = true
+                append("${scope.alias}.\"${attribute.standardName}\", ")
+            }
+            delete(length - 2, length)
+
+            if (!fetchAnyAttr) {
+                // FIXME: potential optimization: skip query, return in-memory ResultSet with ids only
+            }
+        }
+    }
+
+    private fun fromGroupEntity(scope: Scope, sql: MutableSQLQuery) {
+        assert(sql.scopes.size == 1)
+        assert(sql.scopes.first().scope == scope)
+        sql.query.append(" FROM ${scope.table} ${scope.alias}")
+        sql.query.append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(ids, ord) ON ${scope.alias}.id=ANY(ids.ids)")
+    }
+
+    private fun groupByGroupEntity(sql: MutableSQLQuery) {
+        sql.query.append(" GROUP BY ids.ord")
+    }
+
+    private fun orderByGroupEntity(sql: MutableSQLQuery) {
+        sql.query.append(" ORDER BY ids.ord")
+    }
+    // endregion
+
+    // region select group attributes
+    private fun groupAttributesQuery(
+        scope: Scope,
+        logId: Int?,
+        table: String? = null,
+        extraColumns: Set<String> = emptySet()
+    ): SQLQuery = SQLQuery {
+        if (pql.selectOtherAttributes[scope].isNullOrEmpty()
+            && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
+        ) {
+            // dummy query that returns no data
+            it.query.append("SELECT NULL AS id WHERE cardinality(?)=-1")
+            // FIXME: optimization: return empty in-memory ResultSet
+            return@SQLQuery
+        }
+
+        val attrTable = table ?: (scope.toString() + "s_attributes")
+        with(it.query) {
+            selectAttributes(scope, attrTable, extraColumns, it)
+            fromGroupAttributes(scope, attrTable, it)
+            whereAttributes(scope, it, logId)
+            groupByGroupAttributes(it)
+            orderByGroupAttributes(it)
+        }
+    }
+
+    private fun fromGroupAttributes(scope: Scope, attrTable: String, sql: MutableSQLQuery) {
+        with(sql.query) {
+            append(" FROM $attrTable")
+            append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(ids, ord) ON ${scope}_id=ANY(ids.ids)")
+        }
+    }
+
+    private fun groupByGroupAttributes(sql: MutableSQLQuery) {
+        sql.query.append(" GROUP BY ids.ord")
+    }
+
+    private fun orderByGroupAttributes(sql: MutableSQLQuery) {
+        sql.query.append(" ORDER BY ids.ord")
+    }
+
     // endregion
 
     // region select group expressions
     private fun groupExpressionsQuery(scope: Scope, logId: Int?): SQLQuery = SQLQuery {
-        TODO("expressions")
+        // TODO
+        selectExpressions(scope, it)
+        fromExpressions(scope, it)
+        whereExpressions(scope, it)
+        orderByExpressions(scope, it)
     }
     // endregion
 
@@ -425,7 +517,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     fun getEvents(logId: Int, traceId: Long): Executor<QueryResult> = EventExecutor(logId, traceId)
 
     abstract inner class Executor<T : QueryResult> {
-        protected abstract val iterator: BaseIterator
+        protected abstract val iterator: IdBasedIterator<*>
         protected var connection: Connection? = null
 
         fun use(lambda: (iterator: Iterator<T>) -> Unit) {
@@ -454,175 +546,108 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
          */
         fun skipBatch() = iterator.skip(batchSize)
 
-        protected abstract inner class BaseIterator : Iterator<T> {
-            abstract fun skip(count: Int)
-        }
-
-        protected abstract inner class IdBasedIterator<N : Number> : BaseIterator() {
+        protected abstract inner class IdBasedIterator<out N : Any> : Iterator<T> {
             protected abstract val ids: Iterator<N>
             override fun hasNext(): Boolean = ids.hasNext()
-            override fun skip(count: Int) {
+            fun skip(count: Int) {
                 var index = 0
                 while (index++ < count && ids.hasNext())
                     ids.next()
             }
         }
-
-        protected inner class SingleValueIterator(var value: T?) : BaseIterator() {
-            override fun hasNext(): Boolean = value !== null
-            override fun skip(count: Int) {
-                check(count > 0)
-                value = null
-            }
-
-            override fun next(): T {
-                val v = value!!
-                value = null
-                return v
-            }
-        }
     }
 
     private inner class LogExecutor : Executor<LogQueryResult>() {
-        override val iterator: BaseIterator
+        override val iterator: IdBasedIterator<Int> = object : IdBasedIterator<Int>() {
+            override val ids: Iterator<Int> = cache.topEntry.logs.keys.iterator()
 
-        init {
-            // determine type of query: Regular or Grouped
-            val regular = !pql.isImplicitGroupBy && pql.isGroupBy[Scope.Log] == false
-            if (regular) {
-                iterator = object : IdBasedIterator<Int>() {
-                    override val ids: Iterator<Int> = cache.getLogIds().iterator()
+            override fun next(): LogQueryResult {
+                val ids = this.ids.take(batchSize)
+                logger.trace { "Retrieving log/group ids: ${ids.joinToString()}." }
+                val parameters = listOf(connection!!.createArrayOf("int", ids.toTypedArray()))
+                val attrParameters = parameters + cache.topEntry.queryAttributes.params
 
-                    override fun next(): LogQueryResult {
-                        val ids = this.ids.take(batchSize)
-                        logger.trace { "Retrieving log ids: ${ids.joinToString()}." }
-                        val parameters = listOf(connection!!.createArrayOf("int", ids.toTypedArray()))
+                val results = listOf(
+                    cache.topEntry.queryEntity,
+                    cache.topEntry.queryAttributes,
+                    cache.topEntry.queryExpressions,
+                    queryLogClassifiers,
+                    queryLogExtensions,
+                    cache.topEntry.queryGlobals
+                ).executeMany(
+                    connection!!, parameters, attrParameters, parameters, parameters, parameters, parameters
+                )
 
-                        val results = listOf(
-                            queryLogEntity,
-                            queryLogAttributes,
-                            queryLogExpressions,
-                            queryLogClassifiers,
-                            queryLogExtensions,
-                            queryLogGlobals
-                        ).executeMany(
-                            connection!!, parameters, parameters, parameters, parameters, parameters, parameters
-                        )
-
-                        return LogQueryResult(
-                            ErrorSuppressingResultSet(results[0]),
-                            results[1], results[2], results[3], results[4], results[5]
-                        )
-                    }
-                }
-            } else {
-                val results = listOf(queryLogGroupEntity, queryLogGroupAttributes, queryLogGroupExpressions)
-                    .executeMany(connection!!)
-                iterator =
-                    SingleValueIterator(LogQueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
+                return LogQueryResult(
+                    ErrorSuppressingResultSet(results[0]),
+                    results[1],
+                    results[2],
+                    results[3],
+                    results[4],
+                    results[5]
+                )
             }
         }
     }
 
     private inner class TraceExecutor(logId: Int) : Executor<QueryResult>() {
-        override val iterator: BaseIterator
+        private val log = cache.topEntry.logs[logId]!!
+        override val iterator: IdBasedIterator<Long> = object : IdBasedIterator<Long>() {
+            override val ids: Iterator<Long> = log.traces.keys.iterator()
 
-        init {
-            // determine type of query: Regular or Grouped
-            val regular = !pql.isImplicitGroupBy
-                    && pql.isGroupBy[Scope.Log] == false
-                    && pql.isGroupBy[Scope.Trace] == false
-            val entry = cache[logId]
-            if (regular) {
-                iterator = object : IdBasedIterator<Long>() {
-                    override val ids: Iterator<Long> = cache.getTraceIds(logId).iterator()
+            override fun next(): QueryResult {
+                val ids = this.ids.take(batchSize)
+                logger.trace { "Retrieving trace/group ids: ${ids.joinToString()}." }
+                val parameters: List<Any> = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
+                val attrParameters = parameters + log.queryAttributes.params
 
-                    override fun next(): QueryResult {
-                        val ids = this.ids.take(batchSize)
-                        logger.trace { "Retrieving trace ids: ${ids.joinToString()}." }
-                        val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
-                        val attrParameters = parameters + entry.queryTraceAttributes.params
-
-                        val results = listOf(
-                            entry.queryTraceEntity,
-                            entry.queryTraceAttributes,
-                            entry.queryTraceExpressions
-                        ).executeMany(connection!!, parameters, attrParameters, parameters)
-
-                        return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
-                    }
-                }
-
-            } else {
                 val results = listOf(
-                    entry.queryTraceGroupEntity,
-                    entry.queryTraceGroupAttributes,
-                    entry.queryTraceGroupExpressions
-                ).executeMany(connection!!)
-                iterator =
-                    SingleValueIterator(QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
+                    log.queryEntity,
+                    log.queryAttributes,
+                    log.queryExpressions
+                ).executeMany(connection!!, parameters, attrParameters, parameters)
+
+                return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
             }
         }
     }
 
     private inner class EventExecutor(logId: Int, traceId: Long) : Executor<QueryResult>() {
-        override val iterator: BaseIterator
+        private val trace = cache.topEntry.logs[logId]!!.traces[traceId]!!
+        override val iterator: IdBasedIterator<Long> = object : IdBasedIterator<Long>() {
+            override val ids: Iterator<Long> = trace.events.iterator()
 
-        init {
-            // determine type of query: Regular or Grouped
-            val regular = !pql.isImplicitGroupBy
-                    && pql.isGroupBy[Scope.Log] == false
-                    && pql.isGroupBy[Scope.Trace] == false
-                    && pql.isGroupBy[Scope.Event] == false
-            val entry = cache[logId].traces[traceId]!!
-            if (regular) {
-                iterator = object : IdBasedIterator<Long>() {
-                    override val ids: Iterator<Long> = cache.getEventIds(logId, traceId).iterator()
+            override fun next(): QueryResult {
+                val ids = this.ids.take(batchSize)
+                logger.trace { "Retrieving event/group ids: ${ids.joinToString()}." }
+                val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
+                val attrParameters = parameters + trace.queryAttributes.params
 
-                    override fun next(): QueryResult {
-                        val ids = this.ids.take(batchSize)
-                        logger.trace { "Retrieving event ids: ${ids.joinToString()}." }
-                        val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
-                        val attrParameters = parameters + entry.queryEventAttributes.params
-
-                        val results = listOf(
-                            entry.queryEventEntity,
-                            entry.queryEventAttributes,
-                            entry.queryEventExpressions
-                        ).executeMany(connection!!, parameters, attrParameters, parameters)
-
-                        return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
-                    }
-                }
-            } else {
                 val results = listOf(
-                    entry.queryEventGroupEntity,
-                    entry.queryEventGroupAttributes,
-                    entry.queryEventGroupExpressions
-                ).executeMany(connection!!)
-                iterator =
-                    SingleValueIterator(QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2]))
+                    trace.queryEntity,
+                    trace.queryAttributes,
+                    trace.queryExpressions
+                ).executeMany(connection!!, parameters, attrParameters, parameters)
+
+                return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
             }
         }
     }
     // endregion
 
     private inner class Cache {
-        private var tracesInitialized: Boolean = false
-        private var eventsInitialized: Boolean = false
-
+        // region classifiers
         /**
          * key: logId
-         * value: cached information
-         * The order is important.
+         * value: map of classifier -> list of attributes
          */
-        private val entries = LinkedHashMap<Int, LogEntry>()
+        private val classifiers: MutableMap<Int, MutableMap<Attribute, List<Attribute>>> = HashMap()
 
         fun expandClassifier(logId: Int, classifier: Attribute): List<Attribute> {
             require(classifier.isClassifier)
 
-            val entry = get(logId)
-            return entry.classifiers.computeIfAbsent(classifier) {
+            // FIXME: optimization: fetch all classifiers for logId at once
+            return classifiers.computeIfAbsent(logId) { HashMap() }.computeIfAbsent(classifier) {
                 var attributes: List<Attribute>? = null
                 connection.use { conn ->
                     attributes = conn.prepareStatement(
@@ -639,140 +664,286 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 }
 
                 assert(attributes !== null)
-                require(attributes!!.all { !it.isClassifier }) { "Line ${it.line} position ${it.charPositionInLine}: It is strictly forbidden for a classifier to refer other classifiers." }
+                require(attributes!!.all { !it.isClassifier }) { "Line ${classifier.line} position ${classifier.charPositionInLine}: It is forbidden for a classifier to refer other classifiers." }
                 attributes!!
             }
         }
+        // endregion
 
-        fun getLogIds(): Iterable<Int> {
-            if (entries.isEmpty()) {
-                connection.use {
-                    for (logId in queryLogIds.execute(it).toIdList<Int>())
-                        entries[logId] = LogEntry(logId)
+        val topEntry: TopEntry by lazy(NONE) {
+            when {
+                !pql.isImplicitGroupBy && !pql.isGroupBy[Scope.Log]!! -> RegularTopEntry()
+                !pql.isImplicitGroupBy && pql.isGroupBy[Scope.Log]!! -> GroupingTopEntry()
+                pql.isImplicitGroupBy -> GroupedTopEntry()
+                else -> throw IllegalArgumentException()
+            }
+        }
+
+        abstract inner class Entry internal constructor() {
+            abstract val queryIds: SQLQuery
+            abstract val queryEntity: SQLQuery
+            abstract val queryAttributes: SQLQuery
+            abstract val queryExpressions: SQLQuery
+        }
+
+        abstract inner class TopEntry internal constructor() : Entry() {
+            /**
+             * key: logId or groupId
+             * The order is important
+             */
+            abstract val logs: LinkedHashMap<Int, LogEntry>
+
+            abstract val queryGlobals: SQLQuery
+        }
+
+        inner class RegularTopEntry internal constructor() : TopEntry() {
+            init {
+                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isGroupBy[Scope.Log]!!)
+            }
+
+            override val logs: LinkedHashMap<Int, LogEntry> by lazy(NONE) {
+                LinkedHashMap<Int, LogEntry>().apply {
+                    connection.use {
+                        val nextCtor = if (pql.isGroupBy[Scope.Log]!!) ::GroupingLogEntry else ::RegularLogEntry
+                        for (logId in queryIds.execute(it).toIdList<Int>())
+                            this[logId] = nextCtor(logId)
+                    }
                 }
             }
 
-            return entries.keys
+            override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Log, null, null) }
+            override val queryEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Log) }
+            override val queryGlobals: SQLQuery by lazy(NONE)
+            { attributesQuery(Scope.Log, null, "GLOBALS", setOf("scope")) }
+            override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Log, null) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log, null) }
         }
 
-        fun getTraceIds(logId: Int): Iterable<Long> {
-            if (!tracesInitialized) {
-                tracesInitialized = true
+        inner class GroupingTopEntry internal constructor() : TopEntry() {
+            init {
+                assert(!pql.isImplicitGroupBy)
+                assert(pql.isGroupBy[Scope.Log]!!)
+            }
 
-                connection.use {
-                    val results = entries.values.map { it.queryTraceIds }.executeMany(it)
-                    for ((index, lid) in entries.keys.withIndex())
-                        for (traceId in results[index].toIdList<Long>())
-                            entries[lid]!!.traces[traceId] = TraceEntry(lid, traceId)
+            override val logs: LinkedHashMap<Int, LogEntry> by lazy(NONE) {
+                LinkedHashMap<Int, LogEntry>().apply {
+                    connection.use {
+                        groups = queryIds.execute(it).to2DArray()
+                        for (groupId in groups.indices)
+                            this[groupId] = GroupedLogEntry(groupId)
+                    }
                 }
             }
-
-            return get(logId).traces.keys
-        }
-
-        fun getEventIds(
-            logId: Int,
-            traceId: Long
-        ): Iterable<Long> {
-            val log = get(logId)
-            if (!eventsInitialized) {
-                eventsInitialized = true
-
-                connection.use {
-                    val results = log.traces.values.map { it.queryEventIds }.executeMany(it)
-                    for ((index, tid) in log.traces.keys.withIndex())
-                        for (eventId in results[index].toIdList<Long>())
-                            log.traces[tid]!!.events.add(eventId)
-                }
-            }
-
-            return checkNotNull(log.traces[traceId]).events
-        }
-
-        operator fun get(logId: Int): LogEntry =
-            checkNotNull(entries[logId]) { "The cache entry for logId=$logId has not been initialized yet." }
-
-        private fun <N : Number> ResultSet.toIdList(): List<N> = ArrayList<N>().also { out ->
-            this@toIdList.use {
-                while (it.next())
-                    out.add(it.getObject(1) as N)
-            }
-        }
-
-
-        inner class LogEntry(logId: Int) {
-            val classifiers = HashMap<Attribute, List<Attribute>>()
 
             /**
+             * index: groupId
+             * value: group of logIds
              * The order is important.
              */
-            val traces = LinkedHashMap<Long, TraceEntry>()
+            lateinit var groups: List<Array<Int>>
+                private set
 
-            val queryTraceIds: SQLQuery by lazy(NONE) { idQuery(Scope.Trace, logId, null) }
-            val queryTraceEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Trace, logId) }
-            val queryTraceAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Trace, logId) }
-            val queryTraceExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Trace, logId) }
-
-            val queryTraceGroupEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Trace, logId, null) }
-            val queryTraceGroupAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Trace, logId) }
-            val queryTraceGroupExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Trace, logId) }
+            override val queryIds: SQLQuery by lazy(NONE) { groupIdsQuery(Scope.Log, null, null) }
+            override val queryEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Log) }
+            override val queryGlobals: SQLQuery = SQLQuery { /* FIXME: return empty ResultSet for this query */ }
+            override val queryAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Log, null) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Log, null) }
         }
 
-        inner class TraceEntry(logId: Int, traceId: Long) {
+        inner class GroupedTopEntry internal constructor() : TopEntry() {
+            // There is only one group -> groupId=0
+            init {
+                assert(pql.isImplicitGroupBy)
+                assert(!pql.isGroupBy[Scope.Log]!!)
+            }
+
+            override val logs: LinkedHashMap<Int, LogEntry>
+                get() = TODO("Not yet implemented")
+
+            override val queryIds: SQLQuery by lazy(NONE) { TODO() }
+            override val queryEntity: SQLQuery by lazy(NONE) { TODO() }
+            override val queryGlobals: SQLQuery = SQLQuery { /* FIXME: return empty ResultSet for this query */ }
+            override val queryAttributes: SQLQuery by lazy(NONE) { TODO() }
+            override val queryExpressions: SQLQuery by lazy(NONE) { TODO() }
+        }
+
+        abstract inner class LogEntry internal constructor() : Entry() {
             /**
+             * key: traceId or groupId
              * The order is important.
              */
-            val events: MutableList<Long> = ArrayList()
+            abstract val traces: LinkedHashMap<Long, TraceEntry>
+        }
 
-            val queryEventIds: SQLQuery by lazy(NONE) { idQuery(Scope.Event, logId, traceId) }
-            val queryEventEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Event, logId) }
-            val queryEventAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Event, logId) }
-            val queryEventExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Event, logId) }
+        inner class RegularLogEntry internal constructor(logId: Int) : LogEntry() {
+            init {
+                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isGroupBy[Scope.Log]!!)
+                assert(!pql.isGroupBy[Scope.Trace]!!)
+            }
 
-            val queryEventGroupEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Event, logId, traceId) }
-            val queryEventGroupAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Event, logId) }
-            val queryEventGroupExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Event, logId) }
+            override val traces: LinkedHashMap<Long, TraceEntry> by lazy(NONE) {
+                LinkedHashMap<Long, TraceEntry>().apply {
+                    connection.use {
+                        val nextCtor = if (pql.isGroupBy[Scope.Trace]!!) ::GroupingTraceEntry else ::RegularTraceEntry
+                        for (traceId in queryIds.execute(it).toIdList<Long>())
+                            this[traceId] = nextCtor(logId, traceId)
+                    }
+                }
+            }
+
+            override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Trace, logId, null) }
+            override val queryEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Trace) } // FIXME: this query is independent of logId, move it to the main class
+            override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Trace, logId) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Trace, logId) }
+        }
+
+        inner class GroupingLogEntry internal constructor(logId: Int) : LogEntry() {
+            init {
+                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isGroupBy[Scope.Log]!!)
+                assert(pql.isGroupBy[Scope.Trace]!!)
+            }
+
+            override val traces: LinkedHashMap<Long, TraceEntry> by lazy(NONE) {
+                LinkedHashMap<Long, TraceEntry>().apply {
+                    connection.use {
+                        groups = queryIds.execute(it).to2DArray()
+                        for (groupId in groups.indices)
+                            this[groupId.toLong()] = GroupedTraceEntry(logId, null, groupId.toLong())
+                    }
+                }
+            }
+
+            /**
+             * index: groupId
+             * value: group of traceIds
+             * The order is important.
+             */
+            lateinit var groups: List<Array<Long>>
+                private set
+
+            override val queryIds: SQLQuery by lazy(NONE) { groupIdsQuery(Scope.Trace, logId, null) }
+            override val queryEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Trace) } // FIXME: this query is independent of logId, move it to the main class
+            override val queryAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Trace, logId) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Trace, logId) }
+        }
+
+        inner class GroupedLogEntry internal constructor(logGroupId: Int) : LogEntry() {
+            init {
+                assert(pql.isImplicitGroupBy || pql.isGroupBy[Scope.Log]!!)
+                assert(!pql.isGroupBy[Scope.Trace]!!)
+            }
+
+            override val traces: LinkedHashMap<Long, TraceEntry>
+                get() = TODO("Not yet implemented")
+
+            override val queryIds: SQLQuery by lazy(NONE) { TODO() }
+            override val queryEntity: SQLQuery by lazy(NONE) { TODO() }
+            override val queryAttributes: SQLQuery by lazy(NONE) { TODO() }
+            override val queryExpressions: SQLQuery by lazy(NONE) { TODO() }
+        }
+
+        abstract inner class TraceEntry internal constructor() : Entry() {
+            /**
+             * index: eventId or groupId
+             * The order is important.
+             */
+            abstract val events: List<Long>
+        }
+
+        inner class RegularTraceEntry internal constructor(logId: Int, traceId: Long) : TraceEntry() {
+            init {
+                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isGroupBy[Scope.Log]!!)
+                assert(!pql.isGroupBy[Scope.Trace]!!)
+                assert(!pql.isGroupBy[Scope.Event]!!)
+            }
+
+            override val events: List<Long> by lazy(NONE) {
+                lateinit var list: List<Long>
+                connection.use {
+                    list = queryIds.execute(it).toIdList()
+                }
+                list
+            }
+
+            override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Event, logId, traceId) }
+            override val queryEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Event) } // FIXME: optimization: this query is independent of logId, move it to the main class
+            override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Event, logId) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Event, logId) }
+        }
+
+        inner class GroupingTraceEntry internal constructor(logId: Int, traceId: Long) : TraceEntry() {
+            init {
+                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isGroupBy[Scope.Log]!!)
+                assert(!pql.isGroupBy[Scope.Trace]!!)
+                assert(pql.isGroupBy[Scope.Event]!!)
+            }
+
+            override val events: List<Long> by lazy(NONE) {
+                connection.use {
+                    groups = queryIds.execute(it).to2DArray()
+                }
+                groups.indices.toLongRange().toList() // FIXME: optimization: return range here
+            }
+
+            /**
+             * index: groupId
+             * value: group of eventIds
+             * The order is important.
+             */
+            lateinit var groups: List<Array<Long>>
+
+            override val queryIds: SQLQuery by lazy(NONE) { groupIdsQuery(Scope.Event, logId, traceId) }
+            override val queryEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Event) } // FIXME: optimization: this query is independent of logId, move it to the main class
+            override val queryAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Event, logId) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Event, logId) }
+        }
+
+        inner class GroupedTraceEntry internal constructor(logId: Int?, logGroupId: Int?, traceGroupId: Long) :
+            TraceEntry() {
+            init {
+                assert(pql.isImplicitGroupBy || pql.isGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Trace]!!)
+                assert(!pql.isGroupBy[Scope.Event]!!)
+            }
+
+            override val events: List<Long>
+                get() = TODO("Not yet implemented")
+
+            override val queryIds: SQLQuery by lazy(NONE) { TODO() }
+            override val queryEntity: SQLQuery by lazy(NONE) { TODO() }
+            override val queryAttributes: SQLQuery by lazy(NONE) { TODO() }
+            override val queryExpressions: SQLQuery by lazy(NONE) { TODO() }
         }
     }
 
-    private fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
-        for (item in this@join) {
-            append(", ")
-            append(transform(item))
-        }
-    }
+    private fun Attribute.toSQL(sql: MutableSQLQuery, logId: Int?) {
+        val sqlScope = ScopeWithHoisting(this.scope!!, this.hoistingPrefix.length)
+        sql.scopes.add(sqlScope)
+        // expand classifiers
+        val attributes = if (this.isClassifier) cache.expandClassifier(logId!!, this) else listOf(this)
 
-    private fun <T> Iterator<T>.take(limit: Int): List<T> {
-        val list = ArrayList<T>(limit)
-        while (list.size < limit && this.hasNext())
-            list.add(this.next())
-        return list
+        for (attribute in attributes) {
+            if (attribute.isStandard) {
+                if (attribute.scope == Scope.Log && attribute.standardName == "db:id")
+                    sql.query.append("l.id") // for backward-compatibility with the previous implementation of the XES layer
+                else
+                    sql.query.append("${sqlScope.alias}.\"${this.standardName}\"")
+            } else
+                TODO("non-standard attribute")
+            sql.query.append(',')
+        }
+        sql.query.setLength(sql.query.length - 1)
     }
 
     private fun IExpression.toSQL(sql: MutableSQLQuery, logId: Int?) {
         with(sql.query) {
             fun walk(expression: IExpression) {
                 when (expression) {
-                    is Attribute -> {
-                        val sqlScope = ScopeWithHoisting(expression.scope!!, expression.hoistingPrefix.length)
-                        sql.scopes.add(sqlScope)
-                        // expand classifiers
-                        val attributes =
-                            if (expression.isClassifier) cache.expandClassifier(logId!!, expression)
-                            else listOf(expression)
-
-                        for (attribute in attributes) {
-                            if (attribute.isStandard) {
-                                if (attribute.scope == Scope.Log && attribute.standardName == "db:id")
-                                    append("l.id") // for backward-compatibility with the previous implementation of the XES layer
-                                else
-                                    append("${sqlScope.alias}.\"${expression.standardName}\"")
-                            } else
-                                TODO("non-standard attribute")
-                            append(',')
-                        }
-                        setLength(length - 1)
-                    }
+                    is Attribute -> expression.toSQL(sql, logId)
                     is NullLiteral -> append("null")
                     is Literal<*> -> {
                         sql.params.add(expression.value!!)
@@ -795,4 +966,3 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 }
-

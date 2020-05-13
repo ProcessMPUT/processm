@@ -252,3 +252,9 @@ inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
         default()
     else
         this
+
+
+/**
+ * Casts [IntProgression] to an equivalent [LongRange].
+ */
+inline fun IntProgression.toLongRange(): LongRange = this.first.toLong()..this.last.toLong()
