@@ -97,7 +97,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertNull(log.identityId)
         standardAndAllAttributesMatch(log, log)
 
-        assertEquals(100, log.traces.count())
+        assertEquals(101, log.traces.count())
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
             assertTrue(conceptName >= -1)
@@ -280,7 +280,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertNull(log.lifecycleModel)
         standardAndAllAttributesMatch(log, log)
 
-        assertEquals(100, log.traces.count())
+        assertEquals(101, log.traces.count())
         for (trace in log.traces) {
             assertNull(trace.conceptName)
             assertNull(trace.costCurrency)
@@ -548,7 +548,6 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
                 assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
 
-                // TODO: the below assertion depends on data and may not hold, verify and/or add an extra trace
                 assertTrue(event.timeTimestamp!!.toDateTime().dayOfWeek in validDays, event.timeTimestamp?.toString())
 
                 assertNull(event.conceptInstance)
@@ -594,7 +593,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             standardAndAllAttributesMatch(log, trace)
 
             assertTrue(trace.events.count() > 0)
-            // TODO: the below assertions depend on data and may not hold, verify and/or add an extra trace
+
             assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek in validDays })
             assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek !in validDays })
 
@@ -634,7 +633,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         standardAndAllAttributesMatch(log, log)
 
         assertTrue(log.traces.count() > 0)
-        // TODO: the below assertions depend on data and may not hold, verify and/or add an extra trace
+
         assertTrue(log.traces.any { t -> t.events.any { e -> e.timeTimestamp!!.toDateTime().dayOfWeek in validDays } })
         assertTrue(log.traces.any { t -> t.events.any { e -> e.timeTimestamp!!.toDateTime().dayOfWeek !in validDays } })
         assertTrue(log.traces.any { t -> t.events.none { e -> e.timeTimestamp!!.toDateTime().dayOfWeek in validDays } })
