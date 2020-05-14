@@ -38,6 +38,7 @@ object DBConnectionPool {
         // the classes that implement the pooling functionality.
         val jmxName = ObjectName("${jmxDomain}:name=DBConnectionPool")
         val poolableConnectionFactory = PoolableConnectionFactory(connectionFactory, jmxName)
+        poolableConnectionFactory.setConnectionInitSql(listOf("SET timezone='UTC'"))
 
         // Now we'll need a ObjectPool that serves as the actual pool of connections.
         // We'll use a GenericObjectPool instance, although any ObjectPool implementation will suffice.
@@ -53,18 +54,14 @@ object DBConnectionPool {
      * Returns a connection from the pool or creates new if necessary. The invoker is required to call close()
      * on the received object in order to return this connection to the pool.
      */
-    fun getConnection(): Connection = PoolingDataSource<PoolableConnection>(connectionPool).connection.apply {
-        prepareStatement("SET timezone='UTC'").execute()
-    }
+    fun getConnection(): Connection = getDataSource().connection
 
     /**
      * Returns a data source associated with a connection from the pool or creates new if necessary. The invoker
      * is required to call close() on the received object.connection property in order to return this connection
      * to the pool.
      */
-    fun getDataSource(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool).apply {
-        connection.prepareStatement("SET timezone='UTC'").execute()
-    }
+    fun getDataSource(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool)
 
     /**
      * Database object for transactions managed by org.jetbrains.exposed library.
