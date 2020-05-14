@@ -11,6 +11,8 @@ import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.*
 import processm.core.querylanguage.Function
 import java.sql.Connection
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.*
 import kotlin.LazyThreadSafetyMode.NONE
 import kotlin.collections.HashMap
@@ -51,6 +53,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             prepareStatement("START TRANSACTION READ ONLY").execute()
         }
     }
+
+    /**
+     * Current timestamp supplementing all calls to the now() function in [pql]. This is required to achieve consistency
+     * across successive calls and reevaluation of [XESInputStream].
+     * It is lazy-initialized because not all queries use timestamps and we want this value to be as fresh as possible.
+     */
+    private val now: Timestamp by lazy(NONE) { Timestamp.from(Instant.now()) }
     private val cache: Cache = Cache()
 
     // region SQL query generators
@@ -66,6 +75,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         val desiredFromPosition = it.query.length
 
         where(scope, it, logId, traceId)
+        groupBy(scope, it)
         orderBy(scope, it, logId)
 
         val from = from(scope, it)
@@ -95,6 +105,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
             pql.whereExpression.toSQL(sql, null)
         }
+    }
+
+    private fun groupBy(scope: Scope, sql: MutableSQLQuery) {
+        sql.query.append(" GROUP BY ${scope.alias}.id")
     }
 
     private fun orderBy(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
@@ -137,8 +151,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         for (sqlScope in sql.scopes) {
             var prevScope = baseScope
             for (joinWith in path(baseScope, sqlScope)) {
-                if (joinWith.alias in existingAliases)
+                if (joinWith.alias in existingAliases) {
+                    prevScope = joinWith.scope
                     continue
+                }
 
                 existingAliases.add(joinWith.alias)
                 append(" LEFT JOIN ${joinWith.table} ${joinWith.alias} ON ")
@@ -247,7 +263,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             selectAttributes(scope, attrTable, extraColumns, it)
             append(", path || $attrTable.id")
             append(" FROM $attrTable")
-            append(" JOIN tmp ON $attrTable.parent_id=tmp.id")
+            append(" JOIN tmp ON $attrTable.parent_id=tmp.id AND $attrTable.parent_id IS NOT NULL")
             append(") ")
             selectAttributes(scope, "tmp", extraColumns, it)
             append(" FROM tmp")
@@ -946,16 +962,68 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     is Attribute -> expression.toSQL(sql, logId)
                     is NullLiteral -> append("null")
                     is Literal<*> -> {
-                        sql.params.add(expression.value!!)
+                        sql.params.add(
+                            when (expression) {
+                                is DateTimeLiteral -> Timestamp.from(expression.value)
+                                else -> expression.value!!
+                            }
+                        )
                         append('?')
                     }
                     is Operator -> append(" ${expression.value} ")
                     is Function -> {
-                        append("${expression.name}(")
-                        expression.children.forEach { walk(it); append(',') }
-                        if (expression.children.isNotEmpty())
-                            deleteCharAt(length - 1)
-                        append(')')
+                        when (expression.name) {
+                            "min", "max", "avg", "count", "sum", "round", "lower", "upper" -> {
+                                assert(expression.children.size == 1)
+                                append(expression.name)
+                                append('(')
+                                walk(expression.children[0])
+                                // expression.children.forEach { walk(it); append(',') }
+                                // if (expression.children.isNotEmpty())
+                                //     deleteCharAt(length - 1)
+                                append(')')
+                            }
+                            "date", "time" -> {
+                                assert(expression.children.size == 1)
+                                walk(expression.children[0])
+                                append("::")
+                                append(expression.name)
+                            }
+                            "year", "month", "day", "hour", "minute", "quarter" -> {
+                                assert(expression.children.size == 1)
+                                append("extract(")
+                                append(expression.name)
+                                append(" from ")
+                                walk(expression.children[0])
+                                append(')')
+                            }
+                            "second" -> {
+                                assert(expression.children.size == 1)
+                                append("floor(extract(second from ")
+                                append(" from ")
+                                walk(expression.children[0])
+                                append("))")
+                            }
+                            "millisecond" -> {
+                                assert(expression.children.size == 1)
+                                append("extract(milliseconds from ") // note the plural form
+                                walk(expression.children[0])
+                                append(")%1000")
+                            }
+                            "dayofweek" -> {
+                                assert(expression.children.size == 1)
+                                append("extract(dow from ")
+                                walk(expression.children[0])
+                                append(")+1")
+                            }
+                            "now" -> {
+                                assert(expression.children.isEmpty())
+                                append("?::timestamptz")
+                                sql.params.add(now)
+                            }
+                            else -> throw IllegalArgumentException("Undefined function ${expression.name}")
+                        }
+
                     }
                     // Expression must be the last but one because other classes inherit from this one.
                     is Expression -> expression.children.forEach { walk(it) }

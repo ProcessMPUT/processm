@@ -3,7 +3,9 @@ package processm.core.log.hierarchical
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
+import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
+import processm.core.helpers.toDateTime
 import processm.core.log.*
 import processm.core.log.attribute.StringAttr
 import processm.core.log.attribute.value
@@ -11,9 +13,10 @@ import processm.core.logging.logger
 import processm.core.persistence.DBConnectionPool
 import processm.core.querylanguage.Query
 import java.time.DayOfWeek
+import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
 import java.util.*
+import kotlin.math.abs
 import kotlin.system.measureTimeMillis
 import kotlin.test.*
 
@@ -41,8 +44,9 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         private val orgResources =
             setOf("__INVALID__", "Mike", "Anne", "Wil", "Pete", "John", "Mary", "Carol", "Sara", "Sam", "Pam")
         private val results = setOf("accept", "reject")
-        val begin = "2005-12-31T00:00:00.000Z".parseISO8601()
-        val end = "2008-05-05T00:00:00.000Z".parseISO8601()
+        private val begin = "2005-12-31T00:00:00.000Z".parseISO8601()
+        private val end = "2008-05-05T00:00:00.000Z".parseISO8601()
+        private val validCurrencies = setOf("EUR", "USD")
 
         @BeforeAll
         @JvmStatic
@@ -183,8 +187,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             val conceptName = Integer.parseInt(trace.conceptName)
             assertTrue(conceptName >= 0)
             assertTrue(conceptName <= 100)
-            assertNull(trace.costCurrency)
-            assertNull(trace.costTotal)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() == trace.events.count())
             assertNull(trace.identityId)
             assertFalse(trace.isEventStream)
             standardAndAllAttributesMatch(log, trace)
@@ -195,8 +199,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
                 assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
                 assertNull(event.conceptInstance)
-                assertNull(event.costCurrency)
-                assertNull(event.costTotal)
+                assertTrue(event.costCurrency in validCurrencies)
+                assertTrue(event.costTotal!! in 1.0..1.08)
                 assertNull(event.lifecycleState)
                 assertTrue(event.lifecycleTransition in lifecyleTransitions)
                 assertNull(event.orgGroup)
@@ -316,10 +320,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     fun selectAllImplicitTest() {
         val stream = q("")
         assertTrue(stream.count() >= 1) // at least one log
-        val logs = stream.filter { it.identityId == uuid.toString() } // filter in the application layer
-        assertEquals(1, logs.count())
+        val log = stream.first { it.identityId == uuid.toString() } // filter in the application layer
 
-        val log = logs.first()
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(uuid.toString(), log.identityId)
@@ -334,8 +336,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             val conceptName = Integer.parseInt(trace.conceptName)
             assertTrue(conceptName >= 0)
             assertTrue(conceptName <= 100)
-            assertNull(trace.costCurrency)
-            assertNull(trace.costTotal)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() == trace.events.count())
             assertNull(trace.identityId)
             assertFalse(trace.isEventStream)
             standardAndAllAttributesMatch(log, trace)
@@ -344,10 +346,10 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
-                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
+                assertTrue(event.timeTimestamp!!.isBefore(end))
                 assertNull(event.conceptInstance)
-                assertNull(event.costCurrency)
-                assertNull(event.costTotal)
+                assertTrue(event.costCurrency in validCurrencies)
+                assertTrue(event.costTotal!! in 1.0..1.08)
                 assertNull(event.lifecycleState)
                 assertTrue(event.lifecycleTransition in lifecyleTransitions)
                 assertNull(event.orgGroup)
@@ -497,20 +499,25 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun selectNowTest() {
-        val stream = q("select now()")
-        TODO()
+        val stream = q("select l:now() limit l:1")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(1, log.attributes.size)
+        assertTrue(abs(Duration.between(Instant.now(), log.attributes["now()"]?.value as Instant?).seconds) < 60)
     }
 
     @Test
     fun errorHandlingTest() {
         TODO()
         // select non-existent non-standard attribute
+        // duplicated attributes/expressions
     }
 
     @Test
     fun whereSimpleTest() {
-        val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         val stream = q("where dayofweek(e:timestamp) in (1, 7) and l:id='$uuid'")
+        val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -524,12 +531,13 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(1, log.traceGlobals.size)
         standardAndAllAttributesMatch(log, log)
 
+        assertTrue(log.traces.count() > 0)
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
             assertTrue(conceptName >= 0)
             assertTrue(conceptName <= 100)
-            assertNull(trace.costCurrency)
-            assertNull(trace.costTotal)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!! > 0.0)
             assertNull(trace.identityId)
             assertFalse(trace.isEventStream)
             standardAndAllAttributesMatch(log, trace)
@@ -539,7 +547,10 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertTrue(event.conceptName in eventNames)
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
                 assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
-                assertTrue(event.timeTimestamp!!.atOffset(ZoneOffset.UTC).dayOfWeek in validDays)
+
+                // TODO: the below assertion depends on data and may not hold, verify and/or add an extra trace
+                assertTrue(event.timeTimestamp!!.toDateTime().dayOfWeek in validDays)
+
                 assertNull(event.conceptInstance)
                 assertNull(event.costCurrency)
                 assertNull(event.costTotal)
@@ -556,49 +567,321 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun whereSimpleWithHoistingTest() {
-        val stream = q("where dayofweek(^e:timestamp) in (1, 7)")
-        TODO()
+        val stream = q("where dayofweek(^e:timestamp) in (1, 7) and l:id='$uuid'")
+        val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertEquals(3, log.eventClassifiers.size)
+        assertEquals(2, log.eventGlobals.size)
+        assertEquals(1, log.traceGlobals.size)
+        standardAndAllAttributesMatch(log, log)
+
+        assertTrue(log.traces.count() > 0)
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= 0)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() == trace.events.count())
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() > 0)
+            // TODO: the below assertions depend on data and may not hold, verify and/or add an extra trace
+            assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek in validDays })
+            assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek !in validDays })
+
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertTrue(event.timeTimestamp!!.isAfter(begin))
+                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
+                assertNull(event.conceptInstance)
+                assertNull(event.costCurrency)
+                assertNull(event.costTotal)
+                assertNull(event.lifecycleState)
+                assertTrue(event.lifecycleTransition in lifecyleTransitions)
+                assertNull(event.orgGroup)
+                assertTrue(event.orgResource in orgResources)
+                assertNull(event.orgRole)
+                assertNull(event.identityId)
+                standardAndAllAttributesMatch(log, event)
+            }
+        }
     }
 
     @Test
     fun whereSimpleWithHoistingTest2() {
-        val stream = q("where dayofweek(^^e:timestamp) in (1, 7)")
-        TODO()
+        val stream = q("where dayofweek(^^e:timestamp) in (1, 7) and l:id='$uuid'")
+        val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertEquals(3, log.eventClassifiers.size)
+        assertEquals(2, log.eventGlobals.size)
+        assertEquals(1, log.traceGlobals.size)
+        standardAndAllAttributesMatch(log, log)
+
+        assertTrue(log.traces.count() > 0)
+        // TODO: the below assertions depend on data and may not hold, verify and/or add an extra trace
+        assertTrue(log.traces.any { t -> t.events.any { e -> e.timeTimestamp!!.toDateTime().dayOfWeek in validDays } })
+        assertTrue(log.traces.any { t -> t.events.any { e -> e.timeTimestamp!!.toDateTime().dayOfWeek !in validDays } })
+        assertTrue(log.traces.any { t -> t.events.none { e -> e.timeTimestamp!!.toDateTime().dayOfWeek in validDays } })
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= 0)
+            assertTrue(conceptName <= 100)
+            assertNull(trace.costCurrency)
+            assertNull(trace.costTotal)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() > 0)
+            assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek in validDays })
+            assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek !in validDays })
+
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertTrue(event.timeTimestamp!!.isAfter(begin))
+                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
+                assertNull(event.conceptInstance)
+                assertNull(event.costCurrency)
+                assertNull(event.costTotal)
+                assertNull(event.lifecycleState)
+                assertTrue(event.lifecycleTransition in lifecyleTransitions)
+                assertNull(event.orgGroup)
+                assertTrue(event.orgResource in orgResources)
+                assertNull(event.orgRole)
+                assertNull(event.identityId)
+                standardAndAllAttributesMatch(log, event)
+            }
+        }
     }
 
     @Test
     fun whereLogicExprWithHoistingTest() {
-        val stream = q("where not(t:currency = ^e:currency)")
-        TODO()
+        val stream = q("where not(t:currency = ^e:currency) and l:id='$uuid'")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertEquals(3, log.eventClassifiers.size)
+        assertEquals(2, log.eventGlobals.size)
+        assertEquals(1, log.traceGlobals.size)
+        standardAndAllAttributesMatch(log, log)
+
+        assertTrue(log.traces.count() > 0)
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= 0)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!! > 0)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() > 0)
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertTrue(event.timeTimestamp!!.isAfter(begin))
+                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
+                assertNull(event.conceptInstance)
+                assertEquals("USD", event.costCurrency)
+                assertEquals(1.08, event.costTotal)
+                assertNull(event.lifecycleState)
+                assertTrue(event.lifecycleTransition in lifecyleTransitions)
+                assertNull(event.orgGroup)
+                assertTrue(event.orgResource in orgResources)
+                assertNull(event.orgRole)
+                assertNull(event.identityId)
+                standardAndAllAttributesMatch(log, event)
+            }
+        }
     }
 
     @Test
     fun whereLogicExprTest() {
-        val stream = q("where t:currency != e:currency")
-        TODO()
+        val stream = q("where t:currency != e:currency and l:id='$uuid'")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertEquals(3, log.eventClassifiers.size)
+        assertEquals(2, log.eventGlobals.size)
+        assertEquals(1, log.traceGlobals.size)
+        standardAndAllAttributesMatch(log, log)
+
+        assertTrue(log.traces.count() > 0)
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= 0)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!! > 0)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() > 0)
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertTrue(event.timeTimestamp!!.isAfter(begin))
+                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
+                assertNull(event.conceptInstance)
+                assertEquals("USD", event.costCurrency)
+                assertEquals(1.08, event.costTotal)
+                assertNull(event.lifecycleState)
+                assertTrue(event.lifecycleTransition in lifecyleTransitions)
+                assertNull(event.orgGroup)
+                assertTrue(event.orgResource in orgResources)
+                assertNull(event.orgRole)
+                assertNull(event.identityId)
+                standardAndAllAttributesMatch(log, event)
+            }
+        }
     }
 
     @Test
     fun whereLogicExpr2Test() {
-        val stream = q("where not(t:currency = ^e:currency) and t:total is null")
-        TODO()
+        val stream = q("where not(t:currency = ^e:currency) and t:total is null and l:id='$uuid'")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertEquals(3, log.eventClassifiers.size)
+        assertEquals(2, log.eventGlobals.size)
+        assertEquals(1, log.traceGlobals.size)
+        standardAndAllAttributesMatch(log, log)
+
+        assertTrue(log.traces.count() > 0)
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= 0)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertNull(trace.costTotal)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() > 0)
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertTrue(event.timeTimestamp!!.isAfter(begin))
+                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
+                assertNull(event.conceptInstance)
+                assertEquals("USD", event.costCurrency)
+                assertEquals(1.08, event.costTotal)
+                assertNull(event.lifecycleState)
+                assertTrue(event.lifecycleTransition in lifecyleTransitions)
+                assertNull(event.orgGroup)
+                assertTrue(event.orgResource in orgResources)
+                assertNull(event.orgRole)
+                assertNull(event.identityId)
+                standardAndAllAttributesMatch(log, event)
+            }
+        }
     }
 
     @Test
     fun whereLogicExpr3Test() {
-        val stream = q("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2020-01-01) and t:total is null")
-        TODO()
+        val stream =
+            q("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2007-01-01) and t:total is null and l:id='$uuid'")
+        val myBegin = "2007-01-01T00:00:00Z".parseISO8601()
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertEquals(3, log.eventClassifiers.size)
+        assertEquals(2, log.eventGlobals.size)
+        assertEquals(1, log.traceGlobals.size)
+        standardAndAllAttributesMatch(log, log)
+
+        assertTrue(log.traces.count() > 0)
+        assertTrue(log.traces.all { t -> t.costTotal === null })
+        assertTrue(log.traces.all { t ->
+            t.costCurrency !in t.events.mapToSet { e -> e.costCurrency }
+                    || t.events.any { e -> !e.timeTimestamp!!.isBefore(myBegin) }
+        })
+
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= 0)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertNull(trace.costTotal)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() > 0)
+        }
     }
 
     @Test
     fun whereLikeAndMatchesTest() {
-        val stream = q("where t:name like 'transaction %' and ^e:resource matches '^[A-Z][a-z]+ [A-Z][a-z]+$'")
-        TODO()
+        val stream =
+            q("where t:name like '%5' and ^e:resource matches '^[SP]am$' and l:id='$uuid'")
+        val nameRegex = Regex("^[SP]am$")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertEquals(3, log.eventClassifiers.size)
+        assertEquals(2, log.eventGlobals.size)
+        assertEquals(1, log.traceGlobals.size)
+        standardAndAllAttributesMatch(log, log)
+
+        assertTrue(log.traces.count() > 0)
+
+        for (trace in log.traces) {
+            assertTrue(trace.conceptName!!.endsWith("5"))
+            assertTrue(trace.events.any { e -> nameRegex.matches(e.orgResource!!) })
+            assertTrue(trace.events.any { e -> !nameRegex.matches(e.orgResource!!) })
+        }
     }
 
     @Test
     fun groupScopeByClassifierTest() {
-        val stream = q("group trace by e:classifier:activity")
+        val stream = q("where l:id='$uuid' group trace by e:classifier:activity")
         TODO()
     }
 
@@ -652,20 +935,65 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun orderBySimpleTest() {
-        val stream = q("order by e:timestamp")
-        TODO()
+        val stream = q("where l:name='JournalReview' order by e:timestamp limit l:3")
+        assertTrue(stream.count() > 0)
+        assertTrue(stream.count() <= 3)
+        for (log in stream) {
+            assertTrue(log.traces.count() > 0)
+            assertTrue(log.traces.count() <= 100)
+            for (trace in log.traces) {
+                assertTrue(trace.events.count() > 0)
+                assertTrue(trace.events.count() <= 60)
+
+                var lastTimestamp = begin
+                for (event in trace.events) {
+                    assertTrue(!event.timeTimestamp!!.isBefore(lastTimestamp))
+                    lastTimestamp = event.timeTimestamp!!
+                }
+            }
+        }
     }
 
     @Test
     fun orderByWithModifierAndScopesTest() {
-        val stream = q("order by t:total desc, e:timestamp")
-        TODO()
+        val stream = q("where l:name='JournalReview' order by t:total desc, e:timestamp limit l:3")
+        for (log in stream) {
+            assertTrue(log.traces.count() <= 100)
+
+            var lastTotal: Double? = Double.POSITIVE_INFINITY
+            for (trace in log.traces) {
+                assertTrue(trace.costTotal === null || trace.costTotal!! <= lastTotal!!)
+                lastTotal = trace.costTotal // nulls last
+
+                assertTrue(trace.events.count() <= 60)
+                var lastTimestamp = begin
+                for (event in trace.events) {
+                    assertTrue(!event.timeTimestamp!!.isBefore(lastTimestamp))
+                    lastTimestamp = event.timeTimestamp!!
+                }
+            }
+        }
     }
 
     @Test
     fun orderByWithModifierAndScopes2Test() {
-        val stream = q("order by e:timestamp, t:total desc")
-        TODO()
+        val stream = q("where l:name='JournalReview' order by e:timestamp, t:total desc limit l:3")
+        for (log in stream) {
+            assertTrue(log.traces.count() <= 100)
+
+            var lastTotal: Double? = Double.POSITIVE_INFINITY
+            for (trace in log.traces) {
+                assertTrue(trace.costTotal === null || trace.costTotal!! <= lastTotal!!)
+                lastTotal = trace.costTotal // nulls last
+
+                assertTrue(trace.events.count() <= 60)
+                var lastTimestamp = begin
+                for (event in trace.events) {
+                    assertTrue(!event.timeTimestamp!!.isBefore(lastTimestamp), "${event.timeTimestamp} $lastTimestamp")
+                    lastTimestamp = event.timeTimestamp!!
+                }
+            }
+        }
     }
 
     @Test
@@ -682,14 +1010,22 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun limitSingleTest() {
-        val stream = q("limit l:1")
-        TODO()
+        val stream = q("where l:name='JournalReview' limit l:1")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertTrue(log.traces.count() > 1)
+        assertTrue(log.traces.any { t -> t.events.count() > 1 })
     }
 
     @Test
     fun limitAllTest() {
         val stream = q("limit e:3, t:2, l:1")
-        TODO()
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertTrue(log.traces.count() <= 2)
+        assertTrue(log.traces.all { t -> t.events.count() <= 3 })
     }
 
     @Test

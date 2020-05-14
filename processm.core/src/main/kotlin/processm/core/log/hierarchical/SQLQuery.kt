@@ -1,10 +1,17 @@
 package processm.core.log.hierarchical
 
+import org.slf4j.Logger
+import processm.core.logging.logger
+import processm.core.logging.trace
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Statement
 
 internal class SQLQuery(lambda: (sql: MutableSQLQuery) -> Unit) {
+    companion object {
+        internal val logger: Logger = logger()
+    }
+
     val query: String
     val params: List<Any>
 
@@ -15,13 +22,24 @@ internal class SQLQuery(lambda: (sql: MutableSQLQuery) -> Unit) {
         params = sql.params
     }
 
-    fun execute(connection: Connection, params: List<Any> = this.params): ResultSet =
-        connection
+    fun execute(connection: Connection, params: List<Any> = this.params): ResultSet {
+        val ts = System.currentTimeMillis()
+
+        val result = connection
             .prepareStatement(query)
             .apply {
                 for ((i, p) in params.withIndex())
                     this.setObject(i + 1, p)
             }.executeQuery()
+
+        logger.trace {
+            val elapsed = System.currentTimeMillis() - ts
+            if (elapsed >= 500) "Long-running query executed in ${elapsed}ms: $query $params"
+            else null
+        }
+
+        return result
+    }
 }
 
 internal class MutableSQLQuery {
@@ -31,8 +49,9 @@ internal class MutableSQLQuery {
 }
 
 internal fun Collection<SQLQuery>.executeMany(connection: Connection, vararg params: List<Any>): List<ResultSet> {
-    val sql = StringBuilder()
+    val ts = System.currentTimeMillis()
 
+    val sql = StringBuilder()
     for (query in this) {
         sql.append(query.query)
         sql.append(';')
@@ -55,5 +74,12 @@ internal fun Collection<SQLQuery>.executeMany(connection: Connection, vararg par
     } while (statement.getMoreResults(Statement.KEEP_CURRENT_RESULT))
 
     assert(result.size == this.size)
+
+    SQLQuery.logger.trace {
+        val elapsed = System.currentTimeMillis() - ts
+        if (elapsed >= 500) "Long-running query executed in ${elapsed}ms: $sql $params"
+        else null
+    }
+
     return result
 }

@@ -227,7 +227,7 @@ class DBXESOutputStream : XESOutputStream {
                 )
             }
             for (attribute in attributes) {
-                to.sql.append("(?, ?::attribute_type, ?, ?::timestamp, ?::integer, ?::boolean, ?::double precision, ?::boolean), ")
+                to.sql.append("(?, ?::attribute_type, ?, ?::timestamptz, ?::integer, ?::boolean, ?::double precision, ?::boolean), ")
                 with(to.params) {
                     addLast(attribute.key)
                     addLast(attribute.xesTag)
