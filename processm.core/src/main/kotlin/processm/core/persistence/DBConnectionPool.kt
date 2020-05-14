@@ -53,14 +53,18 @@ object DBConnectionPool {
      * Returns a connection from the pool or creates new if necessary. The invoker is required to call close()
      * on the received object in order to return this connection to the pool.
      */
-    fun getConnection(): Connection = PoolingDataSource<PoolableConnection>(connectionPool).connection
+    fun getConnection(): Connection = PoolingDataSource<PoolableConnection>(connectionPool).connection.apply {
+        prepareStatement("SET timezone='UTC'").execute()
+    }
 
     /**
      * Returns a data source associated with a connection from the pool or creates new if necessary. The invoker
      * is required to call close() on the received object.connection property in order to return this connection
      * to the pool.
      */
-    fun getDataSource(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool)
+    fun getDataSource(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool).apply {
+        connection.prepareStatement("SET timezone='UTC'").execute()
+    }
 
     /**
      * Database object for transactions managed by org.jetbrains.exposed library.

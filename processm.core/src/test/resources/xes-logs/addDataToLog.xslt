@@ -3,15 +3,58 @@
 
     <xsl:output method="xml" indent="yes"/>
 
+    <xsl:template match="*[name()='log']">
+        <xsl:copy>
+            <xsl:apply-templates/>
+            <!-- an extra trace -->
+            <xsl:element name="trace">
+                <xsl:element name="string">
+                    <xsl:attribute name="key">concept:name</xsl:attribute>
+                    <xsl:attribute name="value">-1</xsl:attribute>
+                </xsl:element>
+                <xsl:element name="string">
+                    <xsl:attribute name="key">cost:currency</xsl:attribute>
+                    <xsl:attribute name="value">EUR</xsl:attribute>
+                </xsl:element>
+                <xsl:element name="event">
+                    <xsl:element name="string">
+                        <xsl:attribute name="key">concept:name</xsl:attribute>
+                        <xsl:attribute name="value">invite reviewers</xsl:attribute>
+                    </xsl:element>
+                    <xsl:element name="date">
+                        <xsl:attribute name="key">time:timestamp</xsl:attribute>
+                        <xsl:attribute name="value">2007-10-03T01:23:45Z</xsl:attribute> <!-- Wednesday -->
+                    </xsl:element>
+                    <xsl:element name="string">
+                        <xsl:attribute name="key">org:resource</xsl:attribute>
+                        <xsl:attribute name="value">Mike</xsl:attribute>
+                    </xsl:element>
+                    <xsl:element name="string">
+                        <xsl:attribute name="key">lifecycle:transition</xsl:attribute>
+                        <xsl:attribute name="value">complete</xsl:attribute>
+                    </xsl:element>
+                    <xsl:element name="string">
+                        <xsl:attribute name="key">cost:currency</xsl:attribute>
+                        <xsl:attribute name="value">EUR</xsl:attribute>
+                    </xsl:element>
+                    <xsl:element name="float">
+                        <xsl:attribute name="key">cost:total</xsl:attribute>
+                        <xsl:attribute name="value">1.0</xsl:attribute>
+                    </xsl:element>
+                </xsl:element>
+            </xsl:element>
+        </xsl:copy>
+    </xsl:template>
+
     <xsl:template match="*[name()='trace']">
         <xsl:copy>
             <xsl:if test="./*[name()='string' and @key='concept:name']/@value mod 2">
-            <xsl:element name="float">
-                <xsl:attribute name="key">cost:total</xsl:attribute>
-                <xsl:attribute name="value">
-                    <xsl:number value="count(./*[name()='event'])"/>
-                </xsl:attribute>
-            </xsl:element>
+                <xsl:element name="float">
+                    <xsl:attribute name="key">cost:total</xsl:attribute>
+                    <xsl:attribute name="value">
+                        <xsl:number value="count(./*[name()='event'])"/>
+                    </xsl:attribute>
+                </xsl:element>
             </xsl:if>
             <xsl:element name="string">
                 <xsl:attribute name="key">cost:currency</xsl:attribute>

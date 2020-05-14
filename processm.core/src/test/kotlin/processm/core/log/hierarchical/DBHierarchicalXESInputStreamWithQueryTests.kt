@@ -100,7 +100,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(100, log.traces.count())
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertNull(trace.costCurrency)
             assertNull(trace.costTotal)
@@ -140,7 +140,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertNull(trace.costCurrency)
             assertNull(trace.costTotal)
@@ -185,7 +185,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() == trace.events.count())
@@ -334,7 +334,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() == trace.events.count())
@@ -534,7 +534,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertTrue(log.traces.count() > 0)
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertTrue(trace.costTotal === null || trace.costTotal!! > 0.0)
@@ -549,11 +549,11 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
 
                 // TODO: the below assertion depends on data and may not hold, verify and/or add an extra trace
-                assertTrue(event.timeTimestamp!!.toDateTime().dayOfWeek in validDays)
+                assertTrue(event.timeTimestamp!!.toDateTime().dayOfWeek in validDays, event.timeTimestamp?.toString())
 
                 assertNull(event.conceptInstance)
-                assertNull(event.costCurrency)
-                assertNull(event.costTotal)
+                assertTrue(event.costCurrency in validCurrencies)
+                assertTrue(event.costTotal!! in 1.0..1.08)
                 assertNull(event.lifecycleState)
                 assertTrue(event.lifecycleTransition in lifecyleTransitions)
                 assertNull(event.orgGroup)
@@ -585,7 +585,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertTrue(log.traces.count() > 0)
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() == trace.events.count())
@@ -603,8 +603,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
                 assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
                 assertNull(event.conceptInstance)
-                assertNull(event.costCurrency)
-                assertNull(event.costTotal)
+                assertTrue(event.costCurrency in validCurrencies)
+                assertTrue(event.costTotal!! in 1.0..1.08)
                 assertNull(event.lifecycleState)
                 assertTrue(event.lifecycleTransition in lifecyleTransitions)
                 assertNull(event.orgGroup)
@@ -641,7 +641,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertNull(trace.costCurrency)
             assertNull(trace.costTotal)
@@ -691,7 +691,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertTrue(trace.costTotal === null || trace.costTotal!! > 0)
@@ -738,7 +738,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertTrue(trace.costTotal === null || trace.costTotal!! > 0)
@@ -785,7 +785,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertNull(trace.costTotal)
@@ -840,7 +840,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         for (trace in log.traces) {
             val conceptName = Integer.parseInt(trace.conceptName)
-            assertTrue(conceptName >= 0)
+            assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertEquals("EUR", trace.costCurrency)
             assertNull(trace.costTotal)
