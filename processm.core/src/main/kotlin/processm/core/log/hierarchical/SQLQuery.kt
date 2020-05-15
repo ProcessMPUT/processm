@@ -45,7 +45,7 @@ internal class SQLQuery(lambda: (sql: MutableSQLQuery) -> Unit) {
 internal class MutableSQLQuery {
     val query: StringBuilder = StringBuilder()
     val params: MutableList<Any> = ArrayList()
-    val scopes: MutableSet<ScopeWithHoisting> = HashSet()
+    val scopes: MutableSet<ScopeWithMetadata> = HashSet()
 }
 
 internal fun Collection<SQLQuery>.executeMany(connection: Connection, vararg params: List<Any>): List<ResultSet> {

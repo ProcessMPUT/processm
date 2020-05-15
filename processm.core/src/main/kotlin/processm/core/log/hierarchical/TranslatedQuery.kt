@@ -75,14 +75,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         val desiredFromPosition = it.query.length
 
         where(scope, it, logId, traceId)
-        groupBy(scope, it)
+        groupById(scope, it)
         orderBy(scope, it, logId)
 
         val from = from(scope, it)
         it.query.insert(desiredFromPosition, from)
 
-        offset(scope, it)
         limit(scope, it)
+        offset(scope, it)
     }
 
     private fun selectId(scope: Scope, sql: MutableSQLQuery) {
@@ -90,7 +90,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun where(scope: Scope, sql: MutableSQLQuery, logId: Int?, traceId: Long?) {
-        sql.scopes.add(ScopeWithHoisting(scope, 0))
+        sql.scopes.add(ScopeWithMetadata(scope, 0))
         with(sql.query) {
             // filter by trace id and log id if necessary
             when (scope) {
@@ -103,11 +103,11 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
             append(if (scope == Scope.Log) " WHERE " else " AND ")
 
-            pql.whereExpression.toSQL(sql, null)
+            pql.whereExpression.toSQL(sql)
         }
     }
 
-    private fun groupBy(scope: Scope, sql: MutableSQLQuery) {
+    private fun groupById(scope: Scope, sql: MutableSQLQuery) {
         sql.query.append(" GROUP BY ${scope.alias}.id")
     }
 
@@ -122,28 +122,29 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             }
 
             for (expression in expressions) {
-                expression.base.toSQL(sql, logId)
+                if (expression.base is Attribute) expression.base.toSQL(sql, logId)
+                else expression.base.toSQL(sql)
                 if (expression.direction == OrderDirection.Descending)
                     append(" DESC")
                 append(',')
             }
-            deleteCharAt(length - 1)
+            setLength(length - 1)
         }
     }
 
-    private fun from(baseScope: Scope, sql: MutableSQLQuery): String = buildString {
-        fun path(from: Scope, to: ScopeWithHoisting) = sequence {
-            var current = from
-            while (current != to.scope) {
-                current = if (from < to.scope) current.lower!! else current.upper!!
-                yield(ScopeWithHoisting(current, 0))
-            }
-            if (to.hoisting > 0)
-                yield(to)
+    private fun path(from: Scope, to: ScopeWithMetadata) = sequence {
+        var current = from
+        while (current != to.scope) {
+            current = if (from < to.scope) current.lower!! else current.upper!!
+            yield(ScopeWithMetadata(current, 0))
         }
+        if (to.hoisting > 0)
+            yield(to)
+    }
 
-        fun sorted(s1: Scope, s2: Scope) = if (s1 < s2) s1 to s2 else s2 to s1
+    private fun sorted(s1: Scope, s2: Scope) = if (s1 < s2) s1 to s2 else s2 to s1
 
+    private fun from(baseScope: Scope, sql: MutableSQLQuery): String = buildString {
         val existingAliases = HashSet<String>()
         existingAliases.add(baseScope.alias)
 
@@ -196,7 +197,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         with(sql.query) {
             append("SELECT ")
 
-            sql.scopes.add(ScopeWithHoisting(scope, 0))
+            // field sql.scopes is used in assertions only in this query
+            assert(sql.scopes.add(ScopeWithMetadata(scope, 0)))
 
             if (pql.selectAll[scope]!!) {
                 append("${scope.shortName}.*")
@@ -214,7 +216,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 fetchAnyAttr = true
                 append("${scope.alias}.\"${attribute.standardName}\", ")
             }
-            delete(length - 2, length)
+            setLength(length - 2)
 
             if (!fetchAnyAttr && scope != Scope.Trace) {
                 // FIXME: potential optimization: for scope != Trace skip query, return in-memory ResultSet with ids only
@@ -318,25 +320,42 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // endregion
 
     // region select expressions
-    private fun expressionsQuery(scope: Scope, logId: Int?): SQLQuery = SQLQuery {
+    private fun expressionsQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
+        assert(!pql.isImplicitGroupBy)
+        assert(pql.isGroupBy[Scope.Log] == false)
+        assert(scope < Scope.Trace || pql.isGroupBy[Scope.Trace] == false)
+        assert(scope < Scope.Event || pql.isGroupBy[Scope.Event] == false)
+
+        if (pql.selectExpressions[scope].isNullOrEmpty()) {
+            // FIXME: optimization: return empty ResultSet here
+            it.query.append("SELECT NULL FROM unnest(?)")
+            return@SQLQuery
+        }
+
         selectExpressions(scope, it)
-        fromExpressions(scope, it)
-        whereExpressions(scope, it)
+
+        val desiredFromPosition = it.query.length
+
+        where(scope, it, logId, traceId)
+        groupById(scope, it)
         orderByExpressions(scope, it)
+
+        it.query.insert(desiredFromPosition, from(scope, it))
+
+        limit(scope, it)
+        offset(scope, it)
     }
 
     private fun selectExpressions(scope: Scope, sql: MutableSQLQuery) {
-        //TODO()
-        sql.query.append("SELECT NULL FROM unnest(?)")
-    }
-
-    private fun fromExpressions(scope: Scope, sql: MutableSQLQuery) {
-        //TODO()
-    }
-
-    private fun whereExpressions(scope: Scope, sql: MutableSQLQuery) {
-        //TODO()
-        sql.query.append(" WHERE 1=0")
+        with(sql.query) {
+            append("SELECT ")
+            assert(pql.selectExpressions[scope]!!.isNotEmpty())
+            for (expression in pql.selectExpressions[scope]!!) {
+                expression.toSQL(sql)
+                append(", ")
+            }
+            setLength(length - 2)
+        }
     }
 
     private fun orderByExpressions(scope: Scope, sql: MutableSQLQuery) {
@@ -358,7 +377,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         val desiredFromPosition = it.query.length
 
         where(scope, it, logId, traceId)
-        groupBy(scope, it, logId)
+        groupById(scope, it, logId)
         orderBy(scope, it, logId)
 
         val from = from(scope, it)
@@ -373,7 +392,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         sql.query.append("SELECT row_number() AS group_id, array_agg(id) AS ids ")
     }
 
-    private fun groupBy(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
+    private fun groupById(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
         val upperScopeGroupBy = pql.isImplicitGroupBy
                 || scope > Scope.Log && pql.isGroupBy[Scope.Log] == true
                 || scope > Scope.Trace && pql.isGroupBy[Scope.Trace] == true
@@ -411,7 +430,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             }
 
             // remove the last comma
-            deleteCharAt(length - 1)
+            setLength(length - 1)
         }
     }
     // endregion
@@ -435,7 +454,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         with(sql.query) {
             append("SELECT ")
 
-            sql.scopes.add(ScopeWithHoisting(scope, 0))
+            sql.scopes.add(ScopeWithMetadata(scope, 0))
 
             assert(pql.selectAll[scope] != true)
 
@@ -448,7 +467,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 fetchAnyAttr = true
                 append("${scope.alias}.\"${attribute.standardName}\", ")
             }
-            delete(length - 2, length)
+            setLength(length - 2)
 
             if (!fetchAnyAttr) {
                 // FIXME: potential optimization: skip query, return in-memory ResultSet with ids only
@@ -513,14 +532,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         sql.query.append(" ORDER BY ids.ord")
     }
 
-    // endregion
+// endregion
 
     // region select group expressions
     private fun groupExpressionsQuery(scope: Scope, logId: Int?): SQLQuery = SQLQuery {
         // TODO
         selectExpressions(scope, it)
-        fromExpressions(scope, it)
-        whereExpressions(scope, it)
+        //fromExpressions(scope, it)
+        //whereExpressions(scope, it)
         orderByExpressions(scope, it)
     }
     // endregion
@@ -662,7 +681,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         fun expandClassifier(logId: Int, classifier: Attribute): List<Attribute> {
             require(classifier.isClassifier)
 
-            // FIXME: optimization: fetch all classifiers for logId at once
+            // FIXME: optimization: move classifier expansion to database; each time a classifier is encountered run a subquery to fetch the names of the other attributes
             return classifiers.computeIfAbsent(logId) { HashMap() }.computeIfAbsent(classifier) {
                 var attributes: List<Attribute>? = null
                 connection.use { conn ->
@@ -733,7 +752,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryGlobals: SQLQuery by lazy(NONE)
             { attributesQuery(Scope.Log, null, "GLOBALS", setOf("scope")) }
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Log, null) }
-            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log, null) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log, null, null) }
         }
 
         inner class GroupingTopEntry internal constructor() : TopEntry() {
@@ -812,7 +831,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Trace, logId, null) }
             override val queryEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Trace) } // FIXME: this query is independent of logId, move it to the main class
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Trace, logId) }
-            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Trace, logId) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Trace, logId, null) }
         }
 
         inner class GroupingLogEntry internal constructor(logId: Int) : LogEntry() {
@@ -888,7 +907,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Event, logId, traceId) }
             override val queryEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Event) } // FIXME: optimization: this query is independent of logId, move it to the main class
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Event, logId) }
-            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Event, logId) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Event, logId, traceId) }
         }
 
         inner class GroupingTraceEntry internal constructor(logId: Int, traceId: Long) : TraceEntry() {
@@ -937,38 +956,54 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun Attribute.toSQL(sql: MutableSQLQuery, logId: Int?) {
-        val sqlScope = ScopeWithHoisting(this.scope!!, this.hoistingPrefix.length)
+        val sqlScope = ScopeWithMetadata(this.scope!!, this.hoistingPrefix.length)
         sql.scopes.add(sqlScope)
         // expand classifiers
         val attributes = if (this.isClassifier) cache.expandClassifier(logId!!, this) else listOf(this)
 
-        for (attribute in attributes) {
-            if (attribute.isStandard) {
-                if (attribute.scope == Scope.Log && attribute.standardName == "db:id")
-                    sql.query.append("l.id") // for backward-compatibility with the previous implementation of the XES layer
-                else
-                    sql.query.append("${sqlScope.alias}.\"${this.standardName}\"")
-            } else
-                TODO("non-standard attribute")
-            sql.query.append(',')
+        with(sql.query) {
+            for (attribute in attributes) {
+                assert(this@toSQL.scope == attribute.scope)
+
+                if (attribute.isStandard) {
+                    if (attribute.scope == Scope.Log && attribute.standardName == "db:id")
+                        append("l.id") // for backward-compatibility with the previous implementation of the XES layer
+                    else
+                        append("${sqlScope.alias}.\"${attribute.standardName}\"")
+                } else {
+                    // use subquery for the non-standard attribute
+                    append("(SELECT TODO_value ")
+                    TODO("how to select the right column? I don't want to fetch the attribute to detect its type.")
+                    append("FROM ${sqlScope.table}_attributes ")
+                    append("WHERE ${sqlScope}_id=${sqlScope.alias}.id AND key=? AND parent_id IS NULL)")
+                    sql.params.add(attribute.name)
+                }
+                append(',')
+            }
+            setLength(length - 1)
         }
-        sql.query.setLength(sql.query.length - 1)
     }
 
-    private fun IExpression.toSQL(sql: MutableSQLQuery, logId: Int?) {
+    private fun IExpression.toSQL(sql: MutableSQLQuery) {
         with(sql.query) {
             fun walk(expression: IExpression) {
                 when (expression) {
-                    is Attribute -> expression.toSQL(sql, logId)
-                    is NullLiteral -> append("null")
+                    is Attribute -> expression.toSQL(sql, null)
                     is Literal<*> -> {
-                        sql.params.add(
-                            when (expression) {
-                                is DateTimeLiteral -> Timestamp.from(expression.value)
-                                else -> expression.value!!
+                        if (expression.scope != null)
+                            sql.scopes.add(ScopeWithMetadata(expression.scope!!, 0))
+
+                        when (expression) {
+                            is NullLiteral -> append("null")
+                            is DateTimeLiteral -> {
+                                append('?')
+                                sql.params.add(Timestamp.from(expression.value))
                             }
-                        )
-                        append('?')
+                            else -> {
+                                append('?')
+                                sql.params.add(expression.value!!)
+                            }
+                        }
                     }
                     is Operator -> append(" ${expression.value} ")
                     is Function -> {
