@@ -1,5 +1,6 @@
 package processm.miners.processtree.directlyfollowsgraph
 
+import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.ProcessTreeActivity
@@ -12,15 +13,17 @@ class DirectlyFollowsGraph {
     /**
      * Built graph
      *
-     * Structure:
-     * FROM activity -> NEXT activity in each trace + arc statistic (cardinality of relations)
+     * Connection FROM -> TO stored as:
+     * FROM as row index, TO as column index
+     *
+     * Inside [ProcessTreeActivity] [ProcessTreeActivity] position stored arc statistic (cardinality of relations)
      *
      * Log <A, B, B, B, C> will be build as:
-     *  A -> B, cardinality 1
-     *  B -> B, cardinality 2
-     *  B -> C, cardinality 1
+     *    A    B    C
+     * A  -    1    -
+     * B  -    2    1
      */
-    val graph = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -77,10 +80,11 @@ class DirectlyFollowsGraph {
     }
 
     /**
-     * Add connection between two activities in trace and increment statistics of arc.
+     * Add connection between two activities in trace.
+     * Increment statistics of arc already stored in graph matrix if found connection or insert new arc.
      */
     private fun addConnectionInGraph(from: ProcessTreeActivity, to: ProcessTreeActivity) {
-        graph.getOrPut(from, { HashMap() }).getOrPut(to, { Arc() }).increment()
+        graph.set(row = from, col = to, v = (graph.get(row = from, col = to) ?: Arc()).increment())
     }
 
     /**

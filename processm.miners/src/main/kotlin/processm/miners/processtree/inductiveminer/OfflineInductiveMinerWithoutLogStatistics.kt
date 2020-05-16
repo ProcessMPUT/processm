@@ -2,6 +2,7 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.Log
 import processm.core.models.processtree.*
+import processm.miners.processtree.directlyfollowsgraph.Arc
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 
 /**
@@ -49,7 +50,16 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
         if (dfg.startActivities.isEmpty() || dfg.endActivities.isEmpty()) return ProcessTree()
 
         // Prepare set with activities in graph
-        val activities = dfg.graph.keys.toHashSet().also {
+        // TODO: Remove me! Map2D implementation
+        val graph = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>()
+        dfg.graph.rows.forEach { from ->
+            graph[from] = HashMap()
+            dfg.graph.getRow(from).forEach { (to, arc) ->
+                graph[from]!![to] = arc
+            }
+        }
+
+        val activities = dfg.graph.rows.toHashSet().also {
             it.addAll(dfg.startActivities.keys)
             it.addAll(dfg.endActivities.keys)
         }
@@ -59,8 +69,8 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
             assignChildrenToNode(
                 DirectlyFollowsSubGraph(
                     activities = activities,
-                    outgoingConnections = dfg.graph,
-                    initialConnections = dfg.graph,
+                    outgoingConnections = graph,
+                    initialConnections = graph,
                     initialStartActivities = dfg.startActivities.keys.toHashSet(),
                     initialEndActivities = dfg.endActivities.keys.toHashSet()
                 )
