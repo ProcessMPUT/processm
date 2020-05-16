@@ -24,7 +24,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Initial connections between activities in graph (initial DFG)
      */
-    private val initialConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
+    private val initialConnections: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, // = outgoingConnections,
     /**
      * Initial start activities  in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
@@ -560,23 +560,27 @@ class DirectlyFollowsSubGraph(
     /**
      * Infer start activities based on initial connection in DFG
      * This should be done only if initial start activities not assigned yet
+     *
+     * Columns contains all activities with INGOING connection.
+     * Single row for each activity (OUTGOING connections).
+     * Rows minus columns == activities without ingoing connections.
      */
     private fun inferStartActivities() {
-        // Add each activity with outgoing connection to initial start activities
-        initialStartActivities.addAll(initialConnections.keys)
-        initialConnections.values.forEach { initialStartActivities.removeAll(it.keys) }
+        // TODO: We can remove rewrite operation
+        initialStartActivities.addAll(initialConnections.rows.minus(initialConnections.columns))
     }
 
     /**
      * Infer end activities based on initial connection in DFG
      * This should be done only if initial end activities not assigned yet
+     *
+     * Columns contains all activities with INGOING connection.
+     * Single row for each activity (OUTGOING connections).
+     * Columns minus rows == activities without outgoing connections.
      */
     private fun inferEndActivities() {
-        // Add ingoing connections to initial end activities
-        initialConnections.values.forEach { initialEndActivities.addAll(it.keys) }
-
-        // Reduce end activities - drop activity with outgoing connection
-        initialEndActivities.removeAll(initialConnections.keys)
+        // TODO: We can remove rewrite operation
+        initialEndActivities.addAll(initialConnections.columns.minus(initialConnections.rows))
     }
 
     /**
@@ -594,7 +598,7 @@ class DirectlyFollowsSubGraph(
             // Else we should find activities connected to current StartActivities
             val startActivities = HashSet<ProcessTreeActivity>()
             collection.forEach { start ->
-                startActivities.addAll(initialConnections[start].orEmpty().keys)
+                startActivities.addAll(initialConnections.getRow(start).keys)
             }
 
             collection = startActivities
@@ -618,8 +622,10 @@ class DirectlyFollowsSubGraph(
 
             // Else we should find activities connected to current EndActivities
             val endActivities = HashSet<ProcessTreeActivity>()
-            initialConnections.forEach { (from, to) ->
-                if (to.keys.firstOrNull { it in collection } !== null) endActivities.add(from)
+            initialConnections.rows.forEach { from ->
+                if (initialConnections.getRow(from).keys.firstOrNull { it in collection } !== null) {
+                    endActivities.add(from)
+                }
             }
 
             collection = endActivities

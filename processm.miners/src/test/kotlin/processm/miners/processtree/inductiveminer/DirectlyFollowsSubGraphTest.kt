@@ -1,6 +1,7 @@
 package processm.miners.processtree.inductiveminer
 
 import org.junit.jupiter.api.assertThrows
+import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.miners.processtree.directlyfollowsgraph.Arc
 import kotlin.test.*
@@ -19,10 +20,21 @@ internal class DirectlyFollowsSubGraphTest {
         it.addAll(l)
     }
 
+    // TODO: remove me! Map2D implementation
+    private fun initials(connections: HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>): DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc> {
+        val conns = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections.forEach { (from, rows) ->
+            rows.forEach { (to, arc) ->
+                conns[from, to] = arc
+            }
+        }
+        return conns
+    }
+
     @Test
     fun `Possible to finish calculations if contains only one activity`() {
         val activities = activitiesSet(listOf(A))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
 
         assertTrue(graph.canFinishCalculationsOnSubGraph())
     }
@@ -30,7 +42,7 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `NOT possible to finish calculations - more than one activity on graph`() {
         val activities = activitiesSet(listOf(A, B))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
 
         assertFalse(graph.canFinishCalculationsOnSubGraph())
     }
@@ -45,7 +57,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
 
         assertFalse(graph.canFinishCalculationsOnSubGraph())
     }
@@ -53,7 +65,7 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Fetch alone activity from graph`() {
         val activities = activitiesSet(listOf(A))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
 
         assertEquals(A, graph.finishCalculations())
     }
@@ -61,7 +73,7 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Exception if can't fetch activity`() {
         val activities = activitiesSet(listOf(A, B))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf())
+        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
 
         assertThrows<IllegalStateException> {
             graph.finishCalculations()
@@ -97,7 +109,8 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val noAssignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val noAssignment =
+            DirectlyFollowsSubGraph(activities, connections, initials(connections)).calculateExclusiveCut()
 
         assertNull(noAssignment)
     }
@@ -129,7 +142,8 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val noAssignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val noAssignment =
+            DirectlyFollowsSubGraph(activities, connections, initials(connections)).calculateExclusiveCut()
 
         assertNull(noAssignment)
     }
@@ -149,7 +163,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
+        val assignment = DirectlyFollowsSubGraph(activities, connections, initials(connections)).calculateExclusiveCut()
 
         assertNotNull(assignment)
 
@@ -174,7 +188,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
 
         assertEquals(2, graph.children.size)
     }
@@ -199,7 +213,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
         val result = graph.finishWithDefaultRule()
 
         assertEquals("⟲(τ,A,B,C)", result.toString())
@@ -232,7 +246,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
         val result = graph.stronglyConnectedComponents()
 
         assertEquals(4, result.size)
@@ -288,7 +302,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
         val result = graph.stronglyConnectedComponents()
 
         assertEquals(3, result.size)
@@ -343,7 +357,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
         val stronglyConnected = graph.stronglyConnectedComponents()
         val result = graph.connectionMatrix(stronglyConnected)
 
@@ -386,7 +400,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
         val stronglyConnected = graph.stronglyConnectedComponents()
         val assignment = graph.calculateSequentialCut(stronglyConnected)
 
@@ -420,7 +434,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
         val stronglyConnected = graph.stronglyConnectedComponents()
         val noAssignment = graph.calculateSequentialCut(stronglyConnected)
 
@@ -472,7 +486,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
         val stronglyConnected = graph.stronglyConnectedComponents()
         val assignment = graph.calculateSequentialCut(stronglyConnected)
 
@@ -523,7 +537,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(initialConnections))
         val response = graph.currentStartActivities()
 
         assertEquals(1, graph.currentEndActivities().size)
@@ -561,7 +575,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(initialConnections))
         val response = graph.currentEndActivities()
 
         assertEquals(1, response.size)
@@ -605,7 +619,7 @@ internal class DirectlyFollowsSubGraphTest {
             }
         }
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val graph = DirectlyFollowsSubGraph(activities, connections, initials(initialConnections))
         val assignment = graph.calculateParallelCut()
 
         assertNotNull(assignment)
