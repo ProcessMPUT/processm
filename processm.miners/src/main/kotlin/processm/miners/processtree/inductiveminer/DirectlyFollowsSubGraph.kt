@@ -60,11 +60,6 @@ class DirectlyFollowsSubGraph(
         private set
 
     /**
-     * Activities pointed (with connection) to `key` activity
-     */
-    private val ingoingConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
-
-    /**
      * Current start activities in this subGraph.
      * Calculated once, used by parallel and loop cut detection.
      */
@@ -77,13 +72,6 @@ class DirectlyFollowsSubGraph(
     private val currentEndActivities by lazy(LazyThreadSafetyMode.NONE) { currentEndActivities() }
 
     init {
-        outgoingConnections.rows.forEach { from ->
-            outgoingConnections.getRow(from).forEach { (to, arc) ->
-                // TODO: ingoing connections can be removed
-                ingoingConnections[to, from] = arc
-            }
-        }
-
         // No initial activities assigned - we should generate assignment
         if (initialStartActivities.isEmpty()) inferStartActivities()
         if (initialEndActivities.isEmpty()) inferEndActivities()
@@ -97,7 +85,7 @@ class DirectlyFollowsSubGraph(
      * Possible only if connections are empty (no self-loop) AND in activities only one activity.
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
-        return ingoingConnections.rows.isNullOrEmpty() && activities.size == 1
+        return outgoingConnections.columns.isNullOrEmpty() && activities.size == 1
     }
 
     /**
@@ -118,10 +106,7 @@ class DirectlyFollowsSubGraph(
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
-    fun calculateExclusiveCut(
-        outgoing: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = outgoingConnections,
-        ingoing: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = ingoingConnections
-    ): MutableMap<ProcessTreeActivity, Int>? {
+    fun calculateExclusiveCut(outgoing: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = outgoingConnections): MutableMap<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
@@ -170,7 +155,7 @@ class DirectlyFollowsSubGraph(
                     }
                 }
 
-                ingoing.getRow(current).keys.forEach { activity ->
+                outgoing.getColumn(current).keys.forEach { activity ->
                     // If not assigned label yet
                     if (nonLabeledActivities.contains(activity)) {
                         // Assign label
