@@ -20,11 +20,11 @@ class DirectlyFollowsSubGraph(
      * Connections between activities in graph
      * Outgoing - `key` activity has reference to activities which it directly points to.
      */
-    private val outgoingConnections: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>,
+    private val outgoingConnections: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc>,
     /**
      * Initial connections between activities in graph (initial DFG)
      */
-    private val initialConnections: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, // = outgoingConnections,
+    private val initialConnections: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = outgoingConnections,
     /**
      * Initial start activities  in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
@@ -77,8 +77,9 @@ class DirectlyFollowsSubGraph(
     private val currentEndActivities by lazy(LazyThreadSafetyMode.NONE) { currentEndActivities() }
 
     init {
-        outgoingConnections.forEach { (from, hashMap) ->
-            hashMap.forEach { (to, arc) ->
+        outgoingConnections.rows.forEach { from ->
+            outgoingConnections.getRow(from).forEach { (to, arc) ->
+                // TODO: ingoing connections can be removed
                 ingoingConnections[to, from] = arc
             }
         }
@@ -118,7 +119,7 @@ class DirectlyFollowsSubGraph(
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
     fun calculateExclusiveCut(
-        outgoing: Map<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>> = outgoingConnections,
+        outgoing: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = outgoingConnections,
         ingoing: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = ingoingConnections
     ): MutableMap<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
@@ -157,7 +158,7 @@ class DirectlyFollowsSubGraph(
                 }
 
                 // Iterate over activities connected with my `current` (current -> activity)
-                outgoing[current].orEmpty().keys.forEach { activity ->
+                outgoing.getRow(current).keys.forEach { activity ->
                     // If not assigned label yet
                     if (nonLabeledActivities.contains(activity)) {
                         // Assign label
@@ -206,17 +207,20 @@ class DirectlyFollowsSubGraph(
 
         activityGroups.forEach { (groupId, activities) ->
             // Prepare connections map
-            val connectionsHashMap = HashMap<ProcessTreeActivity, Map<ProcessTreeActivity, Arc>>()
-
+            val connectionsMap = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
             // For each activity add connection with another activities from group
-            activities.forEach { activity ->
-                connectionsHashMap[activity] = outgoingConnections[activity].orEmpty().filter { it.key in activities }
+            activities.forEach { from ->
+                activities.forEach { to ->
+                    outgoingConnections[from, to].also {
+                        if (it !== null) connectionsMap[from, to] = it
+                    }
+                }
             }
 
             children[groupToListPosition[groupId]!!] =
                 DirectlyFollowsSubGraph(
                     activities = activities,
-                    outgoingConnections = connectionsHashMap,
+                    outgoingConnections = connectionsMap,
                     initialConnections = initialConnections,
                     initialStartActivities = currentStartActivities,
                     initialEndActivities = currentEndActivities
@@ -288,7 +292,7 @@ class DirectlyFollowsSubGraph(
                         preOrder[v] = counter
                     }
 
-                    val w = outgoingConnections[v]?.keys?.firstOrNull { !preOrder.containsKey(it) }
+                    val w = outgoingConnections.getRow(v).keys.firstOrNull { !preOrder.containsKey(it) }
                     if (w !== null) {
                         stack.add(w)
                     } else {
@@ -296,7 +300,7 @@ class DirectlyFollowsSubGraph(
                         lowLink[v] = preOrder[v]!!
 
                         // Try to decrement value and set as minimal as possible
-                        outgoingConnections[v].orEmpty().keys.forEach { w ->
+                        outgoingConnections.getRow(v).keys.forEach { w ->
                             if (!alreadyAssigned.contains(w)) {
                                 val lowLinkV = lowLink[v]!!
                                 val preOrderedW = preOrder[w]!!
@@ -359,10 +363,10 @@ class DirectlyFollowsSubGraph(
         val connectionsMatrix = Array(size) { ByteArray(size) }
 
         // Iterate over connections in graph
-        outgoingConnections.forEach { connection ->
-            val activityGroupID = activityToGroupIndex[connection.key]!!
-            connection.value.forEach {
-                val indicatedGroupID = activityToGroupIndex[it.key]!!
+        outgoingConnections.rows.forEach { from ->
+            val activityGroupID = activityToGroupIndex[from]!!
+            outgoingConnections.getRow(from).keys.forEach { to ->
+                val indicatedGroupID = activityToGroupIndex[to]!!
 
                 // Different groups
                 if (activityGroupID != indicatedGroupID) {
@@ -664,9 +668,7 @@ class DirectlyFollowsSubGraph(
         for (a1 in activities) {
             for (a2 in activities) {
                 if (components[a1] != components[a2]) {
-                    if (!outgoingConnections[a1].orEmpty().containsKey(a2)
-                        || !outgoingConnections[a2].orEmpty().containsKey(a1)
-                    ) {
+                    if (outgoingConnections[a1, a2] === null || outgoingConnections[a2, a1] === null) {
                         mergeComponents(a1, a2, components)
                     }
                 }
@@ -701,8 +703,8 @@ class DirectlyFollowsSubGraph(
         }
 
         // Merge the other connected components
-        outgoingConnections.forEach { (source, targets) ->
-            targets.keys.forEach { target ->
+        outgoingConnections.rows.forEach { source ->
+            outgoingConnections.getRow(source).keys.forEach { target ->
                 if (source !in currentEndActivities) {
                     if (source in currentStartActivities) {
                         // A redo cannot be reachable from a start activity that is not an end activity
@@ -719,8 +721,8 @@ class DirectlyFollowsSubGraph(
         // Make a list of sub-start and sub-end activities
         val subStartActivities = HashSet<ProcessTreeActivity>()
         val subEndActivities = HashSet<ProcessTreeActivity>()
-        outgoingConnections.forEach { (source, targets) ->
-            targets.keys.forEach { target ->
+        outgoingConnections.rows.forEach { source ->
+            outgoingConnections.getRow(source).keys.forEach { target ->
                 if (components[source] != components[target]) {
                     subEndActivities.add(source)
                     subStartActivities.add(target)
@@ -735,7 +737,7 @@ class DirectlyFollowsSubGraph(
                     // subEndActivity is already in the body
                     break
                 }
-                if (!outgoingConnections[subEndActivity].orEmpty().containsKey(startActivity)) {
+                if (outgoingConnections[subEndActivity, startActivity] === null) {
                     mergeComponents(subEndActivity, startActivity, components)
                     break
                 }
@@ -749,7 +751,7 @@ class DirectlyFollowsSubGraph(
                     // subStartActivity is already in the body
                     break
                 }
-                if (!outgoingConnections[endActivity].orEmpty().containsKey(subStartActivity)) {
+                if (outgoingConnections[endActivity, subStartActivity] === null) {
                     mergeComponents(subStartActivity, endActivity, components)
                     break
                 }

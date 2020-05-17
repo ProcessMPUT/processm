@@ -20,21 +20,10 @@ internal class DirectlyFollowsSubGraphTest {
         it.addAll(l)
     }
 
-    // TODO: remove me! Map2D implementation
-    private fun initials(connections: HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>): DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc> {
-        val conns = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
-        connections.forEach { (from, rows) ->
-            rows.forEach { (to, arc) ->
-                conns[from, to] = arc
-            }
-        }
-        return conns
-    }
-
     @Test
     fun `Possible to finish calculations if contains only one activity`() {
         val activities = activitiesSet(listOf(A))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
+        val graph = DirectlyFollowsSubGraph(activities, DoublingMap2D())
 
         assertTrue(graph.canFinishCalculationsOnSubGraph())
     }
@@ -42,7 +31,7 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `NOT possible to finish calculations - more than one activity on graph`() {
         val activities = activitiesSet(listOf(A, B))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
+        val graph = DirectlyFollowsSubGraph(activities, DoublingMap2D())
 
         assertFalse(graph.canFinishCalculationsOnSubGraph())
     }
@@ -50,14 +39,10 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `NOT possible to finish calculations - connection between activity`() {
         val activities = activitiesSet(listOf(A))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arc ->
-                arc[A] = Arc()
-                conn[A] = arc
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, A] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
 
         assertFalse(graph.canFinishCalculationsOnSubGraph())
     }
@@ -65,7 +50,7 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Fetch alone activity from graph`() {
         val activities = activitiesSet(listOf(A))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
+        val graph = DirectlyFollowsSubGraph(activities, DoublingMap2D())
 
         assertEquals(A, graph.finishCalculations())
     }
@@ -73,7 +58,7 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Exception if can't fetch activity`() {
         val activities = activitiesSet(listOf(A, B))
-        val graph = DirectlyFollowsSubGraph(activities, hashMapOf(), initials(hashMapOf()))
+        val graph = DirectlyFollowsSubGraph(activities, DoublingMap2D())
 
         assertThrows<IllegalStateException> {
             graph.finishCalculations()
@@ -86,31 +71,18 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Graph without separated parts`() {
         // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]}, part G1
         val activities = activitiesSet(listOf(A, B, C, D, E))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[C] = Arc()
-                arcs[E] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[D] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                conn[E] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[A, C] = Arc()
+        connections[A, E] = Arc()
+        connections[B, C] = Arc()
+        connections[B, D] = Arc()
+        connections[C, B] = Arc()
+        connections[C, D] = Arc()
+        connections[E, D] = Arc()
 
         val noAssignment =
-            DirectlyFollowsSubGraph(activities, connections, initials(connections)).calculateExclusiveCut()
+            DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
         assertNull(noAssignment)
     }
@@ -118,32 +90,16 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Graph without separated parts but with not ordered activity`() {
         val activities = activitiesSet(listOf(A, B, C, D, E, F))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[C] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[F] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[F] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[E] = Arc()
-                conn[D] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[F] = Arc()
-                conn[E] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[A, C] = Arc()
+        connections[B, F] = Arc()
+        connections[C, F] = Arc()
+        connections[D, E] = Arc()
+        connections[E, F] = Arc()
 
         val noAssignment =
-            DirectlyFollowsSubGraph(activities, connections, initials(connections)).calculateExclusiveCut()
+            DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
         assertNull(noAssignment)
     }
@@ -152,18 +108,11 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Graph with separated parts`() {
         // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]} part G1b
         val activities = activitiesSet(listOf(B, C, E))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[C] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[B, C] = Arc()
+        connections[C, B] = Arc()
 
-        val assignment = DirectlyFollowsSubGraph(activities, connections, initials(connections)).calculateExclusiveCut()
+        val assignment = DirectlyFollowsSubGraph(activities, connections).calculateExclusiveCut()
 
         assertNotNull(assignment)
 
@@ -177,18 +126,11 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Split graph based on list of activities - separated groups`() {
         val activities = activitiesSet(listOf(A, B, C))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                conn[B] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[B, A] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
 
         assertEquals(2, graph.children.size)
     }
@@ -196,24 +138,14 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Redo loop operator as default rule of subGraph cut`() {
         val activities = activitiesSet(listOf(A, B, C))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[C] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                arcs[C] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                conn[C] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[A, C] = Arc()
+        connections[B, A] = Arc()
+        connections[B, C] = Arc()
+        connections[C, A] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val result = graph.finishWithDefaultRule()
 
         assertEquals("⟲(τ,A,B,C)", result.toString())
@@ -223,30 +155,17 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Calculate strongly connected components based on example from ProcessMining book`() {
         // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]}, part G1
         val activities = activitiesSet(listOf(A, B, C, D, E))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[C] = Arc()
-                arcs[E] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[D] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                conn[E] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[A, C] = Arc()
+        connections[A, E] = Arc()
+        connections[B, C] = Arc()
+        connections[B, D] = Arc()
+        connections[C, B] = Arc()
+        connections[C, D] = Arc()
+        connections[E, D] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val result = graph.stronglyConnectedComponents()
 
         assertEquals(4, result.size)
@@ -261,48 +180,23 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Strongly connected components`() {
         // Based on https://en.wikipedia.org/wiki/Strongly_connected_component
         val activities = activitiesSet(listOf(A, B, C, D, E, F, G, H))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[E] = Arc()
-                arcs[F] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                arcs[G] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[H] = Arc()
-                conn[D] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                arcs[F] = Arc()
-                conn[E] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[G] = Arc()
-                conn[F] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[F] = Arc()
-                conn[G] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                arcs[G] = Arc()
-                conn[H] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[B, C] = Arc()
+        connections[B, E] = Arc()
+        connections[B, F] = Arc()
+        connections[C, D] = Arc()
+        connections[C, G] = Arc()
+        connections[D, C] = Arc()
+        connections[D, H] = Arc()
+        connections[E, A] = Arc()
+        connections[E, F] = Arc()
+        connections[F, G] = Arc()
+        connections[G, F] = Arc()
+        connections[H, D] = Arc()
+        connections[H, G] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val result = graph.stronglyConnectedComponents()
 
         assertEquals(3, result.size)
@@ -316,48 +210,23 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Strongly connected components into connection matrix`() {
         // Based on https://en.wikipedia.org/wiki/Strongly_connected_component
         val activities = activitiesSet(listOf(A, B, C, D, E, F, G, H))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[E] = Arc()
-                arcs[F] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                arcs[G] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[H] = Arc()
-                conn[D] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                arcs[F] = Arc()
-                conn[E] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[G] = Arc()
-                conn[F] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[F] = Arc()
-                conn[G] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                arcs[G] = Arc()
-                conn[H] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[B, C] = Arc()
+        connections[B, E] = Arc()
+        connections[B, F] = Arc()
+        connections[C, D] = Arc()
+        connections[C, G] = Arc()
+        connections[D, C] = Arc()
+        connections[D, H] = Arc()
+        connections[E, A] = Arc()
+        connections[E, F] = Arc()
+        connections[F, G] = Arc()
+        connections[G, F] = Arc()
+        connections[H, D] = Arc()
+        connections[H, G] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
         val result = graph.connectionMatrix(stronglyConnected)
 
@@ -377,30 +246,17 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Calculate sequential cut based on Process Mining 7-21 book`() {
         // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]}, part G1
         val activities = activitiesSet(listOf(A, B, C, D, E))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[C] = Arc()
-                arcs[E] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[D] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                conn[E] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[A, C] = Arc()
+        connections[A, E] = Arc()
+        connections[B, C] = Arc()
+        connections[B, D] = Arc()
+        connections[C, B] = Arc()
+        connections[C, D] = Arc()
+        connections[E, D] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
         val assignment = graph.calculateSequentialCut(stronglyConnected)
 
@@ -419,22 +275,12 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Calculate sequential cut not found - loop here`() {
         // L1 = [a,b,c,a]
         val activities = activitiesSet(listOf(A, B, C))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                conn[C] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[B, C] = Arc()
+        connections[C, A] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
         val noAssignment = graph.calculateSequentialCut(stronglyConnected)
 
@@ -445,48 +291,23 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Calculate sequential cut based on Wikipedia example`() {
         // Based on https://en.wikipedia.org/wiki/Strongly_connected_component
         val activities = activitiesSet(listOf(A, B, C, D, E, F, G, H))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[E] = Arc()
-                arcs[F] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                arcs[G] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[H] = Arc()
-                conn[D] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[A] = Arc()
-                arcs[F] = Arc()
-                conn[E] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[G] = Arc()
-                conn[F] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[F] = Arc()
-                conn[G] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                arcs[G] = Arc()
-                conn[H] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[B, C] = Arc()
+        connections[B, E] = Arc()
+        connections[B, F] = Arc()
+        connections[C, D] = Arc()
+        connections[C, G] = Arc()
+        connections[D, C] = Arc()
+        connections[D, H] = Arc()
+        connections[E, A] = Arc()
+        connections[E, F] = Arc()
+        connections[F, G] = Arc()
+        connections[G, F] = Arc()
+        connections[H, D] = Arc()
+        connections[H, G] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(connections))
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val stronglyConnected = graph.stronglyConnectedComponents()
         val assignment = graph.calculateSequentialCut(stronglyConnected)
 
@@ -507,37 +328,21 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `Start activities in current sub graph`() {
         val activities = activitiesSet(listOf(B, C, D))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[D] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-        }
-        val initialConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[C] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[D] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[B, C] = Arc()
+        connections[B, D] = Arc()
+        connections[C, B] = Arc()
+        connections[C, D] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(initialConnections))
+        val initialConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        initialConnections[A, B] = Arc()
+        initialConnections[A, C] = Arc()
+        initialConnections[B, C] = Arc()
+        initialConnections[B, D] = Arc()
+        initialConnections[C, B] = Arc()
+        initialConnections[C, D] = Arc()
+
+        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
         val response = graph.currentStartActivities()
 
         assertEquals(1, graph.currentEndActivities().size)
@@ -550,32 +355,16 @@ internal class DirectlyFollowsSubGraphTest {
     @Test
     fun `End activities in current sub graph`() {
         val activities = activitiesSet(listOf(B, C, D))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-        }
-        val initialConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[E] = Arc()
-                conn[D] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[B, C] = Arc()
+        connections[C, D] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(initialConnections))
+        val initialConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        initialConnections[B, C] = Arc()
+        initialConnections[C, D] = Arc()
+        initialConnections[D, E] = Arc()
+
+        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
         val response = graph.currentEndActivities()
 
         assertEquals(1, response.size)
@@ -586,40 +375,21 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Calculate parallel cut based on Process Mining 7-21 book - activities B and C with different labels`() {
         // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]}, part G1d
         val activities = activitiesSet(listOf(B, C))
-        val connections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                conn[C] = arcs
-            }
-        }
-        val initialConnections = HashMap<ProcessTreeActivity, HashMap<ProcessTreeActivity, Arc>>().also { conn ->
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[C] = Arc()
-                arcs[E] = Arc()
-                conn[A] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[C] = Arc()
-                arcs[D] = Arc()
-                conn[B] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[B] = Arc()
-                arcs[D] = Arc()
-                conn[C] = arcs
-            }
-            HashMap<ProcessTreeActivity, Arc>().also { arcs ->
-                arcs[D] = Arc()
-                conn[E] = arcs
-            }
-        }
+        val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[B, C] = Arc()
+        connections[C, B] = Arc()
 
-        val graph = DirectlyFollowsSubGraph(activities, connections, initials(initialConnections))
+        val initialConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        initialConnections[A, B] = Arc()
+        initialConnections[A, C] = Arc()
+        initialConnections[A, E] = Arc()
+        initialConnections[B, C] = Arc()
+        initialConnections[B, D] = Arc()
+        initialConnections[C, B] = Arc()
+        initialConnections[C, D] = Arc()
+        initialConnections[E, D] = Arc()
+
+        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
         val assignment = graph.calculateParallelCut()
 
         assertNotNull(assignment)
