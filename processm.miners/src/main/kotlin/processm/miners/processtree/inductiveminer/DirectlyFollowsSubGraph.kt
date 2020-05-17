@@ -29,12 +29,12 @@ class DirectlyFollowsSubGraph(
      * Initial start activities  in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
      */
-    private val initialStartActivities: MutableSet<ProcessTreeActivity> = HashSet(),
+    private var initialStartActivities: Set<ProcessTreeActivity>? = null,
     /**
      * Initial end activities in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
      */
-    private val initialEndActivities: MutableSet<ProcessTreeActivity> = HashSet()
+    private var initialEndActivities: Set<ProcessTreeActivity>? = null
 ) {
     companion object {
         /**
@@ -72,9 +72,8 @@ class DirectlyFollowsSubGraph(
     private val currentEndActivities by lazy(LazyThreadSafetyMode.NONE) { currentEndActivities() }
 
     init {
-        // No initial activities assigned - we should generate assignment
-        if (initialStartActivities.isEmpty()) inferStartActivities()
-        if (initialEndActivities.isEmpty()) inferEndActivities()
+        if (initialEndActivities.isNullOrEmpty()) initialEndActivities = inferEndActivities()
+        if (initialStartActivities.isNullOrEmpty()) initialStartActivities = inferStartActivities()
 
         detectCuts()
     }
@@ -182,7 +181,7 @@ class DirectlyFollowsSubGraph(
         val groupToListPosition = TreeMap<Int, Int>()
         assignment.values.toSortedSet().withIndex().forEach { (index, groupId) -> groupToListPosition[groupId] = index }
 
-        children = arrayOfNulls<DirectlyFollowsSubGraph>(size = groupToListPosition.size)
+        children = arrayOfNulls(size = groupToListPosition.size)
         val activityGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
 
         // Add each activity to designated group
@@ -554,9 +553,8 @@ class DirectlyFollowsSubGraph(
      * Single row for each activity (OUTGOING connections).
      * Rows minus columns == activities without ingoing connections.
      */
-    private fun inferStartActivities() {
-        // TODO: We can remove rewrite operation
-        initialStartActivities.addAll(initialConnections.rows.minus(initialConnections.columns))
+    private fun inferStartActivities(): Set<ProcessTreeActivity>? {
+        return initialConnections.rows.minus(initialConnections.columns)
     }
 
     /**
@@ -567,16 +565,15 @@ class DirectlyFollowsSubGraph(
      * Single row for each activity (OUTGOING connections).
      * Columns minus rows == activities without outgoing connections.
      */
-    private fun inferEndActivities() {
-        // TODO: We can remove rewrite operation
-        initialEndActivities.addAll(initialConnections.columns.minus(initialConnections.rows))
+    private fun inferEndActivities(): Set<ProcessTreeActivity> {
+        return initialConnections.columns.minus(initialConnections.rows)
     }
 
     /**
      * Prepare a set of activities marked as start based on initial DFG and current connections (in sub graph)
      */
     fun currentStartActivities(): MutableSet<ProcessTreeActivity> {
-        var collection = HashSet<ProcessTreeActivity>(initialStartActivities)
+        var collection = HashSet<ProcessTreeActivity>(initialStartActivities!!)
 
         for (_i in 0..activities.size) {
             collection.filter { it in activities }.also {
@@ -601,7 +598,7 @@ class DirectlyFollowsSubGraph(
      * Prepare a set of activities marked as end based on initial DFG and current connections (in sub graph)
      */
     fun currentEndActivities(): MutableSet<ProcessTreeActivity> {
-        var collection = HashSet<ProcessTreeActivity>(initialEndActivities)
+        var collection = HashSet<ProcessTreeActivity>(initialEndActivities!!)
 
         for (_i in 0..activities.size) {
             collection.filter { it in activities }.also {
