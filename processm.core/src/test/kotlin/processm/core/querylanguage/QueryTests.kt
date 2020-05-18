@@ -223,11 +223,11 @@ class QueryTests {
         assertEquals(0, query.selectOtherAttributes[Scope.Event]!!.size)
         assertEquals(2, query.selectExpressions[Scope.Event]!!.size)
         assertEquals(
-            "[event:conceptowy:name]+event:org:resource",
+            "[event:conceptowy:name] + event:org:resource",
             query.selectExpressions[Scope.Event]!!.elementAt(0).toString()
         )
         assertEquals(
-            "max(event:time:timestamp)-min(event:time:timestamp)",
+            "max(event:time:timestamp) - min(event:time:timestamp)",
             query.selectExpressions[Scope.Event]!!.elementAt(1).toString()
         )
         assertTrue(query.selectExpressions[Scope.Event]!!.all { !it.isTerminal })
@@ -273,17 +273,17 @@ class QueryTests {
         assertEquals(0, query.selectStandardAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.selectOtherAttributes[Scope.Trace]!!.size)
         assertEquals(2, query.selectExpressions[Scope.Trace]!!.size)
-        assertEquals("2.0+3.0", query.selectExpressions[Scope.Trace]!!.elementAt(0).toString())
-        assertEquals("null/11.0", query.selectExpressions[Scope.Trace]!!.elementAt(1).toString())
+        assertEquals("2.0 + 3.0", query.selectExpressions[Scope.Trace]!!.elementAt(0).toString())
+        assertEquals("null / 11.0", query.selectExpressions[Scope.Trace]!!.elementAt(1).toString())
         assertTrue(query.selectExpressions[Scope.Trace]!!.all { !it.isTerminal })
         assertTrue(query.selectExpressions[Scope.Trace]!!.all { it.effectiveScope == Scope.Trace })
         // event scope
         assertEquals(0, query.selectStandardAttributes[Scope.Event]!!.size)
         assertEquals(0, query.selectOtherAttributes[Scope.Event]!!.size)
         assertEquals(3, query.selectExpressions[Scope.Event]!!.size)
-        assertEquals("4.0*5.0+6.0", query.selectExpressions[Scope.Event]!!.elementAt(0).toString())
-        assertEquals("7.0/8.0-9.0", query.selectExpressions[Scope.Event]!!.elementAt(1).toString())
-        assertEquals("10.0*null", query.selectExpressions[Scope.Event]!!.elementAt(2).toString())
+        assertEquals("4.0 * 5.0 + 6.0", query.selectExpressions[Scope.Event]!!.elementAt(0).toString())
+        assertEquals("7.0 / 8.0 - 9.0", query.selectExpressions[Scope.Event]!!.elementAt(1).toString())
+        assertEquals("10.0 * null", query.selectExpressions[Scope.Event]!!.elementAt(2).toString())
         assertTrue(query.selectExpressions[Scope.Event]!!.all { !it.isTerminal })
         assertTrue(query.selectExpressions[Scope.Event]!!.all { it.effectiveScope == Scope.Event })
     }
@@ -533,7 +533,7 @@ class QueryTests {
     fun whereSimpleTest() {
         val query = Query("where dayofweek(e:timestamp) in (1, 7)")
         assertTrue(query.isImplicitSelectAll)
-        assertEquals("dayofweek(event:time:timestamp)in(1.0,7.0)", query.whereExpression.toString())
+        assertEquals("dayofweek(event:time:timestamp) in (1.0,7.0)", query.whereExpression.toString())
         assertEquals(Scope.Event, query.whereExpression.effectiveScope)
     }
 
@@ -541,7 +541,7 @@ class QueryTests {
     fun whereSimpleWithHoistingTest() {
         val query = Query("where dayofweek(^e:timestamp) in (1, 7)")
         assertTrue(query.isImplicitSelectAll)
-        assertEquals("dayofweek(^event:time:timestamp)in(1.0,7.0)", query.whereExpression.toString())
+        assertEquals("dayofweek(^event:time:timestamp) in (1.0,7.0)", query.whereExpression.toString())
         assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
     }
 
@@ -549,7 +549,7 @@ class QueryTests {
     fun whereSimpleWithHoistingTest2() {
         val query = Query("where dayofweek(^^e:timestamp) in (1, 7)")
         assertTrue(query.isImplicitSelectAll)
-        assertEquals("dayofweek(^^event:time:timestamp)in(1.0,7.0)", query.whereExpression.toString())
+        assertEquals("dayofweek(^^event:time:timestamp) in (1.0,7.0)", query.whereExpression.toString())
         assertEquals(Scope.Log, query.whereExpression.effectiveScope)
     }
 
@@ -557,7 +557,7 @@ class QueryTests {
     fun whereLogicExprWithHoistingTest() {
         val query = Query("where not(t:currency = ^e:currency)")
         assertTrue(query.isImplicitSelectAll)
-        assertEquals("not(trace:cost:currency=^event:cost:currency)", query.whereExpression.toString())
+        assertEquals("not (trace:cost:currency = ^event:cost:currency)", query.whereExpression.toString())
         assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
     }
 
@@ -565,7 +565,7 @@ class QueryTests {
     fun whereLogicExprTest() {
         val query = Query("where t:currency != e:currency")
         assertTrue(query.isImplicitSelectAll)
-        assertEquals("trace:cost:currency!=event:cost:currency", query.whereExpression.toString())
+        assertEquals("trace:cost:currency != event:cost:currency", query.whereExpression.toString())
         assertEquals(Scope.Event, query.whereExpression.effectiveScope)
     }
 
@@ -574,7 +574,7 @@ class QueryTests {
         val query = Query("where not(t:currency = ^e:currency) and t:total is null")
         assertTrue(query.isImplicitSelectAll)
         assertEquals(
-            "not(trace:cost:currency=^event:cost:currency)andtrace:cost:totalis null",
+            "not (trace:cost:currency = ^event:cost:currency) and trace:cost:total is null",
             query.whereExpression.toString()
         )
         assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
@@ -585,7 +585,7 @@ class QueryTests {
         val query = Query("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2020-01-01) and t:total is null")
         assertTrue(query.isImplicitSelectAll)
         assertEquals(
-            "(not(trace:cost:currency=^event:cost:currency)or^event:time:timestamp>=2020-01-01T00:00:00Z)andtrace:cost:totalis null",
+            "(not (trace:cost:currency = ^event:cost:currency) or ^event:time:timestamp >= 2020-01-01T00:00:00Z) and trace:cost:total is null",
             query.whereExpression.toString()
         )
         assertEquals(Scope.Trace, query.whereExpression.effectiveScope)
@@ -595,7 +595,7 @@ class QueryTests {
     fun whereLikeAndMatchesTest() {
         val query = Query("where t:name like 'transaction %' and ^e:resource matches '^[A-Z][a-z]+ [A-Z][a-z]+$'")
         assertEquals(
-            "trace:concept:nameliketransaction %and^event:org:resourcematches^[A-Z][a-z]+ [A-Z][a-z]+\$",
+            "trace:concept:name like transaction % and ^event:org:resource matches ^[A-Z][a-z]+ [A-Z][a-z]+\$",
             query.whereExpression.toString()
         )
 
@@ -869,12 +869,12 @@ class QueryTests {
         assertEquals(1, query.orderByExpressions[Scope.Trace]!!.size)
         assertEquals(OrderDirection.Descending, query.orderByExpressions[Scope.Trace]!![0].direction)
         assertEquals(
-            "[log:basePrice]*avg(^event:cost:total)*3.141592 desc",
+            "[log:basePrice] * avg(^event:cost:total) * 3.141592 desc",
             query.orderByExpressions[Scope.Trace]!![0].toString()
         )
         val expression = query.orderByExpressions[Scope.Trace]!![0].base
         assertEquals(Scope.Trace, expression.effectiveScope)
-        assertEquals("[log:basePrice]*avg(^event:cost:total)*3.141592", expression.toString())
+        assertEquals("[log:basePrice] * avg(^event:cost:total) * 3.141592", expression.toString())
         assertEquals(2, expression.line)
         assertEquals(39, expression.charPositionInLine)
         assertEquals(0, query.orderByExpressions[Scope.Event]!!.size)

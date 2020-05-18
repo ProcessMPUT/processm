@@ -290,7 +290,10 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             standardAndAllAttributesMatch(log, trace)
 
             assertTrue(trace.events.count() > 0)
-            assertTrue(trace.events.map { it.attributes["result"] }.filterNotNull().any())
+            assertTrue(
+                trace.events.map { it.attributes["result"] }.filterNotNull().any()
+                        || Integer.parseInt(trace.conceptName) < 0
+            )
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
                 assertTrue(event.timeTimestamp!!.isAfter(begin))

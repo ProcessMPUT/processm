@@ -69,35 +69,17 @@ func        : FUNC_SCALAR0 '(' ')'
             | FUNC_AGGR '(' ID ')'              // Note: Aggregation functions can only take a column identifier as an argument
             ;
 
-cmp         : OP_LT
-            | OP_LE
-            | OP_EQ
-            | OP_NEQ
-            | OP_GT
-            | OP_GE
-            ;
-
-cmp_null    : OP_IS_NULL
-            | OP_IS_NOT_NULL
-            ;
-
-cmp_func    : OP_MATCHES
-            | OP_LIKE
-            ;
-
-cmp_in      : OP_IN
-            | OP_NOT_IN
-            ;
-
 // The order of productions reflects the operator precedence
 logic_expr  : '(' logic_expr ')'
-            | arith_expr cmp_in '(' id_or_scalar_list ')'
-            | arith_expr cmp_func STRING
-            | arith_expr cmp arith_expr
-            | arith_expr cmp_null
+            | arith_expr (OP_IN | OP_NOT_IN) in_list
+            | arith_expr (OP_MATCHES | OP_LIKE) STRING
+            | arith_expr (OP_LT | OP_LE | OP_EQ | OP_NEQ | OP_GT | OP_GE) arith_expr
+            | arith_expr (OP_IS_NULL | OP_IS_NOT_NULL)
             | OP_NOT logic_expr
             | logic_expr OP_AND logic_expr
             | logic_expr OP_OR logic_expr
             ;
+
+in_list     : '(' id_or_scalar_list ')' ;
 
 id_or_scalar_list : (ID | scalar) (',' (ID | scalar))* ;

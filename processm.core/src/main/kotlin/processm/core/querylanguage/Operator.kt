@@ -46,10 +46,22 @@ class Operator(
         else -> throwUndefined()
     }
 
-    override fun toString(): String = when (children.size) {
-        0 -> value
-        1 -> "$value${children[0]}"
-        else -> children.joinToString(value)
+    val operatorType: OperatorType
+        get() = when (value) {
+            "*", "/", "+", "-",
+            "like", "matches",
+            "and", "or",
+            "=", "!=", "<", "<=", ">", ">=",
+            "in", "not in" -> OperatorType.Infix
+            "not" -> OperatorType.Prefix
+            "is null", "is not null" -> OperatorType.Postfix
+            else -> throwUndefined()
+        }
+
+    override fun toString(): String = when (operatorType) {
+        OperatorType.Prefix -> children.joinToString(" ", prefix = value + " ")
+        OperatorType.Infix -> children.joinToString(" $value ")
+        OperatorType.Postfix -> children.joinToString(" ", postfix = " " + value)
     }
 
     private fun throwUndefined(): Nothing =
