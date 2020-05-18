@@ -235,10 +235,18 @@ inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(Hash
 inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
 
 /**
- * Returns an array containing the results of applying the given [transform] function
- * to each element in the original collection.
+ * Returns an [Array] containing the results of applying the given [transform] function
+ * to each element in the original [Collection].
  */
 inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
+    Array<R>(this.size) { _ -> transform(it.next()) }
+}
+
+/**
+ * Returns an [Array] containing the results of applying the given [transform] function
+ * to each element in the original [Array].
+ */
+inline fun <T, reified R> Array<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
     Array<R>(this.size) { _ -> transform(it.next()) }
 }
 

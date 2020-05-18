@@ -60,6 +60,26 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
             requireNotNull(s.upper) { "Line $line position $charPositionInLine: It is not supported to hoist a scope beyond the log scope." }
         }
 
+    override val type: Type
+        get() = if (this.isStandard && !this.isClassifier) {
+            when (this.standardName) {
+                "concept:name", "concept:instance",
+                "cost:currency",
+                "identity:id",  // TODO: change type to Type.ID / Type.UUID in issue #81
+                "lifecycle:model", "lifecycle:transition", "lifecycle:state",
+                "org:resource", "org:role", "org:group",
+                "xes:version", "xes:features" -> Type.String
+                "db:id", "cost:total" -> Type.Number
+                "time:timestamp" -> Type.Datetime
+                else -> throw IllegalArgumentException("Line $line position $charPositionInLine: Unknown type of attribute $standardName.")
+            }
+        } else {
+            Type.Unknown
+        }
+
+    override val expectedChildrenTypes: Array<Type>
+        get() = emptyArray()
+
     /**
      * The name of this attribute as specified in PQL.
      */

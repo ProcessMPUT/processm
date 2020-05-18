@@ -749,7 +749,7 @@ class QueryTests {
         assertEquals(0, query.selectExpressions[Scope.Trace]!!.size)
         assertEquals(3, query.selectExpressions[Scope.Event]!!.size)
         assertTrue(query.selectExpressions[Scope.Event]!!.all { !it.isTerminal })
-        assertTrue(query.selectExpressions[Scope.Event]!!.all { it is Function && it.type == FunctionType.Aggregation })
+        assertTrue(query.selectExpressions[Scope.Event]!!.all { it is Function && it.functionType == FunctionType.Aggregation })
         assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
         assertEquals(0, query.groupByStandardAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.groupByStandardAttributes[Scope.Event]!!.size)
@@ -791,7 +791,7 @@ class QueryTests {
         assertEquals(0, query.selectExpressions[Scope.Trace]!!.size)
         assertEquals(0, query.selectExpressions[Scope.Event]!!.size)
         assertTrue(query.selectExpressions[Scope.Log]!!.all { !it.isTerminal })
-        assertTrue(query.selectExpressions[Scope.Log]!!.all { it is Function && it.type == FunctionType.Aggregation })
+        assertTrue(query.selectExpressions[Scope.Log]!!.all { it is Function && it.functionType == FunctionType.Aggregation })
         assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
         assertEquals(0, query.groupByStandardAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.groupByStandardAttributes[Scope.Event]!!.size)
@@ -852,7 +852,7 @@ class QueryTests {
         assertEquals(OrderDirection.Ascending, query.orderByExpressions[Scope.Trace]!![0].direction)
         assertTrue(query.orderByExpressions[Scope.Trace]!![0].base.let {
             it is Function
-                    && it.type == FunctionType.Aggregation
+                    && it.functionType == FunctionType.Aggregation
                     && it.effectiveScope == Scope.Trace
                     && it.children[0].scope == Scope.Event
         })
@@ -876,7 +876,7 @@ class QueryTests {
         assertEquals(Scope.Trace, expression.effectiveScope)
         assertEquals("[log:basePrice]*avg(^event:cost:total)*3.141592", expression.toString())
         assertEquals(2, expression.line)
-        assertEquals(9, expression.charPositionInLine)
+        assertEquals(39, expression.charPositionInLine)
         assertEquals(0, query.orderByExpressions[Scope.Event]!!.size)
     }
 

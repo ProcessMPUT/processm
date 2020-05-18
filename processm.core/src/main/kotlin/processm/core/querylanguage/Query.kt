@@ -269,7 +269,7 @@ class Query(val query: String) {
         toValidate
             .flatMap { it.value }
             .flatMap {
-                it.filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                it.filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
                     .filterIsInstance<Attribute>()
                     .asIterable()
             }
@@ -295,7 +295,7 @@ class Query(val query: String) {
 
     private fun validateImplicitGroupBy(toValidate: Iterable<Expression>) {
         val anyAggregation = toValidate
-            .any { it.filter { it is Function && it.type == FunctionType.Aggregation }.any() }
+            .any { it.filter { it is Function && it.functionType == FunctionType.Aggregation }.any() }
 
         if (anyAggregation) {
             // implicit group by for sure
@@ -323,7 +323,7 @@ class Query(val query: String) {
 
             val nonaggregated = toValidate
                 .flatMap {
-                    it.filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                    it.filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
                         .filterIsInstance<Attribute>()
                         .asIterable()
                 }
@@ -382,7 +382,7 @@ class Query(val query: String) {
         override fun exitWhere(ctx: QLParser.WhereContext?) {
             whereExpression = parseExpression(ctx!!.children[1])
             val aggregation = whereExpression
-                .filter { it is Function && it.type == FunctionType.Aggregation }
+                .filter { it is Function && it.functionType == FunctionType.Aggregation }
                 .firstOrNull()
             if (aggregation !== null)
                 errorListener.delayedThrow(
@@ -508,7 +508,7 @@ class Query(val query: String) {
 
         private fun validateHoisting(expression: Expression) {
             val hoisted = expression
-                .filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                .filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
                 .filter { it is Attribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()
 
             if (hoisted !== null)
@@ -519,25 +519,64 @@ class Query(val query: String) {
                 )
         }
 
-        private fun parseExpression(ctx: ParseTree): Expression {
+        private fun validateTypes(expression: IExpression) {
+            assert(expression.filter { it.type == Type.Any }.firstOrNull() === null)
+            assert(expression.filter { it.expectedChildrenTypes.any { it == Type.Unknown } }.firstOrNull() === null)
+
+            for (i in expression.children.indices) {
+
+                if (expression.expectedChildrenTypes[i] != Type.Any && expression.children[i].type != Type.Unknown /* determined at run time */) {
+                    if (expression.expectedChildrenTypes[i] != expression.children[i].type) {
+                        errorListener.delayedThrow(
+                            IllegalArgumentException(
+                                "Line ${expression.line} position ${expression.charPositionInLine}: Expected ${expression.expectedChildrenTypes[i]} but ${expression.children[i].type} found."
+                            )
+                        )
+                    }
+                }
+
+                validateTypes(expression.children[i])
+            }
+        }
+
+        private fun parseExpression(ctx: ParseTree): Expression = parseExpressionInternal(ctx).also {
+            validateTypes(it)
+        }
+
+        private fun parseExpressionInternal(ctx: ParseTree): Expression {
             if (ctx.childCount == 0) {
                 // terminal
                 val token = ctx.payload as? Token ?: return Expression.empty
                 return parseToken(token)
             }
-            val token = ctx.getChild(0).payload as? Token
-            with(token) {
+            val token = (0 until ctx.childCount)
+                .map { it to (ctx.getChild(it).payload as? Token) }
+                .firstOrNull { it.second !== null }
+            with(token?.second) {
                 return when (this?.type) {
                     QLParser.FUNC_SCALAR0 -> Function(text, line, charPositionInLine)
                     QLParser.FUNC_SCALAR1, QLParser.FUNC_AGGR -> Function(
                         text,
                         line,
                         charPositionInLine,
-                        parseExpression(ctx.getChild(2))
+                        parseExpressionInternal(ctx.getChild(2))
                     )
+                    QLParser.OP_ADD, QLParser.OP_SUB,
+                    QLParser.OP_MUL, QLParser.OP_DIV,
+                    QLParser.OP_AND, QLParser.OP_OR, QLParser.OP_NOT,
+                    QLParser.OP_EQ, QLParser.OP_NEQ, QLParser.OP_GE, QLParser.OP_GT, QLParser.OP_LE, QLParser.OP_LT,
+                    QLParser.OP_LIKE, QLParser.OP_MATCHES,
+                    QLParser.OP_IN, QLParser.OP_NOT_IN,
+                    QLParser.OP_IS_NULL, QLParser.OP_IS_NOT_NULL -> Operator(
+                        text,
+                        line,
+                        charPositionInLine,
+                        *Array(ctx.childCount - 1) {
+                            parseExpressionInternal(ctx.getChild(if (it < token!!.first) it else it + 1))
+                        })
                     else -> {
-                        if (ctx.childCount == 1) parseExpression(ctx.getChild(0))
-                        else Expression(*Array(ctx.childCount) { parseExpression(ctx.getChild(it)) })
+                        if (ctx.childCount == 1) parseExpressionInternal(ctx.getChild(0))
+                        else Expression(*Array(ctx.childCount) { parseExpressionInternal(ctx.getChild(it)) })
                     }
                 }
             }
@@ -551,7 +590,7 @@ class Query(val query: String) {
                 QLParser.DATETIME -> DateTimeLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.STRING -> StringLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.NULL -> NullLiteral(token.text, token.line, token.charPositionInLine)
-                else -> Operator(token.text, token.line, token.charPositionInLine)
+                else -> AnyExpression(token.text, token.line, token.charPositionInLine)
             }
         } catch (e: Exception) {
             errorListener.delayedThrow(e)

@@ -14,48 +14,71 @@ class Function(
     Expression(*arguments) {
     companion object {
         private val scalarFunctions = mapOf(
-            "date" to 1,
-            "time" to 1,
-            "year" to 1,
-            "month" to 1,
-            "day" to 1,
-            "hour" to 1,
-            "minute" to 1,
-            "second" to 1,
-            "millisecond" to 1,
-            "quarter" to 1,
-            "dayofweek" to 1,
-            "now" to 0,
-            "upper" to 1,
-            "lower" to 1,
-            "round" to 1
+            "date" to 1.toByte(),
+            "time" to 1.toByte(),
+            "year" to 1.toByte(),
+            "month" to 1.toByte(),
+            "day" to 1.toByte(),
+            "hour" to 1.toByte(),
+            "minute" to 1.toByte(),
+            "second" to 1.toByte(),
+            "millisecond" to 1.toByte(),
+            "quarter" to 1.toByte(),
+            "dayofweek" to 1.toByte(),
+            "now" to 0.toByte(),
+            "upper" to 1.toByte(),
+            "lower" to 1.toByte(),
+            "round" to 1.toByte()
         )
 
         private val aggregationFunctions = mapOf(
-            "min" to 1,
-            "max" to 1,
-            "avg" to 1,
-            "count" to 1,
-            "sum" to 1
+            "min" to 1.toByte(),
+            "max" to 1.toByte(),
+            "avg" to 1.toByte(),
+            "count" to 1.toByte(),
+            "sum" to 1.toByte()
         )
+    }
+
+    override val type: Type
+        get() = when (name) {
+            "date", "time", "now" -> Type.Datetime
+            "year", "month", "day", "hour", "minute", "second", "millisecond", "quarter", "dayofweek",
+            "round", "avg", "sum", "count" -> Type.Number
+            "upper", "lower" -> Type.String
+            "min", "max" -> children.map { it.type }.first()  // depends on children' types
+            else -> throwUndefined()
+        }
+
+    override val expectedChildrenTypes: Array<Type> = when (name) {
+        "date", "time", "year", "month", "day", "hour", "minute", "second", "millisecond", "quarter", "dayofweek"
+        -> arrayOf(Type.Datetime)
+        "round", "avg", "sum" -> arrayOf(Type.Number)
+        "count" -> arrayOf(Type.Any)
+        "upper", "lower" -> arrayOf(Type.String)
+        "min", "max" -> arrayOf(Type.Any)
+        "now" -> emptyArray()
+        else -> throwUndefined()
     }
 
     /**
      * The type of this function.
      */
-    val type: FunctionType
+    val functionType: FunctionType = when (name) {
+        in scalarFunctions -> FunctionType.Scalar
+        in aggregationFunctions -> FunctionType.Aggregation
+        else -> throwUndefined()
+    }
 
     init {
-        type = when (name) {
-            in scalarFunctions -> FunctionType.Scalar
-            in aggregationFunctions -> FunctionType.Aggregation
-            else -> throw IllegalArgumentException("Line $line position $charPositionInLine: Call of an undefined function $name.")
-        }
         val validArguments = scalarFunctions[name] ?: aggregationFunctions[name]
-        require(children.size == validArguments) {
+        require(children.size.toByte() == validArguments) {
             "Line $line position $charPositionInLine: Invalid number of arguments supplied to function $name: ${children.size} given, $validArguments expected."
         }
     }
 
     override fun toString(): String = "$name(${children.joinToString(", ")})"
+
+    private fun throwUndefined(): Nothing =
+        throw IllegalArgumentException("Line $line position $charPositionInLine: Call of an undefined function $name.")
 }

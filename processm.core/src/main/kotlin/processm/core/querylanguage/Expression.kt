@@ -43,6 +43,12 @@ open class Expression(final override vararg val children: IExpression) : IExpres
         return effectiveScope
     }
 
+    override val type: Type
+        get() = Type.Unknown
+
+    override val expectedChildrenTypes: Array<Type>
+        get() = Array<Type>(children.size) { Type.Any }
+
     /**
      * Indicates whether this is a terminal node of an expression tree.
      */

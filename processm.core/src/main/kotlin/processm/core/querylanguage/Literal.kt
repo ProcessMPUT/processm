@@ -22,6 +22,9 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
 
     final override val scope: Scope?
 
+    final override val expectedChildrenTypes: Array<Type>
+        get() = emptyArray()
+
     /**
      * The parsed value of the literal. This property is stronly-typed.
      */
@@ -54,6 +57,10 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
  */
 class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<String>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.String
+
     override fun parse(literal: String): String {
         require((literal[0] == '"' || literal[0] == '\'') && literal[0] == literal[literal.length - 1]) {
             "Line $line position $charPositionInLine: Invalid format of string literal: $literal."
@@ -143,6 +150,9 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
         )
     }
 
+    override val type: Type
+        get() = Type.Datetime
+
     override fun parse(literal: String): Instant {
         val datetime = literal.substring(1)
         var exception: DateTimeParseException? = null
@@ -169,6 +179,10 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
  */
 class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<Double>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.Number
+
     override fun parse(literal: String): Double = literal.toDouble()
 }
 
@@ -177,6 +191,10 @@ class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
  */
 class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<Boolean>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.Boolean
+
     override fun parse(literal: String): Boolean = when (literal) {
         "true" -> true
         "false" -> false
@@ -191,5 +209,9 @@ class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
  */
 class NullLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<Any?>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.Unknown
+
     override fun parse(literal: String): Any? = null
 }
