@@ -19,7 +19,6 @@ import processm.services.api.models.GroupRole
 
 @KtorExperimentalLocationsAPI
 fun Route.GroupsApi() {
-
     authenticate {
         route("/groups/{groupId}/members") {
             post {
@@ -51,7 +50,9 @@ fun Route.GroupsApi() {
         get<Paths.getGroup> { group: Paths.getGroup ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.OK, GroupMessageBody(Group(group.groupId, GroupRole.owner, group.groupId)))
+            call.respond(
+                HttpStatusCode.OK, GroupMessageBody(Group(group.groupId.toString(), GroupRole.owner, group.groupId))
+            )
         }
 
 
