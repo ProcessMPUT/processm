@@ -1,8 +1,7 @@
 import Vue from "vue";
 import { BaseAPI } from "@/openapi/base";
 import axios, { AxiosInstance, AxiosError } from "axios";
-import { Configuration } from "@/openapi";
-import { UsersApi } from "@/openapi";
+import { Configuration, UsersApi, OrganizationsApi } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
 export default abstract class BaseService {
@@ -33,6 +32,10 @@ export default abstract class BaseService {
 
   protected get usersApi() {
     return this.getGenericClient(UsersApi);
+  }
+
+  protected get organizationsApi() {
+    return this.getGenericClient(OrganizationsApi);
   }
 
   private prolongExistingSession(

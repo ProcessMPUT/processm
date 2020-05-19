@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
+import processm.services.ilike
 import java.util.*
 
 object OrganizationRoles : UUIDTable("organization_roles") {
@@ -17,15 +18,15 @@ class OrganizationRole(id: EntityID<UUID>) : UUIDEntity(id) {
 }
 
 fun OrganizationRoles.getIdByName(organizationRole: OrganizationRoleDto): EntityID<UUID> {
-    return OrganizationRole.find { name eq organizationRole.roleName }.first().id //OrganizationRoles.select { name. eq organizationRole.nameInDatabase }.map { it[id] }.first()
+    return OrganizationRole.find { name ilike organizationRole.roleName }.first().id
 }
 
-enum class OrganizationRoleDto(val id: UUID, val roleName: String) {
-    Owner(UUID.fromString("b8cd11db-b386-4f1d-bd94-f491e591dc20"),"owner"),
-    Writer(UUID.fromString("c26bc1ec-946d-4975-8651-a763a9609b7e"),"writer"),
-    Reader(UUID.fromString("5939d0fe-2c7e-4e0d-9469-a14dc0db4db0"),"reader");
+enum class OrganizationRoleDto(val roleName: String) {
+    Owner("owner"),
+    Writer("writer"),
+    Reader("reader");
 
     companion object {
-        fun byNameInDatabase(nameInDatabase: String) = OrganizationRoleDto.values().first {it.roleName == nameInDatabase }
+        fun byNameInDatabase(nameInDatabase: String) = values().first {it.roleName == nameInDatabase }
     }
 }

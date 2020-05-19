@@ -8,10 +8,10 @@ import io.ktor.request.header
 import io.ktor.server.testing.handleRequest
 import io.mockk.*
 import org.awaitility.Awaitility.await
-import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import processm.services.api.models.*
 import processm.services.logic.ValidationException
+import processm.services.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.random.Random
@@ -34,9 +34,14 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to successful authentication with 201 and token`() = withConfiguredTestApplication {
         every { accountService.verifyUsersCredentials("user@example.com", "pass") } returns mockk {
-            every { id } returns EntityID<UUID>(UUID.randomUUID(), mockk())
+            every { id } returns UUID.randomUUID()
             every { email } returns "user@example.com"
         }
+        every { accountService.getRolesAssignedToUser(userId = any()) } returns listOf(
+            mockk {
+                every { organization.id } returns UUID.randomUUID()
+                every { this@mockk.role } returns OrganizationRoleDto.Owner
+            })
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -359,7 +364,7 @@ class UsersApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to locale change attempt with invalid locale format with 404 and error message`() =
+    fun `responds to locale change attempt with invalid locale format with 400 and error message`() =
         withConfiguredTestApplication {
             every {
                 accountService.changeLocale(
@@ -396,5 +401,30 @@ class UsersApiTest : BaseApiTest() {
             }
 
             verify(exactly = 0) { accountService.changeLocale(userId = any(), locale = any()) }
+        }
+
+    @Test
+    fun `responds to user roles request with 200 and user roles list`() =
+        withConfiguredTestApplication {
+            val userId = UUID.randomUUID()
+            withAuthentication(userId) {
+                every { accountService.getRolesAssignedToUser(userId) } returns listOf(
+                        mockk {
+                            every { user.id } returns userId
+                            every { organization.id } returns UUID.randomUUID()
+                            every { organization.name } returns "Org1"
+                            every { role } returns OrganizationRoleDto.Writer
+                        }
+                    )
+
+                with(handleRequest(HttpMethod.Get, "/api/users/me/organizations")) {
+                    assertEquals(HttpStatusCode.OK, response.status())
+                    val deserializedContent = response.deserializeContent<UserOrganizationCollectionMessageBody>()
+                    assertEquals(1, deserializedContent.data.count())
+                    assertTrue { deserializedContent.data.any {it.name == "Org1" && it.organizationRole == OrganizationRole.writer }}
+                }
+            }
+
+            verify { accountService.getRolesAssignedToUser(userId = any()) }
         }
 }

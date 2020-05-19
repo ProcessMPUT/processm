@@ -31,7 +31,7 @@
             <user-list />
           </v-tab-item>
           <v-tab-item value="groups">
-            {{ tab }}
+            <user-group-list />
           </v-tab-item>
         </v-tabs-items>
       </v-col>
@@ -53,9 +53,10 @@ import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
 import { OrganizationMember } from "@/openapi/model";
 import UserList from "./UserList.vue";
+import UserGroupList from "./UserGroupList.vue";
 
 @Component({
-  components: { UserList }
+  components: { UserList, UserGroupList }
 })
 export default class Users extends Vue {
   @Inject() organizationService!: OrganizationService;

@@ -16,8 +16,11 @@ import io.ktor.routing.routing
 import io.ktor.util.KtorExperimentalAPI
 import org.koin.dsl.module
 import org.koin.ktor.ext.Koin
+import org.koin.ktor.ext.get
 import processm.services.api.*
 import processm.services.logic.AccountService
+import processm.services.logic.GroupService
+import processm.services.logic.OrganizationService
 
 @KtorExperimentalLocationsAPI
 @KtorExperimentalAPI
@@ -35,7 +38,9 @@ fun Application.apiModule() {
     install(DataConversion, ApplicationDataConversionConfiguration())
     install(Koin) {
         modules(module {
-            single { AccountService() }
+            single { AccountService(get()) }
+            single { OrganizationService() }
+            single { GroupService() }
         })
     }
 

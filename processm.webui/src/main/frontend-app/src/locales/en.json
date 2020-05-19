@@ -5,7 +5,7 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
-    "users": "Users",
+    "users": "@:users.page-title",
     "about": "@:about.page-title"
   },
   "topbar": {
@@ -36,6 +36,11 @@
   "user-profile": {
     "language": "Language",
     "change-password": "Change password"
+  },
+  "users": {
+    "page-title": "Users",
+    "users": "Users",
+    "groups": "Groups"
   },
   "rename-dialog": {
     "dialog-title": "Rename",

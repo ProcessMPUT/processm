@@ -1,0 +1,71 @@
+package processm.services.logic
+
+import org.junit.Before
+import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import processm.services.models.*
+import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+class OrganizationServiceTest : ServiceTestBase() {
+
+    @Before
+    @BeforeEach
+    fun setUp() {
+        organizationService = OrganizationService()
+    }
+
+    lateinit var organizationService: OrganizationService
+
+    @Test
+    fun `getting organization members throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
+        val exception = assertFailsWith<ValidationException>("Specified organization does not exist") {
+            organizationService.getOrganizationMembers(UUID.randomUUID())
+        }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `returns all members attached to organization`(): Unit = withCleanTables(Organizations, Users, UsersRolesInOrganizations) {
+        val organizationId1 = createOrganization()
+        val organizationId2 = createOrganization()
+        val userId1 = createUser("user1@example.com")
+        val userId2 = createUser("user2@example.com")
+        val userId3 = createUser("user3@example.com")
+        attachUserToOrganization(userId1.value, organizationId1.value)
+        attachUserToOrganization(userId2.value, organizationId2.value)
+        attachUserToOrganization(userId3.value, organizationId1.value)
+
+        val organizationMembers = organizationService.getOrganizationMembers(organizationId1.value)
+
+        assertEquals(2, organizationMembers.count())
+        assertTrue { organizationMembers.any { it.user.email == "user1@example.com" } }
+        assertTrue { organizationMembers.any { it.user.email == "user3@example.com" } }
+    }
+
+    @Test
+    fun `getting organization groups throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
+        val exception = assertFailsWith<ValidationException>("Specified organization does not exist") {
+            organizationService.getOrganizationGroups(UUID.randomUUID())
+        }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `returns all groups related to organization`(): Unit = withCleanTables(Organizations, UserGroups) {
+        val organizationId1 = createOrganization()
+        val organizationId2 = createOrganization()
+        val groupId1 = createGroup(organizationId1.value)
+        val groupId3 = createGroup(organizationId1.value)
+        createGroup(organizationId2.value)
+
+        val organizationGroups = organizationService.getOrganizationGroups(organizationId1.value)
+        assertEquals(2, organizationGroups.count())
+        assertTrue { organizationGroups.any { it.id == groupId1.value } }
+        assertTrue { organizationGroups.any { it.id == groupId3.value } }
+    }
+}

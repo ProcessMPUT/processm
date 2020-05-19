@@ -36,9 +36,15 @@ fun Route.UsersApi() {
                 credentials != null -> {
                     val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
                         ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
+                    val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
+                        .map { it.organization.id to OrganizationRole.valueOf(it.role.roleName) }.toMap()
                     val token = JwtAuthentication.createToken(
-                        user.id.value, user.email, Instant.now().plus(jwtTokenTtl), jwtIssuer, jwtSecret
-                    )
+                        user.id,
+                        user.email,
+                        userRolesInOrganizations,
+                        Instant.now().plus(jwtTokenTtl),
+                        jwtIssuer,
+                        jwtSecret)
 
                     call.respond(
                         HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token))
@@ -78,12 +84,12 @@ fun Route.UsersApi() {
     authenticate {
         get<Paths.getUserAccountDetails> { _: Paths.getUserAccountDetails ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val userAccountDetails = accountService.getAccountDetails(principal.userId)
+            val userAccount = accountService.getAccountDetails(principal.userId)
 
             call.respond(
                 HttpStatusCode.OK, UserAccountInfoMessageBody(
                     UserAccountInfo(
-                        userAccountDetails.email, userAccountDetails.locale
+                        userAccount.email, userAccount.locale
                     )
                 )
             )
@@ -118,6 +124,15 @@ fun Route.UsersApi() {
                     call.respond(HttpStatusCode.OK)
                 }
             }
+        }
+
+        get<Paths.getUserOrganizations> {  _: Paths.getUserOrganizations ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            val userOrganizations = accountService.getRolesAssignedToUser(principal.userId)
+                .map { UserOrganization(it.organization.id, it.organization.name, OrganizationRole.valueOf(it.role.roleName)) }
+                .toTypedArray()
+
+            call.respond(HttpStatusCode.OK, UserOrganizationCollectionMessageBody(userOrganizations))
         }
 
         get<Paths.getUsers> { _: Paths.getUsers ->

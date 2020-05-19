@@ -12,12 +12,14 @@ import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
-import processm.services.api.models.Organization
-import processm.services.api.models.OrganizationCollectionMessageBody
-import processm.services.api.models.OrganizationMessageBody
+import org.koin.ktor.ext.inject
+import processm.services.api.models.*
+import processm.services.logic.OrganizationService
 
 @KtorExperimentalLocationsAPI
 fun Route.OrganizationsApi() {
+    val organizationService by inject<OrganizationService>()
+
     authenticate {
         route("/organizations/{organizationId}/members") {
             post {
@@ -50,10 +52,33 @@ fun Route.OrganizationsApi() {
         }
 
 
-        get<Paths.getOrganizationMembers> { _: Paths.getOrganizationMembers ->
-            val principal = call.authentication.principal<ApiUser>()
+        get<Paths.getOrganizationGroups> {  organization: Paths.getOrganizationGroups ->
+            val principal = call.authentication.principal<ApiUser>()!!
 
-            call.respond(HttpStatusCode.NotImplemented)
+            if (!principal.organizations.containsKey(organization.organizationId)) {
+                throw ApiException("User is not member of organization with provided id", HttpStatusCode.Forbidden)
+            }
+
+            val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
+                .map { Group(it.name ?: "", it.isImplicit, it.organization.id, GroupRole.reader, it.id) }
+                .toTypedArray()
+
+            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(organizationGroups))
+        }
+
+
+        get<Paths.getOrganizationMembers> { organization: Paths.getOrganizationMembers ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            if (!principal.organizations.containsKey(organization.organizationId)) {
+                throw ApiException("User is not member of organization with provided id", HttpStatusCode.Forbidden)
+            }
+
+            val organizationMembers = organizationService.getOrganizationMembers(organization.organizationId)
+                .map { OrganizationMember(it.user.id, it.user.email, OrganizationRole.valueOf(it.role.roleName)) }
+                .toTypedArray()
+
+            call.respond(HttpStatusCode.OK, OrganizationMemberCollectionMessageBody(organizationMembers))
         }
 
 

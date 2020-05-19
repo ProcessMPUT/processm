@@ -25,4 +25,10 @@ class User(id: EntityID<UUID>) : UUIDEntity(id) {
     var password by Users.password
     var locale by Users.locale
     var organizations by Organization via UsersRolesInOrganizations
+    // do not declare the following until exposed supports DAO with composite key
+    // val rolesInOrganizations by UserRolesInOrganizations referrersOn UsersRolesInOrganizations.userId
+
+    fun toDto() = UserDto(id.value, email, locale)
 }
+
+data class UserDto(val id: UUID, val email: String, val locale: String)
