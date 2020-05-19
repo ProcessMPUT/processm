@@ -5,6 +5,7 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
+    "users": "Users",
     "about": "@:about.page-title"
   },
   "topbar": {

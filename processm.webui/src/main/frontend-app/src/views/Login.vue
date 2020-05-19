@@ -61,6 +61,7 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
+import UserOrganization from "@/models/UserOrganization";
 
 @Component
 export default class Login extends Vue {
@@ -82,6 +83,8 @@ export default class Login extends Vue {
       await this.accountService.signIn(this.username, this.password);
       const { language } = await this.accountService.getAccountDetails();
       this.setLanguage(language);
+      const organizations = await this.accountService.getOrganizations();
+      this.setCurrentOrganization(organizations);
       this.$router.push({ name: "home" });
     } catch (error) {
       this.errorMessage = true;
@@ -91,6 +94,19 @@ export default class Login extends Vue {
   setLanguage(language: string) {
     if (this.$i18n.availableLocales.includes(language)) {
       this.$i18n.locale = language;
+    }
+  }
+
+  setCurrentOrganization(userOrganizations: UserOrganization[]) {
+    if (userOrganizations.length > 1) {
+      //TODO: the current user is associated with more than one organization,
+      //display a modal which allows the user to chooose the organization context
+      this.$sessionStorage.currentOrganizationIndex = 0; // temporary: always choose the first organization
+    } else if (userOrganizations.length == 1) {
+      this.$sessionStorage.currentOrganizationIndex = 0;
+    } else {
+      //TODO: user is not assigned to any organization
+      //display the error on the global snackbar
     }
   }
 }

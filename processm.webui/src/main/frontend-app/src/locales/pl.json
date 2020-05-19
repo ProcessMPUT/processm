@@ -4,6 +4,7 @@
   "flag": "pl",
   "navigation": {
     "workspaces": "Przestrzenie robocze",
+    "users": "Użytkownicy",
     "about": "@:about.page-title"
   },
   "topbar": {
