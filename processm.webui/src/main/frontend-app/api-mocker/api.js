@@ -12,9 +12,64 @@ const workspaces = [
   }
 ];
 
-const users = {};
+const users = [
+  {
+    userId: 10,
+    username: "ed@example.com",
+    organizationId: "1",
+    organizationName: "Org1",
+    organizationRole: "writer",
+    password: "pass",
+    locale: "en_GB"
+  },
+  {
+    userId: 12,
+    username: "bob@example.com",
+    organizationId: "1",
+    organizationName: "Org1",
+    organizationRole: "writer",
+    password: "pass",
+    locale: "en_GB"
+  },
+  {
+    userId: 28,
+    username: "tyron@example.com",
+    organizationId: "1",
+    organizationName: "Org1",
+    organizationRole: "reader",
+    password: "pass",
+    locale: "en_GB"
+  },
+  {
+    userId: 29,
+    username: "james@example.com",
+    organizationId: "1",
+    organizationName: "Org1",
+    organizationRole: "reader",
+    password: "pass",
+    locale: "en_GB"
+  },
+  {
+    userId: 31,
+    username: "andy@example.com",
+    organizationId: "1",
+    organizationName: "Org1",
+    organizationRole: "reader",
+    password: "pass",
+    locale: "en_GB"
+  },
+  {
+    userId: 33,
+    username: "eva@example.com",
+    organizationId: "1",
+    organizationName: "Org1",
+    organizationRole: "owner",
+    password: "pass",
+    locale: "en_GB"
+  }
+];
 
-const userSessions = {};
+const userSessions = [];
 
 const api = {
   "GET /api/workspaces": { data: workspaces },
@@ -68,8 +123,9 @@ const api = {
     const credentials = req.body.data;
 
     if (
-      !_.has(users, credentials.username) ||
-      credentials.password !== users[credentials.username].password
+      !_.some(users, { username: credentials.login }) ||
+      credentials.password !==
+        _.find(users, { username: credentials.login }).password
     ) {
       return res.status(401).json();
     }
@@ -82,7 +138,7 @@ const api = {
         .toString(36)
         .substring(2, 15);
 
-    _.set(userSessions, sessionToken, credentials.username);
+    _.set(userSessions, sessionToken, credentials.login);
 
     return res.status(201).json({
       data: {
@@ -101,11 +157,15 @@ const api = {
     const { userEmail, organizationName } = req.body.data;
 
     if (organizationName !== "org1" && userEmail !== "user1@example.com") {
-      users[userEmail] = {
+      users.push({
+        userId: 1,
+        username: userEmail,
+        organizationId: "1",
         organizationName,
+        organizationRole: "owner",
         password: "pass",
-        locale: "en_US"
-      };
+        locale: "en_GB"
+      });
       res.status(201).json();
     } else {
       res.status(400).json();
@@ -114,32 +174,55 @@ const api = {
   "GET /api/users/me": (req, res) => {
     return res.json({
       data: {
-        username: _.get(_.keys(users), 0),
-        locale: "en-US"
+        username: _.find(users, { userId: 1 }).username,
+        locale: "en-GB"
       }
     });
   },
   "PATCH /api/users/me/password": (req, res) => {
     const { currentPassword, newPassword } = req.body.data;
-    const username = _.get(_.keys(users), 0);
+    const user = _.find(users, { userId: 1 });
 
-    if (users[username].password !== currentPassword) {
+    if (user.password !== currentPassword) {
       return res
         .status(403)
         .json({ error: "The current password is not valid" });
     }
 
-    users[username].password = newPassword;
+    user.password = newPassword;
 
     return res.status(202).json();
   },
   "PATCH /api/users/me/locale": (req, res) => {
     const { locale } = req.body.data;
-    const username = _.get(_.keys(users), 0);
+    const user = _.find(users, { userId: 1 });
 
-    users[username].locale = locale;
+    user.locale = locale;
 
     return res.status(202).json();
+  },
+  "GET /api/users/me/organizations": (req, res) => {
+    const user = _.find(users, { userId: 1 });
+
+    return res.json({
+      data: [
+        {
+          id: user.organizationId,
+          name: user.organizationName,
+          organizationRole: user.organizationRole
+        }
+      ]
+    });
+  },
+  "GET /api/organizations/:organizationId/members": (req, res) => {
+    const { organizationId } = req.params;
+    const members = _.filter(users, { organizationId });
+
+    if (_.isEmpty(members)) {
+      return res.status(403).json();
+    }
+
+    return res.status(200).json({ data: members });
   }
 };
 

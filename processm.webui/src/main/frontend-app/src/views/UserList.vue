@@ -9,8 +9,8 @@
       { text: 'Role', value: 'organizationRole' }
     ]"
     :items="organizationMembers"
+    :loading="loading"
     item-key="id"
-    light
   ></v-data-table>
 </template>
 
@@ -24,12 +24,15 @@ import OrganizationMember from "@/models/OrganizationMember";
 export default class UserList extends Vue {
   @Inject() organizationService!: OrganizationService;
   organizationMembers: Array<OrganizationMember> = [];
+  loading = true;
 
   async mounted() {
+    this.loading = true;
     const currentOrganization = this.$sessionStorage.currentOrganization;
     this.organizationMembers = await this.organizationService.getOrganizationMembers(
       currentOrganization.id
     );
+    this.loading = false;
   }
 }
 </script>

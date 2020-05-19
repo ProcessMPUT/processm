@@ -12,13 +12,18 @@ import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
+import org.koin.ktor.ext.inject
 import processm.services.api.models.Group
 import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.GroupMessageBody
 import processm.services.api.models.GroupRole
+import processm.services.logic.GroupService
+import processm.services.logic.OrganizationService
 
 @KtorExperimentalLocationsAPI
 fun Route.GroupsApi() {
+    val groupService by inject<GroupService>()
+
     authenticate {
         route("/groups/{groupId}/members") {
             post {
@@ -48,10 +53,15 @@ fun Route.GroupsApi() {
 
 
         get<Paths.getGroup> { group: Paths.getGroup ->
-            val principal = call.authentication.principal<ApiUser>()
+            val principal = call.authentication.principal<ApiUser>()!!
+            val userGroup = groupService.getGroup(group.groupId)
+
+            if (!principal.organizations.containsKey(userGroup.organization.id)) {
+                throw ApiException("User is not member of organization containing group with provided id", HttpStatusCode.Forbidden)
+            }
 
             call.respond(
-                HttpStatusCode.OK, GroupMessageBody(Group(group.groupId.toString(), GroupRole.owner, group.groupId))
+                HttpStatusCode.OK, GroupMessageBody(Group(userGroup.name ?: "",userGroup.isImplicit, userGroup.organization.id, GroupRole.reader, userGroup.id))
             )
         }
 
@@ -70,18 +80,27 @@ fun Route.GroupsApi() {
         get<Paths.getGroups> { _: Paths.getGroups ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(emptyArray()))
-        }
-
-
-        get<Paths.getSubgroups> { _: Paths.getSubgroups ->
-            val principal = call.authentication.principal<ApiUser>()
-
             if (principal == null) {
                 call.respond(HttpStatusCode.Unauthorized)
             } else {
                 call.respond(HttpStatusCode.NotImplemented)
             }
+        }
+
+
+        get<Paths.getSubgroups> { group: Paths.getSubgroups ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            val userGroup = groupService.getGroup(group.groupId)
+
+            if (!principal.organizations.containsKey(userGroup.organization.id)) {
+                throw ApiException("User is not member of organization containing group with provided id", HttpStatusCode.Forbidden)
+            }
+
+            val subgroups = groupService.getSubgroups(userGroup.id)
+                .map { Group(it.name ?: "", it.isImplicit, it.organization.id,GroupRole.reader, it.id) }
+                .toTypedArray()
+
+            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(subgroups))
         }
 
 

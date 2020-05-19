@@ -78,6 +78,15 @@ object Paths {
     class getOrganization(val organizationId: java.util.UUID)
 
     /**
+    * Get groups associated with the organization
+    *
+    * @param organizationId Organization ID
+    */
+    @KtorExperimentalLocationsAPI
+    @Location("/organizations/{organizationId}/groups")
+    class getOrganizationGroups(val organizationId: java.util.UUID)
+
+    /**
      * Get members of specified organization
      *
      * @param organizationId Organization ID
@@ -120,6 +129,13 @@ object Paths {
     @KtorExperimentalLocationsAPI
     @Location("/users/me")
     class getUserAccountDetails
+
+    /**
+     * Get organizations which the current user is member of
+     *
+     */
+    @KtorExperimentalLocationsAPI
+    @Location("/users/me/organizations") class getUserOrganizations()
 
     /**
      * Get users associated with the current user by organization membership

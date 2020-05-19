@@ -151,6 +151,23 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
+  /users/me/organizations:
+    get:
+      tags:
+        - users
+      summary: Get organizations which the current user is member of
+      operationId: getUserOrganizations
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/UserOrganizationCollectionMessageBody'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
   /workspaces:
     get:
       tags:
@@ -617,7 +634,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
+                $ref: '#/components/schemas/OrganizationMemberCollectionMessageBody'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
     post:
@@ -666,6 +689,33 @@ paths:
       responses:
         '204':
           description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/groups:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - organizations
+      summary: Get groups associated with the organization
+      operationId: getOrganizationGroups
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/GroupCollectionMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -795,6 +845,44 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserInfo'
+    OrganizationMember:
+      type: object
+      required: [id, username, organizationRole]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        organizationRole:
+          $ref: '#/components/schemas/OrganizationRole'
+    OrganizationMemberCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationMember'
+    UserOrganization:
+      type: object
+      required: [id, name, organizationRole]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationRole:
+          $ref: '#/components/schemas/OrganizationRole'
+    UserOrganizationCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserOrganization'
     Workspace:
       type: object
       required: [name]
@@ -820,13 +908,18 @@ components:
             $ref: '#/components/schemas/Workspace'
     Group:
       type: object
-      required: [name, groupRole]
+      required: [name, groupRole, isImplicit, organizationId]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
+        isImplicit:
+          type: boolean
+        organizationId:
+          type: string
+          format: uuid
         groupRole:
           $ref: '#/components/schemas/GroupRole'
     GroupMessageBody:

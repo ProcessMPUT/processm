@@ -1,0 +1,146 @@
+package processm.services.logic
+
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
+import org.junit.Before
+import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertDoesNotThrow
+import processm.services.models.*
+import java.util.*
+import kotlin.test.*
+
+class GroupServiceTest : ServiceTestBase() {
+
+    @Before
+    @BeforeEach
+    fun setUp() {
+        groupService = GroupService()
+    }
+
+    lateinit var groupService: GroupService
+
+    @Test
+    fun `shared group creation throws if nonexistent organization`(): Unit = withCleanTables(Organizations, UserGroups) {
+        val exception = assertFailsWith<ValidationException>("Specified organization does not exist") {
+            groupService.ensureSharedGroupExists(UUID.randomUUID())
+        }
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `successful shared group creation returns`(): Unit = withCleanTables(Organizations, UserGroups) {
+        val organizationId = createOrganization("Org1")
+
+        val groupId= assertDoesNotThrow { groupService.ensureSharedGroupExists(organizationId.value) }
+
+        val sharedGroup = UserGroups.select { UserGroups.id eq groupId }.first()
+        assertEquals(organizationId.value, sharedGroup[UserGroups.organizationId].value)
+        assertEquals(true, sharedGroup[UserGroups.isImplicit])
+        assertEquals(null, sharedGroup[UserGroups.parentGroupId])
+    }
+
+    @Test
+    fun `ensuring shared group existence returns id of the existing group`(): Unit = withCleanTables(Organizations, UserGroups) {
+        val organizationId = createOrganization()
+
+        val groupId1= assertDoesNotThrow { groupService.ensureSharedGroupExists(organizationId.value) }
+        val groupId2= assertDoesNotThrow { groupService.ensureSharedGroupExists(organizationId.value) }
+
+        assertEquals(groupId1, groupId2)
+    }
+
+    @Test
+    fun `attachment of user to group throws if nonexistent user`(): Unit = withCleanTables(Organizations, UserGroups, Users) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(organizationId.value)
+        val userId = UUID.randomUUID()
+
+        val exception = assertFailsWith<ValidationException>("Specified user or organization does not exist") {
+            groupService.attachUserToGroup(userId, groupId.value)
+        }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `attachment of user to group throws if nonexistent group`(): Unit = withCleanTables(UserGroups, Users) {
+        val groupId = UUID.randomUUID()
+        val userId = createUser()
+
+        val exception = assertFailsWith<ValidationException>("Specified user or organization does not exist") {
+            groupService.attachUserToGroup(userId.value, groupId)
+        }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `attachment of already attached user to group returns`(): Unit = withCleanTables(Organizations, UserGroups, Users) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(organizationId.value)
+        val userId = createUser()
+
+        assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
+        assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
+
+        assertEquals(1, UsersInGroups.select { UsersInGroups.userId eq userId and(UsersInGroups.groupId eq groupId) }.count())
+    }
+
+    @Test
+    fun `successful attachment of user to group returns`(): Unit = withCleanTables(Organizations, UserGroups, Users) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(organizationId.value)
+        val userId = createUser()
+
+        assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
+
+        assertTrue { UsersInGroups.select { UsersInGroups.userId eq userId and(UsersInGroups.groupId eq groupId) }.any() }
+    }
+
+    @Test
+    fun `getting specified group throws if nonexistent group`(): Unit = withCleanTables(UserGroups) {
+        val exception = assertFailsWith<ValidationException>("Specified group does not exist") {
+            groupService.getGroup(UUID.randomUUID())
+        }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `getting specified group returns`(): Unit = withCleanTables(Organizations, UserGroups) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(organizationId.value, name = "Group1")
+
+        val group = assertNotNull(groupService.getGroup(groupId.value))
+
+        assertEquals("Group1", group.name)
+        assertEquals(organizationId.value, group.organization.id)
+    }
+
+    @Test
+    fun `getting subgroups throws if nonexistent group`(): Unit = withCleanTables(UserGroups) {
+        val exception = assertFailsWith<ValidationException>("Specified group does not exist") {
+            groupService.getSubgroups(UUID.randomUUID())
+        }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `getting subgroups returns`(): Unit = withCleanTables(Organizations, UserGroups) {
+        val organizationId = createOrganization()
+        val groupId1 = createGroup(organizationId.value, name = "Group1")
+        val groupId2 = createGroup(organizationId.value, name = "Group2")
+        val subgroupId1 = createGroup(name = "Subgroup1", parentGroupId = groupId1.value, organizationId =  organizationId.value)
+        val subgroupId3 = createGroup(name = "Subgroup3", parentGroupId = groupId1.value, organizationId =  organizationId.value)
+        createGroup(name = "Subgroup2", parentGroupId = groupId2.value, organizationId =  organizationId.value)
+
+        val subgroups = assertNotNull(groupService.getSubgroups(groupId1.value))
+
+        assertEquals(2, subgroups.count())
+        assertTrue { subgroups.any { it.id == subgroupId1.value && it.name == "Subgroup1" } }
+        assertTrue { subgroups.any { it.id == subgroupId3.value && it.name == "Subgroup3" } }
+    }
+}
