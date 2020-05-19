@@ -1,5 +1,6 @@
 package processm.core.querylanguage
 
+import org.apache.commons.text.StringEscapeUtils
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -29,9 +30,11 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
     init {
         val match = scopePattern.matchEntire(literal)
         assert(match !== null)
-        scope = when (match!!.groups[1]) {
-            null -> null
-            else -> Scope.parse(match.groups[1]?.value)
+        scope = with(match!!.groups[1]) {
+            when (this) {
+                null -> null
+                else -> Scope.parse(this.value)
+            }
         }
         value = parse(match.groups[2]!!.value)
     }
@@ -52,10 +55,11 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
 class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<String>(literal, line, charPositionInLine) {
     override fun parse(literal: String): String {
-        if ((literal[0] != '"' && literal[0] != '\'') || literal[0] != literal[literal.length - 1])
-            throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid format of string literal: $literal.")
+        require((literal[0] == '"' || literal[0] == '\'') && literal[0] == literal[literal.length - 1]) {
+            "Line $line position $charPositionInLine: Invalid format of string literal: $literal."
+        }
 
-        return literal.substring(1, literal.length - 1)
+        return StringEscapeUtils.unescapeJava(literal.substring(1, literal.length - 1))
     }
 }
 

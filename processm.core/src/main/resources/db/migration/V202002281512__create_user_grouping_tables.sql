@@ -1,53 +1,55 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE group_roles (
-    id bigserial PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     role text NOT NULL
 );
 
 CREATE TABLE organization_roles (
-    id bigserial PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL
 );
 
 CREATE TABLE organizations (
-    id bigserial PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL,
-    parent_organization_id bigint,
+    parent_organization_id uuid,
     is_private boolean NOT NULL
 );
 
 CREATE TABLE user_groups (
-    id bigserial PRIMARY KEY,
-    parent_group_id bigint NOT NULL,
-    group_role_id bigint NOT NULL,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    parent_group_id uuid NOT NULL,
+    group_role_id uuid NOT NULL,
     name text
 );
 
 CREATE TABLE user_groups_with_workspaces (
-    user_group_id bigint NOT NULL,
-    workspace_id bigint NOT NULL
+    user_group_id uuid NOT NULL,
+    workspace_id uuid NOT NULL
 );
 
 CREATE TABLE users (
-    id bigserial PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     username text NOT NULL
 );
 
 CREATE TABLE users_in_groups (
-    user_id bigint NOT NULL,
-    user_group_id bigint NOT NULL,
-    organization_id bigint NOT NULL,
+    user_id uuid NOT NULL,
+    user_group_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
     creation_date timestamptz
 );
 
 CREATE TABLE users_roles_in_organizations (
-    user_id bigint NOT NULL,
-    organization_role_id bigint NOT NULL,
-    organization_id bigint NOT NULL,
+    user_id uuid NOT NULL,
+    organization_role_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
     creation_date timestamptz
 );
 
 CREATE TABLE workspaces (
-    id bigserial PRIMARY KEY
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid()
 );
 
 ALTER TABLE user_groups_with_workspaces

@@ -4,7 +4,7 @@ info:
   description: Description of api methods used in processm.
   version: 1.0.0
 servers:
-  - url: https://processtom.com/api/
+  - url: /api
 tags:
   - name: users
     description: User registration and session management
@@ -33,14 +33,14 @@ paths:
     post:
       tags:
         - users
-      summary: Regisiter user account
-      operationId: createUser
+      summary: Register account
+      operationId: createAccount
       requestBody:
-        description: User email and account password
+        description: User email and organization name
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/UserCredentialsMessageBody'
+              $ref: '#/components/schemas/AccountRegistrationInfoMessageBody'
         required: true
       responses:
         '201':
@@ -49,8 +49,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
   /users/session:
     post:
       tags:
@@ -109,6 +107,50 @@ paths:
                 $ref: '#/components/schemas/UserAccountInfoMessageBody'
       security:
         - bearerAuth: []
+  /users/me/password:
+    patch:
+      tags:
+        - users
+      summary: Change user password
+      operationId: changeUserPassword
+      requestBody:
+        description: Current and new password
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PasswordChangeMessageBody'
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /users/me/locale:
+    patch:
+      tags:
+        - users
+      summary: Change user locale
+      operationId: changeUserLocale
+      requestBody:
+        description: New locale in ICU format (e.g. en_US)
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/LocaleChangeMessageBody'
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
   /workspaces:
     get:
       tags:
@@ -155,6 +197,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - workspaces
@@ -254,6 +297,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - groups
@@ -313,6 +357,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - groups
@@ -339,6 +384,7 @@ paths:
             schema:
               description: User ID
               type: string
+              format: uuid
         required: true
       responses:
         '201':
@@ -357,12 +403,14 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - name: userId
         in: path
         description: User ID
         required: true
         schema:
           type: string
+          format: uuid
     delete:
       tags:
         - groups
@@ -385,6 +433,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - groups
@@ -430,12 +479,14 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - name: subgroupId
         in: path
         description: Subgroup ID
         required: true
         schema:
           type: string
+          format: uuid
     delete:
       tags:
         - groups
@@ -484,8 +535,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
       security:
         - bearerAuth: []
   /organizations/{organizationId}:
@@ -496,6 +545,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - organizations
@@ -555,6 +605,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
     get:
       tags:
         - organizations
@@ -589,8 +640,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
       security:
         - bearerAuth: []
   /organizations/{organizationId}/members/{userId}:
@@ -601,12 +650,14 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
       - name: userId
         in: path
         description: User ID
         required: true
         schema:
           type: string
+          format: uuid
     delete:
       tags:
         - organizations
@@ -636,11 +687,25 @@ components:
     GroupRole:
       type: string
       enum: [owner, writer, reader]
+    AccountRegistrationInfo:
+      type: object
+      required: [userEmail, organizationName]
+      properties:
+        userEmail:
+          type: string
+        organizationName:
+          type: string
+    AccountRegistrationInfoMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AccountRegistrationInfo'
     UserCredentials:
       type: object
-      required: [username, password]
+      required: [login, password]
       properties:
-        username:
+        login:
           type: string
         password:
           type: string
@@ -653,16 +718,14 @@ components:
           $ref: '#/components/schemas/UserCredentials'
     UserAccountInfo:
       type: object
-      required: [username, organizationRole]
+      required: [userEmail, locale]
       properties:
         username:
           type: string
-        language:
+        userEmail:
           type: string
-        organizationRoles:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/OrganizationRole'
+        locale:
+          type: string
     UserAccountInfoMessageBody:
       type: object
       required: [data]
@@ -671,9 +734,9 @@ components:
           $ref: '#/components/schemas/UserAccountInfo'
     AuthenticationResult:
       type: object
-      required: [AuthorizationToken]
+      required: [authorizationToken]
       properties:
-        AuthorizationToken:
+        authorizationToken:
           type: string
     AuthenticationResultMessageBody:
       type: object
@@ -681,13 +744,42 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/AuthenticationResult'
+    PasswordChange:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+    PasswordChangeMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/PasswordChange'
+    LocaleChange:
+      type: object
+      required: [locale]
+      properties:
+        locale:
+          type: string
+    LocaleChangeMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/LocaleChange'
     UserInfo:
       type: object
-      required: [username, organization, organizationRole]
+      required: [userEmail, organization, organizationRole]
       properties:
         id:
           type: string
+          format: uuid
         username:
+          type: string
+        userEmail:
           type: string
         organization:
           type: string
@@ -709,6 +801,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type: string
     WorkspaceMessageBody:
@@ -731,6 +824,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type: string
         groupRole:
@@ -755,6 +849,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
         name:
           type: string
         contact:
@@ -802,12 +897,6 @@ components:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
       description: resource with sepcified identifier already exists
-      content:
-        'application/json':
-          schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
-    UnprocessableEntity:
-      description: request had valid format but included semantic error
       content:
         'application/json':
           schema:

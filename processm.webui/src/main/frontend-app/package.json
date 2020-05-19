@@ -6,10 +6,12 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'"
+    "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'",
+    "generate-api-sources": "openapi-generator generate -i ../../../../processm.services/src/main/resources/api-spec.yaml -g typescript-axios -o src/openapi --api-package api --model-package model --enable-post-process-file --additional-properties=withSeparateModelsAndApi=true;"
   },
   "dependencies": {
     "axios": "^0.19.2",
+    "axios-auth-refresh": "^2.2.5",
     "core-js": "^3.6.4",
     "flag-icon-css": "^3.4.6",
     "lodash": "^4.17.15",
@@ -27,6 +29,7 @@
     "vuex": "^3.1.2"
   },
   "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^1.0.12-4.3.0",
     "@types/webpack": "^4.4.0",
     "@typescript-eslint/eslint-plugin": "^2.18.0",
     "@typescript-eslint/parser": "^2.18.0",

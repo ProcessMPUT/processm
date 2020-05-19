@@ -9,78 +9,115 @@ import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.delete
 import io.ktor.locations.get
+import io.ktor.request.acceptLanguageItems
 import io.ktor.request.authorization
 import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
-import io.ktor.routing.Route
-import io.ktor.routing.application
-import io.ktor.routing.post
-import io.ktor.routing.route
+import io.ktor.routing.*
+import org.koin.ktor.ext.inject
 import processm.services.api.models.*
+import processm.services.logic.AccountService
 import java.time.Duration
 import java.time.Instant
 
-
 @KtorExperimentalLocationsAPI
 fun Route.UsersApi() {
+    val accountService by inject<AccountService>()
     val jwtIssuer = application.environment.config.property("ktor.jwt.issuer").getString()
     val jwtSecret = application.environment.config.propertyOrNull("ktor.jwt.secret")?.getString()
         ?: JwtAuthentication.generateSecretKey()
-    val jwtTokenTtl = Duration.parse(
-        application.environment.config.property("ktor.jwt.tokenTtl").getString())
+    val jwtTokenTtl = Duration.parse(application.environment.config.property("ktor.jwt.tokenTtl").getString())
 
     route("/users/session") {
         post {
-            val credentials = call.receiveOrNull<UserCredentialsMessageBody>()
+            val credentials = call.receiveOrNull<UserCredentialsMessageBody>()?.data
 
-            if (credentials != null) {
-                if (credentials?.data.password != "pass") {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody("Invalid username or password"))
-                } else {
+            when {
+                credentials != null -> {
+                    val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
+                        ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
                     val token = JwtAuthentication.createToken(
-                        credentials.data.username,
-                        Instant.now().plus(jwtTokenTtl),
-                        jwtIssuer,
-                        jwtSecret
+                        user.id.value, user.email, Instant.now().plus(jwtTokenTtl), jwtIssuer, jwtSecret
                     )
 
-                    call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token)))
+                    call.respond(
+                        HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token))
+                    )
                 }
-            }
-            else if (call.request.authorization() != null) {
-                val authorizationHeader = call.request.parseAuthorizationHeader()
-
-                if (authorizationHeader is HttpAuthHeader.Single) {
-
+                call.request.authorization() != null -> {
+                    val authorizationHeader =
+                        call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
+                            "Invalid authorization token format", HttpStatusCode.Unauthorized
+                        )
                     val prolongedToken = JwtAuthentication.verifyAndProlongToken(
-                        authorizationHeader.blob,
-                        jwtIssuer,
-                        jwtSecret,
-                        jwtTokenTtl)
-                    call.respond(HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(prolongedToken)))
+                        authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl
+                    )
+
+                    call.respond(
+                        HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(prolongedToken))
+                    )
                 }
-            }
-            else {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorMessageBody("Either user credentials or authentication token needs to be provided"))
+                else -> {
+                    throw ApiException("Either user credentials or authentication token needs to be provided")
+                }
             }
         }
     }
 
     route("/users") {
         post {
-            call.respond(HttpStatusCode.NotImplemented)
+            val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
+                ?: throw ApiException("The provided account details cannot be parsed")
+            val locale = call.request.acceptLanguageItems().getOrNull(0)
+
+            accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName, locale?.value)
+            call.respond(HttpStatusCode.Created)
         }
     }
 
     authenticate {
         get<Paths.getUserAccountDetails> { _: Paths.getUserAccountDetails ->
-            val principal = call.authentication.principal<ApiUser>()
+            val principal = call.authentication.principal<ApiUser>()!!
+            val userAccountDetails = accountService.getAccountDetails(principal.userId)
 
-            call.respond(HttpStatusCode.OK, UserAccountInfoMessageBody(UserAccountInfo(
-                principal!!.userId,
-            organizationRoles = mapOf("org1" to OrganizationRole.owner))))
+            call.respond(
+                HttpStatusCode.OK, UserAccountInfoMessageBody(
+                    UserAccountInfo(
+                        userAccountDetails.email, userAccountDetails.locale
+                    )
+                )
+            )
+        }
+
+        route("/users/me") {
+            route("/password") {
+                patch {
+                    val principal = call.authentication.principal<ApiUser>()!!
+                    val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
+                        ?: throw ApiException("The provided password data cannot be parsed")
+
+                    if (accountService.changePassword(
+                            principal.userId, passwordData.currentPassword, passwordData.newPassword
+                        )
+                    ) {
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        call.respond(
+                            HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed")
+                        )
+                    }
+                }
+            }
+            route("/locale") {
+                patch {
+                    val principal = call.authentication.principal<ApiUser>()!!
+                    val localeData = call.receiveOrNull<LocaleChangeMessageBody>()?.data
+                        ?: throw ApiException("The provided locale data cannot be parsed")
+
+                    accountService.changeLocale(principal.userId, localeData.locale)
+                    call.respond(HttpStatusCode.OK)
+                }
+            }
         }
 
         get<Paths.getUsers> { _: Paths.getUsers ->
@@ -92,7 +129,7 @@ fun Route.UsersApi() {
         delete<Paths.signUserOut> { _: Paths.signUserOut ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respond(HttpStatusCode.NoContent)
         }
     }
 }

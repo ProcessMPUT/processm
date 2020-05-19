@@ -45,6 +45,19 @@ class BindingTest {
         }
     }
 
+    @Test
+    fun contains() {
+        val s = Split(setOf(Dependency(a, b), Dependency(a, c)))
+        assertTrue(Dependency(a, b) in s)
+        assertFalse(Dependency(b, a) in s)
+    }
+
+    @Test
+    fun size() {
+        val s = Split(setOf(Dependency(a, b), Dependency(a, c)))
+        assertEquals(2, s.size)
+    }
+
     @Ignore("We decided that protecting against it is too expensive")
     @Test
     fun modifyJoinConstructorArgument() {

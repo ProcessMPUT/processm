@@ -43,10 +43,9 @@ export default class TopBar extends Vue {
       return;
     }
 
-    if (this.accountService.signOut(this.$sessionStorage.sessionToken)) {
-      this.$sessionStorage.removeSession();
-      this.$router.push({ name: "login" });
-    }
+    await this.accountService
+      .signOut()
+      .finally(() => this.$router.push({ name: "login" }));
   }
 }
 </script>

@@ -6,13 +6,16 @@ package processm.core.querylanguage
 class Attribute(attribute: String, override val line: Int, override val charPositionInLine: Int) : Expression() {
     companion object {
         private val pqlAttributePattern =
-            Regex("^\\[?([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?((?:\\w+:)?\\w+)]?$")
+            Regex("^(?:(([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?((?:\\w+:)?\\w+))|(\\[([\\^]{0,2})(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?(.+?)]))$")
 
         private val standardAttributes: Map<Scope, Set<Pair<String, String?>>> = mapOf(
             Scope.Log to setOf(
                 "concept" to "name",
                 "identity" to "id",
-                "lifecycle" to "model"
+                "lifecycle" to "model",
+                "db" to "id",
+                "xes" to "version",
+                "xes" to "features"
             ),
             Scope.Trace to setOf(
                 "concept" to "name",
@@ -50,9 +53,7 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
 
     override fun calculateEffectiveScope(): Scope? =
         hoistingPrefix.fold(scope!!) { s, _ ->
-            s.upper ?: throw IllegalArgumentException(
-                "Line $line position $charPositionInLine: It is not supported to hoist a scope beyond the log scope."
-            )
+            requireNotNull(s.upper) { "Line $line position $charPositionInLine: It is not supported to hoist a scope beyond the log scope." }
         }
 
     /**
@@ -81,13 +82,14 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
         val match = pqlAttributePattern.matchEntire(attribute)
         assert(match !== null)
 
-        hoistingPrefix = match!!.groups[1]!!.value
-        scope = Scope.parse(match.groups[2]?.value)
-        name = match.groups[3]!!.value
+        val offset = if (match!!.groups[1] !== null) 2 else 6
+        hoistingPrefix = match!!.groups[offset]!!.value
+        scope = Scope.parse(match.groups[offset + 1]?.value)
+        name = match.groups[offset + 2]!!.value
 
         assert(attribute.startsWith("[") == attribute.endsWith("]"))
 
-        standardName = if (!attribute.startsWith("[")) {
+        standardName = if (offset == 2) {
             standardAttributes[scope]?.firstOrNull {
                 // the classifiers
                 if (it.second === null) name.startsWith("${it.first}:") || name.startsWith("${it.first[0]}:")

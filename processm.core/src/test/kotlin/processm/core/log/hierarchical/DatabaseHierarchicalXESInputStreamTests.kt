@@ -5,6 +5,7 @@ import processm.core.log.DatabaseXESOutputStream
 import processm.core.log.Event
 import processm.core.log.XESInputStream
 import processm.core.persistence.DBConnectionPool
+import processm.core.querylanguage.Query
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -47,7 +48,7 @@ class DatabaseHierarchicalXESInputStreamTests {
 
     @Test
     fun castTest() {
-        val fromDB = DatabaseHierarchicalXESInputStream(logId)
+        val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
         var implicitCast: XESInputStream = fromDB
         assertNotNull(implicitCast)
 
@@ -57,14 +58,14 @@ class DatabaseHierarchicalXESInputStreamTests {
 
     @Test
     fun repeatableReadTest() {
-        val fromDB = DatabaseHierarchicalXESInputStream(logId)
+        val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
         assertTrue(hierarchicalCompare(log, fromDB))
         assertTrue(hierarchicalCompare(log, fromDB))
     }
 
     @Test
     fun repeatableInterleavedReadTest() {
-        val fromDB = DatabaseHierarchicalXESInputStream(logId)
+        val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
         assertTrue(hierarchicalCompare(fromDB, fromDB))
         assertTrue(hierarchicalCompare(fromDB, fromDB))
     }
@@ -73,7 +74,7 @@ class DatabaseHierarchicalXESInputStreamTests {
     fun phantomReadTest() {
         var traceId: Long = -1L
         try {
-            val fromDB = DatabaseHierarchicalXESInputStream(logId)
+            val fromDB = DatabaseHierarchicalXESInputStream(Query(logId))
             assertTrue(hierarchicalCompare(log, fromDB))
 
             // insert phantom event Z into trace T
@@ -104,7 +105,7 @@ class DatabaseHierarchicalXESInputStreamTests {
             // implementation should ensure that phantom reads do not occur
             assertTrue(hierarchicalCompare(log, fromDB))
             // but a new sequence should reflect changes
-            val fromDB2 = DatabaseHierarchicalXESInputStream(logId)
+            val fromDB2 = DatabaseHierarchicalXESInputStream(Query(logId))
             assertFalse(hierarchicalCompare(log, fromDB2))
         } finally {
             // Delete log with id $logId

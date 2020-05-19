@@ -1,90 +1,115 @@
 package processm.core.log.hierarchical
 
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import processm.core.helpers.parseISO8601
+import processm.core.log.DatabaseLogCleaner
 import processm.core.log.DatabaseXESOutputStream
 import processm.core.log.XMLXESInputStream
+import processm.core.logging.logger
 import processm.core.persistence.DBConnectionPool
-import java.io.ByteArrayInputStream
+import processm.core.querylanguage.Query
+import java.util.*
+import kotlin.system.measureTimeMillis
+import kotlin.test.*
 
 class DatabaseHierarchicalXESInputStreamWithQueryTests {
-    // region test log
-    private val log = """<?xml version="1.0" encoding="UTF-8" ?>
-        <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
-            <extension name="Lifecycle" prefix="lifecycle" uri="http://www.xes-standard.org/lifecycle.xesext"/>
-            <extension name="Concept" prefix="conceptowy" uri="http://www.xes-standard.org/concept.xesext"/>
-            <extension name="Organizational" prefix="org" uri="http://www.xes-standard.org/org.xesext"/>
-            <extension name="Time" prefix="time" uri="http://www.xes-standard.org/time.xesext"/>
-            <global scope="trace">
-                <string key="conceptowy:name" value="__INVALID__"/>
-            </global>
-            <global>
-                <string key="lifecycle:transition" value="complete">
-                    <string key="meta_3TU:log_type" value="Real-life"/>
-                    <list key="listKey">
-                        <int key="intInsideListKey" value="22" />
-                        <values>
-                            <float key="__UNKNOWN__" value="202.617"/>
-                            <int key="__NEW__" value="111"/>
-                        </values>
-                    </list>
-                </string>
-                <string key="conceptowy:name" value="__INVALID__"/>
-                <string key="org:group" value="__INVALID__"/>
-                <date key="time:timestamp" value="1970-01-01T01:00:00.000+01:00"/>
-            </global>
-            <classifier name="Event Name" keys="conceptowy:name"/>
-            <classifier scope="trace" name="Department Classifier" keys="org:group"/>
-            <float key="meta_org:resource_events_standard_deviation" value="202.617">
-                <float key="UNKNOWN" value="202.617"/>
-            </float>
-            <list key="listKey">
-                <int key="intInsideListKey" value="22" />
-                <values>
-                    <float key="__UNKNOWN__" value="202.617"/>
-                    <int key="__NEW__" value="111"/>
-                </values>
-            </list>
-            <string key="meta_3TU:log_type" value="Real-life"/>
-            <string key="conceptowy:name" value="Some amazing log file"/>
-            <int key="meta_org:role_events_total" value="150291">
-                <int key="UNKNOWN" value="150291"/>
-            </int>
-            <trace>
-                <date key="End date" value="2006-01-04T23:45:36.000+01:00"/>
-                <int key="Age" value="33"/>
-                <string key="conceptowy:name" value="00000001"/>
-                <event>
-                    <string key="org:group" value="Radiotherapy"/>
-                    <int key="Specialism code" value="61"/>
-                    <string key="conceptowy:name" value="1e consult poliklinisch"/>
-                    <int key="Activity code" value="410100"/>
-                    <date key="time:timestamp" value="2005-01-03T00:00:00.000+01:00"/>
-                    <string key="lifecycle:transition" value="complete"/>
-                </event>
-                <event>
-                    <string key="org:group" value="Radiotherapy"/>
-                    <int key="Specialism code" value="61"/>
-                    <string key="conceptowy:name" value="administratief tarief - eerste pol"/>
-                    <int key="Activity code" value="419100"/>
-                    <date key="time:timestamp" value="2005-01-03T00:00:00.000+01:00"/>
-                    <string key="lifecycle:transition" value="complete"/>
-                </event>
-            </trace>
-        </log>
-    """
-    private val logId: Int by lazyOf(setUp())
+    companion object {
+        private val logger = logger()
 
-    fun setUp(): Int {
-        val stream = ByteArrayInputStream(log.toByteArray())
-        DatabaseXESOutputStream().use {
-            it.write(XMLXESInputStream(stream))
+        // region test log
+        private var logId: Int = -1
+        private val uuid: UUID = UUID.randomUUID()
+        private val eventNames = setOf(
+            "invite reviewers",
+            "time-out 1", "time-out 2", "time-out 3",
+            "get review 1", "get review 2", "get review 3",
+            "collect reviews",
+            "decide",
+            "invite additional reviewer",
+            "get review X",
+            "time-out X",
+            "reject",
+            "accept"
+        )
+
+        @BeforeAll
+        @JvmStatic
+        fun setUp() {
+            logger.info("Loading data")
+            measureTimeMillis {
+                val stream = this::class.java.getResourceAsStream("/xes-logs/JournalReview.xes")
+                DatabaseXESOutputStream().use { output ->
+                    output.write(XMLXESInputStream(stream).map {
+                        if (it is processm.core.log.Log) /* The base class for log */
+                            it.identityId = uuid.toString()
+                        it
+                    })
+                }
+            }.also { logger.info("Data loaded in ${it}ms.") }
+
+            DBConnectionPool.getConnection().use {
+                val response = it.prepareStatement("SELECT id FROM logs ORDER BY id DESC LIMIT 1").executeQuery()
+                response.next()
+
+                logId = response.getInt("id")
+            }
         }
 
-        DBConnectionPool.getConnection().use {
-            val response = it.prepareStatement("""SELECT id FROM logs ORDER BY id DESC LIMIT 1""").executeQuery()
-            response.next()
+        @AfterAll
+        @JvmStatic
+        fun tearDown() {
+            DatabaseLogCleaner.removeLog(logId)
+        }
+        // endregion
+    }
 
-            return response.getInt("id")
+    @Test
+    fun basicSelectTest() {
+        val begin = "2005-12-31T00:00:00.000Z".parseISO8601()
+        val end = "2008-05-05T00:00:00.000Z".parseISO8601()
+
+        val query = Query("select l:name, t:name, e:name, e:timestamp where l:name='JournalReview' and l:id='$uuid'")
+        var _stream: DatabaseHierarchicalXESInputStream? = null
+
+        measureTimeMillis {
+            _stream = DatabaseHierarchicalXESInputStream(query)
+            _stream!!.toFlatSequence().forEach { _ -> }
+        }.let { logger.info("Log read in ${it}ms.") }
+
+        val stream = _stream!!
+
+        assertEquals(1, stream.count()) // only one log
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertNull(log.lifecycleModel)
+        assertNull(log.identityId)
+
+        assertEquals(100, log.traces.count())
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= 0)
+            assertTrue(conceptName <= 100)
+            assertNull(trace.costCurrency)
+            assertNull(trace.costTotal)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+
+            assertTrue(trace.events.count() > 0)
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertTrue(event.timeTimestamp!!.isAfter(begin))
+                assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
+                assertNull(event.conceptInstance)
+                assertNull(event.costCurrency)
+                assertNull(event.costTotal)
+                assertNull(event.lifecycleState)
+                assertNull(event.lifecycleTransition)
+                assertNull(event.orgGroup)
+                assertNull(event.orgResource)
+                assertNull(event.orgRole)
+                assertNull(event.identityId)
+            }
         }
     }
-    // endregion
 }

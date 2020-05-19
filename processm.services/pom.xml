@@ -21,6 +21,8 @@
         <ktor.version>1.2.6</ktor.version>
         <openapi-tools.version>4.2.3</openapi-tools.version>
         <swagger-ui.version>3.25.0</swagger-ui.version>
+        <koin.version>2.1.5</koin.version>
+        <jargon2.version>1.1.1</jargon2.version>
         <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
 
@@ -265,6 +267,33 @@
             <artifactId>ktor-auth-jwt</artifactId>
             <version>${ktor.version}</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.koin</groupId>
+            <artifactId>koin-core</artifactId>
+            <version>${koin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.koin</groupId>
+            <artifactId>koin-ktor</artifactId>
+            <version>${koin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.koin</groupId>
+            <artifactId>koin-test</artifactId>
+            <version>${koin.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.kosprov.jargon2</groupId>
+            <artifactId>jargon2-api</artifactId>
+            <version>${jargon2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kosprov.jargon2</groupId>
+            <artifactId>jargon2-native-ri-backend</artifactId>
+            <version>${jargon2.version}</version>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 </project>

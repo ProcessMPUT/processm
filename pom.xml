@@ -40,6 +40,7 @@
         <module>processm.performance</module>
         <module>processm.webui</module>
         <module>processm.launcher</module>
+        <module>processm.experimental</module>
     </modules>
 
     <properties>
@@ -161,6 +162,9 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <args>
+                        <arg>-Xopt-in=kotlin.RequiresOptIn</arg>
+                    </args>
                     <compilerPlugins>
                         <plugin>kotlinx-serialization</plugin>
                     </compilerPlugins>

@@ -1,22 +1,73 @@
-import axios from "axios";
+import Vue from "vue";
 import UserAccount from "@/models/UserAccount";
+import BaseService from "./BaseService";
 
-export default class AccountService {
-  public async signIn(
-    username: string,
-    password: string
-  ): Promise<{ userData: UserAccount; authorizationToken: string }> {
-    const response = await axios.post("/api/account/session", {
-      username,
-      password
+export default class AccountService extends BaseService {
+  public async signIn(login: string, password: string) {
+    const response = await this.usersApi.signUserIn(undefined, {
+      data: { login, password }
     });
 
-    return response.data;
+    if (response.status != 201) {
+      throw new Error(response.statusText);
+    }
+
+    Vue.prototype.$sessionStorage.sessionToken =
+      response.data.data.authorizationToken;
   }
 
-  public async signOut(sessionToken: string): Promise<boolean> {
-    const response = await axios.delete(`/api/account/session/${sessionToken}`);
+  public async signOut() {
+    const response = await this.usersApi
+      .signUserOut()
+      .finally(() => Vue.prototype.$sessionStorage.removeSession());
 
-    return [200, 404].includes(response.status);
+    if (![204, 404].includes(response.status)) {
+      throw new Error(response.statusText);
+    }
+  }
+
+  public async registerNewAccount(userEmail: string, organizationName: string) {
+    const response = await this.usersApi.createAccount({
+      data: { userEmail, organizationName }
+    });
+
+    if (response.status != 201) {
+      throw new Error(response.statusText);
+    }
+  }
+
+  public async getAccountDetails(): Promise<UserAccount> {
+    const response = await this.usersApi.getUserAccountDetails();
+
+    if (response.status != 200) {
+      throw new Error(response.statusText);
+    }
+
+    const accountDetails = response.data.data;
+
+    return (Vue.prototype.$sessionStorage.userInfo = new UserAccount(
+      accountDetails.userEmail,
+      accountDetails.locale
+    ));
+  }
+
+  public async changePassword(currentPassword: string, newPassword: string) {
+    const response = await this.usersApi.changeUserPassword({
+      data: { currentPassword, newPassword }
+    });
+
+    if (response.status != 202) {
+      throw new Error(response.statusText);
+    }
+  }
+
+  public async changeLocale(locale: string) {
+    const response = await this.usersApi.changeUserLocale({
+      data: { locale }
+    });
+
+    if (response.status != 202) {
+      throw new Error(response.statusText);
+    }
   }
 }

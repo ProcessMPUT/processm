@@ -1,7 +1,7 @@
 package processm.core.verifiers
 
 import processm.core.models.processtree.Node
-import processm.core.models.processtree.Model as ProcessTree
+import processm.core.models.processtree.ProcessTree as ProcessTree
 
 /**
  * Process Tree verifier
@@ -17,7 +17,7 @@ class ProcessTreeVerifier : Verifier<ProcessTree> {
         val root = model.root
 
         // Root with set parent is not allowed
-        if (root.parent != null) return report(isTree = false)
+        if (root!!.parent != null) return report(isTree = false)
 
         // Return checked parents of each children
         return report(isTree = root.children.all { hasCorrectParent(node = it, parent = root) })

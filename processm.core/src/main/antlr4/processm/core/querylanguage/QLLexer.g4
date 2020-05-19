@@ -88,7 +88,7 @@ COLON       : ':' ;
 ORDER_ASC   : 'asc' ;
 ORDER_DESC  : 'desc' ;
 
-ID          : SCOPE_PREFIX ([a-zA-CE-Z_]|DIGIT)+ (':' (LETTER|DIGIT)+)?
+ID          : SCOPE_PREFIX (LETTER|DIGIT)+ (':' (LETTER|DIGIT)+)?
             | '[' SCOPE_PREFIX .+? ']';
 
 LINE_COMMENT: ( '//' | '--' ) .*? ( '\r' | '\n' ) -> skip ;

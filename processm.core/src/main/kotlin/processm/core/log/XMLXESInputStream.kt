@@ -1,15 +1,14 @@
 package processm.core.log
 
+import processm.core.helpers.fastParseISO8601
 import processm.core.log.attribute.*
 import processm.core.logging.logger
 import java.io.InputStream
 import java.text.NumberFormat
 import java.time.Instant
-import java.time.format.DateTimeFormatter
 import java.util.*
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
-import kotlin.collections.HashMap
 
 /**
  * Extracts a sequence of [XESElement]s from the underlying stream.
@@ -20,11 +19,15 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         private val exitTags = setOf("trace", "event")
         private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list", "id")
         private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
-        private val dateFormatter = DateTimeFormatter.ISO_DATE_TIME
         private var lastSeenElement: String? = null
     }
 
-    private val prefixesMapping: HashMap<String, String> = HashMap()
+    /**
+     * Maps standard names of attributes into custom names in the XES document being read.
+     */
+    private val nameMap = object : HashMap<String, String>() {
+        override fun get(key: String): String? = super.get(key) ?: key
+    }
 
     override fun iterator(): Iterator<XESElement> = sequence<XESElement> {
         val xmlInputFactory: XMLInputFactory = XMLInputFactory.newInstance()
@@ -39,7 +42,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                     "log" -> parseLog(reader)
                     "trace" -> parseTrace(reader)
                     "event" -> parseEvent(reader)
-                    else -> throw Exception("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                    else -> throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                 }
                 yield(xesElement)
             }
@@ -47,7 +50,8 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     }.iterator()
 
     private fun parseLog(reader: XMLStreamReader) = Log().also {
-        it.features = reader.getAttributeValue(null, "xes.features")
+        it.xesVersion = reader.getAttributeValue(null, "xes.version")
+        it.xesFeatures = reader.getAttributeValue(null, "xes.features")
 
         // Read until have next and do not find 'trace' or 'event' element
         while (reader.hasNext()) {
@@ -114,7 +118,13 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
 
         // Add mapping extension's URI -> user's prefix
         if (extension.extension != null) {
-            this.prefixesMapping[extension.extension.uri] = prefix
+            // this.nameMap[extension.extension.uri] = prefix
+            for (name in extension.extension.log.keys)
+                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
+            for (name in extension.extension.trace.keys)
+                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
+            for (name in extension.extension.event.keys)
+                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
         }
 
         log.extensionsInternal[prefix] = extension
@@ -200,51 +210,38 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     }
 
     private fun addGeneralMeaningFieldsIntoLog(log: Log) {
-        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri] ?: "concept"
-        log.conceptName = log.attributes["$conceptPrefix:name"]?.getValue() as String?
-
-        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri] ?: "identity"
-        log.identityId = log.attributes["$identityPrefix:id"]?.getValue() as String?
-
-        val lifecyclePrefix = this.prefixesMapping[XESExtensionLoader.lifecycle.uri] ?: "lifecycle"
-        log.lifecycleModel = log.attributes["$lifecyclePrefix:model"]?.getValue() as String?
+        log.conceptName = log.attributes[nameMap["concept:name"]]?.getValue() as String?
+        log.identityId = log.attributes[nameMap["identity:id"]]?.getValue() as String?
+        log.lifecycleModel = log.attributes[nameMap["lifecycle:model"]]?.getValue() as String?
     }
 
     private fun addGeneralMeaningFieldsIntoTrace(trace: Trace) {
-        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri] ?: "concept"
-        trace.conceptName = trace.attributes["$conceptPrefix:name"]?.getValue() as String?
+        trace.conceptName = trace.attributes[nameMap["concept:name"]]?.getValue() as String?
 
-        val costPrefix = this.prefixesMapping[XESExtensionLoader.cost.uri] ?: "cost"
-        trace.costTotal = trace.attributes["$costPrefix:total"]?.getValue() as Double?
-        trace.costCurrency = trace.attributes["$costPrefix:currency"]?.getValue() as String?
+        trace.costTotal = trace.attributes[nameMap["cost:total"]]?.getValue() as Double?
+        trace.costCurrency = trace.attributes[nameMap["cost:currency"]]?.getValue() as String?
 
-        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri] ?: "identity"
-        trace.identityId = trace.attributes["$identityPrefix:id"]?.getValue() as String?
+        trace.identityId = trace.attributes[nameMap["identity:id"]]?.getValue() as String?
     }
 
     private fun addGeneralMeaningFieldsIntoEvent(event: Event) {
-        val conceptPrefix = this.prefixesMapping[XESExtensionLoader.concept.uri] ?: "concept"
-        event.conceptName = event.attributes["$conceptPrefix:name"]?.getValue() as String?
-        event.conceptInstance = event.attributes["$conceptPrefix:instance"]?.getValue() as String?
+        event.conceptName = event.attributes[nameMap["concept:name"]]?.getValue() as String?
+        event.conceptInstance = event.attributes[nameMap["concept:instance"]]?.getValue() as String?
 
-        val costPrefix = this.prefixesMapping[XESExtensionLoader.cost.uri] ?: "cost"
-        event.costTotal = event.attributes["$costPrefix:total"]?.getValue() as Double?
-        event.costCurrency = event.attributes["$costPrefix:currency"]?.getValue() as String?
+        event.costTotal = event.attributes[nameMap["cost:total"]]?.getValue() as Double?
+        event.costCurrency = event.attributes[nameMap["cost:currency"]]?.getValue() as String?
 
-        val identityPrefix = this.prefixesMapping[XESExtensionLoader.identity.uri] ?: "identity"
-        event.identityId = event.attributes["$identityPrefix:id"]?.getValue() as String?
+        event.identityId = event.attributes[nameMap["identity:id"]]?.getValue() as String?
 
-        val lifecyclePrefix = this.prefixesMapping[XESExtensionLoader.lifecycle.uri] ?: "lifecycle"
-        event.lifecycleState = event.attributes["$lifecyclePrefix:state"]?.getValue() as String?
-        event.lifecycleTransition = event.attributes["$lifecyclePrefix:transition"]?.getValue() as String?
+        event.lifecycleState = event.attributes[nameMap["lifecycle:state"]]?.getValue() as String?
+        event.lifecycleTransition =
+            event.attributes[nameMap["lifecycle:transition"]]?.getValue() as String?
 
-        val orgPrefix = this.prefixesMapping[XESExtensionLoader.org.uri] ?: "org"
-        event.orgRole = event.attributes["$orgPrefix:role"]?.getValue() as String?
-        event.orgGroup = event.attributes["$orgPrefix:group"]?.getValue() as String?
-        event.orgResource = event.attributes["$orgPrefix:resource"]?.getValue() as String?
+        event.orgRole = event.attributes[nameMap["org:role"]]?.getValue() as String?
+        event.orgGroup = event.attributes[nameMap["org:group"]]?.getValue() as String?
+        event.orgResource = event.attributes[nameMap["org:resource"]]?.getValue() as String?
 
-        val timePrefix = this.prefixesMapping[XESExtensionLoader.time.uri] ?: "time"
-        event.timeTimestamp = event.attributes["$timePrefix:timestamp"]?.getValue() as Date?
+        event.timeTimestamp = event.attributes[nameMap["time:timestamp"]]?.getValue() as Instant?
     }
 
     private fun parseTraceOrEventTag(reader: XMLStreamReader, xesElement: XESElement) {
@@ -290,7 +287,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             "list" ->
                 ListAttr(key)
             "date" -> {
-                DateTimeAttr(key, Date.from(Instant.from(dateFormatter.parse(value))))
+                DateTimeAttr(key, value.fastParseISO8601())
             }
             else ->
                 throw Exception("Attribute not recognized. Received $type type.")

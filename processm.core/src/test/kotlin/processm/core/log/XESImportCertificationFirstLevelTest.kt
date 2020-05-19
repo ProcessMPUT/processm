@@ -2,9 +2,8 @@ package processm.core.log
 
 import io.mockk.every
 import io.mockk.spyk
+import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.value
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -174,8 +173,6 @@ internal class XESImportCertificationFirstLevelTest {
 
     @Test
     fun `Level B1 = Level A1 extended with event types (lifecycleTransition attribute) and timestamps (timeTimestamp attribute)`() {
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
-        dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
         """<?xml version="1.0" encoding="UTF-8" ?>
             <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
                 <extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext"/>
@@ -240,32 +237,33 @@ internal class XESImportCertificationFirstLevelTest {
 
             with(iterator.next() as Event) {
                 assertEquals(lifecycleTransition, "start")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-01T00:00:00.000+01:00"))
+                assertEquals(
+                    timeTimestamp,
+                    "2005-01-01T00:00:00.000+01:00".parseISO8601()
+                )
             }
 
             with(iterator.next() as Event) {
                 assertEquals(lifecycleTransition, "complete")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-03T00:00:00.000+01:00"))
+                assertEquals(timeTimestamp, "2005-01-03T00:00:00.000+01:00".parseISO8601())
             }
 
             assert(iterator.next() is Trace)
 
             with(iterator.next() as Event) {
                 assertEquals(lifecycleTransition, "schedule")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-04T00:00:00.000+01:00"))
+                assertEquals(timeTimestamp, "2005-01-04T00:00:00.000+01:00".parseISO8601())
             }
 
             with(iterator.next() as Event) {
                 assertEquals(lifecycleTransition, "complete")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-05T00:00:00.000+01:00"))
+                assertEquals(timeTimestamp, "2005-01-05T00:00:00.000+01:00".parseISO8601())
             }
         }
     }
 
     @Test
     fun `Level C1 = Level B1 extended with information on resources (orgResource attribute)`() {
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
-        dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
         """<?xml version="1.0" encoding="UTF-8" ?>
             <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
                 <extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext"/>
@@ -364,8 +362,6 @@ internal class XESImportCertificationFirstLevelTest {
 
     @Test
     fun `Level D1 = Level C1 extended with attributes from any standard XES extension`() {
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
-        dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
         """<?xml version="1.0" encoding="UTF-8" ?>
             <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
                 <extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext"/>
@@ -496,8 +492,6 @@ internal class XESImportCertificationFirstLevelTest {
             every { mock["openExternalStream"]("http://example.com/cost.xesext") } returns stream
         }
 
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SX")
-        dateFormatter.timeZone = TimeZone.getTimeZone("UTC")
         """<?xml version="1.0" encoding="UTF-8" ?>
             <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
                 <extension name="Concept" prefix="concept" uri="http://www.xes-standard.org/concept.xesext"/>
@@ -627,7 +621,7 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(conceptName, "Event #1 in Trace #001")
                 assertEquals(identityId, "E-001")
                 assertEquals(lifecycleTransition, "start")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-01T00:00:00.000+01:00"))
+                assertEquals(timeTimestamp, "2005-01-01T00:00:00.000+01:00".parseISO8601())
                 assertEquals(orgGroup, "Endoscopy")
                 assertEquals(orgResource, "Drugs")
                 assertEquals(orgRole, "Intern")
@@ -645,7 +639,7 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(conceptName, "Event #2 in Trace #001")
                 assertEquals(identityId, "E-002")
                 assertEquals(lifecycleTransition, "complete")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-03T00:00:00.000+01:00"))
+                assertEquals(timeTimestamp, "2005-01-03T00:00:00.000+01:00".parseISO8601())
                 assertEquals(orgGroup, "Endoscopy")
                 assertEquals(orgResource, "Pills")
                 assertEquals(orgRole, "Assistant")
@@ -675,7 +669,7 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(conceptName, "Event #1 in Trace #002")
                 assertEquals(identityId, "E-003")
                 assertEquals(lifecycleTransition, "schedule")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-04T00:00:00.000+01:00"))
+                assertEquals(timeTimestamp, "2005-01-04T00:00:00.000+01:00".parseISO8601())
                 assertEquals(orgGroup, "Radiotherapy")
                 assertEquals(orgResource, "Pills")
                 assertEquals(orgRole, "Intern")
@@ -693,7 +687,7 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(conceptName, "Event #2 in Trace #002")
                 assertEquals(identityId, "E-004")
                 assertEquals(lifecycleTransition, "complete")
-                assertEquals(timeTimestamp, dateFormatter.parse("2005-01-05T00:00:00.000+01:00"))
+                assertEquals(timeTimestamp, "2005-01-05T00:00:00.000+01:00".parseISO8601())
                 assertEquals(orgGroup, "Radiotherapy")
                 assertEquals(orgResource, "Drugs")
                 assertEquals(orgRole, "Assistant")
