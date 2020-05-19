@@ -20,6 +20,12 @@
           {{ $t("navigation.workspaces") }}
         </v-list-item-content>
       </v-list-item>
+      <v-list-item :to="'users'" color="primary">
+        <v-list-item-action>
+          <v-icon>people</v-icon>
+        </v-list-item-action>
+        <v-list-item-content>{{ $t("navigation.users") }}</v-list-item-content>
+      </v-list-item>
       <v-list-item :to="'about'" color="primary">
         <v-list-item-action>
           <v-icon>info</v-icon>
