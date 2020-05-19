@@ -101,9 +101,11 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             if (pql.whereExpression == Expression.empty)
                 return@with
 
-            append(if (scope == Scope.Log) " WHERE " else " AND ")
+            val insertPos = length
 
-            pql.whereExpression.toSQL(sql)
+            pql.whereExpression.toSQL(sql, scope, Type.Any)
+            if (length != insertPos)
+                insert(insertPos, if (scope == Scope.Log) " WHERE " else " AND ")
         }
     }
 
@@ -122,8 +124,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             }
 
             for (expression in expressions) {
-                if (expression.base is Attribute) expression.base.toSQL(sql, logId)
-                else expression.base.toSQL(sql)
+                if (expression.base is Attribute) expression.base.toSQL(sql, logId, scope, Type.Any)
+                else expression.base.toSQL(sql, scope, Type.Any)
                 if (expression.direction == OrderDirection.Descending)
                     append(" DESC")
                 append(',')
@@ -320,7 +322,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // endregion
 
     // region select expressions
-    private fun expressionsQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
+    private fun expressionsQuery(scope: Scope): SQLQuery = SQLQuery {
         assert(!pql.isImplicitGroupBy)
         assert(pql.isGroupBy[Scope.Log] == false)
         assert(scope < Scope.Trace || pql.isGroupBy[Scope.Trace] == false)
@@ -328,22 +330,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         if (pql.selectExpressions[scope].isNullOrEmpty()) {
             // FIXME: optimization: return empty ResultSet here
-            it.query.append("SELECT NULL FROM unnest(?)")
+            it.query.append("SELECT NULL FROM unnest(?) WHERE 0=1")
             return@SQLQuery
         }
 
         selectExpressions(scope, it)
-
-        val desiredFromPosition = it.query.length
-
-        where(scope, it, logId, traceId)
-        groupById(scope, it)
-        orderByExpressions(scope, it)
-
-        it.query.insert(desiredFromPosition, from(scope, it))
-
-        limit(scope, it)
-        offset(scope, it)
+        it.query.append(from(scope, it))
+        it.query.append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope.alias}.id=ids.id ")
+        orderByEntity(it)
     }
 
     private fun selectExpressions(scope: Scope, sql: MutableSQLQuery) {
@@ -351,15 +345,11 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             append("SELECT ")
             assert(pql.selectExpressions[scope]!!.isNotEmpty())
             for (expression in pql.selectExpressions[scope]!!) {
-                expression.toSQL(sql)
+                expression.toSQL(sql, scope, Type.Any)
                 append(", ")
             }
             setLength(length - 2)
         }
-    }
-
-    private fun orderByExpressions(scope: Scope, sql: MutableSQLQuery) {
-        //TODO()
     }
     // endregion
 
@@ -540,7 +530,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         selectExpressions(scope, it)
         //fromExpressions(scope, it)
         //whereExpressions(scope, it)
-        orderByExpressions(scope, it)
+        //orderByExpressions(scope, it)
     }
     // endregion
 
@@ -752,7 +742,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryGlobals: SQLQuery by lazy(NONE)
             { attributesQuery(Scope.Log, null, "GLOBALS", setOf("scope")) }
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Log, null) }
-            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log, null, null) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Log) }
         }
 
         inner class GroupingTopEntry internal constructor() : TopEntry() {
@@ -831,7 +821,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Trace, logId, null) }
             override val queryEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Trace) } // FIXME: this query is independent of logId, move it to the main class
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Trace, logId) }
-            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Trace, logId, null) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Trace) }
         }
 
         inner class GroupingLogEntry internal constructor(logId: Int) : LogEntry() {
@@ -907,7 +897,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Event, logId, traceId) }
             override val queryEntity: SQLQuery by lazy(NONE) { entityQuery(Scope.Event) } // FIXME: optimization: this query is independent of logId, move it to the main class
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Event, logId) }
-            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Event, logId, traceId) }
+            override val queryExpressions: SQLQuery by lazy(NONE) { expressionsQuery(Scope.Event) }
         }
 
         inner class GroupingTraceEntry internal constructor(logId: Int, traceId: Long) : TraceEntry() {
@@ -955,9 +945,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun Attribute.toSQL(sql: MutableSQLQuery, logId: Int?) {
+    private fun Attribute.toSQL(sql: MutableSQLQuery, logId: Int?, scope: Scope, expectedType: Type) {
         val sqlScope = ScopeWithMetadata(this.scope!!, this.hoistingPrefix.length)
         sql.scopes.add(sqlScope)
+        // FIXME: move classifier expansion to database
         // expand classifiers
         val attributes = if (this.isClassifier) cache.expandClassifier(logId!!, this) else listOf(this)
 
@@ -972,11 +963,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                         append("${sqlScope.alias}.\"${attribute.standardName}\"")
                 } else {
                     // use subquery for the non-standard attribute
-                    append("(SELECT TODO_value ")
-                    TODO("how to select the right column? I don't want to fetch the attribute to detect its type.")
-                    append("FROM ${sqlScope.table}_attributes ")
-                    append("WHERE ${sqlScope}_id=${sqlScope.alias}.id AND key=? AND parent_id IS NULL)")
+                    append("(SELECT get_${scope}_attribute(ids.id, ?, ?::attribute_type, null::${expectedType.asDBType})")
                     sql.params.add(attribute.name)
+                    sql.params.add(expectedType.asAttributeType)
                 }
                 append(',')
             }
@@ -984,11 +973,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun IExpression.toSQL(sql: MutableSQLQuery) {
+    private fun IExpression.toSQL(sql: MutableSQLQuery, topScope: Scope, _expectedType: Type) {
         with(sql.query) {
-            fun walk(expression: IExpression) {
+            fun walk(expression: IExpression, expectedType: Type) {
                 when (expression) {
-                    is Attribute -> expression.toSQL(sql, null)
+                    is Attribute -> expression.toSQL(
+                        sql, null, topScope,
+                        if (expression.type != Type.Unknown) expression.type else expectedType
+                    )
                     is Literal<*> -> {
                         if (expression.scope != null)
                             sql.scopes.add(ScopeWithMetadata(expression.scope!!, 0))
@@ -1005,14 +997,47 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                             }
                         }
                     }
-                    is Operator -> append(" ${expression.value} ")
+                    is Operator -> {
+                        if (expression.effectiveScope < topScope)
+                            return
+                        if (expression.value == "and" || expression.value == "or") {
+                            val validChildren = expression.children.filter { it.effectiveScope >= topScope }
+                            if (validChildren.size == 1) {
+                                walk(validChildren[0], expression.expectedChildrenTypes[0])
+                                return
+                            }
+                        }
+
+                        when (expression.operatorType) {
+                            OperatorType.Prefix -> {
+                                assert(expression.children.size == 1)
+                                append(" ${expression.value} ")
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
+                            }
+                            OperatorType.Infix -> {
+                                assert(expression.children.size >= 2)
+                                append(' ')
+                                for (i in 0 until expression.children.size) {
+                                    walk(expression.children[i], expression.expectedChildrenTypes[i])
+                                    if (i < expression.children.size - 1)
+                                        append(" ${expression.value} ")
+                                }
+                                append(' ')
+                            }
+                            OperatorType.Postfix -> {
+                                assert(expression.children.size == 1)
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
+                                append(" ${expression.value} ")
+                            }
+                        }
+                    }
                     is Function -> {
                         when (expression.name) {
                             "min", "max", "avg", "count", "sum", "round", "lower", "upper" -> {
                                 assert(expression.children.size == 1)
                                 append(expression.name)
                                 append('(')
-                                walk(expression.children[0])
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 // expression.children.forEach { walk(it); append(',') }
                                 // if (expression.children.isNotEmpty())
                                 //     deleteCharAt(length - 1)
@@ -1020,7 +1045,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                             }
                             "date", "time" -> {
                                 assert(expression.children.size == 1)
-                                walk(expression.children[0])
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append("::")
                                 append(expression.name)
                             }
@@ -1029,26 +1054,26 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                                 append("extract(")
                                 append(expression.name)
                                 append(" from ")
-                                walk(expression.children[0])
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(')')
                             }
                             "second" -> {
                                 assert(expression.children.size == 1)
                                 append("floor(extract(second from ")
                                 append(" from ")
-                                walk(expression.children[0])
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append("))")
                             }
                             "millisecond" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(milliseconds from ") // note the plural form
-                                walk(expression.children[0])
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")%1000")
                             }
                             "dayofweek" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(dow from ")
-                                walk(expression.children[0])
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")+1")
                             }
                             "now" -> {
@@ -1056,16 +1081,18 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                                 append("?::timestamptz")
                                 sql.params.add(now)
                             }
-                            else -> throw IllegalArgumentException("Undefined function ${expression.name}")
+                            else -> throw IllegalArgumentException("Undefined function ${expression.name}.")
                         }
 
                     }
+                    is AnyExpression -> append(expression.value)
                     // Expression must be the last but one because other classes inherit from this one.
-                    is Expression -> expression.children.forEach { walk(it) }
+                    is Expression -> expression.children.withIndex()
+                        .forEach { walk(it.value, expression.expectedChildrenTypes[it.index]) }
                     else -> throw IllegalArgumentException("Unknown expression type: $expression")
                 }
             }
-            walk(this@toSQL)
+            walk(this@toSQL, _expectedType)
         }
     }
 }

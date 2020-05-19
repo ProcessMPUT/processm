@@ -51,23 +51,28 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         @BeforeAll
         @JvmStatic
         fun setUp() {
-            logger.info("Loading data")
-            measureTimeMillis {
-                val stream = this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes")
-                DBXESOutputStream().use { output ->
-                    output.write(XMLXESInputStream(stream).map {
-                        if (it is processm.core.log.Log) /* The base class for log */
-                            it.identityId = uuid.toString()
-                        it
-                    })
+            try {
+                logger.info("Loading data")
+                measureTimeMillis {
+                    val stream = this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes")
+                    DBXESOutputStream().use { output ->
+                        output.write(XMLXESInputStream(stream).map {
+                            if (it is processm.core.log.Log) /* The base class for log */
+                                it.identityId = uuid.toString()
+                            it
+                        })
+                    }
+                }.also { logger.info("Data loaded in ${it}ms.") }
+
+                DBConnectionPool.getConnection().use {
+                    val response = it.prepareStatement("SELECT id FROM logs ORDER BY id DESC LIMIT 1").executeQuery()
+                    response.next()
+
+                    logId = response.getInt("id")
                 }
-            }.also { logger.info("Data loaded in ${it}ms.") }
-
-            DBConnectionPool.getConnection().use {
-                val response = it.prepareStatement("SELECT id FROM logs ORDER BY id DESC LIMIT 1").executeQuery()
-                response.next()
-
-                logId = response.getInt("id")
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                throw e
             }
         }
 
@@ -281,6 +286,9 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         standardAndAllAttributesMatch(log, log)
 
         assertEquals(101, log.traces.count())
+        assertTrue(log.traces.any { trace ->
+            trace.events.map { it.attributes["result"] }.filterNotNull().any()
+        })
         for (trace in log.traces) {
             assertNull(trace.conceptName)
             assertNull(trace.costCurrency)
@@ -290,10 +298,6 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             standardAndAllAttributesMatch(log, trace)
 
             assertTrue(trace.events.count() > 0)
-            assertTrue(
-                trace.events.map { it.attributes["result"] }.filterNotNull().any()
-                        || Integer.parseInt(trace.conceptName) < 0
-            )
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
@@ -313,7 +317,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun selectExpressionTest() {
         val stream = q(
-            "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp)" +
+            "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp) " +
+                    "where l:id='$uuid' " +
                     "group event by [e:concept:name], e:resource"
         )
         TODO()
@@ -380,15 +385,15 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(2, trace.attributes.size)
         assertEquals(5.0, trace.attributes["2.0+3.0"]?.value)
         // TODO: so far it is not possible to store null in a (strongly-typed) attribute
-        assertNull(trace.attributes["null/11.0"]!!.value)
+        assertNull(trace.attributes["null / 11.0"]!!.value)
 
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(3, event.attributes.size)
-        assertEquals(26.0, event.attributes["4.0*5.0+6.0"]?.value)
-        assertEquals(-8.125, event.attributes["7.0/8.0-9.0"]?.value)
+        assertEquals(26.0, event.attributes["4.0 * 5.0 + 6.0"]?.value)
+        assertEquals(-8.125, event.attributes["7.0 / 8.0 - 9.0"]?.value)
         // TODO: so far it is not possible to store null in a (strongly-typed) attribute
-        assertNull(event.attributes["10.0*null"]!!.value)
+        assertNull(event.attributes["10.0 * null"]!!.value)
     }
 
     @Test
@@ -645,14 +650,14 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             val conceptName = Integer.parseInt(trace.conceptName)
             assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
-            assertNull(trace.costCurrency)
-            assertNull(trace.costTotal)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!! > 0)
             assertNull(trace.identityId)
             assertFalse(trace.isEventStream)
             standardAndAllAttributesMatch(log, trace)
 
             assertTrue(trace.events.count() > 0)
-            assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek in validDays })
+            assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek in validDays } || trace.conceptName == "-1")
             assertTrue(trace.events.any { it.timeTimestamp!!.toDateTime().dayOfWeek !in validDays })
 
             for (event in trace.events) {
@@ -660,8 +665,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
                 assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
                 assertNull(event.conceptInstance)
-                assertNull(event.costCurrency)
-                assertNull(event.costTotal)
+                assertTrue(event.costCurrency in validCurrencies)
+                assertTrue(event.costTotal!! in 1.0..1.08)
                 assertNull(event.lifecycleState)
                 assertTrue(event.lifecycleTransition in lifecyleTransitions)
                 assertNull(event.orgGroup)

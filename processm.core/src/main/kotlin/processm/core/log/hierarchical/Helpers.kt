@@ -1,5 +1,6 @@
 package processm.core.log.hierarchical
 
+import processm.core.querylanguage.Type
 import java.sql.ResultSet
 import java.util.*
 
@@ -30,3 +31,21 @@ internal fun <N : Number> ResultSet.to2DArray(): List<Array<N>> = ArrayList<Arra
             out.add(it.getObject(1) as Array<N>)
     }
 }
+
+internal val Type.asAttributeType: String
+    get() = when (this) {
+        Type.String -> "string"
+        Type.Number -> "number"
+        Type.Datetime -> "date"
+        Type.Boolean -> "boolean"
+        else -> throw IllegalArgumentException("Unknown type $this.")
+    }
+
+internal val Type.asDBType: String
+    get() = when (this) {
+        Type.String -> "text"
+        Type.Number -> "double precision"
+        Type.Datetime -> "timestamptz"
+        Type.Boolean -> "boolean"
+        else -> throw IllegalArgumentException("Unknown type $this.")
+    }
