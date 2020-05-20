@@ -1,6 +1,5 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.map2d.Map2D
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.RedoLoop
@@ -18,13 +17,8 @@ class DirectlyFollowsSubGraph(
     private val activities: Set<ProcessTreeActivity>,
     /**
      * Connections between activities in graph
-     * Outgoing - `key` activity has reference to activities which it directly points to.
      */
-    private val outgoingConnections: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc>,
-    /**
-     * Initial connections between activities in graph (initial DFG)
-     */
-    private val initialConnections: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = outgoingConnections,
+    private val initialConnections: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc>,
     /**
      * Initial start activities  in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
@@ -84,7 +78,7 @@ class DirectlyFollowsSubGraph(
      * Possible only if connections are empty (no self-loop) AND in activities only one activity.
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
-        return outgoingConnections.columns.isNullOrEmpty() && activities.size == 1
+        return activities.size == 1 && initialConnections[activities.first(), activities.first()] === null
     }
 
     /**
@@ -105,7 +99,7 @@ class DirectlyFollowsSubGraph(
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
      */
-    fun calculateExclusiveCut(outgoing: Map2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = outgoingConnections): MutableMap<ProcessTreeActivity, Int>? {
+    fun calculateExclusiveCut(): MutableMap<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
         var lastLabelId = 0
 
@@ -142,27 +136,31 @@ class DirectlyFollowsSubGraph(
                 }
 
                 // Iterate over activities connected with my `current` (current -> activity)
-                outgoing.getRow(current).keys.forEach { activity ->
-                    // If not assigned label yet
-                    if (nonLabeledActivities.contains(activity)) {
-                        // Assign label
-                        activitiesWithLabels[activity] = label
-                        // Add activity to check list
-                        toCheckActivitiesListFIFO.add(activity)
-                        // Remove activity from not labeled yet activities list
-                        nonLabeledActivities.remove(activity)
+                initialConnections.getRow(current).keys.forEach { activity ->
+                    if (activity in activities) {
+                        // If not assigned label yet
+                        if (nonLabeledActivities.contains(activity)) {
+                            // Assign label
+                            activitiesWithLabels[activity] = label
+                            // Add activity to check list
+                            toCheckActivitiesListFIFO.add(activity)
+                            // Remove activity from not labeled yet activities list
+                            nonLabeledActivities.remove(activity)
+                        }
                     }
                 }
 
-                outgoing.getColumn(current).keys.forEach { activity ->
-                    // If not assigned label yet
-                    if (nonLabeledActivities.contains(activity)) {
-                        // Assign label
-                        activitiesWithLabels[activity] = label
-                        // Add activity to check list
-                        toCheckActivitiesListFIFO.add(activity)
-                        // Remove activity from not labeled yet activities list
-                        nonLabeledActivities.remove(activity)
+                initialConnections.getColumn(current).keys.forEach { activity ->
+                    if (activity in activities) {
+                        // If not assigned label yet
+                        if (nonLabeledActivities.contains(activity)) {
+                            // Assign label
+                            activitiesWithLabels[activity] = label
+                            // Add activity to check list
+                            toCheckActivitiesListFIFO.add(activity)
+                            // Remove activity from not labeled yet activities list
+                            nonLabeledActivities.remove(activity)
+                        }
                     }
                 }
             }
@@ -190,21 +188,9 @@ class DirectlyFollowsSubGraph(
         }
 
         activityGroups.forEach { (groupId, activities) ->
-            // Prepare connections map
-            val connectionsMap = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
-            // For each activity add connection with another activities from group
-            activities.forEach { from ->
-                activities.forEach { to ->
-                    outgoingConnections[from, to].also {
-                        if (it !== null) connectionsMap[from, to] = it
-                    }
-                }
-            }
-
             children[groupToListPosition[groupId]!!] =
                 DirectlyFollowsSubGraph(
                     activities = activities,
-                    outgoingConnections = connectionsMap,
                     initialConnections = initialConnections,
                     initialStartActivities = currentStartActivities,
                     initialEndActivities = currentEndActivities
@@ -276,7 +262,8 @@ class DirectlyFollowsSubGraph(
                         preOrder[v] = counter
                     }
 
-                    val w = outgoingConnections.getRow(v).keys.firstOrNull { !preOrder.containsKey(it) }
+                    val w = initialConnections.getRow(v).keys.filter { it in activities }
+                        .firstOrNull { !preOrder.containsKey(it) }
                     if (w !== null) {
                         stack.add(w)
                     } else {
@@ -284,15 +271,17 @@ class DirectlyFollowsSubGraph(
                         lowLink[v] = preOrder[v]!!
 
                         // Try to decrement value and set as minimal as possible
-                        outgoingConnections.getRow(v).keys.forEach { w ->
-                            if (!alreadyAssigned.contains(w)) {
-                                val lowLinkV = lowLink[v]!!
-                                val preOrderedW = preOrder[w]!!
+                        initialConnections.getRow(v).keys.forEach { w ->
+                            if (w in activities) {
+                                if (!alreadyAssigned.contains(w)) {
+                                    val lowLinkV = lowLink[v]!!
+                                    val preOrderedW = preOrder[w]!!
 
-                                if (preOrderedW > preOrder[v]!!) {
-                                    lowLink[v] = min(lowLinkV, lowLink[w]!!)
-                                } else {
-                                    lowLink[v] = min(lowLinkV, preOrderedW)
+                                    if (preOrderedW > preOrder[v]!!) {
+                                        lowLink[v] = min(lowLinkV, lowLink[w]!!)
+                                    } else {
+                                        lowLink[v] = min(lowLinkV, preOrderedW)
+                                    }
                                 }
                             }
                         }
@@ -347,15 +336,19 @@ class DirectlyFollowsSubGraph(
         val connectionsMatrix = Array(size) { ByteArray(size) }
 
         // Iterate over connections in graph
-        outgoingConnections.rows.forEach { from ->
-            val activityGroupID = activityToGroupIndex[from]!!
-            outgoingConnections.getRow(from).keys.forEach { to ->
-                val indicatedGroupID = activityToGroupIndex[to]!!
+        initialConnections.rows.forEach { from ->
+            if (from in activities) {
+                val activityGroupID = activityToGroupIndex[from]!!
+                initialConnections.getRow(from).keys.forEach { to ->
+                    if (to in activities) {
+                        val indicatedGroupID = activityToGroupIndex[to]!!
 
-                // Different groups
-                if (activityGroupID != indicatedGroupID) {
-                    connectionsMatrix[indicatedGroupID][activityGroupID] = 1
-                    connectionsMatrix[activityGroupID][indicatedGroupID] = -1
+                        // Different groups
+                        if (activityGroupID != indicatedGroupID) {
+                            connectionsMatrix[indicatedGroupID][activityGroupID] = 1
+                            connectionsMatrix[activityGroupID][indicatedGroupID] = -1
+                        }
+                    }
                 }
             }
         }
@@ -650,7 +643,7 @@ class DirectlyFollowsSubGraph(
         for (a1 in activities) {
             for (a2 in activities) {
                 if (components[a1] != components[a2]) {
-                    if (outgoingConnections[a1, a2] === null || outgoingConnections[a2, a1] === null) {
+                    if (initialConnections[a1, a2] === null || initialConnections[a2, a1] === null) {
                         mergeComponents(a1, a2, components)
                     }
                 }
@@ -685,15 +678,19 @@ class DirectlyFollowsSubGraph(
         }
 
         // Merge the other connected components
-        outgoingConnections.rows.forEach { source ->
-            outgoingConnections.getRow(source).keys.forEach { target ->
-                if (source !in currentEndActivities) {
-                    if (source in currentStartActivities) {
-                        // A redo cannot be reachable from a start activity that is not an end activity
-                        mergeComponents(source, target, components)
-                    } else {
-                        // This is an edge inside a sub-component
-                        if (target !in currentStartActivities) mergeComponents(source, target, components)
+        initialConnections.rows.forEach { source ->
+            if (source in activities) {
+                initialConnections.getRow(source).keys.forEach { target ->
+                    if (target in activities) {
+                        if (source !in currentEndActivities) {
+                            if (source in currentStartActivities) {
+                                // A redo cannot be reachable from a start activity that is not an end activity
+                                mergeComponents(source, target, components)
+                            } else {
+                                // This is an edge inside a sub-component
+                                if (target !in currentStartActivities) mergeComponents(source, target, components)
+                            }
+                        }
                     }
                 }
             }
@@ -703,11 +700,15 @@ class DirectlyFollowsSubGraph(
         // Make a list of sub-start and sub-end activities
         val subStartActivities = HashSet<ProcessTreeActivity>()
         val subEndActivities = HashSet<ProcessTreeActivity>()
-        outgoingConnections.rows.forEach { source ->
-            outgoingConnections.getRow(source).keys.forEach { target ->
-                if (components[source] != components[target]) {
-                    subEndActivities.add(source)
-                    subStartActivities.add(target)
+        initialConnections.rows.forEach { source ->
+            if (source in activities) {
+                initialConnections.getRow(source).keys.forEach { target ->
+                    if (target in activities) {
+                        if (components[source] != components[target]) {
+                            subEndActivities.add(source)
+                            subStartActivities.add(target)
+                        }
+                    }
                 }
             }
         }
@@ -719,7 +720,7 @@ class DirectlyFollowsSubGraph(
                     // subEndActivity is already in the body
                     break
                 }
-                if (outgoingConnections[subEndActivity, startActivity] === null) {
+                if (initialConnections[subEndActivity, startActivity] === null) {
                     mergeComponents(subEndActivity, startActivity, components)
                     break
                 }
@@ -733,7 +734,7 @@ class DirectlyFollowsSubGraph(
                     // subStartActivity is already in the body
                     break
                 }
-                if (outgoingConnections[endActivity, subStartActivity] === null) {
+                if (initialConnections[endActivity, subStartActivity] === null) {
                     mergeComponents(subStartActivity, endActivity, components)
                     break
                 }
