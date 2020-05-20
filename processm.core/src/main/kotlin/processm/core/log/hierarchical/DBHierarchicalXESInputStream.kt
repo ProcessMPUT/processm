@@ -11,6 +11,7 @@ import processm.core.querylanguage.Scope
 import java.lang.ref.Cleaner
 import java.lang.ref.SoftReference
 import java.sql.ResultSet
+import java.sql.Types
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -206,6 +207,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             readGlobals(result.globals, this, logId)
             val nameMap = this.extensions.values.getStandardToCustomNameMap()
             readLogAttributes(result.attributes, this, logId, nameMap)
+            readExpressions(result.expressions, this, logId.toLong())
 
             // the standard attributes are to be read after all other attributes, as they may override the previous values
             xesVersion = result.entity.getString("xes:version")
@@ -213,7 +215,6 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             conceptName = result.entity.getString("concept:name") ?: conceptName
             identityId = result.entity.getString("identity:id") ?: identityId
             lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
-
 
             // getTraces is a sequence, so it will be actually called when one reads it
             traces = getTraces(logId, nameMap)
@@ -278,6 +279,43 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         }
     }
 
+    private fun readExpressions(resultSet: ResultSet, element: XESElement, id: Long) {
+        if (resultSet.isBeforeFirst)
+            resultSet.next()
+
+        assert(resultSet.findColumn("id") == 1)
+        if (resultSet.isEnded || resultSet.getLong(1) != id)
+            return
+
+        val expressions = query.selectExpressions[element.scope]!!
+        val metadata = resultSet.metaData
+        for (colIndex in 2..metadata.columnCount) {
+            // TODO: replace with the expression label when included in the PQL specification
+            val colName = expressions[colIndex - 2].toString()
+            element.attributesInternal.computeIfAbsent(colName) {
+                when (val colType = metadata.getColumnType(colIndex)) {
+                    Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
+                        resultSet.getString(colIndex)?.let { StringAttr(colName, it) }
+                    Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
+                        resultSet.getLongOrNull(colIndex)?.let { IntAttr(colName, it) }
+                    Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
+                        resultSet.getDoubleOrNull(colIndex)?.let { RealAttr(colName, it) }
+                    Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE ->
+                        resultSet.getTimestamp(colIndex, gmtCalendar)?.let { DateTimeAttr(colName, it.toInstant()) }
+                    Types.BOOLEAN ->
+                        resultSet.getBooleanOrNull(colIndex)?.let { BoolAttr(colName, it) }
+                    Types.NULL ->
+                        NullAttr(colName)
+                    else -> throw UnsupportedOperationException("Unsupported expression type $colType for expression $colName.")
+                } ?: NullAttr(colName)
+            }
+        }
+
+        resultSet.next() // move to the next row, if it exists then it should refer to the next entity
+        assert(resultSet.isEnded || resultSet.getLong(1) != id)
+    }
+
+
     private fun readTrace(result: QueryResult, logId: Int, nameMap: Map<String, String>): Trace {
         logger.enter()
 
@@ -286,6 +324,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         with(Trace()) {
             val traceId = result.entity.getLong("id")
             readTraceAttributes(result.attributes, this, traceId, nameMap)
+            readExpressions(result.expressions, this, traceId)
 
             // the standard attributes are to be read after all other attributes, as they may override the previous values
             conceptName = result.entity.getString("concept:name") ?: conceptName
@@ -310,6 +349,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         with(Event()) {
             val eventId = result.entity.getLong("id")
             readEventAttributes(result.attributes, this, eventId, nameMap)
+            readExpressions(result.expressions, this, eventId)
 
             // the standard attributes are to be read after all other attributes, as they may override the previous values
             conceptName = result.entity.getString("concept:name") ?: conceptName
@@ -401,6 +441,14 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
     private val ResultSet.isEnded
         // https://stackoverflow.com/a/15750832
         get() = this.isAfterLast || !this.isBeforeFirst && this.row == 0
+
+    private val XESElement.scope: Scope
+        get() = when (this) {
+            is Event -> Scope.Event
+            is Trace -> Scope.Trace
+            is Log -> Scope.Log
+            else -> throw IllegalArgumentException("Unknown type ${this::class.simpleName}.")
+        }
 }
 
 @Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")

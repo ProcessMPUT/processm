@@ -6,7 +6,7 @@ import kotlin.collections.HashMap
 /**
  * The base class for the attribute compliant with the XES standard.
  */
-abstract class Attribute<T : Any>(key: String) {
+abstract class Attribute<T>(key: String) {
     internal val childrenInternal: MutableMap<String, Attribute<*>> = HashMap()
 
     /**
@@ -65,7 +65,7 @@ abstract class Attribute<T : Any>(key: String) {
     }
 }
 
-val Attribute<*>.value: Any
+val Attribute<*>.value: Any?
     get() = this.getValue()
 
 fun Map<String, Attribute<*>>.deepEquals(other: Map<String, Attribute<*>>): Boolean =

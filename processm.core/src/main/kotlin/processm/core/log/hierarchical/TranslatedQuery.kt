@@ -104,8 +104,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             val insertPos = length
 
             pql.whereExpression.toSQL(sql, scope, Type.Any)
-            if (length != insertPos)
-                insert(insertPos, if (scope == Scope.Log) " WHERE " else " AND ")
+            if (length != insertPos) {
+                insert(insertPos, if (scope == Scope.Log) " WHERE (" else " AND (")
+                append(')')
+            }
         }
     }
 
@@ -135,16 +137,39 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun path(from: Scope, to: ScopeWithMetadata) = sequence {
-        var current = from
-        while (current != to.scope) {
-            current = if (from < to.scope) current.lower!! else current.upper!!
-            yield(ScopeWithMetadata(current, 0))
+        assert(to.hoisting <= 2)
+        var current = ScopeWithMetadata(from, 0)
+
+        // phase 1: go to the effective "to" scope
+        val effectiveTo = (0 until to.hoisting).fold(to.scope) { s, _ -> s.upper!! }
+        while (current.scope != effectiveTo) {
+            current =
+                ScopeWithMetadata(if (current.scope < effectiveTo) current.scope.lower!! else current.scope.upper!!, 0)
+            yield(current)
         }
-        if (to.hoisting > 0)
-            yield(to)
+
+        // phase 2: go to the actual "to" scope
+        // Scope.ordinal happens to match the maximum hoisting level
+        assert(0 == Scope.Log.ordinal)
+        assert(1 == Scope.Trace.ordinal)
+        assert(2 == Scope.Event.ordinal)
+
+        assert(current == to || to.hoisting > 0)
+        while (current != to) {
+            assert(current.scope < to.scope)
+            current = current.scope.lower!!.let { ScopeWithMetadata(it, to.hoisting.coerceAtMost(it.ordinal)) }
+            /*current = when {
+                current.scope < to.scope -> current.scope.lower!!
+                current.scope > to.scope -> current.scope.upper!!
+                else -> current.scope
+            }.let { ScopeWithMetadata(it, to.hoisting.coerceAtMost(it.ordinal)) }*/
+
+            yield(current)
+        }
     }
 
-    private fun sorted(s1: Scope, s2: Scope) = if (s1 < s2) s1 to s2 else s2 to s1
+    private fun sorted(s1: ScopeWithMetadata, s2: ScopeWithMetadata) =
+        if (s1.scope < s2.scope) s1 to s2 else s2 to s1
 
     private fun from(baseScope: Scope, sql: MutableSQLQuery): String = buildString {
         val existingAliases = HashSet<String>()
@@ -152,24 +177,20 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         append(" FROM ${baseScope.table} ${baseScope.alias}")
         for (sqlScope in sql.scopes) {
-            var prevScope = baseScope
+            var prevScope = ScopeWithMetadata(baseScope, 0)
             for (joinWith in path(baseScope, sqlScope)) {
                 if (joinWith.alias in existingAliases) {
-                    prevScope = joinWith.scope
+                    prevScope = joinWith
                     continue
                 }
 
                 existingAliases.add(joinWith.alias)
                 append(" LEFT JOIN ${joinWith.table} ${joinWith.alias} ON ")
-                if (joinWith.hoisting == 0) {
-                    val (parent, child) = sorted(prevScope, joinWith.scope)
-                    append("${parent.alias}.id = ${child.alias}.${parent}_id")
-                } else {
-                    assert(prevScope == joinWith.scope)
-                    assert(prevScope != Scope.Log)
-                    append("${prevScope.alias}.${prevScope.upper}_id = ${joinWith.alias}.${joinWith.scope.upper}_id")
-                }
-                prevScope = joinWith.scope
+
+                val (parent, child) = sorted(prevScope, joinWith)
+                append("${parent.alias}.id = ${child.alias}.${parent.scope}_id")
+
+                prevScope = joinWith
             }
         }
     }
@@ -330,19 +351,20 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         if (pql.selectExpressions[scope].isNullOrEmpty()) {
             // FIXME: optimization: return empty ResultSet here
-            it.query.append("SELECT NULL FROM unnest(?) WHERE 0=1")
+            it.query.append("SELECT NULL AS id FROM unnest(?) WHERE 0=1")
             return@SQLQuery
         }
 
         selectExpressions(scope, it)
         it.query.append(from(scope, it))
         it.query.append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope.alias}.id=ids.id ")
+        it.query.append(" GROUP BY ids.id, ids.ord")
         orderByEntity(it)
     }
 
     private fun selectExpressions(scope: Scope, sql: MutableSQLQuery) {
         with(sql.query) {
-            append("SELECT ")
+            append("SELECT ids.id, ")
             assert(pql.selectExpressions[scope]!!.isNotEmpty())
             for (expression in pql.selectExpressions[scope]!!) {
                 expression.toSQL(sql, scope, Type.Any)
@@ -591,6 +613,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 logger.trace { "Retrieving log/group ids: ${ids.joinToString()}." }
                 val parameters = listOf(connection!!.createArrayOf("int", ids.toTypedArray()))
                 val attrParameters = parameters + cache.topEntry.queryAttributes.params
+                val exprParameters = cache.topEntry.queryExpressions.params + parameters
 
                 val results = listOf(
                     cache.topEntry.queryEntity,
@@ -600,7 +623,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     queryLogExtensions,
                     cache.topEntry.queryGlobals
                 ).executeMany(
-                    connection!!, parameters, attrParameters, parameters, parameters, parameters, parameters
+                    connection!!, parameters, attrParameters, exprParameters, parameters, parameters, parameters
                 )
 
                 return LogQueryResult(
@@ -625,12 +648,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 logger.trace { "Retrieving trace/group ids: ${ids.joinToString()}." }
                 val parameters: List<Any> = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
                 val attrParameters = parameters + log.queryAttributes.params
+                val exprParameters = log.queryExpressions.params + parameters
 
                 val results = listOf(
                     log.queryEntity,
                     log.queryAttributes,
                     log.queryExpressions
-                ).executeMany(connection!!, parameters, attrParameters, parameters)
+                ).executeMany(connection!!, parameters, attrParameters, exprParameters)
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
             }
@@ -647,12 +671,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 logger.trace { "Retrieving event/group ids: ${ids.joinToString()}." }
                 val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
                 val attrParameters = parameters + trace.queryAttributes.params
+                val exprParameters = trace.queryExpressions.params + parameters
 
                 val results = listOf(
                     trace.queryEntity,
                     trace.queryAttributes,
                     trace.queryExpressions
-                ).executeMany(connection!!, parameters, attrParameters, parameters)
+                ).executeMany(connection!!, parameters, attrParameters, exprParameters)
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
             }
@@ -973,12 +998,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun IExpression.toSQL(sql: MutableSQLQuery, topScope: Scope, _expectedType: Type) {
+    private fun IExpression.toSQL(sql: MutableSQLQuery, scope: Scope, _expectedType: Type) {
         with(sql.query) {
             fun walk(expression: IExpression, expectedType: Type) {
                 when (expression) {
                     is Attribute -> expression.toSQL(
-                        sql, null, topScope,
+                        sql, null, scope,
                         if (expression.type != Type.Unknown) expression.type else expectedType
                     )
                     is Literal<*> -> {
@@ -988,26 +1013,16 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                         when (expression) {
                             is NullLiteral -> append("null")
                             is DateTimeLiteral -> {
-                                append('?')
+                                append("?::timestamptz")
                                 sql.params.add(Timestamp.from(expression.value))
                             }
                             else -> {
-                                append('?')
+                                append("?::${expression.type.asDBType}")
                                 sql.params.add(expression.value!!)
                             }
                         }
                     }
                     is Operator -> {
-                        if (expression.effectiveScope < topScope)
-                            return
-                        if (expression.value == "and" || expression.value == "or") {
-                            val validChildren = expression.children.filter { it.effectiveScope >= topScope }
-                            if (validChildren.size == 1) {
-                                walk(validChildren[0], expression.expectedChildrenTypes[0])
-                                return
-                            }
-                        }
-
                         when (expression.operatorType) {
                             OperatorType.Prefix -> {
                                 assert(expression.children.size == 1)

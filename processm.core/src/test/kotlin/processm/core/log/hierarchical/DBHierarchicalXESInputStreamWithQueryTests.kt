@@ -148,7 +148,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             assertTrue(conceptName >= -1)
             assertTrue(conceptName <= 100)
             assertNull(trace.costCurrency)
-            assertNull(trace.costTotal)
+            assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() == trace.events.count())
             assertNull(trace.identityId)
             assertFalse(trace.isEventStream)
             standardAndAllAttributesMatch(log, trace)
@@ -159,8 +159,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertTrue(event.timeTimestamp!!.isAfter(begin))
                 assertTrue(event.timeTimestamp!!.isBefore(end), event.timeTimestamp.toString())
                 assertNull(event.conceptInstance)
-                assertNull(event.costCurrency)
-                assertNull(event.costTotal)
+                assertTrue(event.costCurrency in validCurrencies)
+                assertTrue(event.costTotal!! in 1.0..1.08)
                 assertNull(event.lifecycleState)
                 assertTrue(event.lifecycleTransition in lifecyleTransitions)
                 assertNull(event.orgGroup)
@@ -378,13 +378,12 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val log = stream.first()
         assertEquals(2, log.attributes.size)
         assertEquals(1.0, log.attributes["1.0"]?.value)
-        assertEquals(Instant.parse("2020-03-12T00:00:00Z"), log.attributes["2020-03-12T00:00:00Z"]?.value)
+        assertEquals("2020-03-12T00:00:00Z".parseISO8601(), log.attributes["D2020-03-12T00:00:00Z"]?.value)
 
         assertEquals(1, log.traces.count())
         val trace = log.traces.first()
         assertEquals(2, trace.attributes.size)
-        assertEquals(5.0, trace.attributes["2.0+3.0"]?.value)
-        // TODO: so far it is not possible to store null in a (strongly-typed) attribute
+        assertEquals(5.0, trace.attributes["2.0 + 3.0"]?.value)
         assertNull(trace.attributes["null / 11.0"]!!.value)
 
         assertEquals(1, trace.events.count())
@@ -392,7 +391,6 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(3, event.attributes.size)
         assertEquals(26.0, event.attributes["4.0 * 5.0 + 6.0"]?.value)
         assertEquals(-8.125, event.attributes["7.0 / 8.0 - 9.0"]?.value)
-        // TODO: so far it is not possible to store null in a (strongly-typed) attribute
         assertNull(event.attributes["10.0 * null"]!!.value)
     }
 
@@ -432,11 +430,11 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(5, event.attributes.size)
-        assertEquals("D2020-03-13T00:00:00Z", event.attributes["D2020-03-13T00:00:00Z"]?.toString())
-        assertEquals("D2020-03-13T16:45:00Z", event.attributes["D2020-03-13T16:45:00Z"]?.toString())
-        assertEquals("D2020-03-13T16:45:50Z", event.attributes["D2020-03-13T16:45:50Z"]?.toString())
-        assertEquals("D2020-03-13T16:45:50.333Z", event.attributes["D2020-03-13T16:45:50.333Z"]?.toString())
-        assertEquals("D2020-03-13T14:45:00Z", event.attributes["D2020-03-13T14:45:00Z"]?.toString())
+        assertEquals("D2020-03-13T00:00:00Z".parseISO8601(), event.attributes["D2020-03-13T00:00:00Z"]?.value)
+        assertEquals("D2020-03-13T16:45:00Z".parseISO8601(), event.attributes["D2020-03-13T16:45:00Z"]?.value)
+        assertEquals("D2020-03-13T16:45:50Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50Z"]?.value)
+        assertEquals("D2020-03-13T16:45:50.333Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50.333Z"]?.value)
+        assertEquals("D2020-03-13T14:45:00Z".parseISO8601(), event.attributes["D2020-03-13T14:45:00Z"]?.value)
         // TODO: should we return duplicate attributes?
     }
 
@@ -947,10 +945,10 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertTrue(stream.count() <= 3)
         for (log in stream) {
             assertTrue(log.traces.count() > 0)
-            assertTrue(log.traces.count() <= 100)
+            assertTrue(log.traces.count() <= 101)
             for (trace in log.traces) {
                 assertTrue(trace.events.count() > 0)
-                assertTrue(trace.events.count() <= 60)
+                assertTrue(trace.events.count() <= 55)
 
                 var lastTimestamp = begin
                 for (event in trace.events) {
@@ -965,14 +963,14 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     fun orderByWithModifierAndScopesTest() {
         val stream = q("where l:name='JournalReview' order by t:total desc, e:timestamp limit l:3")
         for (log in stream) {
-            assertTrue(log.traces.count() <= 100)
+            assertTrue(log.traces.count() == 101)
 
-            var lastTotal: Double? = Double.POSITIVE_INFINITY
+            var lastTotal: Double? = null // nulls first
             for (trace in log.traces) {
-                assertTrue(trace.costTotal === null || trace.costTotal!! <= lastTotal!!)
-                lastTotal = trace.costTotal // nulls last
+                assertTrue(cmp(trace.costTotal, lastTotal) <= 0)
+                lastTotal = trace.costTotal
 
-                assertTrue(trace.events.count() <= 60)
+                assertTrue(trace.events.count() <= 55)
                 var lastTimestamp = begin
                 for (event in trace.events) {
                     assertTrue(!event.timeTimestamp!!.isBefore(lastTimestamp))
@@ -986,14 +984,14 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     fun orderByWithModifierAndScopes2Test() {
         val stream = q("where l:name='JournalReview' order by e:timestamp, t:total desc limit l:3")
         for (log in stream) {
-            assertTrue(log.traces.count() <= 100)
+            assertTrue(log.traces.count() == 101)
 
-            var lastTotal: Double? = Double.POSITIVE_INFINITY
+            var lastTotal: Double? = null // nulls first
             for (trace in log.traces) {
-                assertTrue(trace.costTotal === null || trace.costTotal!! <= lastTotal!!)
-                lastTotal = trace.costTotal // nulls last
+                assertTrue(cmp(trace.costTotal, lastTotal) <= 0)
+                lastTotal = trace.costTotal
 
-                assertTrue(trace.events.count() <= 60)
+                assertTrue(trace.events.count() <= 55)
                 var lastTimestamp = begin
                 for (event in trace.events) {
                     assertTrue(!event.timeTimestamp!!.isBefore(lastTimestamp), "${event.timeTimestamp} $lastTimestamp")
@@ -1001,6 +999,16 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 }
             }
         }
+    }
+
+    private fun <T : Comparable<T>> cmp(a: T?, b: T?): Int {
+        if (a === b)
+            return 0 // for nulls and the same object supplied twice
+        if (a === null)
+            return 1
+        if (b === null)
+            return -1
+        return a.compareTo(b)
     }
 
     @Test

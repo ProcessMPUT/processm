@@ -41,3 +41,28 @@ internal fun ResultSet.getDoubleOrNull(columnLabel: String): Double? {
     val d = this.getDouble(columnLabel)
     return if (this.wasNull()) null else d
 }
+
+internal fun ResultSet.getDoubleOrNull(columnIndex: Int): Double? {
+    val d = this.getDouble(columnIndex)
+    return if (this.wasNull()) null else d
+}
+
+internal fun ResultSet.getLongOrNull(columnLabel: String): Long? {
+    val l = this.getLong(columnLabel)
+    return if (this.wasNull()) null else l
+}
+
+internal fun ResultSet.getLongOrNull(columnIndex: Int): Long? {
+    val l = this.getLong(columnIndex)
+    return if (this.wasNull()) null else l
+}
+
+internal fun ResultSet.getBooleanOrNull(columnLabel: String): Boolean? {
+    val b = this.getBoolean(columnLabel)
+    return if (this.wasNull()) null else b
+}
+
+internal fun ResultSet.getBooleanOrNull(columnIndex: Int): Boolean? {
+    val b = this.getBoolean(columnIndex)
+    return if (this.wasNull()) null else b
+}

@@ -172,6 +172,8 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
             exception!!
         )
     }
+
+    override fun toString(): String = "D$value"
 }
 
 /**
