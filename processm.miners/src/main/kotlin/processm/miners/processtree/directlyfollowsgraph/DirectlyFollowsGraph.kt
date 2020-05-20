@@ -4,6 +4,8 @@ import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.ProcessTreeActivity
+import java.util.*
+import kotlin.collections.HashMap
 
 /**
  * Directly-follows graph based on log's events sequences
@@ -91,6 +93,30 @@ class DirectlyFollowsGraph {
                 else graph[from, to] = arc
             }
         }
+    }
+
+    /**
+     * Analyze diff and prepare changes list - new connections between activities.
+     *
+     * Operation should be done _before_ apply calculated diff into DFG.
+     */
+    fun diffToChangesList(input: Triple<DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>>): Pair<Boolean, List<Pair<ProcessTreeActivity, ProcessTreeActivity>>> {
+        // Changed start or end activities? Probably whole graph changed, new activities added, lot of changes
+        // Ignore new connections and force rebuild graph
+        if (input.second.keys.any { !startActivities.contains(it) } || input.third.keys.any { !endActivities.contains(it) }) {
+            return Pair(true, emptyList())
+        }
+
+        val addedConnections = LinkedList<Pair<ProcessTreeActivity, ProcessTreeActivity>>()
+
+        // Analyze connections in diff and current DFG
+        input.first.rows.forEach { from ->
+            input.first.getRow(from).keys.forEach { to ->
+                if (graph[from, to] === null) addedConnections.add(Pair(from, to))
+            }
+        }
+
+        return Pair(false, addedConnections)
     }
 
     /**

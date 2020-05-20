@@ -195,4 +195,77 @@ class DirectlyFollowsGraphTest {
         assertEquals(1, miner.endActivities.size)
         assertTrue(miner.endActivities.contains(D))
     }
+
+    @Test
+    fun `Diff changes list - start activities updated`() {
+        val baseLog = logFromString(
+            """
+            A C D
+            """.trimIndent()
+        )
+        val log1 = logFromString(
+            """
+            B C D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(baseLog))
+
+        val diff = miner.discoverDiff(sequenceOf(log1))
+        val output = miner.diffToChangesList(diff)
+
+        assertTrue(output.first)
+        assertTrue(output.second.isEmpty())
+    }
+
+    @Test
+    fun `Diff changes list - end activities updated`() {
+        val baseLog = logFromString(
+            """
+            A C D
+            """.trimIndent()
+        )
+        val log1 = logFromString(
+            """
+            A C E
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(baseLog))
+
+        val diff = miner.discoverDiff(sequenceOf(log1))
+        val output = miner.diffToChangesList(diff)
+
+        assertTrue(output.first)
+        assertTrue(output.second.isEmpty())
+    }
+
+    @Test
+    fun `Diff changes list - new connections between activities`() {
+        val log1 = logFromString(
+            """
+            A B C D
+            A C B D
+            """.trimIndent()
+        )
+        val log2 = logFromString(
+            """
+            A E D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(log1))
+
+        val diff = miner.discoverDiff(sequenceOf(log2))
+        val output = miner.diffToChangesList(diff)
+
+        assertFalse(output.first)
+
+        assertEquals(2, output.second.size)
+        assertTrue(output.second.contains(Pair(A, E)))
+        assertTrue(output.second.contains(Pair(E, D)))
+    }
 }
