@@ -1,10 +1,9 @@
 package processm.miners.processtree.directlyfollowsgraph
 
 import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.LogInputStream
+import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.ProcessTreeActivity
-import java.util.*
 
 /**
  * Directly-follows graph based on log's events sequences
@@ -51,32 +50,78 @@ class DirectlyFollowsGraph {
      * Build directly-follows graph
      */
     fun discover(log: LogInputStream) {
-        log.forEach { discoverGraph(it) }
+        log.forEach { l ->
+            l.traces.forEach { trace ->
+                discoverGraph(trace, graph, startActivities, endActivities)
+            }
+        }
     }
 
-    private fun discoverGraph(log: Log) {
-        log.traces.forEach { trace ->
-            var previousActivity: ProcessTreeActivity? = null
+    /**
+     * Discover changes in DFG as diff matrix.
+     * Analyze also changes in start and end activities (connections from source and into sink).
+     */
+    fun discoverDiff(log: LogInputStream): Triple<DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>> {
+        val diff = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        val starts = HashMap<ProcessTreeActivity, Arc>()
+        val ends = HashMap<ProcessTreeActivity, Arc>()
 
-            // Iterate over all events in current trace
-            trace.events.forEach { event ->
-                // TODO: we should receive activity instead of build it here
-                val activity = ProcessTreeActivity(event.conceptName!!)
-
-                // Add connection
-                if (previousActivity == null)
-                    addConnectionFromSource(activity)
-                else
-                    addConnectionInGraph(from = previousActivity!!, to = activity)
-
-                // Update previous activity
-                previousActivity = activity
+        log.forEach { l ->
+            l.traces.forEach { trace ->
+                discoverGraph(trace, diff, starts, ends)
             }
-
-            // Add connection with sink
-            if (previousActivity != null)
-                addConnectionToSink(previousActivity!!)
         }
+
+        return Triple(diff, starts, ends)
+    }
+
+    /**
+     * Apply calculated diff into DFG internal structure.
+     * Update cardinality of arcs between activities, start and end activities.
+     */
+    fun applyDiff(input: Triple<DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>>) {
+        // Update start & end activities (+ update cardinality)
+        input.second.forEach { (activity, arc) -> addConnectionFromSource(activity, startActivities, arc.cardinality) }
+        input.third.forEach { (activity, arc) -> addConnectionToSink(activity, endActivities, arc.cardinality) }
+
+        // Update connections in DFG
+        input.first.rows.forEach { from ->
+            input.first.getRow(from).forEach { to, arc ->
+                if (graph[from, to] !== null) graph[from, to]!!.increment(arc.cardinality)
+                else graph[from, to] = arc
+            }
+        }
+    }
+
+    /**
+     * Discover connections between pair of activities based on given trace.
+     */
+    private fun discoverGraph(
+        trace: Trace,
+        output: DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = graph,
+        starts: HashMap<ProcessTreeActivity, Arc> = startActivities,
+        ends: HashMap<ProcessTreeActivity, Arc> = endActivities
+    ) {
+        var previousActivity: ProcessTreeActivity? = null
+
+        // Iterate over all events in current trace
+        trace.events.forEach { event ->
+            // TODO: we should receive activity instead of build it here
+            val activity = ProcessTreeActivity(event.conceptName!!)
+
+            // Add connection
+            if (previousActivity == null)
+                addConnectionFromSource(activity, starts)
+            else
+                addConnectionInGraph(from = previousActivity!!, to = activity, output = output)
+
+            // Update previous activity
+            previousActivity = activity
+        }
+
+        // Add connection with sink
+        if (previousActivity != null)
+            addConnectionToSink(previousActivity!!, ends)
     }
 
     /**
