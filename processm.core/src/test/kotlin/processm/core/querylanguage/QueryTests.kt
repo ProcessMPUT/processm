@@ -722,7 +722,9 @@ class QueryTests {
         assertEquals(Scope.Trace, query.groupByOtherAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
     }
 
-    @Test
+    /* This behavior was in fact wrong: there is a difference between group trace by l:name and an empty query -
+        the former returns one grouped trace for each log, and the latter returns plain traces. */
+    /*@Test
     fun groupByMeaninglessScopeTest() {
         val query = Query("group trace by l:name")
         assertTrue(query.isImplicitSelectAll)
@@ -732,7 +734,7 @@ class QueryTests {
 
         assertNotNull(query.warning)
         assertTrue("group" in query.warning!!.message!!)
-    }
+    }*/
 
     @Test
     fun groupByImplicitFromSelectTest() {
@@ -800,7 +802,9 @@ class QueryTests {
         assertEquals(0, query.groupByOtherAttributes[Scope.Event]!!.size)
     }
 
-    @Test
+    /* This behavior was in fact wrong: there is a difference between group trace by l:name and an empty query -
+        the former returns one grouped trace for each log, and the latter returns plain traces. */
+    /*@Test
     fun groupByWarningsTest() {
         val invalidScopes = listOf("group event by t:currency", "group trace by l:name")
         invalidScopes.forEach {
@@ -808,7 +812,7 @@ class QueryTests {
             assertNotNull(query.warning)
             assertTrue(query.warning!!.message!!.contains("group"))
         }
-    }
+    }*/
 
     @Test
     fun orderBySimpleTest() {

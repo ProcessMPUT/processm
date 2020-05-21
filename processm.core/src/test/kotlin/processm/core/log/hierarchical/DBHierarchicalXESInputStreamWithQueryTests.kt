@@ -7,6 +7,7 @@ import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
 import processm.core.log.*
+import processm.core.log.attribute.RealAttr
 import processm.core.log.attribute.StringAttr
 import processm.core.log.attribute.value
 import processm.core.logging.logger
@@ -893,11 +894,30 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupEventByStandardAttributeTest() {
-        val stream = q(
-            """select t:name, e:name, sum(e:total)
-            group event by e:name"""
-        )
-        TODO()
+        val stream = q("select t:name, e:name, sum(e:total) where l:id='$uuid' group event by e:name")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(101, log.traces.count())
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName in -1..100)
+            assertNull(trace.costCurrency)
+            assertNull(trace.costTotal)
+            assertTrue(trace.events.count() >= 1)
+
+            val distinctConceptNames = trace.events.distinctBy { it.conceptName }.count()
+            assertEquals(trace.events.count(), distinctConceptNames)
+
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertNull(event.costCurrency)
+                assertNull(event.costTotal)
+
+                assertTrue((event.attributes["sum(event:total)"] as RealAttr).value >= 1.0)
+            }
+        }
     }
 
     @Test
@@ -916,7 +936,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     }
 
     @Test
-    fun groupByMeaninglessScopeTest() {
+    fun groupByOuterScopeTest() {
         val stream = q("group trace by l:name")
         TODO()
     }

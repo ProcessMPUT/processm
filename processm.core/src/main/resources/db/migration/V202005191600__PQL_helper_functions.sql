@@ -122,3 +122,20 @@ BEGIN
     RAISE EXCEPTION 'Unknown type %.', vtype;
 END ;
 $$;
+
+CREATE OR REPLACE FUNCTION unnest_2d_1d(ANYARRAY, OUT a ANYARRAY)
+    RETURNS SETOF ANYARRAY
+    LANGUAGE plpgsql
+    IMMUTABLE
+    STRICT
+    PARALLEL SAFE
+    ROWS 100
+AS
+$$
+BEGIN
+    FOREACH a SLICE 1 IN ARRAY $1
+        LOOP
+            RETURN NEXT;
+        END LOOP;
+END
+$$;

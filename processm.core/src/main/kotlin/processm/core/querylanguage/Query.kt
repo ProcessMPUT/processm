@@ -46,9 +46,7 @@ class Query(val query: String) {
      * The null value refers to no warnings.
      *
      * An exception is considered a warning, if its cause does not change semantics of the query, and so the query
-     * yields the same results with and without this cause. E.g., using an outer-scope attribute in the group by clause
-     * is considered a warning, because no matter whether this attribute is used or not the result of the query would be
-     * the same.
+     * yields the same results with and without this cause.
      *
      * @see Throwable.getSuppressed
      */
@@ -411,7 +409,7 @@ class Query(val query: String) {
             tokens.get(interval.a, interval.b)
                 .filter { it.type == QLParser.ID }
                 .map { Attribute(it.text, it.line, it.charPositionInLine) }
-                .filter {
+                /*.filter {
                     if (it.effectiveScope < scope) {
                         errorListener.emitWarning(
                             IllegalArgumentException(
@@ -420,7 +418,7 @@ class Query(val query: String) {
                         )
                         false
                     } else true
-                }.forEach {
+                }*/.forEach {
                     if (it.isStandard)
                         standardAttributes.add(it)
                     else
