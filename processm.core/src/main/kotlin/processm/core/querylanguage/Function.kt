@@ -6,13 +6,15 @@ package processm.core.querylanguage
  * @property name The name of the function being called.
  */
 class Function(
-    val name: String,
+    _name: String,
     override val line: Int,
     override val charPositionInLine: Int,
     vararg arguments: Expression
 ) :
     Expression(*arguments) {
     companion object {
+        private val pqlFunctionPattern = Regex("^(?:(l(?:og)?|t(?:race)?|e(?:vent)?):)?(.+)$")
+
         private val scalarFunctions = mapOf(
             "date" to 1.toByte(),
             "time" to 1.toByte(),
@@ -38,6 +40,18 @@ class Function(
             "count" to 1.toByte(),
             "sum" to 1.toByte()
         )
+    }
+
+    val name: String
+
+    override val scope: Scope?
+
+    init {
+        val match = pqlFunctionPattern.matchEntire(_name)
+        assert(match !== null)
+
+        scope = match!!.groups[1]?.let { Scope.parse(it.value) }
+        name = match.groups[2]!!.value
     }
 
     override val type: Type
@@ -71,13 +85,21 @@ class Function(
     }
 
     init {
+        // validate scope
+        if (scope !== null && functionType == FunctionType.Scalar) {
+            require(children.all { it.effectiveScope <= scope }) {
+                "Line $line position $charPositionInLine: The scope of the scalar function $name must be not greater than the effective scope of its arguments."
+            }
+        }
+
+        // validate arguments
         val validArguments = scalarFunctions[name] ?: aggregationFunctions[name]
         require(children.size.toByte() == validArguments) {
             "Line $line position $charPositionInLine: Invalid number of arguments supplied to function $name: ${children.size} given, $validArguments expected."
         }
     }
 
-    override fun toString(): String = "$name(${children.joinToString(", ")})"
+    override fun toString(): String = "${scope.prefix}$name(${children.joinToString(", ")})"
 
     private fun throwUndefined(): Nothing =
         throw IllegalArgumentException("Line $line position $charPositionInLine: Call of an undefined function $name.")

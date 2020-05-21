@@ -13,7 +13,7 @@ open class Expression(final override vararg val children: IExpression) : IExpres
 
     /**
      * The (raw) scope of this expression (excluding children). The value of null means that the scope is not specified
-     * for this expression. This happens for e.g., operators, literals etc.
+     * for this expression. This happens for e.g., operators, literals, functions etc.
      */
     override val scope: Scope? = null
 

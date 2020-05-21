@@ -49,7 +49,7 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
      */
     protected abstract fun parse(literal: String): T
 
-    override fun toString(): String = value.toString()
+    override fun toString(): String = scope.prefix + value.toString()
 }
 
 /**
@@ -173,7 +173,7 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
         )
     }
 
-    override fun toString(): String = "D$value"
+    override fun toString(): String = "${scope.prefix}D$value"
 }
 
 /**

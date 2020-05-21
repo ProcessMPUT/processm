@@ -302,7 +302,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
                         resultSet.getDoubleOrNull(colIndex)?.let { RealAttr(colName, it) }
                     Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE ->
                         resultSet.getTimestamp(colIndex, gmtCalendar)?.let { DateTimeAttr(colName, it.toInstant()) }
-                    Types.BOOLEAN ->
+                    Types.BIT, Types.BOOLEAN ->
                         resultSet.getBooleanOrNull(colIndex)?.let { BoolAttr(colName, it) }
                     Types.NULL ->
                         NullAttr(colName)

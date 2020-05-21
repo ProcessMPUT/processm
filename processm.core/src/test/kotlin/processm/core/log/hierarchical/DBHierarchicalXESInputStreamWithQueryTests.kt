@@ -17,6 +17,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.system.measureTimeMillis
 import kotlin.test.*
 
@@ -377,19 +378,19 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         val log = stream.first()
         assertEquals(2, log.attributes.size)
-        assertEquals(1.0, log.attributes["1.0"]?.value)
-        assertEquals("2020-03-12T00:00:00Z".parseISO8601(), log.attributes["D2020-03-12T00:00:00Z"]?.value)
+        assertEquals(1.0, log.attributes["log:1.0"]?.value)
+        assertEquals("2020-03-12T00:00:00Z".parseISO8601(), log.attributes["log:D2020-03-12T00:00:00Z"]?.value)
 
         assertEquals(1, log.traces.count())
         val trace = log.traces.first()
         assertEquals(2, trace.attributes.size)
-        assertEquals(5.0, trace.attributes["2.0 + 3.0"]?.value)
-        assertNull(trace.attributes["null / 11.0"]!!.value)
+        assertEquals(5.0, trace.attributes["log:2.0 + trace:3.0"]?.value)
+        assertNull(trace.attributes["trace:null / 11.0"]!!.value)
 
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(3, event.attributes.size)
-        assertEquals(26.0, event.attributes["4.0 * 5.0 + 6.0"]?.value)
+        assertEquals(26.0, event.attributes["log:4.0 * trace:5.0 + event:6.0"]?.value)
         assertEquals(-8.125, event.attributes["7.0 / 8.0 - 9.0"]?.value)
         assertNull(event.attributes["10.0 * null"]!!.value)
     }
@@ -430,11 +431,11 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(5, event.attributes.size)
-        assertEquals("D2020-03-13T00:00:00Z".parseISO8601(), event.attributes["D2020-03-13T00:00:00Z"]?.value)
-        assertEquals("D2020-03-13T16:45:00Z".parseISO8601(), event.attributes["D2020-03-13T16:45:00Z"]?.value)
-        assertEquals("D2020-03-13T16:45:50Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50Z"]?.value)
-        assertEquals("D2020-03-13T16:45:50.333Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50.333Z"]?.value)
-        assertEquals("D2020-03-13T14:45:00Z".parseISO8601(), event.attributes["D2020-03-13T14:45:00Z"]?.value)
+        assertEquals("2020-03-13T00:00:00Z".parseISO8601(), event.attributes["D2020-03-13T00:00:00Z"]?.value)
+        assertEquals("2020-03-13T16:45:00Z".parseISO8601(), event.attributes["D2020-03-13T16:45:00Z"]?.value)
+        assertEquals("2020-03-13T16:45:50Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50Z"]?.value)
+        assertEquals("2020-03-13T16:45:50.333Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50.333Z"]?.value)
+        assertEquals("2020-03-13T14:45:00Z".parseISO8601(), event.attributes["D2020-03-13T14:45:00Z"]?.value)
         // TODO: should we return duplicate attributes?
     }
 
@@ -510,7 +511,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         val log = stream.first()
         assertEquals(1, log.attributes.size)
-        assertTrue(abs(Duration.between(Instant.now(), log.attributes["now()"]?.value as Instant?).seconds) < 60)
+        assertTrue(abs(Duration.between(Instant.now(), log.attributes["log:now()"]?.value as Instant?).seconds) <= 1)
     }
 
     @Test
@@ -1045,14 +1046,33 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun offsetSingleTest() {
-        val stream = q("offset l:1")
-        TODO()
+        val stream = q("where l:id='$uuid' offset l:1")
+        assertEquals(0, stream.count())
+
+        val journalAll = q("where l:name like 'Journal%'")
+        val journalWithOffset = q("where l:name like 'Journal%' offset l:1")
+        assertEquals(max(journalAll.count() - 1, 0), journalWithOffset.count())
     }
 
     @Test
     fun offsetAllTest() {
-        val stream = q("offset e:3, t:2, l:1")
-        TODO()
+        val stream = q("where l:id='$uuid' offset e:3, t:2, l:1")
+        assertEquals(0, stream.count())
+
+        val journalAll = q("where l:name='JournalReview' limit l:3").map { it.identityId to it }.toMap()
+        val journalWithOffset = q("where l:name='JournalReview' limit l:3 offset e:3, t:2")
+        assertEquals(journalAll.size, journalWithOffset.count())
+
+        for (log in journalWithOffset) {
+            val logFromAll = journalAll[log.identityId]!!
+            val tracesFromAll = logFromAll.traces.map { it.conceptName to it }.toMap()
+            assertEquals(max(tracesFromAll.size - 2, 0), log.traces.count())
+
+            for (trace in log.traces) {
+                val traceFromAll = tracesFromAll[trace.conceptName]!!
+                assertEquals(max(traceFromAll.events.count() - 3, 0), trace.events.count())
+            }
+        }
     }
 
     private fun q(query: String): DBHierarchicalXESInputStream = DBHierarchicalXESInputStream(Query(query))

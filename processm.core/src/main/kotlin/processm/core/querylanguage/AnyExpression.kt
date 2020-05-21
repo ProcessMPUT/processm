@@ -1,5 +1,6 @@
 package processm.core.querylanguage
 
+import processm.core.logging.debug
 import processm.core.logging.logger
 
 /**
@@ -16,7 +17,9 @@ class AnyExpression(
     }
 
     init {
-        logger.debug("Line $line position $charPositionInLine: Use of a dummy expression in the PQL parser for the string \"$value\". Replace it with a designated class.")
+        logger.debug {
+            "Line $line position $charPositionInLine: Use of a dummy expression in the PQL parser for the string \"$value\". Replace it with a designated class."
+        }
     }
 
     override fun toString(): String = value

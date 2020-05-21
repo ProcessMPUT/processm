@@ -8,7 +8,7 @@ import java.util.*
 
 class DBXESOutputStream : XESOutputStream {
     companion object {
-        private const val batchSize = 16
+        private const val batchSize = 32
     }
 
     /**

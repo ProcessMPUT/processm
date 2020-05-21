@@ -136,7 +136,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun path(from: Scope, to: ScopeWithMetadata) = sequence {
+    private fun path(from: Scope, to: ScopeWithMetadata) = ArrayList<ScopeWithMetadata>(4).apply {
         assert(to.hoisting <= 2)
         var current = ScopeWithMetadata(from, 0)
 
@@ -145,7 +145,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         while (current.scope != effectiveTo) {
             current =
                 ScopeWithMetadata(if (current.scope < effectiveTo) current.scope.lower!! else current.scope.upper!!, 0)
-            yield(current)
+            add(current)
         }
 
         // phase 2: go to the actual "to" scope
@@ -158,14 +158,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         while (current != to) {
             assert(current.scope < to.scope)
             current = current.scope.lower!!.let { ScopeWithMetadata(it, to.hoisting.coerceAtMost(it.ordinal)) }
-            /*current = when {
-                current.scope < to.scope -> current.scope.lower!!
-                current.scope > to.scope -> current.scope.upper!!
-                else -> current.scope
-            }.let { ScopeWithMetadata(it, to.hoisting.coerceAtMost(it.ordinal)) }*/
-
-            yield(current)
+            add(current)
         }
+
+        // The longest possible path is from "event" to "^^event": event -> trace -> log -> ^trace -> ^^event.
+        // The first path element is not yielded, so the maximum path length is 4.
+        assert(size <= 4)
     }
 
     private fun sorted(s1: ScopeWithMetadata, s2: ScopeWithMetadata) =
@@ -1032,10 +1030,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                             OperatorType.Infix -> {
                                 assert(expression.children.size >= 2)
                                 append(' ')
-                                for (i in 0 until expression.children.size) {
+                                for (i in expression.children.indices) {
                                     walk(expression.children[i], expression.expectedChildrenTypes[i])
-                                    if (i < expression.children.size - 1)
-                                        append(" ${expression.value} ")
+                                    if (i < expression.children.size - 1) {
+                                        when (expression.value) {
+                                            "matches" -> append(" ~ ")
+                                            else -> append(" ${expression.value} ")
+                                        }
+                                    }
                                 }
                                 append(' ')
                             }
