@@ -44,15 +44,11 @@ class OnlineInductiveMiner : InductiveMiner() {
     /**
      * Discover new process tree based on already stored tree and current directly-follows graph.
      */
-    private fun discover(log: Iterable<Log>) {
+    fun discover(log: Iterable<Log>) {
         // Calculate diff and changes list
         val diff = dfg.discoverDiff(log.asSequence())
-        val (forceRebuild, changes) = dfg.diffToChangesList(diff)
 
-        // Update DFG
-        dfg.applyDiff(diff)
-
-        if (forceRebuild) {
+        if (diff == null) {
             val activities = dfg.graph.rows.toHashSet().also {
                 it.addAll(dfg.startActivities.keys)
                 it.addAll(dfg.endActivities.keys)
@@ -65,14 +61,15 @@ class OnlineInductiveMiner : InductiveMiner() {
                 initialStartActivities = dfg.startActivities.keys.toHashSet(),
                 initialEndActivities = dfg.endActivities.keys.toHashSet()
             )
-        } else if (changes.isNotEmpty()) {
+        } else if (diff.isNotEmpty()) {
             // Detect affected by change activities
-            val infectedActivities = fetchInfectedActivities(changes)
+            val infectedActivities = detectInfectedActivities(diff)
 
             // Find where rebuild graph
             val subGraphToRebuild = deepFirstSearchMinimalCommonSubGraph(infectedActivities, model)
 
-            // TODO: modify structure
+            // Rebuild subGraph
+            subGraphToRebuild.rebuild()
         }
     }
 
@@ -81,7 +78,7 @@ class OnlineInductiveMiner : InductiveMiner() {
      * Find minimal common subGraph based on changed activities.
      */
     private fun deepFirstSearchMinimalCommonSubGraph(
-        infectedActivities: Set<ProcessTreeActivity>,
+        infectedActivities: Collection<ProcessTreeActivity>,
         root: DirectlyFollowsSubGraph
     ): DirectlyFollowsSubGraph {
         // Init selected subGraph as given tree's root
@@ -99,7 +96,6 @@ class OnlineInductiveMiner : InductiveMiner() {
                 // Update selected subGraph
                 selectedSubGraph = subGraph
 
-                // TODO: can we?
                 // We can clear stack because it is not possible to find relations in two separated groups
                 // ProcessTree without duplicated activities
                 stack.clear()
@@ -116,7 +112,7 @@ class OnlineInductiveMiner : InductiveMiner() {
     /**
      * Detect infected (activities affected by the change) activities.
      */
-    private fun fetchInfectedActivities(pairs: List<Pair<ProcessTreeActivity, ProcessTreeActivity>>): MutableSet<ProcessTreeActivity> {
+    private fun detectInfectedActivities(pairs: Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>): Collection<ProcessTreeActivity> {
         val infectedActivities = mutableSetOf<ProcessTreeActivity>()
         pairs.forEach { (from, to) ->
             infectedActivities.add(from)
