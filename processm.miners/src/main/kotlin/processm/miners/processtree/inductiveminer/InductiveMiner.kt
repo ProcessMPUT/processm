@@ -7,13 +7,14 @@ import processm.core.models.processtree.*
  * Inductive miners common abstract implementation.
  * Can be used by:
  * - [OfflineInductiveMinerWithoutLogStatistics]
+ * - [OnlineInductiveMiner]
  * as code-base reduces. You should use [InductiveMiner] instead of duplicating code.
  */
 abstract class InductiveMiner {
     /**
      * Perform mining on a given log.
      */
-    abstract fun processLog(log: Iterable<Log>)
+    abstract fun processLog(logsCollection: Iterable<Log>)
 
     /**
      * The mined model

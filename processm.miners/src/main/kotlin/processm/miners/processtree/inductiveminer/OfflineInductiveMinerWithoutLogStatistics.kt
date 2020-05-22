@@ -25,8 +25,8 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner() {
     /**
      * Add reference to log file
      */
-    override fun processLog(log: Iterable<Log>) {
-        this.log = log
+    override fun processLog(logsCollection: Iterable<Log>) {
+        this.log = logsCollection
     }
 
     /**

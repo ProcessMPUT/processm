@@ -14,7 +14,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Activities in directly-follows subGraph
      */
-    private val activities: Set<ProcessTreeActivity>,
+    internal val activities: Set<ProcessTreeActivity>,
     /**
      * Connections between activities in graph
      */
