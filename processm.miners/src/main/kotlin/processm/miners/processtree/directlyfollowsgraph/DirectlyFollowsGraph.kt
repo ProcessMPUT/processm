@@ -2,10 +2,7 @@ package processm.miners.processtree.directlyfollowsgraph
 
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.LogInputStream
-import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.ProcessTreeActivity
-import java.util.*
-import kotlin.collections.HashMap
 
 /**
  * Directly-follows graph based on log's events sequences
@@ -51,126 +48,105 @@ class DirectlyFollowsGraph {
     /**
      * Build directly-follows graph
      */
-    fun discover(log: LogInputStream) {
-        log.forEach { l ->
-            l.traces.forEach { trace ->
-                discoverGraph(trace, graph, startActivities, endActivities)
-            }
-        }
-    }
+    fun discover(log: LogInputStream) = discoverGraph(log)
 
     /**
-     * Discover changes in DFG as diff matrix.
-     * Analyze also changes in start and end activities (connections from source and into sink).
-     */
-    fun discoverDiff(log: LogInputStream): Triple<DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>> {
-        val diff = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
-        val starts = HashMap<ProcessTreeActivity, Arc>()
-        val ends = HashMap<ProcessTreeActivity, Arc>()
-
-        log.forEach { l ->
-            l.traces.forEach { trace ->
-                discoverGraph(trace, diff, starts, ends)
-            }
-        }
-
-        return Triple(diff, starts, ends)
-    }
-
-    /**
-     * Apply calculated diff into DFG internal structure.
-     * Update cardinality of arcs between activities, start and end activities.
-     */
-    fun applyDiff(input: Triple<DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>>) {
-        // Update start & end activities (+ update cardinality)
-        input.second.forEach { (activity, arc) -> addConnectionFromSource(activity, startActivities, arc.cardinality) }
-        input.third.forEach { (activity, arc) -> addConnectionToSink(activity, endActivities, arc.cardinality) }
-
-        // Update connections in DFG
-        input.first.rows.forEach { from ->
-            input.first.getRow(from).forEach { to, arc ->
-                if (graph[from, to] !== null) graph[from, to]!!.increment(arc.cardinality)
-                else graph[from, to] = arc
-            }
-        }
-    }
-
-    /**
-     * Analyze diff and prepare changes list - new connections between activities.
+     * Discover changes in DFG.
+     * Update internal structure of graph, analyze changes and return changes list - new connections between pair of activities.
      *
-     * Operation should be done _before_ apply calculated diff into DFG.
+     * Can return [null] if changes in graph focused on:
+     * - new start activity, or
+     * - new end activity, or
+     * - new activity in graph
+     *
+     * Empty [Set] will be if:
+     * - no new connection between pair of activities in graph
+     *
+     * Non empty [Set] if:
+     * - new connections between pair of activities. Element of [Set] == this pair of activities.
      */
-    fun diffToChangesList(input: Triple<DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>, HashMap<ProcessTreeActivity, Arc>>): Pair<Boolean, List<Pair<ProcessTreeActivity, ProcessTreeActivity>>> {
-        // Changed start or end activities? Probably whole graph changed, new activities added, lot of changes
-        // Ignore new connections and force rebuild graph
-        if (input.second.keys.any { !startActivities.contains(it) } || input.third.keys.any { !endActivities.contains(it) }) {
-            return Pair(true, emptyList())
-        }
-
-        val addedConnections = LinkedList<Pair<ProcessTreeActivity, ProcessTreeActivity>>()
-
-        // Analyze connections in diff and current DFG
-        input.first.rows.forEach { from ->
-            input.first.getRow(from).keys.forEach { to ->
-                if (graph[from, to] === null) addedConnections.add(Pair(from, to))
-            }
-        }
-
-        return Pair(false, addedConnections)
-    }
+    fun discoverDiff(log: LogInputStream) = discoverGraph(log, buildDiff = true)
 
     /**
      * Discover connections between pair of activities based on given trace.
+     * If `buildDiff` - return changes in DFG.
      */
     private fun discoverGraph(
-        trace: Trace,
-        output: DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc> = graph,
-        starts: HashMap<ProcessTreeActivity, Arc> = startActivities,
-        ends: HashMap<ProcessTreeActivity, Arc> = endActivities
-    ) {
-        var previousActivity: ProcessTreeActivity? = null
+        log: LogInputStream,
+        buildDiff: Boolean = false
+    ): Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>? {
+        var changedStartActivity = false
+        var changedEndActivity = false
+        var newActivityFound = false
+        val addedConnectionsCollection = LinkedHashSet<Pair<ProcessTreeActivity, ProcessTreeActivity>>()
 
-        // Iterate over all events in current trace
-        trace.events.forEach { event ->
-            // TODO: we should receive activity instead of build it here
-            val activity = ProcessTreeActivity(event.conceptName!!)
+        log.forEach { l ->
+            l.traces.forEach { trace ->
+                var previousActivity: ProcessTreeActivity? = null
 
-            // Add connection
-            if (previousActivity == null)
-                addConnectionFromSource(activity, starts)
-            else
-                addConnectionInGraph(from = previousActivity!!, to = activity, output = output)
+                // Iterate over all events in current trace
+                trace.events.forEach { event ->
+                    // TODO: we should receive activity instead of build it here
+                    val activity = ProcessTreeActivity(event.conceptName!!)
 
-            // Update previous activity
-            previousActivity = activity
+                    // Analyze new activity only if enabled diff AND no seen new activity yet.
+                    // This should speed-up after found first non seen previous activity.
+                    if (buildDiff && !newActivityFound) {
+                        if (activity !in graph.rows && activity !in graph.columns) newActivityFound = true
+                    }
+
+                    // Add connection from source to activity
+                    if (previousActivity == null) {
+                        if (activity in startActivities) {
+                            // Just only insert
+                            startActivities[activity]!!.increment()
+                        } else {
+                            // Insert and increment
+                            startActivities[activity] = Arc().increment()
+
+                            // Remember - changed start activities
+                            changedStartActivity = true
+                        }
+                    } else {
+                        // Add connection between pair of activities in graph
+                        with(graph[previousActivity!!, activity]) {
+                            if (this == null) {
+                                // If enabled diff - store new connection as pair
+                                if (buildDiff) addedConnectionsCollection.add(previousActivity!! to activity)
+
+                                graph[previousActivity!!, activity] = Arc().increment()
+                            } else {
+                                graph[previousActivity!!, activity] = this.increment()
+                            }
+                        }
+                    }
+
+                    // Update previous activity
+                    previousActivity = activity
+                }
+
+                // Add connection with sink
+                if (previousActivity != null) {
+                    // TODO: This is really strange - previous Activity is ProcessTree Activity but compiler suggests it can be any type.
+                    if (previousActivity in endActivities) {
+                        // Just only insert
+                        endActivities[previousActivity!!]!!.increment()
+                    } else {
+                        // Insert and increment
+                        endActivities[previousActivity!!] = Arc().increment()
+
+                        // Remember - changed end activity
+                        changedEndActivity = true
+                    }
+                }
+            }
         }
 
-        // Add connection with sink
-        if (previousActivity != null)
-            addConnectionToSink(previousActivity!!, ends)
-    }
-
-    /**
-     * Add connection between two activities in trace.
-     * Increment statistics of arc already stored in graph matrix if found connection or insert new arc.
-     */
-    private fun addConnectionInGraph(from: ProcessTreeActivity, to: ProcessTreeActivity) {
-        graph[from, to] = (graph[from, to] ?: Arc()).increment()
-    }
-
-    /**
-     * Add connection from source and first seen activity in trace.
-     * Increment statistics of arc in activities map.
-     */
-    private fun addConnectionFromSource(activity: ProcessTreeActivity) {
-        startActivities.getOrPut(activity, { Arc() }).increment()
-    }
-
-    /**
-     * Add connection from last seen activity in trace to sink.
-     * Increment statistics of arc in end activities map.
-     */
-    private fun addConnectionToSink(activity: ProcessTreeActivity) {
-        endActivities.getOrPut(activity, { Arc() }).increment()
+        // Return diff if enabled
+        return if (buildDiff) {
+            if (changedStartActivity || changedEndActivity || newActivityFound) null
+            else addedConnectionsCollection
+        } else
+            null
     }
 }

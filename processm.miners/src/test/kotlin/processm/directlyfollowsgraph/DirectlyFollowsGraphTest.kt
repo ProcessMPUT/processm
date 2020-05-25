@@ -3,10 +3,7 @@ package processm.directlyfollowsgraph
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class DirectlyFollowsGraphTest {
     private val A = ProcessTreeActivity("A")
@@ -115,7 +112,7 @@ class DirectlyFollowsGraphTest {
 
     @Test
     fun `Build graph as diff`() {
-        val log1 = logFromString(
+        val log = logFromString(
             """
             A B C D
             A C B D
@@ -123,25 +120,14 @@ class DirectlyFollowsGraphTest {
         )
 
         val miner = DirectlyFollowsGraph()
-        val diff = miner.discoverDiff(sequenceOf(log1))
+        val diff = miner.discoverDiff(sequenceOf(log))
 
-        assertEquals(1, diff.first[A, B]!!.cardinality)
-        assertEquals(1, diff.first[A, C]!!.cardinality)
-        assertEquals(1, diff.first[B, C]!!.cardinality)
-        assertEquals(1, diff.first[B, D]!!.cardinality)
-        assertEquals(1, diff.first[C, B]!!.cardinality)
-        assertEquals(1, diff.first[C, D]!!.cardinality)
-
-        assertEquals(1, diff.second.size)
-        assertTrue(diff.second.contains(A))
-
-        assertEquals(1, diff.third.size)
-        assertTrue(diff.third.contains(D))
+        assertNull(diff)
     }
 
     @Test
-    fun `DFG inside miner not changed in discoverDiff action`() {
-        val log1 = logFromString(
+    fun `DFG inside miner changed in discoverDiff action`() {
+        val log = logFromString(
             """
             A B C D
             A C B D
@@ -155,17 +141,17 @@ class DirectlyFollowsGraphTest {
         assertTrue(miner.startActivities.isEmpty())
         assertTrue(miner.endActivities.isEmpty())
 
-        miner.discoverDiff(sequenceOf(log1))
+        miner.discoverDiff(sequenceOf(log))
 
-        assertTrue(miner.graph.rows.isEmpty())
-        assertTrue(miner.graph.columns.isEmpty())
-        assertTrue(miner.startActivities.isEmpty())
-        assertTrue(miner.endActivities.isEmpty())
+        assertTrue(miner.graph.rows.isNotEmpty())
+        assertTrue(miner.graph.columns.isNotEmpty())
+        assertTrue(miner.startActivities.isNotEmpty())
+        assertTrue(miner.endActivities.isNotEmpty())
     }
 
     @Test
     fun `Update DFG based on discovered diff`() {
-        val log1 = logFromString(
+        val log = logFromString(
             """
             A B C D
             A C B D
@@ -179,8 +165,7 @@ class DirectlyFollowsGraphTest {
         assertTrue(miner.startActivities.isEmpty())
         assertTrue(miner.endActivities.isEmpty())
 
-        val diff = miner.discoverDiff(sequenceOf(log1))
-        miner.applyDiff(diff)
+        miner.discoverDiff(sequenceOf(log))
 
         assertEquals(1, miner.graph[A, B]!!.cardinality)
         assertEquals(1, miner.graph[A, C]!!.cardinality)
@@ -203,7 +188,7 @@ class DirectlyFollowsGraphTest {
             A C D
             """.trimIndent()
         )
-        val log1 = logFromString(
+        val log = logFromString(
             """
             B C D
             """.trimIndent()
@@ -212,11 +197,9 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(sequenceOf(baseLog))
 
-        val diff = miner.discoverDiff(sequenceOf(log1))
-        val output = miner.diffToChangesList(diff)
+        val diff = miner.discoverDiff(sequenceOf(log))
 
-        assertTrue(output.first)
-        assertTrue(output.second.isEmpty())
+        assertNull(diff)
     }
 
     @Test
@@ -226,7 +209,7 @@ class DirectlyFollowsGraphTest {
             A C D
             """.trimIndent()
         )
-        val log1 = logFromString(
+        val log = logFromString(
             """
             A C E
             """.trimIndent()
@@ -235,15 +218,36 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(sequenceOf(baseLog))
 
-        val diff = miner.discoverDiff(sequenceOf(log1))
-        val output = miner.diffToChangesList(diff)
+        val diff = miner.discoverDiff(sequenceOf(log))
 
-        assertTrue(output.first)
-        assertTrue(output.second.isEmpty())
+        assertNull(diff)
     }
 
     @Test
-    fun `Diff changes list - new connections between activities`() {
+    fun `Diff changes list - no new connections - empty collection as response`() {
+        val log1 = logFromString(
+            """
+            A B C D
+            A C B D
+            """.trimIndent()
+        )
+        val log2 = logFromString(
+            """
+            A B C D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(log1))
+
+        val diff = miner.discoverDiff(sequenceOf(log2))
+
+        assertNotNull(diff)
+        assertTrue(diff.isEmpty())
+    }
+
+    @Test
+    fun `Diff changes list - new activity found (E)`() {
         val log1 = logFromString(
             """
             A B C D
@@ -260,12 +264,31 @@ class DirectlyFollowsGraphTest {
         miner.discover(sequenceOf(log1))
 
         val diff = miner.discoverDiff(sequenceOf(log2))
-        val output = miner.diffToChangesList(diff)
 
-        assertFalse(output.first)
+        assertNull(diff)
+    }
 
-        assertEquals(2, output.second.size)
-        assertTrue(output.second.contains(Pair(A, E)))
-        assertTrue(output.second.contains(Pair(E, D)))
+    @Test
+    fun `Diff changes list - new connections between activities`() {
+        val log1 = logFromString(
+            """
+            A B C D
+            A C B D
+            """.trimIndent()
+        )
+        val log2 = logFromString(
+            """
+            A C C B C D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(log1))
+
+        val diff = miner.discoverDiff(sequenceOf(log2))
+
+        assertNotNull(diff)
+        assertEquals(1, diff.size)
+        assertTrue(diff.contains(C to C))
     }
 }
