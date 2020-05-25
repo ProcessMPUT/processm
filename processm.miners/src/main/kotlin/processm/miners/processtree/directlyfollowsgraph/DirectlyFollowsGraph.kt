@@ -19,9 +19,9 @@ class DirectlyFollowsGraph {
      * Inside [ProcessTreeActivity] [ProcessTreeActivity] position stored arc statistic (cardinality of relations)
      *
      * Log <A, B, B, B, C> will be build as:
-     *    A    B    C
-     * A  -    1    -
-     * B  -    2    1
+     *    B    C
+     * A  1    -
+     * B  2    1
      */
     val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
 
@@ -84,7 +84,7 @@ class DirectlyFollowsGraph {
      * Increment statistics of arc already stored in graph matrix if found connection or insert new arc.
      */
     private fun addConnectionInGraph(from: ProcessTreeActivity, to: ProcessTreeActivity) {
-        graph.set(row = from, col = to, v = (graph.get(row = from, col = to) ?: Arc()).increment())
+        graph[from, to] = (graph[from, to] ?: Arc()).increment()
     }
 
     /**
