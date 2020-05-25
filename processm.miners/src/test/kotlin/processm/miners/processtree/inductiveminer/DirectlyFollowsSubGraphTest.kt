@@ -329,20 +329,14 @@ internal class DirectlyFollowsSubGraphTest {
     fun `Start activities in current sub graph`() {
         val activities = activitiesSet(listOf(B, C, D))
         val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[A, C] = Arc()
         connections[B, C] = Arc()
         connections[B, D] = Arc()
         connections[C, B] = Arc()
         connections[C, D] = Arc()
 
-        val initialConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
-        initialConnections[A, B] = Arc()
-        initialConnections[A, C] = Arc()
-        initialConnections[B, C] = Arc()
-        initialConnections[B, D] = Arc()
-        initialConnections[C, B] = Arc()
-        initialConnections[C, D] = Arc()
-
-        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val response = graph.currentStartActivities()
 
         assertEquals(1, graph.currentEndActivities().size)
@@ -358,13 +352,9 @@ internal class DirectlyFollowsSubGraphTest {
         val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
         connections[B, C] = Arc()
         connections[C, D] = Arc()
+        connections[D, E] = Arc()
 
-        val initialConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
-        initialConnections[B, C] = Arc()
-        initialConnections[C, D] = Arc()
-        initialConnections[D, E] = Arc()
-
-        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val response = graph.currentEndActivities()
 
         assertEquals(1, response.size)
@@ -376,20 +366,16 @@ internal class DirectlyFollowsSubGraphTest {
         // Based on Figure 7.21 PM book: L1 = {[a,b,c,d], [a,c,b,d], [a,e,d]}, part G1d
         val activities = activitiesSet(listOf(B, C))
         val connections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+        connections[A, B] = Arc()
+        connections[A, C] = Arc()
+        connections[A, E] = Arc()
         connections[B, C] = Arc()
+        connections[B, D] = Arc()
         connections[C, B] = Arc()
+        connections[C, D] = Arc()
+        connections[E, D] = Arc()
 
-        val initialConnections = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
-        initialConnections[A, B] = Arc()
-        initialConnections[A, C] = Arc()
-        initialConnections[A, E] = Arc()
-        initialConnections[B, C] = Arc()
-        initialConnections[B, D] = Arc()
-        initialConnections[C, B] = Arc()
-        initialConnections[C, D] = Arc()
-        initialConnections[E, D] = Arc()
-
-        val graph = DirectlyFollowsSubGraph(activities, connections, initialConnections)
+        val graph = DirectlyFollowsSubGraph(activities, connections)
         val assignment = graph.calculateParallelCut()
 
         assertNotNull(assignment)

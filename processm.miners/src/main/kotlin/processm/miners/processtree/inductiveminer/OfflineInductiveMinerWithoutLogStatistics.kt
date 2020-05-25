@@ -60,7 +60,6 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
             assignChildrenToNode(
                 DirectlyFollowsSubGraph(
                     activities = activities,
-                    outgoingConnections = dfg.graph,
                     initialConnections = dfg.graph,
                     initialStartActivities = dfg.startActivities.keys.toHashSet(),
                     initialEndActivities = dfg.endActivities.keys.toHashSet()
