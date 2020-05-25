@@ -2,6 +2,7 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.Log
 import processm.core.models.processtree.*
+import processm.miners.processtree.directlyfollowsgraph.Arc
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 
 /**
@@ -49,7 +50,7 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
         if (dfg.startActivities.isEmpty() || dfg.endActivities.isEmpty()) return ProcessTree()
 
         // Prepare set with activities in graph
-        val activities = dfg.graph.keys.toHashSet().also {
+        val activities = dfg.graph.rows.toHashSet().also {
             it.addAll(dfg.startActivities.keys)
             it.addAll(dfg.endActivities.keys)
         }

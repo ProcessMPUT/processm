@@ -69,7 +69,8 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(log)
 
-        assertTrue(miner.graph.isEmpty())
+        assertTrue(miner.graph.rows.isEmpty())
+        assertTrue(miner.graph.columns.isEmpty())
         assertTrue(miner.startActivities.isEmpty())
         assertTrue(miner.endActivities.isEmpty())
     }
@@ -80,54 +81,20 @@ class DirectlyFollowsGraphTest {
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
         miner.graph.also { graph ->
-            assertEquals(graph.size, 4)
+            assertEquals(4, graph.rows.size)
+            assertTrue(graph.rows.containsAll(setOf(A, B, C, E)))
 
-            assertTrue(graph.contains(A))
-            assertTrue(graph.contains(B))
-            assertTrue(graph.contains(C))
-            assertTrue(graph.contains(E))
+            assertEquals(1, graph[A, B]?.cardinality)
+            assertEquals(2, graph[A, C]?.cardinality)
+            assertEquals(1, graph[A, E]?.cardinality)
 
-            assertFalse(graph.contains(D))
+            assertEquals(1, graph[B, C]?.cardinality)
+            assertEquals(2, graph[B, D]?.cardinality)
 
-            with(graph[A]!!) {
-                assertEquals(size, 3)
+            assertEquals(2, graph[C, B]?.cardinality)
+            assertEquals(1, graph[C, D]?.cardinality)
 
-                assertTrue(contains(B))
-                assertEquals(this[B]!!.cardinality, 1)
-
-                assertTrue(contains(C))
-                assertEquals(this[C]!!.cardinality, 2)
-
-                assertTrue(contains(E))
-                assertEquals(this[E]!!.cardinality, 1)
-            }
-
-            with(graph[B]!!) {
-                assertEquals(size, 2)
-
-                assertTrue(contains(C))
-                assertEquals(this[C]!!.cardinality, 1)
-
-                assertTrue(contains(D))
-                assertEquals(this[D]!!.cardinality, 2)
-            }
-
-            with(graph[C]!!) {
-                assertEquals(size, 2)
-
-                assertTrue(contains(B))
-                assertEquals(this[B]!!.cardinality, 2)
-
-                assertTrue(contains(D))
-                assertEquals(this[D]!!.cardinality, 1)
-            }
-
-            with(graph[E]!!) {
-                assertEquals(size, 1)
-
-                assertTrue(contains(D))
-                assertEquals(this[D]!!.cardinality, 1)
-            }
+            assertEquals(1, graph[E, D]?.cardinality)
         }
     }
 
@@ -136,7 +103,8 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
-        assertEquals(miner.graph.size, 4)
+        assertTrue(miner.graph.rows.containsAll(setOf(A, B, C, E)))
+        assertFalse(miner.graph.rows.contains(D))
     }
 
     @Test
@@ -144,10 +112,10 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
-        assertEquals(miner.startActivities.size, 1)
+        assertEquals(1, miner.startActivities.size)
 
         assertTrue(miner.startActivities.contains(A))
-        assertEquals(miner.startActivities[A]!!.cardinality, 4)
+        assertEquals(4, miner.startActivities[A]!!.cardinality)
     }
 
     @Test
@@ -155,9 +123,9 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(DatabaseHierarchicalXESInputStream(logId))
 
-        assertEquals(miner.endActivities.size, 1)
+        assertEquals(1, miner.endActivities.size)
 
         assertTrue(miner.endActivities.contains(D))
-        assertEquals(miner.endActivities[D]!!.cardinality, 4)
+        assertEquals(4, miner.endActivities[D]!!.cardinality)
     }
 }
