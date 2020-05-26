@@ -52,6 +52,39 @@ class DirectlyFollowsGraph {
         private set
 
     /**
+     * Support activity by traces.
+     * This will show you how many traces use at least one occurrence of process tree activity.
+     * For log:
+     * - A B C A C A
+     * - A C B C D
+     * - A E D
+     *
+     * You will receive:
+     * - A: 3 (in each trace, duplicates ignored)
+     * - B: 2
+     * - C: 2 (duplicates ignored)
+     * - D: 2
+     * - E: 1
+     */
+    val activityTraceSupport = HashMap<ProcessTreeActivity, Int>()
+
+    /**
+     * Maximum activity occurrence in single trace after analyze all traces.
+     * For log:
+     * - A B C A C A
+     * - A C B C C D
+     * - A E D
+     *
+     * You will receive:
+     * - A: 2 - first trace, 2x activity A
+     * - B: 1 - only one B activity in traces 1st and 2nd.
+     * - C: 3 - two times in first, third in second trace.
+     * - D: 2 - in second and third.
+     * - E: 1 - only in last trace
+     */
+    val maximumActivityOccurrenceInTraces = HashMap<ProcessTreeActivity, Int>()
+
+    /**
      * Build directly-follows graph
      */
     fun discover(log: LogInputStream) = discoverGraph(log)
@@ -88,15 +121,16 @@ class DirectlyFollowsGraph {
 
         log.forEach { l ->
             l.traces.forEach { trace ->
-                // Total traces count update
-                tracesCount++
-
+                val activitiesInTrace = HashMap<ProcessTreeActivity, Int>()
                 var previousActivity: ProcessTreeActivity? = null
 
                 // Iterate over all events in current trace
                 trace.events.forEach { event ->
                     // TODO: we should receive activity instead of build it here
                     val activity = ProcessTreeActivity(event.conceptName!!)
+
+                    // Update activity occurrence in trace
+                    activitiesInTrace[activity] = (activitiesInTrace[activity] ?: 0) + 1
 
                     // Analyze new activity only if enabled diff AND no seen new activity yet.
                     // This should speed-up after found first non seen previous activity.
@@ -148,6 +182,8 @@ class DirectlyFollowsGraph {
                         changedEndActivity = true
                     }
                 }
+
+                updateTraceStatistics(activitiesInTrace)
             }
         }
 
@@ -157,5 +193,27 @@ class DirectlyFollowsGraph {
             else addedConnectionsCollection
         } else
             null
+    }
+
+    /**
+     * Trace statistics changes:
+     * - update trace support for each activity in current trace
+     * - update maximum occurrence process tree activity in traces
+     * - increment already analyzed traces
+     */
+    private fun updateTraceStatistics(activitiesInTrace: HashMap<ProcessTreeActivity, Int>) {
+        // Total traces count update
+        tracesCount++
+
+        activitiesInTrace.forEach { (activity, occurrence) ->
+            // If maximumActivityOccurrenceInTraces less than occurrence - update.
+            // Null value with be always less than any value: https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.comparisons/compare-values.html
+            if (compareValues(maximumActivityOccurrenceInTraces[activity], occurrence) < 0) {
+                maximumActivityOccurrenceInTraces[activity] = occurrence
+            }
+
+            // Update trace support
+            activityTraceSupport[activity] = (activityTraceSupport[activity] ?: 0) + 1
+        }
     }
 }
