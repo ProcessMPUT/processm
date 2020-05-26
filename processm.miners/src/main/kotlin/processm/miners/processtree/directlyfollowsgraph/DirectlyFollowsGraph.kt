@@ -46,6 +46,12 @@ class DirectlyFollowsGraph {
     val endActivities = HashMap<ProcessTreeActivity, Arc>()
 
     /**
+     * Total traces analyzed in directly-follows graph
+     */
+    var tracesCount = 0
+        private set
+
+    /**
      * Build directly-follows graph
      */
     fun discover(log: LogInputStream) = discoverGraph(log)
@@ -82,6 +88,9 @@ class DirectlyFollowsGraph {
 
         log.forEach { l ->
             l.traces.forEach { trace ->
+                // Total traces count update
+                tracesCount++
+
                 var previousActivity: ProcessTreeActivity? = null
 
                 // Iterate over all events in current trace

@@ -291,4 +291,28 @@ class DirectlyFollowsGraphTest {
         assertEquals(1, diff.size)
         assertTrue(diff.contains(C to C))
     }
+
+    @Test
+    fun `Update total traces count`() {
+        val log1 = logFromString(
+            """
+            A B C D
+            A C B D
+            """.trimIndent()
+        )
+        val log2 = logFromString(
+            """
+            A E D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(log1))
+
+        assertEquals(2, miner.tracesCount)
+
+        miner.discover(sequenceOf(log2))
+
+        assertEquals(2 + 1, miner.tracesCount)
+    }
 }
