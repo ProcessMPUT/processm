@@ -6,6 +6,7 @@ import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import java.lang.Integer.min
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
 
@@ -28,7 +29,11 @@ class DirectlyFollowsSubGraph(
      * Initial end activities in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
      */
-    private var initialEndActivities: Set<ProcessTreeActivity>? = null
+    private var initialEndActivities: Set<ProcessTreeActivity>? = null,
+    /**
+     * Parent trace support based on activities in parent's subGraph
+     */
+    private val parentTraceSupport: Int = 0
 ) {
     companion object {
         /**
@@ -50,7 +55,7 @@ class DirectlyFollowsSubGraph(
     /**
      * SubGraphs created based on this sub graph
      */
-    lateinit var children: Array<DirectlyFollowsSubGraph?>
+    lateinit var children: MutableList<DirectlyFollowsSubGraph>
         private set
 
     /**
@@ -64,6 +69,11 @@ class DirectlyFollowsSubGraph(
      * Calculated once, used by parallel and loop cut detection.
      */
     private val currentEndActivities by lazy(LazyThreadSafetyMode.NONE) { currentEndActivities() }
+
+    /**
+     * Current activities' trace support
+     */
+    private val currentTraceSupport = dfg.maximumTraceSupport(activities)
 
     init {
         if (initialEndActivities.isNullOrEmpty()) initialEndActivities = inferEndActivities()
@@ -173,26 +183,39 @@ class DirectlyFollowsSubGraph(
     /**
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
-    private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>) {
-        val groupToListPosition = TreeMap<Int, Int>()
-        assignment.values.toSortedSet().withIndex().forEach { (index, groupId) -> groupToListPosition[groupId] = index }
-
-        children = arrayOfNulls(size = groupToListPosition.size)
+    private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>, analyzeChildSupport: Boolean = false) {
         val activityGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
-
         // Add each activity to designated group
         assignment.forEach { (activity, groupId) ->
             activityGroups.computeIfAbsent(groupId) { HashSet() }.add(activity)
         }
 
-        activityGroups.forEach { (groupId, activities) ->
-            children[groupToListPosition[groupId]!!] =
+        children = mutableListOf()
+        activityGroups.toSortedMap().forEach { (_, activities) ->
+            children.add(
                 DirectlyFollowsSubGraph(
                     activities = activities,
                     dfg = dfg,
                     initialStartActivities = currentStartActivities,
-                    initialEndActivities = currentEndActivities
+                    initialEndActivities = currentEndActivities,
+                    parentTraceSupport = currentTraceSupport
                 )
+            )
+        }
+
+        if (analyzeChildSupport) {
+            // Append silent activity if sum of child support < parent support
+            if (children.sumBy { it.currentTraceSupport } < parentTraceSupport) {
+                children.add(
+                    DirectlyFollowsSubGraph(
+                        activities = setOf(SilentActivity()),
+                        dfg = dfg,
+                        initialStartActivities = currentStartActivities,
+                        initialEndActivities = currentEndActivities,
+                        parentTraceSupport = currentTraceSupport
+                    )
+                )
+            }
         }
     }
 
@@ -757,7 +780,7 @@ class DirectlyFollowsSubGraph(
         val connectedComponents = calculateExclusiveCut()
         if (connectedComponents !== null) {
             detectedCut = CutType.Exclusive
-            return splitIntoSubGraphs(connectedComponents)
+            return splitIntoSubGraphs(connectedComponents, analyzeChildSupport = true)
         }
 
         // Sequence cut

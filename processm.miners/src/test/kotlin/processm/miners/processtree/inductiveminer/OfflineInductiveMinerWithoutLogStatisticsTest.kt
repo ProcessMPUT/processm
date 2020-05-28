@@ -76,7 +76,7 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
-        assertEquals("→(A,×(B,C,⟲(τ,D)),E)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(B,C,⟲(τ,D),τ),E)", inductiveMiner.result.toString())
     }
 
     @Test
@@ -389,5 +389,23 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         inductiveMiner.processLog(listOf(log))
 
         assertEquals("→(A,×(∧(B,C),→(E,×(F,τ))),D)", inductiveMiner.result.toString())
+    }
+
+    @Test
+    fun `Exclusive cut should be able to add tau if trace support not sum to parent's support`() {
+        val log = logFromString(
+            """
+            A B C D
+            A C B D
+            A E F D
+            A E D
+            A D
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
+        inductiveMiner.processLog(listOf(log))
+
+        assertEquals("→(A,×(∧(B,C),→(E,×(F,τ)),τ),D)", inductiveMiner.result.toString())
     }
 }
