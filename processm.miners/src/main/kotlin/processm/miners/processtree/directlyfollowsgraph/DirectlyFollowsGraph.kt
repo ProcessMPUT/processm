@@ -107,6 +107,15 @@ class DirectlyFollowsGraph {
     fun discoverDiff(log: LogInputStream) = discoverGraph(log, buildDiff = true)
 
     /**
+     * Calculate maximum trace support for activities given as input collection.
+     * If activity not found in internal structure - support: 0
+     */
+    fun maximumTraceSupport(collection: Collection<ProcessTreeActivity>): Int {
+        val activityWithHighestSupport = collection.maxBy { activityTraceSupport[it] ?: 0 }
+        return activityTraceSupport[activityWithHighestSupport] ?: 0
+    }
+
+    /**
      * Discover connections between pair of activities based on given trace.
      * If `buildDiff` - return changes in DFG.
      */

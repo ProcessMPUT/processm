@@ -379,4 +379,50 @@ class DirectlyFollowsGraphTest {
         assertEquals(3, miner.activityTraceSupport[D])
         assertEquals(1, miner.activityTraceSupport[E])
     }
+
+    @Test
+    fun `Maximum support - activities in collection`() {
+        val log = logFromString(
+            """
+            A B C D
+            A C B D
+            A E D
+            """.trimIndent()
+        )
+
+        val dfg = DirectlyFollowsGraph()
+        dfg.discover(sequenceOf(log))
+
+        assertEquals(3, dfg.maximumTraceSupport(listOf(A, B, C, D, E)))
+    }
+
+    @Test
+    fun `Maximum support - not found activity, return 0 as default`() {
+        val log = logFromString(
+            """
+            A B C
+            A B D
+            """.trimIndent()
+        )
+
+        val dfg = DirectlyFollowsGraph()
+        dfg.discover(sequenceOf(log))
+
+        assertEquals(0, dfg.maximumTraceSupport(listOf(E)))
+    }
+
+    @Test
+    fun `Maximum support - part of activities in collection not used in analyzed traces`() {
+        val log = logFromString(
+            """
+            A B C
+            A B D
+            """.trimIndent()
+        )
+
+        val dfg = DirectlyFollowsGraph()
+        dfg.discover(sequenceOf(log))
+
+        assertEquals(2, dfg.maximumTraceSupport(listOf(A, E)))
+    }
 }
