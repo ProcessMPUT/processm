@@ -51,7 +51,7 @@ internal class DirectlyFollowsSubGraphTest {
     }
 
     @Test
-    fun `NOT possible to finish calculations - connection between activity`() {
+    fun `Can finish calculations - only one activity, found redo loop`() {
         val log = logFromString(
             """
             A A A
@@ -61,7 +61,7 @@ internal class DirectlyFollowsSubGraphTest {
         val dfg = DirectlyFollowsGraph().also { it.discover(sequenceOf(log)) }
         val graph = DirectlyFollowsSubGraph(activities, dfg)
 
-        assertFalse(graph.canFinishCalculationsOnSubGraph())
+        assertTrue(graph.canFinishCalculationsOnSubGraph())
     }
 
     @Test

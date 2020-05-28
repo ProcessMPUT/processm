@@ -1,5 +1,6 @@
 package processm.miners.processtree.inductiveminer
 
+import processm.core.models.processtree.Exclusive
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.RedoLoop
 import processm.core.models.processtree.SilentActivity
@@ -33,7 +34,8 @@ class DirectlyFollowsSubGraph(
     /**
      * Parent trace support based on activities in parent's subGraph
      */
-    private val parentTraceSupport: Int = 0
+    private val parentTraceSupport: Int = 0,
+    private val parentCut: CutType? = null
 ) {
     companion object {
         /**
@@ -85,10 +87,10 @@ class DirectlyFollowsSubGraph(
     /**
      * Check is possible to finish calculation.
      *
-     * Possible only if connections are empty (no self-loop) AND in activities only one activity.
+     * Possible only if one activity left.
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
-        return activities.size == 1 && dfg.graph[activities.first(), activities.first()] === null
+        return activities.size == 1
     }
 
     /**
@@ -198,7 +200,8 @@ class DirectlyFollowsSubGraph(
                     dfg = dfg,
                     initialStartActivities = currentStartActivities,
                     initialEndActivities = currentEndActivities,
-                    parentTraceSupport = currentTraceSupport
+                    parentTraceSupport = currentTraceSupport,
+                    parentCut = detectedCut
                 )
             )
         }
@@ -212,7 +215,8 @@ class DirectlyFollowsSubGraph(
                         dfg = dfg,
                         initialStartActivities = currentStartActivities,
                         initialEndActivities = currentEndActivities,
-                        parentTraceSupport = currentTraceSupport
+                        parentTraceSupport = currentTraceSupport,
+                        parentCut = detectedCut
                     )
                 )
             }
@@ -772,7 +776,21 @@ class DirectlyFollowsSubGraph(
      */
     private fun detectCuts() {
         if (canFinishCalculationsOnSubGraph()) {
-            detectedCut = CutType.Activity
+            // We must check which case we have:
+            // 1. Activity
+            // 2. ×(Activity, τ)
+            // 3. ⟲(Activity, τ)
+            // 4. ⟲(τ, Activity)
+
+            // Activity duplicated in any trace?
+            detectedCut = if (dfg.activitiesDuplicatedInTraces.contains(activities.first())) {
+                if (currentTraceSupport < parentTraceSupport) CutType.RedoActivitySometimes
+                else CutType.RedoActivityAlways
+            } else {
+                if (parentCut == CutType.Sequence && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
+                else CutType.Activity
+            }
+
             return
         }
 
@@ -807,6 +825,28 @@ class DirectlyFollowsSubGraph(
 
         // Flower model - default cut
         detectedCut = CutType.FlowerModel
+    }
+
+    /**
+     * Case: ×(Activity, τ)
+     */
+    fun finishWithOptionalActivity(): Exclusive {
+        val listOfActivities = arrayOfNulls<ProcessTreeActivity>(size = 2)
+        listOfActivities[0] = activities.first()
+        listOfActivities[1] = SilentActivity()
+
+        return Exclusive(*listOfActivities.requireNoNulls())
+    }
+
+    /**
+     * Case: ⟲(Activity, τ)
+     */
+    fun finishWithRedoActivityAlways(): RedoLoop {
+        val listOfActivities = arrayOfNulls<ProcessTreeActivity>(size = 2)
+        listOfActivities[0] = activities.first()
+        listOfActivities[1] = SilentActivity()
+
+        return RedoLoop(*listOfActivities.requireNoNulls())
     }
 
     /**

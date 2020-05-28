@@ -69,20 +69,17 @@ class DirectlyFollowsGraph {
     val activityTraceSupport = HashMap<ProcessTreeActivity, Int>()
 
     /**
-     * Maximum activity occurrence in single trace after analyze all traces.
+     * Duplicated activities occurrence in single trace, after analyze all traces.
      * For log:
-     * - A B C A C A
-     * - A C B C C D
-     * - A E D
+     * - A B C
+     * - A B B C
+     * - A B C D D
      *
-     * You will receive:
-     * - A: 2 - first trace, 2x activity A
-     * - B: 1 - only one B activity in traces 1st and 2nd.
-     * - C: 3 - two times in first, third in second trace.
-     * - D: 2 - in second and third.
-     * - E: 1 - only in last trace
+     * You will receive collection of two activities:
+     * - B: second trace
+     * - D: third trace
      */
-    val maximumActivityOccurrenceInTraces = HashMap<ProcessTreeActivity, Int>()
+    val activitiesDuplicatedInTraces = HashSet<ProcessTreeActivity>()
 
     /**
      * Build directly-follows graph
@@ -130,7 +127,7 @@ class DirectlyFollowsGraph {
 
         log.forEach { l ->
             l.traces.forEach { trace ->
-                val activitiesInTrace = HashMap<ProcessTreeActivity, Int>()
+                val activitiesInTrace = HashSet<ProcessTreeActivity>()
                 var previousActivity: ProcessTreeActivity? = null
 
                 // Iterate over all events in current trace
@@ -139,7 +136,7 @@ class DirectlyFollowsGraph {
                     val activity = ProcessTreeActivity(event.conceptName!!)
 
                     // Update activity occurrence in trace
-                    activitiesInTrace[activity] = (activitiesInTrace[activity] ?: 0) + 1
+                    activitiesInTrace.add(activity)
 
                     // Analyze new activity only if enabled diff AND no seen new activity yet.
                     // This should speed-up after found first non seen previous activity.
@@ -160,6 +157,11 @@ class DirectlyFollowsGraph {
                             changedStartActivity = true
                         }
                     } else {
+                        // If activity duplicated - remember in special collection
+                        if (activity !in activitiesDuplicatedInTraces && activity == previousActivity) {
+                            activitiesDuplicatedInTraces.add(activity)
+                        }
+
                         // Add connection between pair of activities in graph
                         with(graph[previousActivity!!, activity]) {
                             if (this == null) {
@@ -207,21 +209,13 @@ class DirectlyFollowsGraph {
     /**
      * Trace statistics changes:
      * - update trace support for each activity in current trace
-     * - update maximum occurrence process tree activity in traces
      * - increment already analyzed traces
      */
-    private fun updateTraceStatistics(activitiesInTrace: HashMap<ProcessTreeActivity, Int>) {
+    private fun updateTraceStatistics(activitiesInTrace: Set<ProcessTreeActivity>) {
         // Total traces count update
         tracesCount++
 
-        activitiesInTrace.forEach { (activity, occurrence) ->
-            // If maximumActivityOccurrenceInTraces less than occurrence - update.
-            // Null value with be always less than any value: https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.comparisons/compare-values.html
-            if (compareValues(maximumActivityOccurrenceInTraces[activity], occurrence) < 0) {
-                maximumActivityOccurrenceInTraces[activity] = occurrence
-            }
-
-            // Update trace support
+        activitiesInTrace.forEach { activity ->
             activityTraceSupport[activity] = (activityTraceSupport[activity] ?: 0) + 1
         }
     }

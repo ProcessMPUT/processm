@@ -5,7 +5,6 @@ import processm.core.models.processtree.Parallel
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.Sequence
 import processm.miners.heuristicminer.Helper.logFromString
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -76,7 +75,7 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
-        assertEquals("→(A,×(B,C,⟲(τ,D),τ),E)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(B,C,⟲(D,τ),τ),E)", inductiveMiner.result.toString())
     }
 
     @Test
@@ -311,7 +310,6 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         assertEquals("→(A,⟲(B,C),D)", inductiveMiner.result.toString())
     }
 
-    @Ignore("Without statistics can't recognize ⟲(τ,B,C) vs (C,B) [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `Optional activity as first in loop`() {
         val log = logFromString(
@@ -324,7 +322,7 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
-        assertEquals("→(A,⟲(τ,B,C),D)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(C,τ),B,D)", inductiveMiner.result.toString())
     }
 
     @Test
@@ -342,7 +340,6 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         assertEquals("→(×(A,B),C,×(D,E))", inductiveMiner.result.toString())
     }
 
-    @Ignore("Without statistics can't recognize ⟲(A,τ) vs ⟲(τ,A) [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `PM book Figure 7-29 Q10`() {
         val log = logFromString(
@@ -357,7 +354,6 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         assertEquals("⟲(A,τ)", inductiveMiner.result.toString())
     }
 
-    @Ignore("Without statistics can't recognize ×(τ,B) vs B [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `PM book Figure 6-21 | 7-29 Q11`() {
         val log = logFromString(
@@ -370,10 +366,9 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
         val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
         inductiveMiner.processLog(listOf(log))
 
-        assertEquals("→(A,×(τ,B),C)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(B,τ),C)", inductiveMiner.result.toString())
     }
 
-    @Ignore("Without statistics can't recognize ×(F,τ) vs F [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `PM book Figure 7-30 F1`() {
         val log = logFromString(

@@ -34,7 +34,7 @@ abstract class InductiveMiner {
         val node = discoveredCutToNodeObject(graph)
 
         if (graph.detectedCut in nestedOperators) {
-            val it = graph.children.filterNotNull().iterator()
+            val it = graph.children.iterator()
             while (it.hasNext()) {
                 with(assignChildrenToNode(it.next())) {
                     node.addChild(this)
@@ -56,6 +56,9 @@ abstract class InductiveMiner {
             CutType.Sequence -> Sequence()
             CutType.Parallel -> Parallel()
             CutType.RedoLoop -> RedoLoop()
+            CutType.OptionalActivity -> graph.finishWithOptionalActivity()
+            CutType.RedoActivityAlways -> graph.finishWithRedoActivityAlways()
+            CutType.RedoActivitySometimes -> graph.finishWithDefaultRule()
             CutType.FlowerModel -> graph.finishWithDefaultRule()
         }
     }
