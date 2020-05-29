@@ -6,7 +6,7 @@ import processm.core.models.processtree.*
 /**
  * Inductive miners common abstract implementation.
  * Can be used by:
- * - [OfflineInductiveMinerWithoutLogStatistics]
+ * - [OfflineInductiveMiner]
  * - [OnlineInductiveMiner]
  * as code-base reduces. You should use [InductiveMiner] instead of duplicating code.
  */
