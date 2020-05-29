@@ -32,10 +32,10 @@ class DirectlyFollowsSubGraph(
      */
     private var initialEndActivities: Set<ProcessTreeActivity>? = null,
     /**
-     * Parent trace support based on activities in parent's subGraph
+     * Parent subGraph.
+     * Will be null only for root graph.
      */
-    private val parentTraceSupport: Int = 0,
-    private val parentCut: CutType? = null
+    private val parentSubGraph: DirectlyFollowsSubGraph? = null
 ) {
     companion object {
         /**
@@ -200,23 +200,21 @@ class DirectlyFollowsSubGraph(
                     dfg = dfg,
                     initialStartActivities = currentStartActivities,
                     initialEndActivities = currentEndActivities,
-                    parentTraceSupport = currentTraceSupport,
-                    parentCut = detectedCut
+                    parentSubGraph = this
                 )
             )
         }
 
         if (analyzeChildSupport) {
             // Append silent activity if sum of child support < parent support
-            if (children.sumBy { it.currentTraceSupport } < parentTraceSupport) {
+            if (children.sumBy { it.currentTraceSupport } < (parentSubGraph?.currentTraceSupport ?: 0)) {
                 children.add(
                     DirectlyFollowsSubGraph(
                         activities = setOf(SilentActivity()),
                         dfg = dfg,
                         initialStartActivities = currentStartActivities,
                         initialEndActivities = currentEndActivities,
-                        parentTraceSupport = currentTraceSupport,
-                        parentCut = detectedCut
+                        parentSubGraph = this
                     )
                 )
             }
@@ -783,11 +781,12 @@ class DirectlyFollowsSubGraph(
             // 4. ⟲(τ, Activity)
 
             // Activity duplicated in any trace?
+            val parentTraceSupport = parentSubGraph?.currentTraceSupport ?: 0
             detectedCut = if (dfg.activitiesDuplicatedInTraces.contains(activities.first())) {
                 if (currentTraceSupport < parentTraceSupport) CutType.RedoActivitySometimes
                 else CutType.RedoActivityAlways
             } else {
-                if (parentCut == CutType.Sequence && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
+                if (parentSubGraph?.detectedCut == CutType.Sequence && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
                 else CutType.Activity
             }
 

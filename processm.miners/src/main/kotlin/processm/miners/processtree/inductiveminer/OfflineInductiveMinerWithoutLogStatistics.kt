@@ -57,8 +57,7 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner() {
             assignChildrenToNode(
                 DirectlyFollowsSubGraph(
                     activities = activities,
-                    dfg = dfg,
-                    parentTraceSupport = dfg.maximumTraceSupport(activities)
+                    dfg = dfg
                 )
             )
         )

@@ -57,8 +57,7 @@ class OnlineInductiveMiner : InductiveMiner() {
             // Rebuild tree - changes are too big
             model = DirectlyFollowsSubGraph(
                 activities = activities,
-                dfg = dfg,
-                parentTraceSupport = dfg.maximumTraceSupport(activities)
+                dfg = dfg
             )
         } else if (diff.isNotEmpty()) {
             // Detect affected by change activities
