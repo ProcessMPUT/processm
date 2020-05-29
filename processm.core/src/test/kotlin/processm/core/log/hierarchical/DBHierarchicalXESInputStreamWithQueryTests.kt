@@ -908,25 +908,25 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             assertTrue(trace.events.count() >= 1)
 
             val distinctConceptNames = trace.events.distinctBy { it.conceptName }.count()
-            assertEquals(trace.events.count(), distinctConceptNames)
+            assertEquals(distinctConceptNames, trace.events.count())
 
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
                 assertNull(event.costCurrency)
                 assertNull(event.costTotal)
 
-                assertTrue((event.attributes["sum(event:total)"] as RealAttr).value >= 1.0)
+                assertTrue((event.attributes["sum(event:cost:total)"] as RealAttr).value >= 1.0)
             }
         }
     }
 
     @Test
     fun groupLogByEventStandardAttributeTest() {
-        val stream = q(
-            """select e:name, sum(e:total)
-            group log by e:name"""
-        )
-        TODO()
+        val stream = q("select e:name, sum(e:total) group log by e:name")
+        assertTrue(stream.count() >= 1)
+
+        val log = stream.first { it.conceptName == "JournalReview" }
+
     }
 
     @Test

@@ -23,12 +23,12 @@ internal fun <N : Number> ResultSet.toIdList(): List<N> = ArrayList<N>().also { 
     }
 }
 
-internal inline fun <reified N : Number> ResultSet.to2DArray(padWith: N): List<Array<N>> =
-    ArrayList<Array<N>>().also { out ->
+internal fun ResultSet.to2DIntArray(): List<IntArray> =
+    ArrayList<IntArray>().also { out ->
         var maxSize = 0
-        this@to2DArray.use {
+        this@to2DIntArray.use {
             while (it.next()) {
-                val array = it.getArray(1).array as Array<N>
+                val array = (it.getArray(1).array as Array<Int>).toIntArray()
                 if (array.size > maxSize)
                     maxSize = array.size
                 out.add(array)
@@ -37,7 +37,25 @@ internal inline fun <reified N : Number> ResultSet.to2DArray(padWith: N): List<A
         for (i in out.indices) {
             val old = out[i]
             if (old.size != maxSize)
-                out[i] = Array<N>(maxSize) { if (it < old.size) old[it] else padWith }
+                out[i] = old.copyOf(maxSize)
+        }
+    }
+
+internal fun ResultSet.to2DLongArray(): List<LongArray> =
+    ArrayList<LongArray>().also { out ->
+        var maxSize = 0
+        this@to2DLongArray.use {
+            while (it.next()) {
+                val array = (it.getArray(1).array as Array<Long>).toLongArray()
+                if (array.size > maxSize)
+                    maxSize = array.size
+                out.add(array)
+            }
+        }
+        for (i in out.indices) {
+            val old = out[i]
+            if (old.size != maxSize)
+                out[i] = old.copyOf(maxSize)
         }
     }
 

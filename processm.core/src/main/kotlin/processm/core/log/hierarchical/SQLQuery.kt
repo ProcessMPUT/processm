@@ -25,6 +25,8 @@ internal class SQLQuery(lambda: (sql: MutableSQLQuery) -> Unit) {
     fun execute(connection: Connection, params: List<Any> = this.params): ResultSet {
         val ts = System.currentTimeMillis()
 
+        //logger.trace(query)
+
         val result = connection
             .prepareStatement(query)
             .apply {
@@ -65,6 +67,8 @@ internal fun Collection<SQLQuery>.executeMany(connection: Connection, vararg par
         for (p in effectiveParams)
             statement.setObject(paramIndex++, p)
     }
+
+    //SQLQuery.logger.trace { statement.toString() }
 
     statement.execute()
 
