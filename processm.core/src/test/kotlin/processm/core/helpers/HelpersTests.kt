@@ -109,33 +109,8 @@ class HelpersTests {
     }
 
     @Test
-    fun `materialized subsets`() {
-        assertEquals(
-            setOf(
-                setOf(),
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
-                setOf("a", "b", "c")
-            ),
-            setOf("a", "b", "c").materializedAllSubsets(false).mapToSet { it.toSet() }
-        )
-    }
-
-    @Test
-    fun `materialized subsets without empty`() {
-        assertEquals(
-            setOf(
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
-                setOf("a", "b", "c")
-            ),
-            setOf("a", "b", "c").materializedAllSubsets(true).mapToSet { it.toSet() }
-        )
-    }
-
-    @Test
     fun `allSubsets performance`() {
-        val list = "ABCDEFGHIJKLMNOPQRSTUWVX".toList()
+        val list = "ABCDEFGHIJKLMNOPQRSTUWVXYZ".toList()
         // warm up
         for (subset in list.allSubsets(false)) {
             for (item in subset) {
@@ -152,32 +127,6 @@ class HelpersTests {
 
         measureTimeMillis {
             for (subset in list.allSubsets(true)) {
-                for (item in subset) {
-                    // nothing
-                }
-            }
-        }.also { logger().info("Calculated power set without empty subset in $it ms.") }
-    }
-
-    @Test
-    fun `materializedAllSubsets performance`() {
-        val list = "ABCDEFGHIJKLMNOPQRSTUWVX".toList()
-        // warm up
-        for (subset in list.materializedAllSubsets(false)) {
-            for (item in subset) {
-                // nothing
-            }
-        }
-        measureTimeMillis {
-            for (subset in list.materializedAllSubsets(false)) {
-                for (item in subset) {
-                    // nothing
-                }
-            }
-        }.also { logger().info("Calculated power set with empty subset in $it ms.") }
-
-        measureTimeMillis {
-            for (subset in list.materializedAllSubsets(true)) {
                 for (item in subset) {
                     // nothing
                 }

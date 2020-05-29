@@ -94,10 +94,6 @@ infix fun <T, R> Sequence<T>.zipOrThrow(seq2: Sequence<R>): Sequence<Pair<T, R>>
 }
 
 private class Subset<T>(private val base: List<T>, private val mask: Int) : Collection<T> {
-    companion object {
-        val empty: Subset<Nothing> = Subset(emptyList(), 0)
-    }
-
     override val size: Int
         get() = Integer.bitCount(mask)
 
@@ -129,132 +125,52 @@ private class Subset<T>(private val base: List<T>, private val mask: Int) : Coll
     }
 }
 
-private class LongSubset<T>(private val base: List<T>, private val mask: Long) : Collection<T> {
-    companion object {
-        val empty: Subset<Nothing> = Subset(emptyList(), 0)
+/**
+ * Lazily computes the power set view on the given [List].
+ *
+ * This function uses the receiver [List] as backing memory, so any change to that [List] invalidates the output
+ * of this function. If the receiver is mutable, it is recommended to copy the receiver before calling this function.
+ * E.g.,
+ * ```
+ * receiver.toList().aLlSubsets()
+ * ```
+ *
+ * This implementation of power set supports collections of the size up to 31 if [excludeEmpty]=true, and 30 otherwise.
+ *
+ * @param excludeEmpty Controls whether to to skip the empty subset.
+ * @return List of subsets.
+ * @throws IllegalArgumentException When the receiver [List] is larger than the above-mentioned size limit.
+ */
+fun <T> List<T>.allSubsets(excludeEmpty: Boolean = false): List<Collection<T>> {
+    require(excludeEmpty && this.size < Int.SIZE_BITS || this.size < Int.SIZE_BITS - 1) {
+        "This implementation of power set supports collections of the size up to ${Int.SIZE_BITS - 1} if excludeEmpty=true, and ${Int.SIZE_BITS - 2} otherwise."
     }
 
-    override val size: Int
-        get() = java.lang.Long.bitCount(mask)
-
-    /**
-     * Runs in O([size]).
-     */
-    override fun contains(element: T): Boolean = this.any { it == element }
-
-    /**
-     * Runs in O([size] * [elements.size]).
-     */
-    override fun containsAll(elements: Collection<T>): Boolean = elements.all { contains(it) }
-
-    /**
-     * Runs in O(1).
-     */
-    override fun isEmpty(): Boolean = mask == 0L
-
-
-    override fun iterator(): Iterator<T> = object : Iterator<T> {
-        private var mask: Long = this@LongSubset.mask
-        override fun hasNext(): Boolean = mask != 0L
-
-        override fun next(): T {
-            val index = java.lang.Long.numberOfTrailingZeros(mask)
-            mask = mask and (1L shl index).inv()
-            return base[index]
+    return if (excludeEmpty) {
+        object : kotlin.collections.AbstractList<Subset<T>>() {
+            override fun get(index: Int): Subset<T> = Subset(this@allSubsets, index + 1)
+            override val size: Int = (1 shl this@allSubsets.size) - 1 // overflow is expected for size=31
+        }
+    } else {
+        object : kotlin.collections.AbstractList<Subset<T>>() {
+            override fun get(index: Int): Subset<T> = Subset(this@allSubsets, index)
+            override val size: Int = 1 shl this@allSubsets.size
         }
     }
 }
 
 /**
- * Lazily computes the power set view on the given [List]. The empty set is excluded if [filterOutEmpty] is true.
+ * Lazily computes the power set view on the given [Collection].
  *
- * This function uses the receiver [List] as backing memory, so any change to that [List] invalidates the output
- * of this function. If the receiver [List] is mutable, it is recommended to copy that [List] before calling this
- * function. E.g.,
- * ```
- * receiver.toList().aLlSubsets(false)
- * ```
+ * This implementation of power set supports collections of the size up to 31 if [excludeEmpty]=true, and 30 otherwise.
+ *
+ * @param excludeEmpty Controls whether to to skip the empty subset.
+ * @return List of subsets.
+ * @throws IllegalArgumentException When the receiver [List] is larger than the above-mentioned size limit.
  */
-fun <T> List<T>.allSubsets(filterOutEmpty: Boolean = false): Sequence<Collection<T>> = sequence {
-    require(this@allSubsets.size < Long.SIZE_BITS) { "This implementation of power set supports sets of up to 63 items." }
-    if (this@allSubsets.isEmpty()) {
-        if (!filterOutEmpty)
-            yield(emptyList<T>())
-        return@sequence
-    }
-
-    val lastBucketMask: Long = -1L ushr (Long.SIZE_BITS - this@allSubsets.size)
-
-    var mask = if (filterOutEmpty) 1L else 0L
-    while (true) {
-        yield(LongSubset(this@allSubsets, mask))
-
-        if (++mask > lastBucketMask || mask < 0L)
-            return@sequence
-    }
-}
-
-/**
- * Lazily computes the power set view on the given [List]. The empty set is excluded if [filterOutEmpty] is true.
- */
-fun <T> Collection<T>.allSubsets(filterOutEmpty: Boolean = false): Sequence<Collection<T>> {
+fun <T> Collection<T>.allSubsets(excludeEmpty: Boolean = false): List<Collection<T>> {
     assert(this !is List<T>)
-    return this.toList().allSubsets(filterOutEmpty)
-}
-
-/**
- * Eagerly computes the power set view on the given [List]. The empty set is excluded if [filterOutEmpty] is true.
- *
- * This function uses the receiver [List] as backing memory, so any change to that [List] invalidates the output
- * of this function. If the receiver [List] is mutable, it is recommended to copy that [List] before calling this
- * function. E.g.,
- * ```
- * receiver.toList().materializedALlSubsets(false)
- * ```
- *
- * This function seems to be more efficient if one knows that the whole powerset is going to be used.
- * Otherwise, [allSubsets] should be the preferred solution, as it does not perform eager materialization.
- */
-fun <T> List<T>.materializedAllSubsets(filterOutEmpty: Boolean): List<Collection<T>> {
-    // The collection of size 31 cannot be handled this way, as Int is unable to hold 2^31 and the resulting ArrayList cannot be created
-    require(this.size <= 30) { "This implementation of power set supports collections of up to 30 items." }
-    if (this.isEmpty()) {
-        return if (filterOutEmpty) emptyList() else listOf(Subset.empty as Collection<T>)
-    }
-
-    val lastBucketMask: Int = -1 ushr (Int.SIZE_BITS - this.size)
-    var mask: Int = if (filterOutEmpty) 1 else 0
-
-    if (this.size >= 18) {
-        Helpers.logger.warn("Attempted to materialize the power set of the collection of size ${this.size}. Expect high memory pressure.")
-        if (this.size >= 26) // good luck
-            System.gc()
-        /*
-        The below table shows the expected memory usage if the compressed oops are on. These values roughly double for
-        disabled compressed oops. The memory usage is calculated as
-        2^size * (4 /*reference to a Subset<T>*/ + 12 /*internals of the Subset<T>*/)
-        | size | memory usage |
-        | 16   |          1MB |
-        | 18   |          4MB |
-        | 20   |         16MB |
-        | 22   |         64MB |
-        | 24   |        256MB |
-        | 26   |          1GB |
-        | 28   |          4GB |
-        | 30   |         16GB |
-        */
-    }
-
-    val result = ArrayList<Subset<T>>((1 shl this.size) - mask)
-    while (true) {
-        result.add(Subset(this, mask))
-
-        assert((mask + 1) >= 0) { "Overflow should not happen here." }
-        if (++mask > lastBucketMask /*|| mask < 0*/) {
-            assert(result.size == (1 shl this.size) - (if (filterOutEmpty) 1 else 0))
-            return result
-        }
-    }
+    return this.toList().allSubsets(excludeEmpty)
 }
 
 
@@ -264,10 +180,9 @@ fun <T> List<T>.materializedAllSubsets(filterOutEmpty: Boolean): List<Collection
  * This function seems to be more efficient if one knows that the whole powerset is going to be used.
  * Otherwise, [allSubsets] should be the preferred solution, as it does not perform eager materialization.
  */
-fun <T> Collection<T>.materializedAllSubsets(filterOutEmpty: Boolean): List<Collection<T>> {
-    assert(this !is List<T>)
-    return this.toList().materializedAllSubsets(filterOutEmpty)
-}
+@Deprecated("This function was inefficient", ReplaceWith("allSubsets(filterOutEmpty)"))
+fun <T> Collection<T>.materializedAllSubsets(filterOutEmpty: Boolean): List<Collection<T>> =
+    this.allSubsets(filterOutEmpty)
 
 /**
  * Generate all permutations of the given list
