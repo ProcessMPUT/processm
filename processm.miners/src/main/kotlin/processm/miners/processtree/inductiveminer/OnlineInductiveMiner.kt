@@ -1,6 +1,6 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.ProcessTreeSimplifier
@@ -25,7 +25,7 @@ class OnlineInductiveMiner : InductiveMiner() {
     /**
      * Given log collection convert to process tree structure.
      */
-    override fun processLog(logsCollection: Iterable<Log>) {
+    override fun processLog(logsCollection: LogInputStream) {
         discover(logsCollection)
     }
 
@@ -43,9 +43,9 @@ class OnlineInductiveMiner : InductiveMiner() {
     /**
      * Discover new process tree based on already stored tree and current directly-follows graph.
      */
-    fun discover(log: Iterable<Log>) {
+    fun discover(log: LogInputStream) {
         // Calculate diff and changes list
-        val diff = dfg.discoverDiff(log.asSequence())
+        val diff = dfg.discoverDiff(log)
 
         if (diff == null) {
             val activities = dfg.graph.rows.toHashSet().also {

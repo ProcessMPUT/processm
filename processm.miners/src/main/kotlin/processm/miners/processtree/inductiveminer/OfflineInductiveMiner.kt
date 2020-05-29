@@ -1,6 +1,6 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.ProcessTreeSimplifier
@@ -20,12 +20,12 @@ class OfflineInductiveMiner : InductiveMiner() {
     /**
      * Log which we should analyze
      */
-    private lateinit var log: Iterable<Log>
+    private lateinit var log: LogInputStream
 
     /**
      * Add reference to log file
      */
-    override fun processLog(logsCollection: Iterable<Log>) {
+    override fun processLog(logsCollection: LogInputStream) {
         this.log = logsCollection
     }
 
@@ -41,7 +41,7 @@ class OfflineInductiveMiner : InductiveMiner() {
     private fun discoverProcessTreeModel(): ProcessTree {
         // Build directly follows graph
         val dfg = DirectlyFollowsGraph()
-        dfg.discover(this.log.asSequence())
+        dfg.discover(this.log)
 
         // DFG without activities - return empty process tree model
         if (dfg.startActivities.isEmpty() || dfg.endActivities.isEmpty()) return ProcessTree()

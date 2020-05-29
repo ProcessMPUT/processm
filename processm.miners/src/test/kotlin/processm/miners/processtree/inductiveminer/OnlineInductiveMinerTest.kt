@@ -12,7 +12,7 @@ internal class OnlineInductiveMinerTest {
     fun `Discover changed process tree`() {
         val fullMiner = OnlineInductiveMiner()
         fullMiner.discover(
-            listOf(
+            sequenceOf(
                 logFromString(
                     """
                     A B C D
@@ -32,14 +32,14 @@ internal class OnlineInductiveMinerTest {
             A E F D
             """.trimIndent()
         )
-        onlineMiner.discover(listOf(firstLog))
+        onlineMiner.discover(sequenceOf(firstLog))
 
         val logWithLastTrace = logFromString(
             """
             A B C F D
             """.trimIndent()
         )
-        onlineMiner.discover(listOf(logWithLastTrace))
+        onlineMiner.discover(sequenceOf(logWithLastTrace))
 
         val fullMinerTree = fullMiner.result
         val onlineMinerTree = onlineMiner.result

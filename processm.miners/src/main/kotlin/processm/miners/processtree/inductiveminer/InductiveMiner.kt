@@ -1,6 +1,6 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.*
 import java.util.*
 
@@ -15,7 +15,7 @@ abstract class InductiveMiner {
     /**
      * Perform mining on a given log.
      */
-    abstract fun processLog(logsCollection: Iterable<Log>)
+    abstract fun processLog(logsCollection: LogInputStream)
 
     /**
      * The mined model
