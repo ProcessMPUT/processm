@@ -14,7 +14,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Activities in directly-follows subGraph
      */
-    private val activities: Set<ProcessTreeActivity>,
+    internal val activities: Set<ProcessTreeActivity>,
     /**
      * Connections between activities in graph
      */
@@ -174,8 +174,6 @@ class DirectlyFollowsSubGraph(
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
     private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>) {
-        assert(!this::children.isInitialized) { "SubGraph already split. Action cannot be performed again!" }
-
         val groupToListPosition = TreeMap<Int, Int>()
         assignment.values.toSortedSet().withIndex().forEach { (index, groupId) -> groupToListPosition[groupId] = index }
 
@@ -794,5 +792,13 @@ class DirectlyFollowsSubGraph(
 
         // Flower model - default cut
         detectedCut = CutType.FlowerModel
+    }
+
+    /**
+     * Rebuild subGraph
+     * This is simple wrapper on detectCuts function.
+     */
+    fun rebuild() {
+        detectCuts()
     }
 }

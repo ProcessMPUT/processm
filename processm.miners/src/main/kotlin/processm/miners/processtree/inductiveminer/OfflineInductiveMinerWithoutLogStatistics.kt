@@ -1,8 +1,10 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.Log
-import processm.core.models.processtree.*
-import processm.miners.processtree.directlyfollowsgraph.Arc
+import processm.core.models.processtree.ProcessTree
+import processm.core.models.processtree.ProcessTreeActivity
+import processm.core.models.processtree.ProcessTreeSimplifier
+import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 
 /**
@@ -14,12 +16,7 @@ import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
  * * If the activity does not exist in all traces should be as ×(τ,activity).
  *   This IM will ignore [SilentActivity] and use only [ProcessTreeActivity].
  */
-class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
-    /**
-     * Internal set of operations when we should analyze children stored in subGraph
-     */
-    private val nestedOperators = setOf(CutType.RedoLoop, CutType.Sequence, CutType.Parallel, CutType.Exclusive)
-
+class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner() {
     /**
      * Log which we should analyze
      */
@@ -28,8 +25,8 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
     /**
      * Add reference to log file
      */
-    override fun processLog(log: Iterable<Log>) {
-        this.log = log
+    override fun processLog(logsCollection: Iterable<Log>) {
+        this.log = logsCollection
     }
 
     /**
@@ -71,39 +68,5 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner {
         ProcessTreeSimplifier().simplify(processTree)
 
         return processTree
-    }
-
-    /**
-     * Assign children to node discovered by subGraph cut.
-     * Found node can be operator (like exclusive choice) or activity.
-     */
-    private fun assignChildrenToNode(graph: DirectlyFollowsSubGraph): Node {
-        val node = discoveredCutToNodeObject(graph)
-
-        if (graph.detectedCut in nestedOperators) {
-            val it = graph.children.filterNotNull().iterator()
-            while (it.hasNext()) {
-                with(assignChildrenToNode(it.next())) {
-                    node.addChild(this)
-                }
-            }
-        }
-
-        return node
-    }
-
-    /**
-     * Transform discovered cut in subGraph into node.
-     * If activity or flower-model -> fetch if from graph.
-     */
-    private fun discoveredCutToNodeObject(graph: DirectlyFollowsSubGraph): Node {
-        return when (graph.detectedCut) {
-            CutType.Activity -> graph.finishCalculations()
-            CutType.Exclusive -> Exclusive()
-            CutType.Sequence -> Sequence()
-            CutType.Parallel -> Parallel()
-            CutType.RedoLoop -> RedoLoop()
-            CutType.FlowerModel -> graph.finishWithDefaultRule()
-        }
     }
 }
