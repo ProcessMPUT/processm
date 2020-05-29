@@ -134,15 +134,54 @@ class HelpersTests {
     }
 
     @Test
-    fun `materializedAllSubsets performance`() {
-        val set = "ABCDEFGHIJKLMNOPQRSTU".toHashSet()
-        set.materializedAllSubsets(false) // warm up
+    fun `allSubsets performance`() {
+        val list = "ABCDEFGHIJKLMNOPQRSTUWVX".toList()
+        // warm up
+        for (subset in list.allSubsets(false)) {
+            for (item in subset) {
+                // nothing
+            }
+        }
         measureTimeMillis {
-            set.materializedAllSubsets(false)
+            for (subset in list.allSubsets(false)) {
+                for (item in subset) {
+                    // nothing
+                }
+            }
         }.also { logger().info("Calculated power set with empty subset in $it ms.") }
 
         measureTimeMillis {
-            set.materializedAllSubsets(true)
+            for (subset in list.allSubsets(true)) {
+                for (item in subset) {
+                    // nothing
+                }
+            }
+        }.also { logger().info("Calculated power set without empty subset in $it ms.") }
+    }
+
+    @Test
+    fun `materializedAllSubsets performance`() {
+        val list = "ABCDEFGHIJKLMNOPQRSTUWVX".toList()
+        // warm up
+        for (subset in list.materializedAllSubsets(false)) {
+            for (item in subset) {
+                // nothing
+            }
+        }
+        measureTimeMillis {
+            for (subset in list.materializedAllSubsets(false)) {
+                for (item in subset) {
+                    // nothing
+                }
+            }
+        }.also { logger().info("Calculated power set with empty subset in $it ms.") }
+
+        measureTimeMillis {
+            for (subset in list.materializedAllSubsets(true)) {
+                for (item in subset) {
+                    // nothing
+                }
+            }
         }.also { logger().info("Calculated power set without empty subset in $it ms.") }
     }
 
