@@ -2,6 +2,7 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.Log
 import processm.core.models.processtree.*
+import java.util.*
 
 /**
  * Inductive miners common abstract implementation.
@@ -21,10 +22,13 @@ abstract class InductiveMiner {
      */
     abstract val result: ProcessTree
 
-    /**
-     * Internal set of operations when we should analyze children stored in subGraph
-     */
-    private val nestedOperators = setOf(CutType.RedoLoop, CutType.Sequence, CutType.Parallel, CutType.Exclusive)
+    companion object {
+        /**
+         * Internal set of operations when we should analyze children stored in subGraph
+         */
+        private val nestedOperators =
+            EnumSet.of(CutType.RedoLoop, CutType.Sequence, CutType.Parallel, CutType.Exclusive)
+    }
 
     /**
      * Assign children to node discovered by subGraph cut.
