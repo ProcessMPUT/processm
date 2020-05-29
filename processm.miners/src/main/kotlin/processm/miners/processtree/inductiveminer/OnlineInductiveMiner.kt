@@ -5,7 +5,6 @@ import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.ProcessTreeSimplifier
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
-import java.util.*
 
 /**
  * Online Inductive Miner
@@ -82,26 +81,11 @@ class OnlineInductiveMiner : InductiveMiner() {
         // Init selected subGraph as given tree's root
         var selectedSubGraph = root
 
-        // Initialize stack and add root as first element
-        val stack = ArrayDeque<DirectlyFollowsSubGraph>()
-        stack.push(root)
-
-        do {
-            val subGraph = stack.pop()
-
+        while (true) {
             // Analyze subGraph - should contain all activities affected by changed connections
-            if (subGraph.activities.containsAll(affectedActivities)) {
-                // Update selected subGraph
-                selectedSubGraph = subGraph
-
-                // We can clear stack because it is not possible to find relations in two separated groups
-                // ProcessTree without duplicated activities
-                stack.clear()
-
-                // Add all children to analyze in next iterations
-                subGraph.children.forEach { stack.push(it) }
-            }
-        } while (stack.isNotEmpty())
+            selectedSubGraph =
+                selectedSubGraph.children.firstOrNull { it.activities.containsAll(affectedActivities) } ?: break
+        }
 
         // Return selected minimal common subGraph
         return selectedSubGraph
