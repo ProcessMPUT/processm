@@ -64,7 +64,7 @@ class OnlineInductiveMiner : InductiveMiner() {
             val affectedActivities = detectAffectedActivities(diff)
 
             // Find where rebuild graph
-            val subGraphToRebuild = deepFirstSearchMinimalCommonSubGraph(affectedActivities, model)
+            val subGraphToRebuild = breadthFirstSearchMinimalCommonSubGraph(affectedActivities, model)
 
             // Rebuild subGraph
             subGraphToRebuild.rebuild()
@@ -72,10 +72,10 @@ class OnlineInductiveMiner : InductiveMiner() {
     }
 
     /**
-     * Deep first search iterative.
+     * Breadth first search iterative.
      * Find minimal common subGraph based on changed activities.
      */
-    private fun deepFirstSearchMinimalCommonSubGraph(
+    private fun breadthFirstSearchMinimalCommonSubGraph(
         affectedActivities: Collection<ProcessTreeActivity>,
         root: DirectlyFollowsSubGraph
     ): DirectlyFollowsSubGraph {
@@ -83,10 +83,10 @@ class OnlineInductiveMiner : InductiveMiner() {
         var selectedSubGraph = root
 
         // Initialize stack and add root as first element
-        val stack = Stack<DirectlyFollowsSubGraph>()
+        val stack = ArrayDeque<DirectlyFollowsSubGraph>()
         stack.push(root)
 
-        while (stack.isNotEmpty()) {
+        do {
             val subGraph = stack.pop()
 
             // Analyze subGraph - should contain all activities affected by changed connections
@@ -101,7 +101,7 @@ class OnlineInductiveMiner : InductiveMiner() {
                 // Add all children to analyze in next iterations
                 subGraph.children.forEach { stack.push(it) }
             }
-        }
+        } while (stack.isNotEmpty())
 
         // Return selected minimal common subGraph
         return selectedSubGraph
