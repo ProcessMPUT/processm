@@ -67,7 +67,7 @@ class OnlineInductiveMiner : InductiveMiner() {
             val subGraphToRebuild = breadthFirstSearchMinimalCommonSubGraph(affectedActivities, model)
 
             // Rebuild subGraph
-            subGraphToRebuild.rebuild()
+            subGraphToRebuild.detectCuts()
         }
     }
 

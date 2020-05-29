@@ -772,7 +772,7 @@ class DirectlyFollowsSubGraph(
     /**
      * Detect cuts in graph
      */
-    private fun detectCuts() {
+    fun detectCuts() {
         if (canFinishCalculationsOnSubGraph()) {
             // We must check which case we have:
             // 1. Activity
@@ -846,13 +846,5 @@ class DirectlyFollowsSubGraph(
         listOfActivities[1] = SilentActivity()
 
         return RedoLoop(*listOfActivities.requireNoNulls())
-    }
-
-    /**
-     * Rebuild subGraph
-     * This is simple wrapper on detectCuts function.
-     */
-    fun rebuild() {
-        detectCuts()
     }
 }
