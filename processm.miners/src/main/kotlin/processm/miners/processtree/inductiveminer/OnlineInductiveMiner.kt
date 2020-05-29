@@ -61,10 +61,10 @@ class OnlineInductiveMiner : InductiveMiner() {
             )
         } else if (diff.isNotEmpty()) {
             // Detect affected by change activities
-            val infectedActivities = detectInfectedActivities(diff)
+            val affectedActivities = detectAffectedActivities(diff)
 
             // Find where rebuild graph
-            val subGraphToRebuild = deepFirstSearchMinimalCommonSubGraph(infectedActivities, model)
+            val subGraphToRebuild = deepFirstSearchMinimalCommonSubGraph(affectedActivities, model)
 
             // Rebuild subGraph
             subGraphToRebuild.rebuild()
@@ -76,7 +76,7 @@ class OnlineInductiveMiner : InductiveMiner() {
      * Find minimal common subGraph based on changed activities.
      */
     private fun deepFirstSearchMinimalCommonSubGraph(
-        infectedActivities: Collection<ProcessTreeActivity>,
+        affectedActivities: Collection<ProcessTreeActivity>,
         root: DirectlyFollowsSubGraph
     ): DirectlyFollowsSubGraph {
         // Init selected subGraph as given tree's root
@@ -89,8 +89,8 @@ class OnlineInductiveMiner : InductiveMiner() {
         while (stack.isNotEmpty()) {
             val subGraph = stack.pop()
 
-            // Analyze subGraph - should contain all activities infected by changed connections
-            if (subGraph.activities.containsAll(infectedActivities)) {
+            // Analyze subGraph - should contain all activities affected by changed connections
+            if (subGraph.activities.containsAll(affectedActivities)) {
                 // Update selected subGraph
                 selectedSubGraph = subGraph
 
@@ -108,15 +108,15 @@ class OnlineInductiveMiner : InductiveMiner() {
     }
 
     /**
-     * Detect infected (activities affected by the change) activities.
+     * Detect activities affected by the changes.
      */
-    private fun detectInfectedActivities(pairs: Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>): Collection<ProcessTreeActivity> {
-        val infectedActivities = mutableSetOf<ProcessTreeActivity>()
+    private fun detectAffectedActivities(pairs: Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>): Collection<ProcessTreeActivity> {
+        val affectedActivities = mutableSetOf<ProcessTreeActivity>()
         pairs.forEach { (from, to) ->
-            infectedActivities.add(from)
-            infectedActivities.add(to)
+            affectedActivities.add(from)
+            affectedActivities.add(to)
         }
 
-        return infectedActivities
+        return affectedActivities
     }
 }
