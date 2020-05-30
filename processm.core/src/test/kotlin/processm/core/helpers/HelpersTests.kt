@@ -95,6 +95,7 @@ class HelpersTests {
 
         // test PowerSetImpl<T>.equals()
         assertEquals(validPowerset, calculatedPowerset)
+        assertEquals(calculatedPowerset, validPowerset)
         assertEquals(calculatedPowerset, calculatedPowerset)
 
         // test PowerSetImpl<T>.hashCode()
@@ -115,6 +116,7 @@ class HelpersTests {
             // test Subset<T>.indexOf()
             val index = calculatedPowerset.indexOf(validSubset)
             assertTrue(index >= 0)
+            assertEquals(index, calculatedPowerset.lastIndexOf(validSubset))
 
             // test Subset<T>.equals()
             val calculatedSubset = calculatedPowerset[index]
@@ -138,6 +140,7 @@ class HelpersTests {
 
         // test PowerSetImpl<T>.equals()
         assertEquals(validPowerset, calculatedPowerset)
+        assertEquals(calculatedPowerset, validPowerset)
         assertEquals(calculatedPowerset, calculatedPowerset)
 
         // test PowerSetImpl<T>.hashCode()
@@ -158,6 +161,7 @@ class HelpersTests {
             // test Subset<T>.indexOf()
             val index = calculatedPowerset.indexOf(validSubset)
             assertTrue(index >= 0)
+            assertEquals(index, calculatedPowerset.lastIndexOf(validSubset))
 
             // test Subset<T>.equals()
             val calculatedSubset = calculatedPowerset[index]
