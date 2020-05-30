@@ -227,43 +227,26 @@ private class PowerSetImpl<T>(val base: List<T>, val offset: Int) :
 }
 
 /**
- * Lazily computes the power set view on the given [List].
- *
- * This function uses the receiver [List] as backing memory, so any change to that [List] invalidates the output
- * of this function. If the receiver is mutable, it is recommended to copy the receiver before calling this function.
- * E.g.,
- * ```
- * receiver.toList().aLlSubsets()
- * ```
+ * Lazily computes the power set view on the given [Collection].
  *
  * This implementation of power set supports collections of the size up to 31 if [excludeEmpty]=true, and 30 otherwise.
  *
- * @param excludeEmpty Controls whether to skip the empty subset.
- * @return List of subsets.
- * @throws IllegalArgumentException When the receiver [List] is larger than the above-mentioned size limit.
+ * @param excludeEmpty Controls whether to skip the empty subset. Default: false.
+ * @param inline Controls whether to use the given [Collection] as backing memory. If [inline]=true (the default) and
+ * the receiver [Collection] is a [RandomAccess] [List], then this function uses the receiver as backing memory, so any
+ * change to the receiver invalidates the output of this function. If the receiver is mutable, it is recommended to set
+ * [inline]=false. For [inline]=false or a non-[RandomAccess]-[List] the receiver is internally copied.
+ * @return The power set of subsets.
+ * @throws IllegalArgumentException When the receiver [Collection] is larger than the above-mentioned size limit.
  */
-fun <T> List<T>.allSubsets(excludeEmpty: Boolean = false): PowerSet<T> {
+fun <T> Collection<T>.allSubsets(excludeEmpty: Boolean = false, inline: Boolean = true): PowerSet<T> {
     require(excludeEmpty && this.size < Int.SIZE_BITS || this.size < Int.SIZE_BITS - 1) {
         "This implementation of power set supports collections of the size up to ${Int.SIZE_BITS - 1} if excludeEmpty=true, and ${Int.SIZE_BITS - 2} otherwise."
     }
 
-    return PowerSetImpl(this, if (excludeEmpty) 1 else 0)
+    val list = if (inline && this is List<T> && this is RandomAccess) this else this.toList()
+    return PowerSetImpl(list, if (excludeEmpty) 1 else 0)
 }
-
-/**
- * Lazily computes the power set view on the given [Iterable].
- *
- * This implementation of power set supports collections of the size up to 31 if [excludeEmpty]=true, and 30 otherwise.
- *
- * @param excludeEmpty Controls whether to to skip the empty subset.
- * @return List of subsets.
- * @throws IllegalArgumentException When the receiver [Iterable] is larger than the above-mentioned size limit.
- */
-fun <T> Iterable<T>.allSubsets(excludeEmpty: Boolean = false): PowerSet<T> {
-    assert(this !is List<T>)
-    return this.toList().allSubsets(excludeEmpty)
-}
-
 
 /**
  * Eagerly computes the power set view on the given [Collection]. The empty set is excluded if [filterOutEmpty] is true.
@@ -272,7 +255,7 @@ fun <T> Iterable<T>.allSubsets(excludeEmpty: Boolean = false): PowerSet<T> {
  * Otherwise, [allSubsets] should be the preferred solution, as it does not perform eager materialization.
  */
 @Deprecated("This function was inefficient", ReplaceWith("allSubsets(filterOutEmpty)"))
-fun <T> Collection<T>.materializedAllSubsets(filterOutEmpty: Boolean): List<Collection<T>> =
+fun <T> Collection<T>.materializedAllSubsets(filterOutEmpty: Boolean): PowerSet<T> =
     this.allSubsets(filterOutEmpty)
 
 /**
