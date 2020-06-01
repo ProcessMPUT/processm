@@ -272,9 +272,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
         ) {
             // dummy query that returns no data
-            it.query.append("SELECT NULL AS id WHERE cardinality(?)=-1")
-            it.params.add(idPlaceholder)
-            // FIXME: optimization: return empty in-memory ResultSet
+            it.query.append("SELECT NULL AS id WHERE 0=1")
             return@SQLQuery
         }
 
@@ -354,8 +352,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         if (pql.selectExpressions[scope].isNullOrEmpty()) {
             // FIXME: optimization: return empty ResultSet here
-            it.query.append("SELECT NULL AS id FROM unnest(?) WHERE 0=1")
-            it.params.add(idPlaceholder)
+            it.query.append("SELECT NULL AS id WHERE 0=1")
             return@SQLQuery
         }
 
@@ -510,8 +507,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             && pql.selectStandardAttributes[scope]!!.none { a -> a.isClassifier }
         ) {
             // dummy query that returns no data
-            it.query.append("SELECT NULL AS id WHERE cardinality(?)=-1")
-            it.params.add(idPlaceholder)
+            it.query.append("SELECT NULL AS id WHERE 0=1")
             // FIXME: optimization: return empty in-memory ResultSet
             return@SQLQuery
         }
@@ -546,8 +542,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     private fun groupExpressionsQuery(scope: Scope, logId: Int?): SQLQuery = SQLQuery {
         if (pql.selectExpressions[scope].isNullOrEmpty()) {
             // FIXME: optimization: return empty ResultSet here
-            it.query.append("SELECT NULL AS id FROM unnest(?) WHERE 0=1")
-            it.params.add(idPlaceholder)
+            it.query.append("SELECT NULL AS id WHERE 0=1")
             return@SQLQuery
         }
         selectExpressions(scope, it, "ord")
@@ -560,11 +555,24 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         with(sql.query) {
             append(" GROUP BY ids.ord")
 
+            val cache = HashSet<String>()
             for (expression in pql.selectExpressions[scope]!!) {
                 if (expression.filter { it is Function && it.functionType == FunctionType.Aggregation }.any())
                     continue
-                append(", ")
-                expression.toSQL(sql, scope, Type.Any)
+
+                for (attribute in expression.filter { it is Attribute } as Sequence<Attribute>) {
+                    val name = if (attribute.isStandard) attribute.standardName else "${scope.alias}.id"
+                    if (name in cache)
+                        continue
+                    cache.add(name)
+
+                    append(", ")
+                    if (attribute.isStandard) {
+                        attribute.toSQL(sql, scope, Type.Any)
+                    } else {
+                        append(name)
+                    }
+                }
             }
         }
     }
@@ -628,12 +636,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 logger.trace { "Retrieving log/group ids: ${ids.joinToString()}." }
                 val idParam = connection!!.createArrayOf("int", ids.toTypedArray())
                 val idParamList = listOf(idParam)
-                val attrParameters = cache.topEntry.queryAttributes.params.map {
-                    if (it === idPlaceholder) idParam else it
-                }
-                val exprParameters = cache.topEntry.queryExpressions.params.map {
-                    if (it === idPlaceholder) idParam else it
-                }
+                val attrParameters =
+                    cache.topEntry.queryAttributes.params.map { if (it === idPlaceholder) idParam else it }
+                val exprParameters =
+                    cache.topEntry.queryExpressions.params.map { if (it === idPlaceholder) idParam else it }
+                val globalsParameters =
+                    cache.topEntry.queryGlobals.params.map { if (it === idPlaceholder) idParam else it }
 
                 val results = listOf(
                     cache.topEntry.queryEntity,
@@ -643,7 +651,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     queryLogExtensions,
                     cache.topEntry.queryGlobals
                 ).executeMany(
-                    connection!!, idParamList, attrParameters, exprParameters, idParamList, idParamList, idParamList
+                    connection!!,
+                    idParamList,
+                    attrParameters,
+                    exprParameters,
+                    idParamList,
+                    idParamList,
+                    globalsParameters
                 )
 
                 return LogQueryResult(
@@ -815,7 +829,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
             override val queryIds: SQLQuery by lazy(NONE) { groupIdsQuery(Scope.Log, null, null) }
             override val queryEntity: SQLQuery by lazy(NONE) { groupEntityQuery(Scope.Log) }
-            override val queryGlobals: SQLQuery = SQLQuery { /* FIXME: return empty ResultSet for this query */ }
+            override val queryGlobals: SQLQuery =
+                SQLQuery { it.query.append("SELECT NULL AS id WHERE 0=1") } // FIXME: return empty ResultSet for this query
             override val queryAttributes: SQLQuery by lazy(NONE) { groupAttributesQuery(Scope.Log, null) }
             override val queryExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Log, null) }
         }
@@ -832,7 +847,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
             override val queryIds: SQLQuery by lazy(NONE) { TODO() }
             override val queryEntity: SQLQuery by lazy(NONE) { TODO() }
-            override val queryGlobals: SQLQuery = SQLQuery { /* FIXME: return empty ResultSet for this query */ }
+            override val queryGlobals: SQLQuery =
+                SQLQuery { it.query.append("SELECT NULL AS id WHERE 0=1") } // FIXME: return empty ResultSet for this query
             override val queryAttributes: SQLQuery by lazy(NONE) { TODO() }
             override val queryExpressions: SQLQuery by lazy(NONE) { TODO() }
         }
