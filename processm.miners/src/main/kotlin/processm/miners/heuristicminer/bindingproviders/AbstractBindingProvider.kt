@@ -1,9 +1,8 @@
 package processm.miners.heuristicminer.bindingproviders
 
 import processm.core.helpers.allSubsets
-import processm.core.helpers.materializedAllSubsets
-import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 
 abstract class AbstractBindingProvider : BindingProvider {
@@ -13,10 +12,10 @@ abstract class AbstractBindingProvider : BindingProvider {
      * the target of these dependencies must be [currentNode] and they all must be present in [available]
      */
     protected fun consumeCandidates(
-            model: CausalNet,
-            currentNode: Node,
-            available: Set<Dependency>
-    ): Sequence<Collection<Dependency>> {
+        model: CausalNet,
+        currentNode: Node,
+        available: Set<Dependency>
+    ): Collection<Collection<Dependency>> {
         val consumable =
             model.incoming.getOrDefault(currentNode, setOf())
         val knownJoins = model.joins[currentNode]
@@ -24,9 +23,9 @@ abstract class AbstractBindingProvider : BindingProvider {
             if (consumable.isNotEmpty())
                 consumable.intersect(available).allSubsets(true)
             else
-                sequenceOf(emptySet<Dependency>())
+                listOf(emptySet<Dependency>())
         } else {
-            knownJoins.map { join -> join.dependencies }.filter { available.containsAll(it) }.asSequence()
+            knownJoins.map { join -> join.dependencies }.filter { available.containsAll(it) }
         }
     }
 
@@ -44,7 +43,7 @@ abstract class AbstractBindingProvider : BindingProvider {
         val knownSplits = model.splits[currentNode]
         return if (knownSplits.isNullOrEmpty()) {
             if (producible.isNotEmpty())
-                producible.filter { it.target in available }.materializedAllSubsets(true)
+                producible.filter { it.target in available }.allSubsets(true)
             else
                 listOf(setOf<Dependency>())
         } else {
