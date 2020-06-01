@@ -270,3 +270,18 @@ inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
  * Casts [IntProgression] to an equivalent [LongRange].
  */
 inline fun IntProgression.toLongRange(): LongRange = this.first.toLong()..this.last.toLong()
+
+/**
+ * Material conditional.
+ *
+ * @see [https://en.wikipedia.org/wiki/Material_conditional]
+ */
+inline infix fun Boolean.implies(consequence: Boolean) = !this || consequence
+
+/**
+ * Material conditional.
+ *
+ * This override of the [implies] function evaluates [consequence] only of the receiver condition evaluates to true.
+ * @see [https://en.wikipedia.org/wiki/Material_conditional]
+ */
+inline infix fun (() -> Boolean).implies(consequence: () -> Boolean) = !(this() && !consequence())

@@ -65,6 +65,7 @@ internal val Type.asAttributeType: String
         Type.Number -> "number"
         Type.Datetime -> "date"
         Type.Boolean -> "boolean"
+        Type.Any -> "any"
         else -> throw IllegalArgumentException("Unknown type $this.")
     }
 
@@ -74,5 +75,6 @@ internal val Type.asDBType: String
         Type.Number -> "double precision"
         Type.Datetime -> "timestamptz"
         Type.Boolean -> "boolean"
+        Type.Any -> "text" // fallback to PostgreSQL's TEXT
         else -> throw IllegalArgumentException("Unknown type $this.")
     }

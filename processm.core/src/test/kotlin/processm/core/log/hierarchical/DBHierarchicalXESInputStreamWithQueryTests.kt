@@ -3,6 +3,7 @@ package processm.core.log.hierarchical
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
+import processm.core.helpers.implies
 import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
@@ -319,11 +320,30 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun selectExpressionTest() {
         val stream = q(
-            "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp) " +
+            "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp), count(e:time:timestamp) " +
                     "where l:id='$uuid' " +
                     "group event by [e:concept:name], e:resource"
         )
-        TODO()
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(0, log.attributes.size)
+        assertEquals(101, log.traces.count())
+
+        for (trace in log.traces) {
+            assertEquals(0, trace.attributes.size)
+            assertTrue(trace.events.count() > 0)
+
+            val groups = trace.events.map { it.attributes["concept:name+org:resource"] }.toList()
+            assertEquals(groups.distinct().size, groups.size)
+
+            for (event in trace.events) {
+                val rangeInDays = event.attributes["max(time:timestamp)-min(time:timestamp)"]!!.value as Double
+                val count = event.attributes["count(time:timestamp)"]!!.value as Double
+                assertTrue({ abs(count - 1.0) < 1e-6 } implies { rangeInDays < 1e-6 })
+                assertTrue({ abs(count - 1.0) > 1e-6 } implies { rangeInDays > 1e-6 })
+            }
+        }
     }
 
     @Test

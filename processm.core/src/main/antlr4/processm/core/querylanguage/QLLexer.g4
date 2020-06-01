@@ -2,16 +2,8 @@ lexer grammar QLLexer;
 // lexer rules start with uppercase letters
 tokens {STRING}
 @lexer::members {
-    private int _savedIndex, _savedLine, _savedColumn;
-    private void remember() {
-        _savedIndex = _input.index();
-        _savedLine = getLine();
-        _savedColumn = getCharPositionInLine();
-    }
-    private void goback() {
-        _input.seek(_savedIndex);
-        setLine(_savedLine);
-        setCharPositionInLine(_savedColumn);
+    private void go(int diff) {
+        _input.seek(_input.index() + diff);
     }
 }
 
@@ -43,10 +35,10 @@ DATETIME    : SCOPE_PREFIX 'D' ISODATE ('T' ISOTIME ISOTIMEZONE?)?
 
 NULL        : SCOPE_PREFIX 'null' ;
 
-FUNC_AGGR   : SCOPE_PREFIX ('min' | 'max' | 'avg' | 'count' | 'sum') { remember(); } '(' { goback(); } ;
+FUNC_AGGR   : SCOPE_PREFIX ('min' | 'max' | 'avg' | 'count' | 'sum') '(' { go(-1); } ;
 FUNC_SCALAR1: SCOPE_PREFIX ('date' | 'time' | 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second' | 'millisecond' |
-                            'quarter' | 'dayofweek' | 'upper' | 'lower' | 'round') { remember(); } '(' { goback(); } ;
-FUNC_SCALAR0: SCOPE_PREFIX 'now' { remember(); } '(' { goback(); } ;
+                            'quarter' | 'dayofweek' | 'upper' | 'lower' | 'round') '(' { go(-1); } ;
+FUNC_SCALAR0: SCOPE_PREFIX 'now' '(' { go(-1); } ;
 
 OP_MUL      : '*' ;
 OP_DIV      : '/' ;

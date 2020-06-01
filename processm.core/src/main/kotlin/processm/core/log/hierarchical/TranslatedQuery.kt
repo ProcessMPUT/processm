@@ -22,6 +22,7 @@ import kotlin.collections.LinkedHashSet
 internal class TranslatedQuery(private val pql: Query, private val batchSize: Int = 1) {
     companion object {
         private val logger = logger()
+        private val idPlaceholder = Any()
         private val queryLogClassifiers: SQLQuery = SQLQuery {
             it.query.append(
                 """SELECT log_id, scope, name, keys
@@ -29,6 +30,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON c.log_id=ids.id
                 ORDER BY ids.ord, c.id"""
             )
+            it.params.add(idPlaceholder)
         }
         private val queryLogExtensions: SQLQuery = SQLQuery {
             it.query.append(
@@ -37,6 +39,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON e.log_id=ids.id
                 ORDER BY ids.ord, e.id"""
             )
+            it.params.add(idPlaceholder)
         }
     }
 
@@ -249,6 +252,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         assert(sql.scopes.first().scope == scope)
         sql.query.append(" FROM ${scope.table} ${scope.alias}")
         sql.query.append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) USING (id)")
+        sql.params.add(idPlaceholder)
     }
 
     private fun orderByEntity(sql: MutableSQLQuery) {
@@ -269,6 +273,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         ) {
             // dummy query that returns no data
             it.query.append("SELECT NULL AS id WHERE cardinality(?)=-1")
+            it.params.add(idPlaceholder)
             // FIXME: optimization: return empty in-memory ResultSet
             return@SQLQuery
         }
@@ -280,6 +285,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             append(", ARRAY[ids.ord, $attrTable.id] AS path")
             append(" FROM $attrTable")
             append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
+            it.params.add(idPlaceholder)
             whereAttributes(scope, it, logId)
             append(" UNION ALL ")
             selectAttributes(scope, attrTable, extraColumns, it)
@@ -349,12 +355,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         if (pql.selectExpressions[scope].isNullOrEmpty()) {
             // FIXME: optimization: return empty ResultSet here
             it.query.append("SELECT NULL AS id FROM unnest(?) WHERE 0=1")
+            it.params.add(idPlaceholder)
             return@SQLQuery
         }
 
         selectExpressions(scope, it, "id")
         it.query.append(from(scope, it))
         it.query.append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope.alias}.id=ids.id ")
+        it.params.add(idPlaceholder)
         it.query.append(" GROUP BY ids.id, ids.ord")
         orderByEntity(it)
     }
@@ -473,6 +481,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         assert(sql.scopes.first().scope == scope)
         sql.query.append(" FROM ${scope.table} ${scope.alias}")
         sql.query.append(" JOIN (SELECT * FROM unnest_2d_1d(?) WITH ORDINALITY LIMIT $batchSize) ids(ids, ord) ON ${scope.alias}.id = ANY(ids.ids)")
+        sql.params.add(idPlaceholder)
     }
 
     private fun groupByGroupEntity(scope: Scope, sql: MutableSQLQuery) = with(sql.query) {
@@ -502,6 +511,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         ) {
             // dummy query that returns no data
             it.query.append("SELECT NULL AS id WHERE cardinality(?)=-1")
+            it.params.add(idPlaceholder)
             // FIXME: optimization: return empty in-memory ResultSet
             return@SQLQuery
         }
@@ -518,6 +528,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         with(sql.query) {
             append(" FROM ${scope}s_attributes")
             append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(ids, ord) ON ${scope}_id=ANY(ids.ids)")
+            sql.params.add(idPlaceholder)
         }
     }
 
@@ -536,12 +547,26 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         if (pql.selectExpressions[scope].isNullOrEmpty()) {
             // FIXME: optimization: return empty ResultSet here
             it.query.append("SELECT NULL AS id FROM unnest(?) WHERE 0=1")
+            it.params.add(idPlaceholder)
             return@SQLQuery
         }
         selectExpressions(scope, it, "ord")
         fromGroupEntity(scope, it)
-        it.query.append(" GROUP BY ids.ord")
+        groupByExpressions(scope, it)
         orderByEntity(it)
+    }
+
+    private fun groupByExpressions(scope: Scope, sql: MutableSQLQuery) {
+        with(sql.query) {
+            append(" GROUP BY ids.ord")
+
+            for (expression in pql.selectExpressions[scope]!!) {
+                if (expression.filter { it is Function && it.functionType == FunctionType.Aggregation }.any())
+                    continue
+                append(", ")
+                expression.toSQL(sql, scope, Type.Any)
+            }
+        }
     }
 
     // endregion
@@ -601,9 +626,14 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override fun next(): LogQueryResult {
                 val ids = this.ids.take(batchSize)
                 logger.trace { "Retrieving log/group ids: ${ids.joinToString()}." }
-                val parameters = listOf(connection!!.createArrayOf("int", ids.toTypedArray()))
-                val attrParameters = parameters + cache.topEntry.queryAttributes.params
-                val exprParameters = cache.topEntry.queryExpressions.params + parameters
+                val idParam = connection!!.createArrayOf("int", ids.toTypedArray())
+                val idParamList = listOf(idParam)
+                val attrParameters = cache.topEntry.queryAttributes.params.map {
+                    if (it === idPlaceholder) idParam else it
+                }
+                val exprParameters = cache.topEntry.queryExpressions.params.map {
+                    if (it === idPlaceholder) idParam else it
+                }
 
                 val results = listOf(
                     cache.topEntry.queryEntity,
@@ -613,7 +643,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     queryLogExtensions,
                     cache.topEntry.queryGlobals
                 ).executeMany(
-                    connection!!, parameters, attrParameters, exprParameters, parameters, parameters, parameters
+                    connection!!, idParamList, attrParameters, exprParameters, idParamList, idParamList, idParamList
                 )
 
                 return LogQueryResult(
@@ -636,15 +666,16 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override fun next(): QueryResult {
                 val ids = this.ids.take(batchSize)
                 logger.trace { "Retrieving trace/group ids: ${ids.joinToString()}." }
-                val parameters: List<Any> = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
-                val attrParameters = parameters + log.queryAttributes.params
-                val exprParameters = log.queryExpressions.params + parameters
+                val idParam = connection!!.createArrayOf("bigint", ids.toTypedArray())
+                val idParamList = listOf(idParam)
+                val attrParameters = log.queryAttributes.params.map { if (it === idPlaceholder) idParam else it }
+                val exprParameters = log.queryExpressions.params.map { if (it === idPlaceholder) idParam else it }
 
                 val results = listOf(
                     log.queryEntity,
                     log.queryAttributes,
                     log.queryExpressions
-                ).executeMany(connection!!, parameters, attrParameters, exprParameters)
+                ).executeMany(connection!!, idParamList, attrParameters, exprParameters)
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
             }
@@ -659,15 +690,16 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override fun next(): QueryResult {
                 val ids = this.ids.take(batchSize)
                 logger.trace { "Retrieving event/group ids: ${ids.joinToString()}." }
-                val parameters = listOf(connection!!.createArrayOf("bigint", ids.toTypedArray()))
-                val attrParameters = parameters + trace.queryAttributes.params
-                val exprParameters = trace.queryExpressions.params + parameters
+                val idParam = connection!!.createArrayOf("bigint", ids.toTypedArray())
+                val idParamList = listOf(idParam)
+                val attrParameters = trace.queryAttributes.params.map { if (it === idPlaceholder) idParam else it }
+                val exprParameters = trace.queryExpressions.params.map { if (it === idPlaceholder) idParam else it }
 
                 val results = listOf(
                     trace.queryEntity,
                     trace.queryAttributes,
                     trace.queryExpressions
-                ).executeMany(connection!!, parameters, attrParameters, exprParameters)
+                ).executeMany(connection!!, idParamList, attrParameters, exprParameters)
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
             }
@@ -971,7 +1003,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                         append("${sqlScope.alias}.\"${attribute.standardName}\"")
                 } else {
                     // use subquery for the non-standard attribute
-                    append("(SELECT get_${scope}_attribute(ids.id, ?, ?::attribute_type, null::${expectedType.asDBType})")
+                    append("(SELECT get_${scope}_attribute(${scope.alias}.id, ?, ?::attribute_type, null::${expectedType.asDBType}))")
                     sql.params.add(attribute.name)
                     sql.params.add(expectedType.asAttributeType)
                 }
@@ -1020,6 +1052,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                                     if (i < expression.children.size - 1) {
                                         when (expression.value) {
                                             "matches" -> append(" ~ ")
+                                            "+" -> append(if (expression.children.any { it.type == Type.String }) " || " else " + ")
                                             else -> append(" ${expression.value} ")
                                         }
                                     }

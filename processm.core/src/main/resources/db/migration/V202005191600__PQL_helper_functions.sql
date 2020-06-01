@@ -25,7 +25,11 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF vtype != vexpected_type AND vtype != 'int'::attribute_type AND vexpected_type != 'float'::attribute_type THEN
+    IF vexpected_type != 'any'::attribute_type -- type enforcement is on
+        AND vtype != vexpected_type -- check if the actual type matches the expected type
+        AND vtype != 'int'::attribute_type -- exception for seamless casting of int to float
+        AND vexpected_type != 'float'::attribute_type
+    THEN
         RAISE EXCEPTION 'Expected type % for attribute %, % found.', vexpected_type, vkey, vtype;
     END IF;
 
@@ -67,7 +71,11 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF vtype != vexpected_type AND vtype != 'int'::attribute_type AND vexpected_type != 'float'::attribute_type THEN
+    IF vexpected_type != 'any'::attribute_type -- type enforcement is on
+        AND vtype != vexpected_type -- check if the actual type matches the expected type
+        AND vtype != 'int'::attribute_type -- exception for seamless casting of int to float
+        AND vexpected_type != 'float'::attribute_type
+    THEN
         RAISE EXCEPTION 'Expected type % for attribute %, % found.', vexpected_type, vkey, vtype;
     END IF;
 
@@ -109,7 +117,11 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF vtype != vexpected_type AND vtype != 'int'::attribute_type AND vexpected_type != 'float'::attribute_type THEN
+    IF vexpected_type != 'any'::attribute_type -- type enforcement is on
+        AND vtype != vexpected_type -- check if the actual type matches the expected type
+        AND vtype != 'int'::attribute_type -- exception for seamless casting of int to float
+        AND vexpected_type != 'float'::attribute_type
+    THEN
         RAISE EXCEPTION 'Expected type % for attribute %, % found.', vexpected_type, vkey, vtype;
     END IF;
 
