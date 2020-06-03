@@ -34,7 +34,10 @@
               <v-list-item-title>Type</v-list-item-title>
               <v-select
                 v-model="componentDetails.type"
-                :items="[{ text: 'Casual net', value: 'casualNet' }]"
+                :items="[
+                  { text: 'Casual net', value: 'casualNet' },
+                  { text: 'KPI', value: 'kpi' }
+                ]"
               ></v-select>
             </v-list-item-content>
           </v-list-item>
@@ -75,9 +78,6 @@ export default class EditComponentView extends Vue {
   @Prop({ default: false })
   readonly value!: boolean;
   isMounted = false;
-
-  created() {
-  }
 
   mounted() {
     this.isMounted = true;

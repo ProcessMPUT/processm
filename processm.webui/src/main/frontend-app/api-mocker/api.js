@@ -98,8 +98,7 @@ const componentsData = [
           outputBindings: [],
           inputBindings: [["b"], ["c"], ["b", "d"], ["c", "d"], ["b", "c", "d"]]
         }
-      ],
-
+      ]
     }
   },
   {
@@ -293,6 +292,15 @@ const componentsData = [
           inputBindings: [["m"], ["n"], ["l"]]
         }
       ]
+    }
+  },
+  {
+    id: "06a29e69-a58e-498c-ad66-6435816d9c7b",
+    name: "KPI example",
+    type: "kpi",
+    data: {
+      query: "SELECT ...",
+      value: 98.9
     }
   }
 ];

@@ -31,7 +31,11 @@
         </v-list>
       </v-menu>
     </div>
-    <casual-net :data="componentDetails.data" :draggable="interactive" />
+    <component
+      :is="componentDetails.type"
+      :data="componentDetails.data"
+      :draggable="interactive"
+    />
   </div>
 </template>
 
@@ -66,10 +70,11 @@ import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop, Inject } from "vue-property-decorator";
 import CasualNet from "./CasualNet.vue";
+import Kpi from "./Kpi.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 
 @Component({
-  components: { CasualNet }
+  components: { CasualNet, Kpi }
 })
 export default class WorkspaceComponent extends Vue {
   @Prop({ default: "" })
