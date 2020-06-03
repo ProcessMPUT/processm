@@ -119,15 +119,22 @@ export default class CasualNet extends Vue {
     }, {});
     const heightUnit = this.height / Object.keys(depthStats).length;
     const usedWidth: Array<number> = [];
+    const isPredefinedLayout = this.data.layout?.length == this.data.nodes.length
 
     this.data.nodes.forEach((dataNode: DataNode, index: number, allDataNodes: []) => {
       const widthUnit = this.width / depthStats[dataNode.depth];
       usedWidth[dataNode.depth] = (usedWidth[dataNode.depth] || 0) + 1;
+      const x = isPredefinedLayout
+        ? this.data.layout[index].x
+        : widthUnit * usedWidth[dataNode.depth] - widthUnit / 2;
+      const y = isPredefinedLayout
+        ? this.data.layout[index].y
+        : dataNode.depth * heightUnit + heightUnit / 2;
       const node = {
         id: dataNode.id,
         isBindingNode: false,
-        fx: widthUnit * usedWidth[dataNode.depth] - widthUnit / 2,
-        fy: dataNode.depth * heightUnit + heightUnit / 2,
+        fx: x,
+        fy: y,
         isStartNode: index == 0,
         isEndNode: index == allDataNodes.length - 1
       };

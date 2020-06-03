@@ -30,9 +30,9 @@
             />
           </grid-item>
         </grid-layout>
-        <v-switch v-model="locked" :label="$t('workspace.locked')" />
       </v-col>
     </v-row>
+    <v-switch v-model="locked" :label="$t('workspace.locked')" />
     <single-component-view
       v-if="displayViewModal"
       v-model="displayViewModal"
@@ -54,7 +54,7 @@
 
 <style scoped>
 .vue-grid-item:hover {
-  outline-color: #bbdefb;
+  outline-color: var(--v-primary-lighten1);
   outline-style: solid;
   outline-width: thin;
 }

@@ -187,6 +187,13 @@ const componentsData = [
           ]
         },
         { id: "e", depth: 4, outputBindings: [], inputBindings: [["d"]] }
+      ],
+      layout: [
+        { id: "a", x: 125, y: 25 },
+        { id: "b", x: 125, y: 75 },
+        { id: "c", x: 160, y: 125 },
+        { id: "d", x: 125, y: 175 },
+        { id: "e", x: 125, y: 225 }
       ]
     }
   },
