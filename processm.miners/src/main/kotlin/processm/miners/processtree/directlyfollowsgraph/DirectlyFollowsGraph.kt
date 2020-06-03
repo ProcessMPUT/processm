@@ -70,16 +70,17 @@ class DirectlyFollowsGraph {
 
     /**
      * Duplicated activities occurrence in single trace, after analyze all traces.
+     * As value number of traces where activity duplicated.
      * For log:
      * - A B C
      * - A B B C
-     * - A B C D D
+     * - A B B C D D
      *
-     * You will receive collection of two activities:
-     * - B: second trace
-     * - D: third trace
+     * You will receive collection:
+     * - B => 2 (duplicated in second trace)
+     * - D => 1 (duplicated in third trace)
      */
-    val activitiesDuplicatedInTraces = HashSet<ProcessTreeActivity>()
+    val activitiesDuplicatedInTraces = HashMap<ProcessTreeActivity, Int>()
 
     /**
      * Build directly-follows graph
@@ -128,6 +129,7 @@ class DirectlyFollowsGraph {
         log.forEach { l ->
             l.traces.forEach { trace ->
                 val activitiesInTrace = HashSet<ProcessTreeActivity>()
+                val duplicatedActivities = HashSet<ProcessTreeActivity>()
                 var previousActivity: ProcessTreeActivity? = null
 
                 // Iterate over all events in current trace
@@ -158,8 +160,8 @@ class DirectlyFollowsGraph {
                         }
                     } else {
                         // If activity duplicated - remember in special collection
-                        if (activity !in activitiesDuplicatedInTraces && activity == previousActivity) {
-                            activitiesDuplicatedInTraces.add(activity)
+                        if (activity !in duplicatedActivities && activity == previousActivity) {
+                            duplicatedActivities.add(activity)
                         }
 
                         // Add connection between pair of activities in graph
@@ -194,7 +196,7 @@ class DirectlyFollowsGraph {
                     }
                 }
 
-                updateTraceStatistics(activitiesInTrace)
+                updateTraceStatistics(activitiesInTrace, duplicatedActivities)
             }
         }
 
@@ -210,13 +212,21 @@ class DirectlyFollowsGraph {
      * Trace statistics changes:
      * - update trace support for each activity in current trace
      * - increment already analyzed traces
+     * - update duplicated activities
      */
-    private fun updateTraceStatistics(activitiesInTrace: Set<ProcessTreeActivity>) {
+    private fun updateTraceStatistics(
+        activitiesInTrace: Set<ProcessTreeActivity>,
+        duplicatedActivities: HashSet<ProcessTreeActivity>
+    ) {
         // Total traces count update
         tracesCount++
 
         activitiesInTrace.forEach { activity ->
             activityTraceSupport[activity] = (activityTraceSupport[activity] ?: 0) + 1
+        }
+
+        duplicatedActivities.forEach { activity ->
+            activitiesDuplicatedInTraces[activity] = (activitiesDuplicatedInTraces[activity] ?: 0) + 1
         }
     }
 }

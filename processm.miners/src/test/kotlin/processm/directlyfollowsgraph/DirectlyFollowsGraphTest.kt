@@ -326,7 +326,7 @@ class DirectlyFollowsGraphTest {
         )
         val log2 = logFromString(
             """
-            A B C D D
+            A B B C D D
             """.trimIndent()
         )
 
@@ -334,13 +334,13 @@ class DirectlyFollowsGraphTest {
         miner.discover(sequenceOf(log1))
 
         assertEquals(1, miner.activitiesDuplicatedInTraces.size)
-        assertTrue(miner.activitiesDuplicatedInTraces.contains(B))
+        assertEquals(1, miner.activitiesDuplicatedInTraces[B])
 
         miner.discover(sequenceOf(log2))
 
         assertEquals(2, miner.activitiesDuplicatedInTraces.size)
-        assertTrue(miner.activitiesDuplicatedInTraces.contains(B))
-        assertTrue(miner.activitiesDuplicatedInTraces.contains(D))
+        assertEquals(2, miner.activitiesDuplicatedInTraces[B])
+        assertEquals(1, miner.activitiesDuplicatedInTraces[D])
     }
 
     @Test
