@@ -14,6 +14,7 @@
           :interactive="true"
           @view="$emit('view', componentDetails.id)"
           @edit="$emit('edit', componentDetails.id)"
+          @remove="$emit('remove', componentDetails.id)"
         />
       </v-card-text>
     </v-card>

@@ -17,6 +17,7 @@
           :interactive="true"
           @view="$emit('view', componentDetails.id)"
           @edit="$emit('edit', componentDetails.id)"
+          @remove="$emit('remove', componentDetails.id)"
         />
         <v-list subheader>
           <v-list-item>

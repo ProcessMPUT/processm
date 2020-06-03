@@ -27,6 +27,7 @@
               :component-details="componentsDetails[item.i]"
               @view="viewComponent"
               @edit="editComponent"
+              @remove="removeComponent"
             />
           </grid-item>
         </grid-layout>
@@ -40,6 +41,7 @@
       @close="closeModals"
       @view="viewComponent"
       @edit="editComponent"
+      @remove="removeComponent"
     ></single-component-view>
     <edit-component-view
       v-if="displayEditModal"
@@ -48,6 +50,7 @@
       @close="closeModals"
       @view="viewComponent"
       @edit="editComponent"
+      @remove="removeComponent"
     ></edit-component-view>
   </v-container>
 </template>
@@ -150,21 +153,26 @@ export default class WorkspaceArea extends Vue {
   }
 
   viewComponent(id: string) {
-    console.log(id);
     this.closeModals();
     this.displayedComponentDetails = this.componentsDetails[id];
     this.displayViewModal = true;
   }
 
   editComponent(id: string) {
-    console.log(id);
     this.closeModals();
     this.displayedComponentDetails = this.componentsDetails[id];
     this.displayEditModal = true;
   }
 
   removeComponent(id: string) {
-    console.log(id);
+    const componentIndex = this.layout.findIndex(
+      component => component.i == id
+    );
+
+    if (componentIndex >= 0) {
+      this.layout.splice(componentIndex, 1);
+      this.closeModals();
+    }
   }
 
   closeModals() {
