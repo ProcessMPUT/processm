@@ -291,4 +291,92 @@ class DirectlyFollowsGraphTest {
         assertEquals(1, diff.size)
         assertTrue(diff.contains(C to C))
     }
+
+    @Test
+    fun `Update total traces count`() {
+        val log1 = logFromString(
+            """
+            A B C D
+            A C B D
+            """.trimIndent()
+        )
+        val log2 = logFromString(
+            """
+            A E D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(log1))
+
+        assertEquals(2, miner.tracesCount)
+
+        miner.discover(sequenceOf(log2))
+
+        assertEquals(2 + 1, miner.tracesCount)
+    }
+
+    @Test
+    fun `Activities statistics - maximum occurrence`() {
+        val log1 = logFromString(
+            """
+            A B C B D
+            A C B D
+            """.trimIndent()
+        )
+        val log2 = logFromString(
+            """
+            A E D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(log1))
+
+        assertEquals(1, miner.maximumActivityOccurrenceInTraces[A])
+        assertEquals(2, miner.maximumActivityOccurrenceInTraces[B])
+        assertEquals(1, miner.maximumActivityOccurrenceInTraces[C])
+        assertEquals(1, miner.maximumActivityOccurrenceInTraces[D])
+        assertNull(miner.maximumActivityOccurrenceInTraces[E])
+
+        miner.discover(sequenceOf(log2))
+
+        assertEquals(1, miner.maximumActivityOccurrenceInTraces[A])
+        assertEquals(2, miner.maximumActivityOccurrenceInTraces[B])
+        assertEquals(1, miner.maximumActivityOccurrenceInTraces[C])
+        assertEquals(1, miner.maximumActivityOccurrenceInTraces[D])
+        assertEquals(1, miner.maximumActivityOccurrenceInTraces[E])
+    }
+
+    @Test
+    fun `Activities statistics - traces support`() {
+        val log1 = logFromString(
+            """
+            A B C B D
+            A C B D
+            """.trimIndent()
+        )
+        val log2 = logFromString(
+            """
+            A E D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(log1))
+
+        assertEquals(2, miner.activityTraceSupport[A])
+        assertEquals(2, miner.activityTraceSupport[B])
+        assertEquals(2, miner.activityTraceSupport[C])
+        assertEquals(2, miner.activityTraceSupport[D])
+        assertNull(miner.activityTraceSupport[E])
+
+        miner.discover(sequenceOf(log2))
+
+        assertEquals(3, miner.activityTraceSupport[A])
+        assertEquals(2, miner.activityTraceSupport[B])
+        assertEquals(2, miner.activityTraceSupport[C])
+        assertEquals(3, miner.activityTraceSupport[D])
+        assertEquals(1, miner.activityTraceSupport[E])
+    }
 }
