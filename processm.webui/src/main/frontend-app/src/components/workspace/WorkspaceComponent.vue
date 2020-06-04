@@ -69,7 +69,7 @@ button.v-btn.v-btn.component-name[type="button"] {
 import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop, Inject } from "vue-property-decorator";
-import CasualNet from "./CasualNet.vue";
+import CasualNet from "./casual-net/CasualNet.vue";
 import Kpi from "./Kpi.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 

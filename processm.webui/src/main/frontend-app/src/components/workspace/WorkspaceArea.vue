@@ -72,6 +72,8 @@ import SingleComponentView from "./SingleComponentView.vue";
 import EditComponentView from "./EditComponentView.vue";
 import WorkspaceComponent from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
+import WorkspaceComponentModel from "@/models/WorkspaceComponent";
+import WorkspaceLayoutItem from "@/models/WorkspaceLayoutItem";
 
 @Component({
   components: {
@@ -90,32 +92,32 @@ export default class WorkspaceArea extends Vue {
   locked = false;
   displayViewModal = false;
   displayEditModal = false;
-  displayedComponentDetails = null;
-  componentsDetails = {};
-  layout = [];
+  displayedComponentDetails?: WorkspaceComponentModel;
+  componentsDetails: Record<string, WorkspaceComponentModel> = {};
+  layout: Array<{ i: string; x: number; y: number; w: number; h: number }> = [];
 
   async created() {
-    const layout = [
+    const layout: WorkspaceLayoutItem[] = [
       {
+        componentId: "93bcc033-bbea-490d-93b9-3c8580db5354",
         x: 0,
         y: 0,
         width: 6,
-        height: 7,
-        id: "93bcc033-bbea-490d-93b9-3c8580db5354"
+        height: 7
       },
       {
+        componentId: "c629ba68-aae2-4490-85cd-3875939fc69e",
         x: 6,
         y: 0,
         width: 5,
-        height: 5,
-        id: "c629ba68-aae2-4490-85cd-3875939fc69e"
+        height: 5
       },
       {
+        componentId: "06a29e69-a58e-498c-ad66-6435816d9c7b",
         x: 6,
         y: 0,
         width: 6,
-        height: 5,
-        id: "06a29e69-a58e-498c-ad66-6435816d9c7b"
+        height: 5
       }
       // { x: 6, y: 0, w: 2, h: 3, i: "3" },
       // { x: 8, y: 0, w: 2, h: 3, i: "4" },
@@ -131,7 +133,7 @@ export default class WorkspaceArea extends Vue {
     ];
 
     for (const layoutItem of layout) {
-      const componentId = layoutItem.id;
+      const componentId = layoutItem.componentId;
       this.componentsDetails[
         componentId
       ] = await this.workspaceService.getComponent(
@@ -139,11 +141,11 @@ export default class WorkspaceArea extends Vue {
         componentId
       );
       this.layout.push({
+        i: layoutItem.componentId,
         x: layoutItem.x,
         y: layoutItem.y,
         w: layoutItem.width,
-        h: layoutItem.height,
-        i: layoutItem.id
+        h: layoutItem.height
       });
     }
   }

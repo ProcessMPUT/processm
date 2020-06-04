@@ -1,6 +1,7 @@
 import axios from "axios";
 import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
+import WorkspaceComponent from "@/models/WorkspaceComponent";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
@@ -34,8 +35,8 @@ export default class WorkspaceService extends BaseService {
   public async getComponent(
     workspaceId: string,
     componentId: string
-  ): Promise<{}> {
-    const response = await axios.get<{ data: [] }>(
+  ): Promise<WorkspaceComponent> {
+    const response = await axios.get<{ data: WorkspaceComponent }>(
       `/api/workspaces/${workspaceId}/components/${componentId}`
     );
 
@@ -45,8 +46,8 @@ export default class WorkspaceService extends BaseService {
   public async getComponentData(
     workspaceId: string,
     componentId: string
-  ): Promise<{}> {
-    const response = await axios.get<{ data: [] }>(
+  ): Promise<unknown> {
+    const response = await axios.get<{ data: unknown }>(
       `/api/workspaces/${workspaceId}/components/${componentId}/data`
     );
 

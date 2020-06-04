@@ -1,6 +1,15 @@
 <template>
-  <div v-resize:debounce.10="onResize" :class="`svg-container ${componentId}`">
-    <svg x="0" y="0" width="100%" height="100%" ref="svg" class="svg-content" />
+  <div v-resize:debounce.10="onResize" class="svg-container">
+    <svg
+      :viewBox="`0 0 ${width} ${height}`"
+      x="0"
+      y="0"
+      width="100%"
+      height="100%"
+      ref="svg"
+      class="svg-content"
+      preserveAspectRatio="xMidYMid meet"
+    />
     <div class="node-details" />
   </div>
 </template>
@@ -34,11 +43,20 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Prop, Watch } from "vue-property-decorator";
+import { Component, Prop } from "vue-property-decorator";
 import * as d3 from "d3";
 import resize from "vue-resize-directive";
+import {
+  ForceLink,
+  Simulation,
+  SimulationNodeDatum,
+  SimulationLinkDatum,
+  BaseType,
+  Selection,
+  EnterElement
+} from "d3";
 
-interface Node extends d3.SimulationNodeDatum {
+interface Node extends SimulationNodeDatum {
   id: string;
 }
 
@@ -55,7 +73,7 @@ interface VisualNode extends Node {
   isEndNode?: boolean;
 }
 
-interface VisualLink extends d3.SimulationLinkDatum<VisualNode> {
+interface VisualLink extends SimulationLinkDatum<VisualNode> {
   isBindingLink: boolean;
   bindingId?: string;
   isBetweenBindings: boolean;
@@ -69,91 +87,102 @@ interface VisualLink extends d3.SimulationLinkDatum<VisualNode> {
 })
 export default class CasualNet extends Vue {
   @Prop({ default: {} })
-  readonly data!: any;
+  readonly data!: {
+    nodes: Array<DataNode>;
+    layout?: Array<{ x: number; y: number }>;
+  };
   @Prop({ default: false })
   readonly draggable!: boolean;
   @Prop({ default: false })
   readonly editable!: boolean;
 
-  private bindingNodes: Array<VisualNode> = [];
-  private bindingLinks: Array<VisualLink> = [];
-  private simulation: d3.Simulation<VisualNode, VisualLink> | undefined;
   private readonly height: number = 250;
   private readonly width: number = 250;
-  private nodeDetails!: d3.Selection<d3.BaseType, unknown, HTMLElement, any>;
-  private svg!: d3.Selection<d3.BaseType, unknown, HTMLElement, any>;
-  private node!: d3.Selection<SVGGElement, VisualNode, SVGGElement, unknown>;
-  private link!: d3.Selection<
-    Element | d3.EnterElement | Document | Window | SVGPathElement | null,
+  private bindingNodes: Array<VisualNode> = [];
+  private bindingLinks: Array<VisualLink> = [];
+  private simulation: Simulation<VisualNode, VisualLink> | undefined;
+  private nodeDetails!: Selection<BaseType, unknown, null, undefined>;
+  private svg!: Selection<d3.BaseType, unknown, null, undefined>;
+  private node!: Selection<SVGGElement, VisualNode, SVGGElement, unknown>;
+  private link!: Selection<
+    Element | EnterElement | Document | Window | SVGPathElement | null,
     VisualLink,
     SVGGElement,
     unknown
   >;
-  private arrowhead!: d3.Selection<d3.BaseType, unknown, HTMLElement, any>;
-  private arrowheadShape!: d3.Selection<
+  private arrowhead!: Selection<BaseType, unknown, null, undefined>;
+  private arrowheadShape!: Selection<SVGPathElement, unknown, null, undefined>;
+  private nodeShape!: Selection<
     SVGPathElement,
-    unknown,
-    HTMLElement,
-    any
+    VisualNode,
+    SVGGElement,
+    unknown
   >;
-  private nodeShape!: d3.Selection<SVGPathElement, VisualNode, SVGGElement, unknown>;
-  private nodeLabel!: d3.Selection<SVGTextElement, VisualNode, SVGGElement, unknown>;
+  private nodeLabel!: Selection<
+    SVGTextElement,
+    VisualNode,
+    SVGGElement,
+    unknown
+  >;
   private displayPreferences = {
-      nodeSize: 10,
-      bindingNodeSize: 5,
-      edgeThickness: 2,
-      bindingEdgeThickness: 1,
-      edgeArrowSize: 10,
-      nodeLabelSize: 16
-  }
-
-  get componentId(): string {
-        return `c${this._uid}`
-    }
-
+    nodeSize: 10,
+    bindingNodeSize: 5,
+    edgeThickness: 1,
+    bindingEdgeThickness: 1,
+    edgeArrowSize: 10,
+    nodeLabelSize: 16
+  };
 
   mounted() {
-    const depthStats = this.data.nodes.reduce((accumulator: any, node: DataNode) => {
-      accumulator[node.depth] = (accumulator[node.depth] || 0) + 1;
-      return accumulator;
-    }, {});
+    const depthStats = this.data.nodes.reduce<Record<number, number>>(
+      (accumulator: Record<number, number>, node: DataNode) => {
+        accumulator[node.depth] = (accumulator[node.depth] || 0) + 1;
+        return accumulator;
+      },
+      {}
+    );
     const heightUnit = this.height / Object.keys(depthStats).length;
     const usedWidth: Array<number> = [];
-    const isPredefinedLayout = this.data.layout?.length == this.data.nodes.length
+    const isPredefinedLayout =
+      this.data.layout?.length == this.data.nodes.length;
 
-    this.data.nodes.forEach((dataNode: DataNode, index: number, allDataNodes: []) => {
-      const widthUnit = this.width / depthStats[dataNode.depth];
-      usedWidth[dataNode.depth] = (usedWidth[dataNode.depth] || 0) + 1;
-      const x = isPredefinedLayout
-        ? this.data.layout[index].x
-        : widthUnit * usedWidth[dataNode.depth] - widthUnit / 2;
-      const y = isPredefinedLayout
-        ? this.data.layout[index].y
-        : dataNode.depth * heightUnit + heightUnit / 2;
-      const node = {
-        id: dataNode.id,
-        isBindingNode: false,
-        fx: x,
-        fy: y,
-        isStartNode: index == 0,
-        isEndNode: index == allDataNodes.length - 1
-      };
-      this.bindingNodes.push(node);
-      this.createBindingElements(
-        node.id,
-        dataNode.outputBindings,
-        "output",
-        node.fx,
-        node.fy
-      );
-      this.createBindingElements(
-        node.id,
-        dataNode.inputBindings,
-        "input",
-        node.fx,
-        node.fy
-      );
-    });
+    this.data.nodes.forEach(
+      (dataNode: DataNode, index: number, allDataNodes: DataNode[]) => {
+        const widthUnit = this.width / depthStats[dataNode.depth];
+        usedWidth[dataNode.depth] = (usedWidth[dataNode.depth] || 0) + 1;
+        const x = isPredefinedLayout
+          ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            this.data.layout![index].x
+          : widthUnit * usedWidth[dataNode.depth] - widthUnit / 2;
+        const y = isPredefinedLayout
+          ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            this.data.layout![index].y
+          : dataNode.depth * heightUnit + heightUnit / 2;
+        const node = {
+          id: dataNode.id,
+          isBindingNode: false,
+          fx: x,
+          fy: y,
+          isStartNode: index == 0,
+          isEndNode: index == allDataNodes.length - 1
+        };
+        this.bindingNodes.push(node);
+        this.createBindingElements(
+          node.id,
+          dataNode.outputBindings,
+          "output",
+          x,
+          y
+        );
+        this.createBindingElements(
+          node.id,
+          dataNode.inputBindings,
+          "input",
+          x,
+          y
+        );
+      }
+    );
 
     this.data.nodes.forEach((dataNode: DataNode) => {
       const successors = new Set(dataNode.outputBindings.flat());
@@ -172,7 +201,7 @@ export default class CasualNet extends Vue {
       d3
         .forceLink()
         .id(d => (d as VisualNode).id)
-        .distance(d => 0.1)
+        .distance(0.1)
         .strength(d =>
           (d as VisualLink).isBindingLink
             ? 0
@@ -182,23 +211,17 @@ export default class CasualNet extends Vue {
         )
     );
 
-    this.svg = d3
-      .select(`.${this.componentId}`)
-      .select("svg")
-      .attr("preserveAspectRatio", "xMidYMid meet")
-      // .attr("transform", "rotate(0)");
-      .attr("viewBox", `0 0 ${this.width} ${this.height}`)
-      .on("mousedown", this.mousedownCanvas);
+    this.svg = d3.select(this.$el).select("svg");
 
     this.nodeDetails = d3
-      .select(`.${this.componentId}`)
+      .select(this.$el)
       .select("div.node-details")
       .style("opacity", 0);
 
     this.arrowhead = this.svg
       .append("svg:defs")
       .append("svg:marker")
-      .attr("id", `triangle-${this.componentId}`)
+      .attr("id", "arrow")
       .attr("refX", 8 + this.displayPreferences.nodeSize / 2)
       .attr("refY", 4)
       .attr("markerUnits", "userSpaceOnUse")
@@ -242,13 +265,24 @@ export default class CasualNet extends Vue {
             .attr("stroke", color);
         }
         this.nodeDetails
+          .html(`ID: ${d.id}\nX: ${d.x}\nY: ${d.y}`)
+          .style(
+            "left",
+            `${this.convertToAbsolutePercentage(
+              (d.x as number) / this.width,
+              (this.$refs.svg as Element).clientWidth
+            ) * 100}%`
+          )
+          .style(
+            "top",
+            `${this.convertToAbsolutePercentage(
+              (d.y as number) / this.height,
+              (this.$refs.svg as Element).clientHeight
+            ) * 100}%`
+          )
           .transition()
           .duration(200)
           .style("opacity", 0.8);
-        this.nodeDetails
-          .html(`ID: ${d.id}\nX: ${d.x}\nY: ${d.y}`)
-          .style("left", `${(<number>d.x / this.width) * 100}%`)
-          .style("top", `${(<number>d.y / this.height) * 100}%`);
       })
       .on("mouseout", (d, i, nodes) => {
         const selectedNodes = !d.isBindingNode
@@ -264,20 +298,21 @@ export default class CasualNet extends Vue {
           .transition()
           .duration(500)
           .style("opacity", 0);
-      })
+      });
 
-    if (this.draggable) {
-      this.node
-        .call(d3.drag<SVGElement, VisualNode>()
-          .on("start", this.dragstarted)
-          .on("drag", this.dragged)
-          .on("end", this.dragended));
-    }
+    this.node.call(
+      d3
+        .drag<SVGGElement, VisualNode, SVGGElement>()
+        .on("start", this.dragstarted)
+        .on("drag", this.dragged)
+        .on("end", this.dragended)
+    );
 
     this.nodeShape = this.node
       .append("path")
       .attr("opacity", 1)
       .style("fill", this.color());
+
     this.nodeLabel = this.node
       .filter(d => !d.isBindingNode)
       .append("text")
@@ -288,25 +323,44 @@ export default class CasualNet extends Vue {
       .text(d => d.id);
 
     const scalingFactor = this.calculateScalingFactor(
-      (this.$refs.svg as Element).clientWidth, 
-      (this.$refs.svg as Element).clientHeight);
+      (this.$refs.svg as Element).clientWidth,
+      (this.$refs.svg as Element).clientHeight
+    );
 
     this.scaleElements(scalingFactor);
 
     this.simulation.on("tick", () => {
       this.link.attr("d", this.linkArc);
-      this.node.attr("transform", d => `translate(${<number>d.x},${<number>d.y})`);
+      this.node.attr(
+        "transform",
+        d => `translate(${d.x as number},${d.y as number})`
+      );
     });
     this.simulation.nodes(this.bindingNodes);
-    (this.simulation.force("link") as any)?.links(this.bindingLinks);
+    this.simulation
+      ?.force<ForceLink<VisualNode, VisualLink>>("link")
+      ?.links(this.bindingLinks);
   }
 
-  dragstarted(d: any) {
+  convertToAbsolutePercentage(relativePercentage: number, elementSize: number) {
+    const minDimension = Math.min(
+      (this.$refs.svg as Element).clientHeight,
+      (this.$refs.svg as Element).clientWidth
+    );
+    const percentageScaling = minDimension / elementSize;
+    const sizeOffset = 0.5 - percentageScaling / 2;
+
+    return percentageScaling * relativePercentage + sizeOffset;
+  }
+
+  dragstarted(d: VisualNode) {
+    if (!this.draggable) return;
     d.fx = null;
     d.fy = null;
   }
 
-  dragged(d: any) {
+  dragged(d: VisualNode) {
+    if (!this.draggable) return;
     const validateBoundaries = (x: number, minX: number, maxX: number) =>
       Math.min(Math.max(x, minX), maxX);
 
@@ -314,14 +368,18 @@ export default class CasualNet extends Vue {
     d.fy = validateBoundaries(d3.event.y, 0, this.height);
   }
 
-  dragended(d: any) {
+  dragended(d: VisualNode) {
+    if (!this.draggable) return;
     // if (!d3.event.active) this.simulation?.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
   }
 
   onResize(element: Element) {
-    const scalingFactor = this.calculateScalingFactor(element.clientWidth, element.clientHeight);
+    const scalingFactor = this.calculateScalingFactor(
+      element.clientWidth,
+      element.clientHeight
+    );
 
     this.scaleElements(scalingFactor);
   }
@@ -330,19 +388,39 @@ export default class CasualNet extends Vue {
     if (scalingFactor == Number.POSITIVE_INFINITY) return;
 
     this.arrowhead
-      .attr("markerWidth", this.displayPreferences.edgeArrowSize * scalingFactor)
-      .attr("markerHeight", this.displayPreferences.edgeArrowSize * scalingFactor);
+      .attr(
+        "markerWidth",
+        this.displayPreferences.edgeArrowSize * scalingFactor
+      )
+      .attr(
+        "markerHeight",
+        this.displayPreferences.edgeArrowSize * scalingFactor
+      );
 
     this.link.attr(
       "stroke-width",
-      d => (d.isBindingLink ? this.displayPreferences.bindingEdgeThickness : this.displayPreferences.edgeThickness) * scalingFactor
+      d =>
+        (d.isBindingLink
+          ? this.displayPreferences.bindingEdgeThickness
+          : this.displayPreferences.edgeThickness) * scalingFactor
     );
-    this.node.attr("stroke-width", scalingFactor)
+    this.node.attr("stroke-width", scalingFactor);
     this.nodeShape.attr("d", d =>
-        d3.symbol()
-          .type(d.isStartNode || d.isEndNode ? d3.symbolDiamond : d3.symbolCircle)
-          .size(((d.isBindingNode ? this.displayPreferences.bindingNodeSize : this.displayPreferences.nodeSize) * scalingFactor) ** 2)());
-    this.nodeLabel.attr("font-size", this.displayPreferences.nodeLabelSize * scalingFactor);
+      d3
+        .symbol()
+        .type(d.isStartNode || d.isEndNode ? d3.symbolDiamond : d3.symbolCircle)
+        .size(
+          ((d.isBindingNode
+            ? this.displayPreferences.bindingNodeSize
+            : this.displayPreferences.nodeSize) *
+            scalingFactor) **
+            2
+        )()
+    );
+    this.nodeLabel.attr(
+      "font-size",
+      this.displayPreferences.nodeLabelSize * scalingFactor
+    );
   }
 
   mousedownCanvas() {
@@ -434,10 +512,10 @@ export default class CasualNet extends Vue {
       !d.isBindingNode ? "black" : d.id.includes("input") ? "red" : "blue";
   }
 
-  linkArc(d: any) {
+  linkArc(d: d3.SimulationLinkDatum<VisualNode>) {
     return `
-    M${d.source.x},${d.source.y}
-    L${d.target.x},${d.target.y}
+    M${(d.source as VisualNode).x},${(d.source as VisualNode).y}
+    L${(d.target as VisualNode).x},${(d.target as VisualNode).y}
 `;
 
     // const r = Math.hypot(d.target.x - d.source.x, d.target.y - d.source.y);
@@ -448,10 +526,7 @@ export default class CasualNet extends Vue {
   }
 
   calculateScalingFactor(width: number, height: number) {
-    return Math.max(
-      this.width / width,
-      this.height / height
-    );
+    return Math.max(this.width / width, this.height / height);
   }
 }
 </script>
