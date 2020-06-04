@@ -22,9 +22,19 @@ internal class ErrorSuppressingResultSet(private val backingResultSet: ResultSet
         return if (i !== null) getString(i!!) else null
     }
 
+    override fun getBoolean(columnLabel: String?): Boolean {
+        i = labelToId[columnLabel]
+        return if (i !== null) getBoolean(i!!) else false
+    }
+
     override fun getDouble(columnLabel: String?): Double {
         i = labelToId[columnLabel]
         return if (i !== null) getDouble(i!!) else Double.NaN
+    }
+
+    override fun getLong(columnLabel: String?): Long {
+        i = labelToId[columnLabel]
+        return if (i !== null) getLong(i!!) else 0
     }
 
     override fun getTimestamp(columnLabel: String?, cal: Calendar): Timestamp? {

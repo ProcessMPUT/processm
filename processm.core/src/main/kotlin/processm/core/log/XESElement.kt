@@ -22,6 +22,15 @@ abstract class XESElement {
     abstract val identityId: String?
 
     /**
+     * The number of elements (logs, traces, events) represented by this object.
+     * This property is designed for use with grouping, where it holds the number of underlying elements. E.g.,
+     * for [Trace] variant, it refers to the number of actual traces compliant with this variant.
+     * This property is useful for calculating the support for a log/trace/event variant.
+     */
+    var count: Long = 1L
+        internal set
+
+    /**
      * Collection of all attributes associated with this element.
      */
     val attributes: Map<String, Attribute<*>>

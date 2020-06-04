@@ -105,7 +105,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
             val insertPos = length
 
-            pql.whereExpression.toSQL(sql, scope, Type.Any)
+            pql.whereExpression.toSQL(sql, Type.Any)
             if (length != insertPos) {
                 insert(insertPos, if (scope == Scope.Log) " WHERE (" else " AND (")
                 append(')')
@@ -128,8 +128,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             }
 
             for (expression in expressions) {
-                if (expression.base is Attribute) expression.base.toSQL(sql, logId, scope, Type.Any)
-                else expression.base.toSQL(sql, scope, Type.Any)
+                if (expression.base is Attribute) expression.base.toSQL(sql, logId, Type.Any)
+                else expression.base.toSQL(sql, Type.Any)
                 if (expression.direction == OrderDirection.Descending)
                     append(" DESC")
                 append(',')
@@ -369,7 +369,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             append("SELECT ids.$idCol AS id, ")
             assert(pql.selectExpressions[scope]!!.isNotEmpty())
             for (expression in pql.selectExpressions[scope]!!) {
-                expression.toSQL(sql, scope, Type.Any)
+                expression.toSQL(sql, Type.Any)
                 append(", ")
             }
             setLength(length - 2)
@@ -416,12 +416,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         with(sql.query) {
             append(" GROUP BY ")
             for (attribute in pql.groupByStandardAttributes[scope]!!) {
-                attribute.toSQL(sql, logId, scope, Type.Any)
+                attribute.toSQL(sql, logId, Type.Any)
                 append(", ")
             }
 
             for (attribute in pql.groupByOtherAttributes[scope]!!) {
-                attribute.toSQL(sql, logId, scope, Type.Any)
+                attribute.toSQL(sql, logId, Type.Any)
                 append(", ")
             }
 
@@ -452,23 +452,27 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
             sql.scopes.add(ScopeWithMetadata(scope, 0))
 
-            assert(pql.selectAll[scope] != true)
-
             append("ids.ord AS id, ")
 
-            var fetchAnyAttr = false
-            for (attribute in pql.selectStandardAttributes[scope]!!) {
+            val attributes: Set<Attribute> =
+                if (pql.selectAll[scope] == true) {
+                    assert(pql.selectStandardAttributes[scope].isNullOrEmpty())
+                    assert(pql.selectOtherAttributes[scope].isNullOrEmpty())
+                    assert(pql.selectExpressions[scope].isNullOrEmpty())
+
+                    pql.groupByStandardAttributes[scope]!!
+                } else {
+                    pql.selectStandardAttributes[scope]!!
+                }
+
+            for (attribute in attributes) {
                 if (attribute.isClassifier)
                     continue
-                fetchAnyAttr = true
-                attribute.toSQL(sql, null, scope, Type.Any)
+                attribute.toSQL(sql, null, Type.Any)
                 append(", ")
             }
-            setLength(length - 2)
 
-            if (!fetchAnyAttr) {
-                // FIXME: potential optimization: skip query, return in-memory ResultSet with ids only
-            }
+            append("COUNT(*) AS count")
         }
     }
 
@@ -485,7 +489,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         for (attribute in pql.selectStandardAttributes[scope]!!) {
             if (attribute.isClassifier)
                 continue
-            attribute.toSQL(sql, null, scope, Type.Any)
+            attribute.toSQL(sql, null, Type.Any)
             append(", ")
         }
         setLength(length - 2)
@@ -986,7 +990,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun Attribute.toSQL(sql: MutableSQLQuery, logId: Int?, scope: Scope, expectedType: Type) {
+    private fun Attribute.toSQL(sql: MutableSQLQuery, logId: Int?, expectedType: Type) {
         val sqlScope = ScopeWithMetadata(this.scope!!, this.hoistingPrefix.length)
         sql.scopes.add(sqlScope)
         // FIXME: move classifier expansion to database
@@ -1004,7 +1008,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                         append("${sqlScope.alias}.\"${attribute.standardName}\"")
                 } else {
                     // use subquery for the non-standard attribute
-                    append("(SELECT get_${scope}_attribute(${scope.alias}.id, ?, ?::attribute_type, null::${expectedType.asDBType}))")
+                    append("(SELECT get_${attribute.scope}_attribute(${attribute.scope!!.alias}.id, ?, ?::attribute_type, null::${expectedType.asDBType}))")
                     sql.params.add(attribute.name)
                     sql.params.add(expectedType.asAttributeType)
                 }
@@ -1014,12 +1018,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun IExpression.toSQL(sql: MutableSQLQuery, scope: Scope, _expectedType: Type) {
+    private fun IExpression.toSQL(sql: MutableSQLQuery, _expectedType: Type) {
         with(sql.query) {
             fun walk(expression: IExpression, expectedType: Type) {
                 when (expression) {
                     is Attribute -> expression.toSQL(
-                        sql, null, scope,
+                        sql, null,
                         if (expression.type != Type.Unknown) expression.type else expectedType
                     )
                     is Literal<*> -> {

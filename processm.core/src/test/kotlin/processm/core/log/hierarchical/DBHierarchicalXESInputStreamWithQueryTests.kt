@@ -909,8 +909,63 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupScopeByClassifierTest() {
-        val stream = q("where l:id='$uuid' group trace by e:classifier:activity")
-        TODO()
+        val stream = q("where l:id='$uuid' group trace by [e:classifier:concept:name+lifecycle:transition]")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        // as of 2020-06-04 JournalReview-extra.xes consists of variants:
+        // | variant id | trace count | variant
+        // |          1 |           3 | inv inv get get get col col dec dec inv inv get rej rej
+        // |          2 |           2 | inv inv get get get col col dec dec acc acc
+        // |          3 |           2 | inv inv get get tim col col dec dec inv inv tim inv inv tim inv inv get acc acc
+        // |     4 - 97 |           1 | n/a
+
+        val variant1 =
+            sequenceOf("inv", "inv", "get", "get", "get", "col", "col", "dec", "dec", "inv", "inv", "get", "rej", "rej")
+        val variant2 = sequenceOf("inv", "inv", "get", "get", "get", "col", "col", "dec", "dec", "acc", "acc")
+        val variant3 =
+            sequenceOf(
+                "inv", "inv", "get", "get", "tim", "col", "col", "dec", "dec", "inv", "inv", "tim", "inv",
+                "inv", "tim", "inv", "inv", "get", "acc", "acc"
+            )
+
+        assertEquals(97, log.traces.count())
+
+        assertEquals(1, log.traces.count { it.count == 3L })
+        assertEquals(2, log.traces.count { it.count == 2L })
+        assertEquals(94, log.traces.count { it.count == 1L })
+
+        assertTrue(
+            log.traces
+                .first { it.count == 3L }.events
+                .map { it.conceptName!! }
+                .zip(variant1)
+                .all { (act, exp) -> act.startsWith(exp) }
+        )
+
+        assertTrue(
+            log.traces
+                .filter { it.count == 2L }.any {
+                    it.events
+                        .map { it.conceptName!! }
+                        .zip(variant2)
+                        .all { (act, exp) -> act.startsWith(exp) }
+                }
+        )
+
+        assertTrue(
+            log.traces
+                .filter { it.count == 2L }.any {
+                    it.events
+                        .map { it.conceptName!! }
+                        .zip(variant3)
+                        .all { (act, exp) -> act.startsWith(exp) }
+                }
+        )
+
+        for (trace in log.traces) {
+            assertTrue(trace.events.count() > 0)
+        }
     }
 
     @Test
