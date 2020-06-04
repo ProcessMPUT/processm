@@ -403,7 +403,6 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun selectGroupIds(scope: Scope, sql: MutableSQLQuery) {
-        //row_number() OVER () AS group_id,
         sql.query.append("SELECT array_agg(${scope.alias}.id) AS ids ")
     }
 
@@ -455,7 +454,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
             assert(pql.selectAll[scope] != true)
 
-            append("row_number() OVER () AS id, ")
+            append("ids.ord AS id, ")
 
             var fetchAnyAttr = false
             for (attribute in pql.selectStandardAttributes[scope]!!) {
@@ -553,26 +552,12 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     private fun groupByExpressions(scope: Scope, sql: MutableSQLQuery) {
         with(sql.query) {
-            append(" GROUP BY ids.ord")
-
-            val cache = HashSet<String>()
-            for (expression in pql.selectExpressions[scope]!!) {
+            append(" GROUP BY 1")
+            for ((index, expression) in pql.selectExpressions[scope]!!.withIndex()) {
                 if (expression.filter { it is Function && it.functionType == FunctionType.Aggregation }.any())
                     continue
-
-                for (attribute in expression.filter { it is Attribute } as Sequence<Attribute>) {
-                    val name = if (attribute.isStandard) attribute.standardName else "${scope.alias}.id"
-                    if (name in cache)
-                        continue
-                    cache.add(name)
-
-                    append(", ")
-                    if (attribute.isStandard) {
-                        attribute.toSQL(sql, scope, Type.Any)
-                    } else {
-                        append(name)
-                    }
-                }
+                append(", ")
+                append(index + 2)
             }
         }
     }
@@ -1063,6 +1048,10 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                             OperatorType.Infix -> {
                                 assert(expression.children.size >= 2)
                                 append(' ')
+                                val isTemporalSubtract =
+                                    expression.value == "-" && expression.children.any { it.type == Type.Datetime }
+                                if (isTemporalSubtract)
+                                    append("extract(epoch from ")
                                 for (i in expression.children.indices) {
                                     walk(expression.children[i], expression.expectedChildrenTypes[i])
                                     if (i < expression.children.size - 1) {
@@ -1073,6 +1062,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                                         }
                                     }
                                 }
+                                if (isTemporalSubtract)
+                                    append(")/86400")
                                 append(' ')
                             }
                             OperatorType.Postfix -> {

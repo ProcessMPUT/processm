@@ -334,14 +334,15 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             assertEquals(0, trace.attributes.size)
             assertTrue(trace.events.count() > 0)
 
-            val groups = trace.events.map { it.attributes["concept:name+org:resource"] }.toList()
+            val groups = trace.events.map { it.attributes["[event:concept:name] + event:org:resource"] }.toList()
             assertEquals(groups.distinct().size, groups.size)
 
             for (event in trace.events) {
-                val rangeInDays = event.attributes["max(time:timestamp)-min(time:timestamp)"]!!.value as Double
-                val count = event.attributes["count(time:timestamp)"]!!.value as Double
-                assertTrue({ abs(count - 1.0) < 1e-6 } implies { rangeInDays < 1e-6 })
-                assertTrue({ abs(count - 1.0) > 1e-6 } implies { rangeInDays > 1e-6 })
+                val rangeInDays =
+                    event.attributes["max(event:time:timestamp) - min(event:time:timestamp)"]!!.value as Double
+                val count = event.attributes["count(event:time:timestamp)"]!!.value as Long
+                assertTrue({ count == 1L } implies { rangeInDays < 1e-6 })
+                assertTrue({ count != 1L } implies { rangeInDays >= 0.0 })
             }
         }
     }
@@ -942,11 +943,9 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupLogByEventStandardAttributeTest() {
-        val stream = q("select e:name, sum(e:total) group log by e:name")
+        val stream = q("select e:name, sum(e:total) where l:name='JournalReview' group log by e:name")
         assertTrue(stream.count() >= 1)
-
-        val log = stream.first { it.conceptName == "JournalReview" }
-
+        TODO()
     }
 
     @Test
