@@ -221,7 +221,7 @@ class DirectlyFollowsGraph {
             l.traces.forEach { trace ->
                 // Decrement analyzed traces
                 tracesCount--
-                if (tracesCount < 0) throw IllegalArgumentException("You cannot rollback more traces than has been previously analyzed")
+                require(tracesCount >= 0) { "Cannot rollback more traces than have been previously analyzed." }
 
                 val activitiesInTrace = HashSet<ProcessTreeActivity>()
                 val duplicatedActivities = HashSet<ProcessTreeActivity>()
@@ -236,7 +236,7 @@ class DirectlyFollowsGraph {
 
                     // Connection from source to activity
                     if (previousActivity == null) {
-                        if (activity !in startActivities) throw IllegalArgumentException("The log you want to delete has not been previously inserted into DFG")
+                        require(activity in startActivities) { "The log provided for deletion has not been previously inserted into DFG." }
 
                         // Decrement support and remove from DFG if cardinality equal to zero
                         with(startActivities[activity]!!) {
@@ -255,7 +255,7 @@ class DirectlyFollowsGraph {
 
                         // Connection between pair of activities in graph
                         with(graph[previousActivity!!, activity]) {
-                            if (this == null) throw IllegalArgumentException("No link between activities despite waiting for it")
+                            requireNotNull(this) { "Expected a path between activities $previousActivity and $activity." }
 
                             // Decrement support
                             decrement()
@@ -277,7 +277,8 @@ class DirectlyFollowsGraph {
 
                 // Add connection with sink
                 if (previousActivity != null) {
-                    if (previousActivity !in endActivities) throw IllegalArgumentException("The log you want to delete has not been previously inserted into DFG")
+                    require(previousActivity in endActivities) { "The log provided for deletion has not been previously inserted into DFG." }
+                    previousActivity as ProcessTreeActivity
 
                     // Decrement support and remove from DFG if cardinality equal to zero
                     with(endActivities[previousActivity as ProcessTreeActivity]!!) {
@@ -292,10 +293,8 @@ class DirectlyFollowsGraph {
 
                 // Update trace support for each activity in current trace
                 activitiesInTrace.forEach { activity ->
-                    val support = (activityTraceSupport[activity] ?: 0) - 1
-                    if (support > 0) {
-                        activityTraceSupport[activity] = support
-                    } else {
+                    val support = activityTraceSupport.compute(activity) { _, v -> if (v === null) 0 else v - 1 }
+                    if ((support ?: 0) <= 0) {
                         removedActivity = true
                         activityTraceSupport.remove(activity)
                         // Remove row and column with this activity
@@ -306,9 +305,12 @@ class DirectlyFollowsGraph {
 
                 // Update duplicates activities
                 duplicatedActivities.forEach { activity ->
-                    val duplications = (activitiesDuplicatedInTraces[activity] ?: 0) - 1
-                    if (duplications > 0) activitiesDuplicatedInTraces[activity] = duplications
-                    else activitiesDuplicatedInTraces.remove(activity)
+                    activitiesDuplicatedInTraces.compute(activity) { _, v ->
+                        when (v) {
+                            null, 1 -> activitiesDuplicatedInTraces.remove(activity)
+                            else -> v - 1
+                        }
+                    }
                 }
             }
         }
@@ -331,11 +333,11 @@ class DirectlyFollowsGraph {
         tracesCount++
 
         activitiesInTrace.forEach { activity ->
-            activityTraceSupport[activity] = (activityTraceSupport[activity] ?: 0) + 1
+            activityTraceSupport.compute(activity) { _, v -> if (v === null) 1 else v + 1 }
         }
 
         duplicatedActivities.forEach { activity ->
-            activitiesDuplicatedInTraces[activity] = (activitiesDuplicatedInTraces[activity] ?: 0) + 1
+            activitiesDuplicatedInTraces.compute(activity) { _, v -> if (v === null) 1 else v + 1 }
         }
     }
 }

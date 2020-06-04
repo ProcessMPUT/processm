@@ -10,9 +10,9 @@ class Arc {
     }
 
     internal fun decrement(): Arc {
-        if (cardinality > 0)
-            cardinality--
-        
+        check(cardinality > 0) { "Cardinality of connection between activities less than should be." }
+
+        cardinality--
         return this
     }
 }

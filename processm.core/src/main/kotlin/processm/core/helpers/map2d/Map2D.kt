@@ -40,8 +40,7 @@ interface Map2D<Row, Column, Value> {
      * Removes the entry for the specified column.
      *
      * Contract:
-     * Views created before deletion are not updated due to the high cost of calculations.
-     * Data consistency after the operation is not guaranteed!
+     * Calling this method invalidates the previously instantiated views.
      */
     fun removeColumn(column: Column)
 
@@ -49,8 +48,7 @@ interface Map2D<Row, Column, Value> {
      * Removes the entry for the specified row.
      *
      * Contract:
-     * Views created before deletion are not updated due to the high cost of calculations.
-     * Data consistency after the operation is not guaranteed!
+     * Calling this method invalidates the previously instantiated views.
      */
     fun removeRow(row: Row)
 
