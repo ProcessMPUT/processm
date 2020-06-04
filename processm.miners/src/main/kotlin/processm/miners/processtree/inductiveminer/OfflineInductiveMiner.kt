@@ -16,7 +16,7 @@ import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
  * * If the activity does not exist in all traces should be as ×(τ,activity).
  *   This IM will ignore [SilentActivity] and use only [ProcessTreeActivity].
  */
-class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner() {
+class OfflineInductiveMiner : InductiveMiner() {
     /**
      * Log which we should analyze
      */
@@ -57,9 +57,7 @@ class OfflineInductiveMinerWithoutLogStatistics : InductiveMiner() {
             assignChildrenToNode(
                 DirectlyFollowsSubGraph(
                     activities = activities,
-                    initialConnections = dfg.graph,
-                    initialStartActivities = dfg.startActivities.keys.toHashSet(),
-                    initialEndActivities = dfg.endActivities.keys.toHashSet()
+                    dfg = dfg
                 )
             )
         )
