@@ -160,7 +160,7 @@ class DirectlyFollowsGraph {
                         }
                     } else {
                         // If activity duplicated - remember in special collection
-                        if (activity !in duplicatedActivities && activity == previousActivity) {
+                        if (activity == previousActivity) {
                             duplicatedActivities.add(activity)
                         }
 
@@ -172,7 +172,7 @@ class DirectlyFollowsGraph {
 
                                 graph[previousActivity!!, activity] = Arc().increment()
                             } else {
-                                graph[previousActivity!!, activity] = this.increment()
+                                increment()
                             }
                         }
                     }

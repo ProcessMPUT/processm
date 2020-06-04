@@ -61,8 +61,8 @@ abstract class InductiveMiner {
             CutType.Parallel -> Parallel()
             CutType.RedoLoop -> RedoLoop()
             CutType.OptionalActivity -> graph.finishWithOptionalActivity()
-            CutType.RedoActivityAlways -> graph.finishWithRedoActivityAlways()
-            CutType.RedoActivitySometimes -> graph.finishWithDefaultRule()
+            CutType.RedoActivityAtLeastOnce -> graph.finishWithRedoActivityAlways()
+            CutType.RedoActivityAtLeastZeroTimes -> graph.finishWithDefaultRule()
             CutType.FlowerModel -> graph.finishWithDefaultRule()
         }
     }
