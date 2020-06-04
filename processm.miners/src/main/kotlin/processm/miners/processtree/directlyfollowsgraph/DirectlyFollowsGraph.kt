@@ -21,7 +21,7 @@ class DirectlyFollowsGraph {
      * A  1    -
      * B  2    1
      */
-    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc?>()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -70,16 +70,17 @@ class DirectlyFollowsGraph {
 
     /**
      * Duplicated activities occurrence in single trace, after analyze all traces.
+     * As value number of traces where activity duplicated.
      * For log:
      * - A B C
      * - A B B C
-     * - A B C D D
+     * - A B B C D D
      *
-     * You will receive collection of two activities:
-     * - B: second trace
-     * - D: third trace
+     * You will receive collection:
+     * - B => 2 (duplicated in second trace)
+     * - D => 1 (duplicated in third trace)
      */
-    val activitiesDuplicatedInTraces = HashSet<ProcessTreeActivity>()
+    val activitiesDuplicatedInTraces = HashMap<ProcessTreeActivity, Int>()
 
     /**
      * Build directly-follows graph
@@ -128,6 +129,7 @@ class DirectlyFollowsGraph {
         log.forEach { l ->
             l.traces.forEach { trace ->
                 val activitiesInTrace = HashSet<ProcessTreeActivity>()
+                val duplicatedActivities = HashSet<ProcessTreeActivity>()
                 var previousActivity: ProcessTreeActivity? = null
 
                 // Iterate over all events in current trace
@@ -158,8 +160,8 @@ class DirectlyFollowsGraph {
                         }
                     } else {
                         // If activity duplicated - remember in special collection
-                        if (activity !in activitiesDuplicatedInTraces && activity == previousActivity) {
-                            activitiesDuplicatedInTraces.add(activity)
+                        if (activity !in duplicatedActivities && activity == previousActivity) {
+                            duplicatedActivities.add(activity)
                         }
 
                         // Add connection between pair of activities in graph
@@ -194,7 +196,7 @@ class DirectlyFollowsGraph {
                     }
                 }
 
-                updateTraceStatistics(activitiesInTrace)
+                updateTraceStatistics(activitiesInTrace, duplicatedActivities)
             }
         }
 
@@ -207,16 +209,135 @@ class DirectlyFollowsGraph {
     }
 
     /**
+     * Discover removed connections between pair of activities based on given trace.
+     */
+    fun discoverRemovedPartOfGraph(log: LogInputStream): Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>? {
+        var changedStartActivity = false
+        var changedEndActivity = false
+        var removedActivity = false
+        val removedConnections = LinkedHashSet<Pair<ProcessTreeActivity, ProcessTreeActivity>>()
+
+        log.forEach { l ->
+            l.traces.forEach { trace ->
+                // Decrement analyzed traces
+                tracesCount--
+                require(tracesCount >= 0) { "Cannot rollback more traces than have been previously analyzed." }
+
+                val activitiesInTrace = HashSet<ProcessTreeActivity>()
+                val duplicatedActivities = HashSet<ProcessTreeActivity>()
+                var previousActivity: ProcessTreeActivity? = null
+
+                // Iterate over all events in current trace
+                trace.events.forEach { event ->
+                    val activity = ProcessTreeActivity(event.conceptName!!)
+
+                    // Update activity occurrence in trace
+                    activitiesInTrace.add(activity)
+
+                    // Connection from source to activity
+                    if (previousActivity == null) {
+                        require(activity in startActivities) { "The log provided for deletion has not been previously inserted into DFG." }
+
+                        // Decrement support and remove from DFG if cardinality equal to zero
+                        with(startActivities[activity]!!) {
+                            decrement()
+
+                            if (cardinality == 0) {
+                                startActivities.remove(activity)
+                                changedStartActivity = true
+                            }
+                        }
+                    } else {
+                        // If activity duplicated - remember in special collection
+                        if (activity !in duplicatedActivities && activity == previousActivity) {
+                            duplicatedActivities.add(activity)
+                        }
+
+                        // Connection between pair of activities in graph
+                        with(graph[previousActivity!!, activity]) {
+                            requireNotNull(this) { "Expected a path between activities $previousActivity and $activity." }
+
+                            // Decrement support
+                            decrement()
+
+                            if (cardinality == 0) {
+                                graph[previousActivity!!, activity] = null
+
+                                // Add connection if not removed activity found
+                                // If found - this collection will be ignored
+                                if (!removedActivity)
+                                    removedConnections.add(previousActivity!! to activity)
+                            }
+                        }
+                    }
+
+                    // Update previous activity
+                    previousActivity = activity
+                }
+
+                // Add connection with sink
+                if (previousActivity != null) {
+                    require(previousActivity in endActivities) { "The log provided for deletion has not been previously inserted into DFG." }
+                    previousActivity as ProcessTreeActivity
+
+                    // Decrement support and remove from DFG if cardinality equal to zero
+                    with(endActivities[previousActivity as ProcessTreeActivity]!!) {
+                        decrement()
+
+                        if (cardinality == 0) {
+                            endActivities.remove(previousActivity as ProcessTreeActivity)
+                            changedEndActivity = true
+                        }
+                    }
+                }
+
+                // Update trace support for each activity in current trace
+                activitiesInTrace.forEach { activity ->
+                    val support = activityTraceSupport.compute(activity) { _, v -> if (v === null) 0 else v - 1 }
+                    if ((support ?: 0) <= 0) {
+                        removedActivity = true
+                        activityTraceSupport.remove(activity)
+                        // Remove row and column with this activity
+                        graph.removeColumn(activity)
+                        graph.removeRow(activity)
+                    }
+                }
+
+                // Update duplicates activities
+                duplicatedActivities.forEach { activity ->
+                    activitiesDuplicatedInTraces.compute(activity) { _, v ->
+                        when (v) {
+                            null, 1 -> activitiesDuplicatedInTraces.remove(activity)
+                            else -> v - 1
+                        }
+                    }
+                }
+            }
+        }
+
+        return if (changedStartActivity || changedEndActivity || removedActivity) null
+        else removedConnections
+    }
+
+    /**
      * Trace statistics changes:
      * - update trace support for each activity in current trace
      * - increment already analyzed traces
+     * - update duplicated activities
      */
-    private fun updateTraceStatistics(activitiesInTrace: Set<ProcessTreeActivity>) {
+    private fun updateTraceStatistics(
+        activitiesInTrace: Set<ProcessTreeActivity>,
+        duplicatedActivities: HashSet<ProcessTreeActivity>
+    ) {
         // Total traces count update
         tracesCount++
 
         activitiesInTrace.forEach { activity ->
-            activityTraceSupport[activity] = (activityTraceSupport[activity] ?: 0) + 1
+            activityTraceSupport.compute(activity) { _, v -> if (v === null) 1 else v + 1 }
+        }
+
+        duplicatedActivities.forEach { activity ->
+            activitiesDuplicatedInTraces.compute(activity) { _, v -> if (v === null) 1 else v + 1 }
         }
     }
 }
