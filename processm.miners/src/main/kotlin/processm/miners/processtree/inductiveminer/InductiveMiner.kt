@@ -1,7 +1,8 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.*
+import java.util.*
 
 /**
  * Inductive miners common abstract implementation.
@@ -14,17 +15,20 @@ abstract class InductiveMiner {
     /**
      * Perform mining on a given log.
      */
-    abstract fun processLog(logsCollection: Iterable<Log>)
+    abstract fun processLog(logsCollection: LogInputStream)
 
     /**
      * The mined model
      */
     abstract val result: ProcessTree
 
-    /**
-     * Internal set of operations when we should analyze children stored in subGraph
-     */
-    private val nestedOperators = setOf(CutType.RedoLoop, CutType.Sequence, CutType.Parallel, CutType.Exclusive)
+    companion object {
+        /**
+         * Internal set of operations when we should analyze children stored in subGraph
+         */
+        private val nestedOperators =
+            EnumSet.of(CutType.RedoLoop, CutType.Sequence, CutType.Parallel, CutType.Exclusive)
+    }
 
     /**
      * Assign children to node discovered by subGraph cut.
@@ -57,8 +61,8 @@ abstract class InductiveMiner {
             CutType.Parallel -> Parallel()
             CutType.RedoLoop -> RedoLoop()
             CutType.OptionalActivity -> graph.finishWithOptionalActivity()
-            CutType.RedoActivityAlways -> graph.finishWithRedoActivityAlways()
-            CutType.RedoActivitySometimes -> graph.finishWithDefaultRule()
+            CutType.RedoActivityAtLeastOnce -> graph.finishWithRedoActivityAlways()
+            CutType.RedoActivityAtLeastZeroTimes -> graph.finishWithDefaultRule()
             CutType.FlowerModel -> graph.finishWithDefaultRule()
         }
     }

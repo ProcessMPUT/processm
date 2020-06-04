@@ -186,7 +186,7 @@ class DirectlyFollowsSubGraph(
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
     private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>, analyzeChildSupport: Boolean = false) {
-        val activityGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
+        val activityGroups = TreeMap<Int, HashSet<ProcessTreeActivity>>()
         // Add each activity to designated group
         assignment.forEach { (activity, groupId) ->
             activityGroups.computeIfAbsent(groupId) { HashSet() }.add(activity)
@@ -772,8 +772,9 @@ class DirectlyFollowsSubGraph(
     /**
      * Detect cuts in graph
      */
-    private fun detectCuts() {
+    fun detectCuts() {
         if (canFinishCalculationsOnSubGraph()) {
+            assert(activities.size == 1)
             // We must check which case we have:
             // 1. Activity
             // 2. ×(Activity, τ)
@@ -783,8 +784,8 @@ class DirectlyFollowsSubGraph(
             // Activity duplicated in any trace?
             val parentTraceSupport = parentSubGraph?.currentTraceSupport ?: 0
             detectedCut = if (dfg.activitiesDuplicatedInTraces.contains(activities.first())) {
-                if (currentTraceSupport < parentTraceSupport) CutType.RedoActivitySometimes
-                else CutType.RedoActivityAlways
+                if (currentTraceSupport < parentTraceSupport) CutType.RedoActivityAtLeastZeroTimes
+                else CutType.RedoActivityAtLeastOnce
             } else {
                 if (parentSubGraph?.detectedCut == CutType.Sequence && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
                 else CutType.Activity
@@ -846,13 +847,5 @@ class DirectlyFollowsSubGraph(
         listOfActivities[1] = SilentActivity()
 
         return RedoLoop(*listOfActivities.requireNoNulls())
-    }
-
-    /**
-     * Rebuild subGraph
-     * This is simple wrapper on detectCuts function.
-     */
-    fun rebuild() {
-        detectCuts()
     }
 }

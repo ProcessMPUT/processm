@@ -7,7 +7,7 @@ enum class CutType {
     RedoLoop,
     Activity,
     OptionalActivity,
-    RedoActivityAlways,
-    RedoActivitySometimes,
+    RedoActivityAtLeastOnce,
+    RedoActivityAtLeastZeroTimes,
     FlowerModel
 }
