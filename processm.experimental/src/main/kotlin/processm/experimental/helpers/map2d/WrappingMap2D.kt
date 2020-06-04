@@ -76,6 +76,14 @@ class WrappingMap2D<Row, Column, Value>(private val data: MutableMap<Pair<Row, C
 
     override fun set(row: Row, col: Column, v: Value) = data.set(row to col, v)
 
+    override fun removeColumn(column: Column) {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeRow(row: Row) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = data.keys.map { it.first }.toSet()
 

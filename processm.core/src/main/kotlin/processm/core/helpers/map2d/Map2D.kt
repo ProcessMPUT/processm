@@ -37,6 +37,24 @@ interface Map2D<Row, Column, Value> {
     operator fun set(row: Row, column: Column, value: Value)
 
     /**
+     * Removes the entry for the specified column.
+     *
+     * Contract:
+     * Views created before deletion are not updated due to the high cost of calculations.
+     * Data consistency after the operation is not guaranteed!
+     */
+    fun removeColumn(column: Column)
+
+    /**
+     * Removes the entry for the specified row.
+     *
+     * Contract:
+     * Views created before deletion are not updated due to the high cost of calculations.
+     * Data consistency after the operation is not guaranteed!
+     */
+    fun removeRow(row: Row)
+
+    /**
      * The set of all non-empty rows.
      */
     val rows: Set<Row>

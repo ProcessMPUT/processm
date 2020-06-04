@@ -91,6 +91,14 @@ class DenseMap2D<Row, Column, Value>(val nRows: Int, val nColumns: Int) :
         data[row(row)][col(col)] = v
     }
 
+    override fun removeColumn(column: Column) {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeRow(row: Row) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = row2idx.keys
     override val columns: Set<Column>

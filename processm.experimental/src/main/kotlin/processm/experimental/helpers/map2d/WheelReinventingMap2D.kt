@@ -181,6 +181,14 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
         slice.add(Node(row, col, v))
     }
 
+    override fun removeColumn(column: Column) {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeRow(row: Row) {
+        TODO("Not yet implemented")
+    }
+
     override val rows
         get() = Collections.unmodifiableSet(_rows)
 
