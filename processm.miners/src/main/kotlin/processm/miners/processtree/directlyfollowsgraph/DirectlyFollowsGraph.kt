@@ -21,7 +21,7 @@ class DirectlyFollowsGraph {
      * A  1    -
      * B  2    1
      */
-    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc?>()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -206,6 +206,115 @@ class DirectlyFollowsGraph {
             else addedConnectionsCollection
         } else
             null
+    }
+
+    /**
+     * Discover removed connections between pair of activities based on given trace.
+     */
+    fun discoverRemovedPartOfGraph(log: LogInputStream): Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>? {
+        var changedStartActivity = false
+        var changedEndActivity = false
+        var removedActivity = false
+        val removedConnections = LinkedHashSet<Pair<ProcessTreeActivity, ProcessTreeActivity>>()
+
+        log.forEach { l ->
+            l.traces.forEach { trace ->
+                // Decrement analyzed traces
+                tracesCount--
+                if (tracesCount < 0) throw IllegalArgumentException("You cannot rollback more traces than has been previously analyzed")
+
+                val activitiesInTrace = HashSet<ProcessTreeActivity>()
+                val duplicatedActivities = HashSet<ProcessTreeActivity>()
+                var previousActivity: ProcessTreeActivity? = null
+
+                // Iterate over all events in current trace
+                trace.events.forEach { event ->
+                    val activity = ProcessTreeActivity(event.conceptName!!)
+
+                    // Update activity occurrence in trace
+                    activitiesInTrace.add(activity)
+
+                    // Connection from source to activity
+                    if (previousActivity == null) {
+                        if (activity !in startActivities) throw IllegalArgumentException("The log you want to delete has not been previously inserted into DFG")
+
+                        // Decrement support and remove from DFG if cardinality equal to zero
+                        with(startActivities[activity]!!) {
+                            decrement()
+
+                            if (cardinality == 0) {
+                                startActivities.remove(activity)
+                                changedStartActivity = true
+                            }
+                        }
+                    } else {
+                        // If activity duplicated - remember in special collection
+                        if (activity !in duplicatedActivities && activity == previousActivity) {
+                            duplicatedActivities.add(activity)
+                        }
+
+                        // Connection between pair of activities in graph
+                        with(graph[previousActivity!!, activity]) {
+                            if (this == null) throw IllegalArgumentException("No link between activities despite waiting for it")
+
+                            // Decrement support
+                            decrement()
+
+                            if (cardinality == 0) {
+                                graph[previousActivity!!, activity] = null
+
+                                // Add connection if not removed activity found
+                                // If found - this collection will be ignored
+                                if (!removedActivity)
+                                    removedConnections.add(previousActivity!! to activity)
+                            }
+                        }
+                    }
+
+                    // Update previous activity
+                    previousActivity = activity
+                }
+
+                // Add connection with sink
+                if (previousActivity != null) {
+                    if (previousActivity !in endActivities) throw IllegalArgumentException("The log you want to delete has not been previously inserted into DFG")
+
+                    // Decrement support and remove from DFG if cardinality equal to zero
+                    with(endActivities[previousActivity as ProcessTreeActivity]!!) {
+                        decrement()
+
+                        if (cardinality == 0) {
+                            endActivities.remove(previousActivity as ProcessTreeActivity)
+                            changedEndActivity = true
+                        }
+                    }
+                }
+
+                // Update trace support for each activity in current trace
+                activitiesInTrace.forEach { activity ->
+                    val support = (activityTraceSupport[activity] ?: 0) - 1
+                    if (support > 0) {
+                        activityTraceSupport[activity] = support
+                    } else {
+                        removedActivity = true
+                        activityTraceSupport.remove(activity)
+                        // Remove row and column with this activity
+                        graph.removeColumn(activity)
+                        graph.removeRow(activity)
+                    }
+                }
+
+                // Update duplicates activities
+                duplicatedActivities.forEach { activity ->
+                    val duplications = (activitiesDuplicatedInTraces[activity] ?: 0) - 1
+                    if (duplications > 0) activitiesDuplicatedInTraces[activity] = duplications
+                    else activitiesDuplicatedInTraces.remove(activity)
+                }
+            }
+        }
+
+        return if (changedStartActivity || changedEndActivity || removedActivity) null
+        else removedConnections
     }
 
     /**

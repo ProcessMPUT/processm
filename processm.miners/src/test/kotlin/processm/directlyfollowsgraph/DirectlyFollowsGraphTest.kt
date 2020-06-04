@@ -293,6 +293,141 @@ class DirectlyFollowsGraphTest {
     }
 
     @Test
+    fun `Remove log from DFG`() {
+        val baseLog = logFromString(
+            """
+            A B C D
+            A C B D
+            """.trimIndent()
+        )
+        val logToRemove = logFromString(
+            """
+            A C B D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(baseLog))
+
+        val diff = miner.discoverRemovedPartOfGraph(sequenceOf(logToRemove))
+
+        assertEquals(3, diff!!.size)
+        assertTrue(diff.contains(A to C))
+        assertTrue(diff.contains(C to B))
+        assertTrue(diff.contains(B to D))
+
+        assertEquals(setOf(A, B, C), miner.graph.rows)
+        assertEquals(setOf(B, C, D), miner.graph.columns)
+    }
+
+    @Test
+    fun `Remove log from DFG - no removed connections between pair of activities`() {
+        val baseLog = logFromString(
+            """
+            A B C D
+            A C B D
+            A C B D
+            A C B D
+            """.trimIndent()
+        )
+        val logToRemove = logFromString(
+            """
+            A C B D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(baseLog))
+
+        val diff = miner.discoverRemovedPartOfGraph(sequenceOf(logToRemove))
+
+        assertTrue(diff!!.isEmpty())
+    }
+
+    @Test
+    fun `Remove log from DFG - removed activity from DFG`() {
+        val baseLog = logFromString(
+            """
+            A B C D
+            A C B D
+            A E D
+            """.trimIndent()
+        )
+        val logToRemove = logFromString(
+            """
+            A E D
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(baseLog))
+
+        assertEquals(setOf(A, B, C, E), miner.graph.rows)
+        assertEquals(setOf(B, C, E, D), miner.graph.columns)
+
+        val diff = miner.discoverRemovedPartOfGraph(sequenceOf(logToRemove))
+
+        assertNull(diff)
+        assertEquals(setOf(A, B, C), miner.graph.rows)
+        assertEquals(setOf(B, C, D), miner.graph.columns)
+    }
+
+    @Test
+    fun `Remove log from DFG - removed start activity from DFG`() {
+        val baseLog = logFromString(
+            """
+            A B C
+            A C
+            B C
+            """.trimIndent()
+        )
+        val logToRemove = logFromString(
+            """
+            B C
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(baseLog))
+
+        assertEquals(setOf(A, B), miner.graph.rows)
+        assertEquals(setOf(B, C), miner.graph.columns)
+
+        val diff = miner.discoverRemovedPartOfGraph(sequenceOf(logToRemove))
+
+        assertNull(diff)
+        assertEquals(setOf(A, B), miner.graph.rows)
+        assertEquals(setOf(B, C), miner.graph.columns)
+    }
+
+    @Test
+    fun `Remove log from DFG - removed end activity from DFG`() {
+        val baseLog = logFromString(
+            """
+            A B C D
+            A B C
+            """.trimIndent()
+        )
+        val logToRemove = logFromString(
+            """
+            A B C
+            """.trimIndent()
+        )
+
+        val miner = DirectlyFollowsGraph()
+        miner.discover(sequenceOf(baseLog))
+
+        assertEquals(setOf(A, B, C), miner.graph.rows)
+        assertEquals(setOf(B, C, D), miner.graph.columns)
+
+        val diff = miner.discoverRemovedPartOfGraph(sequenceOf(logToRemove))
+
+        assertNull(diff)
+        assertEquals(setOf(A, B, C), miner.graph.rows)
+        assertEquals(setOf(B, C, D), miner.graph.columns)
+    }
+
+    @Test
     fun `Update total traces count`() {
         val log1 = logFromString(
             """

@@ -8,4 +8,11 @@ class Arc {
         cardinality++
         return this
     }
+
+    internal fun decrement(): Arc {
+        if (cardinality > 0)
+            cardinality--
+        
+        return this
+    }
 }
