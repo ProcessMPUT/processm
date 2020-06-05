@@ -91,7 +91,7 @@ export default class CasualNet extends Vue {
   @Prop({ default: {} })
   readonly data!: {
     nodes: Array<DataNode>;
-    layout?: Array<{ x: number; y: number }>;
+    layout?: Array<{ id: string; x: number; y: number }>;
   };
   @Prop({ default: false })
   readonly draggable!: boolean;
@@ -161,20 +161,40 @@ export default class CasualNet extends Vue {
     this.data.nodes.forEach((dataNode: DataNode) => {
       g.setNode(dataNode.id, { label: dataNode.id });
     });
-    dagre.layout(g);
 
-    const layoutWidth = g.graph().width || this.width,
-      layoutHeight = g.graph().height || this.height,
-      scaleX = this.width / layoutWidth,
-      scaleY = this.height / layoutHeight,
-      offsetX = Math.max(this.width - layoutWidth * scaleX, 0) / 2,
-      offsetY = Math.max(this.height - layoutHeight * scaleY, 0) / 2;
+    const isLayoutPredefined =
+      this.data.nodes.length == this.data.layout?.length &&
+      this.data.nodes.every(node =>
+        this.data.layout?.some(nodeLayout => nodeLayout.id == node.id)
+      );
+
+    if (!isLayoutPredefined) {
+      dagre.layout(g);
+      const layoutWidth = g.graph().width || this.width,
+        layoutHeight = g.graph().height || this.height,
+        scaleX = this.width / layoutWidth,
+        scaleY = this.height / layoutHeight,
+        offsetX = Math.max(this.width - layoutWidth * scaleX, 0) / 2,
+        offsetY = Math.max(this.height - layoutHeight * scaleY, 0) / 2;
+      g.nodes().forEach(nodeId => {
+        const node = g.node(nodeId);
+        node.x = node.x * scaleX + offsetX;
+        node.y = node.y * scaleY + offsetY;
+      });
+    } else {
+      g.nodes().forEach(nodeId => {
+        Object.assign(g.node(nodeId), {
+          x: this.data.layout?.find(n => n.id == nodeId)?.x || 0,
+          y: this.data.layout?.find(n => n.id == nodeId)?.y || 0
+        });
+      });
+    }
 
     this.data.nodes.forEach(
       (dataNode: DataNode, index: number, allDataNodes: DataNode[]) => {
         const layoutNode = g.node(dataNode.id),
-          x = layoutNode.x * scaleX + offsetX,
-          y = layoutNode.y * scaleY + offsetY,
+          x = layoutNode.x,
+          y = layoutNode.y,
           node = {
             id: dataNode.id,
             isBindingNode: false,
