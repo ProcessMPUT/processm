@@ -47,6 +47,12 @@ class DirectlyFollowsSubGraph(
          * One as byte to eliminate `compareTo` in code (we have byteArrays and not be able to compare byte and Int).
          */
         private const val oneByte: Byte = 1
+
+        /**
+         * Cuts with validated support for each activity
+         * If parent applied one of cuts in this collection - check activity trace support.
+         */
+        private val cutsWithSupportValidated = setOf(CutType.Sequence, CutType.Parallel)
     }
 
     /**
@@ -787,7 +793,7 @@ class DirectlyFollowsSubGraph(
                 if (currentTraceSupport < parentTraceSupport) CutType.RedoActivityAtLeastZeroTimes
                 else CutType.RedoActivityAtLeastOnce
             } else {
-                if (parentSubGraph?.detectedCut == CutType.Sequence && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
+                if (parentSubGraph?.detectedCut in cutsWithSupportValidated && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
                 else CutType.Activity
             }
 

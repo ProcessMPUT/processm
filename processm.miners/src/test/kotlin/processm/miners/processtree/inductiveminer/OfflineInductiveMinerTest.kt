@@ -403,4 +403,20 @@ internal class OfflineInductiveMinerTest {
 
         assertEquals("→(A,×(∧(B,C),→(E,×(F,τ)),τ),D)", inductiveMiner.result.toString())
     }
+
+    @Test
+    fun `Optional activity in parallel cut`() {
+        val log = logFromString(
+            """
+            A B C D
+            A C B D
+            A C D
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.processLog(sequenceOf(log))
+
+        assertEquals("→(A,∧(×(B,τ),C),D)", inductiveMiner.result.toString())
+    }
 }
