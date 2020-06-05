@@ -386,50 +386,111 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     || scope == Scope.Event && pql.isGroupBy[Scope.Event]!!
         )
 
-        selectGroupIds(scope, it)
+        it.query.append("SELECT array_agg(id) AS ids FROM (")
+
+        val (groupByCount, orderByCount) = selectGroupIds(scope, it, logId)
 
         val desiredFromPosition = it.query.length
 
         where(scope, it, logId, traceId)
-        groupBy(scope, it, logId)
-        orderBy(scope, it, logId)
 
         val from = from(scope, it)
         it.query.insert(desiredFromPosition, from)
 
+        it.query.append(" GROUP BY ${scope.alias}.id")
+        it.query.append(") sub (id, ")
+        for (i in 0 until groupByCount)
+            it.query.append("g$i, ")
+        for (i in 0 until orderByCount)
+            it.query.append("o$i, ")
+        it.query.replace(it.query.length - 2, it.query.length, ")")
+
+        groupBy(scope, it, groupByCount)
+        orderByGroup(scope, it, logId, groupByCount)
         limit(scope, it)
         offset(scope, it)
-
     }
 
-    private fun selectGroupIds(scope: Scope, sql: MutableSQLQuery) {
-        sql.query.append("SELECT array_agg(${scope.alias}.id) AS ids ")
-    }
-
-    private fun groupBy(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
+    private fun selectGroupIds(scope: Scope, sql: MutableSQLQuery, logId: Int?): Pair<Int, Int> {
         val upperScopeGroupBy = pql.isImplicitGroupBy
                 || scope > Scope.Log && pql.isGroupBy[Scope.Log] == true
                 || scope > Scope.Trace && pql.isGroupBy[Scope.Trace] == true
 
         assert(upperScopeGroupBy || pql.isGroupBy[scope]!!)
 
+        var groupByCount = 0
+        var orderByCount = 0
+
+        with(sql.query) {
+            append("SELECT ${scope.alias}.id AS id")
+            for (attribute in pql.groupByStandardAttributes[scope]!! + pql.groupByOtherAttributes[scope]!!) {
+                append(", ")
+                groupByCount += attribute.toSQL(
+                    sql,
+                    logId,
+                    Type.Any,
+                    "array_agg(",
+                    " ORDER BY ${attribute.scope!!.alias}.id)"
+                )
+            }
+
+            for (expression in pql.orderByExpressions[scope]!!) {
+                append(", ")
+                if (expression.base is Attribute)
+                    orderByCount += expression.base.toSQL(sql, logId, Type.Any)
+                else {
+                    expression.base.toSQL(sql, Type.Any)
+                    ++orderByCount
+                }
+            }
+        }
+
+        return groupByCount to orderByCount
+    }
+
+    private fun groupBy(scope: Scope, sql: MutableSQLQuery, groupByCount: Int) {
         with(sql.query) {
             append(" GROUP BY ")
-            for (attribute in pql.groupByStandardAttributes[scope]!!) {
-                attribute.toSQL(sql, logId, Type.Any)
-                append(", ")
-            }
-
-            for (attribute in pql.groupByOtherAttributes[scope]!!) {
-                attribute.toSQL(sql, logId, Type.Any)
-                append(", ")
-            }
-
-            // remove the last comma
+            assert(groupByCount > 0)
+            for (i in 0 until groupByCount)
+                append("g$i, ")
             setLength(length - 2)
         }
     }
-    // endregion
+
+    private fun orderByGroup(scope: Scope, sql: MutableSQLQuery, logId: Int?, groupByCount: Int) {
+        with(sql.query) {
+            append(" ORDER BY ")
+            if (pql.orderByExpressions[scope].isNullOrEmpty()) {
+                append('1')
+                return@orderByGroup
+            }
+
+            var index = 0
+            for (expression in pql.orderByExpressions[scope]!!) {
+                if (expression.base is Attribute) {
+                    val attributes =
+                        if (expression.base.isClassifier)
+                            cache.expandClassifier(logId!!, expression.base)
+                        else
+                            listOf(expression.base)
+                    for (attribute in attributes) {
+                        append("o${index++}")
+                        if (expression.direction == OrderDirection.Descending)
+                            append(" DESC")
+                        append(", ")
+                    }
+                } else {
+                    append("o${index++}")
+                    if (expression.direction == OrderDirection.Descending)
+                        append(" DESC")
+                    append(", ")
+                }
+            }
+            setLength(length - 2)
+        }
+    }
+// endregion
 
     // region select group entity
     private fun groupEntityQuery(scope: Scope): SQLQuery = SQLQuery {
@@ -498,7 +559,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     private fun orderByGroupEntity(sql: MutableSQLQuery) {
         sql.query.append(" ORDER BY ids.ord")
     }
-    // endregion
+// endregion
 
     // region select group attributes
     private fun groupAttributesQuery(
@@ -566,9 +627,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    // endregion
+// endregion
 
-    // endregion
+// endregion
 
     // region Public interface
     fun getLogs(): Executor<LogQueryResult> = LogExecutor()
@@ -618,7 +679,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     private inner class LogExecutor : Executor<LogQueryResult>() {
         override val iterator: IdBasedIterator = object : IdBasedIterator() {
-            override val ids: Iterator<Any> = cache.topEntry.logs.keys.iterator()
+            override val ids: Iterator<Any> = cache.topEntry.ids.iterator()
 
             override fun next(): LogQueryResult {
                 val ids = this.ids.take(batchSize)
@@ -664,7 +725,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     private inner class TraceExecutor(logId: Int) : Executor<QueryResult>() {
         private val log = cache.topEntry.logs[logId]!!
         override val iterator: IdBasedIterator = object : IdBasedIterator() {
-            override val ids: Iterator<Any> = log.traces.keys.iterator()
+            override val ids: Iterator<Any> = log.ids.iterator()
 
             override fun next(): QueryResult {
                 val ids = this.ids.take(batchSize)
@@ -688,7 +749,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     private inner class EventExecutor(logId: Int, traceId: Long) : Executor<QueryResult>() {
         private val trace = cache.topEntry.logs[logId]!!.traces[traceId]!!
         override val iterator: IdBasedIterator = object : IdBasedIterator() {
-            override val ids: Iterator<Any> = trace.events.iterator()
+            override val ids: Iterator<Any> = trace.ids.iterator()
 
             override fun next(): QueryResult {
                 val ids = this.ids.take(batchSize)
@@ -708,7 +769,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             }
         }
     }
-    // endregion
+// endregion
 
     private inner class Cache {
         // region classifiers
@@ -755,6 +816,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
 
         abstract inner class Entry internal constructor() {
+            abstract val ids: Iterable<Any>
             abstract val queryIds: SQLQuery
             abstract val queryEntity: SQLQuery
             abstract val queryAttributes: SQLQuery
@@ -766,7 +828,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
              * key: logId or groupId
              * The order is important
              */
-            abstract val logs: LinkedHashMap<*, LogEntry>
+            abstract val logs: LinkedHashMap<Int, LogEntry>
 
             abstract val queryGlobals: SQLQuery
         }
@@ -776,6 +838,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 assert(!pql.isImplicitGroupBy)
                 assert(!pql.isGroupBy[Scope.Log]!!)
             }
+
+            override val ids: Iterable<Int>
+                get() = logs.keys
 
             override val logs: LinkedHashMap<Int, LogEntry> by lazy(NONE) {
                 LinkedHashMap<Int, LogEntry>().apply {
@@ -801,18 +866,24 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 assert(pql.isGroupBy[Scope.Log]!!)
             }
 
+            override val ids: Collection<IntArray> by lazy(NONE) {
+                ArrayList<IntArray>().apply {
+                    connection.use {
+                        for (group in queryIds.execute(it).to2DIntArray())
+                            this.add(group)
+                    }
+                }
+            }
+
             /**
-             * index: groupId
-             * key: group of logIds
+             * key: groupId
              * value: grouping LogEntry
              * The order is important.
              */
-            override val logs: LinkedHashMap<IntArray, LogEntry> by lazy(NONE) {
-                LinkedHashMap<IntArray, LogEntry>().apply {
-                    connection.use {
-                        for ((index, group) in queryIds.execute(it).to2DIntArray().withIndex())
-                            this[group] = GroupedLogEntry(index)
-                    }
+            override val logs: LinkedHashMap<Int, LogEntry> by lazy(NONE) {
+                LinkedHashMap<Int, LogEntry>().apply {
+                    for (index in ids.indices)
+                        this[index] = GroupedLogEntry(index)
                 }
             }
 
@@ -831,6 +902,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 assert(!pql.isGroupBy[Scope.Log]!!)
             }
 
+            override val ids: Iterable<Int>
+                get() = TODO()
             override val logs: LinkedHashMap<Int, LogEntry>
                 get() = TODO("Not yet implemented")
 
@@ -857,6 +930,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 assert(!pql.isGroupBy[Scope.Trace]!!)
             }
 
+            override val ids: Iterable<Long>
+                get() = traces.keys
             override val traces: LinkedHashMap<Long, TraceEntry> by lazy(NONE) {
                 LinkedHashMap<Long, TraceEntry>().apply {
                     connection.use {
@@ -880,18 +955,24 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 assert(pql.isGroupBy[Scope.Trace]!!)
             }
 
+            override val ids: List<LongArray> by lazy(NONE) {
+                ArrayList<LongArray>().apply {
+                    connection.use {
+                        for (group in queryIds.execute(it).to2DLongArray())
+                            this.add(group)
+                    }
+                }
+            }
+
             /**
-             * index: groupId
-             * key: group of traceIds
+             * key: groupId
              * value: grouping trace
              * The order is important.
              */
-            override val traces: LinkedHashMap<LongArray, TraceEntry> by lazy(NONE) {
-                LinkedHashMap<LongArray, TraceEntry>().apply {
-                    connection.use {
-                        for ((index, group) in queryIds.execute(it).to2DLongArray().withIndex())
-                            this[group] = GroupedTraceEntry(logId, null, index.toLong())
-                    }
+            override val traces: LinkedHashMap<Long, TraceEntry> by lazy(NONE) {
+                LinkedHashMap<Long, TraceEntry>().apply {
+                    for (index in ids.indices)
+                        this[index.toLong()] = GroupedTraceEntry(logId, null, index.toLong())
                 }
             }
 
@@ -907,6 +988,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                 assert(!pql.isGroupBy[Scope.Trace]!!)
             }
 
+            override val ids: Iterable<Long>
+                get() = TODO()
+
             override val traces: LinkedHashMap<Long, TraceEntry>
                 get() = TODO("Not yet implemented")
 
@@ -917,6 +1001,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
 
         abstract inner class TraceEntry internal constructor() : Entry() {
+            override val ids: Iterable<Any>
+                get() = events
+
             /**
              * index: eventId or groupId
              * The order is important.
@@ -990,7 +1077,13 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun Attribute.toSQL(sql: MutableSQLQuery, logId: Int?, expectedType: Type) {
+    private fun Attribute.toSQL(
+        sql: MutableSQLQuery,
+        logId: Int?,
+        expectedType: Type,
+        prefix: String? = null,
+        suffix: String? = null
+    ): Int {
         val sqlScope = ScopeWithMetadata(this.scope!!, this.hoistingPrefix.length)
         sql.scopes.add(sqlScope)
         // FIXME: move classifier expansion to database
@@ -1001,21 +1094,28 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             for (attribute in attributes) {
                 assert(this@toSQL.scope == attribute.scope)
 
+                if (prefix !== null) append(prefix)
+
                 if (attribute.isStandard) {
                     if (attribute.scope == Scope.Log && attribute.standardName == "db:id")
                         append("l.id") // for backward-compatibility with the previous implementation of the XES layer
                     else
                         append("${sqlScope.alias}.\"${attribute.standardName}\"")
                 } else {
-                    // use subquery for the non-standard attribute
-                    append("(SELECT get_${attribute.scope}_attribute(${attribute.scope!!.alias}.id, ?, ?::attribute_type, null::${expectedType.asDBType}))")
+                    // use function for the non-standard attribute
+                    append("get_${attribute.scope}_attribute(${attribute.scope!!.alias}.id, ?, ?::attribute_type, null::${expectedType.asDBType})")
                     sql.params.add(attribute.name)
                     sql.params.add(expectedType.asAttributeType)
                 }
+
+                if (suffix !== null) append(suffix)
+
                 append(',')
             }
             setLength(length - 1)
         }
+
+        return attributes.size
     }
 
     private fun IExpression.toSQL(sql: MutableSQLQuery, _expectedType: Type) {
