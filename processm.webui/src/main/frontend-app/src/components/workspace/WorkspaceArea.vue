@@ -102,25 +102,37 @@ export default class WorkspaceArea extends Vue {
         componentId: "93bcc033-bbea-490d-93b9-3c8580db5354",
         x: 0,
         y: 0,
-        width: 6,
-        height: 7
+        width: 3,
+        height: 10
       },
       {
         componentId: "c629ba68-aae2-4490-85cd-3875939fc69e",
-        x: 6,
+        x: 3,
         y: 0,
         width: 5,
-        height: 5
+        height: 8
       },
       {
         componentId: "06a29e69-a58e-498c-ad66-6435816d9c7b",
-        x: 6,
+        x: 0,
         y: 0,
-        width: 6,
-        height: 5
+        width: 3,
+        height: 4
+      },
+      {
+        componentId: "f7bad885-6add-4516-b536-d6f88c154b6e",
+        x: 3,
+        y: 0,
+        width: 5,
+        height: 10
+      },
+      {
+        componentId: "cf607cb0-0b88-4ccd-9795-5cd0201b3c39",
+        x: 8,
+        y: 0,
+        width: 4,
+        height: 7
       }
-      // { x: 6, y: 0, w: 2, h: 3, i: "3" },
-      // { x: 8, y: 0, w: 2, h: 3, i: "4" },
       // { x: 10, y: 0, w: 2, h: 3, i: "5" },
       // { x: 0, y: 5, w: 2, h: 5, i: "6" },
       // { x: 2, y: 5, w: 2, h: 5, i: "7" },

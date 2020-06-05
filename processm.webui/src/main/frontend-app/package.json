@@ -10,10 +10,12 @@
     "generate-api-sources": "openapi-generator generate -i ../../../../processm.services/src/main/resources/api-spec.yaml -g typescript-axios -o src/openapi --api-package api --model-package model --enable-post-process-file --additional-properties=withSeparateModelsAndApi=true;"
   },
   "dependencies": {
+    "@types/dagre": "^0.7.44",
     "axios": "^0.19.2",
     "axios-auth-refresh": "^2.2.5",
     "core-js": "^3.6.4",
     "d3": "^5.16.0",
+    "dagre": "^0.8.5",
     "flag-icon-css": "^3.4.6",
     "lodash": "^4.17.15",
     "material-design-icons-iconfont": "^5.0.1",

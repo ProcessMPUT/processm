@@ -55,6 +55,7 @@ import {
   Selection,
   EnterElement
 } from "d3";
+import dagre from "dagre";
 
 interface Node extends SimulationNodeDatum {
   id: string;
@@ -134,38 +135,54 @@ export default class CasualNet extends Vue {
   };
 
   mounted() {
-    const depthStats = this.data.nodes.reduce<Record<number, number>>(
-      (accumulator: Record<number, number>, node: DataNode) => {
-        accumulator[node.depth] = (accumulator[node.depth] || 0) + 1;
-        return accumulator;
-      },
-      {}
-    );
-    const heightUnit = this.height / Object.keys(depthStats).length;
-    const usedWidth: Array<number> = [];
-    const isPredefinedLayout =
-      this.data.layout?.length == this.data.nodes.length;
+    const g = new dagre.graphlib.Graph()
+      .setGraph({
+        marginx: this.displayPreferences.nodeSize,
+        marginy: this.displayPreferences.nodeSize,
+        acyclicer: "greedy"
+      })
+      .setDefaultEdgeLabel(function() {
+        return {};
+      });
+
+    this.data.nodes.forEach((dataNode: DataNode) => {
+      const successors = new Set(dataNode.outputBindings.flat());
+      successors.forEach(successor => {
+        const targetNode = this.data.nodes.find(
+          (node: Node) => node.id == successor
+        );
+        if (targetNode != null) {
+          g.setEdge(dataNode.id, targetNode.id);
+          this.createIntermediateLinks(dataNode, targetNode);
+        }
+      });
+    });
+
+    this.data.nodes.forEach((dataNode: DataNode) => {
+      g.setNode(dataNode.id, { label: dataNode.id });
+    });
+    dagre.layout(g);
+
+    const layoutWidth = g.graph().width || this.width,
+      layoutHeight = g.graph().height || this.height,
+      scaleX = this.width / layoutWidth,
+      scaleY = this.height / layoutHeight,
+      offsetX = Math.max(this.width - layoutWidth * scaleX, 0) / 2,
+      offsetY = Math.max(this.height - layoutHeight * scaleY, 0) / 2;
 
     this.data.nodes.forEach(
       (dataNode: DataNode, index: number, allDataNodes: DataNode[]) => {
-        const widthUnit = this.width / depthStats[dataNode.depth];
-        usedWidth[dataNode.depth] = (usedWidth[dataNode.depth] || 0) + 1;
-        const x = isPredefinedLayout
-          ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.data.layout![index].x
-          : widthUnit * usedWidth[dataNode.depth] - widthUnit / 2;
-        const y = isPredefinedLayout
-          ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.data.layout![index].y
-          : dataNode.depth * heightUnit + heightUnit / 2;
-        const node = {
-          id: dataNode.id,
-          isBindingNode: false,
-          fx: x,
-          fy: y,
-          isStartNode: index == 0,
-          isEndNode: index == allDataNodes.length - 1
-        };
+        const layoutNode = g.node(dataNode.id),
+          x = layoutNode.x * scaleX + offsetX,
+          y = layoutNode.y * scaleY + offsetY,
+          node = {
+            id: dataNode.id,
+            isBindingNode: false,
+            fx: x,
+            fy: y,
+            isStartNode: index == 0,
+            isEndNode: index == allDataNodes.length - 1
+          };
         this.bindingNodes.push(node);
         this.createBindingElements(
           node.id,
@@ -183,18 +200,6 @@ export default class CasualNet extends Vue {
         );
       }
     );
-
-    this.data.nodes.forEach((dataNode: DataNode) => {
-      const successors = new Set(dataNode.outputBindings.flat());
-      successors.forEach(successor => {
-        const targetNode = this.data.nodes.find(
-          (node: Node) => node.id == successor
-        );
-        if (targetNode != null) {
-          this.createIntermediateLinks(dataNode, targetNode);
-        }
-      });
-    });
 
     this.simulation = d3.forceSimulation<VisualNode, VisualLink>().force(
       "link",
