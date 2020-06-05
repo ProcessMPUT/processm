@@ -56,6 +56,7 @@ import {
   EnterElement
 } from "d3";
 import dagre from "dagre";
+import { v4 as uuidv4 } from "uuid";
 
 interface Node extends SimulationNodeDatum {
   id: string;
@@ -112,7 +113,6 @@ export default class CasualNet extends Vue {
     unknown
   >;
   private arrowhead!: Selection<BaseType, unknown, null, undefined>;
-  private arrowheadShape!: Selection<SVGPathElement, unknown, null, undefined>;
   private nodeShape!: Selection<
     SVGPathElement,
     VisualNode,
@@ -130,7 +130,7 @@ export default class CasualNet extends Vue {
     bindingNodeSize: 5,
     edgeThickness: 1,
     bindingEdgeThickness: 1,
-    edgeArrowSize: 10,
+    edgeArrowSize: 12,
     nodeLabelSize: 16
   };
 
@@ -226,14 +226,14 @@ export default class CasualNet extends Vue {
     this.arrowhead = this.svg
       .append("svg:defs")
       .append("svg:marker")
-      .attr("id", "arrow")
+      .attr("id", `arrow+${uuidv4()}`)
       .attr("refX", 8 + this.displayPreferences.nodeSize / 2)
       .attr("refY", 4)
       .attr("markerUnits", "userSpaceOnUse")
       .attr("viewBox", `0 0 10 10`)
       .attr("orient", "auto");
 
-    this.arrowheadShape = this.arrowhead
+    this.arrowhead
       .append("path")
       .attr("d", "M 0 0 10 4 0 8 2 4")
       .style("fill", "#999");
