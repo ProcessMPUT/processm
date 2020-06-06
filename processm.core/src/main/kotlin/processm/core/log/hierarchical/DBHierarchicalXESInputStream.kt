@@ -215,7 +215,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             conceptName = result.entity.getString("concept:name") ?: conceptName
             identityId = result.entity.getString("identity:id") ?: identityId
             lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
-            count = result.entity.getLongOrNull("count") ?: 1
+            count = result.entity.getIntOrNull("count") ?: 1
 
             // getTraces is a sequence, so it will be actually called when one reads it
             traces = getTraces(logId, nameMap)
@@ -333,7 +333,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             costTotal = result.entity.getDoubleOrNull("cost:total") ?: costTotal
             identityId = result.entity.getString("identity:id") ?: identityId
             isEventStream = result.entity.getBooleanOrNull("event_stream") ?: false
-            count = result.entity.getLongOrNull("count") ?: 1
+            count = result.entity.getIntOrNull("count") ?: 1
 
             // getEvents is a sequence, so it will be actually called when one reads it
             events = getEvents(logId, traceId, nameMap)
@@ -365,7 +365,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
             orgGroup = result.entity.getString("org:group") ?: orgGroup
             orgResource = result.entity.getString("org:resource") ?: orgResource
             timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant() ?: timeTimestamp
-            count = result.entity.getLongOrNull("count") ?: 1
+            count = result.entity.getIntOrNull("count") ?: 1
 
             logger.exit()
             return this

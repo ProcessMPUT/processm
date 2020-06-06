@@ -63,7 +63,8 @@ internal fun Collection<SQLQuery>.executeMany(connection: Connection, vararg par
     val statement = connection.prepareStatement(sql.toString(), Statement.NO_GENERATED_KEYS)
 
     for ((index, query) in this.withIndex()) {
-        val effectiveParams = if (index >= params.size || params[index] === null) query.params else params[index]
+        assert(index >= params.size || params[index] !== null)
+        val effectiveParams = if (index >= params.size) query.params else params[index]
         for (p in effectiveParams)
             statement.setObject(paramIndex++, p)
     }

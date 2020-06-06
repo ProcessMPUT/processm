@@ -270,11 +270,13 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         assertEquals(1, log.traces.count())
         val trace = log.traces.first()
-        assertEquals(1, trace.attributes["min(t:cost:total)"]?.value)
-        assertEquals(10, trace.attributes["avg(t:cost:total)"]?.value)
-        assertEquals(52, trace.attributes["max(t:cost:total)"]?.value)
+        assertEquals(101, trace.count)
+        assertEquals(11.0, trace.attributes["min(trace:cost:total)"]?.value)
+        assertEquals(21.98, trace.attributes["avg(trace:cost:total)"]?.value)
+        assertEquals(47.0, trace.attributes["max(trace:cost:total)"]?.value)
 
-        assertEquals(0, trace.events.count())
+        assertEquals(1, trace.events.count())
+        assertEquals(2298, trace.events.first().count)
     }
 
     @Test
@@ -931,13 +933,13 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         assertEquals(97, log.traces.count())
 
-        assertEquals(1, log.traces.count { it.count == 3L })
-        assertEquals(2, log.traces.count { it.count == 2L })
-        assertEquals(94, log.traces.count { it.count == 1L })
+        assertEquals(1, log.traces.count { it.count == 3 })
+        assertEquals(2, log.traces.count { it.count == 2 })
+        assertEquals(94, log.traces.count { it.count == 1 })
 
         assertTrue(
             log.traces
-                .first { it.count == 3L }.events
+                .first { it.count == 3 }.events
                 .map { it.conceptName!! }
                 .zip(variant1)
                 .all { (act, exp) -> act.startsWith(exp) }
@@ -945,7 +947,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         assertTrue(
             log.traces
-                .filter { it.count == 2L }.any {
+                .filter { it.count == 2 }.any {
                     it.events
                         .map { it.conceptName!! }
                         .zip(variant2)
@@ -955,7 +957,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         assertTrue(
             log.traces
-                .filter { it.count == 2L }.any {
+                .filter { it.count == 2 }.any {
                     it.events
                         .map { it.conceptName!! }
                         .zip(variant3)

@@ -27,7 +27,10 @@ abstract class XESElement {
      * for [Trace] variant, it refers to the number of actual traces compliant with this variant.
      * This property is useful for calculating the support for a log/trace/event variant.
      */
-    var count: Long = 1L
+    /* Int type should be enough according to the ProcessM grant application, which states that the max total number
+     * of business processes is 100 and the max total number of events per process is 10^7. This results in the
+     * maximum count of 10^9 ≈ 2^30 for an Event and 10^7 ≈ 2^23 for a Trace and a Log. */
+    var count: Int = 1
         internal set
 
     /**

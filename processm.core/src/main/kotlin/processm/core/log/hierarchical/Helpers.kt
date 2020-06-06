@@ -23,6 +23,15 @@ internal fun <N : Number> ResultSet.toIdList(): List<N> = ArrayList<N>().also { 
     }
 }
 
+internal fun List<Any>.fillPlaceholders(idParam: Any, batchOffset: Long): List<Any> =
+    this.map {
+        when (it) {
+            TranslatedQuery.idPlaceholder -> idParam
+            TranslatedQuery.idOffsetPlaceholder -> batchOffset
+            else -> it
+        }
+    }
+
 internal fun ResultSet.to2DIntArray(): List<IntArray> =
     ArrayList<IntArray>().also { out ->
         var maxSize = 0

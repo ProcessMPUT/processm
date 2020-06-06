@@ -34,7 +34,12 @@ internal class ErrorSuppressingResultSet(private val backingResultSet: ResultSet
 
     override fun getLong(columnLabel: String?): Long {
         i = labelToId[columnLabel]
-        return if (i !== null) getLong(i!!) else 0
+        return if (i !== null) getLong(i!!) else 0L
+    }
+
+    override fun getInt(columnLabel: String?): Int {
+        i = labelToId[columnLabel]
+        return if (i !== null) getInt(i!!) else 0
     }
 
     override fun getTimestamp(columnLabel: String?, cal: Calendar): Timestamp? {
@@ -65,6 +70,16 @@ internal fun ResultSet.getLongOrNull(columnLabel: String): Long? {
 internal fun ResultSet.getLongOrNull(columnIndex: Int): Long? {
     val l = this.getLong(columnIndex)
     return if (this.wasNull()) null else l
+}
+
+internal fun ResultSet.getIntOrNull(columnLabel: String): Int? {
+    val i = this.getInt(columnLabel)
+    return if (this.wasNull()) null else i
+}
+
+internal fun ResultSet.getIntOrNull(columnIndex: Int): Int? {
+    val i = this.getInt(columnIndex)
+    return if (this.wasNull()) null else i
 }
 
 internal fun ResultSet.getBooleanOrNull(columnLabel: String): Boolean? {
