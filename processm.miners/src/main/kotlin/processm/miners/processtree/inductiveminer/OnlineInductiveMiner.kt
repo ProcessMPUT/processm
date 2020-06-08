@@ -23,6 +23,13 @@ class OnlineInductiveMiner : InductiveMiner() {
     private val dfg = DirectlyFollowsGraph()
 
     /**
+     * Auxiliary variable.
+     * Indicates whether the statistics of connections between the pair of activities
+     * have been modified during the data analysis.
+     */
+    private var changedStatistics = false
+
+    /**
      * Given log collection convert to process tree structure.
      */
     override fun processLog(logsCollection: LogInputStream) {
@@ -44,6 +51,9 @@ class OnlineInductiveMiner : InductiveMiner() {
      * Discover new process tree based on already stored tree and current directly-follows graph.
      */
     fun discover(log: LogInputStream) {
+        // Statistics changed
+        changedStatistics = true
+
         // Calculate diff and changes list
         val diff = dfg.discoverDiff(log)
 
@@ -58,6 +68,9 @@ class OnlineInductiveMiner : InductiveMiner() {
                 activities = activities,
                 dfg = dfg
             )
+
+            // New tree - statistics inside tree
+            changedStatistics = false
         } else if (diff.isNotEmpty()) {
             // Detect affected by change activities
             val affectedActivities = detectAffectedActivities(diff)
