@@ -5,16 +5,29 @@ import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.ProcessTreeSimplifier
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
+import processm.miners.processtree.inductiveminer.CutType.*
+import java.util.*
 
 /**
  * Online Inductive Miner
  */
 class OnlineInductiveMiner : InductiveMiner() {
+    companion object {
+        val operatorCuts = setOf(Parallel, Sequence, Exclusive, RedoLoop)
+        val activityCuts = setOf(Activity, OptionalActivity, RedoActivityAtLeastOnce, RedoActivityAtLeastZeroTimes)
+    }
+
     /**
      * Internal structure of process tree
      * Will be used as memory to be able to modify tree in real-time.
      */
     private lateinit var model: DirectlyFollowsSubGraph
+
+    /**
+     * Internal structure of process tree
+     * Will be used as memory to be able to modify tree in real-time.
+     */
+    private lateinit var processTree: ProcessTree
 
     /**
      * Directly-follows graph used by Inductive Miner
@@ -34,10 +47,14 @@ class OnlineInductiveMiner : InductiveMiner() {
      */
     override fun processLog(logsCollection: LogInputStream): ProcessTree {
         discover(logsCollection)
-        val tree = ProcessTree(assignChildrenToNode(model))
-        ProcessTreeSimplifier().simplify(tree)
 
-        return tree
+        // Check - apply statistics?
+        if (changedStatistics) propagateStatistics()
+        
+        processTree = ProcessTree(assignChildrenToNode(model))
+        ProcessTreeSimplifier().simplify(processTree)
+
+        return processTree
     }
 
     /**
@@ -114,5 +131,33 @@ class OnlineInductiveMiner : InductiveMiner() {
         }
 
         return affectedActivities
+    }
+
+    /**
+     * Propagation of statistics inside the model.
+     *
+     * Make changes of node value support.
+     * For activity, decide to use optionality / loops.
+     *
+     * BFS was used to prevent recursion.
+     */
+    private fun propagateStatistics() {
+        val stack = ArrayDeque<DirectlyFollowsSubGraph>()
+        stack.addAll(model.children)
+
+        while (stack.isNotEmpty()) {
+            val subGraph = stack.pop()
+
+            // Update statistics
+            subGraph.updateCurrentTraceSupport()
+
+            if (subGraph.detectedCut in operatorCuts) {
+                // Add children if node as one of cut
+                stack.addAll(subGraph.children)
+            } else if (subGraph.detectedCut in activityCuts) {
+                // Re-try analyze activity and decide which case we have
+                subGraph.detectActivityCutType()
+            }
+        }
     }
 }
