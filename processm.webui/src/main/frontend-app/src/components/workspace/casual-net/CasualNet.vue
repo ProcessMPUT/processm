@@ -71,6 +71,7 @@ interface DataNode extends Node {
 interface VisualNode extends Node {
   isBindingNode: boolean;
   bindingId?: string;
+  intermediateLinkId?: string;
   isStartNode?: boolean;
   isEndNode?: boolean;
 }
@@ -78,8 +79,10 @@ interface VisualNode extends Node {
 interface VisualLink extends SimulationLinkDatum<VisualNode> {
   isBindingLink: boolean;
   bindingId?: string;
+  intermediateLinkId?: string;
   isBetweenBindings: boolean;
   displayArrow?: boolean;
+  isLoopLink?: boolean;
 }
 
 @Component({
@@ -141,7 +144,7 @@ export default class CasualNet extends Vue {
         marginy: this.displayPreferences.nodeSize,
         acyclicer: "greedy"
       })
-      .setDefaultEdgeLabel(function() {
+      .setDefaultEdgeLabel(() => {
         return {};
       });
 
@@ -226,7 +229,7 @@ export default class CasualNet extends Vue {
       d3
         .forceLink()
         .id(d => (d as VisualNode).id)
-        .distance(0.1)
+        .distance(d => ((d as VisualLink).isLoopLink ? 5 : 0.1))
         .strength(d =>
           (d as VisualLink).isBindingLink
             ? 0
@@ -265,7 +268,51 @@ export default class CasualNet extends Vue {
       .selectAll("line")
       .data(this.bindingLinks)
       .join("path")
-      .attr("stroke-opacity", d => (d.isBindingLink ? 0.5 : 1));
+      .attr("stroke-opacity", d => (d.isBindingLink ? 0.5 : 1))
+      .on("mouseover", d => {
+        (d.isBindingLink
+          ? this.link.filter(link => link.bindingId == d.bindingId)
+          : this.link.filter(
+              link =>
+                !link.isBindingLink &&
+                link.intermediateLinkId == d.intermediateLinkId
+            )
+        ).attr("stroke", "#000");
+
+        (d.isBindingLink
+          ? this.node.filter(
+              node => node.isBindingNode && node.bindingId == d.bindingId
+            )
+          : this.node.filter(
+              node => node.intermediateLinkId == d.intermediateLinkId
+            )
+        ).attr("stroke", this.color());
+      })
+      .on("mouseout", d => {
+        (d.isBindingLink
+          ? this.link.filter(link => link.bindingId == d.bindingId)
+          : this.link.filter(
+              link =>
+                !link.isBindingLink &&
+                link.intermediateLinkId == d.intermediateLinkId
+            )
+        )
+          .transition()
+          .duration(500)
+          .attr("stroke", "#999");
+
+        (d.isBindingLink
+          ? this.node.filter(
+              node => node.isBindingNode && node.bindingId == d.bindingId
+            )
+          : this.node.filter(
+              node => node.intermediateLinkId == d.intermediateLinkId
+            )
+        )
+          .transition()
+          .duration(500)
+          .attr("stroke", "#fff");
+      });
 
     this.link
       .filter(d => d.displayArrow || false)
@@ -284,10 +331,9 @@ export default class CasualNet extends Vue {
           : this.node.filter(node => node.bindingId == d.bindingId);
         selectedNodes.attr("stroke", this.color());
         if (selectedNodes.size() > 1) {
-          const color = d.bindingId?.includes("output") ? "blue" : "red";
           this.link
             .filter(link => link.bindingId == d.bindingId)
-            .attr("stroke", color);
+            .attr("stroke", "#000");
         }
         this.nodeDetails
           .html(`ID: ${d.id}\nX: ${d.x}\nY: ${d.y}`)
@@ -462,15 +508,20 @@ export default class CasualNet extends Vue {
     bindings.forEach(binding => {
       const bindingId = `${nodeId}-${bindingType}-${binding.join("-")}`;
 
-      binding.forEach(bindingElement =>
+      binding.forEach(bindingElement => {
+        const intermediateLinkId =
+          bindingType == "output"
+            ? `${nodeId}-${bindingElement}`
+            : `${bindingElement}-${nodeId}`;
         this.bindingNodes.push({
           id: `${bindingElement}_${bindingId}`,
           isBindingNode: true,
           bindingId: bindingId,
+          intermediateLinkId,
           x: x,
           y: y
-        })
-      );
+        });
+      });
 
       for (let i = 0; i < binding.length - 1; i++) {
         this.bindingLinks.push({
@@ -486,6 +537,8 @@ export default class CasualNet extends Vue {
 
   createIntermediateLinks(sourceNode: DataNode, targetNode: DataNode) {
     let lastBoundNodeId = sourceNode.id;
+    const isLoopLink = sourceNode.id == targetNode.id;
+    const intermediateLinkId = `${sourceNode.id}-${targetNode.id}`;
 
     for (let i = 0; i < sourceNode.outputBindings.length; i++) {
       if (!sourceNode.outputBindings[i].includes(targetNode.id)) {
@@ -499,7 +552,9 @@ export default class CasualNet extends Vue {
         source: lastBoundNodeId,
         target: currentNodeId,
         isBindingLink: false,
-        isBetweenBindings: true
+        isBetweenBindings: true,
+        isLoopLink,
+        intermediateLinkId
       });
       lastBoundNodeId = currentNodeId;
     }
@@ -517,7 +572,9 @@ export default class CasualNet extends Vue {
         source: lastBoundNodeId,
         target: currentNodeId,
         isBindingLink: false,
-        isBetweenBindings: isBetweenBindings
+        isBetweenBindings: isBetweenBindings,
+        isLoopLink,
+        intermediateLinkId
       });
       isBetweenBindings = true;
       lastBoundNodeId = currentNodeId;
@@ -528,7 +585,9 @@ export default class CasualNet extends Vue {
       target: targetNode.id,
       isBindingLink: false,
       isBetweenBindings: true,
-      displayArrow: true
+      displayArrow: true,
+      isLoopLink,
+      intermediateLinkId
     } as VisualLink);
   }
 
