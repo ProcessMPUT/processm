@@ -10,6 +10,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
+import kotlin.properties.Delegates
 
 class DirectlyFollowsSubGraph(
     /**
@@ -81,9 +82,11 @@ class DirectlyFollowsSubGraph(
     /**
      * Current activities' trace support
      */
-    private val currentTraceSupport = dfg.maximumTraceSupport(activities)
+    private var currentTraceSupport by Delegates.notNull<Int>()
 
     init {
+        updateCurrentTraceSupport()
+
         if (initialEndActivities.isNullOrEmpty()) initialEndActivities = inferEndActivities()
         if (initialStartActivities.isNullOrEmpty()) initialStartActivities = inferStartActivities()
 
@@ -776,28 +779,41 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+     * Detect activity cut type.
+     *
+     * We must check which case we have:
+     * 1. Activity
+     * 2. ×(Activity, τ)
+     * 3. ⟲(Activity, τ)
+     * 4. ⟲(τ, Activity)
+     */
+    fun detectActivityCutType() {
+        assert(activities.size == 1)
+
+        // Activity duplicated in any trace?
+        val parentTraceSupport = parentSubGraph?.currentTraceSupport ?: 0
+        detectedCut = if (dfg.activitiesDuplicatedInTraces.contains(activities.first())) {
+            if (currentTraceSupport < parentTraceSupport) CutType.RedoActivityAtLeastZeroTimes
+            else CutType.RedoActivityAtLeastOnce
+        } else {
+            if (parentSubGraph?.detectedCut in cutsWithSupportValidated && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
+            else CutType.Activity
+        }
+    }
+
+    /**
+     * Update trace support based on list of activities in current subGraph.
+     */
+    fun updateCurrentTraceSupport() {
+        currentTraceSupport = dfg.maximumTraceSupport(activities)
+    }
+
+    /**
      * Detect cuts in graph
      */
     fun detectCuts() {
         if (canFinishCalculationsOnSubGraph()) {
-            assert(activities.size == 1)
-            // We must check which case we have:
-            // 1. Activity
-            // 2. ×(Activity, τ)
-            // 3. ⟲(Activity, τ)
-            // 4. ⟲(τ, Activity)
-
-            // Activity duplicated in any trace?
-            val parentTraceSupport = parentSubGraph?.currentTraceSupport ?: 0
-            detectedCut = if (dfg.activitiesDuplicatedInTraces.contains(activities.first())) {
-                if (currentTraceSupport < parentTraceSupport) CutType.RedoActivityAtLeastZeroTimes
-                else CutType.RedoActivityAtLeastOnce
-            } else {
-                if (parentSubGraph?.detectedCut in cutsWithSupportValidated && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
-                else CutType.Activity
-            }
-
-            return
+            return detectActivityCutType()
         }
 
         // Try to perform exclusive cut

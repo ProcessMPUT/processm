@@ -2,46 +2,21 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.ProcessTree
-import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.ProcessTreeSimplifier
-import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 
 /**
  * Inductive Miner version Offline, without log split inside.
  * Build a process tree based on directly-follows graph only.
- *
- * Without analyze statistics, it can generate not fully correct models.
- * Known issues:
- * * If the activity does not exist in all traces should be as ×(τ,activity).
- *   This IM will ignore [SilentActivity] and use only [ProcessTreeActivity].
  */
 class OfflineInductiveMiner : InductiveMiner() {
     /**
-     * Log which we should analyze
+     * Process log and build process tree based on it
      */
-    private lateinit var log: LogInputStream
-
-    /**
-     * Add reference to log file
-     */
-    override fun processLog(logsCollection: LogInputStream) {
-        this.log = logsCollection
-    }
-
-    /**
-     * Result as process tree model lazy loaded by [discoverProcessTreeModel] function.
-     */
-    override val result: ProcessTree by lazy { discoverProcessTreeModel() }
-
-    /**
-     * Discover process tree model.
-     * Build DFG and transform split subGraph to tree structure.
-     */
-    private fun discoverProcessTreeModel(): ProcessTree {
+    override fun processLog(logsCollection: LogInputStream): ProcessTree {
         // Build directly follows graph
         val dfg = DirectlyFollowsGraph()
-        dfg.discover(this.log)
+        dfg.discover(logsCollection)
 
         // DFG without activities - return empty process tree model
         if (dfg.startActivities.isEmpty() || dfg.endActivities.isEmpty()) return ProcessTree()

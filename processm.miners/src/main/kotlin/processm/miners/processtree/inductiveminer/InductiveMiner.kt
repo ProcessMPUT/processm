@@ -15,12 +15,7 @@ abstract class InductiveMiner {
     /**
      * Perform mining on a given log.
      */
-    abstract fun processLog(logsCollection: LogInputStream)
-
-    /**
-     * The mined model
-     */
-    abstract val result: ProcessTree
+    abstract fun processLog(logsCollection: LogInputStream): ProcessTree
 
     companion object {
         /**
