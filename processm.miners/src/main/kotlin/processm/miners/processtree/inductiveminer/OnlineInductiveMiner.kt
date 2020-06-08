@@ -144,7 +144,7 @@ class OnlineInductiveMiner : InductiveMiner() {
      */
     private fun propagateStatistics() {
         val stack = ArrayDeque<DirectlyFollowsSubGraph>()
-        stack.addAll(model.children)
+        stack.add(model)
 
         while (stack.isNotEmpty()) {
             val subGraph = stack.pop()
