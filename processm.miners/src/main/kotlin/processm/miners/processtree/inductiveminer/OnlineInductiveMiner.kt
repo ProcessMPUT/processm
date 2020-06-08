@@ -32,19 +32,12 @@ class OnlineInductiveMiner : InductiveMiner() {
     /**
      * Given log collection convert to process tree structure.
      */
-    override fun processLog(logsCollection: LogInputStream) {
+    override fun processLog(logsCollection: LogInputStream): ProcessTree {
         discover(logsCollection)
-    }
-
-    /**
-     * Result - built process tree based on given log.
-     */
-    override val result: ProcessTree by lazy {
-        // TODO: use previous built structure
         val tree = ProcessTree(assignChildrenToNode(model))
         ProcessTreeSimplifier().simplify(tree)
 
-        return@lazy tree
+        return tree
     }
 
     /**
