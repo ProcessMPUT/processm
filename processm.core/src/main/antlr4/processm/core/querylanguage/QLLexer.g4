@@ -10,8 +10,7 @@ tokens {STRING}
 
 SELECT      : 'select' ;
 WHERE       : 'where' ;
-GROUP       : 'group' ;
-BY          : 'by' ;
+GROUP_BY    : 'group' [ \t\r\n]+ 'by' ;
 ORDER_BY    : 'order' [ \t\r\n]+ 'by' ;
 LIMIT       : 'limit' ;
 OFFSET      : 'offset' ;

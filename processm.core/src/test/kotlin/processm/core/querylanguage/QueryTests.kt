@@ -204,7 +204,7 @@ class QueryTests {
     fun selectExpressionTest() {
         val query = Query(
             "select [e:conceptowy:name] + e:resource, max(timestamp) - \t \n min(timestamp)" +
-                    "group event by [e:conceptowy:name], e:resource"
+                    "group by [e:conceptowy:name], e:resource"
         )
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.selectAll[Scope.Log]!!)
@@ -604,7 +604,7 @@ class QueryTests {
 
     @Test
     fun groupScopeByClassifierTest() {
-        val query = Query("group trace by e:classifier:activity")
+        val query = Query("group by ^e:classifier:activity")
         assertTrue(query.isImplicitSelectAll)
         assertFalse(query.isImplicitGroupBy)
         assertFalse(query.isGroupBy[Scope.Log]!!)
@@ -619,14 +619,14 @@ class QueryTests {
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { it.isStandard })
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { it.isClassifier })
         assertEquals("classifier:activity", query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
-        assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
+        assertEquals(Scope.Trace, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
     }
 
     @Test
     fun groupEventByStandardAttributeTest() {
         val query = Query(
             """select t:name, e:name, sum(e:total)
-            group event by e:name"""
+            group by e:name"""
         )
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.isImplicitGroupBy)
@@ -652,7 +652,7 @@ class QueryTests {
     fun groupTraceByEventStandardAttributeTest() {
         val query = Query(
             """select e:name, sum(e:total)
-            group trace by e:name"""
+            group by ^e:name"""
         )
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.isImplicitGroupBy)
@@ -670,14 +670,15 @@ class QueryTests {
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { it.isStandard })
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { !it.isClassifier })
         assertEquals("concept:name", query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
-        assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
+        assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).scope)
+        assertEquals(Scope.Trace, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
     }
 
     @Test
     fun groupLogByEventStandardAttributeTest() {
         val query = Query(
             """select e:name, sum(e:total)
-            group log by e:name"""
+            group by ^^e:name"""
         )
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.isImplicitGroupBy)
@@ -695,7 +696,8 @@ class QueryTests {
         assertTrue(query.groupByStandardAttributes[Scope.Log]!!.all { it.isStandard })
         assertTrue(query.groupByStandardAttributes[Scope.Log]!!.all { !it.isClassifier })
         assertEquals("concept:name", query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).standardName)
-        assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).effectiveScope)
+        assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).scope)
+        assertEquals(Scope.Log, query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).effectiveScope)
     }
 
     @Test
@@ -705,40 +707,27 @@ class QueryTests {
         assertFalse(query.isImplicitGroupBy)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertTrue(query.isGroupBy[Scope.Trace]!!)
-        assertFalse(query.isGroupBy[Scope.Event]!!)
+        assertTrue(query.isGroupBy[Scope.Event]!!)
         assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
-        assertEquals(1, query.groupByStandardAttributes[Scope.Trace]!!.size)
-        assertEquals(0, query.groupByStandardAttributes[Scope.Event]!!.size)
+        assertEquals(0, query.groupByStandardAttributes[Scope.Trace]!!.size)
+        assertEquals(1, query.groupByStandardAttributes[Scope.Event]!!.size)
         assertEquals(0, query.groupByOtherAttributes[Scope.Log]!!.size)
         assertEquals(1, query.groupByOtherAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.groupByOtherAttributes[Scope.Event]!!.size)
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { it.isStandard })
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { it.isClassifier })
-        assertEquals("classifier:main", query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
-        assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
+        assertEquals("classifier:main", query.groupByStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
+        assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Event]!!.elementAt(0).effectiveScope)
         assertTrue(query.groupByOtherAttributes[Scope.Trace]!!.all { !it.isStandard })
         assertTrue(query.groupByOtherAttributes[Scope.Trace]!!.all { !it.isClassifier })
         assertEquals("branch", query.groupByOtherAttributes[Scope.Trace]!!.elementAt(0).name)
         assertEquals(Scope.Trace, query.groupByOtherAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
     }
 
-    /* This behavior was in fact wrong: there is a difference between group trace by l:name and an empty query -
-        the former returns one grouped trace for each log, and the latter returns plain traces. */
-    /*@Test
-    fun groupByMeaninglessScopeTest() {
-        val query = Query("group trace by l:name")
-        assertTrue(query.isImplicitSelectAll)
-        assertFalse(query.isImplicitGroupBy)
-        assertEquals(0, query.groupByStandardAttributes[Scope.Trace]!!.size)
-        assertEquals(0, query.groupByOtherAttributes[Scope.Trace]!!.size)
-
-        assertNotNull(query.warning)
-        assertTrue("group" in query.warning!!.message!!)
-    }*/
-
     @Test
     fun groupByImplicitFromSelectTest() {
         val query = Query("select avg(e:total), min(e:timestamp), max(e:timestamp)")
+        TODO("isImplicitSelectAll should be scope-dependent")
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.selectAll[Scope.Log]!!)
         assertFalse(query.selectAll[Scope.Trace]!!)
@@ -761,8 +750,9 @@ class QueryTests {
     }
 
     @Test
-    fun groupByImplitFromOrderByTest() {
+    fun groupByImplicitFromOrderByTest() {
         val query = Query("order by avg(e:total), min(e:timestamp), max(e:timestamp)")
+        TODO("isImplicitSelectAll should be scope-dependent")
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.selectAll[Scope.Log]!!)
         assertFalse(query.selectAll[Scope.Trace]!!)
@@ -850,7 +840,7 @@ class QueryTests {
 
     @Test
     fun orderByExpressionTest() {
-        val query = Query("group trace by e:name order by min(^e:timestamp)")
+        val query = Query("group by ^e:name order by min(^e:timestamp)")
         assertEquals(0, query.orderByExpressions[Scope.Log]!!.size)
         assertEquals(1, query.orderByExpressions[Scope.Trace]!!.size)
         assertEquals(OrderDirection.Ascending, query.orderByExpressions[Scope.Trace]!![0].direction)
@@ -866,7 +856,7 @@ class QueryTests {
     @Test
     fun orderByExpression2Test() {
         val query = Query(
-            """group trace by e:name
+            """group by ^e:name
             |order by [l:basePrice] * avg(^e:total) * 3.141592 desc""".trimMargin()
         )
         assertEquals(0, query.orderByExpressions[Scope.Log]!!.size)

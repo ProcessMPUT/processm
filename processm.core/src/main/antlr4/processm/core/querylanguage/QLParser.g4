@@ -15,12 +15,9 @@ select      :                               # select_all_implicit
 
 where       : WHERE logic_expr ;
 
-group_by    : GROUP BY id_list          # group_trace_by
-            | GROUP SCOPE BY id_list    # group_scope_by
-            ;
+group_by    : GROUP_BY id_list ;
 
-order_by    : ORDER_BY column_list_with_order
-            ;
+order_by    : ORDER_BY column_list_with_order ;
 
 limit       : LIMIT limit_number (',' limit_number)*;
 

@@ -277,7 +277,11 @@ class Query(val query: String) {
                 do {
                     if (_groupByStandardAttributes[scope]!!.size != 0 || _groupByOtherAttributes[scope]!!.size != 0) {
                         groupByEnabled = true
-                        if (it in groupByMap[scope]!!)
+                        // FIXME: the below check is done in O(n) time; replace it with a O(1) function
+                        // Ignore hoisting in the below check
+                        if (groupByMap[scope]!!.any { inMap ->
+                                it.scope == inMap.scope && (it.isStandard && it.standardName == inMap.standardName || !it.isStandard && it.name == inMap.name)
+                            })
                             return@filter false // valid use
                     }
                     scope = scope!!.upper
@@ -393,36 +397,19 @@ class Query(val query: String) {
 
         // region PQL group by clause
 
-        override fun exitGroup_trace_by(ctx: QLParser.Group_trace_byContext?) {
-            handleGroupByIdList(Scope.Trace, ctx!!.id_list().sourceInterval)
+        override fun exitGroup_by(ctx: QLParser.Group_byContext?) {
+            handleGroupByIdList(ctx!!.id_list().sourceInterval)
         }
 
-        override fun exitGroup_scope_by(ctx: QLParser.Group_scope_byContext?) {
-            val scope = Scope.parse(ctx!!.SCOPE().text)
-            handleGroupByIdList(scope, ctx.id_list().sourceInterval)
-        }
-
-        private fun handleGroupByIdList(scope: Scope, interval: Interval) {
-            val standardAttributes = _groupByStandardAttributes[scope]!!
-            val otherAttributes = _groupByOtherAttributes[scope]!!
-
+        private fun handleGroupByIdList(interval: Interval) {
             tokens.get(interval.a, interval.b)
                 .filter { it.type == QLParser.ID }
                 .map { Attribute(it.text, it.line, it.charPositionInLine) }
-                /*.filter {
-                    if (it.effectiveScope < scope) {
-                        errorListener.emitWarning(
-                            IllegalArgumentException(
-                                "Line ${it.line} position ${it.charPositionInLine}: Use of the attribute $it with effective scope ${it.effectiveScope} in group by clause with scope $scope is meaningless. Attribute dropped."
-                            )
-                        )
-                        false
-                    } else true
-                }*/.forEach {
+                .forEach {
                     if (it.isStandard)
-                        standardAttributes.add(it)
+                        _groupByStandardAttributes[it.effectiveScope]!!.add(it)
                     else
-                        otherAttributes.add(it)
+                        _groupByOtherAttributes[it.effectiveScope]!!.add(it)
                 }
         }
 
