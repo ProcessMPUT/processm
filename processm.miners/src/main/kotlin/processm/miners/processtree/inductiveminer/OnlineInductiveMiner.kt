@@ -49,13 +49,19 @@ class OnlineInductiveMiner : InductiveMiner() {
 
     /**
      * Discover new process tree based on already stored tree and current directly-follows graph.
+     *
+     * `increaseTraces` parameter is responsible for the direction of changes
+     * When true - adding new trace. Otherwise, remove trace from model's memory.
      */
-    fun discover(log: LogInputStream) {
+    fun discover(log: LogInputStream, increaseTraces: Boolean = true) {
         // Statistics changed
         changedStatistics = true
 
         // Calculate diff and changes list
-        val diff = dfg.discoverDiff(log)
+        val diff = when (increaseTraces) {
+            true -> dfg.discoverDiff(log)
+            false -> dfg.discoverRemovedPartOfGraph(log)
+        }
 
         if (diff == null) {
             val activities = dfg.graph.rows.toHashSet().also {
