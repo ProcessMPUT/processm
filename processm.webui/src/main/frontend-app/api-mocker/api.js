@@ -81,11 +81,11 @@ const componentsData = [
           id: "a",
           depth: 0,
           outputBindings: [
-            ["b"],
             ["c"],
+            ["d", "b", "c"],
             ["b", "d"],
-            ["c", "d"],
-            ["d", "b", "c"]
+            ["b"],
+            ["c", "d"]
           ],
           inputBindings: []
         },
@@ -96,7 +96,7 @@ const componentsData = [
           id: "e",
           depth: 2,
           outputBindings: [],
-          inputBindings: [["b"], ["c"], ["b", "d"], ["c", "d"], ["c", "b", "d"]]
+          inputBindings: [["c", "d"], ["b"], ["c", "b", "d"], ["c"], ["b", "d"]]
         }
       ]
     }

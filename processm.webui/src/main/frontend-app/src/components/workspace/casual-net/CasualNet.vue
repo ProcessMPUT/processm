@@ -33,7 +33,7 @@
   text-align: left;
   padding: 4px;
   font: 12px sans-serif;
-  background: lightsteelblue;
+  background: var(--v-primary-lighten3);
   border: 0px;
   border-radius: 4px;
   pointer-events: none;
@@ -83,6 +83,7 @@ interface VisualLink extends SimulationLinkDatum<VisualNode> {
   isBetweenBindings: boolean;
   displayArrow?: boolean;
   isLoopLink?: boolean;
+  bindingLayersSpan?: number;
 }
 
 @Component({
@@ -219,13 +220,17 @@ export default class CasualNet extends Vue {
       d3
         .forceLink()
         .id(d => (d as VisualNode).id)
-        .distance(d => ((d as VisualLink).isLoopLink ? 5 : 0.1))
+        .distance(d =>
+          (d as VisualLink).isLoopLink
+            ? 5
+            : 0.1 * ((d as VisualLink).bindingLayersSpan || 1)
+        )
         .strength(d =>
           (d as VisualLink).isBindingLink
             ? 0
             : (d as VisualLink).isBetweenBindings
-            ? 2
-            : 1
+            ? 1 / ((d as VisualLink).bindingLayersSpan || 1)
+            : 0.3
         )
     );
 
@@ -513,7 +518,7 @@ export default class CasualNet extends Vue {
         this.bindingNodes.push({
           id: `${bindingElement}_${bindingId}`,
           isBindingNode: true,
-          bindingId: bindingId,
+          bindingId,
           intermediateLinkId,
           x: node.x,
           y: node.y
@@ -547,11 +552,31 @@ export default class CasualNet extends Vue {
   }
 
   createIntermediateLinks(sourceNode: DataNode, targetNode: DataNode) {
-    let lastBoundNodeId = sourceNode.id;
     const isLoopLink = sourceNode.id == targetNode.id;
     const intermediateLinkId = `${sourceNode.id}-${targetNode.id}`;
+    const nodesOnCurrentLayer: Set<string> = new Set();
+    let lastBoundOutputNodeId = sourceNode.id;
+    let lastBoundInputNodeId = targetNode.id;
+    let bindingLayersSpan = 1;
+
+    sourceNode.outputBindings.sort(
+      (a: string[], b: string[]) => a.length - b.length
+    );
 
     for (let i = 0; i < sourceNode.outputBindings.length; i++) {
+      if (
+        sourceNode.outputBindings[i].some(bindingNode =>
+          nodesOnCurrentLayer.has(bindingNode)
+        )
+      ) {
+        bindingLayersSpan++;
+        nodesOnCurrentLayer.clear();
+      }
+
+      sourceNode.outputBindings[i].forEach(bindingNode =>
+        nodesOnCurrentLayer.add(bindingNode)
+      );
+
       if (!sourceNode.outputBindings[i].includes(targetNode.id)) {
         continue;
       }
@@ -560,43 +585,68 @@ export default class CasualNet extends Vue {
         sourceNode.id
       }-output-${sourceNode.outputBindings[i].join("-")}`;
       this.bindingLinks.push({
-        source: lastBoundNodeId,
+        source: lastBoundOutputNodeId,
         target: currentNodeId,
         isBindingLink: false,
         isBetweenBindings: true,
         isLoopLink,
-        intermediateLinkId
+        intermediateLinkId,
+        bindingLayersSpan
       });
-      lastBoundNodeId = currentNodeId;
+      bindingLayersSpan = 0;
+      lastBoundOutputNodeId = currentNodeId;
     }
 
-    let isBetweenBindings = false;
-    for (let i = targetNode.inputBindings.length; i > 0; i--) {
-      if (!targetNode.inputBindings[i - 1].includes(sourceNode.id)) {
+    nodesOnCurrentLayer.clear();
+    bindingLayersSpan = 1;
+    let displayArrow = true;
+
+    targetNode.inputBindings.sort(
+      (a: string[], b: string[]) => a.length - b.length
+    );
+
+    for (let i = 0; i < targetNode.inputBindings.length; i++) {
+      if (
+        targetNode.inputBindings[i].some(bindingNode =>
+          nodesOnCurrentLayer.has(bindingNode)
+        )
+      ) {
+        bindingLayersSpan++;
+        nodesOnCurrentLayer.clear();
+      }
+
+      targetNode.inputBindings[i].forEach(bindingNode =>
+        nodesOnCurrentLayer.add(bindingNode)
+      );
+
+      if (!targetNode.inputBindings[i].includes(sourceNode.id)) {
         continue;
       }
 
       const currentNodeId = `${sourceNode.id}_${
         targetNode.id
-      }-input-${targetNode.inputBindings[i - 1].join("-")}`;
+      }-input-${targetNode.inputBindings[i].join("-")}`;
       this.bindingLinks.push({
-        source: lastBoundNodeId,
-        target: currentNodeId,
+        source: currentNodeId,
+        target: lastBoundInputNodeId,
         isBindingLink: false,
-        isBetweenBindings: isBetweenBindings,
+        isBetweenBindings: true,
         isLoopLink,
-        intermediateLinkId
+        intermediateLinkId,
+        bindingLayersSpan,
+        displayArrow
       });
-      isBetweenBindings = true;
-      lastBoundNodeId = currentNodeId;
+      displayArrow = false;
+      bindingLayersSpan = 0;
+      lastBoundInputNodeId = currentNodeId;
     }
 
     this.bindingLinks.push({
-      source: lastBoundNodeId,
-      target: targetNode.id,
+      source: lastBoundOutputNodeId,
+      target: lastBoundInputNodeId,
       isBindingLink: false,
-      isBetweenBindings: true,
-      displayArrow: true,
+      isBetweenBindings: false,
+      displayArrow: false,
       isLoopLink,
       intermediateLinkId
     } as VisualLink);
