@@ -192,9 +192,40 @@ class DirectlyFollowsSubGraph(
     }
 
     /**
+     * Modify silent activity inside exclusive choice.
+     *
+     * If subGraph already contain τ, ignore action to prevent adding second τ.
+     * If subGraph contain τ but shouldn't - remove it.
+     */
+    fun modifySilentActivityInsideExclusiveChoice() {
+        val subGraphWithSilentActivity =
+            children.firstOrNull { it.activities.size == 1 && it.activities.first() is SilentActivity }
+
+        // Append silent activity if sum of child support < parent support and not contain silent activity
+        if (children.sumBy { it.currentTraceSupport } < (parentSubGraph?.currentTraceSupport ?: 0)) {
+            if (subGraphWithSilentActivity === null) {
+                children.add(
+                    DirectlyFollowsSubGraph(
+                        activities = setOf(SilentActivity()),
+                        dfg = dfg,
+                        initialStartActivities = currentStartActivities,
+                        initialEndActivities = currentEndActivities,
+                        parentSubGraph = this
+                    )
+                )
+            }
+        } else {
+            // Remove silent activity if inside exclusive choice cut
+            if (subGraphWithSilentActivity != null) {
+                children.remove(subGraphWithSilentActivity)
+            }
+        }
+    }
+
+    /**
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
      */
-    private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>, analyzeChildSupport: Boolean = false) {
+    private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>) {
         val activityGroups = TreeMap<Int, HashSet<ProcessTreeActivity>>()
         // Add each activity to designated group
         assignment.forEach { (activity, groupId) ->
@@ -212,21 +243,6 @@ class DirectlyFollowsSubGraph(
                     parentSubGraph = this
                 )
             )
-        }
-
-        if (analyzeChildSupport) {
-            // Append silent activity if sum of child support < parent support
-            if (children.sumBy { it.currentTraceSupport } < (parentSubGraph?.currentTraceSupport ?: 0)) {
-                children.add(
-                    DirectlyFollowsSubGraph(
-                        activities = setOf(SilentActivity()),
-                        dfg = dfg,
-                        initialStartActivities = currentStartActivities,
-                        initialEndActivities = currentEndActivities,
-                        parentSubGraph = this
-                    )
-                )
-            }
         }
     }
 
@@ -820,7 +836,9 @@ class DirectlyFollowsSubGraph(
         val connectedComponents = calculateExclusiveCut()
         if (connectedComponents !== null) {
             detectedCut = CutType.Exclusive
-            return splitIntoSubGraphs(connectedComponents, analyzeChildSupport = true)
+            splitIntoSubGraphs(connectedComponents)
+            modifySilentActivityInsideExclusiveChoice()
+            return
         }
 
         // Sequence cut
