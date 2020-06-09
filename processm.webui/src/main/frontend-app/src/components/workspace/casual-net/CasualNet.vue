@@ -136,9 +136,10 @@ export default class CasualNet extends Vue {
     edgeArrowSize: 12,
     nodeLabelSize: 16
   };
+  private nodesLayout: Record<string, { x: number; y: number }> = {};
 
   mounted() {
-    const g = new dagre.graphlib.Graph()
+    const graph = new dagre.graphlib.Graph()
       .setGraph({
         marginx: this.displayPreferences.nodeSize,
         marginy: this.displayPreferences.nodeSize,
@@ -155,14 +156,14 @@ export default class CasualNet extends Vue {
           (node: Node) => node.id == successor
         );
         if (targetNode != null) {
-          g.setEdge(dataNode.id, targetNode.id);
+          graph.setEdge(dataNode.id, targetNode.id);
           this.createIntermediateLinks(dataNode, targetNode);
         }
       });
     });
 
     this.data.nodes.forEach((dataNode: DataNode) => {
-      g.setNode(dataNode.id, { label: dataNode.id });
+      graph.setNode(dataNode.id, { label: dataNode.id });
     });
 
     const isLayoutPredefined =
@@ -172,32 +173,33 @@ export default class CasualNet extends Vue {
       );
 
     if (!isLayoutPredefined) {
-      dagre.layout(g);
-      const layoutWidth = g.graph().width || this.width,
-        layoutHeight = g.graph().height || this.height,
+      dagre.layout(graph);
+      const layoutWidth = graph.graph().width || this.width,
+        layoutHeight = graph.graph().height || this.height,
         scaleX = this.width / layoutWidth,
         scaleY = this.height / layoutHeight,
         offsetX = Math.max(this.width - layoutWidth * scaleX, 0) / 2,
         offsetY = Math.max(this.height - layoutHeight * scaleY, 0) / 2;
-      g.nodes().forEach(nodeId => {
-        const node = g.node(nodeId);
-        node.x = node.x * scaleX + offsetX;
-        node.y = node.y * scaleY + offsetY;
+      graph.nodes().forEach(nodeId => {
+        const node = graph.node(nodeId);
+        this.nodesLayout[nodeId] = {
+          x: node.x * scaleX + offsetX,
+          y: node.y * scaleY + offsetY
+        };
       });
     } else {
-      g.nodes().forEach(nodeId => {
-        Object.assign(g.node(nodeId), {
-          x: this.data.layout?.find(n => n.id == nodeId)?.x || 0,
-          y: this.data.layout?.find(n => n.id == nodeId)?.y || 0
-        });
+      this.data.layout?.forEach(nodeLayout => {
+        this.nodesLayout[nodeLayout.id] = {
+          x: nodeLayout.x,
+          y: nodeLayout.y
+        };
       });
     }
 
     this.data.nodes.forEach(
       (dataNode: DataNode, index: number, allDataNodes: DataNode[]) => {
-        const layoutNode = g.node(dataNode.id),
-          x = layoutNode.x,
-          y = layoutNode.y,
+        const x = this.nodesLayout[dataNode.id].x,
+          y = this.nodesLayout[dataNode.id].y,
           node = {
             id: dataNode.id,
             isBindingNode: false,
@@ -207,20 +209,8 @@ export default class CasualNet extends Vue {
             isEndNode: index == allDataNodes.length - 1
           };
         this.bindingNodes.push(node);
-        this.createBindingElements(
-          node.id,
-          dataNode.outputBindings,
-          "output",
-          x,
-          y
-        );
-        this.createBindingElements(
-          node.id,
-          dataNode.inputBindings,
-          "input",
-          x,
-          y
-        );
+        this.createBindingElements(node.id, dataNode.outputBindings, "output");
+        this.createBindingElements(node.id, dataNode.inputBindings, "input");
       }
     );
 
@@ -413,6 +403,14 @@ export default class CasualNet extends Vue {
       ?.links(this.bindingLinks);
   }
 
+  calculateDirectionAngle(
+    from: { x: number; y: number },
+    to: { x: number; y: number }
+  ) {
+    const angle = Math.atan2(from.y - to.y, from.x - to.x);
+    return ((angle + 1.5 * Math.PI) % (2 * Math.PI)) - Math.PI;
+  }
+
   convertToAbsolutePercentage(relativePercentage: number, elementSize: number) {
     const minDimension = Math.min(
       (this.$refs.svg as Element).clientHeight,
@@ -501,12 +499,11 @@ export default class CasualNet extends Vue {
   createBindingElements(
     nodeId: string,
     bindings: string[][],
-    bindingType: string,
-    x: number,
-    y: number
+    bindingType: string
   ) {
     bindings.forEach(binding => {
       const bindingId = `${nodeId}-${bindingType}-${binding.join("-")}`;
+      const node = this.nodesLayout[nodeId];
 
       binding.forEach(bindingElement => {
         const intermediateLinkId =
@@ -518,10 +515,24 @@ export default class CasualNet extends Vue {
           isBindingNode: true,
           bindingId: bindingId,
           intermediateLinkId,
-          x: x,
-          y: y
+          x: node.x,
+          y: node.y
         });
       });
+
+      if (bindingType == "output") {
+        binding.sort(
+          (a: string, b: string) =>
+            this.calculateDirectionAngle(node, this.nodesLayout[a]) -
+            this.calculateDirectionAngle(node, this.nodesLayout[b])
+        );
+      } else {
+        binding.sort(
+          (a: string, b: string) =>
+            this.calculateDirectionAngle(this.nodesLayout[a], node) -
+            this.calculateDirectionAngle(this.nodesLayout[b], node)
+        );
+      }
 
       for (let i = 0; i < binding.length - 1; i++) {
         this.bindingLinks.push({
