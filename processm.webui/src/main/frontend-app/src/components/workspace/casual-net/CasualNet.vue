@@ -86,6 +86,11 @@ interface VisualLink extends SimulationLinkDatum<VisualNode> {
   bindingLayersSpan?: number;
 }
 
+interface Point {
+  x: number;
+  y: number;
+}
+
 @Component({
   directives: {
     resize
@@ -137,7 +142,7 @@ export default class CasualNet extends Vue {
     edgeArrowSize: 12,
     nodeLabelSize: 16
   };
-  private nodesLayout: Record<string, { x: number; y: number }> = {};
+  private nodesLayout: Record<string, Point> = {};
 
   mounted() {
     const graph = new dagre.graphlib.Graph()
@@ -199,16 +204,14 @@ export default class CasualNet extends Vue {
 
     this.data.nodes.forEach(
       (dataNode: DataNode, index: number, allDataNodes: DataNode[]) => {
-        const x = this.nodesLayout[dataNode.id].x,
-          y = this.nodesLayout[dataNode.id].y,
-          node = {
-            id: dataNode.id,
-            isBindingNode: false,
-            fx: x,
-            fy: y,
-            isStartNode: index == 0,
-            isEndNode: index == allDataNodes.length - 1
-          };
+        const node = {
+          id: dataNode.id,
+          isBindingNode: false,
+          fx: this.nodesLayout[dataNode.id].x,
+          fy: this.nodesLayout[dataNode.id].y,
+          isStartNode: index == 0,
+          isEndNode: index == allDataNodes.length - 1
+        };
         this.bindingNodes.push(node);
         this.createBindingElements(node.id, dataNode.outputBindings, "output");
         this.createBindingElements(node.id, dataNode.inputBindings, "input");
@@ -408,10 +411,7 @@ export default class CasualNet extends Vue {
       ?.links(this.bindingLinks);
   }
 
-  calculateDirectionAngle(
-    from: { x: number; y: number },
-    to: { x: number; y: number }
-  ) {
+  calculateDirectionAngle(from: Point, to: Point) {
     const angle = Math.atan2(from.y - to.y, from.x - to.x);
     return ((angle + 1.5 * Math.PI) % (2 * Math.PI)) - Math.PI;
   }
