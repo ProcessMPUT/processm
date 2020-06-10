@@ -606,7 +606,9 @@ class QueryTests {
     fun groupScopeByClassifierTest() {
         val query = Query("group by ^e:classifier:activity")
         assertTrue(query.isImplicitSelectAll)
-        assertFalse(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertTrue(query.isGroupBy[Scope.Trace]!!)
         assertFalse(query.isGroupBy[Scope.Event]!!)
@@ -629,7 +631,9 @@ class QueryTests {
             group by e:name"""
         )
         assertFalse(query.isImplicitSelectAll)
-        assertFalse(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertFalse(query.isGroupBy[Scope.Trace]!!)
         assertTrue(query.isGroupBy[Scope.Event]!!)
@@ -655,7 +659,9 @@ class QueryTests {
             group by ^e:name"""
         )
         assertFalse(query.isImplicitSelectAll)
-        assertFalse(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertTrue(query.isGroupBy[Scope.Trace]!!)
         assertFalse(query.isGroupBy[Scope.Event]!!)
@@ -681,7 +687,9 @@ class QueryTests {
             group by ^^e:name"""
         )
         assertFalse(query.isImplicitSelectAll)
-        assertFalse(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
         assertTrue(query.isGroupBy[Scope.Log]!!)
         assertFalse(query.isGroupBy[Scope.Trace]!!)
         assertFalse(query.isGroupBy[Scope.Event]!!)
@@ -704,7 +712,9 @@ class QueryTests {
     fun groupByImplicitScopeTest() {
         val query = Query("group by e:c:main, [t:branch]")
         assertTrue(query.isImplicitSelectAll)
-        assertFalse(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertTrue(query.isGroupBy[Scope.Trace]!!)
         assertTrue(query.isGroupBy[Scope.Event]!!)
@@ -727,12 +737,13 @@ class QueryTests {
     @Test
     fun groupByImplicitFromSelectTest() {
         val query = Query("select avg(e:total), min(e:timestamp), max(e:timestamp)")
-        TODO("isImplicitSelectAll should be scope-dependent")
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.selectAll[Scope.Log]!!)
         assertFalse(query.selectAll[Scope.Trace]!!)
         assertFalse(query.selectAll[Scope.Event]!!)
-        assertTrue(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertTrue(query.isImplicitGroupBy[Scope.Event]!!)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertFalse(query.isGroupBy[Scope.Trace]!!)
         assertFalse(query.isGroupBy[Scope.Event]!!)
@@ -752,12 +763,13 @@ class QueryTests {
     @Test
     fun groupByImplicitFromOrderByTest() {
         val query = Query("order by avg(e:total), min(e:timestamp), max(e:timestamp)")
-        TODO("isImplicitSelectAll should be scope-dependent")
         assertFalse(query.isImplicitSelectAll)
         assertFalse(query.selectAll[Scope.Log]!!)
         assertFalse(query.selectAll[Scope.Trace]!!)
         assertFalse(query.selectAll[Scope.Event]!!)
-        assertTrue(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertTrue(query.isImplicitGroupBy[Scope.Event]!!)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertFalse(query.isGroupBy[Scope.Trace]!!)
         assertFalse(query.isGroupBy[Scope.Event]!!)
@@ -774,6 +786,32 @@ class QueryTests {
         // It is meaningless to order results here, as there is returned only one entity for each scope
         assertTrue(query.warning is IllegalArgumentException)
         assertTrue("implicit" in (query.warning as IllegalArgumentException).message!!)
+    }
+
+    @Test
+    fun groupByImplicitMultiScopesTest() {
+        val query = Query("select avg(t:total), min(e:timestamp), max(e:timestamp)")
+        assertFalse(query.isImplicitSelectAll)
+        assertFalse(query.selectAll[Scope.Log]!!)
+        assertFalse(query.selectAll[Scope.Trace]!!)
+        assertFalse(query.selectAll[Scope.Event]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertTrue(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertTrue(query.isImplicitGroupBy[Scope.Event]!!)
+        assertFalse(query.isGroupBy[Scope.Log]!!)
+        assertFalse(query.isGroupBy[Scope.Trace]!!)
+        assertFalse(query.isGroupBy[Scope.Event]!!)
+        assertEquals(0, query.selectExpressions[Scope.Log]!!.size)
+        assertEquals(1, query.selectExpressions[Scope.Trace]!!.size)
+        assertEquals(2, query.selectExpressions[Scope.Event]!!.size)
+        assertTrue(query.selectExpressions[Scope.Event]!!.all { !it.isTerminal })
+        assertTrue(query.selectExpressions[Scope.Event]!!.all { it is Function && it.functionType == FunctionType.Aggregation })
+        assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
+        assertEquals(0, query.groupByStandardAttributes[Scope.Trace]!!.size)
+        assertEquals(0, query.groupByStandardAttributes[Scope.Event]!!.size)
+        assertEquals(0, query.groupByOtherAttributes[Scope.Log]!!.size)
+        assertEquals(0, query.groupByOtherAttributes[Scope.Trace]!!.size)
+        assertEquals(0, query.groupByOtherAttributes[Scope.Event]!!.size)
     }
 
     @Test
@@ -1012,7 +1050,9 @@ class QueryTests {
         )
         assertEquals(1, query.selectStandardAttributes[Scope.Event]!!.size)
         assertEquals(Expression.empty, query.whereExpression)
-        assertFalse(query.isImplicitGroupBy)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertFalse(query.isGroupBy[Scope.Trace]!!)
         assertFalse(query.isGroupBy[Scope.Event]!!)

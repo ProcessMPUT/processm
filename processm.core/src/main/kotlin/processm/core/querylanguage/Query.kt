@@ -4,6 +4,7 @@ import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.misc.Interval
 import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.ParseTreeWalker
+import org.jetbrains.annotations.NotNull
 import java.util.*
 import kotlin.collections.LinkedHashSet
 import kotlin.math.round
@@ -117,8 +118,11 @@ class Query(val query: String) {
     // endregion
 
     // region group by clause
-    // However PQL does not allow for many group by clauses, as of version 0.1, I expect that the support will be
-    // added in a future version. So the below collections hold separate sets of attributes for each scope.
+    private val _isImplicitGroupBy: EnumMap<Scope, Boolean> = EnumMap<Scope, Boolean>(Scope::class.java).apply {
+        put(Scope.Log, false)
+        put(Scope.Trace, false)
+        put(Scope.Event, false)
+    }
     private val _groupByStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> =
         EnumMap<Scope, LinkedHashSet<Attribute>>(Scope::class.java).apply {
             put(Scope.Log, LinkedHashSet())
@@ -146,8 +150,7 @@ class Query(val query: String) {
     /**
      * Indicates whether the implicit out-of-scope group by applies.
      */
-    var isImplicitGroupBy: Boolean = false
-        private set
+    var isImplicitGroupBy: Map<Scope, Boolean> = Collections.unmodifiableMap(_isImplicitGroupBy)
 
     /**
      * Indicates whether the group by clause occurs on particular scopes.
@@ -296,23 +299,19 @@ class Query(val query: String) {
             }
 
     private fun validateImplicitGroupBy(toValidate: Iterable<Expression>) {
-        val anyAggregation = toValidate
-            .any { it.filter { it is Function && it.functionType == FunctionType.Aggregation }.any() }
+        val scopesWithAggregation = EnumSet.noneOf(Scope::class.java)
+        for (expr in toValidate) {
+            scopesWithAggregation.addAll(
+                expr.filter { it is Function && it.functionType == FunctionType.Aggregation }.map { it.effectiveScope }
+            )
+        }
 
-        if (anyAggregation) {
+        for (scope in scopesWithAggregation) {
             // implicit group by for sure
-            isImplicitGroupBy = true
+            _isImplicitGroupBy[scope] = true
             isImplicitSelectAll = false
-            if (_selectAll[Scope.Log] == true || _selectAll[Scope.Trace] == true || _selectAll[Scope.Event] == true) {
-                // query uses explicit select all
-                errorListener.delayedThrow(
-                    IllegalArgumentException(
-                        "Use of the explicit select all clause with the implicit group by clause is meaningless."
-                    )
-                )
-            }
 
-            val orderByExpression = _orderByExpressions.values.flatten().firstOrNull()
+            val orderByExpression = _orderByExpressions[scope]!!.firstOrNull()
             if (orderByExpression !== null) {
                 errorListener.emitWarning(
                     IllegalArgumentException(
@@ -320,24 +319,40 @@ class Query(val query: String) {
                                 + "by clause with the implicit group by clause is meaningless. The order by clause is removed."
                     )
                 )
-                _orderByExpressions.values.forEach { it.clear() }
+                _orderByExpressions[scope]!!.clear()
             }
 
-            val nonaggregated = toValidate
-                .flatMap {
-                    it.filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
-                        .filterIsInstance<Attribute>()
-                        .asIterable()
-                }
-            if (nonaggregated.any()) {
-                // nonaggregated attributes exist
-                errorListener.delayedThrow(
-                    IllegalArgumentException(
-                        "Use of an aggregation function without a group by clause requires all attributes to be aggregated. "
-                                + "The attributes ${nonaggregated.joinToString(", ")} are not supplied to an aggregation function."
+
+            var currentOrLowerScope = scope
+            do {
+                if (_selectAll[currentOrLowerScope] == true) {
+                    // query uses scoped select all or explicit select all
+                    errorListener.delayedThrow(
+                        IllegalArgumentException(
+                            "Use of the explicit select all clause with the implicit group by clause is meaningless."
+                        )
                     )
-                )
-            }
+                }
+
+                val nonaggregated = toValidate
+                    .flatMap {
+                        it.filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
+                            .filterIsInstance<Attribute>()
+                            .filter { it.effectiveScope == scope }
+                            .asIterable()
+                    }
+                if (nonaggregated.any()) {
+                    // nonaggregated attributes exist
+                    errorListener.delayedThrow(
+                        IllegalArgumentException(
+                            "Use of an aggregation function without a group by clause requires all attributes on the same and the lower scopes to be aggregated. "
+                                    + "The attributes ${nonaggregated.joinToString(", ")} are not supplied to an aggregation function."
+                        )
+                    )
+                }
+
+                currentOrLowerScope = currentOrLowerScope.lower
+            } while (currentOrLowerScope != null)
         }
     }
 

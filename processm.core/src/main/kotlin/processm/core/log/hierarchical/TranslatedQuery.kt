@@ -68,7 +68,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // region SQL query generators
     // region select ids
     private fun idQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
-        assert(!pql.isImplicitGroupBy)
+        assert(!pql.isImplicitGroupBy[scope]!!)
         assert(pql.isGroupBy[Scope.Log] == false)
         assert(scope < Scope.Trace || pql.isGroupBy[Scope.Trace] == false)
         assert(scope < Scope.Event || pql.isGroupBy[Scope.Event] == false)
@@ -209,7 +209,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     // region select entity
     private fun entityQuery(scope: Scope): SQLQuery = SQLQuery {
-        assert(!pql.isImplicitGroupBy)
+        assert(!pql.isImplicitGroupBy[scope]!!)
         assert(pql.isGroupBy[Scope.Log] == false)
 
         selectEntity(scope, it)
@@ -346,7 +346,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
     // region select expressions
     private fun expressionsQuery(scope: Scope): SQLQuery = SQLQuery {
-        assert(!pql.isImplicitGroupBy)
+        assert(!pql.isImplicitGroupBy[scope]!!)
         assert(pql.isGroupBy[Scope.Log] == false)
         assert(scope < Scope.Trace || pql.isGroupBy[Scope.Trace] == false)
         assert(scope < Scope.Event || pql.isGroupBy[Scope.Event] == false)
@@ -389,7 +389,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // region select groups of ids
     private fun groupIdsQuery(scope: Scope, logId: Int?, traceId: Long?): SQLQuery = SQLQuery {
         assert(
-            pql.isImplicitGroupBy
+            pql.isImplicitGroupBy[scope]!!
                     || pql.isGroupBy[Scope.Log]!!
                     || scope == Scope.Trace && pql.isGroupBy[Scope.Trace]!!
                     || scope == Scope.Event && pql.isGroupBy[Scope.Event]!!
@@ -421,9 +421,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private fun selectGroupIds(scope: Scope, sql: MutableSQLQuery, logId: Int?): Pair<Int, Int> {
-        val upperScopeGroupBy = pql.isImplicitGroupBy
-                || scope > Scope.Log && pql.isGroupBy[Scope.Log] == true
-                || scope > Scope.Trace && pql.isGroupBy[Scope.Trace] == true
+        val upperScopeGroupBy =
+            scope > Scope.Log && (pql.isImplicitGroupBy[Scope.Log] == true || pql.isGroupBy[Scope.Log] == true)
+                    || scope > Scope.Trace && (pql.isImplicitGroupBy[Scope.Trace] == true || pql.isGroupBy[Scope.Trace] == true)
 
         assert(upperScopeGroupBy || pql.isGroupBy[scope]!!)
 
@@ -637,9 +637,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     // region select grouped ids
     private fun <T> groupedIdsQuery(scope: Scope, outerScopeGroup: T): SQLQuery = SQLQuery {
         assert(
-            pql.isImplicitGroupBy
-                    || pql.isGroupBy[Scope.Log]!! && scope > Scope.Log
-                    || pql.isGroupBy[Scope.Trace]!! && scope > Scope.Trace
+            (pql.isImplicitGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Log]!!) && scope > Scope.Log ||
+                    (pql.isImplicitGroupBy[Scope.Trace]!! || pql.isGroupBy[Scope.Trace]!!) && scope > Scope.Trace
         )
 
         it.query.append("SELECT array_agg(id) AS ids FROM (")
@@ -659,7 +658,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         it.query.append(") sub(id, ord)")
 
-        if (!pql.isImplicitGroupBy) {
+        if (!pql.isImplicitGroupBy[scope]!!) {
             it.query.append(" GROUP BY ord")
             it.query.append(" ORDER BY ord")
         }
@@ -873,9 +872,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         val topEntry: TopEntry by lazy(NONE) {
             when {
-                !pql.isImplicitGroupBy && !pql.isGroupBy[Scope.Log]!! -> RegularTopEntry()
-                !pql.isImplicitGroupBy && pql.isGroupBy[Scope.Log]!! -> GroupingTopEntry()
-                pql.isImplicitGroupBy -> GroupedTopEntry()
+                !pql.isImplicitGroupBy[Scope.Log]!! && !pql.isGroupBy[Scope.Log]!! -> RegularTopEntry()
+                pql.isImplicitGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Log]!! -> GroupingTopEntry()
                 else -> throw IllegalArgumentException()
             }
         }
@@ -900,7 +898,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         inner class RegularTopEntry internal constructor() : TopEntry() {
             init {
-                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isImplicitGroupBy[Scope.Log]!!)
                 assert(!pql.isGroupBy[Scope.Log]!!)
             }
 
@@ -910,7 +908,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val logs: LinkedHashMap<Int, LogEntry> by lazy(NONE) {
                 LinkedHashMap<Int, LogEntry>().apply {
                     connection.use {
-                        val nextCtor = if (pql.isGroupBy[Scope.Trace]!!) ::GroupingLogEntry else ::RegularLogEntry
+                        val nextCtor =
+                            if (pql.isImplicitGroupBy[Scope.Trace]!! || pql.isGroupBy[Scope.Trace]!!) ::GroupingLogEntry else ::RegularLogEntry
                         for (logId in queryIds.execute(it).toIdList<Int>())
                             this[logId] = nextCtor(logId)
                     }
@@ -927,7 +926,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         open inner class GroupingTopEntry internal constructor() : TopEntry() {
             protected open fun assert() {
-                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isImplicitGroupBy[Scope.Log]!!)
                 assert(pql.isGroupBy[Scope.Log]!!)
             }
 
@@ -964,15 +963,15 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val queryExpressions: SQLQuery by lazy(NONE) { groupExpressionsQuery(Scope.Log, null) }
         }
 
-        inner class GroupedTopEntry internal constructor() : GroupingTopEntry() {
-            // There is only one group -> groupId=0
-            override fun assert() {
-                assert(pql.isImplicitGroupBy)
-                assert(!pql.isGroupBy[Scope.Log]!!)
-            }
-
-            override val queryIds: SQLQuery by lazy(NONE) { groupedIdsQuery(Scope.Log, null) }
-        }
+//        inner class GroupedTopEntry internal constructor() : GroupingTopEntry() {
+//            // There is only one group -> groupId=0
+//            override fun assert() {
+//                assert(pql.isImplicitGroupBy[Scope.Log]!!)
+//                assert(!pql.isGroupBy[Scope.Log]!!)
+//            }
+//
+//            override val queryIds: SQLQuery by lazy(NONE) { groupedIdsQuery(Scope.Log, null) }
+//        }
 
         abstract inner class LogEntry internal constructor() : Entry() {
             /**
@@ -984,7 +983,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         inner class RegularLogEntry internal constructor(logId: Int) : LogEntry() {
             init {
-                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isImplicitGroupBy[Scope.Log]!!)
+                assert(!pql.isImplicitGroupBy[Scope.Trace]!!)
                 assert(!pql.isGroupBy[Scope.Log]!!)
                 assert(!pql.isGroupBy[Scope.Trace]!!)
             }
@@ -994,7 +994,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override val traces: LinkedHashMap<Long, TraceEntry> by lazy(NONE) {
                 LinkedHashMap<Long, TraceEntry>().apply {
                     connection.use {
-                        val nextCtor = if (pql.isGroupBy[Scope.Event]!!) ::GroupingTraceEntry else ::RegularTraceEntry
+                        val nextCtor =
+                            if (pql.isImplicitGroupBy[Scope.Event]!! || pql.isGroupBy[Scope.Event]!!) ::GroupingTraceEntry else ::RegularTraceEntry
                         for (traceId in queryIds.execute(it).toIdList<Long>())
                             this[traceId] = nextCtor(logId, traceId)
                     }
@@ -1009,9 +1010,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         open inner class GroupingLogEntry internal constructor(logId: Int) : LogEntry() {
             protected open fun assert() {
-                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isImplicitGroupBy[Scope.Log]!!)
                 assert(!pql.isGroupBy[Scope.Log]!!)
-                assert(pql.isGroupBy[Scope.Trace]!!)
+                assert(pql.isImplicitGroupBy[Scope.Trace]!! || pql.isGroupBy[Scope.Trace]!!)
             }
 
             init {
@@ -1047,7 +1048,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         inner class GroupedLogEntry internal constructor(logGroup: IntArray) : GroupingLogEntry(-1) {
             override fun assert() {
-                assert(pql.isImplicitGroupBy || pql.isGroupBy[Scope.Log]!!)
+                assert(pql.isImplicitGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Log]!!)
                 assert(!pql.isGroupBy[Scope.Trace]!!)
             }
 
@@ -1067,7 +1068,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         inner class RegularTraceEntry internal constructor(logId: Int, traceId: Long) : TraceEntry() {
             init {
-                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isImplicitGroupBy[Scope.Log]!!)
+                assert(!pql.isImplicitGroupBy[Scope.Trace]!!)
+                assert(!pql.isImplicitGroupBy[Scope.Event]!!)
                 assert(!pql.isGroupBy[Scope.Log]!!)
                 assert(!pql.isGroupBy[Scope.Trace]!!)
                 assert(!pql.isGroupBy[Scope.Event]!!)
@@ -1089,10 +1092,11 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
 
         open inner class GroupingTraceEntry internal constructor(logId: Int?, traceId: Long) : TraceEntry() {
             protected open fun assert() {
-                assert(!pql.isImplicitGroupBy)
+                assert(!pql.isImplicitGroupBy[Scope.Log]!!)
+                assert(!pql.isImplicitGroupBy[Scope.Trace]!!)
                 assert(!pql.isGroupBy[Scope.Log]!!)
                 assert(!pql.isGroupBy[Scope.Trace]!!)
-                assert(pql.isGroupBy[Scope.Event]!!)
+                assert(pql.isImplicitGroupBy[Scope.Event]!! || pql.isGroupBy[Scope.Event]!!)
             }
 
             init {
@@ -1126,7 +1130,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             GroupingTraceEntry(logId, -1L) {
 
             override fun assert() {
-                assert(pql.isImplicitGroupBy || pql.isGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Trace]!!)
+                assert(pql.isImplicitGroupBy[Scope.Log]!! || pql.isImplicitGroupBy[Scope.Trace]!! || pql.isImplicitGroupBy[Scope.Event]!! || pql.isGroupBy[Scope.Log]!! || pql.isGroupBy[Scope.Trace]!!)
                 assert(!pql.isGroupBy[Scope.Event]!!)
             }
 
