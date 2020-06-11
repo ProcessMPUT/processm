@@ -275,8 +275,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(21.98, trace.attributes["avg(trace:cost:total)"]?.value)
         assertEquals(47.0, trace.attributes["max(trace:cost:total)"]?.value)
 
-        assertEquals(1, trace.events.count())
-        assertEquals(2298, trace.events.first().count)
+        assertTrue(trace.events.count() > 1)
+        assertEquals(2298, trace.events.sumBy { it.count })
     }
 
     @Test
@@ -324,7 +324,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         val stream = q(
             "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp), count(e:time:timestamp) " +
                     "where l:id='$uuid' " +
-                    "group event by [e:concept:name], e:resource"
+                    "group by [e:concept:name], e:resource"
         )
         assertEquals(1, stream.count())
 
@@ -543,6 +543,12 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         TODO()
         // select non-existent non-standard attribute
         // duplicated attributes/expressions
+    }
+
+    @Test
+    fun selectEmpty() {
+        val stream = q("where 0=1")
+        assertEquals(0, stream.count())
     }
 
     @Test
@@ -911,7 +917,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupScopeByClassifierTest() {
-        val stream = q("where l:id='$uuid' group trace by [e:classifier:concept:name+lifecycle:transition]")
+        val stream = q("where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -972,7 +978,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupEventByStandardAttributeTest() {
-        val stream = q("select t:name, e:name, sum(e:total) where l:id='$uuid' group event by e:name")
+        val stream = q("select t:name, e:name, sum(e:total) where l:id='$uuid' group by e:name")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -999,40 +1005,207 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     }
 
     @Test
-    fun groupLogByEventStandardAttributeTest() {
-        val stream = q("select e:name, sum(e:total) where l:name='JournalReview' group log by e:name")
-        assertTrue(stream.count() >= 1)
-        TODO()
+    fun groupLogByEventStandardAttributeAndImplicitGroupEventByTest() {
+        val stream = q("select sum(e:total) where l:name='JournalReview' group by ^^e:name")
+        assertTrue(stream.count() == 1)
+
+        val log = stream.first()
+        assertTrue(log.count >= 1)
+
+        assertTrue(log.traces.count() > 1)
+        assertEquals(101, log.traces.sumBy { it.count } / log.count)
+
+        for (trace in log.traces) {
+            assertEquals(1, trace.events.count())
+
+            val event = trace.events.first()
+            assertTrue(event.count >= 1)
+            assertTrue((event.attributes["sum(event:cost:total)"]!!.value as Double) in (1.0 * event.count)..(1.08 * event.count + 1e-6))
+        }
+    }
+
+    @Test
+    fun groupLogByEventStandardAndGroupEventByStandardAttributeAttributeTest() {
+        val stream = q("select e:name, sum(e:total) where l:name='JournalReview' group by ^^e:name, e:name")
+        assertTrue(stream.count() == 1)
+
+        val log = stream.first()
+        assertTrue(log.count >= 1)
+
+        assertTrue(log.traces.count() > 1)
+        assertEquals(101, log.traces.sumBy { it.count } / log.count)
+
+        for (trace in log.traces) {
+            assertTrue(trace.events.count() >= 1)
+
+            for (event in trace.events) {
+                assertTrue(event.count >= 1)
+                assertTrue((event.attributes["sum(event:cost:total)"]!!.value as Double) in (1.0 * event.count)..(1.08 * event.count))
+            }
+        }
     }
 
     @Test
     fun groupByImplicitScopeTest() {
-        val stream = q("group by e:c:main, [t:branch]")
-        TODO()
+        val stream = q("where l:id='$uuid' group by c:Resource")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(101, log.traces.count())
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        standardAndAllAttributesMatch(log, log)
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= -1)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() in 1..50)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() >= 1)
+            for (event in trace.events) {
+                assertTrue(event.count >= 1)
+                assertNull(event.conceptName)
+                assertNull(event.conceptInstance)
+                assertNull(event.costCurrency)
+                assertNull(event.costTotal)
+                assertNull(event.orgGroup)
+                assertNull(event.orgRole)
+                assertTrue(event.orgResource in orgResources)
+                assertNull(event.timeTimestamp)
+                assertEquals(1, event.attributes.size)
+                assertTrue(event.attributes["org:resource"]!!.value in orgResources)
+            }
+        }
     }
 
     @Test
     fun groupByOuterScopeTest() {
-        val stream = q("group trace by l:name")
+        val stream = q("select t:min(l:name)")
         TODO()
     }
 
     @Test
     fun groupByImplicitFromSelectTest() {
-        val stream = q("select avg(e:total), min(e:timestamp), max(e:timestamp)")
-        TODO()
+        val stream = q(
+            "select l:*, t:*, avg(e:total), min(e:timestamp), max(e:timestamp) where l:name matches '(?i)^journalreview$' limit l:1"
+        )
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(101, log.traces.count())
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertNotNull(log.identityId)
+        standardAndAllAttributesMatch(log, log)
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= -1)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() in 1..50)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertEquals(1, trace.events.count())
+            val event = trace.events.first()
+            assertTrue(event.count >= 1)
+            assertNull(event.conceptName)
+            assertNull(event.conceptInstance)
+            assertNull(event.costCurrency)
+            assertNull(event.costTotal)
+            assertNull(event.orgGroup)
+            assertNull(event.orgRole)
+            assertNull(event.orgResource)
+            assertNull(event.timeTimestamp)
+            assertEquals(3, event.attributes.size)
+            assertTrue((event.attributes["avg(event:cost:total)"]!!.value as Double) in 1.0..1.08)
+            assertTrue(begin.isBefore(event.attributes["min(event:time:timestamp)"]!!.value as Instant))
+            assertTrue(end.isAfter(event.attributes["max(event:time:timestamp)"]!!.value as Instant))
+        }
     }
 
     @Test
-    fun groupByImplitFromOrderByTest() {
-        val stream = q("order by avg(e:total), min(e:timestamp), max(e:timestamp)")
-        TODO()
+    fun groupByImplicitFromOrderByTest() {
+        val stream = q("where l:id='$uuid' order by avg(e:total), min(e:timestamp), max(e:timestamp)")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(101, log.traces.count())
+        assertEquals("JournalReview", log.conceptName)
+        assertEquals("standard", log.lifecycleModel)
+        assertEquals(uuid.toString(), log.identityId)
+        standardAndAllAttributesMatch(log, log)
+
+        for (trace in log.traces) {
+            val conceptName = Integer.parseInt(trace.conceptName)
+            assertTrue(conceptName >= -1)
+            assertTrue(conceptName <= 100)
+            assertEquals("EUR", trace.costCurrency)
+            assertTrue(trace.costTotal === null || trace.costTotal!!.toInt() in 1..50)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertEquals(1, trace.events.count())
+            val event = trace.events.first()
+            assertTrue(event.count >= 1)
+            assertNull(event.conceptName)
+            assertNull(event.conceptInstance)
+            assertNull(event.costCurrency)
+            assertNull(event.costTotal)
+            assertNull(event.orgGroup)
+            assertNull(event.orgRole)
+            assertNull(event.orgResource)
+            assertNull(event.timeTimestamp)
+            assertEquals(0, event.attributes.size)
+        }
     }
 
     @Test
     fun groupByImplicitWithHoistingTest() {
-        val stream = q("select avg(^^e:total), min(^^e:timestamp), max(^^e:timestamp)")
-        TODO()
+        val stream = q("select avg(^^e:total), min(^^e:timestamp), max(^^e:timestamp) where l:id='$uuid'")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertNull(log.conceptName)
+        assertNull(log.lifecycleModel)
+        assertNull(log.identityId)
+        assertTrue((log.attributes["avg(^^event:cost:total)"]!!.value as Double) in 1.0..1.08)
+        assertTrue(begin.isBefore(log.attributes["min(^^event:time:timestamp)"]!!.value as Instant))
+        assertTrue(end.isAfter(log.attributes["max(^^event:time:timestamp)"]!!.value as Instant))
+        standardAndAllAttributesMatch(log, log)
+
+        assertEquals(101, log.traces.count())
+        for (trace in log.traces) {
+            assertNull(trace.conceptName)
+            assertNull(trace.costCurrency)
+            assertNull(trace.costTotal)
+            assertNull(trace.identityId)
+            assertFalse(trace.isEventStream)
+            standardAndAllAttributesMatch(log, trace)
+
+            assertTrue(trace.events.count() >= 1)
+            for (event in trace.events) {
+                assertTrue(event.count >= 1)
+                assertNull(event.conceptName)
+                assertNull(event.conceptInstance)
+                assertNull(event.costCurrency)
+                assertNull(event.costTotal)
+                assertNull(event.orgGroup)
+                assertNull(event.orgRole)
+                assertNull(event.orgResource)
+                assertNull(event.timeTimestamp)
+                assertEquals(0, event.attributes.size)
+            }
+        }
     }
 
     @Test
@@ -1110,13 +1283,13 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun orderByExpressionTest() {
-        val stream = q("group trace by e:name order by min(^e:timestamp)")
+        val stream = q("group by ^e:name order by min(^e:timestamp)")
         TODO()
     }
 
     @Test
     fun orderByExpression2Test() {
-        val stream = q("group trace by e:name order by [l:basePrice] * avg(^e:total) * 3.141592 desc")
+        val stream = q("group by ^e:name order by [l:basePrice] * avg(^e:total) * 3.141592 desc")
         TODO()
     }
 

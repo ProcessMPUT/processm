@@ -55,11 +55,16 @@ class Query(val query: String) {
         get() = errorListener.warning
 
     // region select clause
+    private val _isImplicitSelectAll: EnumMap<Scope, Boolean> = EnumMap<Scope, Boolean>(Scope::class.java).apply {
+        put(Scope.Log, false)
+        put(Scope.Trace, false)
+        put(Scope.Event, false)
+    }
+
     /**
      * Whether the select all clause is not specified explicitly, but it is implied by the query structure.
      */
-    var isImplicitSelectAll: Boolean = false
-        private set
+    val isImplicitSelectAll: Map<Scope, Boolean> = Collections.unmodifiableMap(_isImplicitSelectAll)
 
     private val _selectAll: MutableMap<Scope, Boolean?> = EnumMap<Scope, Boolean>(Scope::class.java)
 
@@ -67,7 +72,7 @@ class Query(val query: String) {
      * Indicates whether to select all (standard and non-standard) attributes on particular scopes.
      */
     val selectAll: Map<Scope, Boolean?> = object : Map<Scope, Boolean?> by _selectAll {
-        override fun get(key: Scope): Boolean = _selectAll[key] ?: isImplicitSelectAll
+        override fun get(key: Scope): Boolean = _selectAll[key] ?: _isImplicitSelectAll[key]!!
     }
 
     private val _selectStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> =
@@ -212,7 +217,7 @@ class Query(val query: String) {
     }
 
     private fun validateSelectAll(scope: Scope, flag: Boolean?) {
-        if (!isImplicitSelectAll && flag == null)
+        if (!isImplicitSelectAll[scope]!! && flag == null)
             return
 
         val standard = _selectStandardAttributes[scope]!!
@@ -233,6 +238,15 @@ class Query(val query: String) {
 
 
     private fun validateGroupByAttributes() {
+        // replace implicit select all with grouping attributes
+        for (scope in _isImplicitSelectAll.filter { it.value && isGroupBy[it.key]!! }.map { it.key }) {
+            _isImplicitSelectAll[scope] = !(
+                    _selectStandardAttributes[scope]!!.addAll(_groupByStandardAttributes[scope]!!.filter { it.hoistingPrefix == "" })
+                            or
+                            _selectOtherAttributes[scope]!!.addAll(_groupByOtherAttributes[scope]!!.filter { it.hoistingPrefix == "" })
+                    )
+        }
+
         validateExplicitGroupBy(_selectStandardAttributes, _groupByStandardAttributes)
         validateExplicitGroupBy(_selectOtherAttributes, _groupByOtherAttributes)
         val groupByAttributes = _groupByStandardAttributes.mapValues {
@@ -247,7 +261,7 @@ class Query(val query: String) {
         }
         validateExplicitGroupBy(orderByExpressions, groupByAttributes)
 
-        if (isGroupBy[Scope.Log] == false && isGroupBy[Scope.Trace] == false && isGroupBy[Scope.Event] == false) {
+        if (isGroupBy[Scope.Log] == false || isGroupBy[Scope.Trace] == false || isGroupBy[Scope.Event] == false) {
             // possible implicit group by
             val selectAllExpressions = sequence {
                 _selectStandardAttributes.values.forEach { yieldAll(it) }
@@ -302,14 +316,17 @@ class Query(val query: String) {
         val scopesWithAggregation = EnumSet.noneOf(Scope::class.java)
         for (expr in toValidate) {
             scopesWithAggregation.addAll(
-                expr.filter { it is Function && it.functionType == FunctionType.Aggregation }.map { it.effectiveScope }
+                expr
+                    .filter { it is Function && it.functionType == FunctionType.Aggregation }
+                    .map { it.effectiveScope }
+                    .filterNot { isGroupBy[it]!! } // exclude active group by clauses
             )
         }
 
         for (scope in scopesWithAggregation) {
             // implicit group by for sure
             _isImplicitGroupBy[scope] = true
-            isImplicitSelectAll = false
+            _isImplicitSelectAll[scope] = false
 
             val orderByExpression = _orderByExpressions[scope]!!.firstOrNull()
             if (orderByExpression !== null) {
@@ -346,7 +363,7 @@ class Query(val query: String) {
                     errorListener.delayedThrow(
                         IllegalArgumentException(
                             "Use of an aggregation function without a group by clause requires all attributes on the same and the lower scopes to be aggregated. "
-                                    + "The attributes ${nonaggregated.joinToString(", ")} are not supplied to an aggregation function."
+                                    + "The attribute(s) ${nonaggregated.joinToString(", ")} is/are not supplied to an aggregation function."
                         )
                     )
                 }
@@ -361,7 +378,9 @@ class Query(val query: String) {
 
     private inner class Listener : QLParserBaseListener() {
         override fun exitSelect_all_implicit(ctx: QLParser.Select_all_implicitContext?) {
-            isImplicitSelectAll = true
+            _isImplicitSelectAll[Scope.Log] = true
+            _isImplicitSelectAll[Scope.Trace] = true
+            _isImplicitSelectAll[Scope.Event] = true
         }
 
         override fun exitSelect_all(ctx: QLParser.Select_allContext?) {
@@ -373,11 +392,7 @@ class Query(val query: String) {
         override fun enterScoped_select_all(ctx: QLParser.Scoped_select_allContext?) {
             val token = ctx!!.SCOPE()
             val scope = Scope.parse(token.text)
-            when (scope) {
-                Scope.Log -> _selectAll[Scope.Log] = true
-                Scope.Trace -> _selectAll[Scope.Trace] = true
-                Scope.Event -> _selectAll[Scope.Event] = true
-            }
+            _selectAll[scope] = true
         }
 
         override fun exitArith_expr_root(ctx: QLParser.Arith_expr_rootContext?) {
