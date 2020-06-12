@@ -651,8 +651,8 @@ class QueryTests {
     fun groupScopeByClassifierTest() {
         val query = Query("group by ^e:classifier:activity")
         assertTrue(query.isImplicitSelectAll[Scope.Log]!!)
-        assertTrue(query.isImplicitSelectAll[Scope.Trace]!!)
-        assertTrue(query.isImplicitSelectAll[Scope.Event]!!)
+        assertFalse(query.isImplicitSelectAll[Scope.Trace]!!)
+        assertFalse(query.isImplicitSelectAll[Scope.Event]!!)
         assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
         assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
         assertFalse(query.isImplicitGroupBy[Scope.Event]!!)

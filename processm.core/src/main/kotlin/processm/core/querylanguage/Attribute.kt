@@ -132,6 +132,12 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
         }
     }
 
+    fun dropHoisting(): Attribute = Attribute(
+        if (isStandard) "$scope:$standardName" else "[$scope:$name]",
+        line,
+        charPositionInLine
+    )
+
     override fun equals(other: Any?): Boolean =
         if (other !is Attribute) false
         else this.toString() == other.toString()

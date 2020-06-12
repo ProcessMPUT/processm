@@ -4,7 +4,6 @@ import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.misc.Interval
 import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.ParseTreeWalker
-import org.jetbrains.annotations.NotNull
 import java.util.*
 import kotlin.collections.LinkedHashSet
 import kotlin.math.round
@@ -240,11 +239,13 @@ class Query(val query: String) {
     private fun validateGroupByAttributes() {
         // replace implicit select all with grouping attributes
         for (scope in _isImplicitSelectAll.filter { it.value && isGroupBy[it.key]!! }.map { it.key }) {
-            _isImplicitSelectAll[scope] = !(
-                    _selectStandardAttributes[scope]!!.addAll(_groupByStandardAttributes[scope]!!.filter { it.hoistingPrefix == "" })
-                            or
-                            _selectOtherAttributes[scope]!!.addAll(_groupByOtherAttributes[scope]!!.filter { it.hoistingPrefix == "" })
-                    )
+            var currentOrLowerScope: Scope? = scope
+            do {
+                _isImplicitSelectAll[currentOrLowerScope] = false
+                currentOrLowerScope = currentOrLowerScope!!.lower
+            } while (currentOrLowerScope !== null)
+            _groupByStandardAttributes[scope]!!.forEach { _selectStandardAttributes[it.scope]!!.add(it.dropHoisting()) }
+            _groupByOtherAttributes[scope]!!.forEach { _selectOtherAttributes[it.scope]!!.add(it.dropHoisting()) }
         }
 
         validateExplicitGroupBy(_selectStandardAttributes, _groupByStandardAttributes)
@@ -529,7 +530,7 @@ class Query(val query: String) {
             if (hoisted !== null)
                 errorListener.delayedThrow(
                     IllegalArgumentException(
-                        "Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select and the order by clauses, except in an aggregate function."
+                        "Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select and the order by clauses, except in an aggregation function."
                     )
                 )
         }

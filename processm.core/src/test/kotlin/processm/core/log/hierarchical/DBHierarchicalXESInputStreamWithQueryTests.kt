@@ -543,6 +543,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         TODO()
         // select non-existent non-standard attribute
         // duplicated attributes/expressions
+        // hoist classifier to the log scope
     }
 
     @Test
@@ -917,7 +918,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupScopeByClassifierTest() {
-        val stream = q("where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
+        val stream = q("select [e:classifier:concept:name+lifecycle:transition] where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1291,7 +1292,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun orderByExpressionTest() {
-        val stream = q("where l:id='$uuid' group by ^e:name order by min(^e:timestamp)")
+        val stream = q("select min(timestamp) where l:id='$uuid' group by ^e:name order by min(^e:timestamp)")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1299,7 +1300,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
         var lastTimestamp = begin
         for (trace in log.traces) {
-            val minTimestamp = trace.events.map { it.timeTimestamp!! }.asIterable().min()!!
+            val minTimestamp =
+                trace.events.map { it.attributes["min(event:time:timestamp)"]!!.value as Instant }.min()!!
             assertTrue(!lastTimestamp.isAfter(minTimestamp))
 
             lastTimestamp = minTimestamp
@@ -1347,7 +1349,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             "accept,accept,collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1",
             "accept,accept,collect reviews,collect reviews,decide,decide,get review 3,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1,time-out 2",
             "collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out X",
-            "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3}",
+            "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3",
             "collect reviews,collect reviews,decide,decide,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out 2",
             "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3,time-out X,time-out X,time-out X",
             "accept,accept,collect reviews,collect reviews,decide,decide,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1,time-out 2",
