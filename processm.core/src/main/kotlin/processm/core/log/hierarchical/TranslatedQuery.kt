@@ -419,6 +419,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                     sql,
                     logId,
                     Type.Any,
+                    Int.MAX_VALUE,
                     { it.query.append("array_agg(") },
                     {
                         pql.orderByExpressions[attribute.scope]!!.toSQL(
@@ -509,7 +510,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             for (attribute in pql.selectStandardAttributes[scope]!!) {
                 if (attribute.isClassifier)
                     continue
-                attribute.toSQL(sql, null, Type.Any)
+                attribute.toSQL(sql, null, Type.Any, Int.MAX_VALUE)
                 append(", ")
             }
 
@@ -530,7 +531,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         for (attribute in pql.selectStandardAttributes[scope]!!) {
             if (attribute.isClassifier)
                 continue
-            attribute.toSQL(sql, null, Type.Any)
+            attribute.toSQL(sql, null, Type.Any, Int.MAX_VALUE)
             append(", ")
         }
         setLength(length - 2)
@@ -1108,6 +1109,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         sql: MutableSQLQuery,
         logId: Int?,
         expectedType: Type,
+        limitCount: Int,
         prefix: ((sql: MutableSQLQuery) -> Unit)? = null,
         suffix: ((sql: MutableSQLQuery) -> Unit)? = null,
         ignoreHoisting: Boolean = false
@@ -1117,6 +1119,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         // FIXME: move classifier expansion to database
         // expand classifiers
         val attributes = if (this.isClassifier) cache.expandClassifier(logId!!, this) else listOf(this)
+        require(attributes.size <= limitCount) {
+            "Line $line position $charPositionInLine: Classifier expansion yields ${attributes.size} but $limitCount allowed."
+        }
 
         with(sql.query) {
             for (attribute in attributes) {
@@ -1151,8 +1156,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             fun walk(expression: IExpression, expectedType: Type) {
                 when (expression) {
                     is Attribute -> expression.toSQL(
-                        sql, null,
-                        if (expression.type != Type.Unknown) expression.type else expectedType,
+                        sql, null, if (expression.type != Type.Unknown) expression.type else expectedType, 1,
                         ignoreHoisting = ignoreHoisting
                     )
                     is Literal<*> -> {
@@ -1290,7 +1294,9 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
                         if (printDirection && expression.direction == OrderDirection.Descending)
                             it.query.append(" DESC")
                     }
-                    orderByCount += expression.base.toSQL(sql, logId, Type.Any, null, suffix, ignoreHoisting)
+                    orderByCount += expression.base.toSQL(
+                        sql, logId, Type.Any, Int.MAX_VALUE, null, suffix, ignoreHoisting
+                    )
                 } else {
                     expression.base.toSQL(sql, Type.Any, ignoreHoisting)
                     ++orderByCount

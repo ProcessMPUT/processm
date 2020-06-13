@@ -539,11 +539,100 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     }
 
     @Test
+    fun nonexistentCustomAttributesTest() {
+        val nonexistentAttributes = listOf(
+            "select [🦠] where l:id='$uuid'",
+            "select [result] where l:id='$uuid'" // exists in some events
+        )
+
+        val validResults = mutableMapOf(null to 0, "accept" to 0, "reject" to 0)
+
+        for (query in nonexistentAttributes) {
+            val stream = q(query)
+            assertEquals(1, stream.count())
+
+            val log = stream.first()
+            for (trace in log.traces) {
+                for (event in trace.events) {
+                    assertNull(event.attributes["🦠"])
+
+                    val result = event.attributes["result"]?.value as String?
+                    assertTrue(result in validResults.keys)
+                    validResults.compute(result) { _, v -> v!! + 1 }
+                }
+            }
+        }
+
+        assertTrue(validResults[null]!! > 0)
+        assertTrue(validResults["accept"]!! > 0)
+        assertTrue(validResults["reject"]!! > 0)
+
+        // the result attribute is used in reviews only
+        val zeroMatch = q("where l:id='$uuid' and e:name=[result]")
+        assertEquals(0, zeroMatch.count())
+    }
+
+    @Test
     fun errorHandlingTest() {
-        TODO()
-        // select non-existent non-standard attribute
-        // duplicated attributes/expressions
-        // hoist classifier to the log scope
+        val nonexistentClassifiers = listOf(
+            "order by c:nonexistent",
+            "group by [^c:nonstandard nonexisting]"
+        )
+
+        for (query in nonexistentClassifiers) {
+            val ex = assertFailsWith<IllegalArgumentException> {
+                val log = q(query).first()
+                val trace = log.traces.first()
+                trace.events.first() // throws exception
+            }
+            assertTrue("not found" in ex.message!!)
+            assertTrue(ex.message!!.contains("classifier", true))
+        }
+    }
+
+    @Test
+    fun invalidUseOfClassifiers() {
+        assertFailsWith<IllegalArgumentException> {
+            val log =
+                q("where [e:classifier:concept:name+lifecycle:transition] in ('acceptcomplete', 'rejectcomplete') and l:id='$uuid'").first()
+            val trace = log.traces.first()
+            trace.events.first() // exception is thrown here
+        }.apply {
+            assertNotNull(message)
+            assertTrue("in" in message!!)
+        }
+
+        val validUse = q("select [e:c:Event Name] where l:id='$uuid'")
+        assertEquals(1, validUse.count())
+
+        val log = validUse.first()
+        assertEquals(101, log.traces.count())
+        for (trace in log.traces) {
+            assertTrue(trace.events.count() >= 1)
+            for (event in trace.events) {
+                assertEquals(1, event.attributes.count())
+                assertTrue(event.conceptName in eventNames)
+            }
+        }
+    }
+
+    @Test
+    fun duplicateAttributes() {
+        val stream = q("select e:name, [e:c:Event Name] where l:id='$uuid'")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(101, log.traces.count())
+        for (trace in log.traces) {
+            assertTrue(trace.events.count() >= 1)
+            for (event in trace.events) {
+                assertTrue(event.conceptName in eventNames)
+                assertEquals(1, event.attributes.count())
+                assertEquals("concept:name", event.attributes.values.first().key)
+
+                standardAndAllAttributesMatch(log, event)
+            }
+        }
     }
 
     @Test
@@ -918,7 +1007,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupScopeByClassifierTest() {
-        val stream = q("select [e:classifier:concept:name+lifecycle:transition] where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
+        val stream =
+            q("select [e:classifier:concept:name+lifecycle:transition] where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
         assertEquals(1, stream.count())
 
         val log = stream.first()

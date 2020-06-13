@@ -398,7 +398,7 @@ class Query(val query: String) {
 
         override fun exitArith_expr_root(ctx: QLParser.Arith_expr_rootContext?) {
             val expression = parseExpression(ctx!!)
-            validateHoisting(expression)
+            validateHoistingInSelectAndOrderBy(expression)
 
             if (expression is Attribute) {
                 when (expression.isStandard) {
@@ -423,6 +423,15 @@ class Query(val query: String) {
                         "Line ${aggregation.line} position ${aggregation.charPositionInLine}: The aggregation function call is not supported in the where clause."
                     )
                 )
+
+
+            val classifier = whereExpression.filter { it is Attribute && it.isClassifier }.firstOrNull()
+            if (classifier !== null)
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Line ${classifier.line} position ${classifier.charPositionInLine}: The use of the classifier is not supported in the where clause."
+                    )
+                )
         }
         // endregion
 
@@ -434,13 +443,12 @@ class Query(val query: String) {
 
         private fun handleGroupByIdList(interval: Interval) {
             tokens.get(interval.a, interval.b)
-                .filter { it.type == QLParser.ID }
-                .map { Attribute(it.text, it.line, it.charPositionInLine) }
+                .filter { it.type != QLParser.COMMA }
+                .map { parseToken(it) }
+                .filterIsInstance<Attribute>() // May be Expression.empty if the constructor of Attribute throws an exception
                 .forEach {
-                    if (it.isStandard)
-                        _groupByStandardAttributes[it.effectiveScope]!!.add(it)
-                    else
-                        _groupByOtherAttributes[it.effectiveScope]!!.add(it)
+                    (if (it.isStandard) _groupByStandardAttributes else _groupByOtherAttributes)[it.effectiveScope]!!
+                        .add(it)
                 }
         }
 
@@ -450,7 +458,7 @@ class Query(val query: String) {
         // region PQL order by clause
         override fun exitOrdered_expression_root(ctx: QLParser.Ordered_expression_rootContext?) {
             val expression = parseExpression(ctx!!.arith_expr())
-            validateHoisting(expression)
+            validateHoistingInSelectAndOrderBy(expression)
 
             val order = OrderDirection.parse(ctx.order_dir().text)
             _orderByExpressions[expression.effectiveScope]!!.add(OrderedExpression(expression, order))
@@ -522,7 +530,7 @@ class Query(val query: String) {
 
         // endregion
 
-        private fun validateHoisting(expression: Expression) {
+        private fun validateHoistingInSelectAndOrderBy(expression: Expression) {
             val hoisted = expression
                 .filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
                 .filter { it is Attribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()

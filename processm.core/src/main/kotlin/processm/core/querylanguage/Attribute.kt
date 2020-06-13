@@ -100,8 +100,8 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
      * True if this is a classifier attribute.
      */
     val isClassifier: Boolean
-        get() = (scope == Scope.Trace || scope == Scope.Event) &&
-                standardName.startsWith("classifier:") || !isStandard && name.startsWith("classifier:")
+        get() = standardName.startsWith("classifier:") ||
+                !isStandard && (name.startsWith("classifier:") || name.startsWith("c:"))
 
     init {
         val match = pqlAttributePattern.matchEntire(attribute)
@@ -129,6 +129,10 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
         } else {
             // other attribute
             standardName = ""
+        }
+
+        require(!isClassifier || effectiveScope != Scope.Log) {
+            "Line $line position $charPositionInLine: Use of the classifier $this on the log scope is not allowed."
         }
     }
 

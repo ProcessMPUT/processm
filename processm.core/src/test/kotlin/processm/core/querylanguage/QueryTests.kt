@@ -2,6 +2,7 @@ package processm.core.querylanguage
 
 import org.antlr.v4.runtime.RecognitionException
 import org.junit.jupiter.api.Tag
+import processm.core.log.hierarchical.DBHierarchicalXESInputStreamWithQueryTests
 import kotlin.test.*
 
 @Tag("PQL")
@@ -544,6 +545,7 @@ class QueryTests {
             "where avg(e:total) > 100",
             "select *, avg(e:total)",
             "select ^e:42",
+            "where ^t:c:myclassifier not in ('a', 'b')",
             "limit 42",
             "limit l:-1",
             "limit l:0",
@@ -556,6 +558,23 @@ class QueryTests {
         illegalOperations.forEach {
             assertFailsWith<IllegalArgumentException>(it) { Query(it) }.apply {
                 assertNotNull(message)
+            }
+        }
+    }
+
+    @Test
+    fun invalidUseOfClassifiersTest() {
+        val invalidHoisting = listOf(
+            "group by [^^c:Event Name]",
+            "group by ^t:c:name",
+            "select [l:c:main]",
+            "where [e:classifier:concept:name+lifecycle:transition] in ('acceptcomplete', 'rejectcomplete')"
+        )
+
+        invalidHoisting.forEach {
+            assertFailsWith<IllegalArgumentException>(it) { Query(it) }.apply {
+                assertNotNull(message)
+                assertTrue("classifier" in message!!)
             }
         }
     }
