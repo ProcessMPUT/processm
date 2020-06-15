@@ -85,64 +85,118 @@ class HelpersTests {
 
     @Test
     fun subsets() {
-        assertEquals(
-            setOf(
-                setOf(),
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
-                setOf("a", "b", "c")
-            ),
-            setOf("a", "b", "c").allSubsets().mapToSet { it.toSet() }
+        val validPowerset = setOf(
+            setOf(),
+            setOf("a"), setOf("b"), setOf("c"),
+            setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
+            setOf("a", "b", "c")
         )
+        val calculatedPowerset = setOf("a", "b", "c").allSubsets()
+
+        // test PowerSetImpl<T>.equals()
+        assertEquals(validPowerset, calculatedPowerset)
+        assertEquals(calculatedPowerset, validPowerset)
+        assertEquals(calculatedPowerset, calculatedPowerset)
+
+        // test PowerSetImpl<T>.hashCode()
+        assertEquals(validPowerset.hashCode(), calculatedPowerset.hashCode())
+        assertEquals(calculatedPowerset.hashCode(), calculatedPowerset.hashCode())
+
+
+        // test PowerSetImpl<T>.contains()
+        assertTrue(emptySet() in calculatedPowerset)
+        assertFalse(setOf("a", "b", "c", "d") in calculatedPowerset)
+        for (validSubset in validPowerset) {
+            // test PowerSetImpl<T>.contains()
+            assertTrue(validSubset in calculatedPowerset)
+
+            // test Subset<T>.contains() and Subset<T>.containsAll():
+            assertTrue(calculatedPowerset.any { calculatedSubset -> calculatedSubset.containsAll(validSubset) })
+
+            // test Subset<T>.indexOf()
+            val index = calculatedPowerset.indexOf(validSubset)
+            assertTrue(index >= 0)
+            assertEquals(index, calculatedPowerset.lastIndexOf(validSubset))
+
+            // test Subset<T>.equals()
+            val calculatedSubset = calculatedPowerset[index]
+            assertEquals(validSubset, calculatedSubset)
+            assertEquals(calculatedSubset, calculatedSubset)
+
+            // test Subset<T>.hashCode()
+            assertEquals(validSubset.hashCode(), calculatedSubset.hashCode())
+            assertEquals(calculatedSubset.hashCode(), calculatedSubset.hashCode())
+        }
     }
 
     @Test
     fun subsetsWithoutEmpty() {
-        assertEquals(
-            setOf(
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
-                setOf("a", "b", "c")
-            ),
-            setOf("a", "b", "c").allSubsets(true).mapToSet { it.toSet() }
+        val validPowerset = setOf(
+            setOf("a"), setOf("b"), setOf("c"),
+            setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
+            setOf("a", "b", "c")
         )
+        val calculatedPowerset = setOf("a", "b", "c").allSubsets(true)
+
+        // test PowerSetImpl<T>.equals()
+        assertEquals(validPowerset, calculatedPowerset)
+        assertEquals(calculatedPowerset, validPowerset)
+        assertEquals(calculatedPowerset, calculatedPowerset)
+
+        // test PowerSetImpl<T>.hashCode()
+        assertEquals(validPowerset.hashCode(), calculatedPowerset.hashCode())
+        assertEquals(calculatedPowerset.hashCode(), calculatedPowerset.hashCode())
+
+
+        // test PowerSetImpl<T>.contains()
+        assertFalse(emptySet() in calculatedPowerset)
+        assertFalse(setOf("a", "b", "c", "d") in calculatedPowerset)
+        for (validSubset in validPowerset) {
+            // test PowerSetImpl<T>.contains()
+            assertTrue(validSubset in calculatedPowerset)
+
+            // test Subset<T>.contains() and Subset<T>.containsAll():
+            assertTrue(calculatedPowerset.any { calculatedSubset -> calculatedSubset.containsAll(validSubset) })
+
+            // test Subset<T>.indexOf()
+            val index = calculatedPowerset.indexOf(validSubset)
+            assertTrue(index >= 0)
+            assertEquals(index, calculatedPowerset.lastIndexOf(validSubset))
+
+            // test Subset<T>.equals()
+            val calculatedSubset = calculatedPowerset[index]
+            assertEquals(validSubset, calculatedSubset)
+            assertEquals(calculatedSubset, calculatedSubset)
+
+            // test Subset<T>.hashCode()
+            assertEquals(validSubset.hashCode(), calculatedSubset.hashCode())
+            assertEquals(calculatedSubset.hashCode(), calculatedSubset.hashCode())
+        }
     }
 
     @Test
-    fun `materialized subsets`() {
-        assertEquals(
-            setOf(
-                setOf(),
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
-                setOf("a", "b", "c")
-            ),
-            setOf("a", "b", "c").materializedAllSubsets(false).mapToSet { it.toSet() }
-        )
-    }
-
-    @Test
-    fun `materialized subsets without empty`() {
-        assertEquals(
-            setOf(
-                setOf("a"), setOf("b"), setOf("c"),
-                setOf("a", "b"), setOf("a", "c"), setOf("c", "b"),
-                setOf("a", "b", "c")
-            ),
-            setOf("a", "b", "c").materializedAllSubsets(true).mapToSet { it.toSet() }
-        )
-    }
-
-    @Test
-    fun `materializedAllSubsets performance`() {
-        val set = "ABCDEFGHIJKLMNOPQRSTU".toHashSet()
-        set.materializedAllSubsets(false) // warm up
+    fun `allSubsets performance`() {
+        val list = "ABCDEFGHIJKLMNOPQRSTUWVXYZ".toList()
+        // warm up
+        for (subset in list.allSubsets(false)) {
+            for (item in subset) {
+                // nothing
+            }
+        }
         measureTimeMillis {
-            set.materializedAllSubsets(false)
+            for (subset in list.allSubsets(false)) {
+                for (item in subset) {
+                    // nothing
+                }
+            }
         }.also { logger().info("Calculated power set with empty subset in $it ms.") }
 
         measureTimeMillis {
-            set.materializedAllSubsets(true)
+            for (subset in list.allSubsets(true)) {
+                for (item in subset) {
+                    // nothing
+                }
+            }
         }.also { logger().info("Calculated power set without empty subset in $it ms.") }
     }
 

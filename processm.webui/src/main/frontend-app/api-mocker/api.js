@@ -12,6 +12,8 @@ const workspaces = [
   }
 ];
 
+const users = {};
+
 const userSessions = {};
 
 const api = {
@@ -62,10 +64,13 @@ const api = {
 
     return res.status(204).json();
   },
-  "POST /api/account/session": (req, res) => {
-    const credentials = req.body;
+  "POST /api/users/session": (req, res) => {
+    const credentials = req.body.data;
 
-    if (credentials.password != "pass") {
+    if (
+      !_.has(users, credentials.username) ||
+      credentials.password !== users[credentials.username].password
+    ) {
       return res.status(401).json();
     }
 
@@ -79,17 +84,62 @@ const api = {
 
     _.set(userSessions, sessionToken, credentials.username);
 
-    return res.json({
-      userData: { username: credentials.username },
-      authorizationToken: sessionToken
+    return res.status(201).json({
+      data: {
+        authorizationToken: `Bearer ${sessionToken}`
+      }
     });
   },
-  "DELETE /api/account/session/:sessionId": (req, res) => {
+  "DELETE /api/users/session": (req, res) => {
     const { sessionId } = req.params;
 
     return _.unset(userSessions, sessionId)
       ? res.status(204).json()
       : res.status(404).json();
+  },
+  "POST /api/users": (req, res) => {
+    const { userEmail, organizationName } = req.body.data;
+
+    if (organizationName !== "org1" && userEmail !== "user1@example.com") {
+      users[userEmail] = {
+        organizationName,
+        password: "pass",
+        locale: "en_US"
+      };
+      res.status(201).json();
+    } else {
+      res.status(400).json();
+    }
+  },
+  "GET /api/users/me": (req, res) => {
+    return res.json({
+      data: {
+        username: _.get(_.keys(users), 0),
+        locale: "en-US"
+      }
+    });
+  },
+  "PATCH /api/users/me/password": (req, res) => {
+    const { currentPassword, newPassword } = req.body.data;
+    const username = _.get(_.keys(users), 0);
+
+    if (users[username].password !== currentPassword) {
+      return res
+        .status(403)
+        .json({ error: "The current password is not valid" });
+    }
+
+    users[username].password = newPassword;
+
+    return res.status(202).json();
+  },
+  "PATCH /api/users/me/locale": (req, res) => {
+    const { locale } = req.body.data;
+    const username = _.get(_.keys(users), 0);
+
+    users[username].locale = locale;
+
+    return res.status(202).json();
   }
 };
 

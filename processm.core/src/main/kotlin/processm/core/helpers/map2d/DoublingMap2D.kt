@@ -45,22 +45,31 @@ class DoublingMap2D<Row, Column, Value> : Map2D<Row, Column, Value> {
 
     private val crv = HashMap<Column, HashMap<Row, Value>>()
 
-    override fun get(row: Row, col: Column): Value? = rcv[row]?.get(col)
+    override fun get(row: Row, column: Column): Value? = rcv[row]?.get(column)
 
     override fun getRow(row: Row): Map2D.View<Column, Value> =
         View({ rcv[row] }, { col, value -> set(row, col, value) })
 
-    override fun getColumn(col: Column): Map2D.View<Row, Value> =
-        View({ crv[col] }, { row, value -> set(row, col, value) })
+    override fun getColumn(column: Column): Map2D.View<Row, Value> =
+        View({ crv[column] }, { row, value -> set(row, column, value) })
 
-    override fun set(row: Row, col: Column, v: Value) {
-        rcv.computeIfAbsent(row) { HashMap() }[col] = v
-        crv.computeIfAbsent(col) { HashMap() }[row] = v
+    override fun set(row: Row, column: Column, value: Value) {
+        rcv.computeIfAbsent(row) { HashMap() }[column] = value
+        crv.computeIfAbsent(column) { HashMap() }[row] = value
+    }
+
+    override fun removeColumn(column: Column) {
+        crv.remove(column)
+        rcv.values.forEach { it.remove(column) }
+    }
+
+    override fun removeRow(row: Row) {
+        rcv.remove(row)
+        crv.values.forEach { it.remove(row) }
     }
 
     override val rows: Set<Row>
         get() = rcv.keys
     override val columns: Set<Column>
         get() = crv.keys
-
 }

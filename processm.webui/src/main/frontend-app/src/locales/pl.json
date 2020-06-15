@@ -1,6 +1,7 @@
 {
   "language-name": "Polski",
-  "iso": "pl",
+  "code": "pl_PL",
+  "flag": "pl",
   "navigation": {
     "workspaces": "Przestrzenie robocze",
     "about": "@:about.page-title"
@@ -18,7 +19,7 @@
   },
   "user-profile": {
     "language": "Język",
-    "save": "Zapisz zmiany"
+    "change-password": "Zmień hasło"
   },
   "rename-dialog": {
     "dialog-title": "Zmień nazwę",
@@ -27,30 +28,45 @@
       "name-empty": "Nazwa nie może być pusta"
     }
   },
+  "password-change-dialog": {
+    "dialog-title": "Zmiana hasła",
+    "current-password": "Obecne hasło",
+    "new-password": "Nowe hasło",
+    "password-confirmation": "Potwierdź hasło",
+    "validation": {
+      "password-empty": "Hasło nie może być puste",
+      "new-password-is-the-same": "Nowe hasło musi być inne",
+      "password-confirmation-not-the-same": "Nowe hasło i potwierdzenie hasła muszą być takie same"
+    }
+  },
   "login-form": {
     "title": "Panel logowania",
-    "email": "Email",
+    "email": "E-mail",
     "password": "Hasło",
     "login": "Zaloguj",
+    "register-account": "Zarejestruj konto",
     "validation": {
-      "email-format": "Nieprawidłowy format adresu email",
+      "email-format": "Nieprawidłowy format adresu e-mail",
       "password-empty": "Hasło nie może być puste"
     },
     "error-box": {
-      "failed": "Nieprawidłowy email lub hasło"
+      "failed": "Nieprawidłowy e-mail lub hasło"
     }
   },
   "registration-form": {
     "title": "Rejestracja konta",
     "organization-name": "Nazwa organizacji",
-    "admin-email": "Email administratora",
+    "admin-email": "E-mail administratora",
     "register": "Zarejestruj",
     "validation": {
-      "email-format": "Nieprawidłowy format adresu email",
+      "email-format": "Nieprawidłowy format adresu e-mail",
       "organization-empty": "Nazwa organizacji nie może być pusta"
     },
     "error-box": {
-      "failed": "Inorrect organization name"
+      "failed": "Nieprawidłowy adres e-mail lub nazwa organizacji"
+    },
+    "success-box": {
+      "registered": "Rejestracja konta zakończona powodzeniem"
     }
   },
   "common": {
@@ -58,6 +74,7 @@
     "save": "Zapisz",
     "rename": "Zmień nazwę",
     "remove": "Usuń",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "submit": "Zatwierdź"
   }
 }

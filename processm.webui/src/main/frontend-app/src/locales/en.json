@@ -1,6 +1,7 @@
 {
   "language-name": "English",
-  "iso": "gb",
+  "code": "en_GB",
+  "flag": "gb",
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
@@ -20,39 +21,54 @@
   },
   "user-profile": {
     "language": "Language",
-    "save": "Save changes"
+    "change-password": "Change password"
   },
   "rename-dialog": {
     "dialog-title": "Rename",
     "new-name-placeholder": "New name",
     "validation": {
-      "name-empty": "Name cannot be empty"
+      "name-empty": "The name cannot be empty"
+    }
+  },
+  "password-change-dialog": {
+    "dialog-title": "Password change",
+    "current-password": "Current password",
+    "new-password": "New password",
+    "password-confirmation": "Password confirmation",
+    "validation": {
+      "password-empty": "The password cannot be empty",
+      "new-password-is-the-same": "The new password must be different from the old password",
+      "password-confirmation-not-the-same": "The new password and the password confirmation must match"
     }
   },
   "login-form": {
     "title": "Login form",
-    "email": "Email",
+    "email": "E-mail",
     "password": "Password",
     "login": "Login",
+    "register-account": "Register account",
     "validation": {
-      "email-format": "Email must be valid",
-      "password-empty": "Password cannot be empty"
+      "email-format": "The e-mail address must be valid",
+      "password-empty": "The password cannot be empty"
     },
     "error-box": {
-      "failed": "Inorrect email or password"
+      "failed": "Incorrect e-mail or password"
     }
   },
   "registration-form": {
     "title": "Account registration",
     "organization-name": "Organization name",
-    "admin-email": "Administrator email",
+    "admin-email": "Administrator e-mail",
     "register": "Register",
     "validation": {
-      "email-format": "Email must be valid",
-      "organization-empty": "Organization name cannot be empty"
+      "email-format": "The e-mail must be valid",
+      "organization-empty": "The organization name cannot be empty"
     },
     "error-box": {
-      "failed": "Inorrect organization name"
+      "failed": "Incorrect e-mail address or organization name"
+    },
+    "success-box": {
+      "registered": "The account registration was successful"
     }
   },
   "common": {
@@ -60,6 +76,7 @@
     "save": "Save",
     "rename": "Rename",
     "remove": "Remove",
-    "close": "Close"
+    "close": "Close",
+    "submit": "Submit"
   }
 }

@@ -10,7 +10,6 @@ import java.io.File
 
 fun Application.staticContentModule() {
     logger().enter()
-
     val codeSource = File(WebServicesHost::class.java.protectionDomain.codeSource.location.toURI())
     val jar = codeSource.extension.equals("jar", true)
 

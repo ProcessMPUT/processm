@@ -19,12 +19,7 @@ class WebServicesHostTest {
     private val client = HttpClient(Apache) {
         engine {
             customizeClient {
-                setSSLContext(
-                    SSLContextBuilder
-                        .create()
-                        .loadTrustMaterial(TrustSelfSignedStrategy())
-                        .build()
-                )
+                setSSLContext(SSLContextBuilder.create().loadTrustMaterial(TrustSelfSignedStrategy()).build())
                 setSSLHostnameVerifier(NoopHostnameVerifier())
                 connectTimeout = 1000
                 connectionRequestTimeout = 1000
@@ -41,7 +36,6 @@ class WebServicesHostTest {
     fun startStopStartStopTest() = runBlocking {
         for (i in 0..2) {
             host.start()
-
             var response = client.get<String>(baseURIs)
             assertTrue(response.startsWith("<!DOCTYPE html>"))
 
