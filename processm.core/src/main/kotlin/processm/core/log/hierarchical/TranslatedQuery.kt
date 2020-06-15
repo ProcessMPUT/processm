@@ -391,8 +391,8 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         it.query.replace(it.query.length - 2, it.query.length, ")")
 
         if (!pql.isImplicitGroupBy[scope]!!) {
-            groupBy(scope, it, groupByCount)
-            orderByGroup(scope, it, logId, groupByCount)
+            groupBy(it, groupByCount)
+            orderByGroup(scope, it, logId)
         }
         limit(scope, it)
         offset(scope, it)
@@ -442,7 +442,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         return groupByCount to orderByCount
     }
 
-    private fun groupBy(scope: Scope, sql: MutableSQLQuery, groupByCount: Int) {
+    private fun groupBy(sql: MutableSQLQuery, groupByCount: Int) {
         with(sql.query) {
             append(" GROUP BY ")
             assert(groupByCount > 0)
@@ -452,7 +452,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
         }
     }
 
-    private fun orderByGroup(scope: Scope, sql: MutableSQLQuery, logId: Int?, groupByCount: Int) {
+    private fun orderByGroup(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
         with(sql.query) {
             append(" ORDER BY ")
             if (pql.orderByExpressions[scope].isNullOrEmpty()) {
@@ -970,7 +970,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             override var traces: LinkedHashMap<Long, TraceEntry>? = null
                 get() {
                     if (field === null) {
-                        assert(parent.logs!![logId] === this)
+                        assert(parent.logs[logId] === this)
                         val nextCtor =
                             if (pql.isImplicitGroupBy[Scope.Event]!! || pql.isGroupBy[Scope.Event]!!) ::GroupingTraceEntry else ::RegularTraceEntry
 
