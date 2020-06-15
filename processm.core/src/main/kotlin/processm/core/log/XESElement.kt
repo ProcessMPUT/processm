@@ -10,13 +10,13 @@ import java.util.*
  */
 abstract class XESElement {
     /**
-     * Special attribute based on concept:name
+     * Standard attribute based on concept:name
      * Standard extension: Concept
      */
     abstract val conceptName: String?
 
     /**
-     * Special attribute based on identity:id
+     * Standard attribute based on identity:id
      * Standard extension: Identity
      */
     abstract val identityId: String?

@@ -7,35 +7,7 @@ import java.util.*
  *
  * Captures the trace component from the XES metadata structure.
  */
-open class Trace : XESElement() {
-    /**
-     * Special attribute based on concept:name
-     * Standard extension: Concept
-     */
-    override var conceptName: String? = null
-        internal set
-
-    /**
-     * Special attribute based on cost:currency
-     * Standard extension: Cost
-     */
-    var costCurrency: String? = null
-        internal set
-
-    /**
-     * Special attribute based on cost:total
-     * Standard extension: Cost
-     */
-    var costTotal: Double? = null
-        internal set
-
-    /**
-     * Special attribute based on identity:id
-     * Standard extension: Identity
-     */
-    override var identityId: String? = null
-        internal set
-
+open class Trace : TraceOrEventBase() {
     /**
      * Event stream special tag - true if trace is fake and log contains only events (no trace)
      */
@@ -53,9 +25,9 @@ open class Trace : XESElement() {
     override fun hashCode(): Int = Objects.hash(isEventStream, attributesInternal)
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributes[nameMap["concept:name"]]?.getValue() as String?
-        costTotal = attributes[nameMap["cost:total"]]?.getValue() as Double?
-        costCurrency = attributes[nameMap["cost:currency"]]?.getValue() as String?
-        identityId = attributes[nameMap["identity:id"]]?.getValue() as String?
+        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
+        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue() as Double?
+        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue() as String?
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as String?
     }
 }

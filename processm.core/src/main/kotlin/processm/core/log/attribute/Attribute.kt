@@ -28,7 +28,8 @@ abstract class Attribute<T>(key: String) {
      * Attributes inside this attribute (nested-attributes)
      * Used as getter based on the internal representation of children
      */
-    val children: Map<String, Attribute<*>> = Collections.unmodifiableMap(childrenInternal)
+    val children: Map<String, Attribute<*>>
+        get() = Collections.unmodifiableMap(childrenInternal)
 
     /**
      * Tag in XES standard

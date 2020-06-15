@@ -428,14 +428,19 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
 
     private fun attributeFromRecord(key: String, record: ResultSet): Attribute<*> {
         with(record) {
-            return when (getString("type")) {
-                "int" -> IntAttr(key, getLong("int_value"))
-                "id" -> IDAttr(key, getString("string_value"))
-                "string" -> StringAttr(key, getString("string_value"))
-                "bool" -> BoolAttr(key, getBoolean("bool_value"))
-                "float" -> RealAttr(key, getDouble("real_value"))
-                "date" -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant())
-                "list" -> ListAttr(key)
+            val type = getString("type")!!
+            assert(type.length >= 2)
+            return when (type[0]) {
+                's' -> StringAttr(key, getString("string_value"))
+                'f' -> RealAttr(key, getDouble("real_value"))
+                'i' -> when (type[1]) {
+                    'n' -> IntAttr(key, getLong("int_value"))
+                    'd' -> IDAttr(key, getString("string_value"))
+                    else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
+                }
+                'd' -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant())
+                'b' -> BoolAttr(key, getBoolean("bool_value"))
+                'l' -> ListAttr(key)
                 else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
             }
         }

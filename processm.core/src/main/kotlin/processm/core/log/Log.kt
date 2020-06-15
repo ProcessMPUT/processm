@@ -60,21 +60,21 @@ open class Log : XESElement() {
         internal set
 
     /**
-     * Special attribute based on concept:name
+     * Standard attribute based on concept:name
      * Standard extension: Concept
      */
     override var conceptName: String? = null
         internal set
 
     /**
-     * Special attribute based on identity:id
+     * Standard attribute based on identity:id
      * Standard extension: Identity
      */
     override var identityId: String? = null
         internal set
 
     /**
-     * Special attribute based on lifecycle:model
+     * Standard attribute based on lifecycle:model
      * Standard extension: Lifecycle
      */
     var lifecycleModel: String? = null
@@ -108,8 +108,8 @@ open class Log : XESElement() {
     )
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributes[nameMap["concept:name"]]?.getValue() as String?
-        identityId = attributes[nameMap["identity:id"]]?.getValue() as String?
-        lifecycleModel = attributes[nameMap["lifecycle:model"]]?.getValue() as String?
+        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as String?
+        lifecycleModel = attributesInternal[nameMap["lifecycle:model"]]?.getValue() as String?
     }
 }

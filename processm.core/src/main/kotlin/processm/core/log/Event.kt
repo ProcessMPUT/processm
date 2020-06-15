@@ -7,44 +7,16 @@ import java.time.Instant
  *
  * Captures the event component from the XES metadata structure.
  */
-class Event : XESElement() {
+class Event : TraceOrEventBase() {
     /**
-     * Special attribute based on concept:name
-     * Standard extension: Concept
-     */
-    override var conceptName: String? = null
-        internal set
-
-    /**
-     * Special attribute based on concept:instance
+     * Standard attribute based on concept:instance
      * Standard extension: Concept
      */
     var conceptInstance: String? = null
         internal set
 
     /**
-     * Special attribute based on cost:currency
-     * Standard extension: Cost
-     */
-    var costCurrency: String? = null
-        internal set
-
-    /**
-     * Special attribute based on cost:total
-     * Standard extension: Cost
-     */
-    var costTotal: Double? = null
-        internal set
-
-    /**
-     * Special attribute based on identity:id
-     * Standard extension: Identity
-     */
-    override var identityId: String? = null
-        internal set
-
-    /**
-     * Special attribute based on lifecycle:transition
+     * Standard attribute based on lifecycle:transition
      * Standard extension: Lifecycle
      */
     var lifecycleTransition: String? = null
@@ -53,7 +25,7 @@ class Event : XESElement() {
         }
 
     /**
-     * Special attribute based on lifecycle:state
+     * Standard attribute based on lifecycle:state
      * Standard extension: Lifecycle
      */
     var lifecycleState: String? = null
@@ -62,28 +34,28 @@ class Event : XESElement() {
         }
 
     /**
-     * Special attribute based on org:resource
+     * Standard attribute based on org:resource
      * Standard extension: Org
      */
     var orgResource: String? = null
         internal set
 
     /**
-     * Special attribute based on org:role
+     * Standard attribute based on org:role
      * Standard extension: Org
      */
     var orgRole: String? = null
         internal set
 
     /**
-     * Special attribute based on org:group
+     * Standard attribute based on org:group
      * Standard extension: Org
      */
     var orgGroup: String? = null
         internal set
 
     /**
-     * Special attribute based on time:timestamp
+     * Standard attribute based on time:timestamp
      * Standard extension: Time
      */
     var timeTimestamp: Instant? = null
@@ -99,21 +71,21 @@ class Event : XESElement() {
     override fun hashCode(): Int = attributesInternal.hashCode()
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributes[nameMap["concept:name"]]?.getValue() as String?
-        conceptInstance = attributes[nameMap["concept:instance"]]?.getValue() as String?
+        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
+        conceptInstance = attributesInternal[nameMap["concept:instance"]]?.getValue() as String?
 
-        costTotal = attributes[nameMap["cost:total"]]?.getValue() as Double?
-        costCurrency = attributes[nameMap["cost:currency"]]?.getValue() as String?
+        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue() as Double?
+        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue() as String?
 
-        identityId = attributes[nameMap["identity:id"]]?.getValue() as String?
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as String?
 
-        lifecycleState = attributes[nameMap["lifecycle:state"]]?.getValue() as String?
-        lifecycleTransition = attributes[nameMap["lifecycle:transition"]]?.getValue() as String?
+        lifecycleState = attributesInternal[nameMap["lifecycle:state"]]?.getValue() as String?
+        lifecycleTransition = attributesInternal[nameMap["lifecycle:transition"]]?.getValue() as String?
 
-        orgRole = attributes[nameMap["org:role"]]?.getValue() as String?
-        orgGroup = attributes[nameMap["org:group"]]?.getValue() as String?
-        orgResource = attributes[nameMap["org:resource"]]?.getValue() as String?
+        orgRole = attributesInternal[nameMap["org:role"]]?.getValue() as String?
+        orgGroup = attributesInternal[nameMap["org:group"]]?.getValue() as String?
+        orgResource = attributesInternal[nameMap["org:resource"]]?.getValue() as String?
 
-        timeTimestamp = attributes[nameMap["time:timestamp"]]?.getValue() as Instant?
+        timeTimestamp = attributesInternal[nameMap["time:timestamp"]]?.getValue() as Instant?
     }
 }
