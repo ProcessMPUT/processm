@@ -40,8 +40,8 @@ class DBXESOutputStream : XESOutputStream {
     /**
      * Write XES Element into the database
      */
-    override fun write(element: XESElement) {
-        when (element) {
+    override fun write(component: XESComponent) {
+        when (component) {
             is Event -> {
                 // We expect that the corresponding Trace object is already stored in the database.
                 // If only Log is stored then we encountered an event stream.
@@ -52,7 +52,7 @@ class DBXESOutputStream : XESOutputStream {
                     write(eventStreamTraceElement)
                 }
 
-                eventQueue.add(element)
+                eventQueue.add(component)
                 if (eventQueue.size >= batchSize)
                     flushEvents()
             }
@@ -63,25 +63,25 @@ class DBXESOutputStream : XESOutputStream {
                 flushEvents() // flush events from the previous trace
 
                 val sql = SQL()
-                writeTrace(element, sql)
-                writeAttributes("TRACES_ATTRIBUTES", "trace", 0, element.attributes.values, sql)
+                writeTrace(component, sql)
+                writeAttributes("TRACES_ATTRIBUTES", "trace", 0, component.attributes.values, sql)
                 traceId = sql.executeQuery("trace")
             }
             is Log -> {
                 flushEvents() // flush events from the previous log
 
                 val sql = SQL()
-                writeLog(element, sql)
-                writeExtensions(element.extensions.values, sql)
-                writeClassifiers("event", element.eventClassifiers.values, sql)
-                writeClassifiers("trace", element.traceClassifiers.values, sql)
-                writeGlobals("event", element.eventGlobals.values, sql)
-                writeGlobals("trace", element.traceGlobals.values, sql)
-                writeAttributes("LOGS_ATTRIBUTES", "log", 0, element.attributes.values, sql)
+                writeLog(component, sql)
+                writeExtensions(component.extensions.values, sql)
+                writeClassifiers("event", component.eventClassifiers.values, sql)
+                writeClassifiers("trace", component.traceClassifiers.values, sql)
+                writeGlobals("event", component.eventGlobals.values, sql)
+                writeGlobals("trace", component.traceGlobals.values, sql)
+                writeAttributes("LOGS_ATTRIBUTES", "log", 0, component.attributes.values, sql)
                 logId = sql.executeQuery("log").toInt()
             }
             else ->
-                throw IllegalArgumentException("Unsupported XESElement found. Expected 'Log', 'Trace' or 'Event' but received ${element.javaClass}")
+                throw IllegalArgumentException("Unsupported XESComponent found. Expected 'Log', 'Trace' or 'Event' but received ${component.javaClass}")
         }
     }
 

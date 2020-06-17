@@ -1,6 +1,6 @@
 package processm.core.log
 
-abstract class TraceOrEventBase : XESElement() {
+abstract class TraceOrEventBase : XESComponent() {
     /**
      * Standard attribute based on concept:name
      * Standard extension: Concept

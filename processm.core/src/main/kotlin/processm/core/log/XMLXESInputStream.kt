@@ -10,7 +10,7 @@ import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
 
 /**
- * Extracts a sequence of [XESElement]s from the underlying stream.
+ * Extracts a sequence of [XESComponent]s from the underlying stream.
  * @see XESInputStream
  */
 class XMLXESInputStream(private val input: InputStream) : XESInputStream {
@@ -28,7 +28,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         override fun get(key: String): String? = super.get(key) ?: key
     }
 
-    override fun iterator(): Iterator<XESElement> = sequence<XESElement> {
+    override fun iterator(): Iterator<XESComponent> = sequence<XESComponent> {
         val xmlInputFactory: XMLInputFactory = XMLInputFactory.newInstance()
         val reader = xmlInputFactory.createXMLStreamReader(input)
 
@@ -208,7 +208,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         return attribute
     }
 
-    private fun parseTraceOrEventTag(reader: XMLStreamReader, xesElement: XESElement) {
+    private fun parseTraceOrEventTag(reader: XMLStreamReader, xesComponent: XESComponent) {
         // Read until has next and not found next 'event' or 'trace' element
         while (reader.hasNext()) {
             reader.next()
@@ -222,7 +222,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 when (reader.localName) {
                     in attributeTags -> {
                         with(parseAttributeTags(reader, reader.localName)) {
-                            xesElement.attributesInternal[this.key] = this
+                            xesComponent.attributesInternal[this.key] = this
                         }
                     }
                     else -> {

@@ -8,7 +8,7 @@ import java.util.*
  *
  * Inside element we expect to store attributes.
  */
-abstract class XESElement {
+abstract class XESComponent {
     /**
      * Standard attribute based on concept:name
      * Standard extension: Concept

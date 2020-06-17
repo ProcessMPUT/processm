@@ -177,7 +177,7 @@ internal class XMLXESOutputStreamTest {
     }
 
 
-    private fun storeLog(sequence: Sequence<XESElement>) {
+    private fun storeLog(sequence: Sequence<XESComponent>) {
         DBXESOutputStream().use {
             it.write(sequence)
         }

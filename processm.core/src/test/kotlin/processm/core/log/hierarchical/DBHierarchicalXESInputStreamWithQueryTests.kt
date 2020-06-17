@@ -1522,36 +1522,36 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     private fun q(query: String): DBHierarchicalXESInputStream = DBHierarchicalXESInputStream(Query(query))
 
-    private fun standardAndAllAttributesMatch(log: Log, element: XESElement) {
+    private fun standardAndAllAttributesMatch(log: Log, component: XESComponent) {
         val nameMap = getStandardToCustomNameMap(log)
 
         // Ignore comparison if there is no value in element.attributes.
         // This is because XESInputStream implementations are required to only map custom attributes to standard attributes
         // but not otherwise.
         fun cmp(standard: Any?, standardName: String) =
-            assertTrue(standard == element.attributes[nameMap[standardName]]?.value || element.attributes[nameMap[standardName]]?.value == null)
+            assertTrue(standard == component.attributes[nameMap[standardName]]?.value || component.attributes[nameMap[standardName]]?.value == null)
 
-        cmp(element.conceptName, "concept:name")
-        cmp(element.identityId, "identity:id")
+        cmp(component.conceptName, "concept:name")
+        cmp(component.identityId, "identity:id")
 
-        when (element) {
+        when (component) {
             is Log -> {
-                cmp(element.lifecycleModel, "lifecycle:model")
+                cmp(component.lifecycleModel, "lifecycle:model")
             }
             is Trace -> {
-                cmp(element.costCurrency, "cost:currency")
-                cmp(element.costTotal, "cost:total")
+                cmp(component.costCurrency, "cost:currency")
+                cmp(component.costTotal, "cost:total")
             }
             is Event -> {
-                cmp(element.conceptInstance, "concept:instance")
-                cmp(element.costCurrency, "cost:currency")
-                cmp(element.costTotal, "cost:total")
-                cmp(element.lifecycleTransition, "lifecycle:transition")
-                cmp(element.lifecycleState, "lifecycle:state")
-                cmp(element.orgGroup, "org:group")
-                cmp(element.orgResource, "org:resource")
-                cmp(element.orgRole, "org:role")
-                cmp(element.timeTimestamp, "time:timestamp")
+                cmp(component.conceptInstance, "concept:instance")
+                cmp(component.costCurrency, "cost:currency")
+                cmp(component.costTotal, "cost:total")
+                cmp(component.lifecycleTransition, "lifecycle:transition")
+                cmp(component.lifecycleState, "lifecycle:state")
+                cmp(component.orgGroup, "org:group")
+                cmp(component.orgResource, "org:resource")
+                cmp(component.orgRole, "org:role")
+                cmp(component.timeTimestamp, "time:timestamp")
             }
         }
 

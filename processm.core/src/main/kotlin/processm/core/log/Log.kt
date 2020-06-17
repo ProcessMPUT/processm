@@ -9,7 +9,7 @@ import kotlin.collections.HashMap
  *
  * Captures the log component from the XES metadata structure.
  */
-open class Log : XESElement() {
+open class Log : XESComponent() {
     internal val extensionsInternal: MutableMap<String, Extension> = HashMap()
     internal val traceGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
     internal val eventGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()

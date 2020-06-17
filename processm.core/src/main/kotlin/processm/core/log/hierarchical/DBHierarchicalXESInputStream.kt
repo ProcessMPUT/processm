@@ -21,11 +21,11 @@ import java.util.concurrent.ConcurrentHashMap
  * with its property [Trace.events].
  * This implementation ensures certain guarantees:
  * * All sequences can be empty, but none of them is null,
- * * It is lazily-evaluated and it may keep [SoftReference]s to [XESElement]s for fast reevaluation,
- * * Repeatable reads are ensured - each time this sequence is evaluated it yields [XESElement]s with equal values of attributes,
- * * Phantom reads are prevented - each time this sequence is evaluated it yields equal [XESElement]s,
+ * * It is lazily-evaluated and it may keep [SoftReference]s to [XESComponent]s for fast reevaluation,
+ * * Repeatable reads are ensured - each time this sequence is evaluated it yields [XESComponent]s with equal values of attributes,
+ * * Phantom reads are prevented - each time this sequence is evaluated it yields equal [XESComponent]s,
  * * Repeatable reads may return the same objects or different but equal objects,
- * * The resulting view on [XESElement]s is read-only,
+ * * The resulting view on [XESComponent]s is read-only,
  * * This class is not thread-safe: for concurrent evaluation one needs to use a synchronization mechanism.
  *
  * @property query An instance of a PQL query.
@@ -47,7 +47,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
          * [DBHierarchicalXESInputStream] because the nested sequences are fetched lazily.
          * The actual memory consumption may also be larger, as reevaluations may bring more objects to the fetch pool.
          * However, this effect is to some extent alleviated by the [cache] of [SoftReference]s to batches, that may use
-         * the same [XESElement] objects during reevaluations.
+         * the same [XESComponent] objects during reevaluations.
          */
         private const val batchSize: Int = 32
 
@@ -94,8 +94,8 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
      *
      * Note that [ConcurrentHashMap] is used because the [cacheCleaner] runs in a separate thread.
      */
-    private val cache: ConcurrentHashMap<Long, SoftReference<List<XESElement>>> = ConcurrentHashMap()
-    private fun <T : XESElement> getCachedBatch(
+    private val cache: ConcurrentHashMap<Long, SoftReference<List<XESComponent>>> = ConcurrentHashMap()
+    private fun <T : XESComponent> getCachedBatch(
         scope: Scope,
         parentId: Long,
         batchIndex: Int,
@@ -114,7 +114,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         var list = cache[key]?.get()
         if (list === null) {
             list = initializer()
-            cache[key] = SoftReference<List<XESElement>>(list)
+            cache[key] = SoftReference<List<XESComponent>>(list)
             cacheCleaner.register(list) {
                 cache.remove(key)
             }
@@ -126,7 +126,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
 
     override fun iterator(): Iterator<Log> = getLogs().iterator()
 
-    private fun <T : QueryResult, R : XESElement> get(
+    private fun <T : QueryResult, R : XESComponent> get(
         getExecutor: () -> TranslatedQuery.Executor<T>,
         getBatch: (batchIndex: Int, initializer: () -> List<R>, skipAction: () -> Unit) -> List<R>,
         read: (result: T) -> R
@@ -280,7 +280,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         }
     }
 
-    private fun readExpressions(resultSet: ResultSet, element: XESElement, id: Long) {
+    private fun readExpressions(resultSet: ResultSet, component: XESComponent, id: Long) {
         if (resultSet.isBeforeFirst)
             resultSet.next()
 
@@ -288,12 +288,12 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         if (resultSet.isEnded || resultSet.getLong(1) != id)
             return
 
-        val expressions = query.selectExpressions[element.scope]!!
+        val expressions = query.selectExpressions[component.scope]!!
         val metadata = resultSet.metaData
         for (colIndex in 2..metadata.columnCount) {
             // TODO: replace with the expression label when included in the PQL specification
             val colName = expressions[colIndex - 2].toString()
-            element.attributesInternal.computeIfAbsent(colName) {
+            component.attributesInternal.computeIfAbsent(colName) {
                 when (val colType = metadata.getColumnType(colIndex)) {
                     Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
                         resultSet.getString(colIndex)?.let { StringAttr(colName, it) }
@@ -384,7 +384,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
     private fun readAttributes(
         resultSet: ResultSet,
         getElementId: (ResultSet) -> Number,
-        element: XESElement,
+        component: XESComponent,
         elementId: Number,
         nameMap: Map<String, String>
     ) {
@@ -393,11 +393,11 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
 
         while (!resultSet.isEnded && getElementId(resultSet) == elementId) {
             with(readRecordsIntoAttributes(resultSet)) {
-                element.attributesInternal[this.key] = this
+                component.attributesInternal[this.key] = this
             }
         }
 
-        element.setStandardAttributes(nameMap)
+        component.setStandardAttributes(nameMap)
     }
 
     private fun readRecordsIntoAttributes(resultSet: ResultSet): Attribute<*> {
@@ -450,7 +450,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
         // https://stackoverflow.com/a/15750832
         get() = this.isAfterLast || !this.isBeforeFirst && this.row == 0
 
-    private val XESElement.scope: Scope
+    private val XESComponent.scope: Scope
         get() = when (this) {
             is Event -> Scope.Event
             is Trace -> Scope.Trace
