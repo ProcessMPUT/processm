@@ -192,7 +192,7 @@
                             <goal>execute</goal>
                         </goals>
                         <configuration>
-                            <sqlCommand>DROP DATABASE "${dbname}";</sqlCommand>
+                            <sqlCommand>DROP DATABASE IF EXISTS "${dbname}";</sqlCommand>
                             <autocommit>true</autocommit>
                             <onError>abort</onError>
                         </configuration>
