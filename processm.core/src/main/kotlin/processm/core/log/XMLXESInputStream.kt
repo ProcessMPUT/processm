@@ -72,11 +72,11 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         // Scope is optional, default 'event'
 
                         val map =
-                            when (val scope = reader.getAttributeValue(null, "scope") ?: "event") {
-                                "trace" -> it.traceGlobalsInternal
-                                "event" -> it.eventGlobalsInternal
-                                else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
-                            }
+                                when (val scope = reader.getAttributeValue(null, "scope") ?: "event") {
+                                    "trace" -> it.traceGlobalsInternal
+                                    "event" -> it.eventGlobalsInternal
+                                    else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                                }
 
                         addGlobalAttributes(map, reader)
                     }
@@ -110,21 +110,14 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     private fun addExtensionToLogElement(log: Log, reader: XMLStreamReader) {
         val prefix = reader.getAttributeValue(null, "prefix")
         val extension = Extension(
-            reader.getAttributeValue(null, "name"),
-            prefix,
-            reader.getAttributeValue(null, "uri")
+                reader.getAttributeValue(null, "name"),
+                prefix,
+                reader.getAttributeValue(null, "uri")
         )
 
         // map standard attribute names to custom names in the log
-        if (extension.extension != null) {
-            /*for (name in extension.extension.log.keys)
-                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
-            for (name in extension.extension.trace.keys)
-                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
-            for (name in extension.extension.event.keys)
-                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"*/
+        if (extension.extension != null)
             extension.mapStandardToCustomNames(this.nameMap)
-        }
 
         log.extensionsInternal[prefix] = extension
     }
@@ -133,11 +126,11 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         val classifiers = when (reader.getAttributeValue(null, "scope") ?: "event") {
             "trace" -> log.traceClassifiersInternal
             "event" -> log.eventClassifiersInternal
-            else -> throw Exception(
-                "Illegal <classifier> scope. Expected 'trace' or 'event', found ${reader.getAttributeValue(
-                    null,
-                    "scope"
-                )} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}"
+            else -> throw IllegalArgumentException(
+                    "Illegal <classifier> scope. Expected 'trace' or 'event', found ${reader.getAttributeValue(
+                            null,
+                            "scope"
+                    )} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}"
             )
         }
 
@@ -226,7 +219,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         }
                     }
                     else -> {
-                        throw Exception("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                        throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
                 }
             } else if (reader.isEndElement && reader.localName in exitTags) {
@@ -236,25 +229,15 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun castToAttribute(type: String, key: String, value: String): Attribute<*> {
-        return when (type) {
-            "float" ->
-                RealAttr(key, numberFormatter.parse(value).toDouble())
-            "string" ->
-                StringAttr(key, value)
-            "boolean" ->
-                BoolAttr(key, value.toBoolean())
-            "id" ->
-                IDAttr(key, value)
-            "int" ->
-                IntAttr(key, value.toLong())
-            "list" ->
-                ListAttr(key)
-            "date" -> {
-                DateTimeAttr(key, value.fastParseISO8601())
+    private fun castToAttribute(type: String, key: String, value: String): Attribute<*> =
+            when (type) {
+                "string" -> StringAttr(key, value)
+                "float" -> RealAttr(key, numberFormatter.parse(value).toDouble())
+                "id" -> IDAttr(key, value)
+                "int" -> IntAttr(key, value.toLong())
+                "date" -> DateTimeAttr(key, value.fastParseISO8601())
+                "boolean" -> BoolAttr(key, value.toBoolean())
+                "list" -> ListAttr(key)
+                else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
             }
-            else ->
-                throw Exception("Attribute not recognized. Received $type type.")
-        }
-    }
 }

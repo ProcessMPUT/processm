@@ -16,10 +16,10 @@ internal fun <T> Iterator<T>.take(limit: Int): List<T> = ArrayList<T>(limit).als
         list.add(this.next())
 }
 
-internal fun <N : Number> ResultSet.toIdList(): List<N> = ArrayList<N>().also { out ->
+internal inline fun <N : Number> ResultSet.toIdList(getter: (rs: ResultSet) -> N) = ArrayList<N>().also {out ->
     this@toIdList.use {
         while (it.next())
-            out.add(it.getObject(1) as N)
+            out.add(getter(it))
     }
 }
 

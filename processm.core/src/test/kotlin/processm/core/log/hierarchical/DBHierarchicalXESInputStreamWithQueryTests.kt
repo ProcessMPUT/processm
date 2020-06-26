@@ -32,20 +32,20 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         private var logId: Int = -1
         private val uuid: UUID = UUID.randomUUID()
         private val eventNames = setOf(
-            "invite reviewers",
-            "time-out 1", "time-out 2", "time-out 3",
-            "get review 1", "get review 2", "get review 3",
-            "collect reviews",
-            "decide",
-            "invite additional reviewer",
-            "get review X",
-            "time-out X",
-            "reject",
-            "accept"
+                "invite reviewers",
+                "time-out 1", "time-out 2", "time-out 3",
+                "get review 1", "get review 2", "get review 3",
+                "collect reviews",
+                "decide",
+                "invite additional reviewer",
+                "get review X",
+                "time-out X",
+                "reject",
+                "accept"
         )
         private val lifecyleTransitions = setOf("start", "complete")
         private val orgResources =
-            setOf("__INVALID__", "Mike", "Anne", "Wil", "Pete", "John", "Mary", "Carol", "Sara", "Sam", "Pam")
+                setOf("__INVALID__", "Mike", "Anne", "Wil", "Pete", "John", "Mary", "Carol", "Sara", "Sam", "Pam")
         private val results = setOf("accept", "reject")
         private val begin = "2005-12-31T00:00:00.000Z".parseISO8601()
         private val end = "2008-05-05T00:00:00.000Z".parseISO8601()
@@ -223,7 +223,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun selectUsingClassifierTest() {
         val stream =
-            q("select [e:classifier:concept:name+lifecycle:transition] where l:name like '_ournal_eview' limit l:1")
+                q("select [e:classifier:concept:name+lifecycle:transition] where l:name like '_ournal_eview' limit l:1")
 
         assertEquals(1, stream.count()) // only one log
         val log = stream.first()
@@ -322,9 +322,9 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun selectExpressionTest() {
         val stream = q(
-            "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp), count(e:time:timestamp) " +
-                    "where l:id='$uuid' " +
-                    "group by [e:concept:name], e:resource"
+                "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp), count(e:time:timestamp) " +
+                        "where l:id='$uuid' " +
+                        "group by [e:concept:name], e:resource"
         )
         assertEquals(1, stream.count())
 
@@ -341,10 +341,32 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
             for (event in trace.events) {
                 val rangeInDays =
-                    event.attributes["max(event:time:timestamp) - min(event:time:timestamp)"]!!.value as Double
+                        event.attributes["max(event:time:timestamp) - min(event:time:timestamp)"]!!.value as Double
                 val count = event.attributes["count(event:time:timestamp)"]!!.value as Long
                 assertTrue({ count == 1L } implies { rangeInDays < 1e-6 })
                 assertTrue({ count != 1L } implies { rangeInDays >= 0.0 })
+            }
+        }
+    }
+
+    @Test
+    fun selectComplexScalarExpressionTest() {
+        val stream = q("select e:total + t:total where l:id='$uuid'")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals(1, log.count)
+        assertEquals(101, log.traces.count())
+
+        assertTrue(log.traces.any { t -> t.events.any { e -> e["event:cost:total + trace:cost:total"] !== null }})
+
+        for (trace in log.traces) {
+            assertEquals(1, trace.count)
+            assertTrue(trace.events.count() >= 1)
+            for (event in trace.events) {
+                val cost = event["event:cost:total + trace:cost:total"]
+                val minCost = (trace.events.count() + 1).toDouble()
+                assertTrue(cost === null || cost is Double && cost in minCost..(minCost + 0.08))
             }
         }
     }
@@ -397,7 +419,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun selectConstantsTest() {
         val stream =
-            q("select l:1, l:2 + t:3, l:4 * t:5 + e:6, 7 / 8 - 9, 10 * null, t:null/11, l:D2020-03-12 limit l:1, t:1, e:1")
+                q("select l:1, l:2 + t:3, l:4 * t:5 + e:6, 7 / 8 - 9, 10 * null, t:null/11, l:D2020-03-12 limit l:1, t:1, e:1")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -422,7 +444,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun selectISO8601Test() {
         val stream = q(
-            """select 
+                """select 
                     D2020-03-13, 
                     D2020-03-13T16:45, 
                     D2020-03-13T16:45:50, 
@@ -466,7 +488,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun selectIEEE754Test() {
         val stream = q(
-            "select 0, 0.0, 0.00, -0, -0.0, 1, 1.0, -1, -1.0, ${Math.PI}, ${Double.MIN_VALUE}, ${Double.MAX_VALUE} limit l:1, t:1, e:1"
+                "select 0, 0.0, 0.00, -0, -0.0, 1, 1.0, -1, -1.0, ${Math.PI}, ${Double.MIN_VALUE}, ${Double.MAX_VALUE} limit l:1, t:1, e:1"
         )
         assertEquals(1, stream.count())
 
@@ -530,19 +552,43 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun selectNowTest() {
+        val now = Instant.now()
         val stream = q("select l:now() limit l:1")
+        val now2 = Instant.now()
+
+        val diff = Duration.between(now, now2).toMillis()
+        assertTrue(diff > 0L, "This test requires that the time difference between obtaining now and now2 values is nonzero. Was: ${diff}ms.")
+
+        // verify whether lazy-evaluation does not affect the timestamp
+        Thread.sleep(diff + 1L)
         assertEquals(1, stream.count())
 
         val log = stream.first()
         assertEquals(1, log.attributes.size)
-        assertTrue(abs(Duration.between(Instant.now(), log.attributes["log:now()"]?.value as Instant?).seconds) <= 1)
+        assertTrue(abs(Duration.between(now, log.attributes["log:now()"]?.value as Instant?).toMillis()) <= diff)
+
+        // verify repetitiveness
+        Thread.sleep(1L)
+        val log2 = stream.first()
+        assertEquals(log.attributes["log:now()"]?.value, log2.attributes["log:now()"]?.value)
+    }
+
+    @Test
+    fun selectSeconds() {
+        val stream = q("select e:*, second(e:timestamp) where l:id='$uuid'")
+        val log = stream.first()
+        for (trace in log.traces) {
+            for (event in trace.events) {
+                assertEquals(event.timeTimestamp!!.toDateTime().second.toDouble(), event.attributes["second(event:time:timestamp)"]?.value)
+            }
+        }
     }
 
     @Test
     fun nonexistentCustomAttributesTest() {
         val nonexistentAttributes = listOf(
-            "select [🦠] where l:id='$uuid'",
-            "select [result] where l:id='$uuid'" // exists in some events
+                "select [🦠] where l:id='$uuid'",
+                "select [result] where l:id='$uuid'" // exists in some events
         )
 
         val validResults = mutableMapOf(null to 0, "accept" to 0, "reject" to 0)
@@ -575,8 +621,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun errorHandlingTest() {
         val nonexistentClassifiers = listOf(
-            "order by c:nonexistent",
-            "group by [^c:nonstandard nonexisting]"
+                "order by c:nonexistent",
+                "group by [^c:nonstandard nonexisting]"
         )
 
         for (query in nonexistentClassifiers) {
@@ -594,7 +640,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     fun invalidUseOfClassifiers() {
         assertFailsWith<IllegalArgumentException> {
             val log =
-                q("where [e:classifier:concept:name+lifecycle:transition] in ('acceptcomplete', 'rejectcomplete') and l:id='$uuid'").first()
+                    q("where [e:classifier:concept:name+lifecycle:transition] in ('acceptcomplete', 'rejectcomplete') and l:id='$uuid'").first()
             val trace = log.traces.first()
             trace.events.first() // exception is thrown here
         }.apply {
@@ -941,7 +987,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun whereLogicExpr3Test() {
         val stream =
-            q("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2007-01-01) and t:total is null and l:id='$uuid'")
+                q("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2007-01-01) and t:total is null and l:id='$uuid'")
         val myBegin = "2007-01-01T00:00:00Z".parseISO8601()
         assertEquals(1, stream.count())
 
@@ -981,7 +1027,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun whereLikeAndMatchesTest() {
         val stream =
-            q("where t:name like '%5' and ^e:resource matches '^[SP]am$' and l:id='$uuid'")
+                q("where t:name like '%5' and ^e:resource matches '^[SP]am$' and l:id='$uuid'")
         val nameRegex = Regex("^[SP]am$")
         assertEquals(1, stream.count())
 
@@ -1008,7 +1054,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun groupScopeByClassifierTest() {
         val stream =
-            q("select [e:classifier:concept:name+lifecycle:transition] where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
+                q("select [e:classifier:concept:name+lifecycle:transition] where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1020,13 +1066,13 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         // |     4 - 97 |           1 | n/a
 
         val variant1 =
-            sequenceOf("inv", "inv", "get", "get", "get", "col", "col", "dec", "dec", "inv", "inv", "get", "rej", "rej")
+                sequenceOf("inv", "inv", "get", "get", "get", "col", "col", "dec", "dec", "inv", "inv", "get", "rej", "rej")
         val variant2 = sequenceOf("inv", "inv", "get", "get", "get", "col", "col", "dec", "dec", "acc", "acc")
         val variant3 =
-            sequenceOf(
-                "inv", "inv", "get", "get", "tim", "col", "col", "dec", "dec", "inv", "inv", "tim", "inv",
-                "inv", "tim", "inv", "inv", "get", "acc", "acc"
-            )
+                sequenceOf(
+                        "inv", "inv", "get", "get", "tim", "col", "col", "dec", "dec", "inv", "inv", "tim", "inv",
+                        "inv", "tim", "inv", "inv", "get", "acc", "acc"
+                )
 
         assertEquals(97, log.traces.count())
 
@@ -1035,31 +1081,31 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(94, log.traces.count { it.count == 1 })
 
         assertTrue(
-            log.traces
-                .first { it.count == 3 }.events
-                .map { it.conceptName!! }
-                .zip(variant1)
-                .all { (act, exp) -> act.startsWith(exp) }
+                log.traces
+                        .first { it.count == 3 }.events
+                        .map { it.conceptName!! }
+                        .zip(variant1)
+                        .all { (act, exp) -> act.startsWith(exp) }
         )
 
         assertTrue(
-            log.traces
-                .filter { it.count == 2 }.any {
-                    it.events
-                        .map { it.conceptName!! }
-                        .zip(variant2)
-                        .all { (act, exp) -> act.startsWith(exp) }
-                }
+                log.traces
+                        .filter { it.count == 2 }.any {
+                            it.events
+                                    .map { it.conceptName!! }
+                                    .zip(variant2)
+                                    .all { (act, exp) -> act.startsWith(exp) }
+                        }
         )
 
         assertTrue(
-            log.traces
-                .filter { it.count == 2 }.any {
-                    it.events
-                        .map { it.conceptName!! }
-                        .zip(variant3)
-                        .all { (act, exp) -> act.startsWith(exp) }
-                }
+                log.traces
+                        .filter { it.count == 2 }.any {
+                            it.events
+                                    .map { it.conceptName!! }
+                                    .zip(variant3)
+                                    .all { (act, exp) -> act.startsWith(exp) }
+                        }
         )
 
         for (trace in log.traces) {
@@ -1192,7 +1238,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun groupByImplicitFromSelectTest() {
         val stream = q(
-            "select l:*, t:*, avg(e:total), min(e:timestamp), max(e:timestamp) where l:name matches '(?i)^journalreview$' limit l:1"
+                "select l:*, t:*, avg(e:total), min(e:timestamp), max(e:timestamp) where l:name matches '(?i)^journalreview$' limit l:1"
         )
         assertEquals(1, stream.count())
 
@@ -1391,7 +1437,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         var lastTimestamp = begin
         for (trace in log.traces) {
             val minTimestamp =
-                trace.events.map { it.attributes["min(event:time:timestamp)"]!!.value as Instant }.min()!!
+                    trace.events.map { it.attributes["min(event:time:timestamp)"]!!.value as Instant }.min()!!
             assertTrue(!lastTimestamp.isAfter(minTimestamp))
 
             lastTimestamp = minTimestamp
@@ -1427,39 +1473,39 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertEquals(78, log.traces.count())
 
         val fourTraces = listOf(
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review 3,invite reviewers,invite reviewers"
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review 3,invite reviewers,invite reviewers"
         ).map { it.split(',') }
         val threeTraces = listOf(
-            "collect reviews,collect reviews,decide,decide,get review 1,get review 3,invite reviewers,invite reviewers,reject,reject,time-out 2",
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 3",
-            "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject"
+                "collect reviews,collect reviews,decide,decide,get review 1,get review 3,invite reviewers,invite reviewers,reject,reject,time-out 2",
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 3",
+                "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject"
         ).map { it.split(',') }
         val twoTraces = listOf(
-            "collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1",
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1",
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 3,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1,time-out 2",
-            "collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out X",
-            "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3",
-            "collect reviews,collect reviews,decide,decide,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out 2",
-            "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3,time-out X,time-out X,time-out X",
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1,time-out 2",
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 3,time-out X,time-out X",
-            "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3,time-out X,time-out X,time-out X,time-out X",
-            "collect reviews,collect reviews,decide,decide,get review X,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out 2,time-out 3,time-out X,time-out X,time-out X,time-out X",
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 3,invite reviewers,invite reviewers,time-out 2",
-            "collect reviews,collect reviews,decide,decide,get review 3,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out 2,time-out X,time-out X",
-            "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out X,time-out X"
+                "collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1",
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1",
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 3,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1,time-out 2",
+                "collect reviews,collect reviews,decide,decide,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out X",
+                "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3",
+                "collect reviews,collect reviews,decide,decide,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out 2",
+                "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3,time-out X,time-out X,time-out X",
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 1,time-out 2",
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out 3,time-out X,time-out X",
+                "collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 3,time-out X,time-out X,time-out X,time-out X",
+                "collect reviews,collect reviews,decide,decide,get review X,get review X,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out 2,time-out 3,time-out X,time-out X,time-out X,time-out X",
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 3,invite reviewers,invite reviewers,time-out 2",
+                "collect reviews,collect reviews,decide,decide,get review 3,get review X,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,reject,reject,time-out 1,time-out 2,time-out X,time-out X",
+                "accept,accept,collect reviews,collect reviews,decide,decide,get review 1,get review 2,get review 3,get review X,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite additional reviewer,invite reviewers,invite reviewers,time-out X,time-out X"
         ).map { it.split(',') }
 
         fun validate(validTraces: List<List<String>>, count: Int) {
             for (validTrace in validTraces) {
                 assertTrue(
-                    log.traces.filter { it.count == count }.any {
-                        it.events
-                            .map { it.conceptName!! }
-                            .zip(validTrace.asSequence())
-                            .all { (act, exp) -> act == exp }
-                    }
+                        log.traces.filter { it.count == count }.any {
+                            it.events
+                                    .map { it.conceptName!! }
+                                    .zip(validTrace.asSequence())
+                                    .all { (act, exp) -> act == exp }
+                        }
                 )
             }
         }
@@ -1529,7 +1575,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         // This is because XESInputStream implementations are required to only map custom attributes to standard attributes
         // but not otherwise.
         fun cmp(standard: Any?, standardName: String) =
-            assertTrue(standard == component.attributes[nameMap[standardName]]?.value || component.attributes[nameMap[standardName]]?.value == null)
+                assertTrue(standard == component.attributes[nameMap[standardName]]?.value || component.attributes[nameMap[standardName]]?.value == null)
 
         cmp(component.conceptName, "concept:name")
         cmp(component.identityId, "identity:id")

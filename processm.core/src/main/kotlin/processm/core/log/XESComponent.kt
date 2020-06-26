@@ -1,6 +1,7 @@
 package processm.core.log
 
 import processm.core.log.attribute.Attribute
+import processm.core.log.attribute.value
 import java.util.*
 
 /**
@@ -38,6 +39,14 @@ abstract class XESComponent {
      */
     val attributes: Map<String, Attribute<*>>
         get() = Collections.unmodifiableMap(attributesInternal)
+
+    /**
+     * Shorthand operator for retrieving the value of the attribute of this component.
+     * @param attributeName The name of the attribute to retrieve.
+     * @return The value of the attribute.
+     * @throws IllegalArgumentException if the attribute with the given name does not exist.
+     */
+    operator fun get(attributeName: String): Any? = requireNotNull(attributesInternal[attributeName]).value
 
     /**
      * A backing mutable field for [attributes].
