@@ -3,8 +3,12 @@ package processm.core.log.attribute
 import java.util.*
 import kotlin.collections.HashMap
 
-abstract class Attribute<T : Any>(key: String) {
+/**
+ * The base class for the attribute compliant with the XES standard.
+ */
+abstract class Attribute<T>(key: String) {
     internal val childrenInternal: MutableMap<String, Attribute<*>> = HashMap()
+
     /**
      * Attribute's key from XES file
      */
@@ -24,7 +28,9 @@ abstract class Attribute<T : Any>(key: String) {
      * Attributes inside this attribute (nested-attributes)
      * Used as getter based on the internal representation of children
      */
-    val children: Map<String, Attribute<*>> = Collections.unmodifiableMap(childrenInternal)
+    val children: Map<String, Attribute<*>>
+        get() = Collections.unmodifiableMap(childrenInternal)
+
     /**
      * Tag in XES standard
      */
@@ -60,7 +66,7 @@ abstract class Attribute<T : Any>(key: String) {
     }
 }
 
-val Attribute<*>.value: Any
+val Attribute<*>.value: Any?
     get() = this.getValue()
 
 fun Map<String, Attribute<*>>.deepEquals(other: Map<String, Attribute<*>>): Boolean =

@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-internal class DatabaseXESInputStreamTest {
+internal class DBXESInputStreamTest {
     private val content: String = """<?xml version="1.0" encoding="UTF-8" ?>
         <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
             <extension name="Lifecycle" prefix="lifecycle" uri="http://www.xes-standard.org/lifecycle.xesext"/>
@@ -69,7 +69,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Receive expected extensions in Log structure`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -90,7 +90,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Receive expected classifiers in Log structure`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -106,7 +106,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains named, special values in structure`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -118,7 +118,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains trace global attributes`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -164,7 +164,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains event global attributes`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -178,7 +178,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Log contains attributes`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         val receivedLog = stream.next() as Log
 
@@ -204,7 +204,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Event stream - special Trace element received`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         // Ignore Log element
         assert(stream.next() is Log)
@@ -218,7 +218,7 @@ internal class DatabaseXESInputStreamTest {
 
     @Test
     fun `Receive events from the DB`() {
-        val stream = DatabaseXESInputStream(Query(logId)).iterator()
+        val stream = DBXESInputStream(Query(logId)).iterator()
 
         // Ignore Log element
         assertTrue(stream.next() is Log)
@@ -255,7 +255,7 @@ internal class DatabaseXESInputStreamTest {
     @Test
     fun `No elements in sequence when log not found`() {
         val missingLogId = -1
-        val stream = DatabaseXESInputStream(Query(missingLogId)).iterator()
+        val stream = DBXESInputStream(Query(missingLogId)).iterator()
 
         assertFalse(stream.hasNext())
     }
@@ -275,7 +275,7 @@ internal class DatabaseXESInputStreamTest {
         content.byteInputStream().use { stream ->
             val xesElements = XMLXESInputStream(stream).asSequence()
 
-            DatabaseXESOutputStream().use { db ->
+            DBXESOutputStream().use { db ->
                 db.write(xesElements)
             }
         }

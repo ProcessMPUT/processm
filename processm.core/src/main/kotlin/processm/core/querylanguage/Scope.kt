@@ -72,3 +72,6 @@ enum class Scope {
         Event -> "event"
     }
 }
+
+val Scope?.prefix: String
+    get() = this?.let { "$it:" } ?: ""

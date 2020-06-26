@@ -3,7 +3,7 @@ package processm.core.log
 import processm.core.persistence.DBConnectionPool
 import java.sql.Connection
 
-object DatabaseLogCleaner {
+object DBLogCleaner {
     fun removeLog(logId: Int) {
         DBConnectionPool.getConnection().use { connection ->
             connection.autoCommit = false
@@ -101,3 +101,6 @@ object DatabaseLogCleaner {
         }
     }
 }
+
+@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")
+typealias DatabaseLogCleaner = DBLogCleaner

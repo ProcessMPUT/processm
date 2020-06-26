@@ -13,7 +13,7 @@ import kotlin.collections.ArrayList
 class ListAttr(key: String) : Attribute<List<Attribute<*>>>(key) {
     internal val valueInternal: MutableList<Attribute<*>> = ArrayList()
     val value: List<Attribute<*>> = Collections.unmodifiableList(valueInternal)
-    override fun getValue() = this.value
+    override fun getValue(): List<Attribute<*>> = this.value
     override val xesTag: String
         get() = "list"
 }
