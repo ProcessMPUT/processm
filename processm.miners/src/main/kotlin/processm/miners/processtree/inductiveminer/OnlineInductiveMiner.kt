@@ -50,7 +50,7 @@ class OnlineInductiveMiner : InductiveMiner() {
 
         // Check - apply statistics?
         if (changedStatistics) propagateStatistics()
-        
+
         processTree = ProcessTree(assignChildrenToNode(model))
         ProcessTreeSimplifier().simplify(processTree)
 
@@ -112,6 +112,7 @@ class OnlineInductiveMiner : InductiveMiner() {
 
         while (true) {
             // Analyze subGraph - should contain all activities affected by changed connections
+            if (selectedSubGraph.detectedCut !in operatorCuts) break
             selectedSubGraph =
                 selectedSubGraph.children.firstOrNull { it.activities.containsAll(affectedActivities) } ?: break
         }
@@ -139,11 +140,15 @@ class OnlineInductiveMiner : InductiveMiner() {
      * Make changes of node value support.
      * For activity, decide to use optionality / loops.
      *
+     * For exclusive choice we should also manage silent activities inside cut.
+     * Add τ if missing, remove if redundant.
+     *
      * BFS was used to prevent recursion.
      */
     private fun propagateStatistics() {
+        val exclusiveChoicesInsideGraph = LinkedList<DirectlyFollowsSubGraph>()
         val stack = ArrayDeque<DirectlyFollowsSubGraph>()
-        stack.addAll(model.children)
+        stack.add(model)
 
         while (stack.isNotEmpty()) {
             val subGraph = stack.pop()
@@ -152,6 +157,8 @@ class OnlineInductiveMiner : InductiveMiner() {
             subGraph.updateCurrentTraceSupport()
 
             if (subGraph.detectedCut in operatorCuts) {
+                if (subGraph.detectedCut == Exclusive) exclusiveChoicesInsideGraph.add(subGraph)
+
                 // Add children if node as one of cut
                 stack.addAll(subGraph.children)
             } else if (subGraph.detectedCut in activityCuts) {
@@ -159,5 +166,8 @@ class OnlineInductiveMiner : InductiveMiner() {
                 subGraph.detectActivityCutType()
             }
         }
+
+        // Analyze silent activity inside exclusive choice
+        exclusiveChoicesInsideGraph.forEach { it.modifySilentActivityInsideExclusiveChoice() }
     }
 }
