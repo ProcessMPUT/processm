@@ -8,7 +8,7 @@ import java.time.Instant
  *
  * Captures the event component from the XES metadata structure.
  */
-class Event : XESElement() {
+open class Event : XESElement() {
     override val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 
     /**

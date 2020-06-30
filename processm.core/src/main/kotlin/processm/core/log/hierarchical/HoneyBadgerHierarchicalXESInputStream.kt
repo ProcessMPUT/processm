@@ -20,7 +20,7 @@ class HoneyBadgerHierarchicalXESInputStream(base: XESInputStream) : LogInputStre
 
     private val log2traces = HashMap<BaseLog, MutableList<BaseTrace>>()
     private val trace2event = HashMap<BaseTrace, MutableList<Event>>()
-    private val result: Sequence<Log> by lazy {
+    private val result: List<Log> by lazy {
         var currentBaseLog: BaseLog? = null
         var currentBaseTrace: BaseTrace? = null
         for (element in base) {
@@ -42,7 +42,7 @@ class HoneyBadgerHierarchicalXESInputStream(base: XESInputStream) : LogInputStre
 
             }
         }
-        log2traces.asSequence().map { (log, traces) ->
+        log2traces.map { (log, traces) ->
             Log(traces.asSequence()
                 .map { trace -> Trace(trace2event.getOrDefault(trace, mutableListOf()).asSequence()) })
         }

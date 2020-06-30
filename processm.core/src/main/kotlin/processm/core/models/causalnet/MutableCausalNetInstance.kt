@@ -21,7 +21,7 @@ class MutableCausalNetInstance(
             addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
     }
 
-    internal var state: CausalNetState = CausalNetState()
+    internal var state: CausalNetStateImpl = CausalNetStateImpl()
 
     init {
         resetExecution()
@@ -61,5 +61,5 @@ class MutableCausalNetInstance(
     }
 
     override val availableActivityExecutions
-        get() = model.available(state).map { NodeExecution(it.activity, this, it.join, it.split) }
+        get() = model.available(state).asSequence().map { NodeExecution(it.activity, this, it.join, it.split) }
 }

@@ -17,7 +17,7 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
 
     override fun computeBindings(model: CausalNet, trace: List<Node>): List<Binding> {
         var currentStates =
-            listOf(ReplayTrace(CausalNetState(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
+            listOf(ReplayTrace(CausalNetStateImpl(), listOf<Set<Dependency>>(), listOf<Set<Dependency>>()))
         for (idx in trace.indices) {
             val currentNode = trace[idx]
             val remainder = trace.subList(idx + 1, trace.size).toSet()
@@ -29,11 +29,11 @@ class CompleteBindingProvider(val hypothesisSelector: ReplayTraceHypothesisSelec
             for ((state, joins, splits) in currentStates) {
                 for (consume in consumeCandidates(model, currentNode, state.uniqueSet())) {
                     assert(state.containsAll(consume))
-                    val intermediate = CausalNetState(state)
+                    val intermediate = CausalNetStateImpl(state)
                     for (c in consume)
                         intermediate.remove(c)
                     for (produce in produceCandidates) {
-                        val ns = CausalNetState(intermediate)
+                        val ns = CausalNetStateImpl(intermediate)
                         ns.addAll(produce)
 
                         if (!remainder.containsAll(ns.mapToSet { it.target }))

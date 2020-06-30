@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.bindingproviders
 
 import processm.core.helpers.allSubsets
+import processm.core.helpers.allSubsetsUpToSize
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
@@ -14,8 +15,9 @@ abstract class AbstractBindingProvider : BindingProvider {
     protected fun consumeCandidates(
         model: CausalNet,
         currentNode: Node,
-        available: Set<Dependency>
-    ): Collection<Collection<Dependency>> {
+        available: Set<Dependency>,
+        maxSetSize: Int=Int.SIZE_BITS
+    ): Iterable<Collection<Dependency>> {
         val consumable =
             model.incoming.getOrDefault(currentNode, setOf())
         val knownJoins = model.joins[currentNode]
@@ -36,14 +38,15 @@ abstract class AbstractBindingProvider : BindingProvider {
     protected fun produceCandidates(
             model: CausalNet,
             currentNode: Node,
-            available: Set<Node>
-    ): List<Collection<Dependency>> {
+            available: Set<Node>,
+            maxSetSize: Int=Int.SIZE_BITS
+    ): Iterable<Set<Dependency>> {
         val producible =
             model.outgoing.getOrDefault(currentNode, setOf())
         val knownSplits = model.splits[currentNode]
         return if (knownSplits.isNullOrEmpty()) {
             if (producible.isNotEmpty())
-                producible.filter { it.target in available }.allSubsets(true)
+                producible.filter { it.target in available }.allSubsetsUpToSize(maxSetSize)
             else
                 listOf(setOf<Dependency>())
         } else {
