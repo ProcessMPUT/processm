@@ -103,7 +103,7 @@ abstract class CausalNet(
     /**
      * In the given [state], list of nodes that can be executed, along with corresponding split and join
      */
-    internal fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
+    fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
         if (state.isNotEmpty()) {
             for (node in state.map { it.target }.toSet())
                 for (join in joins[node].orEmpty())
@@ -118,6 +118,42 @@ abstract class CausalNet(
             yieldAll(
                 splits.getValue(start)
                     .map { split -> DecoupledNodeExecution(start, null, split) })
+    }
+
+    fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
+        if (state.isNotEmpty()) {
+            val relevant = state.uniqueSet().filterTo(HashSet()) { it.target == node }
+            val result = ArrayList<DecoupledNodeExecution>()
+            for (join in joins[node].orEmpty())
+                if (relevant.containsAll(join.dependencies)) {
+                    val splits = if (node != end) splits[node].orEmpty() else setOf(null)
+                    for (split in splits)
+                        result.add(DecoupledNodeExecution(node, join, split))
+                }
+            return result
+        } else
+            if (node == start)
+                return splits.getValue(start)
+                    .map { split -> DecoupledNodeExecution(start, null, split) }
+            else
+                return emptyList()
+    }
+
+    /**
+     * In the given [state], list of nodes that can be executed
+     */
+    fun availableNodes(state: CausalNetState): Set<Node> {
+        return if (state.isNotEmpty()) {
+            val flatState = HashMap<Node, MutableSet<Dependency>>()
+            for (dep in state.uniqueSet())
+                flatState.getOrPut(dep.target) { HashSet() }.add(dep)
+            val result = HashSet<Node>()
+            for ((node, deps) in flatState)
+                if (joins[node]?.any { join -> deps.containsAll(join.dependencies) } == true)
+                    result.add(node)
+            return result
+        } else
+            setOf(start)
     }
 
     /**
@@ -137,7 +173,8 @@ abstract class CausalNet(
     /**
      * True if the causal net contains [dependency]
      */
-    operator fun contains(dependency: Dependency): Boolean = outgoing[dependency.source]?.contains(dependency) == true
+    operator fun contains(dependency: Dependency): Boolean =
+        outgoing[dependency.source]?.contains(dependency) == true
 
     /**
      * A simplified textual representation of the model.
@@ -167,6 +204,7 @@ abstract class CausalNet(
     /**
      * True if [right] is isomorphic with [this], starting with [inital] as a (possibly empty) mapping from [this] to [right].
      */
-    fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? = Isomorphism(this, right).run(initial)
+    fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? =
+        Isomorphism(this, right).run(initial)
 
 }

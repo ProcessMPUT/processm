@@ -7,6 +7,7 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.miners.heuristicminer.Helper.event
+import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import kotlin.test.Test
@@ -52,5 +53,16 @@ class HeuristicMinerTest {
             assertEquals(joins[b], setOf(Join(setOf(Dependency(start, b))), Join(setOf(Dependency(a, b)))))
             assertEquals(joins[c], setOf(Join(setOf(Dependency(start, c))), Join(setOf(Dependency(b, c)))))
         }
+    }
+
+    @Test
+    fun diamond() {
+        val log= logFromString(   """
+                a b c d
+                a c b d 
+            """.trimIndent())
+        val hm = OnlineHeuristicMiner()
+        hm.processLog(log)
+        println(hm.result)
     }
 }

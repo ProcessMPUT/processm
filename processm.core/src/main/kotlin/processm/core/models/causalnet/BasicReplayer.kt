@@ -21,7 +21,7 @@ class BasicReplayer(override val model: CausalNet) : Replayer {
 
     override fun replay(trace: Trace): Sequence<Sequence<BindingDecision>> = sequence {
         val queue = ArrayDeque<ExecutionState>()
-        queue.add(ExecutionState(CausalNetState(), trace.events.toList(), emptyList<BindingDecision>()))
+        queue.add(ExecutionState(CausalNetStateImpl(), trace.events.toList(), emptyList<BindingDecision>()))
         while (!queue.isEmpty()) {
             val (state, remainingTrace, decisionsSoFar) = queue.poll()
             if (remainingTrace.isEmpty()) {
@@ -32,7 +32,7 @@ class BasicReplayer(override val model: CausalNet) : Replayer {
                 val rest = remainingTrace.subList(1, remainingTrace.size)
                 for (ae in model.available(state)) {
                     if (matches(currentEvent, ae.activity)) {
-                        val newState = CausalNetState(state)
+                        val newState = CausalNetStateImpl(state)
                         newState.execute(ae.join, ae.split)
                         val dec = listOf(
                             BindingDecision(ae.join, DecisionPoint(ae.activity, model.joins[ae.activity].orEmpty())),

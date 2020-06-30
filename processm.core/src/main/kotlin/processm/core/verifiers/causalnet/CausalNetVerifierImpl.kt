@@ -294,7 +294,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
                 val tmp = CausalNetSequenceWithHash()
-                tmp.add(ActivityBinding(model.start, setOf(), split.targets, CausalNetState()))
+                tmp.add(ActivityBinding(model.start, setOf(), split.targets, CausalNetStateImpl()))
                 tmp
             })
         val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()

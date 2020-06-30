@@ -230,4 +230,93 @@ class HelpersTests {
             listOf("a", "b", "c").allPermutations().toSet()
         )
     }
+
+    @ExperimentalStdlibApi
+    @Test
+    fun `all subsets up to size 3`() {
+        val subsets = listOf("a", "b", "c", "d").allSubsetsUpToSize(3).toSet()
+        assertEquals(
+            setOf(
+                setOf("a"),
+                setOf("b"),
+                setOf("c"),
+                setOf("d"),
+                setOf("a", "b"),
+                setOf("a", "c"),
+                setOf("a", "d"),
+                setOf("b", "c"),
+                setOf("b", "d"),
+                setOf("c", "d"),
+                setOf("a", "b", "c"),
+                setOf("a", "b", "d"),
+                setOf("a", "c", "d"),
+                setOf("b", "c", "d")
+            ), subsets
+        )
+    }
+
+    @ExperimentalStdlibApi
+    @Test
+    fun `all subsets up to size 2`() {
+        val subsets = listOf("a", "b", "c", "d").allSubsetsUpToSize(2).toSet()
+        assertEquals(
+            setOf(
+                setOf("a"),
+                setOf("b"),
+                setOf("c"),
+                setOf("d"),
+                setOf("a", "b"),
+                setOf("a", "c"),
+                setOf("a", "d"),
+                setOf("b", "c"),
+                setOf("b", "d"),
+                setOf("c", "d")
+            ), subsets
+        )
+    }
+
+    @ExperimentalStdlibApi
+    @Test
+    fun `all subsets up to size 1`() {
+        val subsets = listOf("a", "b", "c", "d").allSubsetsUpToSize(1).toSet()
+        assertEquals(
+            setOf(
+                setOf("a"),
+                setOf("b"),
+                setOf("c"),
+                setOf("d")
+            ), subsets
+        )
+    }
+
+    @ExperimentalStdlibApi
+    @Test
+    fun `all subsets up to size 4`() {
+        val list = listOf("a", "b", "c", "d")
+        assertEquals(list.allSubsets(true), list.allSubsetsUpToSize(4).toSet())
+    }
+
+    private fun testCount(n:Int) {
+        val input = (0 until n).toList()
+        assertEquals(n, input.size)
+        val expected = 0 + //ignored empty subsets
+                n +   // subsets of size 1
+                n * (n - 1) / 2 //subsets of size 2
+        assertEquals(expected, input.allSubsetsUpToSize(2).count())
+    }
+
+    @Test
+    fun `count subsets up to size 2 of list of 40`() {
+        testCount(40)
+    }
+
+    @Test
+    fun `count subsets up to size 2 of list of 70`() {
+        testCount(70)
+    }
+
+    @Test
+    fun `count subsets up to size 2 of list of 300`() {
+        testCount(300)
+    }
 }

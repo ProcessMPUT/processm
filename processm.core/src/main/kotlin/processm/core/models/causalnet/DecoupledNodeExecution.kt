@@ -14,4 +14,6 @@ open class DecoupledNodeExecution internal constructor(
     override fun execute() {
         throw UnsupportedOperationException()
     }
+
+    override fun toString(): String = "$join -> $activity -> $split"
 }
