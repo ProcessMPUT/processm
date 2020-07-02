@@ -12,6 +12,7 @@
   align-items: center;
   color: var(--v-primary-darken2);
   font-size: 80px;
+  overflow: hidden;
 }
 </style>
 
@@ -20,8 +21,8 @@ import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
 
 @Component
-export default class Kpi extends Vue {
+export default class KpiComponent extends Vue {
   @Prop({ default: {} })
-  readonly data!: any;
+  readonly data!: { value: number };
 }
 </script>
