@@ -90,8 +90,9 @@ export class Link implements SimulationLinkDatum<Node> {
     return (this.source as Node)?.id == (this.target as Node)?.id;
   }
 
-  public get displayArrow() {
-    return (this.target as Node)?.id == this.indirectTargetNodeId;
+  public isTargetNodeRegular() {
+    const targetNodeId = (this.target as Node)?.id || (this.target as string);
+    return targetNodeId == this.indirectTargetNodeId;
   }
 
   public hasType(type: ElementType) {
@@ -422,18 +423,27 @@ export default class CasualNet {
         bindingNodes.forEach(node => {
           if (node.relatedNodeId == null || node.intermediateLinkId == null)
             return;
+          const isSplit = node.hasType(ElementType.Split);
           node.bindingSlot = bindingSlot;
           frontierNodes.add(node.relatedNodeId);
+          const sourceNodeId = isSplit
+            ? lastBoundNodes.get(node.relatedNodeId) || nodeId
+            : node.id;
+          const targetNodeId = isSplit
+            ? node.id
+            : lastBoundNodes.get(node.relatedNodeId) || nodeId;
+          const indirectSourceNodeId = isSplit ? nodeId : node.relatedNodeId;
+          const indirectTargetNodeId = isSplit ? node.relatedNodeId : nodeId;
           intermediateLinks.push(
             new Link(
               uuidv4(),
-              lastBoundNodes.get(node.relatedNodeId) || nodeId,
-              node.id,
+              sourceNodeId,
+              targetNodeId,
               ElementType.Regular,
               node.intermediateLinkId,
               {
-                indirectSourceNodeId: nodeId,
-                indirectTargetNodeId: node.relatedNodeId
+                indirectSourceNodeId,
+                indirectTargetNodeId
               }
             )
           );

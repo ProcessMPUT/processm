@@ -25,10 +25,6 @@ export interface UserInputSource {
   readonly displayPreferences: {
     nodeSize: number;
     bindingNodeSize: number;
-    edgeThickness: number;
-    bindingEdgeThickness: number;
-    edgeArrowSize: number;
-    nodeLabelSize: number;
   };
   nodes(
     filterExpression?: ((link: Node) => boolean) | null
@@ -102,9 +98,11 @@ export class AdditionModeInputHandler implements UserInputHandler {
     );
     this.nodeToBeCreated.attr("transform", `translate(${x}, ${y})`);
   }
+
   nodeClick() {
     return;
   }
+
   linkClick(eventLink: Link, point: Point) {
     if (eventLink.hasType(ElementType.Binding)) return;
 
@@ -116,6 +114,7 @@ export class AdditionModeInputHandler implements UserInputHandler {
     this.component.scaleElements();
     this.component.runSimulation();
   }
+
   nodeMouseover(eventNode: Node) {
     this.hideNodeToBeCreated();
     this.newLinkTargetNode = eventNode;
@@ -123,6 +122,7 @@ export class AdditionModeInputHandler implements UserInputHandler {
       .nodes(node => node.id == eventNode.id)
       .attr("stroke", d => this.component.nodeColor(d.nodeType));
   }
+
   nodeMouseout(eventNode: Node) {
     this.showNodeToBeCreated();
     this.newLinkTargetNode = null;
@@ -130,12 +130,14 @@ export class AdditionModeInputHandler implements UserInputHandler {
       .nodes(node => node.id == eventNode.id)
       .attr("stroke", "#fff");
   }
+
   linkMouseover(eventLink: Link, point: Point) {
     if (eventLink.hasType(ElementType.Binding)) return;
 
     const nodeType = this.selectTypeOfBindingNodeToCreate(eventLink, point);
     this.applyElementTypeToNodeToBeCreated(nodeType);
   }
+
   linkMouseout() {
     this.applyElementTypeToNodeToBeCreated(ElementType.Regular);
   }
@@ -461,9 +463,11 @@ export class InteractiveModeInputHandler implements UserInputHandler {
   nodeClick() {
     return;
   }
+
   linkClick() {
     return;
   }
+
   nodeMouseover(eventNode: Node): void {
     const selectedNodes = eventNode.hasType(ElementType.Binding)
       ? this.component.nodes(
@@ -475,7 +479,7 @@ export class InteractiveModeInputHandler implements UserInputHandler {
     if (selectedNodes.size() > 1) {
       this.component
         .links(link => link.groupId == eventNode.bindingLinkId)
-        .attr("stroke", "#000");
+        .attr("stroke-opacity", "1");
     }
     this.nodeDetails
       .html(`ID: ${eventNode.id}\nX: ${eventNode.x}\nY: ${eventNode.y}`)
@@ -497,6 +501,7 @@ export class InteractiveModeInputHandler implements UserInputHandler {
       .duration(200)
       .style("opacity", 0.8);
   }
+
   nodeMouseout(eventNode: Node): void {
     const selectedNodes = eventNode.hasType(ElementType.Binding)
       ? this.component.nodes(
@@ -508,7 +513,9 @@ export class InteractiveModeInputHandler implements UserInputHandler {
     if (selectedNodes.size() > 1) {
       this.component
         .links(link => link.groupId == eventNode.bindingLinkId)
-        .attr("stroke", "#999");
+        .attr("stroke-opacity", d =>
+          d.hasType(ElementType.Binding) ? 0.5 : 0.7
+        );
     }
 
     this.nodeDetails
@@ -520,7 +527,7 @@ export class InteractiveModeInputHandler implements UserInputHandler {
   linkMouseover(eventLink: Link): void {
     this.component
       .links(link => link.groupId == eventLink.groupId)
-      .attr("stroke", "#000");
+      .attr("stroke-opacity", "1");
 
     (eventLink.hasType(ElementType.Binding)
       ? this.component.nodes(node => node.bindingLinkId == eventLink.groupId)
@@ -535,7 +542,9 @@ export class InteractiveModeInputHandler implements UserInputHandler {
       .links(link => link.groupId == eventLink.groupId)
       .transition()
       .duration(500)
-      .attr("stroke", "#999");
+      .attr("stroke-opacity", d =>
+        d.hasType(ElementType.Binding) ? 0.5 : 0.7
+      );
 
     (eventLink.hasType(ElementType.Binding)
       ? this.component.nodes(node => node.bindingLinkId == eventLink.groupId)

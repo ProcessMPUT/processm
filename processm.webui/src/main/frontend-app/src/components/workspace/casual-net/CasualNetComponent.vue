@@ -11,7 +11,7 @@
       :style="{ cursor: editMode == null ? 'auto' : 'crosshair' }"
       preserveAspectRatio="xMidYMid meet"
     >
-      <g class="links" stroke="#999" fill="none" />
+      <g class="links" :stroke="displayPreferences.edgeColor" fill="none" />
       <g class="nodes" stroke="#fff" />
       <circle
         class="nodeToBeCreated"
@@ -23,12 +23,12 @@
         class="linkToBeCreated"
         display="none"
         :stroke-width="displayPreferences.edgeThickness * currentScalingFactor"
-        stroke="#999"
+        :stroke="displayPreferences.edgeColor"
         opacity="0.3"
       />
       <defs>
         <marker
-          :id="`arrow${uuidv4()}`"
+          :id="`arrow${arrowMarkerId}`"
           markerUnits="userSpaceOnUse"
           viewBox="0 0 10 10"
           orient="auto"
@@ -167,7 +167,6 @@ enum EditMode {
 export default class CasualNetComponent extends Vue implements UserInputSource {
   ComponentMode = ComponentMode;
   EditMode = EditMode;
-  uuidv4 = uuidv4;
 
   @Prop({ default: {} })
   readonly data!: {
@@ -178,19 +177,20 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
 
+  private readonly arrowMarkerId = uuidv4();
   private editMode: EditMode | null = null;
   private userInputHandler!: UserInputHandler;
   private simulation: Simulation<Node, Link> | undefined;
 
-  private get rootSvg(): Selection<BaseType, unknown, null, undefined> {
+  private rootSvg(): Selection<BaseType, unknown, null, undefined> {
     return d3.select(this.$el).select("svg");
   }
 
-  private get nodesLayer() {
-    return this.rootSvg.select("g.nodes");
+  private nodesLayer() {
+    return this.rootSvg().select("g.nodes");
   }
 
-  private get nodeShapes() {
+  private nodeShapes() {
     return this.nodes().select("path") as Selection<
       SVGPathElement,
       Node,
@@ -199,7 +199,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
     >;
   }
 
-  private get nodeLabels() {
+  private nodeLabels() {
     return this.nodes().select("text") as Selection<
       SVGTextElement,
       Node,
@@ -208,12 +208,14 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
     >;
   }
 
-  private get linksLayer() {
-    return this.rootSvg.select("g.links");
+  private linksLayer() {
+    return this.rootSvg().select("g.links");
   }
 
-  private get arrowheads(): Selection<BaseType, unknown, null, undefined> {
-    return this.rootSvg.select("defs").select("marker");
+  private arrowheads(): Selection<BaseType, unknown, null, undefined> {
+    return this.rootSvg()
+      .select("defs")
+      .select("marker");
   }
 
   public casualNet!: CasualNet;
@@ -226,7 +228,11 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
     edgeThickness: 3,
     bindingEdgeThickness: 2,
     edgeArrowSize: 12,
-    nodeLabelSize: 16
+    nodeLabelSize: 16,
+    regularNodeColor: "black",
+    splitNodeColor: "blue",
+    joinNodeColor: "green",
+    edgeColor: "grey"
   };
 
   public get nodeDetails() {
@@ -241,19 +247,19 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
     return (this.$refs.svg as Element).clientWidth;
   }
   public get linkToBeCreated() {
-    return this.rootSvg.select("line.linkToBeCreated");
+    return this.rootSvg().select("line.linkToBeCreated");
   }
 
   public get nodeToBeCreated() {
-    return this.rootSvg.select("circle.nodeToBeCreated");
+    return this.rootSvg().select("circle.nodeToBeCreated");
   }
 
   public nodeColor(nodeType: ElementType) {
     return (nodeType & ElementType.Regular) == ElementType.Regular
-      ? "black"
-      : (nodeType & ElementType.Join) == ElementType.Join
-      ? "red"
-      : "blue";
+      ? this.displayPreferences.regularNodeColor
+      : (nodeType & ElementType.Split) == ElementType.Split
+      ? this.displayPreferences.splitNodeColor
+      : this.displayPreferences.joinNodeColor;
   }
 
   public runSimulation() {
@@ -265,7 +271,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   public nodes(filterExpression: ((link: Node) => boolean) | null = null) {
-    const selection = this.nodesLayer.selectAll("g") as Selection<
+    const selection = this.nodesLayer().selectAll("g") as Selection<
       SVGGElement,
       Node,
       SVGGElement,
@@ -278,7 +284,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   public links(filterExpression: ((link: Link) => boolean) | null = null) {
-    const selection = this.linksLayer.selectAll("path") as Selection<
+    const selection = this.linksLayer().selectAll("path") as Selection<
       Element | EnterElement | Document | Window | SVGPathElement | null,
       Link,
       SVGGElement,
@@ -338,7 +344,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
         )
     );
 
-    this.rootSvg
+    this.rootSvg()
       .on("click", () =>
         this.userInputHandler.backgroundClick(this.getMousePosition())
       )
@@ -346,17 +352,12 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
         this.userInputHandler.backgroundMousemove(this.getMousePosition())
       );
 
-    this.arrowheads
+    this.arrowheads()
       .append("path")
       .attr("d", "M 0 0 10 4 0 8 2 4")
-      .style("fill", "#999");
+      .style("fill", this.displayPreferences.edgeColor);
 
     this.refreshLinks();
-
-    this.links()
-      .filter(d => d.displayArrow || false)
-      .attr("marker-end", `url(#${this.arrowheads.attr("id")})`);
-
     this.refreshNodes();
 
     this.nodeToBeCreated
@@ -425,7 +426,10 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
           enter
             .append("path")
             .attr("stroke-opacity", d =>
-              d.hasType(ElementType.Binding) ? 0.5 : 1
+              d.hasType(ElementType.Binding) ? 0.5 : 0.7
+            )
+            .attr("marker-end", d =>
+              d.isTargetNodeRegular() ? `url(#arrow${this.arrowMarkerId})` : ""
             )
             .on("mouseover", d =>
               this.userInputHandler.linkMouseover(d, this.getMousePosition())
@@ -450,7 +454,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   public scaleElements(scalingFactor = this.currentScalingFactor) {
     if (scalingFactor == Number.POSITIVE_INFINITY) return;
 
-    this.arrowheads
+    this.arrowheads()
       .attr(
         "markerWidth",
         this.displayPreferences.edgeArrowSize * scalingFactor
@@ -468,8 +472,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
           : this.displayPreferences.edgeThickness) * scalingFactor
     );
     this.nodes().attr("stroke-width", scalingFactor);
-
-    this.nodeShapes.attr("d", d =>
+    this.nodeShapes().attr("d", d =>
       d3
         .symbol()
         .type(d.isStartNode || d.isEndNode ? d3.symbolDiamond : d3.symbolCircle)
@@ -481,7 +484,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
             2
         )()
     );
-    this.nodeLabels.attr(
+    this.nodeLabels().attr(
       "font-size",
       this.displayPreferences.nodeLabelSize * scalingFactor
     );

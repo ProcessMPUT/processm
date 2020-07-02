@@ -88,7 +88,7 @@ export default class WorkspaceComponent extends Vue {
   @Prop({ default: "" })
   readonly workspaceId!: string;
   @Prop({ default: {} })
-  readonly componentDetails!: any;
+  readonly componentDetails!: object;
   @Prop({ default: false })
   readonly interactive!: boolean;
   @Prop({ default: false })
