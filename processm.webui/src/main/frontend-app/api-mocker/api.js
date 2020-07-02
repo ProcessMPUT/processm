@@ -79,24 +79,42 @@ const componentsData = [
       nodes: [
         {
           id: "a",
-          depth: 0,
-          outputBindings: [
-            ["c"],
-            ["d", "b", "c"],
-            ["b", "d"],
-            ["b"],
-            ["c", "d"]
-          ],
-          inputBindings: []
+          splits: [["c"], ["d", "b", "c"], ["b", "d"], ["b"], ["c", "d"]],
+          joins: []
         },
-        { id: "b", depth: 1, outputBindings: [["e"]], inputBindings: [["a"]] },
-        { id: "c", depth: 1, outputBindings: [["e"]], inputBindings: [["a"]] },
-        { id: "d", depth: 1, outputBindings: [["e"]], inputBindings: [["a"]] },
+        { id: "b", splits: [["e"]], joins: [["a"]] },
+        { id: "c", splits: [["e"]], joins: [["a"]] },
+        { id: "d", splits: [["e"]], joins: [["a"]] },
         {
           id: "e",
-          depth: 2,
-          outputBindings: [],
-          inputBindings: [["c", "d"], ["b"], ["c", "b", "d"], ["c"], ["b", "d"]]
+          splits: [],
+          joins: [["c", "d"], ["b"], ["c", "b", "d"], ["c"], ["b", "d"]]
+        }
+      ],
+      edges: [
+        {
+          sourceNodeId: "a",
+          targerNodeId: "b"
+        },
+        {
+          sourceNodeId: "a",
+          targerNodeId: "c"
+        },
+        {
+          sourceNodeId: "a",
+          targerNodeId: "d"
+        },
+        {
+          sourceNodeId: "b",
+          targerNodeId: "e"
+        },
+        {
+          sourceNodeId: "c",
+          targerNodeId: "e"
+        },
+        {
+          sourceNodeId: "d",
+          targerNodeId: "e"
         }
       ]
     }
@@ -110,52 +128,46 @@ const componentsData = [
       nodes: [
         {
           id: "a",
-          depth: 0,
-          outputBindings: [
+          splits: [
             ["b", "d"],
             ["c", "d"]
           ],
-          inputBindings: []
+          joins: []
         },
         {
           id: "b",
-          depth: 1,
-          outputBindings: [["e"]],
-          inputBindings: [["a"], ["f"]]
+          splits: [["e"]],
+          joins: [["a"], ["f"]]
         },
         {
           id: "c",
-          depth: 1,
-          outputBindings: [["e"]],
-          inputBindings: [["a"], ["f"]]
+          splits: [["e"]],
+          joins: [["a"], ["f"]]
         },
         {
           id: "d",
-          depth: 1,
-          outputBindings: [["e"]],
-          inputBindings: [["a"], ["f"]]
+          splits: [["e"]],
+          joins: [["a"], ["f"]]
         },
         {
           id: "e",
-          depth: 2,
-          outputBindings: [["f"], ["g"], ["h"]],
-          inputBindings: [
+          splits: [["f"], ["g"], ["h"]],
+          joins: [
             ["b", "d"],
             ["c", "d"]
           ]
         },
         {
           id: "f",
-          depth: 1,
-          outputBindings: [
+          splits: [
             ["b", "d"],
             ["c", "d"]
           ],
-          inputBindings: [["e"]]
+          joins: [["e"]]
         },
-        { id: "g", depth: 3, outputBindings: [["z"]], inputBindings: [["e"]] },
-        { id: "h", depth: 3, outputBindings: [["z"]], inputBindings: [["e"]] },
-        { id: "z", depth: 4, outputBindings: [], inputBindings: [["g"], ["h"]] }
+        { id: "g", splits: [["z"]], joins: [["e"]] },
+        { id: "h", splits: [["z"]], joins: [["e"]] },
+        { id: "z", splits: [], joins: [["g"], ["h"]] }
       ]
     }
   },
@@ -166,27 +178,55 @@ const componentsData = [
     data: {
       query: "SELECT ...",
       nodes: [
-        { id: "a", depth: 0, outputBindings: [["b"]], inputBindings: [] },
+        { id: "a", splits: [["b"]], joins: [] },
         {
           id: "b",
-          depth: 1,
-          outputBindings: [
+          splits: [
             ["b", "c"],
             ["c", "d"]
           ],
-          inputBindings: [["a"], ["b"]]
+          joins: [["a"], ["b"]]
         },
-        { id: "c", depth: 2, outputBindings: [["d"]], inputBindings: [["b"]] },
+        { id: "c", splits: [["d"]], joins: [["b"]] },
         {
           id: "d",
-          depth: 3,
-          outputBindings: [["d"], ["e"]],
-          inputBindings: [
+          splits: [["d"], ["e"]],
+          joins: [
             ["b", "c"],
             ["c", "d"]
           ]
         },
-        { id: "e", depth: 4, outputBindings: [], inputBindings: [["d"]] }
+        { id: "e", splits: [], joins: [["d"]] }
+      ],
+      edges: [
+        {
+          sourceNodeId: "a",
+          targerNodeId: "b"
+        },
+        {
+          sourceNodeId: "b",
+          targerNodeId: "b"
+        },
+        {
+          sourceNodeId: "b",
+          targerNodeId: "c"
+        },
+        {
+          sourceNodeId: "b",
+          targerNodeId: "d"
+        },
+        {
+          sourceNodeId: "c",
+          targerNodeId: "d"
+        },
+        {
+          sourceNodeId: "d",
+          targerNodeId: "d"
+        },
+        {
+          sourceNodeId: "d",
+          targerNodeId: "e"
+        }
       ],
       layout: [
         { id: "a", x: 125, y: 25 },
@@ -206,97 +246,83 @@ const componentsData = [
       nodes: [
         {
           id: "a",
-          depth: 0,
-          outputBindings: [
+          splits: [
             ["b", "c", "d"],
             ["c", "d"]
           ],
-          inputBindings: []
+          joins: []
         },
         {
           id: "b",
-          depth: 1,
-          outputBindings: [
+          splits: [
             ["e", "f"],
             ["e", "g"]
           ],
-          inputBindings: [["a"]]
+          joins: [["a"]]
         },
-        { id: "c", depth: 1, outputBindings: [["f"]], inputBindings: [["a"]] },
+        { id: "c", splits: [["f"]], joins: [["a"]] },
         {
           id: "d",
-          depth: 1,
-          outputBindings: [["g", "h"]],
-          inputBindings: [["a"]]
+          splits: [["g", "h"]],
+          joins: [["a"]]
         },
         {
           id: "e",
-          depth: 2,
-          outputBindings: [["i"]],
-          inputBindings: [["b", "g"]]
+          splits: [["i"]],
+          joins: [["b", "g"]]
         },
         {
           id: "f",
-          depth: 2,
-          outputBindings: [
+          splits: [
             ["h", "j"],
             ["m", "l"]
           ],
-          inputBindings: [["b", "c"]]
+          joins: [["b", "c"]]
         },
         {
           id: "g",
-          depth: 2,
-          outputBindings: [["e", "n"], ["k"], ["i"]],
-          inputBindings: [["b", "d"]]
+          splits: [["e", "n"], ["k"], ["i"]],
+          joins: [["b", "d"]]
         },
         {
           id: "h",
-          depth: 2,
-          outputBindings: [["l"]],
-          inputBindings: [["f", "d"]]
+          splits: [["l"]],
+          joins: [["f", "d"]]
         },
         {
           id: "i",
-          depth: 3,
-          outputBindings: [["n"]],
-          inputBindings: [["e", "g"]]
+          splits: [["n"]],
+          joins: [["e", "g"]]
         },
         {
           id: "j",
-          depth: 3,
-          outputBindings: [["m"], ["n"]],
-          inputBindings: [["f"]]
+          splits: [["m"], ["n"]],
+          joins: [["f"]]
         },
         {
           id: "k",
-          depth: 3,
-          outputBindings: [["m", "n"]],
-          inputBindings: [["g"]]
+          splits: [["m", "n"]],
+          joins: [["g"]]
         },
         {
           id: "l",
-          depth: 3,
-          outputBindings: [["o"]],
-          inputBindings: [["f"], ["h"]]
+          splits: [["o"]],
+          joins: [["f"], ["h"]]
         },
         {
           id: "m",
-          depth: 4,
-          outputBindings: [["o"]],
-          inputBindings: [["f"], ["j", "k"]]
+          splits: [["o"]],
+          joins: [["f"], ["j", "k"]]
         },
         {
           id: "n",
-          depth: 4,
-          outputBindings: [["o"]],
-          inputBindings: [["j", "k"], ["g"]]
+          splits: [["o"]],
+          joins: [["j", "k"], ["g"]]
         },
         {
           id: "o",
-          depth: 5,
-          outputBindings: [],
-          inputBindings: [["m"], ["n"], ["l"]]
+          splits: [],
+          joins: [["m"], ["n"], ["l"]]
         }
       ]
     }
