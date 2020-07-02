@@ -25,6 +25,7 @@
           >
             <workspace-component
               :component-details="componentsDetails[item.i]"
+              :component-mode="ComponentMode.Static"
               @view="viewComponent"
               @edit="editComponent"
               @remove="removeComponent"
@@ -70,7 +71,7 @@ import { Prop, Inject } from "vue-property-decorator";
 import { GridLayout, GridItem } from "vue-grid-layout";
 import SingleComponentView from "./SingleComponentView.vue";
 import EditComponentView from "./EditComponentView.vue";
-import WorkspaceComponent from "./WorkspaceComponent.vue";
+import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import WorkspaceComponentModel from "@/models/WorkspaceComponent";
 import WorkspaceLayoutItem from "@/models/WorkspaceLayoutItem";
@@ -85,6 +86,8 @@ import WorkspaceLayoutItem from "@/models/WorkspaceLayoutItem";
   }
 })
 export default class WorkspaceArea extends Vue {
+  ComponentMode = ComponentMode;
+
   @Prop({ default: "" })
   readonly workspaceId!: string;
   @Inject() workspaceService!: WorkspaceService;

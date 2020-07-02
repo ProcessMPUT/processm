@@ -32,9 +32,9 @@
       </v-menu>
     </div>
     <component
-      :is="componentDetails.type"
+      :is="`${componentDetails.type}Component`"
       :data="componentDetails.data"
-      :draggable="interactive"
+      :component-mode="componentMode"
     />
   </div>
 </template>
@@ -69,20 +69,32 @@ button.v-btn.v-btn.component-name[type="button"] {
 import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop, Inject } from "vue-property-decorator";
-import CasualNet from "./casual-net/CasualNet.vue";
-import Kpi from "./Kpi.vue";
+import CasualNetComponent from "./casual-net/CasualNetComponent.vue";
+import KpiComponent from "./KpiComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 
+export enum ComponentMode {
+  Static,
+  Interactive,
+  Edit
+}
+
 @Component({
-  components: { CasualNet, Kpi }
+  components: { CasualNetComponent, KpiComponent }
 })
 export default class WorkspaceComponent extends Vue {
+  ComponentMode = ComponentMode;
+
   @Prop({ default: "" })
   readonly workspaceId!: string;
   @Prop({ default: {} })
   readonly componentDetails!: any;
   @Prop({ default: false })
   readonly interactive!: boolean;
+  @Prop({ default: false })
+  readonly editable!: boolean;
+  @Prop({ default: null })
+  readonly componentMode?: ComponentMode;
   @Inject() workspaceService!: WorkspaceService;
 }
 </script>

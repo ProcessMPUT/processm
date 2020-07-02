@@ -11,7 +11,7 @@
         <workspace-component
           v-if="isMounted"
           :component-details="componentDetails"
-          :interactive="true"
+          :component-mode="ComponentMode.Interactive"
           @view="$emit('view', componentDetails.id)"
           @edit="$emit('edit', componentDetails.id)"
           @remove="$emit('remove', componentDetails.id)"
@@ -30,17 +30,20 @@
 
 <script lang="ts">
 import Vue from "vue";
-import WorkspaceComponent from "./WorkspaceComponent.vue";
+import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import { Component, Prop } from "vue-property-decorator";
 
 @Component({
   components: { WorkspaceComponent }
 })
 export default class SingleComponentView extends Vue {
+  ComponentMode = ComponentMode;
+
   @Prop({ default: {} })
-  readonly componentDetails!: any;
+  readonly componentDetails!: object;
   @Prop({ default: false })
   readonly value!: boolean;
+
   isMounted = false;
 
   mounted() {
