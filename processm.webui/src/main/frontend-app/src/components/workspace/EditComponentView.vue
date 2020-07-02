@@ -88,7 +88,7 @@ export default class EditComponentView extends Vue {
   }
 
   saveChanges() {
-    console.log("save");
+    return;
   }
 }
 </script>

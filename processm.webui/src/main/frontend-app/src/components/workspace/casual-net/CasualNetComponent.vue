@@ -179,7 +179,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
 
   private readonly arrowMarkerId = uuidv4();
   private editMode: EditMode | null = null;
-  private userInputHandler!: UserInputHandler;
+  private userInputHandler: UserInputHandler | null = null;
   private simulation: Simulation<Node, Link> | undefined;
 
   private rootSvg(): Selection<BaseType, unknown, null, undefined> {
@@ -327,8 +327,6 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
       nodesLayout
     );
 
-    this.userInputHandler = new InteractiveModeInputHandler(this);
-
     this.simulation = d3.forceSimulation<Node, Link>().force(
       "link",
       d3
@@ -346,10 +344,10 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
 
     this.rootSvg()
       .on("click", () =>
-        this.userInputHandler.backgroundClick(this.getMousePosition())
+        this.userInputHandler?.backgroundClick(this.getMousePosition())
       )
       .on("mousemove", () =>
-        this.userInputHandler.backgroundMousemove(this.getMousePosition())
+        this.userInputHandler?.backgroundMousemove(this.getMousePosition())
       );
 
     this.arrowheads()
@@ -379,6 +377,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
       );
     });
     this.runSimulation();
+    this.setEditMode(null);
   }
 
   public refreshNodes() {
@@ -388,18 +387,20 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
         enter =>
           enter
             .append("g")
-            .on("mouseover", d => this.userInputHandler.nodeMouseover(d))
-            .on("mouseout", d => this.userInputHandler.nodeMouseout(d))
+            .on("mouseover", d => this.userInputHandler?.nodeMouseover(d))
+            .on("mouseout", d => this.userInputHandler?.nodeMouseout(d))
             .on("click", d => {
-              this.userInputHandler.nodeClick(d);
+              this.userInputHandler?.nodeClick(d);
               d3.event.stopPropagation();
             })
             .call(
               drag<SVGGElement, Node, SVGGElement>()
-                .on("start", d => this.userInputHandler.nodeDragstarted(d))
-                .on("drag", d => this.userInputHandler.nodeDragged(d, d3.event))
+                .on("start", d => this.userInputHandler?.nodeDragstarted(d))
+                .on("drag", d =>
+                  this.userInputHandler?.nodeDragged(d, d3.event)
+                )
                 .on("end", d =>
-                  this.userInputHandler.nodeDragended(d, d3.event)
+                  this.userInputHandler?.nodeDragended(d, d3.event)
                 )
             )
             .append("path")
@@ -432,11 +433,11 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
               d.isTargetNodeRegular() ? `url(#arrow${this.arrowMarkerId})` : ""
             )
             .on("mouseover", d =>
-              this.userInputHandler.linkMouseover(d, this.getMousePosition())
+              this.userInputHandler?.linkMouseover(d, this.getMousePosition())
             )
-            .on("mouseout", d => this.userInputHandler.linkMouseout(d))
+            .on("mouseout", d => this.userInputHandler?.linkMouseout(d))
             .on("click", d => {
-              this.userInputHandler.linkClick(d, this.getMousePosition());
+              this.userInputHandler?.linkClick(d, this.getMousePosition());
               d3.event.stopPropagation();
             }),
         update => update,
@@ -493,16 +494,22 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   private setEditMode(newMode: EditMode | null) {
-    if (this.editMode == null && newMode == null) return;
+    if (this.componentMode == ComponentMode.Edit) {
+      this.editMode = this.editMode != newMode ? newMode : null;
 
-    this.editMode = this.editMode != newMode ? newMode : null;
-
-    if (this.editMode == EditMode.Addition) {
-      this.userInputHandler = new AdditionModeInputHandler(this);
-    } else if (this.editMode == EditMode.Deletion) {
-      this.userInputHandler = new DeletionModeInputHandler(this);
+      if (this.editMode == EditMode.Addition) {
+        this.userInputHandler = new AdditionModeInputHandler(this);
+      } else if (this.editMode == EditMode.Deletion) {
+        this.userInputHandler = new DeletionModeInputHandler(this);
+      } else {
+        this.userInputHandler = new InteractiveModeInputHandler(this);
+      }
     } else {
-      this.userInputHandler = new InteractiveModeInputHandler(this);
+      this.editMode = null;
+      this.userInputHandler =
+        this.componentMode == ComponentMode.Interactive
+          ? new InteractiveModeInputHandler(this)
+          : null;
     }
   }
 

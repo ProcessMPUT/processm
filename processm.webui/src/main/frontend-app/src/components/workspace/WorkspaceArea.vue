@@ -20,7 +20,7 @@
             :h="item.h"
             :i="item.i"
             :key="item.i"
-            drag-ignore-from="svg"
+            drag-ignore-from="div.workspace-component"
             class="elevation-1"
           >
             <workspace-component
