@@ -17,16 +17,16 @@
         <v-list dense>
           <v-list-item @click="$emit('view', componentDetails.id)">
             <v-list-item-icon><v-icon>visibility</v-icon></v-list-item-icon>
-            <v-list-item-title>View</v-list-item-title>
+            <v-list-item-title>{{ $t("common.view") }}</v-list-item-title>
           </v-list-item>
           <v-list-item @click="$emit('edit', componentDetails.id)">
             <v-list-item-icon><v-icon>edit</v-icon></v-list-item-icon>
-            <v-list-item-title>Edit</v-list-item-title>
+            <v-list-item-title>{{ $t("common.edit") }}</v-list-item-title>
           </v-list-item>
           <v-divider></v-divider>
           <v-list-item @click="$emit('remove', componentDetails.id)">
             <v-list-item-icon><v-icon>delete</v-icon></v-list-item-icon>
-            <v-list-item-title>Remove</v-list-item-title>
+            <v-list-item-title>{{ $t("common.remove") }}</v-list-item-title>
           </v-list-item>
         </v-list>
       </v-menu>

@@ -22,32 +22,47 @@
         <v-list subheader>
           <v-list-item>
             <v-list-item-content>
-              <v-list-item-title>Name</v-list-item-title>
+              <v-list-item-title>{{
+                $t("workspace.component.edit.name")
+              }}</v-list-item-title>
               <v-text-field
                 v-model="componentDetails.name"
-                :rules="[v => !!v || 'Name cannot be empty']"
+                :rules="[
+                  v =>
+                    !!v || $t('workspace.component.edit.validation.name-empty')
+                ]"
                 required
               />
             </v-list-item-content>
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-list-item-title>Type</v-list-item-title>
+              <v-list-item-title>{{
+                $t("workspace.component.edit.type")
+              }}</v-list-item-title>
               <v-select
                 v-model="componentDetails.type"
                 :items="[
-                  { text: 'Casual net', value: 'casualNet' },
-                  { text: 'KPI', value: 'kpi' }
+                  {
+                    text: $t('workspace.component.casual-net'),
+                    value: 'casualNet'
+                  },
+                  { text: $t('workspace.component.kpi'), value: 'kpi' }
                 ]"
               ></v-select>
             </v-list-item-content>
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-list-item-title>Name</v-list-item-title>
+              <v-list-item-title>{{
+                $t("workspace.component.edit.query")
+              }}</v-list-item-title>
               <v-text-field
                 v-model="componentDetails.data.query"
-                :rules="[v => !!v || 'Query cannot be empty']"
+                :rules="[
+                  v =>
+                    !!v || $t('workspace.component.edit.validation.query-empty')
+                ]"
                 required
               />
             </v-list-item-content>
