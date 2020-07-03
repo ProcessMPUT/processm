@@ -11,6 +11,8 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
+import processm.core.models.processtree.execution.ModelAnalyzer
+import processm.core.models.processtree.processTree
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
@@ -21,9 +23,7 @@ import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMin
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
-import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.random.Random
 
 fun filterLog(base: Log) = Log(base.traces.map { trace ->
@@ -272,65 +272,67 @@ class Experiment {
         for (logfile in config.logs.map { File(it) }) {
             val filename = logfile.name
             val completeLog = load(logfile)
+            val m = ModelAnalyzer(processTree { null })
+            m.playTrace(completeLog.traces.first())
             println("${completeLog.traces.count()} $logfile")
-            val (partialLog, completeLogStats, partialLogStats) = sample(completeLog, Random(config.sampleSeed), config)
-            for ((mode, stats) in listOf("complete" to completeLogStats, "partial" to partialLogStats)) {
-                csv(filename, "log", mode, "traces", stats.nTraces)
-                csv(filename, "log", mode, "names", stats.nNames)
-            }
-            if(partialLogStats.nNames == 0)
-                continue
+//            val (partialLog, completeLogStats, partialLogStats) = sample(completeLog, Random(config.sampleSeed), config)
+//            for ((mode, stats) in listOf("complete" to completeLogStats, "partial" to partialLogStats)) {
+//                csv(filename, "log", mode, "traces", stats.nTraces)
+//                csv(filename, "log", mode, "names", stats.nNames)
+//            }
+//            if(partialLogStats.nNames == 0)
+//                continue
 //            val (trainLog, testLog) = cvLog(partialLog, config.k, Random(config.cvSeed)).first()
 //            val trainLogSize = trainLog.traces.count()
 //            csv(filename, "log", "train", "traces", trainLogSize)
 //            csv(filename, "log", "test", "traces", testLog.traces.count())
-            val trainLog = partialLog
-            val trainLogSize = partialLog.traces.count()
-            for (relativeBatchSize in config.batchSizes) {
-                val batchSize =
-                    (if (relativeBatchSize < 1.0) relativeBatchSize * trainLogSize else relativeBatchSize)
-                        .roundToInt()
-                        .coerceIn(1, trainLogSize)
-                val online = OnlineHeuristicMiner(
-                    bindingProvider = BestFirstBindingProvider(maxQueueSize = config.maxQueueSize),
-                    longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
-                )
-                val traces = trainLog.traces.toList()
-                val offlineStats = ArrayList<Stats>()
-                val onlineStats = ArrayList<Stats>()
-                for (batchStart in traces.indices step batchSize) {
-                    val batchEnd = min(batchStart + batchSize, traces.size)
-                    val window = traces.subList(0, batchEnd)
-                    System.gc()
-                    var offlineModel: CausalNet? = null
-                    val roff = measureResources {
-                        offlineModel = computeOfflineModel(
-                            Log(window.asSequence()),
-                            config.maxQueueSize
-                        )
-                    }
-                    System.gc()
-                    val ron = measureResources {
-                        for (i in batchStart until batchEnd)
-                            online.processTrace(traces[i])
-                    }
-                    System.gc()
-//                    val poff = PerformanceAnalyzer(testLog, offlineModel!!)
-//                    val pon = PerformanceAnalyzer(testLog, online.result)
-//                    offlineStats.add(Stats(0.0, 0.0, poff.fitness, poff.precision, roff))
-//                    onlineStats.add(Stats(0.0, 0.0, pon.fitness, pon.precision, ron))
-                    offlineStats.add(Stats(0.0, 0.0, 0.0, 0.0, roff))
-                    onlineStats.add(Stats(0.0, 0.0, 0.0, 0.0, ron))
-                }
-                csv(*(listOf(filename, "offline", relativeBatchSize, batchSize) + offlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
-                csv(*(listOf(filename, "online", relativeBatchSize, batchSize) + onlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
+//            val trainLog = partialLog
+//            val trainLogSize = partialLog.traces.count()
+//            for (relativeBatchSize in config.batchSizes) {
+//                val batchSize =
+//                    (if (relativeBatchSize < 1.0) relativeBatchSize * trainLogSize else relativeBatchSize)
+//                        .roundToInt()
+//                        .coerceIn(1, trainLogSize)
+//                val online = OnlineHeuristicMiner(
+//                    bindingProvider = BestFirstBindingProvider(maxQueueSize = config.maxQueueSize),
+//                    longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+//                )
+//                val traces = trainLog.traces.toList()
+//                val offlineStats = ArrayList<Stats>()
+//                val onlineStats = ArrayList<Stats>()
+//                for (batchStart in traces.indices step batchSize) {
+//                    val batchEnd = min(batchStart + batchSize, traces.size)
+//                    val window = traces.subList(0, batchEnd)
+//                    System.gc()
+//                    var offlineModel: CausalNet? = null
+//                    val roff = measureResources {
+//                        offlineModel = computeOfflineModel(
+//                            Log(window.asSequence()),
+//                            config.maxQueueSize
+//                        )
+//                    }
+//                    System.gc()
+//                    val ron = measureResources {
+//                        for (i in batchStart until batchEnd)
+//                            online.processTrace(traces[i])
+//                    }
+//                    System.gc()
+////                    val poff = PerformanceAnalyzer(testLog, offlineModel!!)
+////                    val pon = PerformanceAnalyzer(testLog, online.result)
+////                    offlineStats.add(Stats(0.0, 0.0, poff.fitness, poff.precision, roff))
+////                    onlineStats.add(Stats(0.0, 0.0, pon.fitness, pon.precision, ron))
+//                    offlineStats.add(Stats(0.0, 0.0, 0.0, 0.0, roff))
+//                    onlineStats.add(Stats(0.0, 0.0, 0.0, 0.0, ron))
+//                }
+//                csv(*(listOf(filename, "offline", relativeBatchSize, batchSize) + offlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
+//                csv(*(listOf(filename, "online", relativeBatchSize, batchSize) + onlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
 //                println("FITNESS")
 //                println("OFFLINE: " + offlineStats.joinToString { it.testFitness.toString() })
 //                println("ONLINE: " + onlineStats.joinToString { it.testFitness.toString() })
 //                println("PREC")
 //                println("OFFLINE: " + offlineStats.joinToString { it.testPrecision.toString() })
 //                println("ONLINE: " + onlineStats.joinToString { it.testPrecision.toString() })
-            }
+//            }
 //            val stats = cvLog(partialLog, config.k, Random(config.cvSeed)).map { logpair ->
 //                val offline = run(logpair) { computeOfflineModel(it, config.maxQueueSize) }
 //                val online = run(logpair) { computeOnlineModel(it, config.maxQueueSize) }
