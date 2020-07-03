@@ -2,7 +2,7 @@
   <div class="workspace-component">
     <div class="component-name">
       <v-menu offset-y bottom min-width="0">
-        <template v-slot:activator="{ on }">
+        <template #activator="{ on }">
           <v-btn
             class="component-name"
             small

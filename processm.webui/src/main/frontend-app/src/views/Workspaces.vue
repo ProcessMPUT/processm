@@ -17,7 +17,7 @@
         show-arrows
       >
         <v-menu top offset-y>
-          <template v-slot:activator="{ on }">
+          <template #activator="{ on }">
             <v-btn tile color="primary lighten-1" v-on="on">
               <v-icon>more_vert</v-icon>
             </v-btn>

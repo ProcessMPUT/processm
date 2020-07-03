@@ -45,7 +45,7 @@
       absolute
       direction="left"
     >
-      <template v-slot:activator>
+      <template #activator>
         <v-btn
           color="blue darken-2"
           dark
