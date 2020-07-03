@@ -57,15 +57,15 @@ fun Logger.exit() {
 /**
  * Calls [lazy] to produce the message only if debugging is enabled.
  */
-fun Logger.debug(lazy: () -> String) {
+fun Logger.debug(lazy: () -> String?) {
     if (isDebugEnabled)
-        debug(lazy())
+        debug(lazy() ?: return)
 }
 
 /**
  * Calls [lazy] to produce the message only if tracing is enabled.
  */
-fun Logger.trace(lazy: () -> String) {
+fun Logger.trace(lazy: () -> String?) {
     if (isTraceEnabled)
-        trace(lazy())
+        trace(lazy() ?: return)
 }

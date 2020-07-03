@@ -1,12 +1,16 @@
 lexer grammar QLLexer;
 // lexer rules start with uppercase letters
 tokens {STRING}
+@lexer::members {
+    private void go(int diff) {
+        _input.seek(_input.index() + diff);
+    }
+}
 
 
 SELECT      : 'select' ;
 WHERE       : 'where' ;
-GROUP       : 'group' ;
-BY          : 'by' ;
+GROUP_BY    : 'group' [ \t\r\n]+ 'by' ;
 ORDER_BY    : 'order' [ \t\r\n]+ 'by' ;
 LIMIT       : 'limit' ;
 OFFSET      : 'offset' ;
@@ -30,31 +34,10 @@ DATETIME    : SCOPE_PREFIX 'D' ISODATE ('T' ISOTIME ISOTIMEZONE?)?
 
 NULL        : SCOPE_PREFIX 'null' ;
 
-FUNC_AGGR   : 'min'
-            | 'max'
-            | 'avg'
-            | 'count'
-            | 'sum'
-            ;
-
-FUNC_SCALAR1: 'date'
-            | 'time'
-            | 'year'
-            | 'month'
-            | 'day'
-            | 'hour'
-            | 'minute'
-            | 'second'
-            | 'millisecond'
-            | 'quarter'
-            | 'dayofweek'
-            | 'upper'
-            | 'lower'
-            | 'round'
-            ;
-
-FUNC_SCALAR0: 'now'
-            ;
+FUNC_AGGR   : SCOPE_PREFIX ('min' | 'max' | 'avg' | 'count' | 'sum') '(' { go(-1); } ;
+FUNC_SCALAR1: SCOPE_PREFIX ('date' | 'time' | 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second' | 'millisecond' |
+                            'quarter' | 'dayofweek' | 'upper' | 'lower' | 'round') '(' { go(-1); } ;
+FUNC_SCALAR0: SCOPE_PREFIX 'now' '(' { go(-1); } ;
 
 OP_MUL      : '*' ;
 OP_DIV      : '/' ;

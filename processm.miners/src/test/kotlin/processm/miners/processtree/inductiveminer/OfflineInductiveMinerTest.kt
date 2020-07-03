@@ -5,12 +5,11 @@ import processm.core.models.processtree.Parallel
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.Sequence
 import processm.miners.heuristicminer.Helper.logFromString
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-internal class OfflineInductiveMinerWithoutLogStatisticsTest {
+internal class OfflineInductiveMinerTest {
     @Test
     fun `PM book Figure 2-6 | Figure 7-26`() {
         val log = logFromString(
@@ -24,10 +23,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))", inductiveMiner.result.toString())
+        assertEquals("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))", model.toString())
     }
 
     @Test
@@ -39,10 +38,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,∧(B,D),E,H)", inductiveMiner.result.toString())
+        assertEquals("→(A,∧(B,D),E,H)", model.toString())
     }
 
     @Test
@@ -54,10 +53,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,E,∧(B,D),H)", inductiveMiner.result.toString())
+        assertEquals("→(A,E,∧(B,D),H)", model.toString())
     }
 
     @Test
@@ -73,10 +72,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,×(B,C,⟲(τ,D)),E)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(B,C,⟲(D,τ),τ),E)", model.toString())
     }
 
     @Test
@@ -91,12 +90,12 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
              A E D
             """.trimIndent()
         )
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,×(∧(B,C),E),D)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(∧(B,C),E),D)", model.toString())
 
-        with(inductiveMiner.result.root!!) {
+        with(model.root!!) {
             assert(this is Sequence)
             assertEquals(children.size, 3)
 
@@ -157,10 +156,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,⟲(∧(B,C),→(E,F)),D)", inductiveMiner.result.toString())
+        assertEquals("→(A,⟲(∧(B,C),→(E,F)),D)", model.toString())
     }
 
     @Test
@@ -174,10 +173,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,⟲(→(B,∧(C,D),E),F),G)", inductiveMiner.result.toString())
+        assertEquals("→(A,⟲(→(B,∧(C,D),E),F),G)", model.toString())
     }
 
     @Test
@@ -191,10 +190,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(×(A,B),C,×(D,E))", inductiveMiner.result.toString())
+        assertEquals("→(×(A,B),C,×(D,E))", model.toString())
     }
 
     @Test
@@ -218,10 +217,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,∧(⟲(B,→(C,D)),E),F)", inductiveMiner.result.toString())
+        assertEquals("→(A,∧(⟲(B,→(C,D)),E),F)", model.toString())
     }
 
     @Test
@@ -241,10 +240,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)", inductiveMiner.result.toString())
+        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)", model.toString())
     }
 
     @Test
@@ -265,10 +264,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G,X,Y,Z)", inductiveMiner.result.toString())
+        assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G,X,Y,Z)", model.toString())
     }
 
     @Test
@@ -286,10 +285,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,⟲(τ,B),C)", inductiveMiner.result.toString())
+        assertEquals("→(A,⟲(τ,B),C)", model.toString())
     }
 
     @Test
@@ -305,13 +304,12 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,⟲(B,C),D)", inductiveMiner.result.toString())
+        assertEquals("→(A,⟲(B,C),D)", model.toString())
     }
 
-    @Ignore("Without statistics can't recognize ⟲(τ,B,C) vs (C,B) [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `Optional activity as first in loop`() {
         val log = logFromString(
@@ -321,10 +319,10 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,⟲(τ,B,C),D)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(C,τ),B,D)", model.toString())
     }
 
     @Test
@@ -336,13 +334,12 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(×(A,B),C,×(D,E))", inductiveMiner.result.toString())
+        assertEquals("→(×(A,B),C,×(D,E))", model.toString())
     }
 
-    @Ignore("Without statistics can't recognize ⟲(A,τ) vs ⟲(τ,A) [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `PM book Figure 7-29 Q10`() {
         val log = logFromString(
@@ -351,13 +348,12 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("⟲(A,τ)", inductiveMiner.result.toString())
+        assertEquals("⟲(A,τ)", model.toString())
     }
 
-    @Ignore("Without statistics can't recognize ×(τ,B) vs B [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `PM book Figure 6-21 | 7-29 Q11`() {
         val log = logFromString(
@@ -367,13 +363,12 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,×(τ,B),C)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(B,τ),C)", model.toString())
     }
 
-    @Ignore("Without statistics can't recognize ×(F,τ) vs F [Will be possible in InductiveMinerWithStatistics]")
     @Test
     fun `PM book Figure 7-30 F1`() {
         val log = logFromString(
@@ -385,9 +380,43 @@ internal class OfflineInductiveMinerWithoutLogStatisticsTest {
             """.trimIndent()
         )
 
-        val inductiveMiner = OfflineInductiveMinerWithoutLogStatistics()
-        inductiveMiner.processLog(listOf(log))
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
 
-        assertEquals("→(A,×(∧(B,C),→(E,×(F,τ))),D)", inductiveMiner.result.toString())
+        assertEquals("→(A,×(∧(B,C),→(E,×(F,τ))),D)", model.toString())
+    }
+
+    @Test
+    fun `Exclusive cut should be able to add tau if trace support not sum to parent's support`() {
+        val log = logFromString(
+            """
+            A B C D
+            A C B D
+            A E F D
+            A E D
+            A D
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
+
+        assertEquals("→(A,×(∧(B,C),→(E,×(F,τ)),τ),D)", model.toString())
+    }
+
+    @Test
+    fun `Optional activity in parallel cut`() {
+        val log = logFromString(
+            """
+            A B C D
+            A C B D
+            A C D
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
+
+        assertEquals("→(A,∧(×(B,τ),C),D)", model.toString())
     }
 }

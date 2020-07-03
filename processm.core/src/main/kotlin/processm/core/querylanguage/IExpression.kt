@@ -26,6 +26,16 @@ interface IExpression {
     val isTerminal: Boolean
 
     /**
+     * The type of this expression.
+     */
+    val type: Type
+
+    /**
+     * The expected types of children of this expression.
+     */
+    val expectedChildrenTypes: Array<Type>
+
+    /**
      * Line in the source PQL query.
      */
     val line: Int

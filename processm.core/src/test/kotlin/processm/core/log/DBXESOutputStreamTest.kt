@@ -2,7 +2,7 @@ package processm.core.log
 
 import kotlin.test.Test
 
-internal class DatabaseXESOutputStreamTest {
+internal class DBXESOutputStreamTest {
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
         <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
             <extension name="Lifecycle" prefix="lifecycle" uri="http://www.xes-standard.org/lifecycle.xesext"/>
@@ -73,7 +73,7 @@ internal class DatabaseXESOutputStreamTest {
         content.byteInputStream().use { stream ->
             val xesElements = XMLXESInputStream(stream).asSequence()
 
-            DatabaseXESOutputStream().use { db ->
+            DBXESOutputStream().use { db ->
                 db.write(xesElements)
             }
         }

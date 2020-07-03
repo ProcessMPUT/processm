@@ -6,5 +6,8 @@ enum class CutType {
     Parallel,
     RedoLoop,
     Activity,
+    OptionalActivity,
+    RedoActivityAtLeastOnce,
+    RedoActivityAtLeastZeroTimes,
     FlowerModel
 }
