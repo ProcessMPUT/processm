@@ -136,15 +136,6 @@ export default class WorkspaceArea extends Vue {
         width: 4,
         height: 7
       }
-      // { x: 10, y: 0, w: 2, h: 3, i: "5" },
-      // { x: 0, y: 5, w: 2, h: 5, i: "6" },
-      // { x: 2, y: 5, w: 2, h: 5, i: "7" },
-      // { x: 4, y: 5, w: 2, h: 5, i: "8" },
-      // { x: 6, y: 3, w: 2, h: 4, i: "9" },
-      // { x: 8, y: 4, w: 2, h: 4, i: "10" },
-      // { x: 10, y: 4, w: 2, h: 4, i: "11" },
-      // { x: 0, y: 10, w: 2, h: 5, i: "12" },
-      // { x: 2, y: 10, w: 2, h: 5, i: "13" }
     ];
 
     for (const layoutItem of layout) {
