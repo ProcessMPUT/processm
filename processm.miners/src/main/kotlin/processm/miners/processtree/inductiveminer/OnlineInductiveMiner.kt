@@ -58,6 +58,8 @@ class OnlineInductiveMiner : InductiveMiner() {
         processTree = ProcessTree(assignChildrenToNode(model))
         ProcessTreeSimplifier().simplify(processTree)
 
+        assignActivities(processTree.root)
+
         return processTree
     }
 

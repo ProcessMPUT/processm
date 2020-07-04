@@ -42,6 +42,8 @@ class OfflineInductiveMiner : InductiveMiner() {
         // Simplify processTree model
         ProcessTreeSimplifier().simplify(processTree)
 
+        assignActivities(processTree.root)
+
         return processTree
     }
 }

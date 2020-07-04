@@ -44,6 +44,18 @@ abstract class InductiveMiner {
         return node
     }
 
+    internal fun assignActivities(node: Node?): HashSet<String> {
+        if (node is ProcessTreeActivity) {
+            node.activitiesSet.add(node.name)
+        }
+
+        node?.children?.forEach {
+            node.activitiesSet.addAll(assignActivities(it))
+        }
+
+        return node?.activitiesSet ?: hashSetOf()
+    }
+
     /**
      * Transform discovered cut in subGraph into node.
      * If activity or flower-model -> fetch if from graph.

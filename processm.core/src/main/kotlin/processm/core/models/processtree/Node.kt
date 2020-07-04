@@ -4,6 +4,7 @@ import processm.core.models.processtree.execution.ExecutionNode
 import java.util.*
 
 abstract class Node(vararg nodes: Node) {
+    val activitiesSet = HashSet<String>()
     internal val childrenInternal: MutableList<Node> = LinkedList()
 
     /**
