@@ -175,8 +175,7 @@ internal class OfflineInductiveMinerTest {
         val inductiveMiner = OfflineInductiveMiner()
         val model = inductiveMiner.processLog(sequenceOf(log))
         val analyzer = PerformanceAnalyzer(model)
-//        log.traces.forEach { analyzer.analyze(it) }
-        analyzer.analyze(logFromString("A B C E F B C D").traces.first())
+        log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
 
         assertEquals("→(A,⟲(∧(B,C),→(E,F)),D)", model.toString())
@@ -222,35 +221,35 @@ internal class OfflineInductiveMinerTest {
         assertEquals("→(×(A,B),C,×(D,E))", model.toString())
     }
 
-//    @Test
-//    fun `PM book Figure 6-8 | 7-29 Q5`() {
-//        val log = logFromString(
-//            """
-//            A B E F
-//            A B E F
-//            A B E C D B F
-//            A B E C D B F
-//            A B E C D B F
-//            A B C E D B F
-//            A B C E D B F
-//            A B C D E B F
-//            A B C D E B F
-//            A B C D E B F
-//            A B C D E B F
-//            A E B C D B F
-//            A E B C D B F
-//            A E B C D B F
-//            """.trimIndent()
-//        )
-//
-//        val inductiveMiner = OfflineInductiveMiner()
-//        val model = inductiveMiner.processLog(sequenceOf(log))
-//        val analyzer = PerformanceAnalyzer(model)
-//        log.traces.forEach { analyzer.analyze(it) }
-//        assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-//
-//        assertEquals("→(A,∧(⟲(B,→(C,D)),E),F)", model.toString())
-//    }
+    @Test
+    fun `PM book Figure 6-8 | 7-29 Q5`() {
+        val log = logFromString(
+            """
+            A B E F
+            A B E F
+            A B E C D B F
+            A B E C D B F
+            A B E C D B F
+            A B C E D B F
+            A B C E D B F
+            A B C D E B F
+            A B C D E B F
+            A B C D E B F
+            A B C D E B F
+            A E B C D B F
+            A E B C D B F
+            A E B C D B F
+            """.trimIndent()
+        )
+
+        val inductiveMiner = OfflineInductiveMiner()
+        val model = inductiveMiner.processLog(sequenceOf(log))
+        val analyzer = PerformanceAnalyzer(model)
+        log.traces.forEach { analyzer.analyze(it) }
+        assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
+
+        assertEquals("→(A,∧(⟲(B,→(C,D)),E),F)", model.toString())
+    }
 
     @Test
     fun `PM book Figure 7-29 Q6`() {
