@@ -6,6 +6,8 @@ import processm.core.models.commons.ProcessModel
  * Process Tree model with `root` reference
  */
 class ProcessTree(root: Node? = null) : ProcessModel {
+    val successAnalyzedTracesIds = HashSet<Int>()
+
     var root: Node? = root
         internal set
 

@@ -5,6 +5,9 @@ import java.util.*
 
 abstract class Node(vararg nodes: Node) {
     val activitiesSet = HashSet<String>()
+    var currentTraceId = 0
+    val analyzedTracesIds = HashSet<Int>()
+
     internal val childrenInternal: MutableList<Node> = LinkedList()
 
     /**
