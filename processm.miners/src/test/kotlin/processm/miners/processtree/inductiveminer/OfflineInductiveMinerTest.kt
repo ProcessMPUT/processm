@@ -1,10 +1,8 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.models.processtree.Exclusive
-import processm.core.models.processtree.Parallel
-import processm.core.models.processtree.ProcessTreeActivity
-import processm.core.models.processtree.Sequence
+import processm.core.models.processtree.*
 import processm.miners.heuristicminer.Helper.logFromString
+import processm.miners.heuristicminer.assertDoubleEquals
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -28,6 +26,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
+        assertDoubleEquals(1.0, analyzer.fitness())
 
         assertEquals("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))", model.toString())
     }
@@ -47,7 +46,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,∧(B,D),E,H)", model.toString())
     }
 
@@ -65,7 +64,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,E,∧(B,D),H)", model.toString())
     }
 
@@ -87,7 +86,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,×(B,C,⟲(D,τ),τ),E)", model.toString())
     }
 
@@ -108,7 +107,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,×(∧(B,C),E),D)", model.toString())
 
         with(model.root!!) {
@@ -177,7 +176,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,⟲(∧(B,C),→(E,F)),D)", model.toString())
     }
 
@@ -197,7 +196,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,⟲(→(B,∧(C,D),E),F),G)", model.toString())
     }
 
@@ -217,7 +216,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(×(A,B),C,×(D,E))", model.toString())
     }
 
@@ -247,7 +246,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,∧(⟲(B,→(C,D)),E),F)", model.toString())
     }
 
@@ -273,7 +272,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)", model.toString())
     }
 
@@ -300,7 +299,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G,X,Y,Z)", model.toString())
     }
 
@@ -324,7 +323,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,⟲(τ,B),C)", model.toString())
     }
 
@@ -347,7 +346,7 @@ internal class OfflineInductiveMinerTest {
         log.traces.forEach { analyzer.analyze(it) }
         println(model.successAnalyzedTracesIds)
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,⟲(B,C),D)", model.toString())
     }
 
@@ -365,7 +364,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,×(C,τ),B,D)", model.toString())
     }
 
@@ -383,7 +382,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(×(A,B),C,×(D,E))", model.toString())
     }
 
@@ -400,7 +399,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("⟲(A,τ)", model.toString())
     }
 
@@ -418,7 +417,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,×(B,τ),C)", model.toString())
     }
 
@@ -438,7 +437,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,×(∧(B,C),→(E,×(F,τ))),D)", model.toString())
     }
 
@@ -459,7 +458,7 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
         assertEquals("→(A,×(∧(B,C),→(E,×(F,τ)),τ),D)", model.toString())
     }
 
@@ -477,8 +476,42 @@ internal class OfflineInductiveMinerTest {
         val model = inductiveMiner.processLog(sequenceOf(log))
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
+//        analyzer.analyze(log.traces.first())
         assertEquals(log.traces.count(), model.successAnalyzedTracesIds.size)
-
+        assertDoubleEquals(1.0, analyzer.fitness())
+        println(analyzer.precision())
         assertEquals("→(A,∧(×(B,τ),C),D)", model.toString())
+    }
+
+    @Test
+    fun `sdf`() {
+        val model = processTree {
+            Sequence(
+                Exclusive(
+                    ProcessTreeActivity("A"),
+                    ProcessTreeActivity("B")
+                ),
+                RedoLoop(
+                    ProcessTreeActivity("C"),
+                    ProcessTreeActivity("D")
+                ),
+                Parallel(
+                    ProcessTreeActivity("E"),
+                    Sequence(
+                        ProcessTreeActivity("F"),
+                        ProcessTreeActivity("G")
+                    )
+                )
+            )
+        }
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.assignActivities(model.root)
+
+        val analyzer = PerformanceAnalyzer(model)
+        analyzer.analyze(logFromString("A C E F").traces.first())
+        analyzer.analyze(logFromString("B C E F").traces.first())
+
+        println(analyzer.precision())
     }
 }

@@ -2,6 +2,8 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.*
+import java.util.*
+import kotlin.collections.LinkedHashSet
 
 class PerformanceAnalyzer(private val tree: ProcessTree) {
     var traceId = 0
@@ -18,6 +20,7 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
         // Analyze whole events
         trace.events.forEach { event ->
             if (increment) alreadyTested.clear()
+            var assignment = false
 
             val name = event.conceptName ?: ""
             println("Szukam $name")
@@ -36,6 +39,7 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
 
                 if (isCompletedNode(currentSubTree!!, name)) {
                     do {
+                        assignment = true
                         println("Spełniono $currentSubTree")
                         currentSubTree!!.currentTraceId = traceId
                         currentSubTree!!.analyzedTracesIds.add(traceId)
@@ -48,12 +52,18 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                     )
                 }
             } while (next != null)
+
+            if (!assignment) {
+                println("Trace $traceId NOT COMPLETED - error with $name")
+                println("========================================")
+                return
+            }
         }
 
         if (isCompletedNode(tree.root!!, "")) {
             tree.successAnalyzedTracesIds.add(traceId)
             println("Trace $traceId fit to model")
-        } else {
+        } else if (increment) {
             var i = 1
             do {
                 alreadyTested.clear()
@@ -85,6 +95,7 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                     }
                     alreadyTested.add(n)
                     alreadyTestedHistory.add(n)
+                    println(alreadyTested)
                     return n
                 } else {
                     // Exclusive only one child
@@ -106,19 +117,19 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                 for (n in node.children) {
                     // Used
                     if (n.currentTraceId == currentTraceId) continue
-                    // Silent activity not used
-                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains("")) return n
                     // Expected activity not used
                     if (n.currentTraceId != currentTraceId && n.activitiesSet.contains(activityName)) return n
+                    // Silent activity not used
+                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains("")) return n
                 }
             }
             is RedoLoop -> {
                 for (n in node.children) {
                     if (n.currentTraceId == currentTraceId) continue
-                    // Silent activity
-                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains("")) return n
                     // Expected activity
                     if (n.currentTraceId != currentTraceId && n.activitiesSet.contains(activityName)) return n
+                    // Silent activity
+                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains("")) return n
                 }
             }
         }
@@ -152,5 +163,26 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
         }
 
         return false
+    }
+
+    fun fitness(): Double {
+        return tree.successAnalyzedTracesIds.size / (traceId * 1.0)
+    }
+
+    fun precision(): Double {
+        if (tree.root == null) return 0.0
+        assignPrecision(tree.root!!)
+        return tree.root!!.precision
+    }
+
+    private fun assignPrecision(node: Node) {
+        if (node is ProcessTreeActivity) {
+            println(node.analyzedTracesIds)
+            node.precision = if (node.analyzedTracesIds.isEmpty()) 0.0 else 1.0
+        } else {
+            node.children.forEach { assignPrecision(it) }
+            node.precision = node.children.sumByDouble { it.precision } / (1.0 * node.children.size)
+        }
+        println("$node with precision ${node.precision}")
     }
 }

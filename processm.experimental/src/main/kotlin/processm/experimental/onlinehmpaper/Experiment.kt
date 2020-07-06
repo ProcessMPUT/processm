@@ -11,7 +11,6 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
-import processm.core.models.processtree.execution.ModelAnalyzer
 import processm.core.models.processtree.processTree
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
@@ -20,6 +19,7 @@ import processm.miners.heuristicminer.OfflineHeuristicMiner
 import processm.miners.heuristicminer.OnlineHeuristicMiner
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import processm.miners.processtree.inductiveminer.OfflineInductiveMiner
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
@@ -275,6 +275,14 @@ class Experiment {
             val m = ModelAnalyzer(processTree { null })
             m.playTrace(completeLog.traces.first())
             println("${completeLog.traces.count()} $logfile")
+
+            val im = OfflineInductiveMiner()
+            val r = im.processLog(sequenceOf(completeLog))
+            val pa = processm.miners.processtree.inductiveminer.PerformanceAnalyzer(r)
+            completeLog.traces.forEach { pa.analyze(it) }
+            println(r)
+            println("---------§---------------------------- ${pa.fitness()} ------------------------------------- ")
+
 //            val (partialLog, completeLogStats, partialLogStats) = sample(completeLog, Random(config.sampleSeed), config)
 //            for ((mode, stats) in listOf("complete" to completeLogStats, "partial" to partialLogStats)) {
 //                csv(filename, "log", mode, "traces", stats.nTraces)
