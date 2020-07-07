@@ -166,9 +166,61 @@ export default class CasualNet {
           intermediateJoinLinks
         )
       );
-    });
 
+      this.updateBindingNodesPositions(node.id, splitNodes, nodesLayout);
+      this.updateBindingNodesPositions(node.id, joinNodes, nodesLayout);
+    });
     this.links.push(...this.createLinksBetweenSplitsAndJoins(this.nodes));
+  }
+
+  private updateBindingNodesPositions(
+    sourceNodeId: string,
+    bindingNodes: Node[],
+    nodesLayout: Map<string, Point>
+  ) {
+    const maximumBindingSlot = Math.max(
+      ...bindingNodes.map(node => node.bindingSlot)
+    );
+
+    if (!nodesLayout.has(sourceNodeId)) return;
+
+    bindingNodes.forEach(bindingNode => {
+      if (
+        bindingNode.relatedNodeId == null ||
+        !nodesLayout.has(bindingNode.relatedNodeId)
+      )
+        return;
+
+      const sourceNodePosition = nodesLayout.get(sourceNodeId);
+      const targetNodePosition = nodesLayout.get(bindingNode.relatedNodeId);
+
+      if (sourceNodePosition == null || targetNodePosition == null) return;
+
+      const position = this.calculateBindingNodePosition(
+        sourceNodePosition,
+        targetNodePosition,
+        bindingNode.bindingSlot,
+        maximumBindingSlot
+      );
+      bindingNode.fx = bindingNode.x = position.x;
+      bindingNode.fy = bindingNode.y = position.y;
+    });
+  }
+
+  private calculateBindingNodePosition(
+    sourceNodePosition: Point,
+    targetNodePosition: Point,
+    bindingSlot: number,
+    maximumBindingSlot: number
+  ) {
+    const edgeSpaceUsageRatio = 4 / 9;
+    const unit = edgeSpaceUsageRatio / (maximumBindingSlot + 1);
+    const lambda = unit * bindingSlot + unit / 2;
+
+    return {
+      x: (1 - lambda) * sourceNodePosition.x + lambda * targetNodePosition.x,
+      y: (1 - lambda) * sourceNodePosition.y + lambda * targetNodePosition.y
+    };
   }
 
   public nodes: Array<Node>;
