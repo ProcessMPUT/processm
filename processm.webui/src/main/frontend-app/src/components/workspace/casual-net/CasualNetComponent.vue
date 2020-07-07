@@ -32,7 +32,7 @@
           markerUnits="userSpaceOnUse"
           viewBox="0 0 10 10"
           orient="auto"
-          :refX="8 + displayPreferences.nodeSize / 2"
+          :refX="8 + displayPreferences.nodeSize ** 0.5"
           refY="4"
         />
       </defs>
@@ -121,6 +121,20 @@
 }
 </style>
 
+<style>
+.node-name {
+  alignment-baseline: middle;
+  font-family: Arial, Helvetica, sans-serif;
+  paint-order: stroke;
+  font-size: 60%;
+}
+
+.node-name-background {
+  fill: white;
+  opacity: 0.6;
+}
+</style>
+
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
@@ -190,6 +204,15 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   private nodeShapes() {
+    return this.nodes().select("g") as Selection<
+      SVGPathElement,
+      Node,
+      SVGGElement,
+      unknown
+    >;
+  }
+
+  private bindingNodeShapes() {
     return this.nodes().select("path") as Selection<
       SVGPathElement,
       Node,
@@ -223,7 +246,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   public readonly contentWidth: number = 250;
   public displayPreferences = {
     nodeSize: 20,
-    bindingNodeSize: 10,
+    bindingNodeSize: 6,
     edgeThickness: 3,
     bindingEdgeThickness: 2,
     edgeArrowSize: 12,
@@ -360,8 +383,8 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
     this.nodes()
       .data(this.casualNet.nodes, d => (d as Node).id)
       .join(
-        enter =>
-          enter
+        enter => {
+          const enteredItems = enter
             .append("g")
             .on("mouseover", d => this.userInputHandler?.nodeMouseover(d))
             .on("mouseout", d => this.userInputHandler?.nodeMouseout(d))
@@ -378,11 +401,39 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
                 .on("end", d =>
                   this.userInputHandler?.nodeDragended(d, d3.event)
                 )
-            )
+            );
+
+          const linearNodeSize = this.displayPreferences.nodeSize ** 0.5;
+
+          enteredItems
+            .filter(d => d.hasType(ElementType.Binding))
             .append("path")
             .attr("opacity", 1)
             .style("cursor", "pointer")
-            .style("fill", d => this.nodeColor(d.nodeType)),
+            .style("fill", d => this.nodeColor(d.nodeType));
+          enteredItems
+            .filter(d => d.hasType(ElementType.Regular))
+            .append("rect")
+            .attr("class", "node-name-background")
+            .attr("width", d => d.id.length * 3 + linearNodeSize * 3.6)
+            .attr("height", linearNodeSize * 2 * 1.2)
+            .attr("stroke", this.displayPreferences.regularNodeColor)
+            .attr("rx", linearNodeSize)
+            .attr("x", -linearNodeSize * 1.2)
+            .attr("y", -linearNodeSize * 1.2);
+          enteredItems
+            .filter(d => d.hasType(ElementType.Regular))
+            .append("circle")
+            .attr("r", linearNodeSize);
+          enteredItems
+            .append("text")
+            .attr("class", "node-name")
+            .attr("x", linearNodeSize * 1.2)
+            .attr("textLength", d => d.id.length * 3 + linearNodeSize * 1.2)
+            .text(d => (d.hasType(ElementType.Regular) ? d.id : ""));
+
+          return enteredItems;
+        },
         update => update,
         exit =>
           exit.call(exit =>
@@ -449,17 +500,11 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
           : this.displayPreferences.edgeThickness) * scalingFactor
     );
     this.nodes().attr("stroke-width", scalingFactor);
-    this.nodeShapes().attr("d", d =>
+    this.bindingNodeShapes().attr("d", () =>
       d3
         .symbol()
-        .type(d.isStartNode || d.isEndNode ? d3.symbolDiamond : d3.symbolCircle)
-        .size(
-          ((d.hasType(ElementType.Binding)
-            ? this.displayPreferences.bindingNodeSize
-            : this.displayPreferences.nodeSize) *
-            scalingFactor) **
-            2
-        )()
+        .type(d3.symbolCircle)
+        .size((this.displayPreferences.bindingNodeSize * scalingFactor) ** 2)()
     );
     this.nodeLabels().attr(
       "font-size",
