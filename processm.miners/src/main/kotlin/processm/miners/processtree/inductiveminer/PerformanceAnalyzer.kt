@@ -3,166 +3,141 @@ package processm.miners.processtree.inductiveminer
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.*
 import java.util.*
-import kotlin.collections.LinkedHashSet
 
 class PerformanceAnalyzer(private val tree: ProcessTree) {
     var traceId = 0
-    private val alreadyTested = LinkedHashSet<Node?>()
-    private val alreadyTestedHistory = LinkedHashSet<Node?>()
 
-    fun analyze(trace: Trace, increment: Boolean = true) {
-        // Start with root
-        var currentSubTree: Node? = tree.root
+    fun cleanNode(node: Node) {
+        node.currentTraceId = 0
+        node.children.forEach { cleanNode(it) }
+    }
 
-        // Increment - new trace analyze
-        if (increment) traceId++
+    private fun nextActivities(lastExecuted: Node?): Set<Pair<String, Node>> {
+        val node = lastExecuted ?: tree.root!!
+        val possibleActivities = HashSet<Pair<String, Node>>()
 
-        // Analyze whole events
-        trace.events.forEach { event ->
-            if (increment) alreadyTested.clear()
-            var assignment = false
-
-            val name = event.conceptName ?: ""
-            println("Szukam $name")
-            var next: Node?
-
-            while (!currentSubTree!!.activitiesSet.contains(name) && currentSubTree!!.parent != null) {
-                currentSubTree = currentSubTree!!.parent ?: tree.root
-            }
-
-            do {
-                next = nextCheck(currentSubTree!!, name)
-                if (next != null) {
-                    println("- zmiana z ${currentSubTree} \t\t\t ${next}")
-                    currentSubTree = next
+        if (node.currentTraceId == traceId && node.parent != null) {
+            if (node.parent is RedoLoop) {
+                // Node is first child - suggest all children != first and next node
+                if (node == node.parent!!.children[0]) {
+                    node.parent!!.children.stream().skip(1).forEach { cleanNode(it) }
+                    node.parent!!.children.stream().skip(1).forEach { possibleActivities.addAll(nextActivities(it)) }
+                    possibleActivities.addAll(nextActivities(node.parent))
+                    return possibleActivities
+                } else {
+                    cleanNode(node.parent!!)
+                    return nextActivities(node.parent)
                 }
-
-                if (isCompletedNode(currentSubTree!!, name)) {
-                    do {
-                        assignment = true
-                        println("Spełniono $currentSubTree")
-                        currentSubTree!!.currentTraceId = traceId
-                        currentSubTree!!.analyzedTracesIds.add(traceId)
-                        currentSubTree = currentSubTree!!.parent ?: tree.root
-                        println("Wycofanie do $currentSubTree")
-                    } while (isCompletedNode(
-                            currentSubTree!!,
-                            name
-                        ) && currentSubTree !is RedoLoop && currentSubTree!!.parent != null
-                    )
+            } else if (node.parent is Parallel) {
+                node.parent!!.children.forEach { child ->
+                    if (child is RedoLoop && child.currentTraceId == traceId) {
+                        child.children.stream().skip(1).forEach { possibleActivities.addAll(nextActivities(it)) }
+                    }
                 }
-            } while (next != null)
-
-            if (!assignment) {
-                println("Trace $traceId NOT COMPLETED - error with $name")
-                println("========================================")
-                return
+                possibleActivities.addAll(nextActivities(node.parent))
+                return possibleActivities
+            } else {
+                return nextActivities(node.parent)
             }
         }
 
-        if (isCompletedNode(tree.root!!, "")) {
-            tree.successAnalyzedTracesIds.add(traceId)
-            println("Trace $traceId fit to model")
-        } else if (increment) {
-            var i = 1
-            do {
-                alreadyTested.clear()
-                alreadyTested.addAll(alreadyTestedHistory.take(i))
-                clean(tree.root!!)
-                analyze(trace, increment = false)
-                i++
-            } while (i < alreadyTestedHistory.size)
-        }
-        println("========================================")
-    }
-
-    private fun clean(n: Node) {
-        n.currentTraceId = 0
-        n.children.forEach { clean(it) }
-    }
-
-    private fun nextCheck(node: Node, activityName: String, currentTraceId: Int = traceId): Node? {
         when (node) {
             is Exclusive -> {
                 if (node.children.count { it.currentTraceId == traceId } == 0) {
-                    val nm = node.children.firstOrNull {
-                        it.currentTraceId != currentTraceId && it.activitiesSet.contains(activityName)
-                    }
-                    if (nm != null) return nm
-
-                    val n = node.children.firstOrNull {
-                        it !in alreadyTested && it.currentTraceId != currentTraceId && it.activitiesSet.contains("")
-                    }
-                    alreadyTested.add(n)
-                    alreadyTestedHistory.add(n)
-                    println(alreadyTested)
-                    return n
-                } else {
-                    // Exclusive only one child
-                    return null
+                    node.children.forEach { possibleActivities.addAll(nextActivities(it)) }
                 }
             }
             is Parallel -> {
-                return node.children.firstOrNull {
-                    it.currentTraceId != currentTraceId && it.activitiesSet.contains(
-                        activityName
-                    )
-                } ?: node.children.firstOrNull {
-                    it !in alreadyTested && it.currentTraceId != currentTraceId && it.activitiesSet.contains(
-                        ""
-                    )
+                node.children.forEach { child ->
+                    if (child.currentTraceId != traceId) possibleActivities.addAll(nextActivities(child))
+                    if (child is RedoLoop && child.currentTraceId == traceId) {
+                        child.children.stream().skip(1).forEach { possibleActivities.addAll(nextActivities(it)) }
+                    }
                 }
             }
             is Sequence -> {
-                for (n in node.children) {
-                    // Used
-                    if (n.currentTraceId == currentTraceId) continue
-                    // Expected activity not used
-                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains(activityName)) return n
-                    // Silent activity not used
-                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains("")) return n
+                for (child in node.children) {
+                    if (child.currentTraceId == traceId) continue
+                    else {
+                        possibleActivities.addAll(nextActivities(child))
+                        break
+                    }
                 }
             }
             is RedoLoop -> {
-                for (n in node.children) {
-                    if (n.currentTraceId == currentTraceId) continue
-                    // Expected activity
-                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains(activityName)) return n
-                    // Silent activity
-                    if (n.currentTraceId != currentTraceId && n.activitiesSet.contains("")) return n
+                if (node.children[0].currentTraceId != traceId) {
+                    possibleActivities.addAll(nextActivities(node.children[0]))
+                } else {
+                    node.children.stream().skip(1).forEach { possibleActivities.addAll(nextActivities(it)) }
                 }
+            }
+            is ProcessTreeActivity -> {
+                if (node.currentTraceId != traceId) possibleActivities.add(node.name to node)
             }
         }
 
-        return null
+        return possibleActivities
     }
 
-    private fun isCompletedNode(node: Node, activityName: String, currentTraceId: Int = traceId): Boolean {
+    private fun assignAsExecuted(node: Node) {
         when (node) {
-            is SilentActivity -> return true
             is ProcessTreeActivity -> {
-                return node.name == activityName
+                node.currentTraceId = traceId
+                node.analyzedTracesIds.add(traceId)
             }
             is Sequence, is Parallel -> {
-                return node.children.all { it.currentTraceId == currentTraceId }
+                if (node.children.all { it.currentTraceId == traceId }) {
+                    node.currentTraceId = traceId
+                    node.analyzedTracesIds.add(traceId)
+                }
             }
             is Exclusive -> {
-                return node.children.any { it.currentTraceId == currentTraceId }
+                if (node.children.any { it.currentTraceId == traceId }) {
+                    node.currentTraceId = traceId
+                    node.analyzedTracesIds.add(traceId)
+                }
             }
             is RedoLoop -> {
-                // Only first element
-                if (node.children.first().currentTraceId == currentTraceId &&
-                    node.children.stream().skip(1).noneMatch { it.currentTraceId == currentTraceId }
-                ) return true
-
-                // First and extra element
-                if (node.children.first().currentTraceId == currentTraceId &&
-                    node.children.stream().skip(1).anyMatch { it.currentTraceId == currentTraceId }
-                ) return true
+                if (node.children[0].currentTraceId == traceId) {
+                    node.currentTraceId = traceId
+                    node.analyzedTracesIds.add(traceId)
+                }
             }
         }
 
-        return false
+        if (node.parent != null) assignAsExecuted(node.parent!!)
+    }
+
+    fun analyze(trace: Trace) {
+        // Increment - new trace analyze
+        traceId++
+        var lastExecuted: Node? = null
+
+        trace.events.forEach { event ->
+            val name = event.conceptName ?: ""
+
+            while (true) {
+                val activities = nextActivities(lastExecuted)
+                val node = activities.firstOrNull { it.first == name }?.second
+                val silentNode = activities.firstOrNull { it.second is SilentActivity }?.second
+
+                if (node != null) {
+                    assignAsExecuted(node)
+                    lastExecuted = node
+                    break
+                } else if (silentNode != null) {
+                    assignAsExecuted(silentNode)
+                    lastExecuted = silentNode
+                } else {
+                    println("Event $name can not be replayed on model")
+                    return
+                }
+            }
+        }
+
+        if (tree.root!!.currentTraceId == traceId) {
+            tree.successAnalyzedTracesIds.add(traceId)
+        }
     }
 
     fun fitness(): Double {
@@ -177,12 +152,10 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
 
     private fun assignPrecision(node: Node) {
         if (node is ProcessTreeActivity) {
-            println(node.analyzedTracesIds)
             node.precision = if (node.analyzedTracesIds.isEmpty()) 0.0 else 1.0
         } else {
             node.children.forEach { assignPrecision(it) }
             node.precision = node.children.sumByDouble { it.precision } / (1.0 * node.children.size)
         }
-        println("$node with precision ${node.precision}")
     }
 }
