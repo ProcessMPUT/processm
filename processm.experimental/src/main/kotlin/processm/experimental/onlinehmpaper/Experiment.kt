@@ -146,7 +146,11 @@ class Experiment {
 
                         // Statistics for offline
                         val paOffline = PerformanceAnalyzer(modelOffline!!)
-                        logToSequence(allTraces, from = current, to = current + windowSize).traces.forEach { paOffline.analyze(it) }
+                        logToSequence(
+                            allTraces,
+                            from = current,
+                            to = current + windowSize
+                        ).traces.forEach { paOffline.analyze(it) }
                         offlineStats.add(Stats(paOffline.fitness(), paOffline.precision(), timeOffline))
 
                         // Clean up
@@ -165,7 +169,15 @@ class Experiment {
 
                             // Calculate basic model (first)
                             timeOnline = measureResources {
-                                modelOnline = imOnline.processLog(sequenceOf(logToSequence(allTraces, from = current, to = current + windowSize)))
+                                modelOnline = imOnline.processLog(
+                                    sequenceOf(
+                                        logToSequence(
+                                            allTraces,
+                                            from = current,
+                                            to = current + windowSize
+                                        )
+                                    )
+                                )
                             }
 
                             // Clean up
@@ -192,7 +204,11 @@ class Experiment {
                         // Statistics for online
                         val paOnline = PerformanceAnalyzer(modelOnline!!)
                         paOnline.cleanNode(modelOnline!!.root!!)
-                        logToSequence(allTraces, from = current, to = current + windowSize).traces.forEach { paOnline.analyze(it) }
+                        logToSequence(
+                            allTraces,
+                            from = current,
+                            to = current + windowSize
+                        ).traces.forEach { paOnline.analyze(it) }
                         onlineStats.add(Stats(paOnline.fitness(), paOnline.precision(), timeOnline))
 
                         // Clean up
@@ -201,6 +217,10 @@ class Experiment {
                         // Step
                         current += step
                     }
+
+                    csv(file.name, "model[buildFromZero]", imOnline.builtFromZero)
+                    csv(file.name, "model[rebuild]", imOnline.rebuild)
+                    csv(file.name, "model[ignoredRebuild]", imOnline.tracesNoRebuildNeeds)
                 }
             }
         }

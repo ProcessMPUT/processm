@@ -37,6 +37,13 @@ class OnlineInductiveMiner : InductiveMiner() {
      */
     private val dfg = DirectlyFollowsGraph()
 
+    var builtFromZero = 0
+        private set
+    var rebuild = 0
+        private set
+    var tracesNoRebuildNeeds = 0
+        private set
+
     /**
      * Auxiliary variable.
      * Indicates whether the statistics of connections between the pair of activities
@@ -88,6 +95,7 @@ class OnlineInductiveMiner : InductiveMiner() {
             }
 
             // Rebuild tree - changes are too big
+            builtFromZero++
             model = DirectlyFollowsSubGraph(
                 activities = activities,
                 dfg = dfg
@@ -103,7 +111,10 @@ class OnlineInductiveMiner : InductiveMiner() {
             val subGraphToRebuild = breadthFirstSearchMinimalCommonSubGraph(affectedActivities, model)
 
             // Rebuild subGraph
+            rebuild++
             subGraphToRebuild.detectCuts()
+        } else {
+            tracesNoRebuildNeeds++
         }
     }
 
