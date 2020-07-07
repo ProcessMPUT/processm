@@ -135,7 +135,6 @@ import {
   drag,
   ContainerElement
 } from "d3";
-import dagre from "dagre";
 import { v4 as uuidv4 } from "uuid";
 import { ComponentMode } from "../WorkspaceComponent.vue";
 import CasualNet, {
@@ -297,34 +296,11 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   mounted() {
-    const isLayoutPredefined =
-      this.data.nodes.length == this.data.layout?.length &&
-      this.data.nodes.every(node =>
-        this.data.layout?.some(nodeLayout => nodeLayout.id == node.id)
-      );
-
-    const nodesLayout =
-      isLayoutPredefined && this.data.layout != null
-        ? this.data.layout?.reduce(
-            (
-              layout: Map<string, Point>,
-              node: {
-                id: string;
-                x: number;
-                y: number;
-              }
-            ) => {
-              layout.set(node.id, { x: node.x, y: node.y });
-              return layout;
-            },
-            new Map()
-          )
-        : this.calculateLayout();
-
     this.casualNet = new CasualNet(
       this.data.nodes,
       this.data.edges,
-      nodesLayout
+      this.data.layout,
+      this.nodeTransition
     );
 
     this.simulation = d3.forceSimulation<Node, Link>().force(
@@ -523,64 +499,32 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   private rearrangeNodes() {
-    const nodesLayout = this.calculateLayout();
-
-    this.casualNet.nodes.forEach(node => {
-      const nodePosition = nodesLayout.get(node.id);
-      if (nodePosition == null) return;
-
-      node.fx = nodePosition.x;
-      node.fy = nodePosition.y;
-    });
-
+    this.casualNet.recalculateLayout();
     this.simulation?.alphaTarget(0.3).restart();
   }
 
-  private calculateLayout() {
-    const networkGraph = new dagre.graphlib.Graph()
-      .setGraph({
-        marginx: this.displayPreferences.nodeSize,
-        marginy: this.displayPreferences.nodeSize,
-        acyclicer: "greedy"
-      })
-      .setDefaultEdgeLabel(() => {
-        return new Map();
-      });
+  private nodeTransition(
+    nodePosition: Point,
+    layoutWidth?: number,
+    layoutHeight?: number
+  ) {
+    const scaleX = this.contentWidth / (layoutWidth || this.contentWidth),
+      scaleY = this.contentHeight / (layoutHeight || this.contentHeight),
+      offsetX =
+        Math.max(
+          this.contentWidth - (layoutWidth || this.contentWidth) * scaleX,
+          0
+        ) / 2,
+      offsetY =
+        Math.max(
+          this.contentHeight - (layoutHeight || this.contentHeight) * scaleY,
+          0
+        ) / 2;
 
-    this.data.nodes.forEach((dataNode: DataNode) => {
-      const successors = new Set(dataNode.splits.flat());
-      successors.forEach(successor => {
-        const targetNode = this.data.nodes.find(
-          (node: DataNode) => node.id == successor
-        );
-        if (targetNode != null) {
-          networkGraph.setEdge(dataNode.id, targetNode.id);
-        }
-      });
-    });
-
-    this.data.nodes.forEach((dataNode: DataNode) => {
-      networkGraph.setNode(dataNode.id, { label: dataNode.id });
-    });
-
-    dagre.layout(networkGraph);
-    const layoutWidth = networkGraph.graph().width || this.contentWidth,
-      layoutHeight = networkGraph.graph().height || this.contentHeight,
-      scaleX = this.contentWidth / layoutWidth,
-      scaleY = this.contentHeight / layoutHeight,
-      offsetX = Math.max(this.contentWidth - layoutWidth * scaleX, 0) / 2,
-      offsetY = Math.max(this.contentHeight - layoutHeight * scaleY, 0) / 2;
-
-    return networkGraph
-      .nodes()
-      .reduce((layout: Map<string, Point>, nodeId: string) => {
-        const node = networkGraph.node(nodeId);
-        layout.set(nodeId, {
-          x: node.x * scaleX + offsetX,
-          y: node.y * scaleY + offsetY
-        });
-        return layout;
-      }, new Map());
+    return {
+      x: nodePosition.x * scaleX + offsetX,
+      y: nodePosition.y * scaleY + offsetY
+    };
   }
 
   private linkArc(link: Link) {

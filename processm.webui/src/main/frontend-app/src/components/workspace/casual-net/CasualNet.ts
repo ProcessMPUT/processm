@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { SimulationNodeDatum, SimulationLinkDatum } from "d3";
+import dagre from "dagre";
 
 export interface DataNode {
   id: string;
@@ -103,19 +104,51 @@ export class Link implements SimulationLinkDatum<Node> {
 export default class CasualNet {
   constructor(
     dataNodes: Array<DataNode>,
-    dataLinks: Array<DataLink>,
-    nodesLayout: Map<string, Point>
+    private dataLinks: Array<DataLink>,
+    layout?: Array<{ id: string; x: number; y: number }>,
+    private nodeTransition:
+      | ((
+          nodePosition: Point,
+          layoutWidth?: number,
+          layoutHeight?: number
+        ) => Point)
+      | null = null
   ) {
-    this.nodes = dataNodes.map(
-      (node, index) =>
-        new Node(
-          node.id,
-          ElementType.Regular,
-          index == 0,
-          index == dataNodes.length - 1,
-          { fx: nodesLayout.get(node.id)?.x, fy: nodesLayout.get(node.id)?.y }
-        )
-    );
+    const isLayoutPredefined =
+      dataNodes.length == layout?.length &&
+      dataNodes.every(node =>
+        layout?.some(nodeLayout => nodeLayout.id == node.id)
+      );
+
+    const nodesLayout =
+      isLayoutPredefined && layout != null
+        ? layout?.reduce(
+            (
+              layout: Map<string, Point>,
+              node: {
+                id: string;
+                x: number;
+                y: number;
+              }
+            ) => {
+              layout.set(node.id, { x: node.x, y: node.y });
+              return layout;
+            },
+            new Map()
+          )
+        : this.calculateLayout(dataNodes, dataLinks);
+
+    this.nodes = dataNodes.map((node, index) => {
+      const x = nodesLayout.get(node.id)?.x,
+        y = nodesLayout.get(node.id)?.y;
+      return new Node(
+        node.id,
+        ElementType.Regular,
+        index == 0,
+        index == dataNodes.length - 1,
+        { fx: x, fy: y, x, y }
+      );
+    });
 
     dataNodes.forEach(node => {
       const nodePosition = nodesLayout.get(node.id);
@@ -344,6 +377,21 @@ export default class CasualNet {
     );
   }
 
+  public recalculateLayout() {
+    const newLayout = this.calculateLayout(
+      this.nodes.filter(node => node.hasType(ElementType.Regular)),
+      this.dataLinks
+    );
+
+    this.nodes.forEach(node => {
+      const nodePosition = newLayout.get(node.id);
+      if (nodePosition != null) {
+        (node.fx = node.x = nodePosition.x),
+          (node.fy = node.y = nodePosition.y);
+      }
+    });
+  }
+
   private createBindingNodes(
     nodeId: string,
     bindings: string[][],
@@ -555,6 +603,42 @@ export default class CasualNet {
       },
       []
     );
+  }
+
+  private calculateLayout(
+    nodes: Array<{ id: string }>,
+    links: Array<{ sourceNodeId: string; targetNodeId: string }>
+  ) {
+    const networkGraph = new dagre.graphlib.Graph()
+      .setGraph({
+        marginx: 10,
+        marginy: 10,
+        acyclicer: "greedy"
+      })
+      .setDefaultEdgeLabel(() => {
+        return new Map();
+      });
+
+    links.forEach(link =>
+      networkGraph.setEdge(link.sourceNodeId, link.targetNodeId)
+    );
+    nodes.forEach((node: { id: string }) => {
+      networkGraph.setNode(node.id, { label: node.id });
+    });
+
+    dagre.layout(networkGraph);
+    const layoutWidth = networkGraph.graph().width,
+      layoutHeight = networkGraph.graph().height;
+
+    return networkGraph
+      .nodes()
+      .reduce((layout: Map<string, Point>, nodeId: string) => {
+        const node = networkGraph.node(nodeId);
+        const nodePosition =
+          this.nodeTransition?.(node as Point, layoutWidth, layoutHeight) ||
+          (node as Point);
+        return layout.set(nodeId, nodePosition);
+      }, new Map());
   }
 
   private groupObjectsByProperty<TObject, TProperty>(

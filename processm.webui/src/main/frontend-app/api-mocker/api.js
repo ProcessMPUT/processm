@@ -94,27 +94,27 @@ const componentsData = [
       edges: [
         {
           sourceNodeId: "a",
-          targerNodeId: "b"
+          targetNodeId: "b"
         },
         {
           sourceNodeId: "a",
-          targerNodeId: "c"
+          targetNodeId: "c"
         },
         {
           sourceNodeId: "a",
-          targerNodeId: "d"
+          targetNodeId: "d"
         },
         {
           sourceNodeId: "b",
-          targerNodeId: "e"
+          targetNodeId: "e"
         },
         {
           sourceNodeId: "c",
-          targerNodeId: "e"
+          targetNodeId: "e"
         },
         {
           sourceNodeId: "d",
-          targerNodeId: "e"
+          targetNodeId: "e"
         }
       ]
     }
@@ -168,6 +168,64 @@ const componentsData = [
         { id: "g", splits: [["z"]], joins: [["e"]] },
         { id: "h", splits: [["z"]], joins: [["e"]] },
         { id: "z", splits: [], joins: [["g"], ["h"]] }
+      ],
+      edges: [
+        {
+          sourceNodeId: "a",
+          targetNodeId: "b"
+        },
+        {
+          sourceNodeId: "a",
+          targetNodeId: "c"
+        },
+        {
+          sourceNodeId: "a",
+          targetNodeId: "d"
+        },
+        {
+          sourceNodeId: "b",
+          targetNodeId: "e"
+        },
+        {
+          sourceNodeId: "c",
+          targetNodeId: "e"
+        },
+        {
+          sourceNodeId: "d",
+          targetNodeId: "e"
+        },
+        {
+          sourceNodeId: "e",
+          targetNodeId: "f"
+        },
+        {
+          sourceNodeId: "e",
+          targetNodeId: "g"
+        },
+        {
+          sourceNodeId: "e",
+          targetNodeId: "h"
+        },
+        {
+          sourceNodeId: "f",
+          targetNodeId: "b"
+        },
+        {
+          sourceNodeId: "f",
+          targetNodeId: "c"
+        },
+        {
+          sourceNodeId: "f",
+          targetNodeId: "d"
+        },
+        {
+          sourceNodeId: "g",
+          targetNodeId: "z"
+        },
+        {
+          sourceNodeId: "h",
+          targetNodeId: "z"
+        }
       ]
     }
   },
@@ -201,31 +259,31 @@ const componentsData = [
       edges: [
         {
           sourceNodeId: "a",
-          targerNodeId: "b"
+          targetNodeId: "b"
         },
         {
           sourceNodeId: "b",
-          targerNodeId: "b"
+          targetNodeId: "b"
         },
         {
           sourceNodeId: "b",
-          targerNodeId: "c"
+          targetNodeId: "c"
         },
         {
           sourceNodeId: "b",
-          targerNodeId: "d"
+          targetNodeId: "d"
         },
         {
           sourceNodeId: "c",
-          targerNodeId: "d"
+          targetNodeId: "d"
         },
         {
           sourceNodeId: "d",
-          targerNodeId: "d"
+          targetNodeId: "d"
         },
         {
           sourceNodeId: "d",
-          targerNodeId: "e"
+          targetNodeId: "e"
         }
       ],
       layout: [
@@ -323,6 +381,108 @@ const componentsData = [
           id: "o",
           splits: [],
           joins: [["m"], ["n"], ["l"]]
+        }
+      ],
+      edges: [
+        {
+          sourceNodeId: "a",
+          targetNodeId: "b"
+        },
+        {
+          sourceNodeId: "a",
+          targetNodeId: "c"
+        },
+        {
+          sourceNodeId: "a",
+          targetNodeId: "d"
+        },
+        {
+          sourceNodeId: "b",
+          targetNodeId: "e"
+        },
+        {
+          sourceNodeId: "b",
+          targetNodeId: "f"
+        },
+        {
+          sourceNodeId: "b",
+          targetNodeId: "g"
+        },
+        {
+          sourceNodeId: "c",
+          targetNodeId: "f"
+        },
+        {
+          sourceNodeId: "d",
+          targetNodeId: "g"
+        },
+        {
+          sourceNodeId: "d",
+          targetNodeId: "h"
+        },
+        {
+          sourceNodeId: "e",
+          targetNodeId: "i"
+        },
+        {
+          sourceNodeId: "f",
+          targetNodeId: "h"
+        },
+        {
+          sourceNodeId: "f",
+          targetNodeId: "j"
+        },
+        {
+          sourceNodeId: "g",
+          targetNodeId: "e"
+        },
+        {
+          sourceNodeId: "g",
+          targetNodeId: "n"
+        },
+        {
+          sourceNodeId: "g",
+          targetNodeId: "k"
+        },
+        {
+          sourceNodeId: "g",
+          targetNodeId: "i"
+        },
+        {
+          sourceNodeId: "h",
+          targetNodeId: "l"
+        },
+        {
+          sourceNodeId: "i",
+          targetNodeId: "n"
+        },
+        {
+          sourceNodeId: "j",
+          targetNodeId: "m"
+        },
+        {
+          sourceNodeId: "j",
+          targetNodeId: "n"
+        },
+        {
+          sourceNodeId: "k",
+          targetNodeId: "m"
+        },
+        {
+          sourceNodeId: "k",
+          targetNodeId: "n"
+        },
+        {
+          sourceNodeId: "l",
+          targetNodeId: "o"
+        },
+        {
+          sourceNodeId: "m",
+          targetNodeId: "o"
+        },
+        {
+          sourceNodeId: "n",
+          targetNodeId: "o"
         }
       ]
     }
