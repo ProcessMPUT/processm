@@ -12,9 +12,9 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
         node.children.forEach { cleanNode(it) }
     }
 
-    private fun nextActivities(lastExecuted: Node?): HashSet<Pair<String, Node>> {
+    private fun nextActivities(lastExecuted: Node?): MutableList<Pair<String, Node>> {
         val node = lastExecuted ?: tree.root!!
-        val possibleActivities = HashSet<Pair<String, Node>>()
+        val possibleActivities = ArrayList<Pair<String, Node>>()
 
         if (node.currentTraceId == traceId && node.parent != null) {
             if (node.parent is RedoLoop) {
@@ -130,20 +130,30 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                 parallelNodes.forEach { activities.addAll(nextActivities(it)) }
 
                 val node = activities.firstOrNull { it.first == name }?.second
-                val silentNode = activities.firstOrNull { it.second is SilentActivity }?.second
 
                 if (node != null) {
                     assignAsExecuted(node)
                     lastExecuted = node
                     break
-                } else if (silentNode != null) {
-                    assignAsExecuted(silentNode)
-                    lastExecuted = silentNode
                 } else {
-                    println("########## ################")
-                    println("Can not execute $name")
-                    println("-----------------------")
-                    return
+                    val silentNodes = activities.filter { it.second is SilentActivity }.map { it.second }
+                    val matchingSilentNode = silentNodes.firstOrNull {
+                        assignAsExecuted(it)
+                        val result =
+                            nextActivities(it).any { lookAhead -> lookAhead.first == name || lookAhead.second is SilentActivity }
+                        cleanNode(it) // FIXME: this should actually revert the changes made by assignAsExecuted(it) above
+                        result
+                    }
+
+                    if (matchingSilentNode !== null) {
+                        assignAsExecuted(matchingSilentNode)
+                        lastExecuted = matchingSilentNode
+                    } else {
+                        println("########## ################")
+                        println("Can not execute $name")
+                        println("-----------------------")
+                        return
+                    }
                 }
             }
         }
