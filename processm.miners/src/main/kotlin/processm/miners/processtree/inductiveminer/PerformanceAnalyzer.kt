@@ -115,6 +115,7 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
 
         trace.events.forEach { event ->
             val name = event.conceptName ?: ""
+            println("Execute: $name")
 
             while (true) {
                 val activities = nextActivities(lastExecuted)
@@ -129,12 +130,16 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                     assignAsExecuted(silentNode)
                     lastExecuted = silentNode
                 } else {
+                    println("########## ################")
+                    println("Can not execute $name")
+                    println("-----------------------")
                     return
                 }
             }
         }
 
         if (tree.root!!.currentTraceId == traceId) {
+            println("-----------------------")
             tree.successAnalyzedTracesIds.add(traceId)
         }
     }

@@ -155,12 +155,12 @@ class Experiment {
 
                         if (paOffline.fitness() < 1.0) {
                             println(modelOffline)
-                            logToSequence(allTraces, from = current, to = current + windowSize).traces.forEach {
-                                it.events.forEach { print("${it.conceptName} \t|\t") }
-                                println("")
-                            }
-                            println(modelOffline!!.successAnalyzedTracesIds)
-                            return
+//                            logToSequence(allTraces, from = current, to = current + windowSize).traces.forEach {
+//                                it.events.forEach { print("${it.conceptName} \t|\t") }
+//                                println("")
+//                            }
+//                            println(modelOffline!!.successAnalyzedTracesIds)
+//                            return
                         }
 
                         // TODO:
@@ -243,7 +243,7 @@ class Experiment {
         }
     }
 
-    // TODO:
+    // TODO może się uda wykrozystać:
 //                csv(*(listOf(filename, "offline", relativeBatchSize, batchSize) + offlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
 //                csv(*(listOf(filename, "online", relativeBatchSize, batchSize) + onlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
 //                println("FITNESS")
@@ -276,3 +276,12 @@ class Experiment {
 fun main(args: Array<String>) {
     Experiment().main(args)
 }
+
+// TODO:
+//  * ile razy przebudowano całe drzewo
+//  * ile razy przebudowano fragment drzewa
+//  * ile razy zignorowano przebudowę
+//  * czas realizacji algorytmu
+//  * zużycie pamięci (opcjonalnie)
+//  * dopasowanie na przesuniętym w pełni oknie czasowym (bez nakładania się)
+//  * precyzja na przesuniętym w pełni oknie czasowym (bez nakładania się)

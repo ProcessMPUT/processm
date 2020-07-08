@@ -550,7 +550,11 @@ internal class OfflineInductiveMinerTest {
                     SilentActivity()
                 ),
                 RedoLoop(
-                    ProcessTreeActivity("W_Valideren_aanvraag"),
+                    SilentActivity(),
+                    RedoLoop(
+                        ProcessTreeActivity("W_Valideren_aanvraag"),
+                        SilentActivity()
+                    ),
                     Sequence(
                         RedoLoop(
                             SilentActivity(),
@@ -583,7 +587,10 @@ internal class OfflineInductiveMinerTest {
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
 
+        println(analyzer.fitness())
+        println(model.successAnalyzedTracesIds)
+        assertEquals(10, model.successAnalyzedTracesIds.size)
+
         assertDoubleEquals(1.0, analyzer.fitness())
-        assertDoubleEquals(1.0, analyzer.precision())
     }
 }
