@@ -1,9 +1,9 @@
 {
   "logs": [
-    "xes-logs/Hospital_Billing-Event_Log.xes.gz"
+    "xes-logs/bpi_challenge_2012.xes.gz"
   ],
-  "windowsSizes": [100],
-  "windowsSteps": [1],
+  "windowsSizes": [10, 20, 30, 40, 50, 75, 100],
+  "windowsSteps": [1, 2, 5, 10],
   "csv": "output-20200619.csv",
   "maxTraces": 500
 }

@@ -129,7 +129,6 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                     assignAsExecuted(silentNode)
                     lastExecuted = silentNode
                 } else {
-                    println("Event $name can not be replayed on model")
                     return
                 }
             }

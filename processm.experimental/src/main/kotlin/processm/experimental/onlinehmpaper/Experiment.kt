@@ -126,7 +126,7 @@ class Experiment {
                     var firstMove = true
                     val imOnline = OnlineInductiveMiner()
 
-                    while (current + windowSize + step < allTracesSize) {
+                    do {
                         println("Window [$current; ${current + windowSize}]")
 
                         // Offline
@@ -151,7 +151,20 @@ class Experiment {
                             from = current,
                             to = current + windowSize
                         ).traces.forEach { paOffline.analyze(it) }
-                        offlineStats.add(Stats(paOffline.fitness(), paOffline.precision(), timeOffline))
+                        println("${paOffline.fitness()} ${paOffline.precision()}")
+
+                        if (paOffline.fitness() < 1.0) {
+                            println(modelOffline)
+                            logToSequence(allTraces, from = current, to = current + windowSize).traces.forEach {
+                                it.events.forEach { print("${it.conceptName} \t|\t") }
+                                println("")
+                            }
+                            println(modelOffline!!.successAnalyzedTracesIds)
+                            return
+                        }
+
+                        // TODO:
+//                        offlineStats.add(Stats(paOffline.fitness(), paOffline.precision(), timeOffline))
 
                         // Clean up
                         System.gc()
@@ -209,14 +222,18 @@ class Experiment {
                             from = current,
                             to = current + windowSize
                         ).traces.forEach { paOnline.analyze(it) }
-                        onlineStats.add(Stats(paOnline.fitness(), paOnline.precision(), timeOnline))
+                        // TODO:
+//                        onlineStats.add(Stats(paOnline.fitness(), paOnline.precision(), timeOnline))
+                        println("${paOnline.fitness()} ${paOnline.precision()}")
 
                         // Clean up
                         System.gc()
 
                         // Step
                         current += step
-                    }
+
+                        println("${imOnline.builtFromZero} ${imOnline.rebuild} ${imOnline.tracesNoRebuildNeeds}")
+                    } while (current + windowSize - step < allTracesSize)
 
                     csv(file.name, "model[buildFromZero]", imOnline.builtFromZero)
                     csv(file.name, "model[rebuild]", imOnline.rebuild)
@@ -226,7 +243,7 @@ class Experiment {
         }
     }
 
-
+    // TODO:
 //                csv(*(listOf(filename, "offline", relativeBatchSize, batchSize) + offlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
 //                csv(*(listOf(filename, "online", relativeBatchSize, batchSize) + onlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
 //                println("FITNESS")
