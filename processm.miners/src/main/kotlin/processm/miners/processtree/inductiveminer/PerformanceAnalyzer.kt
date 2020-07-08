@@ -19,7 +19,7 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
         if (node.currentTraceId == traceId && node.parent != null) {
             if (node.parent is RedoLoop) {
                 // Node is first child - suggest all children != first and next node
-                if (node == node.parent!!.children[0]) {
+                if (node === node.parent!!.children[0]) {
                     node.parent!!.children.stream().skip(1).forEach { cleanNode(it) }
                     node.parent!!.children.stream().skip(1).forEach { possibleActivities.addAll(nextActivities(it)) }
                     possibleActivities.addAll(nextActivities(node.parent))
@@ -146,6 +146,15 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                     return
                 }
             }
+        }
+
+        // execute remaining silent activities
+        while (tree.root!!.currentTraceId != traceId) {
+            val activities = nextActivities(lastExecuted)
+            parallelNodes.forEach { activities.addAll(nextActivities(it)) }
+            val silentNode = activities.firstOrNull { it.second is SilentActivity }?.second ?: break
+            assignAsExecuted(silentNode)
+            lastExecuted = silentNode
         }
 
         if (tree.root!!.currentTraceId == traceId) {
