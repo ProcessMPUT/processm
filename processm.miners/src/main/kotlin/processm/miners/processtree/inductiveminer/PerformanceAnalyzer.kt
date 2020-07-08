@@ -2,17 +2,17 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.*
-import java.util.*
 
 class PerformanceAnalyzer(private val tree: ProcessTree) {
     var traceId = 0
+    val parallelNodes = HashSet<Parallel>()
 
     fun cleanNode(node: Node) {
         node.currentTraceId = 0
         node.children.forEach { cleanNode(it) }
     }
 
-    private fun nextActivities(lastExecuted: Node?): Set<Pair<String, Node>> {
+    private fun nextActivities(lastExecuted: Node?): HashSet<Pair<String, Node>> {
         val node = lastExecuted ?: tree.root!!
         val possibleActivities = HashSet<Pair<String, Node>>()
 
@@ -37,7 +37,8 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                 possibleActivities.addAll(nextActivities(node.parent))
                 return possibleActivities
             } else {
-                return nextActivities(node.parent)
+                possibleActivities.addAll(nextActivities(node.parent))
+                return possibleActivities
             }
         }
 
@@ -84,6 +85,13 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
             is ProcessTreeActivity -> {
                 node.currentTraceId = traceId
                 node.analyzedTracesIds.add(traceId)
+
+                parallelNodes.clear()
+                var n = node.parent
+                while (n != null) {
+                    if (n is Parallel) parallelNodes.add(n)
+                    n = n.parent
+                }
             }
             is Sequence, is Parallel -> {
                 if (node.children.all { it.currentTraceId == traceId }) {
@@ -119,6 +127,8 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
 
             while (true) {
                 val activities = nextActivities(lastExecuted)
+                parallelNodes.forEach { activities.addAll(nextActivities(it)) }
+
                 val node = activities.firstOrNull { it.first == name }?.second
                 val silentNode = activities.firstOrNull { it.second is SilentActivity }?.second
 
