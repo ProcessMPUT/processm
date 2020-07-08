@@ -69,7 +69,7 @@ button.v-btn.v-btn.component-name[type="button"] {
 import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop, Inject } from "vue-property-decorator";
-import CasualNetComponent from "./casual-net/CasualNetComponent.vue";
+import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
 import KpiComponent from "./KpiComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 
@@ -80,7 +80,7 @@ export enum ComponentMode {
 }
 
 @Component({
-  components: { CasualNetComponent, KpiComponent }
+  components: { CausalNetComponent, KpiComponent }
 })
 export default class WorkspaceComponent extends Vue {
   ComponentMode = ComponentMode;

@@ -73,7 +73,7 @@ const componentsData = [
   {
     id: "cf607cb0-0b88-4ccd-9795-5cd0201b3c39",
     name: "some name 1",
-    type: "casualNet",
+    type: "causalNet",
     data: {
       query: "SELECT ...",
       nodes: [
@@ -122,7 +122,7 @@ const componentsData = [
   {
     id: "c629ba68-aae2-4490-85cd-3875939fc69e",
     name: "component 1",
-    type: "casualNet",
+    type: "causalNet",
     data: {
       query: "SELECT ...",
       nodes: [
@@ -232,7 +232,7 @@ const componentsData = [
   {
     id: "93bcc033-bbea-490d-93b9-3c8580db5354",
     name: "long long long long name",
-    type: "casualNet",
+    type: "causalNet",
     data: {
       query: "SELECT ...",
       nodes: [
@@ -298,7 +298,7 @@ const componentsData = [
   {
     id: "f7bad885-6add-4516-b536-d6f88c154b6e",
     name: "c1",
-    type: "casualNet",
+    type: "causalNet",
     data: {
       query: "SELECT ...",
       nodes: [

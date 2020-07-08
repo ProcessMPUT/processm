@@ -151,14 +151,14 @@ import {
 } from "d3";
 import { v4 as uuidv4 } from "uuid";
 import { ComponentMode } from "../WorkspaceComponent.vue";
-import CasualNet, {
+import CausalNet, {
   DataNode,
   DataLink,
   Point,
   Node,
   Link,
   ElementType
-} from "./CasualNet";
+} from "./CausalNet";
 import {
   UserInputSource,
   UserInputHandler,
@@ -177,7 +177,7 @@ enum EditMode {
     resize
   }
 })
-export default class CasualNetComponent extends Vue implements UserInputSource {
+export default class CausalNetComponent extends Vue implements UserInputSource {
   ComponentMode = ComponentMode;
   EditMode = EditMode;
 
@@ -240,7 +240,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
       .select("marker");
   }
 
-  public casualNet!: CasualNet;
+  public causalNet!: CausalNet;
   public currentScalingFactor = 1;
   public readonly contentHeight: number = 250;
   public readonly contentWidth: number = 250;
@@ -285,10 +285,10 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   public runSimulation() {
-    this.simulation?.nodes(this.casualNet.nodes);
+    this.simulation?.nodes(this.causalNet.nodes);
     this.simulation
       ?.force<ForceLink<Node, Link>>("link")
-      ?.links(this.casualNet.links);
+      ?.links(this.causalNet.links);
     this.simulation?.alphaTarget(0.3).restart();
   }
 
@@ -319,7 +319,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   mounted() {
-    this.casualNet = new CasualNet(
+    this.causalNet = new CausalNet(
       this.data.nodes,
       this.data.edges,
       this.data.layout,
@@ -381,7 +381,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
 
   public refreshNodes() {
     this.nodes()
-      .data(this.casualNet.nodes, d => (d as Node).id)
+      .data(this.causalNet.nodes, d => (d as Node).id)
       .join(
         enter => {
           const enteredItems = enter
@@ -448,7 +448,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
 
   public refreshLinks() {
     this.links()
-      .data(this.casualNet.links, d => (d as Link).id)
+      .data(this.causalNet.links, d => (d as Link).id)
       .join(
         enter =>
           enter
@@ -544,7 +544,7 @@ export default class CasualNetComponent extends Vue implements UserInputSource {
   }
 
   private rearrangeNodes() {
-    this.casualNet.recalculateLayout();
+    this.causalNet.recalculateLayout();
     this.simulation?.alphaTarget(0.3).restart();
   }
 

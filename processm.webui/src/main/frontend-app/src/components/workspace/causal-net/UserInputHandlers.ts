@@ -1,4 +1,4 @@
-import CasualNet, { Node, Link, ElementType, Point } from "./CasualNet";
+import CausalNet, { Node, Link, ElementType, Point } from "./CausalNet";
 import { Selection, BaseType } from "d3";
 
 function validateBoundaries(
@@ -20,7 +20,7 @@ export interface UserInputSource {
   readonly componentWidth: number;
   readonly contentHeight: number;
   readonly contentWidth: number;
-  readonly casualNet: CasualNet;
+  readonly causalNet: CausalNet;
   readonly currentScalingFactor: number;
   readonly displayPreferences: {
     nodeSize: number;
@@ -84,7 +84,7 @@ export class AdditionModeInputHandler implements UserInputHandler {
       this.component.contentWidth,
       this.component.contentHeight
     );
-    this.component.casualNet.addRegularNode(normalizedPoint);
+    this.component.causalNet.addRegularNode(normalizedPoint);
     this.component.refreshNodes();
     this.component.scaleElements();
     this.component.runSimulation();
@@ -108,7 +108,7 @@ export class AdditionModeInputHandler implements UserInputHandler {
 
     const nodeType = this.selectTypeOfBindingNodeToCreate(eventLink, point);
 
-    this.component.casualNet.addBindingNode(nodeType, eventLink, point);
+    this.component.causalNet.addBindingNode(nodeType, eventLink, point);
     this.component.refreshNodes();
     this.component.refreshLinks();
     this.component.scaleElements();
@@ -165,13 +165,13 @@ export class AdditionModeInputHandler implements UserInputHandler {
       eventNode.nodeType == this.newLinkTargetNode.nodeType
     ) {
       if (eventNode.nodeType == ElementType.Regular) {
-        this.component.casualNet.addRegularLink(
+        this.component.causalNet.addRegularLink(
           eventNode,
           this.newLinkTargetNode
         );
         this.component.refreshNodes();
       } else {
-        this.component.casualNet.addBindingLink(
+        this.component.causalNet.addBindingLink(
           eventNode,
           this.newLinkTargetNode
         );
@@ -241,7 +241,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const isBindingNode = eventNode.hasType(ElementType.Binding);
     const intermediateLinksToBeRemoved = isBindingNode
       ? []
-      : this.component.casualNet.links.filter(
+      : this.component.causalNet.links.filter(
           link =>
             link.indirectSourceNodeId == eventNode.id ||
             link.indirectTargetNodeId == eventNode.id
@@ -262,8 +262,8 @@ export class DeletionModeInputHandler implements UserInputHandler {
       ...bindingLinksToBeRemoved
     ]);
 
-    this.component.casualNet.removeNodes(node => nodesToBeRemoved.has(node.id));
-    this.component.casualNet.removeLinks(link => linksToBeRemoved.has(link.id));
+    this.component.causalNet.removeNodes(node => nodesToBeRemoved.has(node.id));
+    this.component.causalNet.removeLinks(link => linksToBeRemoved.has(link.id));
     this.component.refreshNodes();
     this.component.refreshLinks();
   }
@@ -272,7 +272,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const isBindingLink = eventLink.hasType(ElementType.Binding);
     const intermediateLinksToBeRemoved = isBindingLink
       ? []
-      : this.component.casualNet.links.filter(
+      : this.component.causalNet.links.filter(
           link => link.groupId == eventLink.groupId
         );
     const bindingNodesToBeRemoved = isBindingLink
@@ -295,10 +295,10 @@ export class DeletionModeInputHandler implements UserInputHandler {
       ...bindingLinksToBeRemoved
     ]);
 
-    this.component.casualNet.removeNodes(node =>
+    this.component.causalNet.removeNodes(node =>
       bindingNodesToBeRemoved.has(node.id)
     );
-    this.component.casualNet.removeLinks(link => linksToBeRemoved.has(link.id));
+    this.component.causalNet.removeLinks(link => linksToBeRemoved.has(link.id));
     this.component.refreshNodes();
     this.component.refreshLinks();
   }
@@ -307,7 +307,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const isBindingNode = eventNode.hasType(ElementType.Binding);
     const intermediateLinksToBeRemoved = isBindingNode
       ? []
-      : this.component.casualNet.links.filter(
+      : this.component.causalNet.links.filter(
           link =>
             link.indirectSourceNodeId == eventNode.id ||
             link.indirectTargetNodeId == eventNode.id
@@ -336,7 +336,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const isBindingLink = eventLink.hasType(ElementType.Binding);
     const intermediateLinksToBeRemoved = isBindingLink
       ? []
-      : this.component.casualNet.links.filter(
+      : this.component.causalNet.links.filter(
           link => link.groupId == eventLink.groupId
         );
     const bindingNodesToBeRemoved = isBindingLink
@@ -410,7 +410,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
 
   private selectBindingLinksToBeRemoved(bindingNodes: Set<string>) {
     return Array.from(
-      this.component.casualNet.links.reduce(
+      this.component.causalNet.links.reduce(
         (groupedBindingLinks: Map<string, Array<string>>, link: Link) => {
           if (!link.hasType(ElementType.Binding)) return groupedBindingLinks;
 

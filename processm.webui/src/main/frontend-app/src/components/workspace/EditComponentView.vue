@@ -44,8 +44,8 @@
                 v-model="componentDetails.type"
                 :items="[
                   {
-                    text: $t('workspace.component.casual-net'),
-                    value: 'casualNet'
+                    text: $t('workspace.component.causal-net'),
+                    value: 'causalNet'
                   },
                   { text: $t('workspace.component.kpi'), value: 'kpi' }
                 ]"

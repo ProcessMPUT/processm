@@ -15,7 +15,7 @@
     "default-name": "Workspace",
     "locked": "Locked",
     "component": {
-      "casual-net": "Casual net",
+      "causal-net": "Causal net",
       "kpi": "KPI",
       "edit": {
         "name": "Name",

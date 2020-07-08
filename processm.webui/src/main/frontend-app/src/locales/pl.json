@@ -14,7 +14,7 @@
     "default-name": "Przestrzeń robocza",
     "locked": "Zablokowany",
     "component": {
-      "casual-net": "Sieć przyczynowa",
+      "causal-net": "Sieć przyczynowa",
       "kpi": "KPI",
       "edit": {
         "name": "Nazwa",
