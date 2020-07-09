@@ -514,7 +514,7 @@ internal class OfflineInductiveMinerTest {
 
         assertEquals(0.0, analyzer.fitness())
         assertTrue(model.successAnalyzedTracesIds.isEmpty())
-        assertDoubleEquals(3.0/4.0, analyzer.precision())
+        assertDoubleEquals(3.0 / 4.0, analyzer.precision())
     }
 
     @Test
@@ -571,7 +571,8 @@ internal class OfflineInductiveMinerTest {
         val inductiveMiner = OfflineInductiveMiner()
         inductiveMiner.assignActivities(model.root)
 
-        val log = logFromString("""
+        val log = logFromString(
+            """
             A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes W_Nabellen_offertes O_SENT_BACK W_Nabellen_offertes A_REGISTERED A_APPROVED O_ACCEPTED A_ACTIVATED W_Valideren_aanvraag
             A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag A_ACCEPTED A_FINALIZED O_SELECTED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes O_SELECTED O_CANCELLED O_CREATED O_SENT W_Nabellen_offertes W_Nabellen_offertes O_SENT_BACK W_Nabellen_offertes W_Valideren_aanvraag W_Valideren_aanvraag O_ACCEPTED A_APPROVED A_REGISTERED A_ACTIVATED W_Valideren_aanvraag 
             A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag A_ACCEPTED A_FINALIZED O_SELECTED O_CREATED O_SENT W_Completeren_aanvraag O_SELECTED O_CANCELLED O_CREATED O_SENT W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes O_SELECTED O_CANCELLED O_CREATED O_SENT W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes O_SENT_BACK W_Nabellen_offertes O_ACCEPTED A_APPROVED A_REGISTERED A_ACTIVATED W_Valideren_aanvraag
@@ -582,7 +583,82 @@ internal class OfflineInductiveMinerTest {
             A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag A_CANCELLED
             A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Afhandelen_leads W_Completeren_aanvraag W_Completeren_aanvraag A_CANCELLED W_Completeren_aanvraag
             A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes O_SENT_BACK W_Nabellen_offertes A_DECLINED O_DECLINED W_Valideren_aanvraag 
-        """.trimIndent())
+        """.trimIndent()
+        )
+
+        val analyzer = PerformanceAnalyzer(model)
+        log.traces.forEach { analyzer.analyze(it) }
+
+        println(analyzer.fitness())
+        println(model.successAnalyzedTracesIds)
+        assertEquals(10, model.successAnalyzedTracesIds.size)
+
+        assertDoubleEquals(1.0, analyzer.fitness())
+    }
+
+    @Test
+    fun `Advanced model - fitness check - loop protection`() {
+        val model = processTree {
+            Sequence(
+                ProcessTreeActivity("A_SUBMITTED"),
+                ProcessTreeActivity("A_PARTLYSUBMITTED"),
+                Exclusive(
+                    ProcessTreeActivity("A_PREACCEPTED"),
+                    SilentActivity()
+                ),
+                RedoLoop(
+                    SilentActivity(),
+                    ProcessTreeActivity("A_CANCELLED"),
+                    ProcessTreeActivity("O_SELECTED"),
+                    ProcessTreeActivity("O_CREATED"),
+                    ProcessTreeActivity("O_SENT_BACK"),
+                    ProcessTreeActivity("O_CANCELLED"),
+                    ProcessTreeActivity("W_Afhandelen_leads"),
+                    ProcessTreeActivity("A_DECLINED"),
+                    ProcessTreeActivity("A_FINALIZED"),
+                    ProcessTreeActivity("O_SENT"),
+                    ProcessTreeActivity("W_Completeren_aanvraag"),
+                    ProcessTreeActivity("A_ACCEPTED"),
+                    ProcessTreeActivity("W_Nabellen_offertes")
+                ),
+                RedoLoop(
+                    SilentActivity(),
+                    RedoLoop(
+                        ProcessTreeActivity("W_Valideren_aanvraag"),
+                        SilentActivity()
+                    ),
+                    RedoLoop(
+                        SilentActivity(),
+                        ProcessTreeActivity("A_REGISTERED"),
+                        ProcessTreeActivity("A_APPROVED"),
+                        ProcessTreeActivity("O_ACCEPTED"),
+                        ProcessTreeActivity("A_ACTIVATED")
+                    ),
+                    RedoLoop(
+                        SilentActivity(),
+                        ProcessTreeActivity("W_Nabellen_incomplete_dossiers")
+                    )
+                )
+            )
+        }
+
+        val inductiveMiner = OfflineInductiveMiner()
+        inductiveMiner.assignActivities(model.root)
+
+        val log = logFromString(
+            """
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes O_SENT_BACK W_Nabellen_offertes W_Valideren_aanvraag W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Valideren_aanvraag W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Valideren_aanvraag W_Valideren_aanvraag W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Nabellen_incomplete_dossiers W_Valideren_aanvraag W_Valideren_aanvraag A_APPROVED O_ACCEPTED A_ACTIVATED A_REGISTERED W_Valideren_aanvraag 
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag O_CANCELLED O_SELECTED O_CREATED O_SENT W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes A_CANCELLED O_CANCELLED W_Nabellen_offertes 
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes W_Nabellen_offertes O_SENT_BACK W_Nabellen_offertes W_Valideren_aanvraag O_ACCEPTED A_APPROVED A_ACTIVATED A_REGISTERED W_Valideren_aanvraag 
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes W_Nabellen_offertes O_SENT_BACK W_Nabellen_offertes W_Valideren_aanvraag W_Nabellen_incomplete_dossiers W_Valideren_aanvraag O_ACCEPTED A_REGISTERED A_ACTIVATED A_APPROVED W_Valideren_aanvraag 
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag A_ACCEPTED A_FINALIZED O_SELECTED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes A_CANCELLED O_CANCELLED W_Nabellen_offertes 
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag W_Completeren_aanvraag W_Completeren_aanvraag A_DECLINED W_Completeren_aanvraag 
+            A_SUBMITTED A_PARTLYSUBMITTED A_DECLINED W_Afhandelen_leads 
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Completeren_aanvraag A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes A_CANCELLED O_CANCELLED 
+            A_SUBMITTED A_PARTLYSUBMITTED A_DECLINED 
+            A_SUBMITTED A_PARTLYSUBMITTED A_PREACCEPTED W_Afhandelen_leads W_Completeren_aanvraag A_ACCEPTED O_SELECTED A_FINALIZED O_CREATED O_SENT W_Completeren_aanvraag W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes W_Nabellen_offertes A_CANCELLED O_CANCELLED
+        """.trimIndent()
+        )
 
         val analyzer = PerformanceAnalyzer(model)
         log.traces.forEach { analyzer.analyze(it) }
