@@ -5,7 +5,15 @@ import processm.core.models.processtree.*
 
 class PerformanceAnalyzer(private val tree: ProcessTree) {
     var traceId = 0
-    val parallelNodes = HashSet<Parallel>()
+    private val parallelNodes = HashSet<Parallel>()
+    private val changes = HashMap<Node, Int>()
+
+    private fun revertChanges() {
+        for((n, v) in changes) {
+            n.currentTraceId = v
+        }
+        changes.clear()
+    }
 
     fun cleanNode(node: Node) {
         node.currentTraceId = 0
@@ -83,6 +91,7 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
     private fun assignAsExecuted(node: Node) {
         when (node) {
             is ProcessTreeActivity -> {
+                changes[node] = node.currentTraceId
                 node.currentTraceId = traceId
                 node.analyzedTracesIds.add(traceId)
 
@@ -95,18 +104,21 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
             }
             is Sequence, is Parallel -> {
                 if (node.children.all { it.currentTraceId == traceId }) {
+                    changes[node] = node.currentTraceId
                     node.currentTraceId = traceId
                     node.analyzedTracesIds.add(traceId)
                 }
             }
             is Exclusive -> {
                 if (node.children.any { it.currentTraceId == traceId }) {
+                    changes[node] = node.currentTraceId
                     node.currentTraceId = traceId
                     node.analyzedTracesIds.add(traceId)
                 }
             }
             is RedoLoop -> {
                 if (node.children[0].currentTraceId == traceId) {
+                    changes[node] = node.currentTraceId
                     node.currentTraceId = traceId
                     node.analyzedTracesIds.add(traceId)
                 }
@@ -123,9 +135,10 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
 
         trace.events.forEach { event ->
             val name = event.conceptName ?: ""
-            println("Execute: $name")
-
-            while (true) {
+//            println("Execute: $name")
+            var i = 0
+            while (i < 10000) {
+                i++
                 val activities = nextActivities(lastExecuted)
                 parallelNodes.forEach { activities.addAll(nextActivities(it)) }
 
@@ -138,10 +151,11 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                 } else {
                     val silentNodes = activities.filter { it.second is SilentActivity }.map { it.second }
                     val matchingSilentNode = silentNodes.firstOrNull {
+                        changes.clear()
                         assignAsExecuted(it)
                         val result =
                             nextActivities(it).any { lookAhead -> lookAhead.first == name || lookAhead.second is SilentActivity }
-                        cleanNode(it) // FIXME: this should actually revert the changes made by assignAsExecuted(it) above
+                        revertChanges() // FIXME: this should actually revert the changes made by assignAsExecuted(it) above
                         result
                     }
 
@@ -149,9 +163,9 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
                         assignAsExecuted(matchingSilentNode)
                         lastExecuted = matchingSilentNode
                     } else {
-                        println("########## ################")
-                        println("Can not execute $name")
-                        println("-----------------------")
+//                        println("########## ################")
+//                        println("Can not execute $name")
+//                        println("-----------------------")
                         return
                     }
                 }
@@ -168,7 +182,7 @@ class PerformanceAnalyzer(private val tree: ProcessTree) {
         }
 
         if (tree.root!!.currentTraceId == traceId) {
-            println("-----------------------")
+//            println("-----------------------")
             tree.successAnalyzedTracesIds.add(traceId)
         }
     }

@@ -1,6 +1,6 @@
 {
   "logs": [
-    "xes-logs/bpi_challenge_2012.xes.gz"
+    "xes-logs/bpi_challenge_2017.xes.gz"
   ],
   "windowsSizes": [10, 20, 30, 40, 50, 75, 100],
   "windowsSteps": [1, 2, 5, 10],

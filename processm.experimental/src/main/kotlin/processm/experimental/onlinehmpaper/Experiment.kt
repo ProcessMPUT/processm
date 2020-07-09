@@ -115,7 +115,7 @@ class Experiment {
             // Unique activities labels
             val allNames = allTraces.flatMap { trace -> trace.events.map { it.conceptName }.toSet() }.toSet()
 
-            println("File ${file.name}: ${allTracesSize} traces with ${allNames.size} activities")
+            println("File ${file.name}: $allTracesSize traces with ${allNames.size} activities")
             csv(file.name, "traces", allTracesSize)
             csv(file.name, "activities", allNames.size)
 
@@ -151,20 +151,19 @@ class Experiment {
                             from = current,
                             to = current + windowSize
                         ).traces.forEach { paOffline.analyze(it) }
-                        println("${paOffline.fitness()} ${paOffline.precision()}")
-
-                        if (paOffline.fitness() < 1.0) {
-                            println(modelOffline)
-//                            logToSequence(allTraces, from = current, to = current + windowSize).traces.forEach {
-//                                it.events.forEach { print("${it.conceptName} \t|\t") }
-//                                println("")
-//                            }
-//                            println(modelOffline!!.successAnalyzedTracesIds)
-//                            return
-                        }
-
-                        // TODO:
-//                        offlineStats.add(Stats(paOffline.fitness(), paOffline.precision(), timeOffline))
+                        csv(file.name, "fitnessTrain", "offline", windowSize, step, current, paOffline.fitness())
+                        csv(file.name, "precisionTrain", "offline", windowSize, step, current, paOffline.precision())
+                        paOffline.cleanNode(modelOffline!!.root!!)
+                        logToSequence(
+                            allTraces,
+                            from = current + windowSize,
+                            to = current + (windowSize * 2)
+                        ).traces.forEach { paOffline.analyze(it) }
+                        csv(file.name, "fitnessTest", "offline", windowSize, step, current, paOffline.fitness())
+                        csv(file.name, "precisionTest", "offline", windowSize, step, current, paOffline.precision())
+                        csv(file.name, "time", "offline", windowSize, step, current, timeOffline.cpuTimeMillis)
+                        csv(file.name, "memory", "offline", windowSize, step, current, timeOffline.peakMemory)
+                        csv(file.name, "model", "offline", windowSize, step, current, modelOffline.toString())
 
                         // Clean up
                         System.gc()
@@ -222,9 +221,19 @@ class Experiment {
                             from = current,
                             to = current + windowSize
                         ).traces.forEach { paOnline.analyze(it) }
-                        // TODO:
-//                        onlineStats.add(Stats(paOnline.fitness(), paOnline.precision(), timeOnline))
-                        println("${paOnline.fitness()} ${paOnline.precision()}")
+                        csv(file.name, "fitnessTrain", "online", windowSize, step, current, paOnline.fitness())
+                        csv(file.name, "precisionTrain", "online", windowSize, step, current, paOnline.precision())
+                        paOnline.cleanNode(modelOnline!!.root!!)
+                        logToSequence(
+                            allTraces,
+                            from = current + windowSize,
+                            to = current + (windowSize * 2)
+                        ).traces.forEach { paOnline.analyze(it) }
+                        csv(file.name, "fitnessTest", "online", windowSize, step, current, paOnline.fitness())
+                        csv(file.name, "precisionTest", "online", windowSize, step, current, paOnline.precision())
+                        csv(file.name, "time", "online", windowSize, step, current, timeOnline.cpuTimeMillis)
+                        csv(file.name, "memory", "online", windowSize, step, current, timeOnline.peakMemory)
+                        csv(file.name, "model", "online", windowSize, step, current, modelOnline.toString())
 
                         // Clean up
                         System.gc()
@@ -235,36 +244,13 @@ class Experiment {
                         println("${imOnline.builtFromZero} ${imOnline.rebuild} ${imOnline.tracesNoRebuildNeeds}")
                     } while (current + windowSize - step < allTracesSize)
 
-                    csv(file.name, "model[buildFromZero]", imOnline.builtFromZero)
-                    csv(file.name, "model[rebuild]", imOnline.rebuild)
-                    csv(file.name, "model[ignoredRebuild]", imOnline.tracesNoRebuildNeeds)
+                    csv(file.name, "modelBuildFromZero]", "online", imOnline.builtFromZero)
+                    csv(file.name, "modelRebuild", "online", imOnline.rebuild)
+                    csv(file.name, "modelIgnoredRebuild", "online", imOnline.tracesNoRebuildNeeds)
                 }
             }
         }
     }
-
-    // TODO może się uda wykrozystać:
-//                csv(*(listOf(filename, "offline", relativeBatchSize, batchSize) + offlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
-//                csv(*(listOf(filename, "online", relativeBatchSize, batchSize) + onlineStats.map { it.resources.cpuTimeMillis }).toTypedArray())
-//                println("FITNESS")
-//                println("OFFLINE: " + offlineStats.joinToString { it.testFitness.toString() })
-//                println("ONLINE: " + onlineStats.joinToString { it.testFitness.toString() })
-//                println("PREC")
-//                println("OFFLINE: " + offlineStats.joinToString { it.testPrecision.toString() })
-//                println("ONLINE: " + onlineStats.joinToString { it.testPrecision.toString() })
-//            }
-//            for ((mode, stats) in listOf("offline" to offlineStats, "online" to onlineStats)) {
-//                csv(stats.map { it.trainFitness }, filename, mode, "train", "fitness")
-//                csv(stats.map { it.trainPrecision }, filename, mode, "train", "precision")
-//                csv(stats.map { it.resources.cpuTimeMillis }, filename, mode, "train", "cputimems")
-//                csv(stats.map { it.resources.peakMemory }, filename, mode, "train", "peakmemory")
-//                csv(stats.map { it.testFitness }, filename, mode, "test", "fitness")
-//                csv(stats.map { it.testPrecision }, filename, mode, "test", "precision")
-//            }
-//            println("ONLINE")
-//            println("\tfitness ${onlineStats.map { it.testFitness }.descriptiveStats()}")
-//            println("\tprecision ${onlineStats.map { it.testPrecision }.descriptiveStats()}")
-//            println("\ttime ${onlineStats.map { it.time.toDouble() }.descriptiveStats()}")
 
     fun main(args: Array<String>) {
         val config = Config.load("config.json")
@@ -276,12 +262,3 @@ class Experiment {
 fun main(args: Array<String>) {
     Experiment().main(args)
 }
-
-// TODO:
-//  * ile razy przebudowano całe drzewo
-//  * ile razy przebudowano fragment drzewa
-//  * ile razy zignorowano przebudowę
-//  * czas realizacji algorytmu
-//  * zużycie pamięci (opcjonalnie)
-//  * dopasowanie na przesuniętym w pełni oknie czasowym (bez nakładania się)
-//  * precyzja na przesuniętym w pełni oknie czasowym (bez nakładania się)
