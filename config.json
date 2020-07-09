@@ -1,9 +1,40 @@
 {
+  "csv": "output-run-01.csv",
   "logs": [
-    "xes-logs/bpi_challenge_2017.xes.gz"
+    "xes-logs/CoSeLoG_WABO_2.xes.gz",
+    "xes-logs/BPIC15_2f.xes.gz",
+    "xes-logs/CoSeLoG_WABO_4.xes.gz",
+    "xes-logs/BPIC15_2.xes.gz",
+    "xes-logs/BPIC15_4f.xes.gz",
+    "xes-logs/CoSeLoG_WABO_5.xes.gz",
+    "xes-logs/BPIC15_1f.xes.gz",
+    "xes-logs/CoSeLoG_WABO_1.xes.gz",
+    "xes-logs/BPIC15_5f.xes.gz",
+    "xes-logs/Sepsis_Cases-Event_Log.xes.gz",
+    "xes-logs/BPIC15_4.xes.gz",
+    "xes-logs/CoSeLoG_WABO_3.xes.gz",
+    "xes-logs/Hospital_log.xes.gz",
+    "xes-logs/BPIC15_5.xes.gz",
+    "xes-logs/BPIC15_1.xes.gz",
+    "xes-logs/BPIC15_3f.xes.gz",
+    "xes-logs/BPIC15_3.xes.gz",
+    "xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz"
   ],
-  "windowsSizes": [10, 20, 30, 40, 50, 75, 100],
-  "windowsSteps": [1, 2, 5, 10],
-  "csv": "output-20200619.csv",
-  "maxTraces": 500
+  "maxActivities": 100,
+  "seed": 127228,
+  "windowsSizes": [
+    10,
+    20,
+    30,
+    40,
+    50,
+    75,
+    100
+  ],
+  "windowsSteps": [
+    1,
+    2,
+    5,
+    10
+  ]
 }

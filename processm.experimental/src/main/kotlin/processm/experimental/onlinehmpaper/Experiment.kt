@@ -16,6 +16,7 @@ import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
 import kotlin.math.pow
+import kotlin.random.Random
 import kotlin.streams.asSequence
 
 fun filterLog(base: Log) = Log(base.traces.map { trace ->
@@ -29,6 +30,35 @@ class Experiment {
         logfile.inputStream().use { base ->
             return filterLog(HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(base))).first())
         }
+    }
+
+    private fun filterTraces(allTraces: List<Trace>, random: Random, config: Config): List<Trace> {
+        val allNames = allTraces.flatMap { trace -> trace.events.map { it.conceptName }.toSet() }.toSet()
+        println("# distinct names: ${allNames.size}")
+        if (allNames.size <= config.maxActivities)
+            return allTraces
+        var knownNames = emptySet<String?>()
+        val available = allTraces.indices.toMutableList()
+        var ctr = 0
+        while (true) {
+            val idx = random.nextInt(available.size)
+            val trace = allTraces[available[idx]]
+            available.removeAt(idx)
+            val newKnownNames = knownNames + trace.events.map { it.conceptName }.toSet()
+            if (newKnownNames.size > config.maxActivities) {
+                ctr++
+                if (ctr < 10)
+                    continue
+                else
+                    break
+            }
+            knownNames = newKnownNames
+        }
+        println("Selected ${knownNames.size} events: $knownNames")
+        val selectedTraces =
+            allTraces.filter { trace -> knownNames.containsAll(trace.events.map { it.conceptName }.toList()) }
+        println("Selected traces: ${selectedTraces.count()}")
+        return selectedTraces
     }
 
     private data class Stats(
@@ -85,7 +115,8 @@ class Experiment {
         val windowsSizes: List<Int>,
         val windowsSteps: List<Int>,
         val csv: String,
-        val maxTraces: Int
+        val maxActivities: Int,
+        val seed: Int
     ) {
         companion object {
             val json = Json(JsonConfiguration.Default)
@@ -110,14 +141,16 @@ class Experiment {
             val file = File(logfile)
             val wholeLog = load(file)
             // Traces in log (whole log file)
-            val allTraces = wholeLog.traces.toList()
-            val allTracesSize = allTraces.size
+            var allTraces = wholeLog.traces.toList()
             // Unique activities labels
             val allNames = allTraces.flatMap { trace -> trace.events.map { it.conceptName }.toSet() }.toSet()
 
-            println("File ${file.name}: $allTracesSize traces with ${allNames.size} activities")
-            csv(file.name, "traces", allTracesSize)
+            println("File ${file.name}: ${allTraces.size} traces with ${allNames.size} activities")
+            csv(file.name, "traces", allTraces.size)
             csv(file.name, "activities", allNames.size)
+
+            allTraces = filterTraces(allTraces, Random(seed=config.seed), config)
+            val allTracesSize = allTraces.size
 
             for (step in config.windowsSteps) {
                 for (windowSize in config.windowsSizes) {

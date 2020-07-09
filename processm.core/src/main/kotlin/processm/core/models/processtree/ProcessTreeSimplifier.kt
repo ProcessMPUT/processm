@@ -76,6 +76,31 @@ class ProcessTreeSimplifier {
                     iter.remove()
                 }
             }
+
+            // Move up redo loop to parent redo loop if contains both silent activity as first child
+            if (node.children[0] is SilentActivity) {
+                var index = 0
+                while (index < node.childrenInternal.size) {
+                    val child = node.childrenInternal[index]
+
+                    if (child is RedoLoop && child.children[0] is SilentActivity) {
+                        // Remove old node from children list
+                        node.childrenInternal.removeAt(index)
+
+                        // Add children from child to node
+                        node.childrenInternal.addAll(index, child.childrenInternal.filter { it !is SilentActivity })
+                        child.childrenInternal.forEach {
+                            // Change parent reference
+                            it.parent = node
+                        }
+
+                        // Ignore moved up nodes
+                        index += child.childrenInternal.filter { it !is SilentActivity }.size
+                    } else {
+                        ++index
+                    }
+                }
+            }
         }
 
         // For each child try to simplify model
@@ -84,7 +109,11 @@ class ProcessTreeSimplifier {
 
             // Replace empty operator with silent activity and move one level up alone child
             when (child.childrenInternal.size) {
-                0 -> if (child !is ProcessTreeActivity) replaceChildInNode(node, replaced = child, replacement = SilentActivity())
+                0 -> if (child !is ProcessTreeActivity) replaceChildInNode(
+                    node,
+                    replaced = child,
+                    replacement = SilentActivity()
+                )
                 1 -> replaceChildInNode(node, replaced = child, replacement = child.childrenInternal.first())
             }
         }

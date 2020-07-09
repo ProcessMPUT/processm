@@ -44,6 +44,72 @@ class ProcessTreeSimplifierTest {
     }
 
     @Test
+    fun `Move up activities in redo loop`() {
+        val tree = processTree {
+            Sequence(
+                ProcessTreeActivity("Create Fine"),
+                Exclusive(
+                    ProcessTreeActivity("Send Fine"),
+                    SilentActivity()
+                ),
+                Exclusive(
+                    ProcessTreeActivity("Insert Fine Notification"),
+                    SilentActivity()
+                ),
+                Exclusive(
+                    ProcessTreeActivity("Insert Date Appeal to Prefecture"),
+                    SilentActivity()
+                ),
+                RedoLoop(
+                    SilentActivity(),
+                    RedoLoop(
+                        SilentActivity(),
+                        ProcessTreeActivity("Payment")
+                    ),
+                    ProcessTreeActivity("Add penalty")
+                ),
+                Exclusive(
+                    ProcessTreeActivity("Send Appeal to Prefecture"),
+                    ProcessTreeActivity("Send for Credit Collection"),
+                    SilentActivity()
+                )
+            )
+        }
+
+        ProcessTreeSimplifier().simplify(tree)
+
+        val expectedTree = processTree {
+            Sequence(
+                ProcessTreeActivity("Create Fine"),
+                Exclusive(
+                    ProcessTreeActivity("Send Fine"),
+                    SilentActivity()
+                ),
+                Exclusive(
+                    ProcessTreeActivity("Insert Fine Notification"),
+                    SilentActivity()
+                ),
+                Exclusive(
+                    ProcessTreeActivity("Insert Date Appeal to Prefecture"),
+                    SilentActivity()
+                ),
+                RedoLoop(
+                    SilentActivity(),
+                    ProcessTreeActivity("Payment"),
+                    ProcessTreeActivity("Add penalty")
+                ),
+                Exclusive(
+                    ProcessTreeActivity("Send Appeal to Prefecture"),
+                    ProcessTreeActivity("Send for Credit Collection"),
+                    SilentActivity()
+                )
+            )
+        }
+        println(tree.toString())
+        assertTrue(tree.languageEqual(expectedTree))
+    }
+
+    @Test
     fun `Remove tau and generate sequence with one activity`() {
         val tree = processTree { Sequence(silentActivity, C) }
 
