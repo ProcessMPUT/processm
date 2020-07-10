@@ -19,5 +19,5 @@ Merge_MR_IF_TeamCity_Built:
     - apk update && apk upgrade
     - apk add --no-cache bash git curl openssh jq
   script:
-    - export PR_BRANCH=$(curl -s "https://git.processtom.com/api/v4/projects/${CI_PROJECT_ID}/merge_requests?private_token=${OAUTH_TOKEN}&state=opened" | jq -r ".[]|select(.sha == \"${CI_COMMIT_SHA}\")|.source_branch")
-    - curl -s -X POST -H "${ACCEPT}" -H "${CONTENT_TYPE}" -H "${BEARER}" -d "{\"branchName\":\"$PR_BRANCH\", \"buildType\":{\"id\":\"ProcessM_AutoMergeMr\", \"projectId\":\"ProcessM\"}, \"properties\":{\"property\":[{\"name\":\"mr_iid\",\"value\":\"$CI_MERGE_REQUEST_IID\"}, {\"name\":\"mr_branch\",\"value\":\"$PR_BRANCH\"}, {\"name\":\"project_id\",\"value\":\"$CI_MERGE_REQUEST_PROJECT_ID\"}]}}" "https://build.processtom.com/app/rest/buildQueue"
+    - export PR_BRANCH=$(curl -s "https://git.processm.cs.put.poznan.pl/api/v4/projects/${CI_PROJECT_ID}/merge_requests?private_token=${OAUTH_TOKEN}&state=opened" | jq -r ".[]|select(.sha == \"${CI_COMMIT_SHA}\")|.source_branch")
+    - curl -s -X POST -H "${ACCEPT}" -H "${CONTENT_TYPE}" -H "${BEARER}" -d "{\"branchName\":\"$PR_BRANCH\", \"buildType\":{\"id\":\"ProcessM_AutoMergeMr\", \"projectId\":\"ProcessM\"}, \"properties\":{\"property\":[{\"name\":\"mr_iid\",\"value\":\"$CI_MERGE_REQUEST_IID\"}, {\"name\":\"mr_branch\",\"value\":\"$PR_BRANCH\"}, {\"name\":\"project_id\",\"value\":\"$CI_MERGE_REQUEST_PROJECT_ID\"}]}}" "https://build.processm.cs.put.poznan.pl/app/rest/buildQueue"

@@ -1,7 +1,7 @@
 package processm.core.log.hierarchical
 
 import processm.core.log.Event
-import processm.core.log.XESElement
+import processm.core.log.XESComponent
 import processm.core.log.XESInputStream
 import processm.core.log.Trace as BaseTrace
 
@@ -19,7 +19,7 @@ class Trace(events: Sequence<Event> = emptySequence()) : BaseTrace() {
 /**
  * Transforms this trace into a flat sequence of XES elements.
  * @see XESInputStream
- * @see XESElement
+ * @see XESComponent
  * @see processm.core.log.Log
  * @see processm.core.log.Trace
  * @see processm.core.log.Event
@@ -29,13 +29,13 @@ fun Trace.toFlatSequence(): XESInputStream = sequenceOf(this).toFlatSequence()
 /**
  * Transforms this sequence of traces into a flat sequence of XES elements.
  * @see XESInputStream
- * @see XESElement
+ * @see XESComponent
  * @see processm.core.log.Log
  * @see processm.core.log.Trace
  * @see processm.core.log.Event
  */
 fun Sequence<Trace>.toFlatSequence(): XESInputStream = object : XESInputStream {
-    override fun iterator(): Iterator<XESElement> = sequence {
+    override fun iterator(): Iterator<XESComponent> = sequence {
         this@toFlatSequence.forEach {
             yield(it)
             yieldAll(it.events)

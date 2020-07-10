@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter
  * Tag inside XES file: <date>
  */
 class DateTimeAttr(key: String, val value: Instant) : Attribute<Instant>(key) {
-    override fun getValue() = this.value
+    override fun getValue(): Instant = this.value
     override val xesTag: String
         get() = "date"
 

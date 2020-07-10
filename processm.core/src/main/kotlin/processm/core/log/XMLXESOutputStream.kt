@@ -13,14 +13,14 @@ class XMLXESOutputStream(private val output: XMLStreamWriter) : XESOutputStream 
     private var seenTag: String? = null
 
     /**
-     * Write XESElement in XML output stream
+     * Write XESComponent in XML output stream
      */
-    override fun write(element: XESElement) {
-        when (element) {
-            is Event -> writeEvent(element)
-            is Trace -> writeTrace(element)
-            is Log -> writeLog(element)
-            else -> throw IllegalArgumentException("Unexpected object ${element.javaClass}")
+    override fun write(component: XESComponent) {
+        when (component) {
+            is Event -> writeEvent(component)
+            is Trace -> writeTrace(component)
+            is Log -> writeLog(component)
+            else -> throw IllegalArgumentException("Unexpected object ${component.javaClass}")
         }
     }
 

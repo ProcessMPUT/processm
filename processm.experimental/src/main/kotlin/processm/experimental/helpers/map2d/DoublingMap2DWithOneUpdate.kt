@@ -74,6 +74,14 @@ class DoublingMap2DWithOneUpdate<Row, Column, Value> :
         }
     }
 
+    override fun removeColumn(column: Column) {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeRow(row: Row) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = rcv.keys
     override val columns: Set<Column>

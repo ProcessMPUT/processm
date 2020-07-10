@@ -46,9 +46,7 @@ class Query(val query: String) {
      * The null value refers to no warnings.
      *
      * An exception is considered a warning, if its cause does not change semantics of the query, and so the query
-     * yields the same results with and without this cause. E.g., using an outer-scope attribute in the group by clause
-     * is considered a warning, because no matter whether this attribute is used or not the result of the query would be
-     * the same.
+     * yields the same results with and without this cause.
      *
      * @see Throwable.getSuppressed
      */
@@ -56,11 +54,16 @@ class Query(val query: String) {
         get() = errorListener.warning
 
     // region select clause
+    private val _isImplicitSelectAll: EnumMap<Scope, Boolean> = EnumMap<Scope, Boolean>(Scope::class.java).apply {
+        put(Scope.Log, false)
+        put(Scope.Trace, false)
+        put(Scope.Event, false)
+    }
+
     /**
      * Whether the select all clause is not specified explicitly, but it is implied by the query structure.
      */
-    var isImplicitSelectAll: Boolean = false
-        private set
+    val isImplicitSelectAll: Map<Scope, Boolean> = Collections.unmodifiableMap(_isImplicitSelectAll)
 
     private val _selectAll: MutableMap<Scope, Boolean?> = EnumMap<Scope, Boolean>(Scope::class.java)
 
@@ -68,7 +71,7 @@ class Query(val query: String) {
      * Indicates whether to select all (standard and non-standard) attributes on particular scopes.
      */
     val selectAll: Map<Scope, Boolean?> = object : Map<Scope, Boolean?> by _selectAll {
-        override fun get(key: Scope): Boolean = _selectAll[key] ?: isImplicitSelectAll
+        override fun get(key: Scope): Boolean = _selectAll[key] ?: _isImplicitSelectAll[key]!!
     }
 
     private val _selectStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> =
@@ -119,8 +122,11 @@ class Query(val query: String) {
     // endregion
 
     // region group by clause
-    // However PQL does not allow for many group by clauses, as of version 0.1, I expect that the support will be
-    // added in a future version. So the below collections hold separate sets of attributes for each scope.
+    private val _isImplicitGroupBy: EnumMap<Scope, Boolean> = EnumMap<Scope, Boolean>(Scope::class.java).apply {
+        put(Scope.Log, false)
+        put(Scope.Trace, false)
+        put(Scope.Event, false)
+    }
     private val _groupByStandardAttributes: Map<Scope, LinkedHashSet<Attribute>> =
         EnumMap<Scope, LinkedHashSet<Attribute>>(Scope::class.java).apply {
             put(Scope.Log, LinkedHashSet())
@@ -148,8 +154,7 @@ class Query(val query: String) {
     /**
      * Indicates whether the implicit out-of-scope group by applies.
      */
-    var isImplicitGroupBy: Boolean = false
-        private set
+    var isImplicitGroupBy: Map<Scope, Boolean> = Collections.unmodifiableMap(_isImplicitGroupBy)
 
     /**
      * Indicates whether the group by clause occurs on particular scopes.
@@ -211,7 +216,7 @@ class Query(val query: String) {
     }
 
     private fun validateSelectAll(scope: Scope, flag: Boolean?) {
-        if (!isImplicitSelectAll && flag == null)
+        if (!isImplicitSelectAll[scope]!! && flag == null)
             return
 
         val standard = _selectStandardAttributes[scope]!!
@@ -232,6 +237,17 @@ class Query(val query: String) {
 
 
     private fun validateGroupByAttributes() {
+        // replace implicit select all with grouping attributes
+        for (scope in _isImplicitSelectAll.filter { it.value && isGroupBy[it.key]!! }.map { it.key }) {
+            var currentOrLowerScope: Scope? = scope
+            do {
+                _isImplicitSelectAll[currentOrLowerScope] = false
+                currentOrLowerScope = currentOrLowerScope!!.lower
+            } while (currentOrLowerScope !== null)
+            _groupByStandardAttributes[scope]!!.forEach { _selectStandardAttributes[it.scope]!!.add(it.dropHoisting()) }
+            _groupByOtherAttributes[scope]!!.forEach { _selectOtherAttributes[it.scope]!!.add(it.dropHoisting()) }
+        }
+
         validateExplicitGroupBy(_selectStandardAttributes, _groupByStandardAttributes)
         validateExplicitGroupBy(_selectOtherAttributes, _groupByOtherAttributes)
         val groupByAttributes = _groupByStandardAttributes.mapValues {
@@ -246,7 +262,7 @@ class Query(val query: String) {
         }
         validateExplicitGroupBy(orderByExpressions, groupByAttributes)
 
-        if (isGroupBy[Scope.Log] == false && isGroupBy[Scope.Trace] == false && isGroupBy[Scope.Event] == false) {
+        if (isGroupBy[Scope.Log] == false || isGroupBy[Scope.Trace] == false || isGroupBy[Scope.Event] == false) {
             // possible implicit group by
             val selectAllExpressions = sequence {
                 _selectStandardAttributes.values.forEach { yieldAll(it) }
@@ -269,7 +285,7 @@ class Query(val query: String) {
         toValidate
             .flatMap { it.value }
             .flatMap {
-                it.filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                it.filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
                     .filterIsInstance<Attribute>()
                     .asIterable()
             }
@@ -279,7 +295,11 @@ class Query(val query: String) {
                 do {
                     if (_groupByStandardAttributes[scope]!!.size != 0 || _groupByOtherAttributes[scope]!!.size != 0) {
                         groupByEnabled = true
-                        if (it in groupByMap[scope]!!)
+                        // FIXME: the below check is done in O(n) time; replace it with a O(1) function
+                        // Ignore hoisting in the below check
+                        if (groupByMap[scope]!!.any { inMap ->
+                                it.scope == inMap.scope && (it.isStandard && it.standardName == inMap.standardName || !it.isStandard && it.name == inMap.name)
+                            })
                             return@filter false // valid use
                     }
                     scope = scope!!.upper
@@ -294,23 +314,22 @@ class Query(val query: String) {
             }
 
     private fun validateImplicitGroupBy(toValidate: Iterable<Expression>) {
-        val anyAggregation = toValidate
-            .any { it.filter { it is Function && it.type == FunctionType.Aggregation }.any() }
+        val scopesWithAggregation = EnumSet.noneOf(Scope::class.java)
+        for (expr in toValidate) {
+            scopesWithAggregation.addAll(
+                expr
+                    .filter { it is Function && it.functionType == FunctionType.Aggregation }
+                    .map { it.effectiveScope }
+                    .filterNot { isGroupBy[it]!! } // exclude active group by clauses
+            )
+        }
 
-        if (anyAggregation) {
+        for (scope in scopesWithAggregation) {
             // implicit group by for sure
-            isImplicitGroupBy = true
-            isImplicitSelectAll = false
-            if (_selectAll[Scope.Log] == true || _selectAll[Scope.Trace] == true || _selectAll[Scope.Event] == true) {
-                // query uses explicit select all
-                errorListener.delayedThrow(
-                    IllegalArgumentException(
-                        "Use of the explicit select all clause with the implicit group by clause is meaningless."
-                    )
-                )
-            }
+            _isImplicitGroupBy[scope] = true
+            _isImplicitSelectAll[scope] = false
 
-            val orderByExpression = _orderByExpressions.values.flatten().firstOrNull()
+            val orderByExpression = _orderByExpressions[scope]!!.firstOrNull()
             if (orderByExpression !== null) {
                 errorListener.emitWarning(
                     IllegalArgumentException(
@@ -318,24 +337,40 @@ class Query(val query: String) {
                                 + "by clause with the implicit group by clause is meaningless. The order by clause is removed."
                     )
                 )
-                _orderByExpressions.values.forEach { it.clear() }
+                _orderByExpressions[scope]!!.clear()
             }
 
-            val nonaggregated = toValidate
-                .flatMap {
-                    it.filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
-                        .filterIsInstance<Attribute>()
-                        .asIterable()
-                }
-            if (nonaggregated.any()) {
-                // nonaggregated attributes exist
-                errorListener.delayedThrow(
-                    IllegalArgumentException(
-                        "Use of an aggregation function without a group by clause requires all attributes to be aggregated. "
-                                + "The attributes ${nonaggregated.joinToString(", ")} are not supplied to an aggregation function."
+
+            var currentOrLowerScope = scope
+            do {
+                if (_selectAll[currentOrLowerScope] == true) {
+                    // query uses scoped select all or explicit select all
+                    errorListener.delayedThrow(
+                        IllegalArgumentException(
+                            "Use of the explicit select all clause with the implicit group by clause is meaningless."
+                        )
                     )
-                )
-            }
+                }
+
+                val nonaggregated = toValidate
+                    .flatMap {
+                        it.filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
+                            .filterIsInstance<Attribute>()
+                            .filter { it.effectiveScope == scope }
+                            .asIterable()
+                    }
+                if (nonaggregated.any()) {
+                    // nonaggregated attributes exist
+                    errorListener.delayedThrow(
+                        IllegalArgumentException(
+                            "Use of an aggregation function without a group by clause requires all attributes on the same and the lower scopes to be aggregated. "
+                                    + "The attribute(s) ${nonaggregated.joinToString(", ")} is/are not supplied to an aggregation function."
+                        )
+                    )
+                }
+
+                currentOrLowerScope = currentOrLowerScope.lower
+            } while (currentOrLowerScope != null)
         }
     }
 
@@ -344,7 +379,9 @@ class Query(val query: String) {
 
     private inner class Listener : QLParserBaseListener() {
         override fun exitSelect_all_implicit(ctx: QLParser.Select_all_implicitContext?) {
-            isImplicitSelectAll = true
+            _isImplicitSelectAll[Scope.Log] = true
+            _isImplicitSelectAll[Scope.Trace] = true
+            _isImplicitSelectAll[Scope.Event] = true
         }
 
         override fun exitSelect_all(ctx: QLParser.Select_allContext?) {
@@ -356,16 +393,12 @@ class Query(val query: String) {
         override fun enterScoped_select_all(ctx: QLParser.Scoped_select_allContext?) {
             val token = ctx!!.SCOPE()
             val scope = Scope.parse(token.text)
-            when (scope) {
-                Scope.Log -> _selectAll[Scope.Log] = true
-                Scope.Trace -> _selectAll[Scope.Trace] = true
-                Scope.Event -> _selectAll[Scope.Event] = true
-            }
+            _selectAll[scope] = true
         }
 
         override fun exitArith_expr_root(ctx: QLParser.Arith_expr_rootContext?) {
             val expression = parseExpression(ctx!!)
-            validateHoisting(expression)
+            validateHoistingInSelectAndOrderBy(expression)
 
             if (expression is Attribute) {
                 when (expression.isStandard) {
@@ -382,7 +415,7 @@ class Query(val query: String) {
         override fun exitWhere(ctx: QLParser.WhereContext?) {
             whereExpression = parseExpression(ctx!!.children[1])
             val aggregation = whereExpression
-                .filter { it is Function && it.type == FunctionType.Aggregation }
+                .filter { it is Function && it.functionType == FunctionType.Aggregation }
                 .firstOrNull()
             if (aggregation !== null)
                 errorListener.delayedThrow(
@@ -390,41 +423,32 @@ class Query(val query: String) {
                         "Line ${aggregation.line} position ${aggregation.charPositionInLine}: The aggregation function call is not supported in the where clause."
                     )
                 )
+
+
+            val classifier = whereExpression.filter { it is Attribute && it.isClassifier }.firstOrNull()
+            if (classifier !== null)
+                errorListener.delayedThrow(
+                    IllegalArgumentException(
+                        "Line ${classifier.line} position ${classifier.charPositionInLine}: The use of the classifier is not supported in the where clause."
+                    )
+                )
         }
         // endregion
 
         // region PQL group by clause
 
-        override fun exitGroup_trace_by(ctx: QLParser.Group_trace_byContext?) {
-            handleGroupByIdList(Scope.Trace, ctx!!.id_list().sourceInterval)
+        override fun exitGroup_by(ctx: QLParser.Group_byContext?) {
+            handleGroupByIdList(ctx!!.id_list().sourceInterval)
         }
 
-        override fun exitGroup_scope_by(ctx: QLParser.Group_scope_byContext?) {
-            val scope = Scope.parse(ctx!!.SCOPE().text)
-            handleGroupByIdList(scope, ctx.id_list().sourceInterval)
-        }
-
-        private fun handleGroupByIdList(scope: Scope, interval: Interval) {
-            val standardAttributes = _groupByStandardAttributes[scope]!!
-            val otherAttributes = _groupByOtherAttributes[scope]!!
-
+        private fun handleGroupByIdList(interval: Interval) {
             tokens.get(interval.a, interval.b)
-                .filter { it.type == QLParser.ID }
-                .map { Attribute(it.text, it.line, it.charPositionInLine) }
-                .filter {
-                    if (it.effectiveScope < scope) {
-                        errorListener.emitWarning(
-                            IllegalArgumentException(
-                                "Line ${it.line} position ${it.charPositionInLine}: Use of the attribute $it with effective scope ${it.effectiveScope} in group by clause with scope $scope is meaningless. Attribute dropped."
-                            )
-                        )
-                        false
-                    } else true
-                }.forEach {
-                    if (it.isStandard)
-                        standardAttributes.add(it)
-                    else
-                        otherAttributes.add(it)
+                .filter { it.type != QLParser.COMMA }
+                .map { parseToken(it) }
+                .filterIsInstance<Attribute>() // May be Expression.empty if the constructor of Attribute throws an exception
+                .forEach {
+                    (if (it.isStandard) _groupByStandardAttributes else _groupByOtherAttributes)[it.effectiveScope]!!
+                        .add(it)
                 }
         }
 
@@ -434,7 +458,7 @@ class Query(val query: String) {
         // region PQL order by clause
         override fun exitOrdered_expression_root(ctx: QLParser.Ordered_expression_rootContext?) {
             val expression = parseExpression(ctx!!.arith_expr())
-            validateHoisting(expression)
+            validateHoistingInSelectAndOrderBy(expression)
 
             val order = OrderDirection.parse(ctx.order_dir().text)
             _orderByExpressions[expression.effectiveScope]!!.add(OrderedExpression(expression, order))
@@ -506,39 +530,77 @@ class Query(val query: String) {
 
         // endregion
 
-        private fun validateHoisting(expression: Expression) {
+        private fun validateHoistingInSelectAndOrderBy(expression: Expression) {
             val hoisted = expression
-                .filterRecursively { it !is Function || it.type != FunctionType.Aggregation }
+                .filterRecursively { it !is Function || it.functionType != FunctionType.Aggregation }
                 .filter { it is Attribute && it.hoistingPrefix.isNotEmpty() }.firstOrNull()
 
             if (hoisted !== null)
                 errorListener.delayedThrow(
                     IllegalArgumentException(
-                        "Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select and the order by clauses, except in an aggregate function."
+                        "Line ${hoisted.line} position ${hoisted.charPositionInLine}: Scope hoisting is not supported in the select and the order by clauses, except in an aggregation function."
                     )
                 )
         }
 
-        private fun parseExpression(ctx: ParseTree): Expression {
+        private fun validateTypes(expression: IExpression) {
+            assert(expression.filter { it.type == Type.Any }.firstOrNull() === null)
+            assert(expression.filter { it.expectedChildrenTypes.any { it == Type.Unknown } }.firstOrNull() === null)
+
+            for (i in expression.children.indices) {
+
+                if (expression.expectedChildrenTypes[i] != Type.Any && expression.children[i].type != Type.Unknown /* determined at run time */) {
+                    if (expression.expectedChildrenTypes[i] != expression.children[i].type) {
+                        errorListener.delayedThrow(
+                            IllegalArgumentException(
+                                "Line ${expression.line} position ${expression.charPositionInLine}: Expected ${expression.expectedChildrenTypes[i]} but ${expression.children[i].type} found."
+                            )
+                        )
+                    }
+                }
+
+                validateTypes(expression.children[i])
+            }
+        }
+
+        private fun parseExpression(ctx: ParseTree): Expression = parseExpressionInternal(ctx).also {
+            validateTypes(it)
+        }
+
+        private fun parseExpressionInternal(ctx: ParseTree): Expression {
             if (ctx.childCount == 0) {
                 // terminal
                 val token = ctx.payload as? Token ?: return Expression.empty
                 return parseToken(token)
             }
-            val token = ctx.getChild(0).payload as? Token
-            with(token) {
+            val token = (0 until ctx.childCount)
+                .map { it to (ctx.getChild(it).payload as? Token) }
+                .firstOrNull { it.second !== null }
+            with(token?.second) {
                 return when (this?.type) {
                     QLParser.FUNC_SCALAR0 -> Function(text, line, charPositionInLine)
                     QLParser.FUNC_SCALAR1, QLParser.FUNC_AGGR -> Function(
                         text,
                         line,
                         charPositionInLine,
-                        parseExpression(ctx.getChild(2))
+                        parseExpressionInternal(ctx.getChild(2))
                     )
+                    QLParser.OP_ADD, QLParser.OP_SUB,
+                    QLParser.OP_MUL, QLParser.OP_DIV,
+                    QLParser.OP_AND, QLParser.OP_OR, QLParser.OP_NOT,
+                    QLParser.OP_EQ, QLParser.OP_NEQ, QLParser.OP_GE, QLParser.OP_GT, QLParser.OP_LE, QLParser.OP_LT,
+                    QLParser.OP_LIKE, QLParser.OP_MATCHES,
+                    QLParser.OP_IN, QLParser.OP_NOT_IN,
+                    QLParser.OP_IS_NULL, QLParser.OP_IS_NOT_NULL -> Operator(
+                        text,
+                        line,
+                        charPositionInLine,
+                        *Array(ctx.childCount - 1) {
+                            parseExpressionInternal(ctx.getChild(if (it < token!!.first) it else it + 1))
+                        })
                     else -> {
-                        val array =
-                            (0 until ctx.childCount).map { parseExpression(ctx.getChild(it)) }.toTypedArray()
-                        if (array.size == 1) array[0] else Expression(*array)
+                        if (ctx.childCount == 1) parseExpressionInternal(ctx.getChild(0))
+                        else Expression(*Array(ctx.childCount) { parseExpressionInternal(ctx.getChild(it)) })
                     }
                 }
             }
@@ -552,7 +614,7 @@ class Query(val query: String) {
                 QLParser.DATETIME -> DateTimeLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.STRING -> StringLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.NULL -> NullLiteral(token.text, token.line, token.charPositionInLine)
-                else -> Operator(token.text, token.line, token.charPositionInLine)
+                else -> AnyExpression(token.text, token.line, token.charPositionInLine)
             }
         } catch (e: Exception) {
             errorListener.delayedThrow(e)
