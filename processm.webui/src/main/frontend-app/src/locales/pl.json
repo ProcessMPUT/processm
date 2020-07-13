@@ -12,7 +12,20 @@
   },
   "workspace": {
     "default-name": "Przestrzeń robocza",
-    "locked": "Zablokowany"
+    "locked": "Zablokowany",
+    "component": {
+      "causal-net": "Sieć przyczynowa",
+      "kpi": "KPI",
+      "edit": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "query": "Zapytanie",
+        "validation": {
+          "name-empty": "Nazwa nie może być pusta",
+          "query-empty": "Zapytanie nie może być puste"
+        }
+      }
+    }
   },
   "about": {
     "page-title": "O aplikacji"
@@ -75,6 +88,8 @@
     "rename": "Zmień nazwę",
     "remove": "Usuń",
     "close": "Zamknij",
-    "submit": "Zatwierdź"
+    "submit": "Zatwierdź",
+    "view": "Podgląd",
+    "edit": "Edycja"
   }
 }
