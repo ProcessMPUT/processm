@@ -4,7 +4,7 @@
       <v-col cols="12" class="pa-0">
         <v-tabs-items v-model="currentWorkspaceIndex">
           <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
-            <workspace-area />
+            <workspace-area :workspaceId="workspace.id" />
           </v-tab-item>
         </v-tabs-items>
       </v-col>
@@ -17,7 +17,7 @@
         show-arrows
       >
         <v-menu top offset-y>
-          <template v-slot:activator="{ on }">
+          <template #activator="{ on }">
             <v-btn tile color="primary lighten-1" v-on="on">
               <v-icon>more_vert</v-icon>
             </v-btn>
@@ -70,7 +70,7 @@
 <script lang="ts">
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
-import WorkspaceArea from "@/components/WorkspaceArea.vue";
+import WorkspaceArea from "@/components/workspace/WorkspaceArea.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import Workspace from "@/models/Workspace";

@@ -5,9 +5,13 @@ import UserOrganization from "@/models/UserOrganization";
 
 export default class AccountService extends BaseService {
   public async signIn(login: string, password: string) {
-    const response = await this.usersApi.signUserIn(undefined, {
-      data: { login, password }
-    });
+    const response = await this.usersApi.signUserIn(
+      undefined,
+      {
+        data: { login, password }
+      },
+      { skipAuthRefresh: true }
+    );
 
     if (response.status != 201) {
       throw new Error(response.statusText);

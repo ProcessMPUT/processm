@@ -16,7 +16,7 @@
                 dense
                 outlined
               >
-                <template v-slot:selection="data">
+                <template #selection="data">
                   <span
                     v-bind:class="[
                       'flag-icon flag-icon-' + $t('flag', data.item.value),
@@ -25,7 +25,7 @@
                   />
                   {{ $t("language-name", data.item.value) }}
                 </template>
-                <template v-slot:item="data">
+                <template #item="data">
                   <span
                     v-bind:class="[
                       'flag-icon flag-icon-' + $t('flag', data.item.value),

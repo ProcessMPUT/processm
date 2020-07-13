@@ -68,6 +68,10 @@ const users = [
     locale: "en_GB"
   }
 ];
+<<<<<<< HEAD
+
+const userSessions = [];
+=======
 
 const componentsData = [
   {
@@ -507,6 +511,7 @@ function createUUID() {
     return v.toString(16);
   });
 }
+>>>>>>> c2854ac688dda9c379a96e299697c7f902084ed1
 
 const api = {
   "GET /api/workspaces": { data: workspaces },
