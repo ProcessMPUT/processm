@@ -1,4 +1,4 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
   title: Processm
   description: Description of api methods used in processm.
@@ -262,6 +262,104 @@ paths:
       responses:
         '204':
           description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /workspaces/{workspaceId}/components:
+    parameters:
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - workspaces
+        - components
+      summary: Get components attached to specified workspace
+      operationId: getWorkspaceComponents
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentCollectionMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /workspaces/{workspaceId}/components/{componentId}:
+    parameters:
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: componentId
+        in: path
+        description: Component ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - workspaces
+        - components
+      summary: Get specified workspace component
+      operationId: getWorkspaceComponent
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /workspaces/{workspaceId}/components/{componentId}/data:
+    parameters:
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: componentId
+        in: path
+        description: Component ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - workspaces
+        - components
+      summary: Get specified workspace component data
+      operationId: getWorkspaceComponentData
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentDataMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -737,6 +835,9 @@ components:
     GroupRole:
       type: string
       enum: [owner, writer, reader]
+    ComponentType:
+      type: string
+      enum: [kpi, causalNet]
     AccountRegistrationInfo:
       type: object
       required: [userEmail, organizationName]
@@ -906,6 +1007,139 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Workspace'
+    Component:
+      type: object
+      required: [name, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/ComponentType'
+        data:
+          type: object
+          properties:
+            query:
+              type: string
+    ComponentAbstract:
+      oneOf:
+        - $ref: '#/components/schemas/KpiComponent'
+        - $ref: '#/components/schemas/CausalNetComponent'
+      discriminator:
+        propertyName: type
+        mapping:
+          kpi: '#/components/schemas/KpiComponent'
+          causal: '#/components/schemas/CausalNetComponent'
+    ComponentData:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ComponentType'
+    ComponentDataAbstract:
+      oneOf:
+        - $ref: '#/components/schemas/KpiComponentData'
+        - $ref: '#/components/schemas/CausalNetComponentData'
+      discriminator:
+        propertyName: type
+        mapping:
+          kpi: '#/components/schemas/KpiComponentData'
+          causalNet: '#/components/schemas/CausalNetComponentData'
+    KpiComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          required: [value]
+          properties:
+            type:
+              $ref: '#/components/schemas/ComponentType'
+            value:
+              type: number
+    KpiComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/KpiComponentData'
+    CausalNetComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          required: [nodes, edges]
+          properties:
+            type:
+              $ref: '#/components/schemas/ComponentType'
+            nodes:
+              type: array
+              items:
+                type: object
+                required: [splits, joins]
+                properties:
+                  id:
+                    type: string
+                  splits:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: string
+                  joins:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: string
+            edges:
+              type: array
+              items:
+                type: object
+                required: [sourceNodeId, targetNodeId]
+                properties:
+                  sourceNodeId:
+                    type: string
+                  targetNodeId:
+                    type: string
+    CausalNetComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CausalNetComponentData'
+            layout:
+              type: array
+              items:
+                type: object
+                required: [id, x, y]
+                properties:
+                  id:
+                    type: string
+                  x:
+                    type: number
+                  y:
+                    type: number
+    ComponentMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ComponentAbstract'
+    ComponentDataMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ComponentDataAbstract'
+    ComponentCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComponentAbstract'
     Group:
       type: object
       required: [name, groupRole, isImplicit, organizationId]
