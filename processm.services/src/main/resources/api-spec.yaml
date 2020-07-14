@@ -168,11 +168,19 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
-  /workspaces:
+  /organizations/{organizationId}/workspaces:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
     get:
       tags:
         - workspaces
-      summary: Get workspaces which user has access to
+      summary: Get all workspaces available to the calling user in the context of the specified organization
       operationId: getWorkspaces
       responses:
         '200':
@@ -186,7 +194,7 @@ paths:
     post:
       tags:
         - workspaces
-      summary: Create workspace
+      summary: Create a new workspace in the context of the specified organization
       operationId: createWorkspace
       requestBody:
         description: Workspace details
@@ -206,8 +214,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
-  /workspaces/{workspaceId}:
+  /organizations/{organizationId}/workspaces/{workspaceId}:
     parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -218,7 +233,7 @@ paths:
     get:
       tags:
         - workspaces
-      summary: Get specified workspace
+      summary: Get the specified workspace in the context of the specified organization
       operationId: getWorkspace
       responses:
         '200':
@@ -236,7 +251,7 @@ paths:
     put:
       tags:
         - workspaces
-      summary: Update specified workspace
+      summary: Update the specified workspace in the context of the specified organization
       operationId: updateWorkspace
       requestBody:
         description: Workspace details to update
@@ -257,7 +272,7 @@ paths:
     delete:
       tags:
         - workspaces
-      summary: Remove specified workspace
+      summary: Remove the specified workspace in the context of the specified organization
       operationId: deleteWorkspace
       responses:
         '204':
@@ -268,8 +283,15 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
-  /workspaces/{workspaceId}/components:
+  /organizations/{organizationId}/workspaces/{workspaceId}/components:
     parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -281,7 +303,7 @@ paths:
       tags:
         - workspaces
         - components
-      summary: Get components attached to specified workspace
+      summary: Get all components available to the calling user in the specified workspace in the context of the specified organization
       operationId: getWorkspaceComponents
       responses:
         '200':
@@ -296,8 +318,15 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
-  /workspaces/{workspaceId}/components/{componentId}:
+  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}:
     parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -316,7 +345,7 @@ paths:
       tags:
         - workspaces
         - components
-      summary: Get specified workspace component
+      summary: Get the specified component in the specified workspace in the context of the specified organization
       operationId: getWorkspaceComponent
       responses:
         '200':
@@ -331,8 +360,15 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
-  /workspaces/{workspaceId}/components/{componentId}/data:
+  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
     parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -351,7 +387,7 @@ paths:
       tags:
         - workspaces
         - components
-      summary: Get specified workspace component data
+      summary: Get data of the specified component in the specified workspace in the context of the specified organization
       operationId: getWorkspaceComponentData
       responses:
         '200':
