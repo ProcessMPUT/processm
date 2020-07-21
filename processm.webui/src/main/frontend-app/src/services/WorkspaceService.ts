@@ -2,7 +2,7 @@ import Vue from "vue";
 import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import WorkspaceComponent from "@/models/WorkspaceComponent";
-import { Workspace as ApiWorkspace } from "@/openapi/model";
+import { Workspace as ApiWorkspace, ComponentAbstract } from "@/openapi/model";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
@@ -52,13 +52,13 @@ export default class WorkspaceService extends BaseService {
     return response.status == 204;
   }
 
-  public async removeWorkspace(workspaceId: string): Promise<boolean> {
+  public async removeWorkspace(workspaceId: string): Promise<void> {
     const response = await this.workspacesApi.deleteWorkspace(
       this.currentOrganizationId,
       workspaceId
     );
 
-    return [204, 404].includes(response.status);
+    this.ensureSuccessfulResponseCode(response, 204, 404);
   }
 
   public async getComponent(
@@ -99,6 +99,31 @@ export default class WorkspaceService extends BaseService {
     this.ensureSuccessfulResponseCode(response);
 
     return response.data.data;
+  }
+
+  public async getWorkspaceComponents(workspaceId: string) {
+    const response = await this.workspacesApi.getWorkspaceComponents(
+      this.currentOrganizationId,
+      workspaceId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+
+    return response.data.data.reduce(
+      (components: WorkspaceComponent[], apiComponent: ComponentAbstract) => {
+        if (apiComponent.id != null) {
+          components.push({
+            id: apiComponent.id,
+            name: apiComponent.name,
+            type: apiComponent.type,
+            data: apiComponent.data
+          });
+        }
+
+        return components;
+      },
+      []
+    );
   }
 
   private get currentOrganizationId() {

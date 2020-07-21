@@ -49,7 +49,6 @@ abstract class ServiceTestBase {
     protected fun Transaction.createGroup(organizationId: UUID, name: String = "Group1", parentGroupId: UUID? = null, groupRole: GroupRoleDto = GroupRoleDto.Reader, isImplicit: Boolean = false) =
         UserGroups.insertAndGetId {
             it[this.name] = name
-            it[this.organizationId] = EntityID(organizationId, Organizations)
             it[this.parentGroupId] = if (parentGroupId != null) EntityID(parentGroupId, UserGroups) else null
             it[this.groupRoleId] = GroupRoles.getIdByName(groupRole)
             it[this.isImplicit] = isImplicit

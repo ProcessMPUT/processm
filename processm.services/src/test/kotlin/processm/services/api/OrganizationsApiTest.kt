@@ -63,13 +63,11 @@ class OrganizationsApiTest : BaseApiTest() {
                     every { id } returns groupId1
                     every { name } returns "Group1"
                     every { isImplicit } returns true
-                    every { organization.id } returns organizationId
                 },
                 mockk {
                     every { id } returns groupId2
                     every { name } returns "Group2"
                     every { isImplicit } returns false
-                    every { organization.id } returns organizationId
                 }
             )
             every { accountService.getRolesAssignedToUser(userId) } returns listOf(

@@ -1,7 +1,9 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.DBConnectionPool
 import processm.services.ilike
@@ -35,27 +37,37 @@ class AccountService(private val groupService: GroupService) {
             }
             //TODO: registered accounts should be stored as "pending' until confirmed
             // user password should be specified upon successful confirmation
-            // a single-user group representing the user should be created
-            val userId = Users.insertAndGetId {
-                it[email] = userEmail
-                it[password] = calculatePasswordHash("pass")
-                it[locale] = accountLocale ?: defaultLocale.toString()
+            // user creation should be moved to a separate method
+
+            // automatically created group for the particular user
+            val privateGroupId = UserGroups.insertAndGetId {
+                it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Owner)
+                it[isImplicit] = true
+            }
+            // automatically created group for all users
+            val sharedGroupId = UserGroups.insertAndGetId {
+                it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Reader)
+                it[isImplicit] = true
             }
             val organizationId = Organizations.insertAndGetId {
                 it[name] = organizationName
                 it[isPrivate] = false
+                it[this.sharedGroupId] = sharedGroupId
+            }
+            val userId = Users.insertAndGetId {
+                it[email] = userEmail
+                it[password] = calculatePasswordHash("pass")
+                it[locale] = accountLocale ?: defaultLocale.toString()
+                it[this.privateGroupId] = privateGroupId
             }
 
+            groupService.attachUserToGroup(userId.value, sharedGroupId.value)
+            groupService.attachUserToGroup(userId.value, privateGroupId.value)
             UsersRolesInOrganizations.insert {
                 it[this.userId] = userId
                 it[this.organizationId] = organizationId
                 it[roleId] = OrganizationRoles.getIdByName(OrganizationRoleDto.Owner)
             }
-
-            // automatically created group for all users
-            // this should be eventually moved to a separate method together with the logic above
-            val userGroupId = groupService.ensureSharedGroupExists(organizationId.value)
-            groupService.attachUserToGroup(userId.value, userGroupId)
         }
     }
 

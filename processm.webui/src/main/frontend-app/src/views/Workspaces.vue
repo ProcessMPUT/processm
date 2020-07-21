@@ -104,14 +104,10 @@ export default class Workspaces extends Vue {
 
   async removeWorkspace() {
     const removedWorkspaceIndex = this.currentWorkspaceIndex;
-    const isRemoved = await this.workspaceService.removeWorkspace(
+
+    await this.workspaceService.removeWorkspace(
       this.workspaces[removedWorkspaceIndex].id
     );
-
-    if (!isRemoved) {
-      return;
-    }
-
     this.currentWorkspaceIndex = Math.max(0, this.currentWorkspaceIndex - 1);
     this.workspaces.splice(removedWorkspaceIndex, 1);
   }

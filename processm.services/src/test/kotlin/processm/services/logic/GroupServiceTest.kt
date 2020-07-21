@@ -22,36 +22,6 @@ class GroupServiceTest : ServiceTestBase() {
     lateinit var groupService: GroupService
 
     @Test
-    fun `shared group creation throws if nonexistent organization`(): Unit = withCleanTables(Organizations, UserGroups) {
-        val exception = assertFailsWith<ValidationException>("Specified organization does not exist") {
-            groupService.ensureSharedGroupExists(UUID.randomUUID())
-        }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
-    }
-
-    @Test
-    fun `successful shared group creation returns`(): Unit = withCleanTables(Organizations, UserGroups) {
-        val organizationId = createOrganization("Org1")
-
-        val groupId= assertDoesNotThrow { groupService.ensureSharedGroupExists(organizationId.value) }
-
-        val sharedGroup = UserGroups.select { UserGroups.id eq groupId }.first()
-        assertEquals(organizationId.value, sharedGroup[UserGroups.organizationId].value)
-        assertEquals(true, sharedGroup[UserGroups.isImplicit])
-        assertEquals(null, sharedGroup[UserGroups.parentGroupId])
-    }
-
-    @Test
-    fun `ensuring shared group existence returns id of the existing group`(): Unit = withCleanTables(Organizations, UserGroups) {
-        val organizationId = createOrganization()
-
-        val groupId1= assertDoesNotThrow { groupService.ensureSharedGroupExists(organizationId.value) }
-        val groupId2= assertDoesNotThrow { groupService.ensureSharedGroupExists(organizationId.value) }
-
-        assertEquals(groupId1, groupId2)
-    }
-
-    @Test
     fun `attachment of user to group throws if nonexistent user`(): Unit = withCleanTables(Organizations, UserGroups, Users) {
         val organizationId = createOrganization()
         val groupId = createGroup(organizationId.value)
@@ -116,7 +86,6 @@ class GroupServiceTest : ServiceTestBase() {
         val group = assertNotNull(groupService.getGroup(groupId.value))
 
         assertEquals("Group1", group.name)
-        assertEquals(organizationId.value, group.organization.id)
     }
 
     @Test

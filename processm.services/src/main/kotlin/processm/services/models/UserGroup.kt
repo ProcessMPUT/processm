@@ -10,7 +10,6 @@ import java.util.*
 object UserGroups : UUIDTable("user_groups") {
     val name = text("name").nullable()
     val parentGroupId = reference("parent_group_id", UserGroups).nullable()
-    val organizationId = reference("organization_id", Organizations)
     val groupRoleId = reference("group_role_id", GroupRoles)
     val isImplicit = bool("is_implicit")
 }
@@ -20,12 +19,11 @@ class UserGroup(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var name by UserGroups.name
     var parentGroup by UserGroup optionalReferencedOn UserGroups.parentGroupId
-    var organization by Organization referencedOn UserGroups.organizationId
     var groupRole by GroupRole referencedOn UserGroups.groupRoleId
     var isImplicit by UserGroups.isImplicit
     val childGroups by UserGroup optionalReferrersOn UserGroups.parentGroupId
 
-    fun toDto() = UserGroupDto(id.value, name, isImplicit, organization.toDto())
+    fun toDto() = UserGroupDto(id.value, name, isImplicit)
 }
 
-data class UserGroupDto(val id: UUID, val name: String?, val isImplicit: Boolean, val organization: OrganizationDto)
+data class UserGroupDto(val id: UUID, val name: String?, val isImplicit: Boolean)

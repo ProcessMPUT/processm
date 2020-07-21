@@ -29,7 +29,6 @@ fun Route.OrganizationsApi() {
             }
         }
 
-
         route("/organizations") {
             post {
                 val principal = call.authentication.principal<ApiUser>()
@@ -37,7 +36,6 @@ fun Route.OrganizationsApi() {
                 call.respond(HttpStatusCode.NotImplemented)
             }
         }
-
 
         get<Paths.getOrganization> { organization: Paths.getOrganization ->
             val principal = call.authentication.principal<ApiUser>()
@@ -51,7 +49,6 @@ fun Route.OrganizationsApi() {
             )
         }
 
-
         get<Paths.getOrganizationGroups> {  organization: Paths.getOrganizationGroups ->
             val principal = call.authentication.principal<ApiUser>()!!
 
@@ -60,12 +57,11 @@ fun Route.OrganizationsApi() {
             }
 
             val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
-                .map { Group(it.name ?: "", it.isImplicit, it.organization.id, GroupRole.reader, it.id) }
+                .map { Group(it.name ?: "", it.isImplicit, organization.organizationId, GroupRole.reader, it.id) }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(organizationGroups))
         }
-
 
         get<Paths.getOrganizationMembers> { organization: Paths.getOrganizationMembers ->
             val principal = call.authentication.principal<ApiUser>()!!
@@ -81,13 +77,11 @@ fun Route.OrganizationsApi() {
             call.respond(HttpStatusCode.OK, OrganizationMemberCollectionMessageBody(organizationMembers))
         }
 
-
         get<Paths.getOrganizations> { _: Paths.getOrganizations ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.OK, OrganizationCollectionMessageBody(emptyArray()))
         }
-
 
         delete<Paths.removeOrganization> { _: Paths.removeOrganization ->
             val principal = call.authentication.principal<ApiUser>()
@@ -95,13 +89,11 @@ fun Route.OrganizationsApi() {
             call.respond(HttpStatusCode.NotImplemented)
         }
 
-
         delete<Paths.removeOrganizationMember> { _: Paths.removeOrganizationMember ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
         }
-
 
         route("/organizations/{organizationId}") {
             put {

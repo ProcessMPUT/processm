@@ -565,6 +565,19 @@ const api = {
 
     return res.status(204).json();
   },
+  "GET /api/organizations/:organizationId/workspaces/:workspaceId/components": (
+    req,
+    res
+  ) => {
+    const { workspaceId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+
+    if (!workspace) {
+      return res.status(404).json();
+    }
+
+    return res.json({ data: componentsData });
+  },
   "GET /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId": (
     req,
     res

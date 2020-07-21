@@ -66,7 +66,6 @@ class AccountServiceTest : ServiceTestBase() {
     fun `successful account registration returns`() =
         withCleanTables(Users, Organizations, UsersRolesInOrganizations) {
             val groupId = UUID.randomUUID()
-            every { groupServiceMock.ensureSharedGroupExists(any()) } returns groupId
             every { groupServiceMock.attachUserToGroup(any(), groupId) } just runs
 
             accountService.createAccount("user@example.com", "Org1")
@@ -75,7 +74,6 @@ class AccountServiceTest : ServiceTestBase() {
             assertEquals("user@example.com", organizationMember.user.email)
             assertEquals("Org1", organizationMember.organization.name)
             assertEquals(OrganizationRoleDto.Owner, organizationMember.role.name)
-            verify { groupServiceMock.ensureSharedGroupExists(organizationMember.organization.id.value) }
             verify { groupServiceMock.attachUserToGroup(organizationMember.user.id.value, groupId) }
         }
 

@@ -14,13 +14,13 @@ CREATE TABLE organizations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL,
     parent_organization_id uuid,
-    is_private boolean NOT NULL
+    is_private boolean NOT NULL,
+    shared_group_id uuid NOT NULL
 );
 
 CREATE TABLE user_groups (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     parent_group_id uuid,
-    organization_id uuid NOT NULL,
     group_role_id uuid NOT NULL,
     name text,
     is_implicit boolean NOT NULL DEFAULT FALSE
@@ -28,12 +28,14 @@ CREATE TABLE user_groups (
 
 CREATE TABLE user_groups_with_workspaces (
     user_group_id uuid NOT NULL,
-    workspace_id uuid NOT NULL
+    workspace_id uuid NOT NULL,
+    organization_id uuid NOT NULL
 );
 
 CREATE TABLE users (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    username text NOT NULL
+    username text NOT NULL,
+    private_group_id uuid NOT NULL
 );
 
 CREATE TABLE users_in_groups (
@@ -50,11 +52,12 @@ CREATE TABLE users_roles_in_organizations (
 );
 
 CREATE TABLE workspaces (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name text NOT NULL
 );
 
 ALTER TABLE user_groups_with_workspaces
-    ADD CONSTRAINT user_groups_with_workspaces_pk PRIMARY KEY (user_group_id, workspace_id);
+    ADD CONSTRAINT user_groups_with_workspaces_pk PRIMARY KEY (user_group_id, workspace_id, organization_id);
 ALTER TABLE users_in_groups
     ADD CONSTRAINT users_in_groups_pk PRIMARY KEY (user_id, user_group_id);
 ALTER TABLE users_roles_in_organizations
@@ -62,12 +65,12 @@ ALTER TABLE users_roles_in_organizations
 
 ALTER TABLE organizations
     ADD CONSTRAINT organizations_organizations_fk FOREIGN KEY (parent_organization_id) REFERENCES organizations(id);
+ALTER TABLE organizations
+    ADD CONSTRAINT organizations_user_groups_fk FOREIGN KEY (shared_group_id) REFERENCES user_groups(id) ON DELETE CASCADE;
 ALTER TABLE user_groups
     ADD CONSTRAINT user_groups_user_groups_fk FOREIGN KEY (parent_group_id) REFERENCES user_groups(id);
 ALTER TABLE user_groups
     ADD CONSTRAINT user_groups_group_roles_fk FOREIGN KEY (group_role_id) REFERENCES group_roles(id);
-ALTER TABLE user_groups
-    ADD CONSTRAINT user_groups_organizations_fk FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 ALTER TABLE user_groups_with_workspaces
     ADD CONSTRAINT user_groups_with_workspaces_user_groups_fk FOREIGN KEY (user_group_id) REFERENCES user_groups(id) ON DELETE CASCADE;
 ALTER TABLE user_groups_with_workspaces
@@ -76,6 +79,10 @@ ALTER TABLE users_in_groups
     ADD CONSTRAINT users_in_groups_user_groups_fk FOREIGN KEY (user_group_id) REFERENCES user_groups(id) ON DELETE CASCADE;
 ALTER TABLE users_in_groups
     ADD CONSTRAINT users_in_groups_users_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE user_groups_with_workspaces
+    ADD CONSTRAINT user_groups_with_workspaces_organizations_fk FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE users
+    ADD CONSTRAINT users_user_groups_fk FOREIGN KEY (private_group_id) REFERENCES user_groups(id) ON DELETE CASCADE;
 ALTER TABLE users_roles_in_organizations
     ADD CONSTRAINT users_roles_in_organizations_organization_roles_fk FOREIGN KEY (organization_role_id) REFERENCES organization_roles(id);
 ALTER TABLE users_roles_in_organizations

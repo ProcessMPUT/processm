@@ -66,20 +66,17 @@ class GroupsApiTest : BaseApiTest() {
         withAuthentication {
             every { groupService.getGroup(groupId) } returns mockk {
                     every { id } returns groupId
-                    every { organization.id } returns organizationId
                 }
             every { groupService.getSubgroups(groupId) } returns listOf(
                 mockk {
                     every { id } returns subgroupId1
                     every { name } returns "Subgroup1"
                     every { isImplicit } returns true
-                    every { organization.id } returns organizationId
                 },
                 mockk {
                     every { id } returns subgroupId2
                     every { name } returns "Subgroup2"
                     every { isImplicit } returns false
-                    every { organization.id } returns organizationId
                 }
             )
             every { accountService.getRolesAssignedToUser(any()) } returns listOf(
@@ -115,12 +112,10 @@ class GroupsApiTest : BaseApiTest() {
     @Test
     fun `responds to request for subgroups in organization not related to user with 403 and error message`() = withConfiguredTestApplication {
         val groupId = UUID.randomUUID()
-        val organizationId = UUID.randomUUID()
 
         withAuthentication {
             every { groupService.getGroup(groupId) } returns mockk {
                 every { id } returns groupId
-                every { organization.id } returns organizationId
             }
             every { accountService.getRolesAssignedToUser(any()) } returns listOf(
                 mockk {
@@ -145,7 +140,6 @@ class GroupsApiTest : BaseApiTest() {
             every { groupService.getGroup(groupId) } returns mockk {
                 every { id } returns groupId
                 every { name } returns "Group1"
-                every { organization.id } returns organizationId
                 every { isImplicit } returns false
             }
             every { accountService.getRolesAssignedToUser(any()) } returns listOf(
@@ -171,7 +165,6 @@ class GroupsApiTest : BaseApiTest() {
             every { groupService.getGroup(groupId) } returns mockk {
                 every { id } returns groupId
                 every { name } returns "Group1"
-                every { organization.id } returns UUID.randomUUID()
                 every { isImplicit } returns false
             }
             every { accountService.getRolesAssignedToUser(any()) } returns listOf(

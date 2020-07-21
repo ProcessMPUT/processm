@@ -1,8 +1,11 @@
 package processm.services.logic
 
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.DBConnectionPool
 import processm.services.models.Organization
+import processm.services.models.Organizations
+import processm.services.models.UserGroup
 import java.util.*
 
 class OrganizationService {
@@ -17,7 +20,16 @@ class OrganizationService {
     fun getOrganizationGroups(organizationId: UUID) = transaction(DBConnectionPool.database) {
         val organization = getOrganizationDao(organizationId)
 
-        organization.userGroups.map { it.toDto() }
+        return@transaction listOf(organization.sharedGroup.toDto())
+    }
+
+    fun getOrganizationBySharedGroupId(sharedGroupId: UUID) = transaction(DBConnectionPool.database) {
+        val organization = Organizations.select {Organizations.sharedGroupId eq sharedGroupId }.firstOrNull()
+           ?: throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified shared group id is not assigned to any organization")
+
+        return@transaction Organization.wrapRow(organization).toDto()
     }
 
     private fun getOrganizationDao(organizationId: UUID) = transaction(DBConnectionPool.database) {

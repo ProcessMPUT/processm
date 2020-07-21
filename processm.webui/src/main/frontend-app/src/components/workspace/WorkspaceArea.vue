@@ -74,7 +74,6 @@ import EditComponentView from "./EditComponentView.vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import WorkspaceComponentModel from "@/models/WorkspaceComponent";
-import WorkspaceLayoutItem from "@/models/WorkspaceLayoutItem";
 
 @Component({
   components: {
@@ -100,58 +99,18 @@ export default class WorkspaceArea extends Vue {
   layout: Array<{ i: string; x: number; y: number; w: number; h: number }> = [];
 
   async created() {
-    const layout: WorkspaceLayoutItem[] = [
-      {
-        componentId: "93bcc033-bbea-490d-93b9-3c8580db5354",
-        x: 0,
-        y: 0,
-        width: 3,
-        height: 10
-      },
-      {
-        componentId: "c629ba68-aae2-4490-85cd-3875939fc69e",
-        x: 3,
-        y: 0,
-        width: 5,
-        height: 8
-      },
-      {
-        componentId: "06a29e69-a58e-498c-ad66-6435816d9c7b",
-        x: 0,
-        y: 0,
-        width: 3,
-        height: 4
-      },
-      {
-        componentId: "f7bad885-6add-4516-b536-d6f88c154b6e",
-        x: 3,
-        y: 0,
-        width: 5,
-        height: 10
-      },
-      {
-        componentId: "cf607cb0-0b88-4ccd-9795-5cd0201b3c39",
-        x: 8,
-        y: 0,
-        width: 4,
-        height: 7
-      }
-    ];
+    const components = await this.workspaceService.getWorkspaceComponents(
+      this.workspaceId
+    );
 
-    for (const layoutItem of layout) {
-      const componentId = layoutItem.componentId;
-      this.componentsDetails[
-        componentId
-      ] = await this.workspaceService.getComponent(
-        this.workspaceId,
-        componentId
-      );
+    for (const component of components) {
+      this.componentsDetails[component.id] = component;
       this.layout.push({
-        i: layoutItem.componentId,
-        x: layoutItem.x,
-        y: layoutItem.y,
-        w: layoutItem.width,
-        h: layoutItem.height
+        i: component.id,
+        x: 0,
+        y: 0,
+        w: 3,
+        h: 4
       });
     }
   }

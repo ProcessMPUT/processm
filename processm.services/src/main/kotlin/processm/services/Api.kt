@@ -21,6 +21,7 @@ import processm.services.api.*
 import processm.services.logic.AccountService
 import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
+import processm.services.logic.WorkspaceService
 
 @KtorExperimentalLocationsAPI
 @KtorExperimentalAPI
@@ -41,6 +42,7 @@ fun Application.apiModule() {
             single { AccountService(get()) }
             single { OrganizationService() }
             single { GroupService() }
+            single { WorkspaceService(get()) }
         })
     }
 

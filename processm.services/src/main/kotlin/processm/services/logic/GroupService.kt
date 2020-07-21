@@ -2,40 +2,13 @@ package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.exceptions.ExposedSQLException
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertAndGetId
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.DBConnectionPool
 import processm.services.models.*
 import java.util.*
 
 class GroupService {
-
-    fun ensureSharedGroupExists(organizationId: UUID) = transaction(DBConnectionPool.database) {
-        val existingGroups =
-            UserGroups.select { UserGroups.organizationId eq organizationId and UserGroups.parentGroupId.isNull() }
-                .limit(1)
-
-        if (existingGroups.any()) {
-            return@transaction existingGroups.first()[UserGroups.id].value
-        }
-
-        try {
-            UserGroups.insertAndGetId {
-                it[this.organizationId] = EntityID(organizationId, Organizations)
-                it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Reader)
-                it[isImplicit] = true
-            }.value
-        } catch (e: ExposedSQLException) {
-            throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "Specified organization does not exist"
-            )
-        }
-    }
-
     fun attachUserToGroup(userId: UUID, groupId: UUID): Unit = transaction(DBConnectionPool.database) {
         val userInGroup =
             UsersInGroups.select { UsersInGroups.userId eq userId and(UsersInGroups.groupId eq groupId) }.limit(1)
@@ -55,6 +28,24 @@ class GroupService {
                 "Specified user or organization does not exist"
             )
         }
+    }
+
+    fun getRootGroupId(groupId: UUID) = transaction(DBConnectionPool.database) {
+        var rootGroup: ResultRow?
+        do {
+            rootGroup = UserGroups.slice(UserGroups.id, UserGroups.parentGroupId)
+            .select { UserGroups.id eq groupId }
+            .firstOrNull()
+        } while (rootGroup != null && rootGroup[UserGroups.parentGroupId] != null)
+
+        if (rootGroup == null) {
+            throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified group does not exist"
+            )
+        }
+
+        return@transaction rootGroup[UserGroups.id].value
     }
 
     fun getSubgroups(groupId: UUID) = transaction(DBConnectionPool.database) {
