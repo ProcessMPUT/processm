@@ -56,7 +56,7 @@ fun Route.OrganizationsApi() {
             val principal = call.authentication.principal<ApiUser>()!!
 
             if (!principal.organizations.containsKey(organization.organizationId)) {
-                throw ApiException("User is not member of organization with provided id", HttpStatusCode.Forbidden)
+                throw ApiException("The user is not a member of the organization with the provided id", HttpStatusCode.Forbidden)
             }
 
             val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
@@ -71,7 +71,7 @@ fun Route.OrganizationsApi() {
             val principal = call.authentication.principal<ApiUser>()!!
 
             if (!principal.organizations.containsKey(organization.organizationId)) {
-                throw ApiException("User is not member of organization with provided id", HttpStatusCode.Forbidden)
+                throw ApiException("The user is not a member of the organization with the provided id", HttpStatusCode.Forbidden)
             }
 
             val organizationMembers = organizationService.getOrganizationMembers(organization.organizationId)

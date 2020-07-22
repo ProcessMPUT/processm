@@ -95,7 +95,7 @@ internal fun ApplicationDataConversionConfiguration(): DataConversion.Configurat
                 when (value) {
                     null -> listOf()
                     is UUID -> listOf(value.toString())
-                    else -> throw DataConversionException("Cannot convert $value as UUID")
+                    else -> throw DataConversionException("Cannot convert $value to UUID")
                 }
             }
         }

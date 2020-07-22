@@ -57,7 +57,7 @@ fun Route.GroupsApi() {
             val userGroup = groupService.getGroup(group.groupId)
 
             if (!principal.organizations.containsKey(userGroup.organization.id)) {
-                throw ApiException("User is not member of organization containing group with provided id", HttpStatusCode.Forbidden)
+                throw ApiException("The user is not a member of an organization containing the group with the provided id", HttpStatusCode.Forbidden)
             }
 
             call.respond(
@@ -93,7 +93,7 @@ fun Route.GroupsApi() {
             val userGroup = groupService.getGroup(group.groupId)
 
             if (!principal.organizations.containsKey(userGroup.organization.id)) {
-                throw ApiException("User is not member of organization containing group with provided id", HttpStatusCode.Forbidden)
+                throw ApiException("The user is not a member of an organization containing the group with the provided id", HttpStatusCode.Forbidden)
             }
 
             val subgroups = groupService.getSubgroups(userGroup.id)
