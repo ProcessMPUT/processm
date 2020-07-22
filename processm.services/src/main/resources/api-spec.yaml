@@ -9,7 +9,7 @@ tags:
   - name: users
     description: User registration and session management
   - name: workspaces
-    description: User workspace management
+    description: User workspaces management
   - name: groups
     description: User groups and groups membership management
   - name: organizations
@@ -155,7 +155,7 @@ paths:
     get:
       tags:
         - users
-      summary: Get organizations which the current user is member of
+      summary: Get organizations which the current user is a member of
       operationId: getUserOrganizations
       responses:
         '200':
@@ -172,7 +172,7 @@ paths:
     get:
       tags:
         - workspaces
-      summary: Get workspaces which user has access to
+      summary: Get workspaces which the current user has access to
       operationId: getWorkspaces
       responses:
         '200':
@@ -272,7 +272,7 @@ paths:
     get:
       tags:
         - groups
-      summary: Get groups belonging to user organization
+      summary: Get groups belonging to the current user's organization
       operationId: getGroups
       responses:
         '200':
@@ -378,7 +378,7 @@ paths:
     get:
       tags:
         - groups
-      summary: Get members of specified group
+      summary: Get members of the specified group
       operationId: getGroupMembers
       responses:
         '200':
@@ -392,7 +392,7 @@ paths:
     post:
       tags:
         - groups
-      summary: Add new member to group
+      summary: Add new member to the specified group
       operationId: addGroupMember
       requestBody:
         description: New member ID
@@ -431,7 +431,7 @@ paths:
     delete:
       tags:
         - groups
-      summary: Remove member from group
+      summary: Remove member from the specified group
       operationId: removeGroupMember
       responses:
         '204':
@@ -454,7 +454,7 @@ paths:
     get:
       tags:
         - groups
-      summary: Get subgroups of specified group
+      summary: Get subgroups of the specified group
       operationId: getSubgroups
       responses:
         '200':
@@ -626,7 +626,7 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get members of specified organization
+      summary: Get members of the specified organization
       operationId: getOrganizationMembers
       responses:
         '200':
@@ -646,7 +646,7 @@ paths:
     post:
       tags:
         - organizations
-      summary: Add new member to organization
+      summary: Add new member to the specified organization
       operationId: addOrganizationMember
       requestBody:
         description: New member username
@@ -684,7 +684,7 @@ paths:
     delete:
       tags:
         - organizations
-      summary: Remove member from organization
+      summary: Remove member from the specified organization
       operationId: removeOrganizationMember
       responses:
         '204':
@@ -707,7 +707,7 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get groups associated with the organization
+      summary: Get groups associated with the specified organization
       operationId: getOrganizationGroups
       responses:
         '200':
@@ -983,13 +983,13 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     NotFound:
-      description: specified resource was not found
+      description: the specified resource was not found
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
-      description: resource with sepcified identifier already exists
+      description: the resource with the sepcified identifier already exists
       content:
         'application/json':
           schema:

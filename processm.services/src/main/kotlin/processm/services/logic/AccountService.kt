@@ -16,7 +16,7 @@ class AccountService(private val groupService: GroupService) {
 
     fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
         val user = User.find(Users.email ilike username).firstOrNull() ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
+            ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
         )
 
         if (verifyPassword(password, user.password)) user.toDto() else null
@@ -30,7 +30,7 @@ class AccountService(private val groupService: GroupService) {
             if (usersCount > 0 || organizationsCount > 0) {
                 throw ValidationException(
                     ValidationException.Reason.ResourceAlreadyExists,
-                    "User and/or organization with specified email already exists"
+                    "The specified user and/or organization already exists"
                 )
             }
             //TODO: registered accounts should be stored as "pending' until confirmed

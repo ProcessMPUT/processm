@@ -22,7 +22,7 @@ class OrganizationService {
 
     private fun getOrganizationDao(organizationId: UUID) = transaction(DBConnectionPool.database) {
         Organization.findById(organizationId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified organization does not exist"
+            ValidationException.Reason.ResourceNotFound, "The specified organization does not exist"
         )
     }
 }

@@ -31,7 +31,7 @@ class GroupService {
         } catch (e: ExposedSQLException) {
             throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
-                "Specified organization does not exist"
+                "The specified organization does not exist"
             )
         }
     }
@@ -52,7 +52,7 @@ class GroupService {
         } catch (e: ExposedSQLException) {
             throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
-                "Specified user or organization does not exist"
+                "The specified user or organization does not exist"
             )
         }
     }
@@ -69,7 +69,7 @@ class GroupService {
 
     private fun getGroupDao(groupId: UUID) = transaction(DBConnectionPool.database) {
         UserGroup.findById(groupId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified group does not exist"
+            ValidationException.Reason.ResourceNotFound, "The specified group does not exist"
         )
     }
 }
