@@ -23,7 +23,7 @@ paths:
       operationId: getUsers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -44,7 +44,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -71,7 +71,7 @@ paths:
         required: false
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -100,7 +100,7 @@ paths:
       operationId: getUserAccountDetails
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -122,7 +122,7 @@ paths:
         required: true
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -144,7 +144,7 @@ paths:
         required: true
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -159,7 +159,7 @@ paths:
       operationId: getUserOrganizations
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -176,7 +176,7 @@ paths:
       operationId: getWorkspaces
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -197,7 +197,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -222,7 +222,7 @@ paths:
       operationId: getWorkspace
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -247,7 +247,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -261,7 +261,7 @@ paths:
       operationId: deleteWorkspace
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -276,7 +276,7 @@ paths:
       operationId: getGroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -297,7 +297,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -322,7 +322,7 @@ paths:
       operationId: getGroup
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -345,7 +345,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -359,7 +359,7 @@ paths:
       operationId: removeGroup
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -382,7 +382,7 @@ paths:
       operationId: getGroupMembers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -405,7 +405,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -435,7 +435,7 @@ paths:
       operationId: removeGroupMember
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -458,7 +458,7 @@ paths:
       operationId: getSubgroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -479,7 +479,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -511,7 +511,7 @@ paths:
       operationId: removeSubgroup
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -526,7 +526,7 @@ paths:
       operationId: getOrganizations
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -547,7 +547,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -570,7 +570,7 @@ paths:
       operationId: getOrganization
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -593,7 +593,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -607,7 +607,7 @@ paths:
       operationId: removeOrganization
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -630,7 +630,7 @@ paths:
       operationId: getOrganizationMembers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -658,7 +658,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -688,7 +688,7 @@ paths:
       operationId: removeOrganizationMember
       responses:
         '204':
-          description: successful operation
+          description: uccessful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -711,7 +711,7 @@ paths:
       operationId: getOrganizationGroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -729,7 +729,7 @@ components:
       required: [error]
       properties:
         error:
-          description: error details
+          description: Error details
           type: string
     OrganizationRole:
       type: string
@@ -814,6 +814,7 @@ components:
       properties:
         locale:
           type: string
+          description: New locale settings in ICU format
     LocaleChangeMessageBody:
       type: object
       required: [data]
@@ -917,6 +918,7 @@ components:
           type: string
         isImplicit:
           type: boolean
+          description: Indicates whether the group was explicitly created by a user or implicitly created by the system (default groups)
         organizationId:
           type: string
           format: uuid
@@ -947,8 +949,10 @@ components:
           type: string
         contact:
           type: string
+          description: An address associated with the organization
         isPrivate:
           type: boolean
+          description: Indicates whether the organization can be accessed by ancestral organizations members
     OrganizationMessageBody:
       type: object
       required: [data]
@@ -965,31 +969,31 @@ components:
             $ref: '#/components/schemas/Organization'
   responses:
     BadRequest:
-      description: invalid request body
+      description: Invalid request body
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Unauthorized:
-      description: user not authenticated
+      description: The user is not authenticated
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Forbidden:
-      description: user not authorized
+      description: The user is not authorized
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     NotFound:
-      description: the specified resource was not found
+      description: The specified resource was not found
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
-      description: the resource with the sepcified identifier already exists
+      description: The resource with the sepcified identifier already exists
       content:
         'application/json':
           schema:
