@@ -18,7 +18,6 @@ import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.GroupMessageBody
 import processm.services.api.models.GroupRole
 import processm.services.logic.GroupService
-import processm.services.logic.OrganizationService
 
 @KtorExperimentalLocationsAPI
 fun Route.GroupsApi() {
@@ -52,7 +51,7 @@ fun Route.GroupsApi() {
         }
 
 
-        get<Paths.getGroup> { group: Paths.getGroup ->
+        get<Paths.Group> { group ->
             val principal = call.authentication.principal<ApiUser>()!!
             val userGroup = groupService.getGroup(group.groupId)
 
@@ -66,7 +65,7 @@ fun Route.GroupsApi() {
         }
 
 
-        get<Paths.getGroupMembers> { _: Paths.getGroupMembers ->
+        get<Paths.GroupMembers> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             if (principal == null) {
@@ -77,7 +76,7 @@ fun Route.GroupsApi() {
         }
 
 
-        get<Paths.getGroups> { _: Paths.getGroups ->
+        get<Paths.Groups> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             if (principal == null) {
@@ -88,23 +87,23 @@ fun Route.GroupsApi() {
         }
 
 
-        get<Paths.getSubgroups> { group: Paths.getSubgroups ->
+        get<Paths.Subgroups> { subgroups ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val userGroup = groupService.getGroup(group.groupId)
+            val userGroup = groupService.getGroup(subgroups.groupId)
 
             if (!principal.organizations.containsKey(userGroup.organization.id)) {
                 throw ApiException("The user is not a member of an organization containing the group with the provided id", HttpStatusCode.Forbidden)
             }
 
-            val subgroups = groupService.getSubgroups(userGroup.id)
+            val groups = groupService.getSubgroups(userGroup.id)
                 .map { Group(it.name ?: "", it.isImplicit, it.organization.id,GroupRole.reader, it.id) }
                 .toTypedArray()
 
-            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(subgroups))
+            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(groups))
         }
 
 
-        delete<Paths.removeGroup> { _: Paths.removeGroup ->
+        delete<Paths.Group> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             if (principal == null) {
@@ -115,14 +114,14 @@ fun Route.GroupsApi() {
         }
 
 
-        delete<Paths.removeGroupMember> { _: Paths.removeGroupMember ->
+        delete<Paths.GroupMember> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
 
-        delete<Paths.removeSubgroup> { _: Paths.removeSubgroup ->
+        delete<Paths.Subgroup> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
