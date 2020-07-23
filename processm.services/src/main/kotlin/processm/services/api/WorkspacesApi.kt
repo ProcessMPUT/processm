@@ -28,14 +28,14 @@ fun Route.WorkspacesApi() {
         }
 
 
-        delete<Paths.deleteWorkspace> { _: Paths.deleteWorkspace ->
+        delete<Paths.Workspace> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
 
-        get<Paths.getWorkspace> { workspace: Paths.getWorkspace ->
+        get<Paths.Workspace> { workspace ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(
@@ -45,7 +45,7 @@ fun Route.WorkspacesApi() {
         }
 
 
-        get<Paths.getWorkspaces> { _: Paths.getWorkspaces ->
+        get<Paths.Workspaces> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.OK, WorkspaceCollectionMessageBody(emptyArray()))

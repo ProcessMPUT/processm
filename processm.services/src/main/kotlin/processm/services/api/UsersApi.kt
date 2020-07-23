@@ -82,7 +82,7 @@ fun Route.UsersApi() {
     }
 
     authenticate {
-        get<Paths.getUserAccountDetails> { _: Paths.getUserAccountDetails ->
+        get<Paths.UserAccountDetails> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
             val userAccount = accountService.getAccountDetails(principal.userId)
 
@@ -126,7 +126,7 @@ fun Route.UsersApi() {
             }
         }
 
-        get<Paths.getUserOrganizations> {  _: Paths.getUserOrganizations ->
+        get<Paths.UserOrganizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
             val userOrganizations = accountService.getRolesAssignedToUser(principal.userId)
                 .map { UserOrganization(it.organization.id, it.organization.name, OrganizationRole.valueOf(it.role.roleName)) }
@@ -135,13 +135,13 @@ fun Route.UsersApi() {
             call.respond(HttpStatusCode.OK, UserOrganizationCollectionMessageBody(userOrganizations))
         }
 
-        get<Paths.getUsers> { _: Paths.getUsers ->
+        get<Paths.Users> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.OK, UserInfoCollectionMessageBody(emptyArray()))
         }
 
-        delete<Paths.signUserOut> { _: Paths.signUserOut ->
+        delete<Paths.UserOut> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NoContent)
