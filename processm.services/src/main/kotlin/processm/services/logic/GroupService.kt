@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.logging.loggedScope
 import processm.core.persistence.DBConnectionPool
 import processm.services.models.*
 import java.util.*
@@ -37,23 +38,26 @@ class GroupService {
     }
 
     fun attachUserToGroup(userId: UUID, groupId: UUID): Unit = transaction(DBConnectionPool.database) {
-        val userInGroup =
-            UsersInGroups.select { UsersInGroups.userId eq userId and(UsersInGroups.groupId eq groupId) }.limit(1)
+        loggedScope { logger ->
+            val userInGroup =
+                UsersInGroups.select { UsersInGroups.userId eq userId and (UsersInGroups.groupId eq groupId) }.limit(1)
 
-        if (userInGroup.any()) {
-            return@transaction
-        }
-
-        try {
-            UsersInGroups.insert {
-                it[this.userId] = EntityID(userId, Users)
-                it[this.groupId] = EntityID(groupId, UserGroups)
+            if (userInGroup.any()) {
+                logger.debug("The user $userId is already assigned to the group $groupId")
+                return@transaction
             }
-        } catch (e: ExposedSQLException) {
-            throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "The specified user or organization does not exist"
-            )
+
+            try {
+                UsersInGroups.insert {
+                    it[this.userId] = EntityID(userId, Users)
+                    it[this.groupId] = EntityID(groupId, UserGroups)
+                }
+                logger.debug("The user $userId has been successfully assigned to the group $groupId")
+            } catch (e: ExposedSQLException) {
+                logger.debug("The non-existing userId $userId or groupId $groupId was specified")
+                throw ValidationException(
+                    ValidationException.Reason.ResourceNotFound, "The specified user or group does not exist")
+            }
         }
     }
 
