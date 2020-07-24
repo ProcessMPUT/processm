@@ -33,10 +33,9 @@ class BasicReplayerTest {
 
     private fun Sequence<Sequence<BindingDecision>>.expecting(vararg what: List<Binding?>) {
         //this also compares order, possibly not the best idea?
-        val actual = this.toList()
-        val expected = what.toList()
-        assertEquals(actual.size, what.size)
-        (expected zip actual).forEach { (e, a) -> assertEquals(e, a.map { it.binding }.toList()) }
+        val actual = this.map { a ->  a.map { it.binding }.toList()}.toSet()
+        val expected = what.toSet()
+        assertEquals(expected, actual)
     }
 
     @Test

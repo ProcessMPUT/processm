@@ -1,0 +1,102 @@
+package processm.miners.heuristicminer.windowing
+
+import org.apache.commons.collections4.multiset.HashMultiSet
+import processm.core.helpers.Counter
+import processm.core.log.hierarchical.Log
+import processm.core.logging.debug
+import processm.core.logging.logger
+import processm.core.models.causalnet.*
+import processm.miners.heuristicminer.BasicTraceToNodeTrace
+import processm.miners.heuristicminer.HeuristicMiner
+import processm.miners.heuristicminer.NodeTrace
+import processm.miners.heuristicminer.TraceToNodeTrace
+
+class WindowingHeuristicMiner(
+    val replayer: Replayer = SingleReplayer(),
+    val traceToNodeTrace: TraceToNodeTrace = BasicTraceToNodeTrace()
+) : HeuristicMiner {
+
+    companion object {
+        private val logger = logger()
+    }
+
+    private lateinit var model: MutableCausalNet
+    override val result: MutableCausalNet
+        get() = model
+    private val window = HashMultiSet<NodeTrace>()
+    private val directlyFollows = Counter<Dependency>()
+    private val start = Node("start", special = true)
+    private val end = Node("end", special = true)
+
+    private fun aggregateLog(log: Log): HashMultiSet<NodeTrace> {
+        val result = HashMultiSet<NodeTrace>()
+        log.traces.mapTo(result) { traceToNodeTrace(it) }
+        return result
+    }
+
+    private fun updateDirectlyFollows(nodeTrace: NodeTrace, ctr: Int) {
+        val i = nodeTrace.iterator()
+        var prev = start
+        while (i.hasNext()) {
+            val curr = i.next()
+            directlyFollows.inc(Dependency(prev, curr), ctr)
+            prev = curr
+        }
+        directlyFollows.inc(Dependency(prev, end), ctr)
+    }
+
+    fun processDiff(addLog: Log, removeLog: Log) {
+        val addTraces = aggregateLog(addLog)
+        val removeTraces = aggregateLog(removeLog)
+        val newlyAdded = HashSet<NodeTrace>()
+        val freshlyRemoved = HashSet<NodeTrace>()
+        for (remove in removeTraces.entrySet()) {
+            if (window.remove(remove.element, remove.count) == remove.count)
+                freshlyRemoved.add(remove.element)
+            updateDirectlyFollows(remove.element, -remove.count)
+        }
+        for (add in addTraces.entrySet()) {
+            if (window.add(add.element, add.count) == 0)
+                newlyAdded.add(add.element)
+            updateDirectlyFollows(add.element, add.count)
+        }
+        val removedAndAdded = newlyAdded.intersect(freshlyRemoved)
+        newlyAdded.removeAll(removedAndAdded)
+        freshlyRemoved.removeAll(removedAndAdded)
+        val touchedActivities = HashSet<Node>()
+        newlyAdded.flatMapTo(touchedActivities) { it }
+        freshlyRemoved.flatMapTo(touchedActivities) { it }
+
+        val splits = HashSet<Split>()
+        val joins = HashSet<Join>()
+        if (this::model.isInitialized) {
+            val untouchedActivities = model.activities.toSet() - touchedActivities
+            untouchedActivities.flatMapTo(splits) { model.splits[it].orEmpty() }
+            untouchedActivities.flatMapTo(joins) { model.joins[it].orEmpty() }
+        }
+        logger.debug { "Preserving splits: $splits" }
+        logger.debug { "Preserving joins: $joins" }
+
+        model = MutableCausalNet(start = start, end = end)
+        val activeDependencies = directlyFollows.filterValues { it >= 1 }.keys
+        for (d in activeDependencies) {
+            model.addInstance(d.source)
+            model.addInstance(d.target)
+            model.addDependency(d)
+        }
+        val toReplay = window.uniqueSet()
+            .filter { trace -> trace.any { touchedActivities.contains(it) } }
+            .map { listOf(start) + it + listOf(end) }
+        val (newsplits, newjoins) = replayer.replayGroup(model, toReplay)
+        splits.addAll(newsplits)
+        joins.addAll(newjoins)
+        for (split in splits)
+            model.addSplit(split)
+        for (join in joins)
+            model.addJoin(join)
+    }
+
+    override fun processLog(log: Log) =
+        processDiff(log, Log(emptySequence()))
+
+}
