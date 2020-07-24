@@ -40,6 +40,7 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                 traces.map { trace ->
                     SearchState(
                         0.0,
+                        0.0,
                         0,
                         0,
                         true,
@@ -47,10 +48,11 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                             CausalNetStateImpl(),
                             listOf(),
                             listOf()
-                        ),
-                        trace
+                        )
                     )
-                })
+                },
+                traces
+            )
         )
         var ctr = 0
         var skipCtr = 0
@@ -75,8 +77,8 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                 logger.info ( "ctr=$ctr queue=${queue.size} ${currentComposite.features}" )
             var anyFailed = false
             var allFinished = true
-            for (current in currentComposite.base) {
-                if (current.produce && current.node == current.nodeTrace.size - 1) {
+            for ((traceIdx, current) in currentComposite.base.withIndex()) {
+                if (current.produce && current.node == traces[traceIdx].size - 1) {
                     if (current.trace.state.isNotEmpty()) {
                         //this is an invalid solution without any chances of improvement
                         anyFailed = true
@@ -101,11 +103,11 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
             logger.trace { "${currentComposite.parent}/$ctr ${currentComposite.position} features = ${currentComposite.features}" }
             var currentIdx = currentComposite.position
             //skip traces that finished successfully
-            while (currentComposite.base[currentIdx].node == currentComposite.base[currentIdx].nodeTrace.size - 1 && currentComposite.base[currentIdx].produce) {
+            while (currentComposite.base[currentIdx].node == traces[currentIdx].size - 1 && currentComposite.base[currentIdx].produce) {
                 currentIdx = (currentIdx + 1) % currentComposite.base.size
             }
             val current = currentComposite.base[currentIdx]
-            val trace = current.nodeTrace
+            val trace = traces[currentIdx]
             val currentNode = trace[current.node]
             val newLength = current.solutionLength + 1
             val newSearchStates = ArrayList<SearchState>()
@@ -124,11 +126,11 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                     newSearchStates.add(
                         SearchState(
                             newValue,
+                            0.0,
                             newLength,
                             current.node + 1,
                             false,
-                            newReplayTrace,
-                            trace
+                            newReplayTrace
                         )
                     )
                 }
@@ -148,11 +150,11 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                     newSearchStates.add(
                         SearchState(
                             newValue,
+                            0.0,
                             newLength,
                             current.node,
                             true,
-                            newReplayTrace,
-                            trace
+                            newReplayTrace
                         )
                     )
                 }
@@ -180,7 +182,8 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                                 left,
                                 ss,
                                 right
-                            )
+                            ),
+                            traces
                         )
                     )
                 }

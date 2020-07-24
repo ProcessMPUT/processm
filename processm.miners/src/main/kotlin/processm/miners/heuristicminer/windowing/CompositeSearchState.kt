@@ -2,6 +2,7 @@ package processm.miners.heuristicminer.windowing
 
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.ActiveDependencies
+import processm.miners.heuristicminer.NodeTrace
 
 data class CompositeSearchState(
     val position: Int,
@@ -11,13 +12,14 @@ data class CompositeSearchState(
     val havingSomeJoin: Set<Node>,
     val havingSomeSplit: Set<Node>,
     val allActivities: Set<Node>,
-    val base: List<SearchState>
+    val base: List<SearchState>,
+    val traces: List<NodeTrace>
 ) : HasFeatures() {
 
     override val features: List<Double>
 
     init {
-        val progress = base.map { -it.node / it.nodeTrace.size.toDouble() }
+        val progress = (base zip traces).map { (s, t) -> -s.node / t.size.toDouble() }
         val greediness = base.sumByDouble { -it.totalGreediness / it.solutionLength }
         features = listOf(countUniqueBindings().toDouble(), greediness)
     }

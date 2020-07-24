@@ -1,7 +1,6 @@
 package processm.miners.heuristicminer.windowing
 
 import ch.qos.logback.classic.Level
-import com.sun.xml.bind.v2.runtime.unmarshaller.XsiNilLoader
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -13,9 +12,6 @@ import processm.miners.heuristicminer.Helper
 import processm.miners.heuristicminer.Helper.logFromModel
 import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.NodeTrace
-import processm.miners.heuristicminer.windowing.Replayer
-import processm.miners.heuristicminer.windowing.SingleReplayer
-import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.math.max
@@ -30,19 +26,6 @@ class WindowingHeuristicMinerTest {
 //        (hm.logger() as ch.qos.logback.classic.Logger).level = Level.WARN
 //    }
 
-    @Test
-    fun diamond() {
-        val log = Helper.logFromString(
-            """
-                a b c d
-                a c b d 
-            """.trimIndent()
-        )
-        val hm = WindowingHeuristicMiner()
-        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        hm.processLog(log)
-        println(hm.result)
-    }
 
     val a = Node("a")
     val b1 = Node("b1")
@@ -105,18 +88,6 @@ class WindowingHeuristicMinerTest {
         test(log, hm.result)
     }
 
-    @Test
-    fun `loops prove that a run-all-consume-all strategy is not enough`() {
-        val log = logFromString("""
-            a b c
-            a b b c
-            a b b b c
-        """.trimIndent())
-        val hm = WindowingHeuristicMiner()
-        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        hm.processDiff(log, Log(emptySequence()))
-        println(hm.result)
-    }
 
     /*
     @Test
@@ -196,13 +167,16 @@ class WindowingHeuristicMinerTest {
         val traces = log.traces
             .map { listOf(hm.result.start) + hm.traceToNodeTrace(it) + listOf(hm.result.end) }
             .toList()
-        replayer.replay(hm.result, traces[0])
+        for(i in 0 until 100) {
+            println(i)
+            replayer.replay(hm.result, traces[i])
+        }
     }
 
     @InMemoryXESProcessing
     @Test
     fun `real logs`() {
-//        val files = listOf("../xes-logs/BPIC15_2f.xes.gz", "../xes-logs/BPIC15_4f.xes.gz", "../xes-logs/Sepsis_Cases-Event_Log.xes.gz")
+//        val files = listOf("../xes-logs/BPIC15_2f.xes.gz", "../xes-logs/BPIC15_4f.xes.gz")
 //        val files = listOf("../xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz",
 //            "../xes-logs/nasa-cev-complete-splitted.xes.gz"
 //        )
@@ -220,30 +194,5 @@ class WindowingHeuristicMinerTest {
         }
     }
 
-    @Test
-    fun test() {
-        val log = logFromString("m w o m w o w m o")
-        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
-        hm.processLog(log)
-        println(hm.result)
-    }
 
-    @Test
-    fun test2() {
-        val log = logFromString("a b b a c a c")
-        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
-        hm.processLog(log)
-        println(hm.result)
-    }
-
-    @Test
-    fun test3() {
-        val log=logFromString("Leucocytes CRP ERRegistration ERTriage ERSepsisTriage IVLiquid IVAntibiotics CRP Leucocytes LacticAcid AdmissionNC Leucocytes LacticAcid AdmissionNC Leucocytes CRP AdmissionIC LacticAcid Leucocytes CRP ReleaseB")
-        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
-        hm.processLog(log)
-        println(hm.result)
-    }
 }
