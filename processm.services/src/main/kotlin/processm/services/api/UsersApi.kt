@@ -15,6 +15,10 @@ import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
 import io.ktor.routing.*
 import org.koin.ktor.ext.inject
+import processm.core.logging.enter
+import processm.core.logging.exit
+import processm.core.logging.loggedScope
+import processm.core.logging.logger
 import processm.services.api.models.*
 import processm.services.logic.AccountService
 import java.time.Duration
@@ -30,41 +34,43 @@ fun Route.UsersApi() {
 
     route("/users/session") {
         post {
-            val credentials = call.receiveOrNull<UserCredentialsMessageBody>()?.data
+            loggedScope { logger ->
+                val credentials = call.receiveOrNull<UserCredentialsMessageBody>()?.data
 
-            when {
-                credentials != null -> {
-                    val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
-                        ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
-                    val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
-                        .map { it.organization.id to OrganizationRole.valueOf(it.role.roleName) }.toMap()
-                    val token = JwtAuthentication.createToken(
-                        user.id,
-                        user.email,
-                        userRolesInOrganizations,
-                        Instant.now().plus(jwtTokenTtl),
-                        jwtIssuer,
-                        jwtSecret)
+                when {
+                    credentials != null -> {
+                        val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
+                                   ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
+                        val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
+                            .map { it.organization.id to OrganizationRole.valueOf(it.role.roleName) }
+                            .toMap()
+                        val token = JwtAuthentication.createToken(
+                            user.id,
+                            user.email,
+                            userRolesInOrganizations,
+                            Instant.now().plus(jwtTokenTtl),
+                            jwtIssuer,
+                            jwtSecret)
 
-                    call.respond(
-                        HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token))
-                    )
-                }
-                call.request.authorization() != null -> {
-                    val authorizationHeader =
-                        call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
-                            "Invalid authorization token format", HttpStatusCode.Unauthorized
-                        )
-                    val prolongedToken = JwtAuthentication.verifyAndProlongToken(
-                        authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl
-                    )
+                        logger.debug("The user ${user.id} has successfully logged in")
+                        call.respond(
+                            HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token)))
+                    }
+                    call.request.authorization() != null -> {
+                        val authorizationHeader =
+                            call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
+                                "Invalid authorization token format", HttpStatusCode.Unauthorized)
+                        val prolongedToken = JwtAuthentication.verifyAndProlongToken(
+                            authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl)
 
-                    call.respond(
-                        HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(prolongedToken))
-                    )
-                }
-                else -> {
-                    throw ApiException("Either user credentials or authentication token needs to be provided")
+                        logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
+                        call.respond(
+                            HttpStatusCode.Created,
+                            AuthenticationResultMessageBody(AuthenticationResult(prolongedToken)))
+                    }
+                    else -> {
+                        throw ApiException("Either user credentials or authentication token needs to be provided")
+                    }
                 }
             }
         }
@@ -72,12 +78,16 @@ fun Route.UsersApi() {
 
     route("/users") {
         post {
-            val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
-                ?: throw ApiException("The provided account details cannot be parsed")
-            val locale = call.request.acceptLanguageItems().getOrNull(0)
+            loggedScope { logger ->
+                val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
+                                  ?: throw ApiException("The provided account details cannot be parsed")
+                val locale = call.request.acceptLanguageItems().getOrNull(0)
 
-            accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName, locale?.value)
-            call.respond(HttpStatusCode.Created)
+                accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName, locale?.value)
+
+                logger.info("A new organization account for ${accountInfo.organizationName} has been successfully created")
+                call.respond(HttpStatusCode.Created)
+            }
         }
     }
 
@@ -98,19 +108,19 @@ fun Route.UsersApi() {
         route("/users/me") {
             route("/password") {
                 patch {
-                    val principal = call.authentication.principal<ApiUser>()!!
-                    val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
-                        ?: throw ApiException("The provided password data cannot be parsed")
+                    loggedScope { logger ->
+                        val principal = call.authentication.principal<ApiUser>()!!
+                        val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
+                                           ?: throw ApiException("The provided password data cannot be parsed")
 
-                    if (accountService.changePassword(
-                            principal.userId, passwordData.currentPassword, passwordData.newPassword
-                        )
-                    ) {
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(
-                            HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed")
-                        )
+                        if (accountService.changePassword(
+                                principal.userId, passwordData.currentPassword, passwordData.newPassword)) {
+                            logger.info("The user ${principal.userId} has successfully changed his password")
+                            call.respond(HttpStatusCode.OK)
+                        } else {
+                            call.respond(
+                                HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed"))
+                        }
                     }
                 }
             }
@@ -142,9 +152,12 @@ fun Route.UsersApi() {
         }
 
         delete<Paths.UserOut> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
+            loggedScope { logger ->
+                val principal = call.authentication.principal<ApiUser>()!!
 
-            call.respond(HttpStatusCode.NoContent)
+                logger.debug("The user ${principal.userId} has successfully logged out")
+                call.respond(HttpStatusCode.NoContent)
+            }
         }
     }
 }
