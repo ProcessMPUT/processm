@@ -1,5 +1,10 @@
 <template>
-  <v-treeview dense open-on-click :items="items" :load-children="fetchUsers"></v-treeview>
+  <v-treeview
+    dense
+    open-on-click
+    :items="items"
+    :load-children="fetchUsers"
+  ></v-treeview>
 </template>
 
 <script lang="ts">
