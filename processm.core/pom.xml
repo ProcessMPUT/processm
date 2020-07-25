@@ -147,7 +147,7 @@
                 <!-- common configuration shared by all executions -->
                 <configuration>
                     <driver>org.postgresql.Driver</driver>
-                    <url>${env.PROCESSM_CORE_PERSISTENCE_CONNECTION_URL}</url>
+                    <url>${env.PROCESSM_CORE_PERSISTENCE_CONNECTION_URL_FOR_MVN_CREATE_DB}</url>
                     <!--all executions are ignored if -Dmaven.test.skip=true-->
                     <!--<skip>${maven.test.skip}</skip>-->
                 </configuration>
