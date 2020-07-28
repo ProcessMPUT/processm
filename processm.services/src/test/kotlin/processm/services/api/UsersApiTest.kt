@@ -427,4 +427,13 @@ class UsersApiTest : BaseApiTest() {
 
             verify { accountService.getRolesAssignedToUser(userId = any()) }
         }
+
+    @Test
+    fun `responds to user session termination attempt with 204`() = withConfiguredTestApplication {
+        withAuthentication {
+            with(handleRequest(HttpMethod.Delete, "/api/users/session")) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
+            }
+        }
+    }
 }
