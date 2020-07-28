@@ -45,20 +45,14 @@ fun Route.WorkspacesApi() {
             }
         }
 
-        delete<Paths.deleteWorkspace> { workspace: Paths.deleteWorkspace ->
+        delete<Paths.Workspace> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
             val removedWorkspacesCount = workspaceService.removeWorkspace(workspace.workspaceId, principal.userId, workspace.organizationId)
 
             call.respond(if (removedWorkspacesCount > 0) HttpStatusCode.NoContent else HttpStatusCode.NotFound)
         }
 
-        get<Paths.getWorkspace> { _: Paths.getWorkspace ->
-            val principal = call.authentication.principal<ApiUser>()
-
-            call.respond(HttpStatusCode.NotImplemented)
-        }
-
-        get<Paths.getWorkspaces> { workspace: Paths.getWorkspaces ->
+        get<Paths.Workspaces> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaces = workspaceService.getUserWorkspaces(principal.userId, workspace.organizationId)
                     .map { Workspace(it.name, it.id) }.toTypedArray()
@@ -67,7 +61,7 @@ fun Route.WorkspacesApi() {
         }
 
 
-        route("/workspaces/{workspaceId}") {
+        route("/organizations/{organizationId}/workspaces/{workspaceId}") {
             put {
                 val principal = call.authentication.principal<ApiUser>()
 
@@ -75,19 +69,19 @@ fun Route.WorkspacesApi() {
             }
         }
 
-        get<Paths.getWorkspaceComponent> { _: Paths.getWorkspaceComponent ->
+        get<Paths.WorkspaceComponent> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
-        get<Paths.getWorkspaceComponentData> { _: Paths.getWorkspaceComponentData ->
+        get<Paths.WorkspaceComponentData> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
-        get<Paths.getWorkspaceComponents> { workspace: Paths.getWorkspaceComponents ->
+        get<Paths.WorkspaceComponents> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
             val components = workspaceService.getWorkspaceComponents(workspace.workspaceId)
                 .mapToArray {

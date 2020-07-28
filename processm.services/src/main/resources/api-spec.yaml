@@ -9,7 +9,7 @@ tags:
   - name: users
     description: User registration and session management
   - name: workspaces
-    description: User workspace management
+    description: User workspaces management
   - name: groups
     description: User groups and groups membership management
   - name: organizations
@@ -23,7 +23,7 @@ paths:
       operationId: getUsers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -44,7 +44,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -71,7 +71,7 @@ paths:
         required: false
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -100,7 +100,7 @@ paths:
       operationId: getUserAccountDetails
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -122,7 +122,7 @@ paths:
         required: true
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -144,7 +144,7 @@ paths:
         required: true
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -155,11 +155,11 @@ paths:
     get:
       tags:
         - users
-      summary: Get organizations which the current user is member of
+      summary: Get organizations which the current user is a member of
       operationId: getUserOrganizations
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -184,7 +184,7 @@ paths:
       operationId: getWorkspaces
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -205,7 +205,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -237,7 +237,7 @@ paths:
       operationId: getWorkspace
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -262,7 +262,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -276,7 +276,7 @@ paths:
       operationId: deleteWorkspace
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -406,11 +406,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get groups belonging to user organization
+      summary: Get groups belonging to the current user's organization
       operationId: getGroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -431,7 +431,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -452,11 +452,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get specified group
+      summary: Get the specified group
       operationId: getGroup
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -479,7 +479,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -493,7 +493,7 @@ paths:
       operationId: removeGroup
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -512,11 +512,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get members of specified group
+      summary: Get members of the specified group
       operationId: getGroupMembers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -526,7 +526,7 @@ paths:
     post:
       tags:
         - groups
-      summary: Add new member to group
+      summary: Add new member to the specified group
       operationId: addGroupMember
       requestBody:
         description: New member ID
@@ -539,7 +539,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -565,11 +565,11 @@ paths:
     delete:
       tags:
         - groups
-      summary: Remove member from group
+      summary: Remove member from the specified group
       operationId: removeGroupMember
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -588,11 +588,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get subgroups of specified group
+      summary: Get subgroups of the specified group
       operationId: getSubgroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -613,7 +613,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -641,11 +641,11 @@ paths:
     delete:
       tags:
         - groups
-      summary: Remove speciified subgroup
+      summary: Remove the specified subgroup
       operationId: removeSubgroup
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -660,7 +660,7 @@ paths:
       operationId: getOrganizations
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -681,7 +681,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -700,11 +700,11 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get specified organization
+      summary: Get the specified organization
       operationId: getOrganization
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -727,7 +727,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -737,11 +737,11 @@ paths:
     delete:
       tags:
         - organizations
-      summary: Remove specified organization
+      summary: Remove the specified organization
       operationId: removeOrganization
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -760,11 +760,11 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get members of specified organization
+      summary: Get members of the specified organization
       operationId: getOrganizationMembers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -780,7 +780,7 @@ paths:
     post:
       tags:
         - organizations
-      summary: Add new member to organization
+      summary: Add new member to the specified organization
       operationId: addOrganizationMember
       requestBody:
         description: New member username
@@ -792,7 +792,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -818,11 +818,11 @@ paths:
     delete:
       tags:
         - organizations
-      summary: Remove member from organization
+      summary: Remove member from the specified organization
       operationId: removeOrganizationMember
       responses:
         '204':
-          description: successful operation
+          description: uccessful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -841,11 +841,11 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get groups associated with the organization
+      summary: Get groups associated with the specified organization
       operationId: getOrganizationGroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -863,7 +863,7 @@ components:
       required: [error]
       properties:
         error:
-          description: error details
+          description: Error details
           type: string
     OrganizationRole:
       type: string
@@ -951,6 +951,7 @@ components:
       properties:
         locale:
           type: string
+          description: New locale settings in ICU format
     LocaleChangeMessageBody:
       type: object
       required: [data]
@@ -1187,6 +1188,7 @@ components:
           type: string
         isImplicit:
           type: boolean
+          description: Indicates whether the group was explicitly created by a user or implicitly created by the system (default groups)
         organizationId:
           type: string
           format: uuid
@@ -1217,8 +1219,10 @@ components:
           type: string
         contact:
           type: string
+          description: An address associated with the organization
         isPrivate:
           type: boolean
+          description: Indicates whether the organization can be accessed by ancestral organizations members
     OrganizationMessageBody:
       type: object
       required: [data]
@@ -1235,31 +1239,31 @@ components:
             $ref: '#/components/schemas/Organization'
   responses:
     BadRequest:
-      description: invalid request body
+      description: Invalid request body
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Unauthorized:
-      description: user not authenticated
+      description: The user is not authenticated
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Forbidden:
-      description: user not authorized
+      description: The user is not authorized
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     NotFound:
-      description: specified resource was not found
+      description: The specified resource was not found
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
-      description: resource with sepcified identifier already exists
+      description: The resource with the sepcified identifier already exists
       content:
         'application/json':
           schema:

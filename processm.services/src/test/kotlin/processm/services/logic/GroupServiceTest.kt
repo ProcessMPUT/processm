@@ -22,9 +22,8 @@ class GroupServiceTest : ServiceTestBase() {
     lateinit var groupService: GroupService
 
     @Test
-    fun `attachment of user to group throws if nonexistent user`(): Unit = withCleanTables(Organizations, UserGroups, Users) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(organizationId.value)
+    fun `attachment of user to group throws if nonexistent user`(): Unit = withCleanTables(UserGroups, Users) {
+        val groupId = createGroup()
         val userId = UUID.randomUUID()
 
         val exception = assertFailsWith<ValidationException>("Specified user or organization does not exist") {
@@ -48,8 +47,7 @@ class GroupServiceTest : ServiceTestBase() {
 
     @Test
     fun `attachment of already attached user to group returns`(): Unit = withCleanTables(Organizations, UserGroups, Users) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(organizationId.value)
+        val groupId = createGroup()
         val userId = createUser()
 
         assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
@@ -60,8 +58,7 @@ class GroupServiceTest : ServiceTestBase() {
 
     @Test
     fun `successful attachment of user to group returns`(): Unit = withCleanTables(Organizations, UserGroups, Users) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(organizationId.value)
+        val groupId = createGroup()
         val userId = createUser()
 
         assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
@@ -80,8 +77,7 @@ class GroupServiceTest : ServiceTestBase() {
 
     @Test
     fun `getting specified group returns`(): Unit = withCleanTables(Organizations, UserGroups) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(organizationId.value, name = "Group1")
+        val groupId = createGroup(name = "Group1")
 
         val group = assertNotNull(groupService.getGroup(groupId.value))
 
@@ -99,12 +95,11 @@ class GroupServiceTest : ServiceTestBase() {
 
     @Test
     fun `getting subgroups returns`(): Unit = withCleanTables(Organizations, UserGroups) {
-        val organizationId = createOrganization()
-        val groupId1 = createGroup(organizationId.value, name = "Group1")
-        val groupId2 = createGroup(organizationId.value, name = "Group2")
-        val subgroupId1 = createGroup(name = "Subgroup1", parentGroupId = groupId1.value, organizationId =  organizationId.value)
-        val subgroupId3 = createGroup(name = "Subgroup3", parentGroupId = groupId1.value, organizationId =  organizationId.value)
-        createGroup(name = "Subgroup2", parentGroupId = groupId2.value, organizationId =  organizationId.value)
+        val groupId1 = createGroup(name = "Group1")
+        val groupId2 = createGroup(name = "Group2")
+        val subgroupId1 = createGroup(name = "Subgroup1", parentGroupId = groupId1.value)
+        val subgroupId3 = createGroup(name = "Subgroup3", parentGroupId = groupId1.value)
+        createGroup(name = "Subgroup2", parentGroupId = groupId2.value)
 
         val subgroups = assertNotNull(groupService.getSubgroups(groupId1.value))
 

@@ -56,16 +56,15 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns all groups related to organization`(): Unit = withCleanTables(Organizations, UserGroups) {
-        val organizationId1 = createOrganization()
-        val organizationId2 = createOrganization()
-        val groupId1 = createGroup(organizationId1.value)
-        val groupId3 = createGroup(organizationId1.value)
-        createGroup(organizationId2.value)
+    fun `returns all groups related to organization`(): Unit = withCleanTables(UserGroups) {
+        val groupId1 = createGroup()
+        val groupId2 = createGroup()
+        val organizationId1 = createOrganization(sharedGroupId = groupId1.value)
+        createOrganization(sharedGroupId = groupId2.value)
+
 
         val organizationGroups = organizationService.getOrganizationGroups(organizationId1.value)
-        assertEquals(2, organizationGroups.count())
+        assertEquals(1, organizationGroups.count())
         assertTrue { organizationGroups.any { it.id == groupId1.value } }
-        assertTrue { organizationGroups.any { it.id == groupId3.value } }
     }
 }

@@ -2,6 +2,8 @@ package processm.core.logging
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
+import java.lang.Exception
+import kotlin.math.log
 import kotlin.reflect.full.companionObject
 
 /**
@@ -17,6 +19,25 @@ fun <T : Any> getClassForLogging(javaClass: Class<T>): Class<*> {
  * Returns the logger for the current scope.
  */
 inline fun <reified T : Any> T.logger(): Logger = getLogger(getClassForLogging(T::class.java))
+
+/**
+ * Logs trace message before and after execution of the given logic.
+ */
+inline fun <reified T : Any, TResult> T.loggedScope(logExceptions: Boolean = false, scopeLogic: T.(logger: Logger) -> TResult): TResult {
+    val logger = logger()
+
+    try {
+        logger.enter()
+        return scopeLogic(logger)
+    }
+    catch (e :Exception) {
+        if (logExceptions) logger.error("$e")
+        throw e
+    }
+    finally {
+        logger.exit()
+    }
+}
 
 /**
  * Logs on TRACE level the entrance to a function.

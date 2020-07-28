@@ -99,6 +99,7 @@ export default class Registration extends Vue {
         this.messageTimeout
       );
     } catch (error) {
+      console.error(error);
       this.errorMessage = true;
     }
   }

@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.logging.loggedScope
 import processm.core.persistence.DBConnectionPool
 import processm.services.ilike
 import processm.services.models.*
@@ -16,76 +17,91 @@ class AccountService(private val groupService: GroupService) {
     private val passwordVerifier = jargon2Verifier()
     private val defaultLocale = Locale.UK
 
-    fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
-        val user = User.find(Users.email ilike username).firstOrNull() ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
-        )
+    fun verifyUsersCredentials(username: String, password: String) =
+        loggedScope { logger ->
+            transaction(DBConnectionPool.database) {
+                val user = User.find(Users.email ilike username).firstOrNull()
 
-        if (verifyPassword(password, user.password)) user.toDto() else null
-    }
+                if (user == null) {
+                    logger.debug("The specified username ${username} is unknown and cannot be verified")
+                    throw ValidationException(
+                        ValidationException.Reason.ResourceNotFound, "The specified user account does not exist")
+                }
 
-    fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null) {
-        transaction(DBConnectionPool.database) {
-            val organizationsCount = Organizations.select { Organizations.name eq organizationName }.limit(1).count()
-            val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
-
-            if (usersCount > 0 || organizationsCount > 0) {
-                throw ValidationException(
-                    ValidationException.Reason.ResourceAlreadyExists,
-                    "User and/or organization with specified email already exists"
-                )
-            }
-            //TODO: registered accounts should be stored as "pending' until confirmed
-            // user password should be specified upon successful confirmation
-            // user creation should be moved to a separate method
-
-            // automatically created group for the particular user
-            val privateGroupId = UserGroups.insertAndGetId {
-                it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Owner)
-                it[isImplicit] = true
-            }
-            // automatically created group for all users
-            val sharedGroupId = UserGroups.insertAndGetId {
-                it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Reader)
-                it[isImplicit] = true
-            }
-            val organizationId = Organizations.insertAndGetId {
-                it[name] = organizationName
-                it[isPrivate] = false
-                it[this.sharedGroupId] = sharedGroupId
-            }
-            val userId = Users.insertAndGetId {
-                it[email] = userEmail
-                it[password] = calculatePasswordHash("pass")
-                it[locale] = accountLocale ?: defaultLocale.toString()
-                it[this.privateGroupId] = privateGroupId
-            }
-
-            groupService.attachUserToGroup(userId.value, sharedGroupId.value)
-            groupService.attachUserToGroup(userId.value, privateGroupId.value)
-            UsersRolesInOrganizations.insert {
-                it[this.userId] = userId
-                it[this.organizationId] = organizationId
-                it[roleId] = OrganizationRoles.getIdByName(OrganizationRoleDto.Owner)
+                return@transaction if (verifyPassword(password, user.password)) user.toDto() else null
             }
         }
-    }
+
+    fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null): Unit =
+        loggedScope { logger ->
+            transaction(DBConnectionPool.database) {
+                val organizationsCount =
+                    Organizations.select { Organizations.name eq organizationName }.limit(1).count()
+                val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
+
+                if (usersCount > 0 || organizationsCount > 0) {
+                    throw ValidationException(
+                        ValidationException.Reason.ResourceAlreadyExists,
+                        "The specified user and/or organization already exists")
+                }
+                //TODO: registered accounts should be stored as "pending' until confirmed
+                // user password should be specified upon successful confirmation
+                // user creation should be moved to a separate method
+
+                // automatically created group for the particular user
+                val privateGroupId = UserGroups.insertAndGetId {
+                    it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Owner)
+                    it[isImplicit] = true
+                }
+                // automatically created group for all users
+                val sharedGroupId = UserGroups.insertAndGetId {
+                    it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Reader)
+                    it[isImplicit] = true
+                }
+                val organizationId = Organizations.insertAndGetId {
+                    it[name] = organizationName
+                    it[isPrivate] = false
+                    it[this.sharedGroupId] = sharedGroupId
+                }
+                val userId = Users.insertAndGetId {
+                    it[email] = userEmail
+                    it[password] = calculatePasswordHash("pass")
+                    it[locale] = accountLocale ?: defaultLocale.toString()
+                    it[this.privateGroupId] = privateGroupId
+                }
+
+                logger.debug("A new organization account has been created with organization $organizationId and user $userId")
+                // automatically created group for all users
+                // this should be eventually moved to a separate method together with the logic above
+                groupService.attachUserToGroup(userId.value, sharedGroupId.value)
+                groupService.attachUserToGroup(userId.value, privateGroupId.value)
+                UsersRolesInOrganizations.insert {
+                    it[this.userId] = userId
+                    it[this.organizationId] = organizationId
+                    it[roleId] = OrganizationRoles.getIdByName(OrganizationRoleDto.Owner)
+                }
+            }
+        }
 
     fun getAccountDetails(userId: UUID) = transaction(DBConnectionPool.database) {
         getUserDao(userId).toDto()
     }
 
     fun changePassword(userId: UUID, currentPassword: String, newPassword: String) =
-        transaction(DBConnectionPool.database) {
-            val user = getUserDao(userId)
+        loggedScope { logger ->
+            transaction(DBConnectionPool.database) {
+                val user = getUserDao(userId)
 
-            if (!verifyPassword(currentPassword, user.password)) {
-                return@transaction false
+                if (!verifyPassword(currentPassword, user.password)) {
+                    logger.debug("A user password cannot be changed for user $userId due to an invalid current password")
+                    return@transaction false
+                }
+
+                user.password = calculatePasswordHash(newPassword)
+                logger.debug("A user password has been successfully changed for the user $userId")
+
+                return@transaction true
             }
-
-            user.password = calculatePasswordHash(newPassword)
-
-            return@transaction true
         }
 
     fun changeLocale(userId: UUID, locale: String) = transaction(DBConnectionPool.database) {
@@ -118,7 +134,7 @@ class AccountService(private val groupService: GroupService) {
 
     private fun getUserDao(userId: UUID) = transaction(DBConnectionPool.database) {
         User.findById(userId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
+            ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
         )
     }
 

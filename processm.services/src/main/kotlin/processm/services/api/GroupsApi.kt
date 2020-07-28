@@ -56,21 +56,24 @@ fun Route.GroupsApi() {
             }
         }
 
-        get<Paths.getGroup> { group: Paths.getGroup ->
+
+        get<Paths.Group> { group ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val userGroup = groupService.getGroup(group.groupId)
             val organization = getOrganizationRelatedToGroup(group.groupId)
 
             if (!principal.organizations.containsKey(organization.id)) {
-                throw ApiException("User is not member of organization containing group with provided id", HttpStatusCode.Forbidden)
+                throw ApiException("The user is not a member of an organization containing the group with the provided id", HttpStatusCode.Forbidden)
             }
 
+            val userGroup = groupService.getGroup(group.groupId)
+
             call.respond(
-                HttpStatusCode.OK, GroupMessageBody(Group(userGroup.name ?: "", userGroup.isImplicit, UUID.randomUUID(), GroupRole.reader, userGroup.id))
+                HttpStatusCode.OK, GroupMessageBody(Group(userGroup.name ?: "", userGroup.isImplicit, organization.id, GroupRole.reader, userGroup.id))
             )
         }
 
-        get<Paths.getGroupMembers> { _: Paths.getGroupMembers ->
+
+        get<Paths.GroupMembers> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             if (principal == null) {
@@ -80,7 +83,8 @@ fun Route.GroupsApi() {
             }
         }
 
-        get<Paths.getGroups> { _: Paths.getGroups ->
+
+        get<Paths.Groups> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             if (principal == null) {
@@ -90,22 +94,24 @@ fun Route.GroupsApi() {
             }
         }
 
-        get<Paths.getSubgroups> { group: Paths.getSubgroups ->
+
+        get<Paths.Subgroups> { subgroups ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val organization = getOrganizationRelatedToGroup(group.groupId)
+            val organization = getOrganizationRelatedToGroup(subgroups.groupId)
 
             if (!principal.organizations.containsKey(organization.id)) {
-                throw ApiException("User is not member of organization containing group with provided id", HttpStatusCode.Forbidden)
+                throw ApiException("The user is not a member of an organization containing the group with the provided id", HttpStatusCode.Forbidden)
             }
 
-            val subgroups = groupService.getSubgroups(group.groupId)
-                .map { Group(it.name ?: "", it.isImplicit, UUID.randomUUID(), GroupRole.reader, it.id) }
+            val groups = groupService.getSubgroups(subgroups.groupId)
+                .map { Group(it.name ?: "", it.isImplicit, organization.id, GroupRole.reader, it.id) }
                 .toTypedArray()
 
-            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(subgroups))
+            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(groups))
         }
 
-        delete<Paths.removeGroup> { _: Paths.removeGroup ->
+
+        delete<Paths.Group> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             if (principal == null) {
@@ -115,13 +121,15 @@ fun Route.GroupsApi() {
             }
         }
 
-        delete<Paths.removeGroupMember> { _: Paths.removeGroupMember ->
+
+        delete<Paths.GroupMember> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
-        delete<Paths.removeSubgroup> { _: Paths.removeSubgroup ->
+
+        delete<Paths.Subgroup> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)

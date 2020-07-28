@@ -87,6 +87,7 @@ export default class Login extends Vue {
       this.setCurrentOrganization(organizations);
       this.$router.push({ name: "home" });
     } catch (error) {
+      console.error(error);
       this.errorMessage = true;
     }
   }
@@ -102,11 +103,17 @@ export default class Login extends Vue {
       //TODO: the current user is associated with more than one organization,
       //display a modal which allows the user to chooose the organization context
       this.$sessionStorage.currentOrganizationIndex = 0; // temporary: always choose the first organization
+      console.error(
+        `Not implemented: the current user is associated with ${userOrganizations.length} organizations; the first one was automatically selected.`
+      );
     } else if (userOrganizations.length == 1) {
       this.$sessionStorage.currentOrganizationIndex = 0;
     } else {
       //TODO: user is not assigned to any organization
       //display the error on the global snackbar
+      console.error(
+        "Not implemented: the user is not associated with any organization."
+      );
     }
   }
 }
