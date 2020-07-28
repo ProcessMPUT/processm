@@ -35,6 +35,8 @@ fun Route.WorkspacesApi() {
                     throw ApiException("'organizationId' parameter needs to be specified when creating new workspace", HttpStatusCode.BadRequest)
                 }
 
+                principal.ensureUserBelongsToOrganization(organizationId)
+
                 if (workspace == null || workspace.name.isEmpty()) {
                     throw ApiException("Workspace name needs to be specified when creating new workspace", HttpStatusCode.BadRequest)
                 }
@@ -47,6 +49,9 @@ fun Route.WorkspacesApi() {
 
         delete<Paths.Workspace> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
+
+            principal.ensureUserBelongsToOrganization(workspace.organizationId, OrganizationRole.writer)
+
             val removedWorkspacesCount = workspaceService.removeWorkspace(workspace.workspaceId, principal.userId, workspace.organizationId)
 
             call.respond(if (removedWorkspacesCount > 0) HttpStatusCode.NoContent else HttpStatusCode.NotFound)

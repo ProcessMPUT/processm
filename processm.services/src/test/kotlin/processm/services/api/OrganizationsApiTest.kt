@@ -36,7 +36,9 @@ class OrganizationsApiTest : BaseApiTest() {
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
+        HttpMethod.Get to "/api/organizations",
         HttpMethod.Post to "/api/organizations",
+        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
@@ -95,7 +97,7 @@ class OrganizationsApiTest : BaseApiTest() {
             with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/groups")) {
                 assertEquals(HttpStatusCode.Forbidden, response.status())
                 assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of the organization with the provided id"))
+                    .contains("The user is not a member of the related organization"))
             }
         }
     }
@@ -165,7 +167,7 @@ class OrganizationsApiTest : BaseApiTest() {
             with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/members")) {
                 assertEquals(HttpStatusCode.Forbidden, response.status())
                 assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of the organization with the provided id"))
+                    .contains("The user is not a member of the related organization"))
             }
         }
     }

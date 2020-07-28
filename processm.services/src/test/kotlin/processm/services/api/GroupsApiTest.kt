@@ -120,7 +120,7 @@ class GroupsApiTest : BaseApiTest() {
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.Forbidden, response.status())
                 assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of an organization containing the group with the provided id"))
+                    .contains("The user is not a member of the related organization"))
             }
         }
     }
@@ -163,7 +163,7 @@ class GroupsApiTest : BaseApiTest() {
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                 assertEquals(HttpStatusCode.Forbidden, response.status())
                 assertTrue { response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of an organization containing the group with the provided id") }
+                    .contains("The user is not a member of the related organization") }
             }
         }
     }
