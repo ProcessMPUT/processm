@@ -56,7 +56,7 @@
         <bpmn2:resourceRef>bpmn2:Bpmn_Resource_6vVHsLHzEeS1nbPdxxCzlg</bpmn2:resourceRef>
       </bpmn2:potentialOwner>
     </bpmn2:userTask>
-    <bpmn2:userTask id="reviewInvoice" name="Rechnung klären" implementation="##unspecified">
+    <bpmn2:userTask id="reviewInvoice" name="Rechnung klÃ¤ren" implementation="##unspecified">
       <bpmn2:incoming>invoiceNotApproved</bpmn2:incoming>
       <bpmn2:outgoing>sequenceFlow_183</bpmn2:outgoing>
       <bpmn2:ioSpecification id="Bpmn_InputOutputSpecification_dB6xs7H1EeSuDf0W70XLGw">

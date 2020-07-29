@@ -94,7 +94,7 @@
       <bpmn2:incoming>_JSBnch8wEeW9keBtFZy97Q</bpmn2:incoming>
       <bpmn2:outgoing>_JSBndB8wEeW9keBtFZy97Q</bpmn2:outgoing>
     </bpmn2:userTask>
-    <bpmn2:userTask id="_JSBnZR8wEeW9keBtFZy97Q" name="Rechnung klären" implementation="##unspecified">
+    <bpmn2:userTask id="_JSBnZR8wEeW9keBtFZy97Q" name="Rechnung klÃ¤ren" implementation="##unspecified">
       <bpmn2:incoming>_JSBndR8wEeW9keBtFZy97Q</bpmn2:incoming>
       <bpmn2:outgoing>_JSBndh8wEeW9keBtFZy97Q</bpmn2:outgoing>
     </bpmn2:userTask>
