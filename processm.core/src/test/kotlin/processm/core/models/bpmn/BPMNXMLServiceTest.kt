@@ -83,7 +83,7 @@ class BPMNXMLServiceTest {
         return nonStrictFiles
             .map {
                 DynamicTest.dynamicTest(it.path.replace(base, "")) {
-                    val (value, warnings) = BPMNXMLService.load(it.inputStream())
+                    val (_: Any?, warnings) = BPMNXMLService.load(it.inputStream())
                     assertTrue { warnings.isNotEmpty() }
                 }
             }
@@ -97,7 +97,7 @@ class BPMNXMLServiceTest {
             .map {
                 DynamicTest.dynamicTest(it.path.replace(base, ""))
                 {
-                    val (value, warnings) = BPMNXMLService.load(it.inputStream())
+                    val (_: Any?, warnings) = BPMNXMLService.load(it.inputStream())
                     assertTrue { warnings.isEmpty() }
                 }
             }.toList()

@@ -17,7 +17,6 @@
     <name>ProcessM Core</name>
 
     <properties>
-        <dbname></dbname>
         <dbschema>public</dbschema>
     </properties>
 
@@ -148,7 +147,7 @@
                 <!-- common configuration shared by all executions -->
                 <configuration>
                     <driver>org.postgresql.Driver</driver>
-                    <url>${env.processm_core_persistence_connection_URL}</url>
+                    <url>${env.PROCESSM_CORE_PERSISTENCE_CONNECTION_URL_FOR_MVN_CREATE_DB}</url>
                     <!--all executions are ignored if -Dmaven.test.skip=true-->
                     <!--<skip>${maven.test.skip}</skip>-->
                 </configuration>
@@ -171,28 +170,28 @@
                     </execution>
                     <execution>
                         <!-- Called by TeamCity before tests to prepare database.
-                        Requires property dbname to be set by command line. -->
+                        Requires property DBNAME to be set by command line. -->
                         <id>create-db</id>
                         <phase>none</phase>
                         <goals>
                             <goal>execute</goal>
                         </goals>
                         <configuration>
-                            <sqlCommand>CREATE DATABASE "${dbname}" OWNER DEFAULT;</sqlCommand>
+                            <sqlCommand>CREATE DATABASE "${env.DBNAME}" OWNER DEFAULT;</sqlCommand>
                             <autocommit>true</autocommit>
                             <onError>abort</onError>
                         </configuration>
                     </execution>
                     <execution>
                         <!-- Called by TeamCity before tests to prepare database.
-                        Requires property dbname to be set by command line. -->
+                        Requires property DBNAME to be set by command line. -->
                         <id>drop-db</id>
                         <phase>none</phase>
                         <goals>
                             <goal>execute</goal>
                         </goals>
                         <configuration>
-                            <sqlCommand>DROP DATABASE "${dbname}";</sqlCommand>
+                            <sqlCommand>DROP DATABASE "${env.DBNAME}";</sqlCommand>
                             <autocommit>true</autocommit>
                             <onError>abort</onError>
                         </configuration>
