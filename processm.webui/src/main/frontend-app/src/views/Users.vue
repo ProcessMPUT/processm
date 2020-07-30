@@ -51,7 +51,7 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
-import { OrganizationMember } from "@/openapi/model";
+import { OrganizationMember } from "@/openapi";
 import UserList from "./UserList.vue";
 import UserGroupList from "./UserGroupList.vue";
 
