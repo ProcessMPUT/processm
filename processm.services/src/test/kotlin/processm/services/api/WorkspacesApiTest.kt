@@ -1,9 +1,6 @@
 package processm.services.api
 
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Test

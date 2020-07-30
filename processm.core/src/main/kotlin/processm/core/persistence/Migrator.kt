@@ -19,7 +19,7 @@ object Migrator {
         logger().enter()
 
         logger().debug("Migrating database if required")
-        val url = System.getProperty("processm.core.persistence.connection.URL")
+        val url = System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
         val conf = Flyway.configure().dataSource(url, null, null)
         applyDefaultSchema(conf, url)
         val flyway = conf.load()

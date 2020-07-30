@@ -89,8 +89,9 @@ object Paths {
     @Location("/organizations/{organizationId}/members") class OrganizationMembers(val organizationId: java.util.UUID)
 
     /**
-     * Get organizations
+     * Get members of the specified organization
      *
+     * @param organizationId Organization ID
      */
     @KtorExperimentalLocationsAPI
     @Location("/organizations") class Organizations()
@@ -119,14 +120,14 @@ object Paths {
     @Location("/users/me/organizations") class UserOrganizations()
 
     /**
-     * Get users associated with the current user by organization membership
+     * Get organizations which the current user is a member of
      *
      */
     @KtorExperimentalLocationsAPI
     @Location("/users") class Users()
 
     /**
-     * Session termination
+     * Get users associated with the current user by organization membership
      *
      */
     @KtorExperimentalLocationsAPI
