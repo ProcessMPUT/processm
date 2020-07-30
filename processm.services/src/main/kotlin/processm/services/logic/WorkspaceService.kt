@@ -52,12 +52,12 @@ class WorkspaceService(private val accountService: AccountService) {
 
         if (!canBeRemoved) {
             throw ValidationException(
-                ValidationException.Reason.ResourceNotFound, "The specified workspace does not exist")
+                ValidationException.Reason.ResourceNotFound, "The specified workspace does not exist or the user has insufficient permissions to it")
         }
 
         Workspaces.deleteWhere {
             Workspaces.id eq workspaceId
-        }
+        } > 0
     }
 
     fun getWorkspaceComponents(workspaceId: UUID) =

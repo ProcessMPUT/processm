@@ -69,4 +69,16 @@ abstract class ServiceTestBase {
             it[this.userId] = EntityID(userId, Users)
             it[this.groupId] = EntityID(groupId, UserGroups)
         }
+
+    protected fun Transaction.createWorkspace(name: String = "Workspace1") =
+        Workspaces.insertAndGetId {
+            it[this.name] = name
+        }
+
+    protected fun Transaction.attachUserGroupToWorkspace(userGroupId: UUID, workspaceId: UUID, organizationId: UUID? = null) =
+        UserGroupWithWorkspaces.insertAndGetId {
+            it[this.userGroupId] = EntityID(userGroupId, UserGroups)
+            it[this.workspaceId] = EntityID(workspaceId, Workspaces)
+            it[this.organizationId] = EntityID(organizationId ?: createOrganization().value, Organizations)
+        }
 }

@@ -47,9 +47,9 @@ fun Route.WorkspacesApi() {
 
             principal.ensureUserBelongsToOrganization(workspace.organizationId, OrganizationRole.writer)
 
-            val removedWorkspacesCount = workspaceService.removeWorkspace(workspace.workspaceId, principal.userId, workspace.organizationId)
+            val workspaceRemoved = workspaceService.removeWorkspace(workspace.workspaceId, principal.userId, workspace.organizationId)
 
-            call.respond(if (removedWorkspacesCount > 0) HttpStatusCode.NoContent else HttpStatusCode.NotFound)
+            call.respond(if (workspaceRemoved) HttpStatusCode.NoContent else HttpStatusCode.NotFound)
         }
 
         get<Paths.Workspaces> { workspace ->
