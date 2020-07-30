@@ -35,21 +35,21 @@ class GroupService {
     }
 
     fun getRootGroupId(groupId: UUID) = transaction(DBConnectionPool.database) {
-        var rootGroup: ResultRow?
+        var parentGroup: ResultRow? = null
         do {
-            rootGroup = UserGroups.slice(UserGroups.id, UserGroups.parentGroupId)
-            .select { UserGroups.id eq groupId }
+            parentGroup = UserGroups.slice(UserGroups.id, UserGroups.parentGroupId)
+            .select { UserGroups.id eq (parentGroup?.getOrNull(UserGroups.parentGroupId) ?: EntityID(groupId, UserGroups)) }
             .firstOrNull()
-        } while (rootGroup != null && rootGroup[UserGroups.parentGroupId] != null)
+        } while (parentGroup != null && parentGroup[UserGroups.parentGroupId] != null)
 
-        if (rootGroup == null) {
+        if (parentGroup == null) {
             throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
                 "The specified group does not exist"
             )
         }
 
-        return@transaction rootGroup[UserGroups.id].value
+        return@transaction parentGroup[UserGroups.id].value
     }
 
     fun getSubgroups(groupId: UUID) = transaction(DBConnectionPool.database) {

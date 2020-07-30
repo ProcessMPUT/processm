@@ -38,16 +38,10 @@ fun Route.OrganizationsApi() {
         }
 
 
-        get<Paths.Organization> { organization ->
+        get<Paths.Organization> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(
-                HttpStatusCode.OK, OrganizationMessageBody(
-                    Organization(
-                        organization.organizationId.toString(), false, organization.organizationId
-                    )
-                )
-            )
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
@@ -80,7 +74,7 @@ fun Route.OrganizationsApi() {
         get<Paths.Organizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.OK, OrganizationCollectionMessageBody(emptyArray()))
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 

@@ -7,6 +7,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.delete
 import io.ktor.locations.get
+import io.ktor.locations.post
 import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
 import io.ktor.routing.Route
@@ -25,26 +26,20 @@ fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
 
     authenticate {
-        route("/organizations/{organizationId}/workspaces") {
-            post {
-                val principal = call.authentication.principal<ApiUser>()!!
-                val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
-                val organizationId = try {
-                    UUID.fromString(call.parameters["organizationId"])
-                } catch (exception: IllegalArgumentException) {
-                    throw ApiException("'organizationId' parameter needs to be specified when creating new workspace", HttpStatusCode.BadRequest)
-                }
+        post<Paths.Workspaces> {
+            val principal = call.authentication.principal<ApiUser>()!!
+            val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
+                ?: throw ApiException("The provided workspace data cannot be parsed")
 
-                principal.ensureUserBelongsToOrganization(organizationId)
+            principal.ensureUserBelongsToOrganization(it.organizationId, OrganizationRole.writer)
 
-                if (workspace == null || workspace.name.isEmpty()) {
-                    throw ApiException("Workspace name needs to be specified when creating new workspace", HttpStatusCode.BadRequest)
-                }
-
-                val workspaceId = workspaceService.createWorkspace(workspace.name, principal.userId, organizationId)
-
-                call.respond(HttpStatusCode.Created, WorkspaceMessageBody(Workspace(workspace.name, workspaceId)))
+            if (workspace.name.isEmpty()) {
+                throw ApiException("Workspace name needs to be specified when creating new workspace")
             }
+
+            val workspaceId = workspaceService.createWorkspace(workspace.name, principal.userId, it.organizationId)
+
+            call.respond(HttpStatusCode.Created, WorkspaceMessageBody(Workspace(workspace.name, workspaceId)))
         }
 
         delete<Paths.Workspace> { workspace ->
@@ -88,6 +83,9 @@ fun Route.WorkspacesApi() {
 
         get<Paths.WorkspaceComponents> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
+
+            principal.ensureUserBelongsToOrganization(workspace.organizationId)
+
             val components = workspaceService.getWorkspaceComponents(workspace.workspaceId)
                 .mapToArray {
                     val data = it.data as CausalNetDto

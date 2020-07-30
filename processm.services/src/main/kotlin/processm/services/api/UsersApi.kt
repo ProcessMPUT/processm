@@ -15,10 +15,7 @@ import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
 import io.ktor.routing.*
 import org.koin.ktor.ext.inject
-import processm.core.logging.enter
-import processm.core.logging.exit
 import processm.core.logging.loggedScope
-import processm.core.logging.logger
 import processm.services.api.models.*
 import processm.services.logic.AccountService
 import java.time.Duration

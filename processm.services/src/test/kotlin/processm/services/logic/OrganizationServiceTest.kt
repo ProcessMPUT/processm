@@ -21,7 +21,7 @@ class OrganizationServiceTest : ServiceTestBase() {
 
     @Test
     fun `getting organization members throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
-        val exception = assertFailsWith<ValidationException>("Specified organization does not exist") {
+        val exception = assertFailsWith<ValidationException>("The specified organization does not exist") {
             organizationService.getOrganizationMembers(UUID.randomUUID())
         }
 
@@ -48,7 +48,7 @@ class OrganizationServiceTest : ServiceTestBase() {
 
     @Test
     fun `getting organization groups throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
-        val exception = assertFailsWith<ValidationException>("Specified organization does not exist") {
+        val exception = assertFailsWith<ValidationException>("The specified organization does not exist") {
             organizationService.getOrganizationGroups(UUID.randomUUID())
         }
 
@@ -62,9 +62,28 @@ class OrganizationServiceTest : ServiceTestBase() {
         val organizationId1 = createOrganization(sharedGroupId = groupId1.value)
         createOrganization(sharedGroupId = groupId2.value)
 
-
         val organizationGroups = organizationService.getOrganizationGroups(organizationId1.value)
         assertEquals(1, organizationGroups.count())
         assertTrue { organizationGroups.any { it.id == groupId1.value } }
+    }
+
+    @Test
+    fun `returns organization related to to shared group`(): Unit = withCleanTables(Organizations, UserGroups) {
+        val groupId1 = createGroup()
+        val groupId2 = createGroup()
+        val organizationId = createOrganization(sharedGroupId = groupId1.value)
+        createOrganization(sharedGroupId = groupId2.value)
+
+        val organization = organizationService.getOrganizationBySharedGroupId(groupId1.value)
+        assertEquals(organizationId.value, organization.id)
+    }
+
+    @Test
+    fun `getting organization groups throws if nonexistent shared group`(): Unit = withCleanTables(Organizations) {
+        val exception = assertFailsWith<ValidationException>("The specified shared group id is not assigned to any organization") {
+            organizationService.getOrganizationBySharedGroupId(UUID.randomUUID())
+        }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
 }
