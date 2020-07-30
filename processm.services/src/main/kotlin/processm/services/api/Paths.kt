@@ -5,58 +5,44 @@ import io.ktor.locations.Location
 
 object Paths {
     /**
-     * Get specified group
+     * Get or remove specified group
      *
      * @param groupId Group ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/groups/{groupId}")
-    class getGroup(val groupId: java.util.UUID)
+    @Location("/groups/{groupId}") class Group(val groupId: java.util.UUID)
 
     /**
-     * Get members of specified group
+     * Get members of the specified group
      *
      * @param groupId Group ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/groups/{groupId}/members")
-    class getGroupMembers(val groupId: java.util.UUID)
+    @Location("/groups/{groupId}/members") class GroupMembers(val groupId: java.util.UUID)
 
     /**
-     * Get groups belonging to user organization
+     * Get groups belonging to the current user&#39;s organization
      *
      */
     @KtorExperimentalLocationsAPI
-    @Location("/groups")
-    class getGroups
+    @Location("/groups") class Groups()
 
     /**
-     * Get subgroups of specified group
+     * Get subgroups of the specified group
      *
      * @param groupId Group ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/groups/{groupId}/subgroups")
-    class getSubgroups(val groupId: java.util.UUID)
+    @Location("/groups/{groupId}/subgroups") class Subgroups(val groupId: java.util.UUID)
 
     /**
-     * Remove user group
-     *
-     * @param groupId Group ID
-     */
-    @KtorExperimentalLocationsAPI
-    @Location("/groups/{groupId}")
-    class removeGroup(val groupId: java.util.UUID)
-
-    /**
-     * Remove member from group
+     * Remove member from the specified group
      *
      * @param groupId Group ID
      * @param userId User ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/groups/{groupId}/members/{userId}")
-    class removeGroupMember(val groupId: java.util.UUID, val userId: java.util.UUID)
+    @Location("/groups/{groupId}/members/{userId}") class GroupMember(val groupId: java.util.UUID, val userId: java.util.UUID)
 
     /**
      * Remove speciified subgroup
@@ -65,102 +51,89 @@ object Paths {
      * @param subgroupId Subgroup ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/groups/{groupId}/subgroups/{subgroupId}")
-    class removeSubgroup(val groupId: java.util.UUID, val subgroupId: java.util.UUID)
+    @Location("/groups/{groupId}/subgroups/{subgroupId}") class Subgroup(val groupId: java.util.UUID, val subgroupId: java.util.UUID)
 
     /**
-     * Get specified organization
+     * Get or remove specified organization
      *
      * @param organizationId Organization ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/organizations/{organizationId}")
-    class getOrganization(val organizationId: java.util.UUID)
+    @Location("/organizations/{organizationId}") class Organization(val organizationId: java.util.UUID)
 
     /**
-     * Get members of specified organization
+     * Get groups associated with the specified organization
      *
      * @param organizationId Organization ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/organizations/{organizationId}/members")
-    class getOrganizationMembers(val organizationId: java.util.UUID)
+    @Location("/organizations/{organizationId}/groups") class OrganizationGroups(val organizationId: java.util.UUID)
+
+    /**
+     * Get members of the specified organization
+     *
+     * @param organizationId Organization ID
+     */
+    @KtorExperimentalLocationsAPI
+    @Location("/organizations/{organizationId}/members") class OrganizationMembers(val organizationId: java.util.UUID)
 
     /**
      * Get organizations
      *
      */
     @KtorExperimentalLocationsAPI
-    @Location("/organizations")
-    class getOrganizations
+    @Location("/organizations") class Organizations()
 
     /**
-     * Remove specified organization
-     *
-     * @param organizationId Organization ID
-     */
-    @KtorExperimentalLocationsAPI
-    @Location("/organizations/{organizationId}")
-    class removeOrganization(val organizationId: java.util.UUID)
-
-    /**
-     * Remove member from organization
+     * Remove member from the specified organization
      *
      * @param organizationId Organization ID
      * @param userId User ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/organizations/{organizationId}/members/{userId}")
-    class removeOrganizationMember(val organizationId: java.util.UUID, val userId: java.util.UUID)
+    @Location("/organizations/{organizationId}/members/{userId}") class OrganizationMember(val organizationId: java.util.UUID, val userId: java.util.UUID)
 
     /**
      * Get details about current user
      *
      */
     @KtorExperimentalLocationsAPI
-    @Location("/users/me")
-    class getUserAccountDetails
+    @Location("/users/me") class UserAccountDetails()
+
+    /**
+     * Get organizations which the current user is a member of
+     *
+     */
+    @KtorExperimentalLocationsAPI
+    @Location("/users/me/organizations") class UserOrganizations()
 
     /**
      * Get users associated with the current user by organization membership
      *
      */
     @KtorExperimentalLocationsAPI
-    @Location("/users")
-    class getUsers
+    @Location("/users") class Users()
 
     /**
      * Session termination
      *
      */
     @KtorExperimentalLocationsAPI
-    @Location("/users/session")
-    class signUserOut
+    @Location("/users/session") class UserOut()
 
     /**
-     * Remove specified workspace
+     * Get or remove specified workspace
      *
      * @param workspaceId Workspace ID
      */
     @KtorExperimentalLocationsAPI
-    @Location("/workspaces/{workspaceId}")
-    class deleteWorkspace(val workspaceId: java.util.UUID)
+    @Location("/workspaces/{workspaceId}") class Workspace(val workspaceId: java.util.UUID)
 
     /**
-     * Get specified workspace
-     *
-     * @param workspaceId Workspace ID
-     */
-    @KtorExperimentalLocationsAPI
-    @Location("/workspaces/{workspaceId}")
-    class getWorkspace(val workspaceId: java.util.UUID)
-
-    /**
-     * Get workspaces which user has access to
+     * Get workspaces which the current user has access to
      *
      */
     @KtorExperimentalLocationsAPI
-    @Location("/workspaces")
-    class getWorkspaces
+    @Location("/workspaces") class Workspaces()
 
 }

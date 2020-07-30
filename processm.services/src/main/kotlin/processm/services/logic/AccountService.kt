@@ -1,84 +1,127 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertAndGetId
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.logging.loggedScope
 import processm.core.persistence.DBConnectionPool
 import processm.services.ilike
 import processm.services.models.*
 import java.util.*
 
-class AccountService {
+class AccountService(private val groupService: GroupService) {
     private val passwordHasher =
         jargon2Hasher().type(Type.ARGON2d).memoryCost(65536).timeCost(3).saltLength(16).hashLength(16)
     private val passwordVerifier = jargon2Verifier()
     private val defaultLocale = Locale.UK
 
-    fun verifyUsersCredentials(username: String, password: String) = transaction(DBConnectionPool.database) {
-        val user = User.find(Users.email ilike username).firstOrNull() ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
-        )
+    fun verifyUsersCredentials(username: String, password: String) =
+        loggedScope { logger ->
+            transaction(DBConnectionPool.database) {
+                val user = User.find(Users.email ilike username).firstOrNull()
 
-        if (verifyPassword(password, user.password)) user else null
-    }
+                if (user == null) {
+                    logger.debug("The specified username ${username} is unknown and cannot be verified")
+                    throw ValidationException(
+                        ValidationException.Reason.ResourceNotFound, "The specified user account does not exist")
+                }
 
-    fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null) {
-        transaction(DBConnectionPool.database) {
-            val organizationsCount = Organizations.select { Organizations.name eq organizationName }.limit(1).count()
-            val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
-
-            if (usersCount > 0 || organizationsCount > 0) {
-                throw ValidationException(
-                    ValidationException.Reason.ResourceAlreadyExists,
-                    "User and/or organization with specified email already exists"
-                )
-            }
-            //TODO: registered accounts should be stored as "pending' until confirmed
-            // user password should be specified upon successful confirmation
-            val userId = Users.insertAndGetId {
-                it[email] = userEmail
-                it[password] = calculatePasswordHash("pass")
-                it[locale] = accountLocale ?: defaultLocale.toString()
-            }
-            val organizationId = Organizations.insertAndGetId {
-                it[name] = organizationName
-                it[isPrivate] = false
-            }
-
-            UsersRolesInOrganizations.insert {
-                it[user] = userId
-                it[organization] = organizationId
-                it[role] = OrganizationRoles.getIdByName(OrganizationRole.Owner)
+                return@transaction if (verifyPassword(password, user.password)) user.toDto() else null
             }
         }
-    }
+
+    fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null) =
+        loggedScope { logger ->
+            transaction(DBConnectionPool.database) {
+                val organizationsCount =
+                    Organizations.select { Organizations.name eq organizationName }.limit(1).count()
+                val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
+
+                if (usersCount > 0 || organizationsCount > 0) {
+                    throw ValidationException(
+                        ValidationException.Reason.ResourceAlreadyExists,
+                        "The specified user and/or organization already exists")
+                }
+                //TODO: registered accounts should be stored as "pending' until confirmed
+                // user password should be specified upon successful confirmation
+                // a single-user group representing the user should be created
+                val userId = Users.insertAndGetId {
+                    it[email] = userEmail
+                    it[password] = calculatePasswordHash("pass")
+                    it[locale] = accountLocale ?: defaultLocale.toString()
+                }
+                val organizationId = Organizations.insertAndGetId {
+                    it[name] = organizationName
+                    it[isPrivate] = false
+                }
+
+                UsersRolesInOrganizations.insert {
+                    it[this.userId] = userId
+                    it[this.organizationId] = organizationId
+                    it[roleId] = OrganizationRoles.getIdByName(OrganizationRoleDto.Owner)
+                }
+
+                logger.debug("A new organization account has been created with organization $organizationId and user $userId")
+                // automatically created group for all users
+                // this should be eventually moved to a separate method together with the logic above
+                val userGroupId = groupService.ensureSharedGroupExists(organizationId.value)
+                groupService.attachUserToGroup(userId.value, userGroupId)
+            }
+        }
 
     fun getAccountDetails(userId: UUID) = transaction(DBConnectionPool.database) {
-        User.findById(userId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
-        )
+        getUserDao(userId).toDto()
     }
 
     fun changePassword(userId: UUID, currentPassword: String, newPassword: String) =
-        transaction(DBConnectionPool.database) {
-            val user = getAccountDetails(userId)
+        loggedScope { logger ->
+            transaction(DBConnectionPool.database) {
+                val user = getUserDao(userId)
 
-            if (!verifyPassword(currentPassword, user.password)) {
-                return@transaction false
+                if (!verifyPassword(currentPassword, user.password)) {
+                    logger.debug("A user password cannot be changed for user $userId due to an invalid current password")
+                    return@transaction false
+                }
+
+                user.password = calculatePasswordHash(newPassword)
+                logger.debug("A user password has been successfully changed for the user $userId")
+
+                return@transaction true
             }
-
-            user.password = calculatePasswordHash(newPassword)
-
-            return@transaction true
         }
 
     fun changeLocale(userId: UUID, locale: String) = transaction(DBConnectionPool.database) {
-        val user = getAccountDetails(userId)
+        val user = getUserDao(userId)
         val localeObject = parseLocale(locale)
 
         user.locale = localeObject.toString()
+    }
+
+    fun getRolesAssignedToUser(userId: UUID) = transaction(DBConnectionPool.database) {
+        // This returns only organizations explicitly assigned to the user account.
+        // Inferring the complete set of user roles (including inherited roles) is expensive
+        // so its probably faster to check the appropriate roles on case by case basis
+        // e.g. with getInheritedRoles(userId, organizationId) method.
+        val user = getUserDao(userId).toDto()
+
+        // The following implementation purposefully does not use back-referencing UserRolesInOrganizations with specified userId.
+        // Exposed does not support DAOs with composite keys, hence only one column can be marked as the primary key.
+        // In case of UserRolesInOrganizations the column marked as primary key is userId,
+        // this would cause a collection of all organizations related to the same user to be a collection of DAOs
+        // with the same ID (userId) and that is incorrect - exposed represents it as a collection of the same objects.
+        UsersRolesInOrganizations
+            .innerJoin(Organizations)
+            .innerJoin(OrganizationRoles)
+            .select {
+                UsersRolesInOrganizations.userId eq userId }
+            .map {
+                OrganizationMemberDto(user, Organization.wrapRow(it).toDto(), OrganizationRole.wrapRow(it).name) }
+    }
+
+    private fun getUserDao(userId: UUID) = transaction(DBConnectionPool.database) {
+        User.findById(userId) ?: throw ValidationException(
+            ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
+        )
     }
 
     private fun calculatePasswordHash(password: String) = passwordHasher.password(password.toByteArray()).encodedHash()

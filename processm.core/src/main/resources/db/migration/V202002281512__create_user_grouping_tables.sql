@@ -19,9 +19,11 @@ CREATE TABLE organizations (
 
 CREATE TABLE user_groups (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    parent_group_id uuid NOT NULL,
+    parent_group_id uuid,
+    organization_id uuid NOT NULL,
     group_role_id uuid NOT NULL,
-    name text
+    name text,
+    is_implicit boolean NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE user_groups_with_workspaces (
@@ -37,7 +39,6 @@ CREATE TABLE users (
 CREATE TABLE users_in_groups (
     user_id uuid NOT NULL,
     user_group_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
     creation_date timestamptz
 );
 
@@ -65,12 +66,12 @@ ALTER TABLE user_groups
     ADD CONSTRAINT user_groups_user_groups_fk FOREIGN KEY (parent_group_id) REFERENCES user_groups(id);
 ALTER TABLE user_groups
     ADD CONSTRAINT user_groups_group_roles_fk FOREIGN KEY (group_role_id) REFERENCES group_roles(id);
+ALTER TABLE user_groups
+    ADD CONSTRAINT user_groups_organizations_fk FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 ALTER TABLE user_groups_with_workspaces
     ADD CONSTRAINT user_groups_with_workspaces_user_groups_fk FOREIGN KEY (user_group_id) REFERENCES user_groups(id) ON DELETE CASCADE;
 ALTER TABLE user_groups_with_workspaces
     ADD CONSTRAINT user_groups_with_workspaces_workspaces_fk FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
-ALTER TABLE users_in_groups
-    ADD CONSTRAINT users_in_groups_organizations_fk FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 ALTER TABLE users_in_groups
     ADD CONSTRAINT users_in_groups_user_groups_fk FOREIGN KEY (user_group_id) REFERENCES user_groups(id) ON DELETE CASCADE;
 ALTER TABLE users_in_groups

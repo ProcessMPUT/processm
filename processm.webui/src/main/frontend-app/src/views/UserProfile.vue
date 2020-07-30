@@ -98,6 +98,7 @@ export default class UserProfile extends Vue {
         const locale = this.$t("code", this.selectedLocale).toString();
         await this.accountService.changeLocale(locale);
       } catch (error) {
+        console.error(error);
         //TODO: display the error on the global snackbar
       }
     }
@@ -108,6 +109,7 @@ export default class UserProfile extends Vue {
       await this.accountService.changePassword(currentPassword, newPassword);
       this.passwordChangeDialog = false;
     } catch (error) {
+      console.error(error);
       //TODO: display the error on the global snackbar
     }
   }

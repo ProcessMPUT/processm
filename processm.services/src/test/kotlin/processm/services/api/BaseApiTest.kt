@@ -21,8 +21,11 @@ import org.koin.test.AutoCloseKoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
 import processm.services.api.models.AuthenticationResult
+import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
+import processm.services.models.OrganizationMemberDto
+import processm.services.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -40,6 +43,10 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
         MockProvider.register { mockedClass -> mockkClass(mockedClass) }
+    }
+
+    protected open fun componentsRegistration() {
+        accountService = declareMock()
     }
 
     @ParameterizedTest
@@ -85,20 +92,24 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
             put("ktor.jwt.tokenTtl", "PT10S")
         }
         configurationCustomization?.invoke(configuration)
-
         application.apiModule()
-        accountService = declareMock { }
-
+        componentsRegistration()
         testLogic(this)
     }
 
     protected fun TestApplicationEngine.withAuthentication(
-        login: String = "user@example.com", password: String = "pass", callback: JwtAuthenticationTrackingEngine.() -> Unit
+        userId: UUID = UUID.randomUUID(), login: String = "user@example.com", password: String = "pass", role: OrganizationRole = OrganizationRole.owner, callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
-            every { id } returns EntityID<UUID>(UUID.randomUUID(), mockk())
+            every { id } returns userId
             every { email } returns login
         }
+        every { accountService.getRolesAssignedToUser(userId) } returns
+            listOf(mockk {
+                every { user.id } returns userId
+                every { organization.id } returns UUID.randomUUID()
+                every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.name)
+            })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
     }

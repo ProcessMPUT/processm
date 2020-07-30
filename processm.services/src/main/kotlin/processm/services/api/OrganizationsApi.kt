@@ -12,12 +12,14 @@ import io.ktor.routing.Route
 import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
-import processm.services.api.models.Organization
-import processm.services.api.models.OrganizationCollectionMessageBody
-import processm.services.api.models.OrganizationMessageBody
+import org.koin.ktor.ext.inject
+import processm.services.api.models.*
+import processm.services.logic.OrganizationService
 
 @KtorExperimentalLocationsAPI
 fun Route.OrganizationsApi() {
+    val organizationService by inject<OrganizationService>()
+
     authenticate {
         route("/organizations/{organizationId}/members") {
             post {
@@ -37,7 +39,7 @@ fun Route.OrganizationsApi() {
         }
 
 
-        get<Paths.getOrganization> { organization: Paths.getOrganization ->
+        get<Paths.Organization> { organization ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(
@@ -50,28 +52,51 @@ fun Route.OrganizationsApi() {
         }
 
 
-        get<Paths.getOrganizationMembers> { _: Paths.getOrganizationMembers ->
-            val principal = call.authentication.principal<ApiUser>()
+        get<Paths.OrganizationGroups> { organization ->
+            val principal = call.authentication.principal<ApiUser>()!!
 
-            call.respond(HttpStatusCode.NotImplemented)
+            if (!principal.organizations.containsKey(organization.organizationId)) {
+                throw ApiException("The user is not a member of the organization with the provided id", HttpStatusCode.Forbidden)
+            }
+
+            val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
+                .map { Group(it.name ?: "", it.isImplicit, it.organization.id, GroupRole.reader, it.id) }
+                .toTypedArray()
+
+            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(organizationGroups))
         }
 
 
-        get<Paths.getOrganizations> { _: Paths.getOrganizations ->
+        get<Paths.OrganizationMembers> { organizationMembers ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            if (!principal.organizations.containsKey(organizationMembers.organizationId)) {
+                throw ApiException("The user is not a member of the organization with the provided id", HttpStatusCode.Forbidden)
+            }
+
+            val members = organizationService.getOrganizationMembers(organizationMembers.organizationId)
+                .map { OrganizationMember(it.user.id, it.user.email, OrganizationRole.valueOf(it.role.roleName)) }
+                .toTypedArray()
+
+            call.respond(HttpStatusCode.OK, OrganizationMemberCollectionMessageBody(members))
+        }
+
+
+        get<Paths.Organizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.OK, OrganizationCollectionMessageBody(emptyArray()))
         }
 
 
-        delete<Paths.removeOrganization> { _: Paths.removeOrganization ->
+        delete<Paths.Organization> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
 
-        delete<Paths.removeOrganizationMember> { _: Paths.removeOrganizationMember ->
+        delete<Paths.OrganizationMember> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)

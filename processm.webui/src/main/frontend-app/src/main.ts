@@ -12,6 +12,7 @@ import i18n from "@/i18n";
 import SessionStorage from "@/plugins/SessionStorage";
 import WorkspaceService from "@/services/WorkspaceService";
 import AccountService from "@/services/AccountService";
+import OrganizationService from "@/services/OrganizationService";
 
 Vue.config.productionTip = false;
 Vue.use(SessionStorage, { persist: true });
@@ -23,7 +24,8 @@ new Vue({
   i18n,
   provide: () => ({
     workspaceService: new WorkspaceService(),
-    accountService: new AccountService()
+    accountService: new AccountService(),
+    organizationService: new OrganizationService()
   }),
   render: h => h(App)
 }).$mount("#app");
