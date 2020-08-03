@@ -72,6 +72,7 @@ import { Prop, Inject } from "vue-property-decorator";
 import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
 import KpiComponent from "./KpiComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
+import WorkspaceComponentModel from "@/models/WorkspaceComponent";
 
 export enum ComponentMode {
   Static,
@@ -88,7 +89,7 @@ export default class WorkspaceComponent extends Vue {
   @Prop({ default: "" })
   readonly workspaceId!: string;
   @Prop({ default: {} })
-  readonly componentDetails!: object;
+  readonly componentDetails!: WorkspaceComponentModel;
   @Prop({ default: false })
   readonly interactive!: boolean;
   @Prop({ default: false })

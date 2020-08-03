@@ -120,7 +120,7 @@ export default class CausalNet {
         layout?.some(nodeLayout => nodeLayout.id == node.id)
       );
 
-    const nodesLayout =
+    this.nodesLayout =
       isLayoutPredefined && layout != null
         ? layout?.reduce(
             (
@@ -139,8 +139,8 @@ export default class CausalNet {
         : this.calculateLayout(dataNodes, dataLinks);
 
     this.nodes = dataNodes.map((node, index) => {
-      const x = nodesLayout.get(node.id)?.x,
-        y = nodesLayout.get(node.id)?.y;
+      const x = this.nodesLayout.get(node.id)?.x,
+        y = this.nodesLayout.get(node.id)?.y;
       return new Node(
         node.id,
         ElementType.Regular,
@@ -151,7 +151,7 @@ export default class CausalNet {
     });
 
     dataNodes.forEach(node => {
-      const nodePosition = nodesLayout.get(node.id);
+      const nodePosition = this.nodesLayout.get(node.id);
 
       if (nodePosition == null) return;
 
@@ -173,13 +173,13 @@ export default class CausalNet {
         node.id,
         ElementType.Split,
         splitNodes,
-        nodesLayout
+        this.nodesLayout
       );
       const joinLinks = this.createBindingLinks(
         node.id,
         ElementType.Join,
         joinNodes,
-        nodesLayout
+        this.nodesLayout
       );
       const intermediateSplitLinks = this.createIntermediateLinks(
         node.id,
@@ -200,8 +200,8 @@ export default class CausalNet {
         )
       );
 
-      this.updateBindingNodesPositions(node.id, splitNodes, nodesLayout);
-      this.updateBindingNodesPositions(node.id, joinNodes, nodesLayout);
+      this.updateBindingNodesPositions(node.id, splitNodes, this.nodesLayout);
+      this.updateBindingNodesPositions(node.id, joinNodes, this.nodesLayout);
     });
     this.links.push(...this.createLinksBetweenSplitsAndJoins(this.nodes));
   }
@@ -235,8 +235,8 @@ export default class CausalNet {
         bindingNode.bindingSlot,
         maximumBindingSlot
       );
-      bindingNode.fx = bindingNode.x = position.x;
-      bindingNode.fy = bindingNode.y = position.y;
+      bindingNode.x = position.x;
+      bindingNode.y = position.y;
     });
   }
 
@@ -258,6 +258,7 @@ export default class CausalNet {
 
   public nodes: Array<Node>;
   public links: Array<Link> = [];
+  public nodesLayout: Map<string, Point>;
 
   public removeNodes(filterExpression: (node: Node) => boolean) {
     this.nodes = this.nodes.filter(node => !filterExpression(node));

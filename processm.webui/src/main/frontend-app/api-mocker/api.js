@@ -607,6 +607,22 @@ const api = {
 
     return res.json({ data: componentsData[datasetIndex].data });
   },
+  "PUT /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId/data": (
+    req,
+    res
+  ) => {
+    const { workspaceId, componentId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+    const component = _.find(componentsData, { id: componentId });
+
+    if (!workspace || !component) {
+      return res.status(404).json();
+    }
+
+    component.data = req.body.data;
+
+    return res.status(201).json();
+  },
   "POST /api/users/session": (req, res) => {
     const credentials = req.body.data;
 

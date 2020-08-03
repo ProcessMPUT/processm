@@ -48,6 +48,7 @@
       v-if="displayEditModal"
       v-model="displayEditModal"
       :component-details="displayedComponentDetails"
+      :workspace-id="workspaceId"
       @close="closeModals"
       @view="viewComponent"
       @edit="editComponent"

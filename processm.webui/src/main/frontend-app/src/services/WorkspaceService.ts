@@ -1,8 +1,11 @@
 import Vue from "vue";
 import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
-import WorkspaceComponent from "@/models/WorkspaceComponent";
-import { Workspace as ApiWorkspace, ComponentAbstract } from "@/openapi/model";
+import WorkspaceComponent, {
+  CausalNetComponentData,
+  KpiComponentData
+} from "@/models/WorkspaceComponent";
+import { Workspace as ApiWorkspace, ComponentAbstract } from "@/openapi";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
@@ -99,6 +102,21 @@ export default class WorkspaceService extends BaseService {
     this.ensureSuccessfulResponseCode(response);
 
     return response.data.data;
+  }
+
+  public async updateComponentData(
+    workspaceId: string,
+    componentId: string,
+    componentData: CausalNetComponentData | KpiComponentData
+  ) {
+    const response = await this.workspacesApi.updateWorkspaceComponentData(
+      this.currentOrganizationId,
+      workspaceId,
+      componentId,
+      { data: componentData }
+    );
+
+    return response.status == 204;
   }
 
   public async getWorkspaceComponents(workspaceId: string) {

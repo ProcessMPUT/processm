@@ -151,14 +151,7 @@ import {
 } from "d3";
 import { v4 as uuidv4 } from "uuid";
 import { ComponentMode } from "../WorkspaceComponent.vue";
-import CausalNet, {
-  DataNode,
-  DataLink,
-  Point,
-  Node,
-  Link,
-  ElementType
-} from "./CausalNet";
+import CausalNet, { Point, Node, Link, ElementType } from "./CausalNet";
 import {
   UserInputSource,
   UserInputHandler,
@@ -166,6 +159,7 @@ import {
   DeletionModeInputHandler,
   InteractiveModeInputHandler
 } from "./UserInputHandlers";
+import { CausalNetComponentData } from "../../../models/WorkspaceComponent";
 
 enum EditMode {
   Addition,
@@ -182,11 +176,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   EditMode = EditMode;
 
   @Prop({ default: {} })
-  readonly data!: {
-    nodes: Array<DataNode>;
-    edges: Array<DataLink>;
-    layout?: Array<{ id: string; x: number; y: number }>;
-  };
+  readonly data!: CausalNetComponentData;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
 
@@ -325,6 +315,12 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
       this.data.layout,
       this.nodeTransition
     );
+
+    if (this.data.layout == null) {
+      this.data.layout = Array.from(
+        this.causalNet.nodesLayout
+      ).map(([id, point]) => ({ id, x: point.x, y: point.y }));
+    }
 
     this.simulation = d3.forceSimulation<Node, Link>().force(
       "link",
@@ -512,6 +508,21 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
     );
 
     this.currentScalingFactor = scalingFactor;
+  }
+
+  public updateNodeLayoutPosition(nodeId: string, position: Point): void {
+    if (this.data.layout == null) return;
+
+    const nodeIndex = this.data.layout.findIndex(node => node.id == nodeId);
+
+    if (nodeIndex < 0) {
+      this.data.layout.push({ id: nodeId, x: position.x, y: position.y });
+    } else {
+      const node = this.data.layout[nodeIndex];
+
+      node.x = position.x;
+      node.y = position.y;
+    }
   }
 
   private setEditMode(newMode: EditMode | null) {

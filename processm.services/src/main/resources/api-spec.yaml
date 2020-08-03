@@ -402,6 +402,28 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
+    put:
+      tags:
+        - workspaces
+        - components
+      summary: Update data of the specified component in the specified workspace in the context of the specified organization
+      operationId: updateWorkspaceComponentData
+      requestBody:
+        description: Component data to update
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ComponentDataMessageBody'
+        required: true
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
   /groups:
     get:
       tags:
@@ -1112,7 +1134,7 @@ components:
               type: array
               items:
                 type: object
-                required: [splits, joins]
+                required: [id, splits, joins]
                 properties:
                   id:
                     type: string
