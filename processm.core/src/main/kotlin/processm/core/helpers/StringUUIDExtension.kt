@@ -3,15 +3,8 @@ package processm.core.helpers
 import java.util.*
 
 /**
- * Nullable [String] to [UUID]
+ * Transforms the given [String?] to [UUID?].
+ * @returns [UUID] or null if null supplied.
+ * @throws IllegalArgumentException for an invalid string.
  */
-fun String?.toUUID(): UUID? {
-    try {
-        if (this.isNullOrBlank()) return null
-        return UUID.fromString(this)
-    } catch (e: IllegalArgumentException) {
-        Helpers.logger.warn("Cast to UUID not possible", e)
-    }
-
-    return null
-}
+fun String?.toUUID(): UUID? = this?.let { UUID.fromString(it) }
