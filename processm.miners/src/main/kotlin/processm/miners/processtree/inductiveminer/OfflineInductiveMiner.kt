@@ -12,6 +12,8 @@ import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 class OfflineInductiveMiner : InductiveMiner() {
     /**
      * Process log and build process tree based on it
+     *
+     * Runs in: O(|traces| * |activities|)
      */
     override fun processLog(logsCollection: LogInputStream): ProcessTree {
         // Build directly follows graph
