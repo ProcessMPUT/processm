@@ -1,6 +1,7 @@
 package processm.core.log
 
 import java.time.Instant
+import java.util.*
 
 /**
  * Event component
@@ -77,7 +78,7 @@ class Event : TraceOrEventBase() {
         costTotal = attributesInternal[nameMap["cost:total"]]?.getValue() as Double?
         costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue() as String?
 
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as String?
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
 
         lifecycleState = attributesInternal[nameMap["lifecycle:state"]]?.getValue() as String?
         lifecycleTransition = attributesInternal[nameMap["lifecycle:transition"]]?.getValue() as String?

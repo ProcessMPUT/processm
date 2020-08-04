@@ -16,7 +16,7 @@ internal fun <T> Iterator<T>.take(limit: Int): List<T> = ArrayList<T>(limit).als
         list.add(this.next())
 }
 
-internal inline fun <N : Number> ResultSet.toIdList(getter: (rs: ResultSet) -> N) = ArrayList<N>().also {out ->
+internal inline fun <N : Number> ResultSet.toIdList(getter: (rs: ResultSet) -> N) = ArrayList<N>().also { out ->
     this@toIdList.use {
         while (it.next())
             out.add(getter(it))
@@ -71,6 +71,7 @@ internal fun ResultSet.to2DLongArray(): List<LongArray> =
 internal val Type.asAttributeType: String
     get() = when (this) {
         Type.String -> "string"
+        Type.UUID -> "uuid"
         Type.Number -> "number"
         Type.Datetime -> "date"
         Type.Boolean -> "boolean"
@@ -81,6 +82,7 @@ internal val Type.asAttributeType: String
 internal val Type.asDBType: String
     get() = when (this) {
         Type.String -> "text"
+        Type.UUID -> "uuid"
         Type.Number -> "double precision"
         Type.Datetime -> "timestamptz"
         Type.Boolean -> "boolean"

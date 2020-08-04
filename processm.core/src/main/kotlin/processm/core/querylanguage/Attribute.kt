@@ -65,11 +65,11 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
             when (this.standardName) {
                 "concept:name", "concept:instance",
                 "cost:currency",
-                "identity:id",  // TODO: change type to Type.ID / Type.UUID in issue #81
                 "lifecycle:model", "lifecycle:transition", "lifecycle:state",
                 "org:resource", "org:role", "org:group",
                 "xes:version", "xes:features" -> Type.String
                 "db:id", "cost:total" -> Type.Number
+                "identity:id" -> Type.UUID
                 "time:timestamp" -> Type.Datetime
                 else -> throw IllegalArgumentException("Line $line position $charPositionInLine: Unknown type of attribute $standardName.")
             }

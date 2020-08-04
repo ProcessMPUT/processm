@@ -9,13 +9,14 @@ $$
 DECLARE
     vtype         attribute_type;
     vstring_value text;
+    vuuid_value   uuid;
     vdate_value   timestamptz;
     vint_value    bigint;
     vbool_value   boolean;
     vreal_value   double precision;
 BEGIN
-    SELECT type, string_value, date_value, int_value, bool_value, real_value
-    INTO vtype, vstring_value, vdate_value, vint_value, vbool_value, vreal_value
+    SELECT type, string_value, uuid_value, date_value, int_value, bool_value, real_value
+    INTO vtype, vstring_value, vuuid_value, vdate_value, vint_value, vbool_value, vreal_value
     FROM logs_attributes
     WHERE log_id = vlog_id
       AND key = vkey
@@ -34,6 +35,7 @@ BEGIN
     END IF;
 
     IF vtype = 'string' THEN RETURN vstring_value; END IF;
+    IF vtype = 'uuid' THEN RETURN vuuid_value; END IF;
     IF vtype = 'date' THEN RETURN vdate_value; END IF;
     IF vtype = 'int' THEN RETURN vint_value::double precision; END IF;
     IF vtype = 'boolean' THEN RETURN vbool_value; END IF;
@@ -55,13 +57,14 @@ $$
 DECLARE
     vtype         attribute_type;
     vstring_value text;
+    vuuid_value   uuid;
     vdate_value   timestamptz;
     vint_value    bigint;
     vbool_value   boolean;
     vreal_value   double precision;
 BEGIN
-    SELECT type, string_value, date_value, int_value, bool_value, real_value
-    INTO vtype, vstring_value, vdate_value, vint_value, vbool_value, vreal_value
+    SELECT type, string_value, uuid_value, date_value, int_value, bool_value, real_value
+    INTO vtype, vstring_value, vuuid_value, vdate_value, vint_value, vbool_value, vreal_value
     FROM traces_attributes
     WHERE trace_id = vtrace_id
       AND key = vkey
@@ -80,6 +83,7 @@ BEGIN
     END IF;
 
     IF vtype = 'string' THEN RETURN vstring_value; END IF;
+    IF vtype = 'uuid' THEN RETURN vuuid_value; END IF;
     IF vtype = 'date' THEN RETURN vdate_value; END IF;
     IF vtype = 'int' THEN RETURN vint_value::double precision; END IF;
     IF vtype = 'boolean' THEN RETURN vbool_value; END IF;
@@ -101,13 +105,14 @@ $$
 DECLARE
     vtype         attribute_type;
     vstring_value text;
+    vuuid_value   uuid;
     vdate_value   timestamptz;
     vint_value    bigint;
     vbool_value   boolean;
     vreal_value   double precision;
 BEGIN
-    SELECT type, string_value, date_value, int_value, bool_value, real_value
-    INTO vtype, vstring_value, vdate_value, vint_value, vbool_value, vreal_value
+    SELECT type, string_value, uuid_value, date_value, int_value, bool_value, real_value
+    INTO vtype, vstring_value, vuuid_value, vdate_value, vint_value, vbool_value, vreal_value
     FROM events_attributes
     WHERE event_id = vevent_id
       AND key = vkey
@@ -126,6 +131,7 @@ BEGIN
     END IF;
 
     IF vtype = 'string' THEN RETURN vstring_value; END IF;
+    IF vtype = 'uuid' THEN RETURN vuuid_value; END IF;
     IF vtype = 'date' THEN RETURN vdate_value; END IF;
     IF vtype = 'int' THEN RETURN vint_value::double precision; END IF;
     IF vtype = 'boolean' THEN RETURN vbool_value; END IF;

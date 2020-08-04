@@ -35,5 +35,10 @@ enum class Type {
     /**
      * A Boolean-algebra true or false
      */
-    Boolean
+    Boolean,
+
+    /**
+     * An universally unique identifier
+     */
+    UUID
 }

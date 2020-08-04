@@ -1,5 +1,7 @@
 package processm.core.log
 
+import java.util.*
+
 abstract class TraceOrEventBase : XESComponent() {
     /**
      * Standard attribute based on concept:name
@@ -42,6 +44,6 @@ abstract class TraceOrEventBase : XESComponent() {
      * Standard attribute based on identity:id
      * Standard extension: Identity
      */
-    override var identityId: String? = null
+    override var identityId: UUID? = null
         internal set
 }

@@ -28,6 +28,6 @@ open class Trace : TraceOrEventBase() {
         conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
         costTotal = attributesInternal[nameMap["cost:total"]]?.getValue() as Double?
         costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue() as String?
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as String?
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
     }
 }

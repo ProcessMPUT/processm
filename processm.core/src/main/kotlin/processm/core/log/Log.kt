@@ -70,7 +70,7 @@ open class Log : XESComponent() {
      * Standard attribute based on identity:id
      * Standard extension: Identity
      */
-    override var identityId: String? = null
+    override var identityId: UUID? = null
         internal set
 
     /**
@@ -109,7 +109,7 @@ open class Log : XESComponent() {
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
         conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as String?
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
         lifecycleModel = attributesInternal[nameMap["lifecycle:model"]]?.getValue() as String?
     }
 }
