@@ -436,7 +436,7 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
                 'f' -> RealAttr(key, getDouble("real_value"))
                 'i' -> when (type[1]) {
                     'n' -> IntAttr(key, getLong("int_value"))
-                    'd' -> IDAttr(key, getString("string_value").toUUID()!!)
+                    'd' -> IDAttr(key, getString("uuid_value").toUUID()!!)
                     else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
                 }
                 'd' -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant())

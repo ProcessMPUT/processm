@@ -49,6 +49,7 @@ scalar      : STRING
             | NUMBER
             | BOOLEAN
             | DATETIME
+            | UUID
             | NULL
             ;
 

@@ -612,6 +612,7 @@ class Query(val query: String) {
                 QLParser.BOOLEAN -> BooleanLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.NUMBER -> NumberLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.DATETIME -> DateTimeLiteral(token.text, token.line, token.charPositionInLine)
+                QLParser.UUID -> UUIDLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.STRING -> StringLiteral(token.text, token.line, token.charPositionInLine)
                 QLParser.NULL -> NullLiteral(token.text, token.line, token.charPositionInLine)
                 else -> AnyExpression(token.text, token.line, token.charPositionInLine)

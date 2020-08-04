@@ -2,6 +2,7 @@ package processm.core.log.hierarchical
 
 import processm.core.helpers.NestableAutoCloseable
 import processm.core.helpers.mapToArray
+import processm.core.helpers.toUUID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -564,7 +565,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     private fun selectGroupAttributes(scope: Scope, sql: MutableSQLQuery) {
         sql.query.append(
             """SELECT DISTINCT ON(ids.ord, a.key) ids.ord AS id, ids.ord+? AS ${scope}_id, NULL AS parent_id, 
-            a.type, a.key, a.string_value, a.date_value, a.int_value, a.bool_value, a.real_value, a.in_list_attr"""
+            a.type, a.key, a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, a.in_list_attr"""
         )
         sql.params.add(idOffsetPlaceholder)
     }
@@ -580,7 +581,6 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     private fun orderByGroupAttributes(sql: MutableSQLQuery) {
         sql.query.append(" ORDER BY ids.ord")
     }
-
     // endregion
 
     // region select group expressions
@@ -815,7 +815,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
             }
         }
     }
-// endregion
+    // endregion
 
     private inner class Cache {
         // region classifiers

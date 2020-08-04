@@ -92,7 +92,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         var _stream: DBHierarchicalXESInputStream? = null
 
         measureTimeMillis {
-            _stream = q("select l:name, t:name, e:name, e:timestamp where l:name='JournalReview' and l:id='$uuid'")
+            _stream = q("select l:name, t:name, e:name, e:timestamp where l:name='JournalReview' and l:id=$uuid")
             _stream!!.toFlatSequence().forEach { _ -> }
         }.let { logger.info("Log read in ${it}ms.") }
 
@@ -177,7 +177,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun scopedSelectAll2Test() {
-        val stream = q("select t:*, e:*, l:* where l:concept:name like 'Jour%Rev%' and l:id='$uuid'")
+        val stream = q("select t:*, e:*, l:* where l:concept:name like 'Jour%Rev%' and l:id=$uuid")
 
         assertEquals(1, stream.count()) // only one log
         val log = stream.first()
@@ -263,7 +263,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun selectAggregationTest() {
-        val stream = q("select min(t:total), avg(t:total), max(t:total) where l:id='$uuid'")
+        val stream = q("select min(t:total), avg(t:total), max(t:total) where l:id=$uuid")
 
         assertEquals(1, stream.count()) // only one log
         val log = stream.first()
@@ -281,7 +281,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun selectNonStandardAttributesTest() {
-        val stream = q("select [e:result], [e:time:timestamp], [e:concept:name] where l:id='$uuid'")
+        val stream = q("select [e:result], [e:time:timestamp], [e:concept:name] where l:id=$uuid")
 
         assertEquals(1, stream.count()) // only one log
         val log = stream.first()
@@ -323,7 +323,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     fun selectExpressionTest() {
         val stream = q(
             "select [e:concept:name] + e:resource, max(timestamp) - \t \n min(timestamp), count(e:time:timestamp) " +
-                    "where l:id='$uuid' " +
+                    "where l:id=$uuid " +
                     "group by [e:concept:name], e:resource"
         )
         assertEquals(1, stream.count())
@@ -351,7 +351,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun selectComplexScalarExpressionTest() {
-        val stream = q("select e:total + t:total where l:id='$uuid'")
+        val stream = q("select e:total + t:total where l:id=$uuid")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -579,7 +579,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun selectSeconds() {
-        val stream = q("select e:*, second(e:timestamp) where l:id='$uuid'")
+        val stream = q("select e:*, second(e:timestamp) where l:id=$uuid")
         val log = stream.first()
         for (trace in log.traces) {
             for (event in trace.events) {
@@ -594,8 +594,8 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun nonexistentCustomAttributesTest() {
         val nonexistentAttributes = listOf(
-            "select [🦠] where l:id='$uuid'",
-            "select [result] where l:id='$uuid'" // exists in some events
+            "select [🦠] where l:id=$uuid",
+            "select [result] where l:id=$uuid" // exists in some events
         )
 
         val validResults = mutableMapOf(null to 0, "accept" to 0, "reject" to 0)
@@ -621,7 +621,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         assertTrue(validResults["reject"]!! > 0)
 
         // the result attribute is used in reviews only
-        val zeroMatch = q("where l:id='$uuid' and e:name=[result]")
+        val zeroMatch = q("where l:id=$uuid and e:name=[result]")
         assertEquals(0, zeroMatch.count())
     }
 
@@ -647,7 +647,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     fun invalidUseOfClassifiers() {
         assertFailsWith<IllegalArgumentException> {
             val log =
-                q("where [e:classifier:concept:name+lifecycle:transition] in ('acceptcomplete', 'rejectcomplete') and l:id='$uuid'").first()
+                q("where [e:classifier:concept:name+lifecycle:transition] in ('acceptcomplete', 'rejectcomplete') and l:id=$uuid").first()
             val trace = log.traces.first()
             trace.events.first() // exception is thrown here
         }.apply {
@@ -655,7 +655,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
             assertTrue("in" in message!!)
         }
 
-        val validUse = q("select [e:c:Event Name] where l:id='$uuid'")
+        val validUse = q("select [e:c:Event Name] where l:id=$uuid")
         assertEquals(1, validUse.count())
 
         val log = validUse.first()
@@ -671,7 +671,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun duplicateAttributes() {
-        val stream = q("select e:name, [e:c:Event Name] where l:id='$uuid'")
+        val stream = q("select e:name, [e:c:Event Name] where l:id=$uuid")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -696,7 +696,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun whereSimpleTest() {
-        val stream = q("where dayofweek(e:timestamp) in (1, 7) and l:id='$uuid'")
+        val stream = q("where dayofweek(e:timestamp) in (1, 7) and l:id=$uuid")
         val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         assertEquals(1, stream.count())
 
@@ -746,7 +746,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun whereSimpleWithHoistingTest() {
-        val stream = q("where dayofweek(^e:timestamp) in (1, 7) and l:id='$uuid'")
+        val stream = q("where dayofweek(^e:timestamp) in (1, 7) and l:id=$uuid")
         val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         assertEquals(1, stream.count())
 
@@ -797,7 +797,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun whereSimpleWithHoistingTest2() {
-        val stream = q("where dayofweek(^^e:timestamp) in (1, 7) and l:id='$uuid'")
+        val stream = q("where dayofweek(^^e:timestamp) in (1, 7) and l:id=$uuid")
         val validDays = EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
         assertEquals(1, stream.count())
 
@@ -852,7 +852,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun whereLogicExprWithHoistingTest() {
-        val stream = q("where not(t:currency = ^e:currency) and l:id='$uuid'")
+        val stream = q("where not(t:currency = ^e:currency) and l:id=$uuid")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -899,7 +899,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun whereLogicExprTest() {
-        val stream = q("where t:currency != e:currency and l:id='$uuid'")
+        val stream = q("where t:currency != e:currency and l:id=$uuid")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -946,7 +946,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun whereLogicExpr2Test() {
-        val stream = q("where not(t:currency = ^e:currency) and t:total is null and l:id='$uuid'")
+        val stream = q("where not(t:currency = ^e:currency) and t:total is null and l:id=$uuid")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -994,7 +994,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun whereLogicExpr3Test() {
         val stream =
-            q("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2007-01-01) and t:total is null and l:id='$uuid'")
+            q("where (not(t:currency = ^e:currency) or ^e:timestamp >= D2007-01-01) and t:total is null and l:id=$uuid")
         val myBegin = "2007-01-01T00:00:00Z".parseISO8601()
         assertEquals(1, stream.count())
 
@@ -1034,7 +1034,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun whereLikeAndMatchesTest() {
         val stream =
-            q("where t:name like '%5' and ^e:resource matches '^[SP]am$' and l:id='$uuid'")
+            q("where t:name like '%5' and ^e:resource matches '^[SP]am$' and l:id=$uuid")
         val nameRegex = Regex("^[SP]am$")
         assertEquals(1, stream.count())
 
@@ -1061,7 +1061,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     @Test
     fun groupScopeByClassifierTest() {
         val stream =
-            q("select [e:classifier:concept:name+lifecycle:transition] where l:id='$uuid' group by [^e:classifier:concept:name+lifecycle:transition]")
+            q("select [e:classifier:concept:name+lifecycle:transition] where l:id=$uuid group by [^e:classifier:concept:name+lifecycle:transition]")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1122,7 +1122,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupEventByStandardAttributeTest() {
-        val stream = q("select t:name, e:name, sum(e:total) where l:id='$uuid' group by e:name")
+        val stream = q("select t:name, e:name, sum(e:total) where l:id=$uuid group by e:name")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1191,7 +1191,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupByImplicitScopeTest() {
-        val stream = q("where l:id='$uuid' group by c:Resource")
+        val stream = q("where l:id=$uuid group by c:Resource")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1286,7 +1286,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupByImplicitFromOrderByTest() {
-        val stream = q("where l:id='$uuid' order by avg(e:total), min(e:timestamp), max(e:timestamp)")
+        val stream = q("where l:id=$uuid order by avg(e:total), min(e:timestamp), max(e:timestamp)")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1323,7 +1323,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupByImplicitWithHoistingTest() {
-        val stream = q("select avg(^^e:total), min(^^e:timestamp), max(^^e:timestamp) where l:id='$uuid'")
+        val stream = q("select avg(^^e:total), min(^^e:timestamp), max(^^e:timestamp) where l:id=$uuid")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1435,7 +1435,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun orderByExpressionTest() {
-        val stream = q("select min(timestamp) where l:id='$uuid' group by ^e:name order by min(^e:timestamp)")
+        val stream = q("select min(timestamp) where l:id=$uuid group by ^e:name order by min(^e:timestamp)")
         assertEquals(1, stream.count())
 
         val log = stream.first()
@@ -1453,7 +1453,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun groupByWithHoistingAndOrderByWithinGroupTest() {
-        val stream = q("where l:id='$uuid' group by ^e:name order by name")
+        val stream = q("where l:id=$uuid group by ^e:name order by name")
         val log = stream.first()
 
         // as of 2020-06-11 JournalReview-extra.xes consists of 78 variants w.r.t. concept:name order by concept:name:
@@ -1544,7 +1544,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun offsetSingleTest() {
-        val stream = q("where l:id='$uuid' offset l:1")
+        val stream = q("where l:id=$uuid offset l:1")
         assertEquals(0, stream.count())
 
         val journalAll = q("where l:name like 'Journal%'")
@@ -1554,7 +1554,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
 
     @Test
     fun offsetAllTest() {
-        val stream = q("where l:id='$uuid' offset e:3, t:2, l:1")
+        val stream = q("where l:id=$uuid offset e:3, t:2, l:1")
         assertEquals(0, stream.count())
 
         val journalAll = q("where l:name='JournalReview' limit l:3").map { it.identityId to it }.toMap()

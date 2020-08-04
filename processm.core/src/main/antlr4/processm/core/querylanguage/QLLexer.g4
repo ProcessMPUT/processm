@@ -23,6 +23,8 @@ SCOPE       : 'log'
             | 'e'
             ;
 
+UUID        : SCOPE_PREFIX HEX_4 HEX_4 '-' HEX_4 '-' HEX_4 '-' HEX_4 '-' HEX_4 HEX_4 HEX_4 ;
+
 STRING_SINGLE : SCOPE_PREFIX '\'' ( '\\\'' | . )*? '\'' -> type(STRING) ;
 STRING_DOUBLE : SCOPE_PREFIX '"' ( '\\"' | . )*? '"' -> type(STRING) ;
 
@@ -106,3 +108,5 @@ fragment ISOSECOND: ISOMINUTE ;
 fragment ISOMILLI: DIGIT DIGIT DIGIT ;
 fragment ISOTIMEZONE: 'Z' | ('+'|'-') ISOTZONEHOUR (':'? ISOMINUTE)? ;
 fragment ISOTZONEHOUR: '0' DIGIT | '10' | '11' | '12' ;
+fragment HEX_4: HEX HEX HEX HEX;
+fragment HEX: [0-9a-fA-F];
