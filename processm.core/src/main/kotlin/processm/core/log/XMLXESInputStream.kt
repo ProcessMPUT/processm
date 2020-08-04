@@ -234,14 +234,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         when (type) {
             "string" -> StringAttr(key, value)
             "float" -> RealAttr(key, numberFormatter.parse(value).toDouble())
-            "id" -> {
-                val uuidValue = value.toUUID()
-                if (uuidValue !== null) {
-                    IDAttr(key, uuidValue)
-                } else {
-                    throw Exception("Cannot convert String $value into UUID form.")
-                }
-            }
+            "id" -> IDAttr(key, requireNotNull(value.toUUID()))
             "int" -> IntAttr(key, value.toLong())
             "date" -> DateTimeAttr(key, value.fastParseISO8601())
             "boolean" -> BoolAttr(key, value.toBoolean())
