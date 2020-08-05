@@ -2,9 +2,12 @@ package processm.core.persistence
 
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
+import org.postgresql.ds.PGSimpleDataSource
+import processm.core.helpers.isUUID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
+import java.util.*
 
 /**
  * Database migrator.
@@ -19,13 +22,44 @@ object Migrator {
         logger().enter()
 
         logger().debug("Migrating database if required")
-        val url = System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
-        val conf = Flyway.configure().dataSource(url, null, null)
-        applyDefaultSchema(conf, url)
-        val flyway = conf.load()
-        flyway.migrate()
+        val connectionURL = System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
+        val databaseName = ensureMainDBNameNotUUID(connectionURL)
+
+        // Main database
+        val conf = Flyway.configure().dataSource(connectionURL, null, null)
+        conf.locations("db/processm_main_migrations")
+        applyDefaultSchema(conf, connectionURL)
+        conf.load().migrate()
+
+        // DataSource databases
+        val dbs = listOf("jpotoniec")
+        for (db in dbs) { // TODO: dbs from database - fetch UUIDs list
+            // TODO: bug available? database name at the beginning
+            // jdbc:postgresql://db.processm.cs.put.poznan.pl/db -> replace by 123 -> jdbc:postgresql:/123.processm.cs.put.poznan.pl/db
+            val dbURL = Regex("/$databaseName").replace(connectionURL, "/$db")
+            with(Flyway.configure().dataSource(dbURL, null, null)) {
+                locations("db/processm_datastore_migrations")
+                applyDefaultSchema(this, dbURL)
+                load().migrate()
+            }
+        }
 
         logger().exit()
+    }
+
+    /**
+     * Validate main database name - should not be in UUID format.
+     * As result return database name.
+     */
+    private fun ensureMainDBNameNotUUID(connectionURL: String): String {
+        val databaseName = with(PGSimpleDataSource()) {
+            setURL(connectionURL)
+            return@with databaseName!!
+        }
+
+        require(!databaseName.isUUID()) { "Database name can't be in UUID format" }
+
+        return databaseName
     }
 
     /**
