@@ -23,6 +23,7 @@ object Migrator {
 
         logger().debug("Migrating database if required")
         val connectionURL = System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
+        ensurePostgreSQLDatabase(connectionURL)
         val databaseName = ensureMainDBNameNotUUID(connectionURL)
 
         // Main database
@@ -32,11 +33,9 @@ object Migrator {
         conf.load().migrate()
 
         // DataSource databases
-        val dbs = listOf("jpotoniec")
+        val dbs = listOf("test")
         for (db in dbs) { // TODO: dbs from database - fetch UUIDs list
-            // TODO: bug available? database name at the beginning
-            // jdbc:postgresql://db.processm.cs.put.poznan.pl/db -> replace by 123 -> jdbc:postgresql:/123.processm.cs.put.poznan.pl/db
-            val dbURL = Regex("/$databaseName").replace(connectionURL, "/$db")
+            val dbURL = switchDatabaseURL(connectionURL, databaseName, db)
             with(Flyway.configure().dataSource(dbURL, null, null)) {
                 locations("db/processm_datastore_migrations")
                 applyDefaultSchema(this, dbURL)
@@ -45,6 +44,15 @@ object Migrator {
         }
 
         logger().exit()
+    }
+
+    private fun switchDatabaseURL(connectionURL: String, mainDatabase: String, expectedDatabase: String): String {
+        val withoutPSQL = connectionURL.substring(18)
+        return "jdbc:postgresql://${Regex("/$mainDatabase").replace(withoutPSQL, "/$expectedDatabase")}"
+    }
+
+    private fun ensurePostgreSQLDatabase(connectionURL: String) {
+        require(connectionURL.startsWith("jdbc:postgresql://")) { "Expected PostgreSQL database not found!" }
     }
 
     /**
