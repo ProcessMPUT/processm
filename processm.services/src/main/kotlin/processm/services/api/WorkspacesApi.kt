@@ -1,26 +1,23 @@
 package processm.services.api
 
+import com.google.gson.Gson
 import io.ktor.application.call
 import io.ktor.auth.authenticate
 import io.ktor.auth.authentication
 import io.ktor.http.HttpStatusCode
-import io.ktor.locations.KtorExperimentalLocationsAPI
-import io.ktor.locations.delete
-import io.ktor.locations.get
-import io.ktor.locations.post
+import io.ktor.locations.*
 import io.ktor.request.receiveOrNull
 import io.ktor.response.respond
 import io.ktor.routing.Route
-import io.ktor.routing.post
-import io.ktor.routing.put
-import io.ktor.routing.route
+import kotlinx.serialization.ImplicitReflectionSerializer
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.services.api.models.*
 import processm.services.logic.WorkspaceService
 import processm.services.models.CausalNetDto
-import java.util.*
+import processm.services.models.ComponentTypeDto
 
+@UseExperimental(ImplicitReflectionSerializer::class)
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
@@ -60,19 +57,31 @@ fun Route.WorkspacesApi() {
             call.respond(HttpStatusCode.OK, WorkspaceCollectionMessageBody(workspaces))
         }
 
+        put<Paths.Workspace> {
+            val principal = call.authentication.principal<ApiUser>()
 
-        route("/organizations/{organizationId}/workspaces/{workspaceId}") {
-            put {
-                val principal = call.authentication.principal<ApiUser>()
-
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
         get<Paths.WorkspaceComponent> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)
+        }
+
+        put<Paths.WorkspaceComponent> { component ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            val workspaceComponent = call.receiveOrNull<ComponentMessageBody>()?.data
+                                         ?: throw ApiException("The provided workspace data cannot be parsed")
+
+            principal.ensureUserBelongsToOrganization(component.organizationId)
+            workspaceComponent.apply {
+                workspaceService.updateWorkspaceComponent(component.componentId, name, ComponentTypeDto.byTypeNameInDatabase(type.toString()), if (workspaceComponent.customizationData != null) Gson().toJson(
+                    workspaceComponent.customizationData
+                ) else null)
+            }
+
+            call.respond(HttpStatusCode.NoContent)
         }
 
         get<Paths.WorkspaceComponentData> { _ ->
@@ -88,11 +97,14 @@ fun Route.WorkspacesApi() {
 
             val components = workspaceService.getWorkspaceComponents(workspace.workspaceId)
                 .mapToArray {
+                    val customizationData = if (!it.customizationData.isNullOrEmpty())
+                        Gson().fromJson(it.customizationData, CausalNetComponentAllOfCustomizationData::class.java)
+                        else null
                     val data = it.data as CausalNetDto
-                    ComponentAbstract(it.name, ComponentType.causalNet, it.id, CausalNetComponentData(
-                        data.nodes.mapToArray { CausalNetComponentDataAllOfNodes(it.splits, it.joins, it.id) },
+                    AbstractComponent(it.id, it.name,  ComponentType.causalNet, CausalNetComponentData(
+                        data.nodes.mapToArray { CausalNetComponentDataAllOfNodes(it.id, it.splits, it.joins) },
                         data.edges.mapToArray { CausalNetComponentDataAllOfEdges(it.sourceNodeId, it.targetNodeId) }
-                    ))
+                    ), customizationData)
                 }
 
             call.respond(HttpStatusCode.OK, ComponentCollectionMessageBody(components))

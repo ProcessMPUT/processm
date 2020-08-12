@@ -134,7 +134,7 @@ object Paths {
     @Location("/users/session") class UserOut()
 
     /**
-     * Get or remove the specified workspace in the context of the specified organization
+     * Get, update or remove the specified workspace in the context of the specified organization
      *
      * @param organizationId Organization ID
      * @param workspaceId Workspace ID
@@ -143,7 +143,7 @@ object Paths {
     @Location("/organizations/{organizationId}/workspaces/{workspaceId}") class Workspace(val organizationId: java.util.UUID, val workspaceId: java.util.UUID)
 
     /**
-     * Get the specified component in the specified workspace in the context of the specified organization
+     * Get or update the specified component in the specified workspace in the context of the specified organization
      *
      * @param organizationId Organization ID
      * @param workspaceId Workspace ID

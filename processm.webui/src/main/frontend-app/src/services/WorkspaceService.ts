@@ -5,7 +5,7 @@ import WorkspaceComponent, {
   CausalNetComponentData,
   KpiComponentData
 } from "@/models/WorkspaceComponent";
-import { Workspace as ApiWorkspace, ComponentAbstract } from "@/openapi";
+import { Workspace as ApiWorkspace, AbstractComponent } from "@/openapi";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
@@ -85,8 +85,24 @@ export default class WorkspaceService extends BaseService {
       id: component.id,
       name: component.name,
       type: component.type,
-      data: component.data
+      data: component.data,
+      customizationData: component.customizationData
     };
+  }
+
+  public async updateComponent(
+    workspaceId: string,
+    componentId: string,
+    componentData: AbstractComponent
+  ) {
+    const response = await this.workspacesApi.updateWorkspaceComponent(
+      this.currentOrganizationId,
+      workspaceId,
+      componentId,
+      { data: componentData }
+    );
+
+    return response.status == 204;
   }
 
   public async getComponentData(
@@ -104,21 +120,6 @@ export default class WorkspaceService extends BaseService {
     return response.data.data;
   }
 
-  public async updateComponentData(
-    workspaceId: string,
-    componentId: string,
-    componentData: CausalNetComponentData | KpiComponentData
-  ) {
-    const response = await this.workspacesApi.updateWorkspaceComponentData(
-      this.currentOrganizationId,
-      workspaceId,
-      componentId,
-      { data: componentData }
-    );
-
-    return response.status == 204;
-  }
-
   public async getWorkspaceComponents(workspaceId: string) {
     const response = await this.workspacesApi.getWorkspaceComponents(
       this.currentOrganizationId,
@@ -128,13 +129,14 @@ export default class WorkspaceService extends BaseService {
     this.ensureSuccessfulResponseCode(response);
 
     return response.data.data.reduce(
-      (components: WorkspaceComponent[], apiComponent: ComponentAbstract) => {
+      (components: WorkspaceComponent[], apiComponent: AbstractComponent) => {
         if (apiComponent.id != null) {
           components.push({
             id: apiComponent.id,
             name: apiComponent.name,
             type: apiComponent.type,
-            data: apiComponent.data
+            data: apiComponent.data,
+            customizationData: apiComponent.customizationData
           });
         }
 

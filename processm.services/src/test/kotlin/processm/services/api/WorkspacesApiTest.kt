@@ -1,7 +1,9 @@
 package processm.services.api
 
 import io.ktor.http.*
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import org.junit.Test
 import org.junit.jupiter.api.TestInstance
@@ -11,6 +13,7 @@ import processm.services.logic.WorkspaceService
 import processm.services.models.CausalNetDto
 import processm.services.models.CausalNetEdgeDto
 import processm.services.models.CausalNetNodeDto
+import processm.services.models.ComponentTypeDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -27,6 +30,7 @@ class WorkspacesApiTest : BaseApiTest() {
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}",
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components",
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}",
+        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}",
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
     )
 
@@ -201,6 +205,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { data } returns CausalNetDto(
                         listOf(CausalNetNodeDto("node_id", arrayOf(arrayOf()), arrayOf(arrayOf()))),
                         listOf(CausalNetEdgeDto("node_id1", "node_id2")))
+                    every {customizationData} returns null
                 },
                 mockk {
                     every { id } returns componentId2
@@ -208,6 +213,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { data } returns CausalNetDto(
                         listOf(CausalNetNodeDto("node_id", arrayOf(arrayOf()), arrayOf(arrayOf()))),
                         listOf(CausalNetEdgeDto("node_id1", "node_id2")))
+                    every {customizationData} returns null
                 }
             )
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/workspaces/$workspaceId/components")) {
@@ -216,6 +222,71 @@ class WorkspacesApiTest : BaseApiTest() {
                 assertEquals(2, components.count())
                 assertEquals(componentId1, components[0].id)
                 assertEquals(componentId2, components[1].id)
+            }
+        }
+    }
+
+    @Test
+    fun `responds to workspace components request with 200 and component details`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val workspaceId = UUID.randomUUID()
+        val componentId = UUID.randomUUID()
+
+        withAuthentication(role = OrganizationRole.reader to organizationId) {
+            every { workspaceService.getWorkspaceComponents(workspaceId) } returns listOf(
+                mockk {
+                    every { id } returns componentId
+                    every { name } returns "Component1"
+                    every { data } returns CausalNetDto(
+                        listOf(CausalNetNodeDto("node_id", arrayOf(arrayOf()), arrayOf(arrayOf()))),
+                        listOf(CausalNetEdgeDto("node_id1", "node_id2")))
+                    every { customizationData } returns "{\"layout\":[{\"id\":\"node_id\",\"x\":15,\"y\":30}]}"
+                }
+            )
+            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/workspaces/$workspaceId/components")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+                val componentCustomizationData = assertNotNull(response.deserializeContent<ComponentCollectionMessageBody>().data.firstOrNull()?.customizationData?.layout)
+
+                assertEquals("node_id", componentCustomizationData.firstOrNull()?.id)
+                assertEquals(15.toBigDecimal(), componentCustomizationData.firstOrNull()?.x)
+                assertEquals(30.toBigDecimal(), componentCustomizationData.firstOrNull()?.y)
+            }
+        }
+    }
+
+    @Test
+    fun `responds to workspace component update without component customization data request with 204`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val workspaceId = UUID.randomUUID()
+        val componentId = UUID.randomUUID()
+        val componentName = "Component1"
+
+        withAuthentication(role = OrganizationRole.reader to organizationId) {
+            every { workspaceService.updateWorkspaceComponent(componentId, componentName, ComponentTypeDto.CausalNet, customizationData = null) } just Runs
+            with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(ComponentMessageBody(AbstractComponent(name = "Component1", type = ComponentType.causalNet, customizationData = null)))
+            }) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
+            }
+        }
+    }
+
+    @Test
+    fun `responds to workspace component update request with 204`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val workspaceId = UUID.randomUUID()
+        val componentId = UUID.randomUUID()
+        val componentName = "Component1"
+
+        withAuthentication(role = OrganizationRole.reader to organizationId) {
+            every { workspaceService.updateWorkspaceComponent(componentId, componentName, ComponentTypeDto.CausalNet, customizationData = """{"layout":[{"id":"id1","x":10,"y":10}]}""") } just Runs
+            with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                withSerializedBody(ComponentMessageBody(AbstractComponent(name = "Component1", type = ComponentType.causalNet, customizationData = CausalNetComponentAllOfCustomizationData(
+                    arrayOf(CausalNetComponentAllOfCustomizationDataLayout(id = "id1", x = 10.toBigDecimal(), y = 10.toBigDecimal()))))))
+            }) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
             }
         }
     }

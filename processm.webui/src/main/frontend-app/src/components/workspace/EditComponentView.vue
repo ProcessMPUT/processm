@@ -122,15 +122,14 @@ export default class EditComponentView extends Vue {
       const causalNetComponentData = this.componentDetails
         .data as CausalNetComponentData;
 
-      this.workspaceService.updateComponentData(
+      this.workspaceService.updateComponent(
         this.workspaceId,
         this.componentDetails.id,
         {
-          type: causalNetComponentData.type,
-          query: causalNetComponentData.query,
-          nodes: causalNetComponentData.nodes,
-          edges: causalNetComponentData.edges,
-          layout: causalNetComponentData.layout
+          type: this.componentDetails.type,
+          data: causalNetComponentData,
+          name: this.componentDetails.name,
+          customizationData: this.componentDetails.customizationData
         }
       );
     }

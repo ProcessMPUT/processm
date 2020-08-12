@@ -360,6 +360,28 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
+    put:
+      tags:
+        - workspaces
+        - components
+      summary: Update the specified component in the specified workspace in the context of the specified organization
+      operationId: updateWorkspaceComponent
+      requestBody:
+        description: Component details to update
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ComponentMessageBody'
+        required: true
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
   /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
     parameters:
       - name: organizationId
@@ -396,28 +418,6 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/ComponentDataMessageBody'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      security:
-        - bearerAuth: []
-    put:
-      tags:
-        - workspaces
-        - components
-      summary: Update data of the specified component in the specified workspace in the context of the specified organization
-      operationId: updateWorkspaceComponentData
-      requestBody:
-        description: Component data to update
-        content:
-          'application/json':
-            schema:
-              $ref: '#/components/schemas/ComponentDataMessageBody'
-        required: true
-      responses:
-        '204':
-          description: successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1068,7 +1068,6 @@ components:
             $ref: '#/components/schemas/Workspace'
     Component:
       type: object
-      required: [name, type]
       properties:
         id:
           type: string
@@ -1082,7 +1081,7 @@ components:
           properties:
             query:
               type: string
-    ComponentAbstract:
+    AbstractComponent:
       oneOf:
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
@@ -1096,7 +1095,7 @@ components:
       properties:
         type:
           $ref: '#/components/schemas/ComponentType'
-    ComponentDataAbstract:
+    AbstractComponentData:
       oneOf:
         - $ref: '#/components/schemas/KpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
@@ -1122,6 +1121,8 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/KpiComponentData'
+            customizationData:
+              type: object
     CausalNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -1167,30 +1168,33 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/CausalNetComponentData'
-            layout:
-              type: array
-              items:
-                type: object
-                required: [id, x, y]
-                properties:
-                  id:
-                    type: string
-                  x:
-                    type: number
-                  y:
-                    type: number
+            customizationData:
+              type: object
+              properties:
+                layout:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, x, y]
+                    properties:
+                      id:
+                        type: string
+                      x:
+                        type: number
+                      y:
+                        type: number
     ComponentMessageBody:
       type: object
       required: [data]
       properties:
         data:
-          $ref: '#/components/schemas/ComponentAbstract'
+          $ref: '#/components/schemas/AbstractComponent'
     ComponentDataMessageBody:
       type: object
       required: [data]
       properties:
         data:
-          $ref: '#/components/schemas/ComponentDataAbstract'
+          $ref: '#/components/schemas/AbstractComponentData'
     ComponentCollectionMessageBody:
       type: object
       required: [data]
@@ -1198,7 +1202,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/ComponentAbstract'
+            $ref: '#/components/schemas/AbstractComponent'
     Group:
       type: object
       required: [name, groupRole, isImplicit, organizationId]

@@ -285,7 +285,8 @@ const componentsData = [
           sourceNodeId: "d",
           targetNodeId: "e"
         }
-      ],
+      ]},
+    customizationData: {
       layout: [
         { id: "a", x: 125, y: 25 },
         { id: "b", x: 125, y: 75 },
@@ -592,6 +593,25 @@ const api = {
 
     return res.json({ data: component });
   },
+  "PUT /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId": (
+    req,
+    res
+  ) => {
+    const { workspaceId, componentId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+    const component = _.find(componentsData, { id: componentId });
+
+    if (!workspace || !component) {
+      return res.status(404).json();
+    }
+
+    component.name = req.body.data.name;
+    component.type = req.body.data.type;
+    component.data = req.body.data.data;
+    component.customizationData = req.body.data.customizationData;
+
+    return res.status(204).json();
+  },
   "GET /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId/data": (
     req,
     res
@@ -606,22 +626,6 @@ const api = {
     const datasetIndex = Math.floor(componentsData.length * Math.random());
 
     return res.json({ data: componentsData[datasetIndex].data });
-  },
-  "PUT /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId/data": (
-    req,
-    res
-  ) => {
-    const { workspaceId, componentId } = req.params;
-    const workspace = _.find(workspaces, { id: workspaceId });
-    const component = _.find(componentsData, { id: componentId });
-
-    if (!workspace || !component) {
-      return res.status(404).json();
-    }
-
-    component.data = req.body.data;
-
-    return res.status(201).json();
   },
   "POST /api/users/session": (req, res) => {
     const credentials = req.body.data;

@@ -49,7 +49,7 @@ abstract class ServiceTestBase {
         }
     }
 
-    protected fun Transaction.attachUserToOrganization(userId: UUID, organizationId: UUID, organizationRole: OrganizationRoleDto = OrganizationRoleDto.Reader)  =
+    protected fun Transaction.attachUserToOrganization(userId: UUID, organizationId: UUID, organizationRole: OrganizationRoleDto = OrganizationRoleDto.Reader) =
         UsersRolesInOrganizations.insertAndGetId {
             it[UsersRolesInOrganizations.userId] = EntityID(userId, Users)
             it[UsersRolesInOrganizations.organizationId] = EntityID(organizationId, Organizations)
@@ -81,4 +81,17 @@ abstract class ServiceTestBase {
             it[this.workspaceId] = EntityID(workspaceId, Workspaces)
             it[this.organizationId] = EntityID(organizationId ?: createOrganization().value, Organizations)
         }
+
+    protected fun Transaction.createWorkspaceComponent(name: String = "Component1", componentWorkspaceId: UUID? = null, query: String ="SELECT ...", componentType: ComponentTypeDto = ComponentTypeDto.CausalNet, dataSourceId : Int = 0, customizationData: String = "{}"): EntityID<UUID> {
+        val workspaceId = componentWorkspaceId ?: createWorkspace().value
+
+        return WorkspaceComponents.insertAndGetId {
+            it[this.name] = name
+            it[this.workspaceId] = EntityID(workspaceId, Workspaces)
+            it[this.query] = query
+            it[this.componentType] = componentType.typeName
+            it[componentDataSourceId] = dataSourceId
+            it[this.customizationData] = customizationData
+        }
+    }
 }

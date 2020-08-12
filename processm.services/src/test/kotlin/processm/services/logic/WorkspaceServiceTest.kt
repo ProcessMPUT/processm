@@ -11,6 +11,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.koin.test.mock.declareMock
+import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.DBSerializer
+import processm.core.models.causalnet.MutableCausalNet
 import processm.services.models.*
 import java.util.*
 import kotlin.test.*
@@ -103,5 +106,67 @@ class WorkspaceServiceTest : ServiceTestBase() {
             }
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
+    }
+
+    @Test
+    fun `returns all user workspace components`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+        val workspaceId1 = createWorkspace("Workspace1")
+        val workspaceId2 = createWorkspace("Workspace2")
+        val componentId1 = createWorkspaceComponent("Component1", workspaceId1.value, componentType = ComponentTypeDto.Kpi)
+        val componentId2 = createWorkspaceComponent("Component2", workspaceId2.value, componentType = ComponentTypeDto.Kpi)
+        val componentId3 = createWorkspaceComponent("Component3", workspaceId1.value, componentType = ComponentTypeDto.Kpi)
+
+        val workspaceComponents = workspaceService.getWorkspaceComponents(workspaceId1.value)
+
+        assertEquals(2, workspaceComponents.size)
+        assertTrue { workspaceComponents.any { it.id == componentId1.value } }
+        assertTrue { workspaceComponents.any { it.id == componentId3.value } }
+    }
+
+    @Test
+    fun `returns only user workspace components with existing data source`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+        val componentDataSourceId = DBSerializer.insert(MutableCausalNet())
+        val workspaceId = createWorkspace("Workspace1")
+        val componentWithNotExistingDataSource = createWorkspaceComponent("Component1", workspaceId.value, componentType = ComponentTypeDto.CausalNet)
+        val componentWithExistingDataSource = createWorkspaceComponent("Component2", workspaceId.value, componentType = ComponentTypeDto.CausalNet, dataSourceId = componentDataSourceId)
+
+        val workspaceComponents = workspaceService.getWorkspaceComponents(workspaceId.value)
+
+        assertEquals(1, workspaceComponents.size)
+        assertTrue { workspaceComponents.any { it.id == componentWithExistingDataSource.value } }
+    }
+
+    @Test
+    fun `successful workspace component update returns`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+        val workspaceId = createWorkspace("Workspace1")
+        val componentId = createWorkspaceComponent("Component1", workspaceId.value, componentType = ComponentTypeDto.CausalNet)
+        val newComponentName = "newName"
+        val newComponentType = ComponentTypeDto.Kpi
+        val newComponentCustomizationData = """{"data":"new"}"""
+
+        workspaceService.updateWorkspaceComponent(componentId.value, newComponentName, newComponentType, newComponentCustomizationData)
+
+        assertTrue { WorkspaceComponents.select {
+                    WorkspaceComponents.id eq componentId and
+                    (WorkspaceComponents.name eq newComponentName) and
+                    (WorkspaceComponents.componentType eq newComponentType.typeName) and
+                    (WorkspaceComponents.customizationData eq newComponentCustomizationData) }.any() }
+    }
+
+    @Test
+    fun `skips workspace component field update if new value is null`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+        val oldComponentName = "oldName"
+        val oldComponentType = ComponentTypeDto.Kpi
+        val oldComponentCustomizationData = """{"data":"new"}"""
+        val workspaceId = createWorkspace("Workspace1")
+        val componentId = createWorkspaceComponent(oldComponentName, workspaceId.value, componentType = oldComponentType, customizationData = oldComponentCustomizationData)
+
+        workspaceService.updateWorkspaceComponent(componentId.value, name = null, componentType = null, customizationData = null)
+
+        assertTrue { WorkspaceComponents.select {
+            WorkspaceComponents.id eq componentId and
+                    (WorkspaceComponents.name eq oldComponentName) and
+                    (WorkspaceComponents.componentType eq oldComponentType.typeName) and
+                    (WorkspaceComponents.customizationData eq oldComponentCustomizationData) }.any() }
     }
 }

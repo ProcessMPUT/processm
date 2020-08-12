@@ -177,35 +177,6 @@ object DBSerializer {
             throw IllegalStateException() // this should be impossible to reach
     }
 
-    fun fetchAll() = transaction(DBConnectionPool.database) {
-        addLogger(Slf4jSqlDebugLogger)
-        DAOModel.all().map { daomodel ->
-            val idNode = daomodel.nodes
-                .map { row -> row.id to Node(row.activity, row.instance, row.special) }
-                .toMap()
-            var start = daomodel.start
-            var end = daomodel.end
-            if (start == null || end == null)
-                throw IllegalStateException("start or end is null") //this means that DB went bonkers
-            val mm = MutableCausalNet(start = idNode.getValue(start), end = idNode.getValue(end))
-            mm.addInstance(*idNode.values.toTypedArray())
-            val idDep = daomodel.dependencies.map { row ->
-                row to mm.addDependency(
-                    idNode.getValue(row.source),
-                    idNode.getValue(row.target)
-                )
-            }.toMap()
-            daomodel.bindings.forEach { row ->
-                val deps = row.dependencies.mapToSet { idDep.getValue(it) }
-                if (row.isJoin)
-                    mm.addJoin(Join(deps))
-                else
-                    mm.addSplit(Split(deps))
-            }
-            return@map mm
-        }
-        }
-
     /**
      * Deletes a model with specified modelId
      */

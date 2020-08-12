@@ -33,7 +33,7 @@
     </div>
     <component
       :is="`${componentDetails.type}Component`"
-      :data="componentDetails.data"
+      :data="componentDetails"
       :component-mode="componentMode"
     />
   </div>

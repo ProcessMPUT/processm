@@ -159,7 +159,9 @@ import {
   DeletionModeInputHandler,
   InteractiveModeInputHandler
 } from "./UserInputHandlers";
-import { CausalNetComponentData } from "../../../models/WorkspaceComponent";
+import WorkspaceComponentModel, {
+  CausalNetComponentData, CausalNetComponentCustomizationData
+} from "../../../models/WorkspaceComponent";
 
 enum EditMode {
   Addition,
@@ -176,7 +178,10 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   EditMode = EditMode;
 
   @Prop({ default: {} })
-  readonly data!: CausalNetComponentData;
+  readonly data!: WorkspaceComponentModel<
+    CausalNetComponentData,
+    CausalNetComponentCustomizationData
+  >;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
 
@@ -309,17 +314,25 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   mounted() {
+    if (this.data.data == null) {
+      throw new Error("Component data field must not be null");
+    }
+
     this.causalNet = new CausalNet(
-      this.data.nodes,
-      this.data.edges,
-      this.data.layout,
+      this.data.data.nodes,
+      this.data.data.edges,
+      this.data.customizationData?.layout,
       this.nodeTransition
     );
 
-    if (this.data.layout == null) {
-      this.data.layout = Array.from(
-        this.causalNet.nodesLayout
-      ).map(([id, point]) => ({ id, x: point.x, y: point.y }));
+    if (this.data.customizationData?.layout == null) {
+      this.data.customizationData = {
+        layout: Array.from(this.causalNet.nodesLayout).map(([id, point]) => ({
+          id,
+          x: point.x,
+          y: point.y
+        }))
+      };
     }
 
     this.simulation = d3.forceSimulation<Node, Link>().force(
@@ -511,14 +524,20 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   public updateNodeLayoutPosition(nodeId: string, position: Point): void {
-    if (this.data.layout == null) return;
+    if (this.data.customizationData?.layout == null) return;
 
-    const nodeIndex = this.data.layout.findIndex(node => node.id == nodeId);
+    const nodeIndex = this.data.customizationData.layout.findIndex(
+      node => node.id == nodeId
+    );
 
     if (nodeIndex < 0) {
-      this.data.layout.push({ id: nodeId, x: position.x, y: position.y });
+      this.data.customizationData.layout.push({
+        id: nodeId,
+        x: position.x,
+        y: position.y
+      });
     } else {
-      const node = this.data.layout[nodeIndex];
+      const node = this.data.customizationData?.layout[nodeIndex];
 
       node.x = position.x;
       node.y = position.y;

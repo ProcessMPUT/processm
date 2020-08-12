@@ -3,11 +3,15 @@ import {
   DataLink
 } from "@/components/workspace/causal-net/CausalNet";
 
-export default interface WorkspaceComponent {
+export default interface WorkspaceComponent<
+  TComponentData = CausalNetComponentData | KpiComponentData,
+  TComponentCustomizationData = CausalNetComponentCustomizationData | object
+> {
   id: string;
-  name: string;
-  type: ComponentType;
-  data: CausalNetComponentData | KpiComponentData | undefined;
+  name: string | undefined;
+  type: ComponentType | undefined;
+  data?: TComponentData;
+  customizationData?: TComponentCustomizationData;
 }
 
 export enum ComponentType {
@@ -23,7 +27,10 @@ interface ComponentData {
 export interface CausalNetComponentData extends ComponentData {
   nodes: Array<DataNode>;
   edges: Array<DataLink>;
-  layout?: Array<{ id: string; x: number; y: number }>;
+}
+
+export interface CausalNetComponentCustomizationData {
+  layout: { id: string; x: number; y: number }[];
 }
 
 export interface KpiComponentData extends ComponentData {
