@@ -2,8 +2,7 @@ import Vue from "vue";
 import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import WorkspaceComponent, {
-  CausalNetComponentData,
-  KpiComponentData
+  CausalNetComponentData
 } from "@/models/WorkspaceComponent";
 import { Workspace as ApiWorkspace, AbstractComponent } from "@/openapi";
 
@@ -93,13 +92,13 @@ export default class WorkspaceService extends BaseService {
   public async updateComponent(
     workspaceId: string,
     componentId: string,
-    componentData: AbstractComponent
+    component: WorkspaceComponent<CausalNetComponentData>
   ) {
     const response = await this.workspacesApi.updateWorkspaceComponent(
       this.currentOrganizationId,
       workspaceId,
       componentId,
-      { data: componentData }
+      { data: component }
     );
 
     return response.status == 204;

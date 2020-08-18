@@ -111,7 +111,7 @@ export default class EditComponentView extends Vue {
   }
 
   saveChanges() {
-    if (this.componentDetails.data == undefined) {
+    if (this.componentDetails.data == null) {
       console.error(
         `The component ${this.componentDetails.id} has undifined 'data' property`
       );
@@ -126,6 +126,7 @@ export default class EditComponentView extends Vue {
         this.workspaceId,
         this.componentDetails.id,
         {
+          id: this.componentDetails.id,
           type: this.componentDetails.type,
           data: causalNetComponentData,
           name: this.componentDetails.name,
