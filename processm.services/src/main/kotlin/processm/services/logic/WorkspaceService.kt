@@ -14,6 +14,9 @@ import java.util.*
 
 class WorkspaceService(private val accountService: AccountService) {
 
+    /**
+     * Returns all user workspaces for the specified [userId] in the context of the specified [organizationId].
+     */
     fun getUserWorkspaces(userId: UUID, organizationId: UUID) = transaction(DBConnectionPool.database) {
         Workspace.wrapRows(UserGroups
             .innerJoin(UsersInGroups)
@@ -23,6 +26,9 @@ class WorkspaceService(private val accountService: AccountService) {
             .select { UsersInGroups.userId eq userId and (UserGroupWithWorkspaces.organizationId eq organizationId) }).map { it.toDto() }
     }
 
+    /**
+     * Creates new workspace with [workspaceName] in the context of specified [organizationId] and assigns it to private group of the specified [userId].
+     */
     fun createWorkspace(workspaceName: String, userId: UUID, organizationId: UUID) = transaction(DBConnectionPool.database) {
         val user = accountService.getAccountDetails(userId)
         val privateGroupId = user.privateGroup.id
@@ -39,6 +45,10 @@ class WorkspaceService(private val accountService: AccountService) {
         return@transaction workspaceId.value
     }
 
+    /**
+     * Removes the specified [workspaceId].
+     * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceId] doesn't exist.
+     */
     fun removeWorkspace(workspaceId: UUID, userId: UUID, organizationId: UUID) = transaction(DBConnectionPool.database) {
         val canBeRemoved = UsersInGroups
             .innerJoin(UserGroups)
@@ -57,9 +67,11 @@ class WorkspaceService(private val accountService: AccountService) {
         } > 0
     }
 
+    /**
+     * Returns all components in the specified [workspaceId].
+     */
     fun getWorkspaceComponents(workspaceId: UUID, userId: UUID, organizationId: UUID) = loggedScope { logger ->
         transaction(DBConnectionPool.database) {
-
             WorkspaceComponent.wrapRows(
                 WorkspaceComponents
                     .innerJoin(Workspaces)
@@ -87,6 +99,10 @@ class WorkspaceService(private val accountService: AccountService) {
         }
     }
 
+    /**
+     * Updates the specified [workspaceComponentId]. If particular parameter: [name], [componentType], [customizationData] is not specified, then it's not updated.
+     * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceComponentId] doesn't exist.
+     */
     fun updateWorkspaceComponent(workspaceComponentId: UUID, workspaceId: UUID, userId: UUID, organizationId: UUID, name: String?, componentType: ComponentTypeDto?, customizationData: String? = null): Unit = transaction(DBConnectionPool.database) {
         val canBeUpdated = UsersInGroups
             .innerJoin(UserGroups)

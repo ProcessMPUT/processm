@@ -10,6 +10,11 @@ import processm.services.models.*
 import java.util.*
 
 class GroupService {
+
+    /**
+     * Attaches the specified [userId] to the specified [groupId].
+     * Throws [ValidationException] if the specified [userId] or [groupId] doesn't exist.
+     */
     fun attachUserToGroup(userId: UUID, groupId: UUID): Unit = transaction(DBConnectionPool.database) {
         loggedScope { logger ->
             val userInGroup =
@@ -34,6 +39,10 @@ class GroupService {
         }
     }
 
+    /**
+     * Returns id of root group for the specified [groupId]. This is the same group that accumulates all users and user groups in a particular organization.
+     * Throws [ValidationException] if the specified [groupId] doesn't exist.
+     */
     fun getRootGroupId(groupId: UUID) = transaction(DBConnectionPool.database) {
         var parentGroup: ResultRow? = null
         do {
@@ -52,12 +61,20 @@ class GroupService {
         return@transaction parentGroup[UserGroups.id].value
     }
 
+    /**
+     * Returns all groups whose direct parent is [groupId].
+     * Throws [ValidationException] if the specified [groupId] doesn't exist.
+     */
     fun getSubgroups(groupId: UUID) = transaction(DBConnectionPool.database) {
         val userGroup = getGroupDao(groupId)
 
         userGroup.childGroups.map { it.toDto() }
     }
 
+    /**
+     * Returns [UserGroupDto] object for the group with the specified [groupId].
+     * Throws [ValidationException] if the specified [groupId] doesn't exist.
+     */
     fun getGroup(groupId: UUID) = transaction(DBConnectionPool.database) {
         getGroupDao(groupId).toDto()
     }

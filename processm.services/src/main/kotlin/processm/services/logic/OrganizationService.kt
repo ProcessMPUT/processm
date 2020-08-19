@@ -10,19 +10,30 @@ import java.util.*
 
 class OrganizationService {
 
+    /**
+     * Returns all users explicitly assigned to the specified [organizationId].
+     * Throws [ValidationException] if the specified [organizationId] doesn't exist.
+     */
     fun getOrganizationMembers(organizationId: UUID) = transaction(DBConnectionPool.database) {
-        // this returns only users explicitly assigned to the organization
         val organization = getOrganizationDao(organizationId)
 
         organization.userRoles.map { it.toDto() }
     }
 
+    /**
+     * Returns all user groups explicitly assigned to the specified [organizationId].
+     * Throws [ValidationException] if the specified [organizationId] doesn't exist.
+     */
     fun getOrganizationGroups(organizationId: UUID) = transaction(DBConnectionPool.database) {
         val organization = getOrganizationDao(organizationId)
 
         return@transaction listOf(organization.sharedGroup.toDto())
     }
 
+    /**
+     * Returns organization by the specified [sharedGroupId].
+     * Throws [ValidationException] if the organization doesn't exist.
+     */
     fun getOrganizationBySharedGroupId(sharedGroupId: UUID) = transaction(DBConnectionPool.database) {
         val organization = Organizations.select {Organizations.sharedGroupId eq sharedGroupId }.firstOrNull()
            ?: throw ValidationException(

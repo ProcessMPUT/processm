@@ -15,6 +15,10 @@ class AccountService(private val groupService: GroupService) {
     private val passwordVerifier = jargon2Verifier()
     private val defaultLocale = Locale.UK
 
+    /**
+     * Verifies that [username] with the specified [password] exists and returns the [UserDto] object.
+     * Throws [ValidationException] if the specified [username] doesn't exist.
+     */
     fun verifyUsersCredentials(username: String, password: String) =
         loggedScope { logger ->
             transaction(DBConnectionPool.database) {
@@ -30,6 +34,10 @@ class AccountService(private val groupService: GroupService) {
             }
         }
 
+    /**
+     * Creates new organization account and supervising user account.
+     * Throws [ValidationException] if [organizationName] or [userEmail] is already in use.
+     */
     fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null): Unit =
         loggedScope { logger ->
             transaction(DBConnectionPool.database) {
@@ -81,10 +89,18 @@ class AccountService(private val groupService: GroupService) {
             }
         }
 
+    /**
+     * Returns [UserDto] object for the user with the specified [userId].
+     * Throws [ValidationException] if the specified [userId] doesn't exist.
+     */
     fun getAccountDetails(userId: UUID) = transaction(DBConnectionPool.database) {
         getUserDao(userId).toDto()
     }
 
+    /**
+     * Changes user's [currentPassword] to [newPassword] for the user with the specified [userId] and returns true if the operation succeeds or false otherwise.
+     * Throws [ValidationException] if the specified [userId] doesn't exist.
+     */
     fun changePassword(userId: UUID, currentPassword: String, newPassword: String) =
         loggedScope { logger ->
             transaction(DBConnectionPool.database) {
@@ -102,6 +118,10 @@ class AccountService(private val groupService: GroupService) {
             }
         }
 
+    /**
+     * Changes user's [locale] settings for the user with the specified [userId].
+     * Throws [ValidationException] if the specified [userId] doesn't exist or the [locale] cannot be parsed.
+     */
     fun changeLocale(userId: UUID, locale: String) = transaction(DBConnectionPool.database) {
         val user = getUserDao(userId)
         val localeObject = parseLocale(locale)
@@ -109,6 +129,10 @@ class AccountService(private val groupService: GroupService) {
         user.locale = localeObject.toString()
     }
 
+    /**
+     * Returns a collection of all user's roles assigned to the organizations the user with the specified [userId] is member of.
+     * Throws [ValidationException] if the specified [userId] doesn't exist.
+     */
     fun getRolesAssignedToUser(userId: UUID) = transaction(DBConnectionPool.database) {
         // This returns only organizations explicitly assigned to the user account.
         // Inferring the complete set of user roles (including inherited roles) is expensive
