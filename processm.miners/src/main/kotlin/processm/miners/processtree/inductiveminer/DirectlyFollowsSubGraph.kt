@@ -608,7 +608,7 @@ class DirectlyFollowsSubGraph(
     fun currentStartActivities(): MutableSet<ProcessTreeActivity> {
         var collection = HashSet<ProcessTreeActivity>(initialStartActivities!!)
 
-        for (_i in 0..activities.size) {
+        for (_i in 0..(activities.size * 10000)) {
             collection.filter { it in activities }.also {
                 // If at least one start activity still in graph - return start activities
                 if (it.isNotEmpty()) return it.toMutableSet()
@@ -633,7 +633,7 @@ class DirectlyFollowsSubGraph(
     fun currentEndActivities(): MutableSet<ProcessTreeActivity> {
         var collection = HashSet<ProcessTreeActivity>(initialEndActivities!!)
 
-        for (_i in 0..activities.size) {
+        for (_i in 0..(activities.size * 10000)) {
             collection.filter { it in activities }.also {
                 // If at least one end activity still in graph - return start activities
                 if (it.isNotEmpty()) return it.toMutableSet()
@@ -783,6 +783,12 @@ class DirectlyFollowsSubGraph(
 
         // Put the start and end activity component first
         val startLabel = components[currentStartActivities.first()]!!
+
+        // Introduce silent activity if first group of activities are part optional based on stats
+        if (components.values.toSet().size >= 2 && dfg.maximumTraceSupport(components.filterValues { it == startLabel }.keys) < (parentSubGraph?.currentTraceSupport ?: 0)) {
+            components[SilentActivity()] = -2
+        }
+
         // Normally we have indexes 0, 1, 2...
         // If start group not first element - set as -1 to be first in ordered list
         if (startLabel > 0) {
@@ -805,10 +811,17 @@ class DirectlyFollowsSubGraph(
      */
     fun detectActivityCutType() {
         assert(activities.size == 1)
+        val activity = activities.first()
+
+        // If we have silent - this will just silent activity
+        if (activity is SilentActivity) {
+            detectedCut = CutType.Activity
+            return
+        }
 
         // Activity duplicated in any trace?
         val parentTraceSupport = parentSubGraph?.currentTraceSupport ?: 0
-        detectedCut = if (dfg.activitiesDuplicatedInTraces.contains(activities.first())) {
+        detectedCut = if (dfg.activitiesDuplicatedInTraces.containsKey(activity)) {
             if (currentTraceSupport < parentTraceSupport) CutType.RedoActivityAtLeastZeroTimes
             else CutType.RedoActivityAtLeastOnce
         } else {
