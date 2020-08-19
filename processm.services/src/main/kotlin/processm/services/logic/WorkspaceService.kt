@@ -57,11 +57,16 @@ class WorkspaceService(private val accountService: AccountService) {
         } > 0
     }
 
-    // TODO: methods related to workspace component are missing authorization logic
-    fun getWorkspaceComponents(workspaceId: UUID) = loggedScope { logger ->
+    fun getWorkspaceComponents(workspaceId: UUID, userId: UUID, organizationId: UUID) = loggedScope { logger ->
         transaction(DBConnectionPool.database) {
+
             WorkspaceComponent.wrapRows(
-                WorkspaceComponents.select(WorkspaceComponents.workspaceId eq workspaceId))
+                WorkspaceComponents
+                    .innerJoin(Workspaces)
+                    .innerJoin(UserGroupWithWorkspaces)
+                    .innerJoin(UserGroups)
+                    .innerJoin(UsersInGroups)
+                    .select(WorkspaceComponents.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId)))
                 .fold(mutableListOf<WorkspaceComponentDto>()) { acc, component ->
                     val componentDto = component.toDto()
 
@@ -82,7 +87,21 @@ class WorkspaceService(private val accountService: AccountService) {
         }
     }
 
-    fun updateWorkspaceComponent(workspaceComponentId: UUID, name: String?, componentType: ComponentTypeDto?, customizationData: String? = null): Unit = transaction(DBConnectionPool.database) {
+    fun updateWorkspaceComponent(workspaceComponentId: UUID, workspaceId: UUID, userId: UUID, organizationId: UUID, name: String?, componentType: ComponentTypeDto?, customizationData: String? = null): Unit = transaction(DBConnectionPool.database) {
+        val canBeUpdated = UsersInGroups
+            .innerJoin(UserGroups)
+            .innerJoin(UserGroupWithWorkspaces)
+            .innerJoin(Workspaces)
+            .innerJoin(WorkspaceComponents)
+            .select { WorkspaceComponents.id eq workspaceComponentId and (UserGroupWithWorkspaces.workspaceId eq workspaceId) and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader)) }
+            .limit(1)
+            .any()
+
+        if (!canBeUpdated) {
+            throw ValidationException(
+                ValidationException.Reason.ResourceNotFound, "The specified workspace component does not exist or the user has insufficient permissions to it")
+        }
+
         WorkspaceComponents.update({ WorkspaceComponents.id eq workspaceComponentId }) {
             if (name != null) it[WorkspaceComponents.name] = name
             if (componentType != null) it[WorkspaceComponents.componentType] = componentType.typeName

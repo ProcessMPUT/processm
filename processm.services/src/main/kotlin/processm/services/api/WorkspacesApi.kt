@@ -76,7 +76,7 @@ fun Route.WorkspacesApi() {
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
             workspaceComponent.apply {
-                workspaceService.updateWorkspaceComponent(component.componentId, name, ComponentTypeDto.byTypeNameInDatabase(type.toString()), if (workspaceComponent.customizationData != null) Gson().toJson(
+                workspaceService.updateWorkspaceComponent(component.componentId, component.workspaceId, principal.userId, component.organizationId, name, ComponentTypeDto.byTypeNameInDatabase(type.toString()), if (workspaceComponent.customizationData != null) Gson().toJson(
                     workspaceComponent.customizationData
                 ) else null)
             }
@@ -95,7 +95,7 @@ fun Route.WorkspacesApi() {
 
             principal.ensureUserBelongsToOrganization(workspace.organizationId)
 
-            val components = workspaceService.getWorkspaceComponents(workspace.workspaceId)
+            val components = workspaceService.getWorkspaceComponents(workspace.workspaceId, principal.userId, workspace.organizationId)
                 .mapToArray {
                     val customizationData = if (!it.customizationData.isNullOrEmpty())
                         Gson().fromJson(it.customizationData, CausalNetComponentAllOfCustomizationData::class.java)

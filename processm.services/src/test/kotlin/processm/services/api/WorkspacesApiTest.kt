@@ -198,7 +198,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val componentId2 = UUID.randomUUID()
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
-            every { workspaceService.getWorkspaceComponents(workspaceId) } returns listOf(
+            every { workspaceService.getWorkspaceComponents(workspaceId, userId = any(), organizationId = organizationId) } returns listOf(
                 mockk {
                     every { id } returns componentId1
                     every { name } returns "Component1"
@@ -233,7 +233,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val componentId = UUID.randomUUID()
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
-            every { workspaceService.getWorkspaceComponents(workspaceId) } returns listOf(
+            every { workspaceService.getWorkspaceComponents(workspaceId, userId = any(), organizationId = organizationId) } returns listOf(
                 mockk {
                     every { id } returns componentId
                     every { name } returns "Component1"
@@ -262,7 +262,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val componentName = "Component1"
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
-            every { workspaceService.updateWorkspaceComponent(componentId, componentName, ComponentTypeDto.CausalNet, customizationData = null) } just Runs
+            every { workspaceService.updateWorkspaceComponent(componentId, workspaceId, any(), organizationId, componentName, ComponentTypeDto.CausalNet, customizationData = null) } just Runs
             with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(ComponentMessageBody(AbstractComponent(name = "Component1", type = ComponentType.causalNet, customizationData = null)))
@@ -280,7 +280,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val componentName = "Component1"
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
-            every { workspaceService.updateWorkspaceComponent(componentId, componentName, ComponentTypeDto.CausalNet, customizationData = """{"layout":[{"id":"id1","x":10,"y":10}]}""") } just Runs
+            every { workspaceService.updateWorkspaceComponent(componentId, workspaceId, any(), organizationId, componentName, ComponentTypeDto.CausalNet, customizationData = """{"layout":[{"id":"id1","x":10,"y":10}]}""") } just Runs
             with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(ComponentMessageBody(AbstractComponent(name = "Component1", type = ComponentType.causalNet, customizationData = CausalNetComponentAllOfCustomizationData(

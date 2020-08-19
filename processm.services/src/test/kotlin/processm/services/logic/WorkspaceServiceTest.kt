@@ -109,14 +109,18 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns all user workspace components`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+    fun `returns all user workspace components`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val userId = createUser(privateGroupId = groupId.value)
         val workspaceId1 = createWorkspace("Workspace1")
+        attachUserGroupToWorkspace(groupId.value, workspaceId1.value, organizationId.value)
         val workspaceId2 = createWorkspace("Workspace2")
         val componentId1 = createWorkspaceComponent("Component1", workspaceId1.value, componentType = ComponentTypeDto.Kpi)
         val componentId2 = createWorkspaceComponent("Component2", workspaceId2.value, componentType = ComponentTypeDto.Kpi)
         val componentId3 = createWorkspaceComponent("Component3", workspaceId1.value, componentType = ComponentTypeDto.Kpi)
 
-        val workspaceComponents = workspaceService.getWorkspaceComponents(workspaceId1.value)
+        val workspaceComponents = workspaceService.getWorkspaceComponents(workspaceId1.value, userId.value, organizationId.value)
 
         assertEquals(2, workspaceComponents.size)
         assertTrue { workspaceComponents.any { it.id == componentId1.value } }
@@ -124,27 +128,35 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns only user workspace components with existing data source`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+    fun `returns only user workspace components with existing data source`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
         val componentDataSourceId = DBSerializer.insert(MutableCausalNet())
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
+        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
         val componentWithNotExistingDataSource = createWorkspaceComponent("Component1", workspaceId.value, componentType = ComponentTypeDto.CausalNet)
         val componentWithExistingDataSource = createWorkspaceComponent("Component2", workspaceId.value, componentType = ComponentTypeDto.CausalNet, dataSourceId = componentDataSourceId)
 
-        val workspaceComponents = workspaceService.getWorkspaceComponents(workspaceId.value)
+        val workspaceComponents = workspaceService.getWorkspaceComponents(workspaceId.value, userId.value, organizationId.value)
 
         assertEquals(1, workspaceComponents.size)
         assertTrue { workspaceComponents.any { it.id == componentWithExistingDataSource.value } }
     }
 
     @Test
-    fun `successful workspace component update returns`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+    fun `successful workspace component update returns`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
+        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
         val componentId = createWorkspaceComponent("Component1", workspaceId.value, componentType = ComponentTypeDto.CausalNet)
         val newComponentName = "newName"
         val newComponentType = ComponentTypeDto.Kpi
         val newComponentCustomizationData = """{"data":"new"}"""
 
-        workspaceService.updateWorkspaceComponent(componentId.value, newComponentName, newComponentType, newComponentCustomizationData)
+        workspaceService.updateWorkspaceComponent(componentId.value, workspaceId.value, userId.value, organizationId.value, newComponentName, newComponentType, newComponentCustomizationData)
 
         assertTrue { WorkspaceComponents.select {
                     WorkspaceComponents.id eq componentId and
@@ -154,19 +166,49 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `skips workspace component field update if new value is null`(): Unit = withCleanTables(WorkspaceComponents, Workspaces) {
+    fun `skips workspace component field update if new value is null`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
         val oldComponentName = "oldName"
         val oldComponentType = ComponentTypeDto.Kpi
         val oldComponentCustomizationData = """{"data":"new"}"""
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
+        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
         val componentId = createWorkspaceComponent(oldComponentName, workspaceId.value, componentType = oldComponentType, customizationData = oldComponentCustomizationData)
 
-        workspaceService.updateWorkspaceComponent(componentId.value, name = null, componentType = null, customizationData = null)
+        workspaceService.updateWorkspaceComponent(componentId.value, workspaceId.value, userId.value, organizationId.value, name = null, componentType = null, customizationData = null)
 
         assertTrue { WorkspaceComponents.select {
             WorkspaceComponents.id eq componentId and
                     (WorkspaceComponents.name eq oldComponentName) and
                     (WorkspaceComponents.componentType eq oldComponentType.typeName) and
                     (WorkspaceComponents.customizationData eq oldComponentCustomizationData) }.any() }
+    }
+
+    @Test
+    fun `workspace component field update fails if user has insufficient permissions`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+        val oldComponentName = "oldName"
+        val oldComponentType = ComponentTypeDto.Kpi
+        val oldComponentCustomizationData = """{"data":"new"}"""
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Reader)
+        val userId = createUser(privateGroupId = groupId.value)
+        val workspaceId = createWorkspace("Workspace1")
+        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val componentId = createWorkspaceComponent(oldComponentName, workspaceId.value, componentType = oldComponentType, customizationData = oldComponentCustomizationData)
+
+        val exception =
+            assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
+                workspaceService.updateWorkspaceComponent(
+                    componentId.value,
+                    workspaceId.value,
+                    userId.value,
+                    organizationId.value,
+                    name = null,
+                    componentType = null,
+                    customizationData = null)
+            }
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
 }
