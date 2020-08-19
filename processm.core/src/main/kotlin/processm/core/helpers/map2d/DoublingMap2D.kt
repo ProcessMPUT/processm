@@ -68,6 +68,15 @@ class DoublingMap2D<Row, Column, Value> : Map2D<Row, Column, Value> {
         crv.values.forEach { it.remove(row) }
     }
 
+    /**
+     * Remove value from map.
+     * Warning: This will not update already created views!
+     */
+    fun removeValue(row: Row, column: Column) {
+        rcv.computeIfAbsent(row) { HashMap() }.remove(column)
+        crv.computeIfAbsent(column) { HashMap() }.remove(row)
+    }
+
     override val rows: Set<Row>
         get() = rcv.keys
     override val columns: Set<Column>

@@ -3,6 +3,7 @@ package processm.miners.processtree.directlyfollowsgraph
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.ProcessTreeActivity
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Directly-follows graph based on log's events sequences
@@ -21,7 +22,7 @@ class DirectlyFollowsGraph {
      * A  1    -
      * B  2    1
      */
-    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc?>()
+    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -80,7 +81,7 @@ class DirectlyFollowsGraph {
      * - B => 2 (duplicated in second trace)
      * - D => 1 (duplicated in third trace)
      */
-    val activitiesDuplicatedInTraces = HashMap<ProcessTreeActivity, Int>()
+    val activitiesDuplicatedInTraces = ConcurrentHashMap<ProcessTreeActivity, Int>()
 
     /**
      * Build directly-follows graph
@@ -260,8 +261,8 @@ class DirectlyFollowsGraph {
                             // Decrement support
                             decrement()
 
-                            if (cardinality == 0) {
-                                graph[previousActivity!!, activity] = null
+                            if (cardinality <= 0) {
+                                graph.removeValue(previousActivity!!, activity)
 
                                 // Add connection if not removed activity found
                                 // If found - this collection will be ignored
