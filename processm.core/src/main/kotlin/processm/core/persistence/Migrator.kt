@@ -22,6 +22,11 @@ object Migrator {
         logger().enter()
 
         logger().debug("Migrating database if required")
+        System.setProperty(
+            "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
+            "jdbc:postgresql://db.processm.cs.put.poznan.pl/db?user=bgorka&password=bgorka"
+        )
+
         val connectionURL = System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
         ensurePostgreSQLDatabase(connectionURL)
         val databaseName = ensureMainDBNameNotUUID(connectionURL)
