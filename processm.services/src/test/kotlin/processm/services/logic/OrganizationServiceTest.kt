@@ -1,7 +1,6 @@
 package processm.services.logic
 
 import org.junit.Before
-import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.UserGroups
@@ -11,6 +10,7 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlin.test.Test
 
 class OrganizationServiceTest : ServiceTestBase() {
     @Before
@@ -26,6 +26,8 @@ class OrganizationServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("The specified organization does not exist") {
             organizationService.getOrganizationMembers(UUID.randomUUID())
         }
+
+        DataSources.all()
 
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
