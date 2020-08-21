@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.windowing
 
 import com.google.common.collect.MinMaxPriorityQueue
+import org.apache.commons.lang3.math.Fraction
 import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.allSubsets
 import processm.core.helpers.mapToSet
@@ -39,8 +40,8 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                 allActivities,
                 traces.map { trace ->
                     SearchState(
-                        0.0,
-                        0.0,
+                        Fraction.ZERO,
+                        Fraction.ZERO,
                         0,
                         0,
                         true,
@@ -116,7 +117,7 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                     val newState = CausalNetStateImpl(current.trace.state)
                     newState.addAll(produce)
                     val newValue =
-                        current.totalGreediness + produce.size.toDouble() / producible[currentIdx][current.node].size
+                        current.totalGreediness + Fraction.getFraction(produce.size,  producible[currentIdx][current.node].size)
                     val newReplayTrace =
                         ReplayTrace(
                             newState,
@@ -126,7 +127,7 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                     newSearchStates.add(
                         SearchState(
                             newValue,
-                            0.0,
+                            Fraction.ZERO,
                             newLength,
                             current.node + 1,
                             false,
@@ -140,7 +141,7 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                     val newState = CausalNetStateImpl(current.trace.state)
                     for (c in consume)
                         newState.remove(c, 1)
-                    val newValue = current.totalGreediness + consume.size.toDouble() / consumable.size
+                    val newValue = current.totalGreediness + Fraction.getFraction(consume.size, consumable.size)
                     val newReplayTrace =
                         ReplayTrace(
                             newState,
@@ -150,7 +151,7 @@ class CompositeReplayer(val horizon:Int=-1):Replayer {
                     newSearchStates.add(
                         SearchState(
                             newValue,
-                            0.0,
+                            Fraction.ZERO,
                             newLength,
                             current.node,
                             true,

@@ -1,9 +1,8 @@
 package processm.miners.heuristicminer.windowing
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
 import com.google.common.collect.MinMaxPriorityQueue
-import org.apache.commons.collections4.multiset.HashMultiSet
+import org.apache.commons.lang3.math.Fraction
+import org.apache.commons.math3.util.ArithmeticUtils
 import processm.core.helpers.Counter
 import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.allSubsets
@@ -19,6 +18,8 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 import kotlin.math.min
+
+private typealias RelaxedState = HashMapWithDefault<Node, Counter<Dependency>>
 
 class SingleReplayer(val horizon: Int = -1) : Replayer {
 
@@ -65,7 +66,37 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         val trace: NodeTrace,
         val queue: AbstractQueue<SearchState>
     ) {
-        val largestPossibleSplit = producible.indices.map{ node -> producible.subList(node, producible.size).map { it.size }.max()!!}
+
+        /**
+         * For each position in the [trace], a map from a dependency to a list of sizes of future [producible] containing the dependency.
+         * The list is sorted in the descending order.
+         */
+        val largestPossibleSplit: List<Map<Dependency, List<Int>>> =
+            producible.indices.map { node ->
+                val result = HashMap<Dependency, MutableList<Int>>()
+                for (i in node until producible.size) {
+                    val p = producible[i]
+                    for (dep in p)
+                        result.computeIfAbsent(dep) { mutableListOf() }.add(p.size)
+                }
+                for (l in result.values)
+                    l.sortDescending()
+                return@map result
+            }
+
+        /**
+         * The largest common multiplier for all the sizes present in the respective positions of [largestPossibleSplit]
+         */
+        val lcm: List<Int> = largestPossibleSplit.map { m ->
+            m.values
+                .flatten()
+                .fold(0) { acc, i ->
+                    return@fold if (acc == 0)
+                        i
+                    else
+                        ArithmeticUtils.lcm(acc, i)
+                }
+        }
     }
 
     private fun consumption(current: SearchState, context: Context) {
@@ -85,7 +116,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         for (mayConsume in consumable.allSubsets(excludeEmpty = mustConsume.isEmpty())) {
             val consume = mayConsume + mustConsume
             assert(consume.isNotEmpty())
-            val additionalGain = consume.size.toDouble() / allConsumable.size
+            val additionalGain = Fraction.getFraction(consume.size, allConsumable.size)
             val newValue = current.totalGreediness + additionalGain
             val newReplayTrace =
                 ReplayTrace(
@@ -219,14 +250,15 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                 continue
             }
 
-            val newValue = current.totalGreediness + produce.size.toDouble() / context.producible[current.node].size
+            val newValue =
+                current.totalGreediness + Fraction.getFraction(produce.size, context.producible[current.node].size)
             val newReplayTrace =
                 ReplayTrace(
                     LazyCausalNetState(current.trace.state, emptyList(), produce),
                     current.trace.joins,
                     HierarchicalIterable(current.trace.splits, produce)
                 )
-            val penalty = relaxedHeuristic(newReplayTrace.state, current.node+1, false, context)
+            val penalty = relaxedHeuristic(newReplayTrace.state, current.node + 1, false, context)
             context.queue.add(
                 SearchState(
                     newValue,
@@ -240,63 +272,55 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         }
     }
 
-    private fun relaxedHeuristicSlower(initState:CausalNetState, node:Int, produce: Boolean, context: Context):Double {
-        // Optimum produkcji to uruchomienie wszystkich producible i zjedzenie wszystkiego co sie da.
-        // To zostawi mi jakies tokeny w sieci i kazdy token jest stratą, którą koniecznie musimy ponieść
-        val n2int = HashMap<Node, Int>()
-        val intTrace = ArrayList<Int>()
-        var ctr=0
-        for(pos in node until context.trace.size)
-            intTrace.add(n2int.getOrPut(context.trace[pos]) {ctr++})
-        for(e in initState.entrySet())
-            n2int.getOrPut(e.element.source) {ctr++}
-        val state = List(ctr) { MutableList(ctr) {0} }
-        var flatStateSize= 0
-        for(e in initState.entrySet()) {
-            val t=n2int[e.element.target]!!
-            val s=n2int[e.element.source]!!
-            state[t][s] = e.count
-            flatStateSize += e.count
-        }
-        for((pos, currentNode) in intTrace.withIndex()) {
-            if(!produce || pos>0) {
-                for(i in state[currentNode].indices)
-                    if(state[currentNode][i]>=1) {
-                        state[currentNode][i]--
-                        flatStateSize--
-                    }
-            }
-//            logger.trace{"pos=$pos node=$node intTrace=$intTrace trace=${context.trace}"}
-            for(p in context.producible[pos+node]) {
-                state[n2int[p.target]!!][currentNode]++
-                flatStateSize++
-            }
-        }
-        val penalty = if(flatStateSize>0) flatStateSize.toDouble()/context.largestPossibleSplit[node] else 0.0
-        logger.trace{"penalty $penalty flat state size $flatStateSize remaining after stuffing myself full $state"}
-        return penalty
+    private fun prepareState(initState: CausalNetState): RelaxedState {
+        val state = HashMapWithDefault<Node, Counter<Dependency>>() { Counter<Dependency>() }
+        for (e in initState.entrySet())
+            state[e.element.target][e.element] = e.count
+        return state
     }
 
-    private fun relaxedHeuristic(initState:CausalNetState, node:Int, produce: Boolean, context: Context):Double {
-        // Optimum produkcji to uruchomienie wszystkich producible i zjedzenie wszystkiego co sie da.
-        // To zostawi mi jakies tokeny w sieci i kazdy token jest stratą, którą koniecznie musimy ponieść
-        val state = HashMapWithDefault<Node, Counter<Dependency>>() {Counter<Dependency>()}
-        for(e in initState.entrySet())
-            state[e.element.target][e.element] = e.count
-        for(pos in node until context.trace.size) {
-            val currentNode = context.trace[pos]
-            if(!produce || pos!=node) {
-                for(e in state[currentNode].entries)
-                    if(e.value>=1)
-                        e.setValue(e.value-1)
+    private fun processNode(pos: Int, state: RelaxedState, consume: Boolean, context: Context) {
+        val currentNode = context.trace[pos]
+        if (consume) {
+            val i = state[currentNode].entries.iterator()
+            while (i.hasNext()) {
+                val e = i.next()
+                if (e.value >= 1)
+                    e.setValue(e.value - 1)
             }
-            for(p in context.producible[pos])
-                state[p.target].inc(p)
         }
-        val flatStateSize = state.values.sumBy { it.values.sum() }
-        val penalty = if(flatStateSize>0) flatStateSize.toDouble()/context.largestPossibleSplit[node] else 0.0
-        logger.trace{"penalty $penalty remaining after stuffing myself full $state"}
-        return penalty
+        for (p in context.producible[pos])
+            state[p.target].inc(p)
+    }
+
+    /**
+     * A heuristic solving a relaxed version of the considered problem: it is not concerned with tokens remaining in the network after
+     * constructing splits and joins as large as possible. Instead, the number of tokens left is an estimation of the cost of
+     * correctly completing the solution.
+     */
+    private fun relaxedHeuristic(initState: CausalNetState, node: Int, produce: Boolean, context: Context): Fraction {
+        val state = prepareState(initState)
+        processNode(node, state, !produce, context)
+        for (pos in node + 1 until context.trace.size) {
+            processNode(pos, state, true, context)
+        }
+
+        var pnom = 0
+        val lcm = context.lcm[node]
+        for (ctr in state.values) {
+            for (e in ctr.entries)
+                if (e.value >= 1) {
+                    val tmp = context.largestPossibleSplit[node][e.key]!!
+                    assert(e.value <= tmp.size)
+                    // doing it straight on Fractions seems to be terribly inefficient
+                    for (i in 0 until e.value) {
+                        assert(lcm % tmp[i] == 0)
+                        pnom += lcm / tmp[i]
+                    }
+                }
+        }
+        assert(lcm != 0 || pnom == 0)
+        return if (lcm != 0) Fraction.getFraction(pnom, lcm).reduce() else Fraction.ZERO
     }
 
     /**
@@ -324,11 +348,51 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         internal set
 
 
+    /**
+     * For each node in [trace] computes the set of dependencies that should be considered given the rest of the trace.
+     * It is based on an observation that a node a can cause a node b (a!=b) only if ctr[a@a]-ctr[a@b] < ctr[b@a]-ctr[b@b]
+     * where ctr[x@y] denotes the number of times the node x is present in the trace starting from the node y.
+     *
+     * For example, consider the following trace: `c c b b a`.
+     * The first c can cause b, because there two bs in its future.
+     * The second c can cause b, because there is a single b free and can cause a, because there will be no other c to cause a.
+     * Similarly, the first b can only cause another b, because there will be another b to cause a and there is only a single a in the trace.
+     *
+     * Observe, that purpose of this is only to break symmetry: from the perspective of the final model it does not matter if we replay the trace
+     * so that the first c cause a or the second c causes a - there is only one a in the trace, so only one c can be its cause, but in the model
+     * both situations are indistinguishable.
+     */
+    private fun inferRunnableDependencies(trace: NodeTrace): List<Set<Dependency>> {
+        val counters = List(trace.size) { Counter<Node>() }
+        for (i in trace.size - 2 downTo 0 step 1) {
+            counters[i].putAll(counters[i + 1])
+            counters[i].inc(trace[i + 1])
+        }
+        return trace.indices.map { i ->
+            val a = trace[i]
+            val prod = HashSet<Dependency>()
+            for (j in i + 1 until trace.size) {
+                val b = trace[j]
+                val dep = Dependency(a, b)
+                if (prod.contains(dep))
+                    continue
+                if (a != b) {
+                    if (counters[i][a] - counters[i][b] < counters[j][a] - counters[j][b])
+                        prod.add(dep)
+                }
+            }
+            if (counters[i][a] > 0)
+                prod.add(Dependency(a, a))
+            return@map prod
+        }
+    }
+
     fun replay(model: CausalNet, trace: NodeTrace): Pair<List<Split>, List<Join>> {
+        val runnableDeps = inferRunnableDependencies(trace)
         val producible = trace.indices.map { idx ->
             val end = if (horizon > 0) min(idx + 1 + horizon, trace.size) else trace.size
             model.outgoing[trace[idx]].orEmpty()
-                .intersect(trace.subList(idx + 1, end).map { Dependency(trace[idx], it) })
+                .intersect(runnableDeps[idx])
         }
         minimalVisitedStates = 2 * trace.size - 1
         logger.debug("$trace")
@@ -344,8 +408,8 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
             val seen = HashSet<Pair<CausalNetState, Int>>()
             queue.add(
                 SearchState(
-                    0.0,
-                    0.0,
+                    Fraction.ZERO,
+                    Fraction.ZERO,
                     0,
                     0,
                     true,
@@ -356,20 +420,18 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                 val current = queue.pollFirst()
                 val key = current.trace.state to current.solutionLength
                 if (seen.contains(key)) {
-//                    logger.trace("Skipping state at ${current.solutionLength} was seen at ${current}")
                     continue
                 }
                 seen.add(key)
                 visitedStates++
                 if (visitedStates % 10000 == 0)
-                    logger.debug { "ctr=${visitedStates} efficiency=$efficiency ${current.features} ${current.trace.state.entrySet()}" }
+                    logger.debug { "ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo} ${current.trace.state.entrySet()}" }
                 val currentNode = trace[current.node]
-//            logger.trace { queue.map { it.features }.toString()}
-                logger.trace { "$currentNode ${current.node}/${current.produce}: ${current.features} ${current.trace.state.entrySet()} $trace" }
+                logger.trace { "$currentNode ${current.node}/${current.produce}: ${current.debugInfo} ${current.trace.state.entrySet()} $trace" }
+                logger.trace { "${current.trace.splits.toList()}" }
                 if (current.produce && current.node == trace.size - 1) {
                     if (current.trace.state.isEmpty()) {
-                        logger.debug { "FINAL ctr=${visitedStates} efficiency=$efficiency ${current.features}" }
-//                        check(hypothesis41(current))
+                        logger.debug { "FINAL ctr=${visitedStates} efficiency=$efficiency ${current.debugInfo}" }
                         return current.trace.splits.map { Split(it.toSet()) } to current.trace.joins.map { Join(it.toSet()) }
                     } else {
                         //this is an invalid solution without any chances of improvement

@@ -1,5 +1,6 @@
 package processm.miners.heuristicminer.windowing
 
+import org.apache.commons.lang3.math.Fraction
 import processm.core.models.causalnet.Node
 import processm.miners.heuristicminer.ActiveDependencies
 import processm.miners.heuristicminer.NodeTrace
@@ -16,12 +17,12 @@ data class CompositeSearchState(
     val traces: List<NodeTrace>
 ) : HasFeatures() {
 
-    override val features: List<Double>
+    override val features: List<Fraction>
 
     init {
         val progress = (base zip traces).map { (s, t) -> -s.node / t.size.toDouble() }
-        val greediness = base.sumByDouble { -it.totalGreediness / it.solutionLength }
-        features = listOf(countUniqueBindings().toDouble(), greediness)
+        val greediness = base.fold(Fraction.ZERO){ prev, it -> prev -it.totalGreediness / it.solutionLength }
+        features = listOf(Fraction.getFraction(countUniqueBindings(), 1), greediness)
     }
 
     private fun countUniqueBindings(): Int {

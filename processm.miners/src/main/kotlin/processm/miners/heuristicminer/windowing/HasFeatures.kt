@@ -1,8 +1,10 @@
 package processm.miners.heuristicminer.windowing
 
+import org.apache.commons.lang3.math.Fraction
+
 abstract class HasFeatures : Comparable<HasFeatures> {
 
-    abstract val features: List<Double>
+    abstract val features: List<Fraction>
 
     override fun compareTo(other: HasFeatures): Int {
         val a = features

@@ -1,11 +1,11 @@
 package processm.miners.heuristicminer.windowing
 
-import processm.miners.heuristicminer.NodeTrace
+import org.apache.commons.lang3.math.Fraction
 import processm.miners.heuristicminer.ReplayTrace
 
 data class SearchState(
-    val totalGreediness: Double,
-    val heuristicPenalty: Double,
+    val totalGreediness: Fraction,
+    val heuristicPenalty: Fraction,
     val solutionLength: Int,
     val node: Int,
     val produce: Boolean,
@@ -27,6 +27,14 @@ data class SearchState(
     On further reflection, we are able to detect that a perfect solution is impossible and give an lower bound on penalty
      */
 
-    override val features: List<Double>
-        get() = listOf(solutionLength - totalGreediness + heuristicPenalty , -node.toDouble())
+    override val features: List<Fraction> by lazy(LazyThreadSafetyMode.NONE) {
+        listOf(
+            (Fraction.getFraction(solutionLength, 1) - totalGreediness + heuristicPenalty).reduce(),
+            Fraction.getFraction(-node, 1),
+            heuristicPenalty
+        )
+    }
+
+    val debugInfo: String
+        get() = "sL - tG + hP = $solutionLength - $totalGreediness + $heuristicPenalty; features = $features"
 }
