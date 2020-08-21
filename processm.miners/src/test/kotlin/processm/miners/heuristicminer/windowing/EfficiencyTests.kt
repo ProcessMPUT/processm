@@ -2,9 +2,11 @@ package processm.miners.heuristicminer.windowing
 
 import ch.qos.logback.classic.Level
 import processm.core.log.hierarchical.Log
-import kotlin.test.*
 import processm.core.logging.logger
 import processm.miners.heuristicminer.Helper
+import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class EfficiencyTests {
 
@@ -12,53 +14,53 @@ class EfficiencyTests {
     fun test() {
         val log = Helper.logFromString("m w o m w o w m o")
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
+        val hm = WindowingHeuristicMiner()
         hm.processLog(log)
         println(hm.result)
-        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.15 }
+        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
     @Test
     fun test2() {
         val log = Helper.logFromString("a b b a c a c")
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
+        val hm = WindowingHeuristicMiner()
         hm.processLog(log)
         println(hm.result)
-        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.06 }
+        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
     @Test
     fun test3() {
-        val log=
+        val log =
             Helper.logFromString("a b c d e f g b a h i a h i a b j h a b k")
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
+        val hm = WindowingHeuristicMiner()
         hm.processLog(log)
         println(hm.result)
-        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 15.05 }
+        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
     @Test
     fun test4() {
-        val log=
+        val log =
             Helper.logFromString("a b a b a c d c d")
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
+        val hm = WindowingHeuristicMiner()
         hm.processLog(log)
         println(hm.result)
-        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.05 }
+        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
     @Test
     fun test5() {
-        val log=
+        val log =
             Helper.logFromString("a b c d e f g h i c e e c e c j")
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val hm=WindowingHeuristicMiner()
+        val hm = WindowingHeuristicMiner()
         hm.processLog(log)
         println(hm.result)
-        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.35 }
+        assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
     @Test
@@ -90,8 +92,75 @@ class EfficiencyTests {
         hm.processDiff(log, Log(emptySequence()))
         println(hm.result)
         val eff = (hm.replayer as SingleReplayer).groupEfficiency
-        assertTrue { eff[0] <= 1.01 }
-        assertTrue { eff[0] <= 1.01 }
-        assertTrue { eff[0] <= 1.08 }
+        assertTrue { eff.all { it <= 1.01 } }
     }
+
+    private fun randomStrings(n: Int, k: Int, a: Int, rnd: Random = Random(42)): List<Double> {
+        val events = (0 until a).map { ('a'.toInt() + it).toChar() }
+        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
+        val hm = WindowingHeuristicMiner()
+        for (i in 0 until n) {
+            val log = Helper.logFromString(List(k) { events[rnd.nextInt(events.size)] }.joinToString(separator = " "))
+            hm.processDiff(log, Log(emptySequence()))
+        }
+        return (hm.replayer as SingleReplayer).groupEfficiency
+    }
+
+    @Test
+    fun `random 1 10`() {
+        val eff = randomStrings(1, 10, 3).single()
+        assertTrue { eff <= 1.01 }
+    }
+
+    @Test
+    fun `random 1 20`() {
+        val eff = randomStrings(1, 20, 3).single()
+        assertTrue { eff <= 1.01 }
+    }
+
+    @Test
+    fun `random 1 40`() {
+        val eff = randomStrings(1, 40, 3).single()
+        assertTrue { eff <= 1.01 }
+    }
+
+    @Test
+    fun `random 1 100`() {
+        val eff = randomStrings(1, 100, 3).single()
+        assertTrue { eff <= 1.01 }
+    }
+
+    @Test
+    fun `random 1 15 3 22`() {
+        val hm = WindowingHeuristicMiner()
+        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
+        val log = Helper.logFromString("c c c c c c a b b c a b c c b")
+        hm.processLog(log)
+        println(hm.result)
+        val eff = (hm.replayer as SingleReplayer).efficiency
+        assertTrue { eff <= 1.61 }
+    }
+
+    @Test
+    fun t3() {
+        val hm = WindowingHeuristicMiner()
+        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
+        val log = Helper.logFromString("c c b b c a b c c b")
+        hm.processLog(log)
+        println(hm.result)
+        val eff = (hm.replayer as SingleReplayer).efficiency
+        assertTrue { eff <= 1.35 }
+    }
+
+    @Test
+    fun t4() {
+        val hm = WindowingHeuristicMiner()
+        (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
+        val log = Helper.logFromString("a b e c c a c b f c f")
+        hm.processLog(log)
+        println(hm.result)
+        val eff = (hm.replayer as SingleReplayer).efficiency
+        assertTrue { eff <= 1.01 }
+    }
+
 }

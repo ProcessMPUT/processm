@@ -8,7 +8,6 @@ import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.miners.heuristicminer.BasicTraceToNodeTrace
-import processm.miners.heuristicminer.Helper
 import processm.miners.heuristicminer.Helper.logFromModel
 import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.NodeTrace
@@ -60,14 +59,14 @@ class WindowingHeuristicMinerTest {
         e1 + e2 join f
     }
 
-    private fun test(log:Log, model:CausalNet) {
+    private fun test(log: Log, model: CausalNet) {
         val replayer = BasicReplayer(model)
         val usedBindings = HashSet<Binding>()
         for (trace in log.traces) {
             val tmp = listOf(model.start) + BasicTraceToNodeTrace()(trace) + listOf(model.end)
             val replay = replayer.replay(tmp)
                 .map { it.toList() }.toList()
-            println("${replay.size} ${trace.events.map{it.conceptName}.toList()}")
+            println("${replay.size} ${trace.events.map { it.conceptName }.toList()}")
             assertTrue { replay.size == replay.toSet().size }
             assertTrue { replay.isNotEmpty() }
             assertTrue { replay.all { it.isNotEmpty() } }
@@ -80,29 +79,20 @@ class WindowingHeuristicMinerTest {
     }
 
     @Test
-    fun `diamond of diamonds - incremental`() {
-        val log = logFromModel(dodReference)
-        val hm = WindowingHeuristicMiner()
-        for (trace in log.traces)
-            hm.processDiff(Log(sequenceOf(trace)), Log(emptySequence()))
-        test(log, hm.result)
-    }
-
-
-    /*
-    @Test
     fun `loops are hard`() {
-        val log = logFromString("""
+        val log = logFromString(
+            """
             a b c d e
             a b b c d d e
             a b b b c d d d e
-        """.trimIndent())
+        """.trimIndent()
+        )
         val hm = WindowingHeuristicMiner()
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processDiff(log, Log(emptySequence()))
         println(hm.result)
+        test(log, hm.result)
     }
-     */
 
     @Test
     fun `diamond of diamonds - batch`() {
@@ -110,17 +100,16 @@ class WindowingHeuristicMinerTest {
         val hm = WindowingHeuristicMiner(SingleReplayer(2))
         (hm.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processDiff(log, Log(emptySequence()))
-//        test(log, hm.result)
         println(hm.result)
     }
 
-    data class Window(val add:IntRange, val remove:IntRange, val window:IntRange)
+    data class Window(val add: IntRange, val remove: IntRange, val window: IntRange)
 
-    private fun windowGenerator(windowSize:Int, stepSize:Int, n:Int) = sequence {
-        for(i in stepSize .. (n + n%stepSize) step stepSize) {
-            val add = IntRange(i-stepSize , min(i, n)-1)
-            val remove = IntRange(max(i-stepSize-windowSize, 0), max(min(i, n)-windowSize, 0)-1)
-            val window = IntRange(remove.last +1, add.last)
+    private fun windowGenerator(windowSize: Int, stepSize: Int, n: Int) = sequence {
+        for (i in stepSize..(n + n % stepSize) step stepSize) {
+            val add = IntRange(i - stepSize, min(i, n) - 1)
+            val remove = IntRange(max(i - stepSize - windowSize, 0), max(min(i, n) - windowSize, 0) - 1)
+            val window = IntRange(remove.last + 1, add.last)
             yield(
                 Window(
                     add,
@@ -138,57 +127,33 @@ class WindowingHeuristicMinerTest {
         val log = logFromModel(dodReference)
         val traces = log.traces.toList()
         val hm = WindowingHeuristicMiner()
-        for(step in windowGenerator(windowSize, stepSize, traces.size)) {
-            val add = if(!step.add.isEmpty()) traces.subList(step.add.first, step.add.last+1) else emptyList()
-            val remove = if(!step.remove.isEmpty()) traces.subList(step.remove.first, step.remove.last+1) else emptyList()
+        for (step in windowGenerator(windowSize, stepSize, traces.size)) {
+            val add = if (!step.add.isEmpty()) traces.subList(step.add.first, step.add.last + 1) else emptyList()
+            val remove =
+                if (!step.remove.isEmpty()) traces.subList(step.remove.first, step.remove.last + 1) else emptyList()
             hm.processDiff(Log(add.asSequence()), Log(remove.asSequence()))
             println(hm.result)
-            val window = traces.subList(step.window.first, step.window.last+1)
+            val window = traces.subList(step.window.first, step.window.last + 1)
             test(Log(window.asSequence()), hm.result)
         }
     }
 
     @InMemoryXESProcessing
     @Test
-    fun `sepsis`() {
-        val dummyReplayer = object : Replayer {
-            override fun replayGroup(model: CausalNet, traces: List<NodeTrace>): Pair<Set<Split>, Set<Join>> = emptySet<Split>() to emptySet<Join>()
-
-        }
-        val log = File("../xes-logs/Sepsis_Cases-Event_Log.xes.gz").inputStream().use {
-            HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(it))).first()
-        }
-        val hm = WindowingHeuristicMiner(dummyReplayer)
-        //(hm.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-//            (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-        hm.processDiff(log, Log(emptySequence()))
-        println(hm.result)
-        val replayer = SingleReplayer()
-        val traces = log.traces
-            .map { listOf(hm.result.start) + hm.traceToNodeTrace(it) + listOf(hm.result.end) }
-            .toList()
-        for(i in 0 until 100) {
-            println(i)
-            replayer.replay(hm.result, traces[i])
-        }
-    }
-
-    @InMemoryXESProcessing
-    @Test
     fun `real logs`() {
-//        val files = listOf("../xes-logs/BPIC15_2f.xes.gz", "../xes-logs/BPIC15_4f.xes.gz")
-//        val files = listOf("../xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz",
-//            "../xes-logs/nasa-cev-complete-splitted.xes.gz"
-//        )
-        val files = listOf("../xes-logs/Sepsis_Cases-Event_Log.xes.gz")
-        for(file in files) {
+        val files = listOf(
+            "../xes-logs/BPIC15_2f.xes.gz", "../xes-logs/BPIC15_4f.xes.gz",
+            "../xes-logs/BPIC15_1f.xes.gz", "../xes-logs/BPIC15_5f.xes.gz", "../xes-logs/BPIC15_3f.xes.gz",
+            "../xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz",
+            "../xes-logs/nasa-cev-complete-splitted.xes.gz",
+            "../xes-logs/Sepsis_Cases-Event_Log.xes.gz"
+        )
+        for (file in files) {
             println(file)
             val log = File(file).inputStream().use {
                 HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(it))).first()
             }
             val hm = WindowingHeuristicMiner()
-            //(hm.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
-//            (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
             hm.processDiff(log, Log(emptySequence()))
             println(hm.result)
         }
