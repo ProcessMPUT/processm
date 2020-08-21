@@ -2,6 +2,7 @@ package processm.core.models.causalnet
 
 import processm.core.models.commons.Activity
 import processm.core.models.metadata.MetadataSubject
+import java.util.*
 
 /**
  * Represents an instance activity, i.e., a node in a causal net.
@@ -11,10 +12,17 @@ import processm.core.models.metadata.MetadataSubject
  */
 data class Node(val activity: String, val instanceId: String = "", val special: Boolean = false) : MetadataSubject,
     Activity {
+
+    private val hash: Int by lazy {
+        Objects.hash(activity, instanceId, special)
+    }
+
     override val name: String
         get() = activity
 
     override fun toString(): String {
         return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (special) "*" else "")
     }
+
+    override fun hashCode(): Int = hash
 }
