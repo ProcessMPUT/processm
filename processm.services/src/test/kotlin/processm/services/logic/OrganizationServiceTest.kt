@@ -7,10 +7,10 @@ import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
 import processm.dbmodels.models.UsersRolesInOrganizations
 import java.util.*
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import kotlin.test.Test
 
 class OrganizationServiceTest : ServiceTestBase() {
     @Before
@@ -26,8 +26,6 @@ class OrganizationServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("The specified organization does not exist") {
             organizationService.getOrganizationMembers(UUID.randomUUID())
         }
-
-        DataSources.all()
 
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }

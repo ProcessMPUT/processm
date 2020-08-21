@@ -1,5 +1,6 @@
 package processm.core.persistence
 
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.UnsafeSerializationApi
 import kotlinx.serialization.json.Json
@@ -37,6 +38,7 @@ abstract class AbstractPersistenceProvider(protected val tableName: String) : Pe
         assert(connection.autoCommit)
     }
 
+    @InternalSerializationApi
     @Suppress("UNCHECKED_CAST")
     override fun put(uri: URI, obj: Any) {
         insert.setString(1, uri.toString())
@@ -45,6 +47,7 @@ abstract class AbstractPersistenceProvider(protected val tableName: String) : Pe
         insert.execute()
     }
 
+    @InternalSerializationApi
     @Suppress("UNCHECKED_CAST")
     override fun <T> get(uri: URI, klass: KClass<*>): T {
         select.setString(1, uri.toString())
