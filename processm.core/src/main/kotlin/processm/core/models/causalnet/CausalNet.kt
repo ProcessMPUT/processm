@@ -116,7 +116,7 @@ abstract class CausalNet(
 
         } else
             yieldAll(
-                splits.getValue(start)
+                splits[start].orEmpty()
                     .map { split -> DecoupledNodeExecution(start, null, split) })
     }
 
