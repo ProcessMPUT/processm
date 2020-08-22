@@ -17,6 +17,7 @@ import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
 import processm.services.logic.WorkspaceService
 
+@OptIn(ExperimentalStdlibApi::class)
 @KtorExperimentalLocationsAPI
 @KtorExperimentalAPI
 fun Application.apiModule() {
