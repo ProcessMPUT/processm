@@ -32,6 +32,7 @@
     </issueManagement>
 
     <modules>
+        <module>processm.dbmodels</module>
         <module>processm.core</module>
         <module>processm.etl</module>
         <module>processm.services</module>
