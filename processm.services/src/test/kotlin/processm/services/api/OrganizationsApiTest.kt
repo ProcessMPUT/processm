@@ -13,7 +13,7 @@ import processm.services.api.models.OrganizationMemberCollectionMessageBody
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
-import processm.services.models.OrganizationRoleDto
+import processm.dbmodels.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals

@@ -1,13 +1,9 @@
 package processm.services.logic
 
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
 import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
-import processm.services.models.*
 import java.util.*
 import kotlin.test.*
 

@@ -9,7 +9,7 @@ import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.DBConnectionPool
-import processm.services.models.*
+import processm.dbmodels.models.*
 import java.util.*
 
 class WorkspaceService(private val accountService: AccountService) {
@@ -130,13 +130,20 @@ class WorkspaceService(private val accountService: AccountService) {
             (sequenceOf(start) +
                     activities.filter { it != start && it != end } +
                     sequenceOf(end))
-                .map { CausalNetNodeDto(
-                    it.name,
-                    splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
-                    joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
-                ) }
+                .map {
+                    CausalNetNodeDto(
+                        it.name,
+                        splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
+                        joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
+                    )
+                }
                 .toList()
-        val edges = dependencies.map { CausalNetEdgeDto(it.source.name, it.target.name) }
+        val edges = dependencies.map {
+            CausalNetEdgeDto(
+                it.source.name,
+                it.target.name
+            )
+        }
 
         return CausalNetDto(nodes, edges)
     }

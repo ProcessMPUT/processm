@@ -14,8 +14,8 @@ import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.services.api.models.*
 import processm.services.logic.WorkspaceService
-import processm.services.models.CausalNetDto
-import processm.services.models.ComponentTypeDto
+import processm.dbmodels.models.CausalNetDto
+import processm.dbmodels.models.ComponentTypeDto
 
 @UseExperimental(ImplicitReflectionSerializer::class)
 @KtorExperimentalLocationsAPI

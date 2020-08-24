@@ -6,7 +6,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import processm.core.persistence.DBConnectionPool
-import processm.services.models.*
+import processm.dbmodels.models.*
 import java.util.*
 
 class GroupService {
@@ -34,7 +34,8 @@ class GroupService {
             } catch (e: ExposedSQLException) {
                 logger.debug("The non-existing userId $userId or groupId $groupId was specified")
                 throw ValidationException(
-                    ValidationException.Reason.ResourceNotFound, "The specified user or group does not exist")
+                    ValidationException.Reason.ResourceNotFound, "The specified user or group does not exist"
+                )
             }
         }
     }

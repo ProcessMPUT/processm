@@ -11,7 +11,6 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.TestInstance
 import processm.services.api.models.*
 import processm.services.logic.ValidationException
-import processm.services.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.random.Random

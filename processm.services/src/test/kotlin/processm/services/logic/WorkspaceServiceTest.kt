@@ -1,20 +1,18 @@
 package processm.services.logic
 
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertDoesNotThrow
-import org.koin.test.mock.declareMock
-import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
-import processm.services.models.*
+import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.UserGroupWithWorkspaces
+import processm.dbmodels.models.WorkspaceComponents
+import processm.dbmodels.models.Workspaces
 import java.util.*
 import kotlin.test.*
 
@@ -31,7 +29,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
     lateinit var workspaceService: WorkspaceService
 
     @Test
-    fun `returns all user workspaces in the organization`(): Unit = withCleanTables(Users, UserGroups, Workspaces, Organizations, UserGroupWithWorkspaces, UsersInGroups) {
+    fun `returns all user workspaces in the organization`(): Unit = withCleanTables(Users, UserGroups,
+        Workspaces, Organizations,
+        UserGroupWithWorkspaces, UsersInGroups) {
         val userGroupId = createGroup()
         val otherUserGroupId = createGroup()
         val userId = createUser(privateGroupId = userGroupId.value)
@@ -53,7 +53,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `successful user workspace creation returns`(): Unit = withCleanTables(Users, UserGroups, Workspaces, Organizations, UserGroupWithWorkspaces, UsersInGroups) {
+    fun `successful user workspace creation returns`(): Unit = withCleanTables(Users, UserGroups,
+        Workspaces, Organizations,
+        UserGroupWithWorkspaces, UsersInGroups) {
         val userGroupId = createGroup()
         val userId = createUser(privateGroupId = userGroupId.value)
         val organizationId = createOrganization()
@@ -69,7 +71,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `successful user workspace removal returns true`(): Unit = withCleanTables(Users, UserGroups, Workspaces, Organizations, UserGroupWithWorkspaces, UsersInGroups) {
+    fun `successful user workspace removal returns true`(): Unit = withCleanTables(Users, UserGroups,
+        Workspaces, Organizations,
+        UserGroupWithWorkspaces, UsersInGroups) {
         val userGroupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = userGroupId.value)
         val workspaceId = createWorkspace("Workspace1")
@@ -81,7 +85,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `user workspace removal fails if user has insufficient permissions`(): Unit = withCleanTables(Users, UserGroups, Workspaces, Organizations, UserGroupWithWorkspaces, UsersInGroups) {
+    fun `user workspace removal fails if user has insufficient permissions`(): Unit = withCleanTables(Users, UserGroups,
+        Workspaces, Organizations,
+        UserGroupWithWorkspaces, UsersInGroups) {
         val userGroupId = createGroup(groupRole = GroupRoleDto.Reader)
         val userId = createUser(privateGroupId = userGroupId.value)
         val workspaceId = createWorkspace("Workspace1")
@@ -97,7 +103,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `user workspace removal fails if workspace does not exist`(): Unit = withCleanTables(Users, UserGroups, Workspaces, Organizations, UserGroupWithWorkspaces, UsersInGroups) {
+    fun `user workspace removal fails if workspace does not exist`(): Unit = withCleanTables(Users, UserGroups,
+        Workspaces, Organizations,
+        UserGroupWithWorkspaces, UsersInGroups) {
         val workspaceId = createWorkspace("Workspace1")
 
         val exception =
@@ -109,7 +117,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns all user workspace components`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+    fun `returns all user workspace components`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = groupId.value)
@@ -128,7 +139,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns only user workspace components with existing data source`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+    fun `returns only user workspace components with existing data source`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
         val componentDataSourceId = DBSerializer.insert(MutableCausalNet())
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
@@ -145,7 +159,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `successful workspace component update returns`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+    fun `successful workspace component update returns`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = groupId.value)
@@ -166,7 +183,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `skips workspace component field update if new value is null`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+    fun `skips workspace component field update if new value is null`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
         val oldComponentName = "oldName"
         val oldComponentType = ComponentTypeDto.Kpi
         val oldComponentCustomizationData = """{"data":"new"}"""
@@ -187,7 +207,10 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `workspace component field update fails if user has insufficient permissions`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups, WorkspaceComponents, Workspaces) {
+    fun `workspace component field update fails if user has insufficient permissions`(): Unit = withCleanTables(Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
         val oldComponentName = "oldName"
         val oldComponentType = ComponentTypeDto.Kpi
         val oldComponentCustomizationData = """{"data":"new"}"""

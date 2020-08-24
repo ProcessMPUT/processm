@@ -10,10 +10,10 @@ import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.services.api.models.*
 import processm.services.logic.WorkspaceService
-import processm.services.models.CausalNetDto
-import processm.services.models.CausalNetEdgeDto
-import processm.services.models.CausalNetNodeDto
-import processm.services.models.ComponentTypeDto
+import processm.dbmodels.models.CausalNetDto
+import processm.dbmodels.models.CausalNetEdgeDto
+import processm.dbmodels.models.CausalNetNodeDto
+import processm.dbmodels.models.ComponentTypeDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -203,16 +203,30 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { id } returns componentId1
                     every { name } returns "Component1"
                     every { data } returns CausalNetDto(
-                        listOf(CausalNetNodeDto("node_id", arrayOf(arrayOf()), arrayOf(arrayOf()))),
-                        listOf(CausalNetEdgeDto("node_id1", "node_id2")))
+                        listOf(
+                            CausalNetNodeDto(
+                                "node_id",
+                                arrayOf(arrayOf()),
+                                arrayOf(arrayOf())
+                            )
+                        ),
+                        listOf(CausalNetEdgeDto("node_id1", "node_id2"))
+                    )
                     every {customizationData} returns null
                 },
                 mockk {
                     every { id } returns componentId2
                     every { name } returns "Component2"
                     every { data } returns CausalNetDto(
-                        listOf(CausalNetNodeDto("node_id", arrayOf(arrayOf()), arrayOf(arrayOf()))),
-                        listOf(CausalNetEdgeDto("node_id1", "node_id2")))
+                        listOf(
+                            CausalNetNodeDto(
+                                "node_id",
+                                arrayOf(arrayOf()),
+                                arrayOf(arrayOf())
+                            )
+                        ),
+                        listOf(CausalNetEdgeDto("node_id1", "node_id2"))
+                    )
                     every {customizationData} returns null
                 }
             )
@@ -238,8 +252,15 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { id } returns componentId
                     every { name } returns "Component1"
                     every { data } returns CausalNetDto(
-                        listOf(CausalNetNodeDto("node_id", arrayOf(arrayOf()), arrayOf(arrayOf()))),
-                        listOf(CausalNetEdgeDto("node_id1", "node_id2")))
+                        listOf(
+                            CausalNetNodeDto(
+                                "node_id",
+                                arrayOf(arrayOf()),
+                                arrayOf(arrayOf())
+                            )
+                        ),
+                        listOf(CausalNetEdgeDto("node_id1", "node_id2"))
+                    )
                     every { customizationData } returns "{\"layout\":[{\"id\":\"node_id\",\"x\":15,\"y\":30}]}"
                 }
             )
