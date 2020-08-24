@@ -40,6 +40,7 @@ export interface UserInputSource {
   nodeColor(nodeType: ElementType): string;
   refreshNodes(): void;
   refreshLinks(): void;
+  updateNodeLayoutPosition(nodeId: string, position: Point): void;
   scaleElements(scalingFactor?: number): void;
   runSimulation(): void;
 }
@@ -573,6 +574,13 @@ export class InteractiveModeInputHandler implements UserInputHandler {
   nodeDragended(eventNode: Node): void {
     eventNode.fx = eventNode.x;
     eventNode.fy = eventNode.y;
+
+    if (eventNode.x == null || eventNode.y == null) return;
+
+    this.component.updateNodeLayoutPosition(eventNode.id, {
+      x: eventNode.x,
+      y: eventNode.y
+    });
   }
 
   private convertToAbsolutePercentage(

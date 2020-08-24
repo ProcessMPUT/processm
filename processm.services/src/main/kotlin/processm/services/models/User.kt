@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
+import processm.services.models.Organizations.nullable
 import java.util.*
 
 object Users : UUIDTable("users") {
@@ -13,6 +14,7 @@ object Users : UUIDTable("users") {
     val lastName = text("last_name").nullable()
     val password = text("password")
     val locale = text("locale")
+    val privateGroupId = reference("private_group_id", UserGroups)
 }
 
 class User(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -27,8 +29,9 @@ class User(id: EntityID<UUID>) : UUIDEntity(id) {
     var organizations by Organization via UsersRolesInOrganizations
     // do not declare the following until exposed supports DAO with composite key
     // val rolesInOrganizations by UserRolesInOrganizations referrersOn UsersRolesInOrganizations.userId
+    var privateGroup by UserGroup referencedOn Users.privateGroupId
 
-    fun toDto() = UserDto(id.value, email, locale)
+    fun toDto() = UserDto(id.value, email, locale, privateGroup.toDto())
 }
 
-data class UserDto(val id: UUID, val email: String, val locale: String)
+data class UserDto(val id: UUID, val email: String, val locale: String, val privateGroup: UserGroupDto)

@@ -32,6 +32,7 @@
 import Vue from "vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import { Component, Prop } from "vue-property-decorator";
+import WorkspaceComponentModel from "@/models/WorkspaceComponent";
 
 @Component({
   components: { WorkspaceComponent }
@@ -40,7 +41,7 @@ export default class SingleComponentView extends Vue {
   ComponentMode = ComponentMode;
 
   @Prop({ default: {} })
-  readonly componentDetails!: object;
+  readonly componentDetails!: WorkspaceComponentModel;
   @Prop({ default: false })
   readonly value!: boolean;
 

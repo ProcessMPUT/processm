@@ -83,7 +83,12 @@
 <script lang="ts">
 import Vue from "vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
-import { Component, Prop } from "vue-property-decorator";
+import { Component, Prop, Inject } from "vue-property-decorator";
+import WorkspaceComponentModel, {
+  ComponentType,
+  CausalNetComponentData
+} from "@/models/WorkspaceComponent";
+import WorkspaceService from "@/services/WorkspaceService";
 
 @Component({
   components: { WorkspaceComponent }
@@ -92,9 +97,12 @@ export default class EditComponentView extends Vue {
   ComponentMode = ComponentMode;
 
   @Prop({ default: {} })
-  readonly componentDetails!: object;
+  readonly componentDetails!: WorkspaceComponentModel;
   @Prop({ default: false })
   readonly value!: boolean;
+  @Prop()
+  readonly workspaceId!: string;
+  @Inject() workspaceService!: WorkspaceService;
 
   isMounted = false;
 
@@ -103,7 +111,29 @@ export default class EditComponentView extends Vue {
   }
 
   saveChanges() {
-    return;
+    if (this.componentDetails.data == null) {
+      console.error(
+        `The component ${this.componentDetails.id} has undifined 'data' property`
+      );
+      return;
+    }
+
+    if (this.componentDetails.type == ComponentType.CausalNet) {
+      const causalNetComponentData = this.componentDetails
+        .data as CausalNetComponentData;
+
+      this.workspaceService.updateComponent(
+        this.workspaceId,
+        this.componentDetails.id,
+        {
+          id: this.componentDetails.id,
+          type: this.componentDetails.type,
+          data: causalNetComponentData,
+          name: this.componentDetails.name,
+          customizationData: this.componentDetails.customizationData
+        }
+      );
+    }
   }
 }
 </script>

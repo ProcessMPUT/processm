@@ -285,7 +285,8 @@ const componentsData = [
           sourceNodeId: "d",
           targetNodeId: "e"
         }
-      ],
+      ]},
+    customizationData: {
       layout: [
         { id: "a", x: 125, y: 25 },
         { id: "b", x: 125, y: 75 },
@@ -509,8 +510,11 @@ function createUUID() {
 }
 
 const api = {
-  "GET /api/workspaces": { data: workspaces },
-  "GET /api/workspaces/:workspaceId": (req, res) => {
+  "GET /api/organizations/:organizationId/workspaces": { data: workspaces },
+  "GET /api/organizations/:organizationId/workspaces/:workspaceId": (
+    req,
+    res
+  ) => {
     const { workspaceId } = req.params;
     const workspace = _.find(workspaces, { id: workspaceId });
 
@@ -520,8 +524,8 @@ const api = {
 
     return res.json({ data: workspace });
   },
-  "POST /api/workspaces": (req, res) => {
-    const workspace = req.body;
+  "POST /api/organizations/:organizationId/workspaces": (req, res) => {
+    const workspace = req.body.data;
 
     if (!workspace) {
       return res.status(400).json();
@@ -530,9 +534,12 @@ const api = {
     workspace.id = createUUID();
     workspaces.push(workspace);
 
-    return res.json({ data: workspace });
+    return res.status(201).json({ data: workspace });
   },
-  "PATCH /api/workspaces/:workspaceId": (req, res) => {
+  "PATCH /api/organizations/:organizationId/workspaces/:workspaceId": (
+    req,
+    res
+  ) => {
     const { workspaceId } = req.params;
     const workspace = _.find(workspaces, { id: workspaceId });
 
@@ -544,7 +551,10 @@ const api = {
 
     return res.json({ data: workspace });
   },
-  "DELETE /api/workspaces/:workspaceId": (req, res) => {
+  "DELETE /api/organizations/:organizationId/workspaces/:workspaceId": (
+    req,
+    res
+  ) => {
     const { workspaceId } = req.params;
     const workspaceExists = _.some(workspaces, { id: workspaceId });
 
@@ -556,7 +566,23 @@ const api = {
 
     return res.status(204).json();
   },
-  "GET /api/workspaces/:workspaceId/components/:componentId": (req, res) => {
+  "GET /api/organizations/:organizationId/workspaces/:workspaceId/components": (
+    req,
+    res
+  ) => {
+    const { workspaceId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+
+    if (!workspace) {
+      return res.status(404).json();
+    }
+
+    return res.json({ data: componentsData });
+  },
+  "GET /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId": (
+    req,
+    res
+  ) => {
     const { workspaceId, componentId } = req.params;
     const workspace = _.find(workspaces, { id: workspaceId });
     const component = _.find(componentsData, { id: componentId });
@@ -567,7 +593,26 @@ const api = {
 
     return res.json({ data: component });
   },
-  "GET /api/workspaces/:workspaceId/components/:componentId/data": (
+  "PUT /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId": (
+    req,
+    res
+  ) => {
+    const { workspaceId, componentId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+    const component = _.find(componentsData, { id: componentId });
+
+    if (!workspace || !component) {
+      return res.status(404).json();
+    }
+
+    component.name = req.body.data.name;
+    component.type = req.body.data.type;
+    component.data = req.body.data.data;
+    component.customizationData = req.body.data.customizationData;
+
+    return res.status(204).json();
+  },
+  "GET /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId/data": (
     req,
     res
   ) => {

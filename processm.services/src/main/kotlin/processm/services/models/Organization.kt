@@ -9,6 +9,7 @@ import java.util.*
 object Organizations : UUIDTable("organizations") {
     val name = text("name")
     val parentOrganizationId = reference("parent_organization_id", Organizations).nullable()
+    val sharedGroupId = reference("shared_group_id", UserGroups)
     val isPrivate = bool("is_private")
 }
 
@@ -17,9 +18,9 @@ class Organization(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var name by Organizations.name
     var parentOrganization by Organization optionalReferencedOn Organizations.parentOrganizationId
+    val sharedGroup by UserGroup referencedOn Organizations.sharedGroupId
     var isPrivate by Organizations.isPrivate
     var users by User via UsersRolesInOrganizations
-    val userGroups by UserGroup referrersOn UserGroups.organizationId
     val userRoles by UserRolesInOrganizations referrersOn UsersRolesInOrganizations.organizationId
 
     fun toDto() = OrganizationDto(id.value, name, isPrivate)

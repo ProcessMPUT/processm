@@ -12,7 +12,6 @@ import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkClass
-import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.Before
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
@@ -24,7 +23,6 @@ import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
-import processm.services.models.OrganizationMemberDto
 import processm.services.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
@@ -98,7 +96,7 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     }
 
     protected fun TestApplicationEngine.withAuthentication(
-        userId: UUID = UUID.randomUUID(), login: String = "user@example.com", password: String = "pass", role: OrganizationRole = OrganizationRole.owner, callback: JwtAuthenticationTrackingEngine.() -> Unit
+        userId: UUID = UUID.randomUUID(), login: String = "user@example.com", password: String = "pass", role: Pair<OrganizationRole, UUID> = OrganizationRole.owner to UUID.randomUUID(), callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
             every { id } returns userId
@@ -107,8 +105,8 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
         every { accountService.getRolesAssignedToUser(userId) } returns
             listOf(mockk {
                 every { user.id } returns userId
-                every { organization.id } returns UUID.randomUUID()
-                every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.name)
+                every { organization.id } returns role.second
+                every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.first.name)
             })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))

@@ -151,14 +151,7 @@ import {
 } from "d3";
 import { v4 as uuidv4 } from "uuid";
 import { ComponentMode } from "../WorkspaceComponent.vue";
-import CausalNet, {
-  DataNode,
-  DataLink,
-  Point,
-  Node,
-  Link,
-  ElementType
-} from "./CausalNet";
+import CausalNet, { Point, Node, Link, ElementType } from "./CausalNet";
 import {
   UserInputSource,
   UserInputHandler,
@@ -166,6 +159,9 @@ import {
   DeletionModeInputHandler,
   InteractiveModeInputHandler
 } from "./UserInputHandlers";
+import WorkspaceComponentModel, {
+  CausalNetComponentData, CausalNetComponentCustomizationData
+} from "../../../models/WorkspaceComponent";
 
 enum EditMode {
   Addition,
@@ -182,11 +178,10 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   EditMode = EditMode;
 
   @Prop({ default: {} })
-  readonly data!: {
-    nodes: Array<DataNode>;
-    edges: Array<DataLink>;
-    layout?: Array<{ id: string; x: number; y: number }>;
-  };
+  readonly data!: WorkspaceComponentModel<
+    CausalNetComponentData,
+    CausalNetComponentCustomizationData
+  >;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
 
@@ -319,12 +314,26 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   mounted() {
+    if (this.data.data == null) {
+      throw new Error("Component data field must not be null");
+    }
+
     this.causalNet = new CausalNet(
-      this.data.nodes,
-      this.data.edges,
-      this.data.layout,
+      this.data.data.nodes,
+      this.data.data.edges,
+      this.data.customizationData?.layout,
       this.nodeTransition
     );
+
+    if (this.data.customizationData?.layout == null) {
+      this.data.customizationData = {
+        layout: Array.from(this.causalNet.nodesLayout).map(([id, point]) => ({
+          id,
+          x: point.x,
+          y: point.y
+        }))
+      };
+    }
 
     this.simulation = d3.forceSimulation<Node, Link>().force(
       "link",
@@ -512,6 +521,27 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
     );
 
     this.currentScalingFactor = scalingFactor;
+  }
+
+  public updateNodeLayoutPosition(nodeId: string, position: Point): void {
+    if (this.data.customizationData?.layout == null) return;
+
+    const nodeIndex = this.data.customizationData.layout.findIndex(
+      node => node.id == nodeId
+    );
+
+    if (nodeIndex < 0) {
+      this.data.customizationData.layout.push({
+        id: nodeId,
+        x: position.x,
+        y: position.y
+      });
+    } else {
+      const node = this.data.customizationData?.layout[nodeIndex];
+
+      node.x = position.x;
+      node.y = position.y;
+    }
   }
 
   private setEditMode(newMode: EditMode | null) {

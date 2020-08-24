@@ -1,7 +1,9 @@
 package processm.services.logic
 
 import io.mockk.*
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.insertAndGetId
 import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
@@ -64,10 +66,8 @@ class AccountServiceTest : ServiceTestBase() {
 
     @Test
     fun `successful account registration returns`() =
-        withCleanTables(Users, Organizations, UsersRolesInOrganizations) {
-            val groupId = UUID.randomUUID()
-            every { groupServiceMock.ensureSharedGroupExists(any()) } returns groupId
-            every { groupServiceMock.attachUserToGroup(any(), groupId) } just runs
+        withCleanTables(Users, Organizations, UsersRolesInOrganizations, UserGroups) {
+            every { groupServiceMock.attachUserToGroup(any(), any()) } just runs
 
             accountService.createAccount("user@example.com", "Org1")
 
@@ -75,8 +75,7 @@ class AccountServiceTest : ServiceTestBase() {
             assertEquals("user@example.com", organizationMember.user.email)
             assertEquals("Org1", organizationMember.organization.name)
             assertEquals(OrganizationRoleDto.Owner, organizationMember.role.name)
-            verify { groupServiceMock.ensureSharedGroupExists(organizationMember.organization.id.value) }
-            verify { groupServiceMock.attachUserToGroup(organizationMember.user.id.value, groupId) }
+            verify(exactly = 2) { groupServiceMock.attachUserToGroup(organizationMember.user.id.value, any()) }
         }
 
     @Test
@@ -91,11 +90,9 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `account registration throws if organization already registered`() = withCleanTables(Users, Organizations) {
-        Organizations.insert {
-            it[name] = "Org1"
-            it[isPrivate] = false
-        }
+    fun `account registration throws if organization already registered`() = withCleanTables(Users, Organizations, UserGroups) {
+        createOrganization(name = "Org1", isPrivate = true)
+
         val exception =
             assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
                 accountService.createAccount("user@example.com", "Org1")

@@ -29,7 +29,6 @@ fun Route.OrganizationsApi() {
             }
         }
 
-
         route("/organizations") {
             post {
                 val principal = call.authentication.principal<ApiUser>()
@@ -39,28 +38,20 @@ fun Route.OrganizationsApi() {
         }
 
 
-        get<Paths.Organization> { organization ->
+        get<Paths.Organization> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(
-                HttpStatusCode.OK, OrganizationMessageBody(
-                    Organization(
-                        organization.organizationId.toString(), false, organization.organizationId
-                    )
-                )
-            )
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         get<Paths.OrganizationGroups> { organization ->
             val principal = call.authentication.principal<ApiUser>()!!
 
-            if (!principal.organizations.containsKey(organization.organizationId)) {
-                throw ApiException("The user is not a member of the organization with the provided id", HttpStatusCode.Forbidden)
-            }
+            principal.ensureUserBelongsToOrganization(organization.organizationId)
 
             val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
-                .map { Group(it.name ?: "", it.isImplicit, it.organization.id, GroupRole.reader, it.id) }
+                .map { Group(it.name ?: "", it.isImplicit, organization.organizationId, GroupRole.reader, it.id) }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(organizationGroups))
@@ -70,9 +61,7 @@ fun Route.OrganizationsApi() {
         get<Paths.OrganizationMembers> { organizationMembers ->
             val principal = call.authentication.principal<ApiUser>()!!
 
-            if (!principal.organizations.containsKey(organizationMembers.organizationId)) {
-                throw ApiException("The user is not a member of the organization with the provided id", HttpStatusCode.Forbidden)
-            }
+            principal.ensureUserBelongsToOrganization(organizationMembers.organizationId)
 
             val members = organizationService.getOrganizationMembers(organizationMembers.organizationId)
                 .map { OrganizationMember(it.user.id, it.user.email, OrganizationRole.valueOf(it.role.roleName)) }
@@ -85,7 +74,7 @@ fun Route.OrganizationsApi() {
         get<Paths.Organizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
-            call.respond(HttpStatusCode.OK, OrganizationCollectionMessageBody(emptyArray()))
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
@@ -101,7 +90,6 @@ fun Route.OrganizationsApi() {
 
             call.respond(HttpStatusCode.NotImplemented)
         }
-
 
         route("/organizations/{organizationId}") {
             put {

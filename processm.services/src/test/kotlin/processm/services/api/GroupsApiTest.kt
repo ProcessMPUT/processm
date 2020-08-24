@@ -10,10 +10,10 @@ import org.koin.test.mock.declareMock
 import processm.services.api.models.ErrorMessageBody
 import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.GroupMessageBody
-import processm.services.api.models.GroupRole
+import processm.services.api.models.OrganizationRole.reader
 import processm.services.logic.GroupService
+import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
-import processm.services.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -52,42 +52,37 @@ class GroupsApiTest : BaseApiTest() {
     override fun componentsRegistration() {
         super.componentsRegistration()
         groupService = declareMock()
+        organizationService = declareMock()
     }
 
     lateinit var groupService: GroupService
+    lateinit var organizationService: OrganizationService
 
     @Test
     fun `responds with 200 and subgroups list`() = withConfiguredTestApplication {
         val groupId = UUID.randomUUID()
+        val rootGroupId = UUID.randomUUID()
         val subgroupId1 = UUID.randomUUID()
         val subgroupId2 = UUID.randomUUID()
         val organizationId = UUID.randomUUID()
 
-        withAuthentication {
-            every { groupService.getGroup(groupId) } returns mockk {
-                    every { id } returns groupId
-                    every { organization.id } returns organizationId
-                }
+        withAuthentication(role = reader to organizationId) {
+            every { groupService.getRootGroupId(groupId) } returns rootGroupId
+            every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
+                every { id } returns organizationId
+            }
             every { groupService.getSubgroups(groupId) } returns listOf(
                 mockk {
                     every { id } returns subgroupId1
                     every { name } returns "Subgroup1"
                     every { isImplicit } returns true
-                    every { organization.id } returns organizationId
                 },
                 mockk {
                     every { id } returns subgroupId2
                     every { name } returns "Subgroup2"
                     every { isImplicit } returns false
-                    every { organization.id } returns organizationId
                 }
             )
-            every { accountService.getRolesAssignedToUser(any()) } returns listOf(
-                mockk {
-                    every { user.id } returns UUID.randomUUID()
-                    every { organization.id } returns organizationId
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
-                })
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val subgroups = assertNotNull(response.deserializeContent<GroupCollectionMessageBody>().data)
@@ -103,11 +98,11 @@ class GroupsApiTest : BaseApiTest() {
         val groupId = UUID.randomUUID()
 
         withAuthentication {
-            every { groupService.getGroup(groupId) } throws ValidationException(ValidationException.Reason.ResourceNotFound, "Group not found")
+            every { groupService.getRootGroupId(groupId) } throws ValidationException(ValidationException.Reason.ResourceNotFound, "The specified group does not exist")
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
                 assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("Group not found"))
+                    .contains("The specified group does not exist"))
             }
         }
     }
@@ -115,23 +110,17 @@ class GroupsApiTest : BaseApiTest() {
     @Test
     fun `responds to request for subgroups in organization not related to user with 403 and error message`() = withConfiguredTestApplication {
         val groupId = UUID.randomUUID()
-        val organizationId = UUID.randomUUID()
+        val rootGroupId = UUID.randomUUID()
 
         withAuthentication {
-            every { groupService.getGroup(groupId) } returns mockk {
-                every { id } returns groupId
-                every { organization.id } returns organizationId
+            every { groupService.getRootGroupId(groupId) } returns rootGroupId
+            every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
+                every { id } returns UUID.randomUUID()
             }
-            every { accountService.getRolesAssignedToUser(any()) } returns listOf(
-                mockk {
-                    every { user.id } returns UUID.randomUUID()
-                    every { organization.id } returns UUID.randomUUID()
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
-                })
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.Forbidden, response.status())
                 assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of an organization containing the group with the provided id"))
+                    .contains("The user is not a member of the related organization"))
             }
         }
     }
@@ -139,21 +128,20 @@ class GroupsApiTest : BaseApiTest() {
     @Test
     fun `responds with 200 and the specified group`() = withConfiguredTestApplication {
         val groupId = UUID.randomUUID()
+        val rootGroupId = UUID.randomUUID()
         val organizationId = UUID.randomUUID()
 
-        withAuthentication {
+        withAuthentication(role = reader to organizationId) {
+            every { groupService.getRootGroupId(groupId) } returns rootGroupId
+            every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
+                every { id } returns organizationId
+            }
             every { groupService.getGroup(groupId) } returns mockk {
                 every { id } returns groupId
                 every { name } returns "Group1"
-                every { organization.id } returns organizationId
                 every { isImplicit } returns false
             }
-            every { accountService.getRolesAssignedToUser(any()) } returns listOf(
-                mockk {
-                    every { user.id } returns UUID.randomUUID()
-                    every { organization.id } returns organizationId
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
-                })
+
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val group = assertNotNull(response.deserializeContent<GroupMessageBody>().data)
@@ -165,25 +153,17 @@ class GroupsApiTest : BaseApiTest() {
     @Test
     fun `responds to request for group in organization not related to user with 403 and error message`() = withConfiguredTestApplication {
         val groupId = UUID.randomUUID()
-        val organizationId = UUID.randomUUID()
+        val rootGroupId = UUID.randomUUID()
 
         withAuthentication {
-            every { groupService.getGroup(groupId) } returns mockk {
-                every { id } returns groupId
-                every { name } returns "Group1"
-                every { organization.id } returns UUID.randomUUID()
-                every { isImplicit } returns false
+            every { groupService.getRootGroupId(groupId) } returns rootGroupId
+            every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
+                every { id } returns UUID.randomUUID()
             }
-            every { accountService.getRolesAssignedToUser(any()) } returns listOf(
-                mockk {
-                    every { user.id } returns UUID.randomUUID()
-                    every { organization.id } returns organizationId
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
-                })
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                 assertEquals(HttpStatusCode.Forbidden, response.status())
                 assertTrue { response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of an organization containing the group with the provided id") }
+                    .contains("The user is not a member of the related organization") }
             }
         }
     }
@@ -191,13 +171,19 @@ class GroupsApiTest : BaseApiTest() {
     @Test
     fun `responds to unknown group request with 404 and error message`() = withConfiguredTestApplication {
         val groupId = UUID.randomUUID()
+        val rootGroupId = UUID.randomUUID()
+        val organizationId = UUID.randomUUID()
 
-        withAuthentication {
-            every { groupService.getGroup(groupId) } throws ValidationException(ValidationException.Reason.ResourceNotFound, "Group not found")
+        withAuthentication(role = reader to organizationId) {
+            every { groupService.getRootGroupId(groupId) } returns rootGroupId
+            every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
+                every { id } returns organizationId
+            }
+            every { groupService.getGroup(groupId) } throws ValidationException(ValidationException.Reason.ResourceNotFound, "The specified group does not exist")
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
                 assertTrue { response.deserializeContent<ErrorMessageBody>().error
-                    .contains("Group not found") }
+                    .contains("The specified group does not exist") }
             }
         }
     }

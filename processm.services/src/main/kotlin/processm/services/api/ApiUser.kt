@@ -2,6 +2,7 @@ package processm.services.api
 
 import com.auth0.jwt.interfaces.Claim
 import io.ktor.auth.Principal
+import io.ktor.http.HttpStatusCode
 import processm.services.api.models.OrganizationRole
 import java.util.*
 
@@ -16,4 +17,13 @@ data class ApiUser(private val claims: Map<String, Claim>) : Principal {
             return@map UUID.fromString(organizationId) to OrganizationRole.valueOf(organizationRole)
         }?.toMap()
         ?: throw ApiException("Token should contain 'organizations' field")
+}
+
+internal fun ApiUser.ensureUserBelongsToOrganization(organizationId: UUID, organizationRole: OrganizationRole? = null) {
+    if (!organizations.containsKey(organizationId)) {
+        throw ApiException("The user is not a member of the related organization", HttpStatusCode.Forbidden)
+    }
+    else if (organizationRole != null && organizations[organizationId]?.ordinal ?: -1 > organizationRole.ordinal) {
+        throw ApiException("The user has insufficient permissions to access the related organization", HttpStatusCode.Forbidden)
+    }
 }

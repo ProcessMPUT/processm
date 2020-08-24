@@ -1,7 +1,12 @@
 import Vue from "vue";
 import { BaseAPI } from "@/openapi/base";
-import axios, { AxiosInstance, AxiosError } from "axios";
-import { Configuration, UsersApi, OrganizationsApi } from "@/openapi";
+import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import {
+  Configuration,
+  UsersApi,
+  OrganizationsApi,
+  WorkspacesApi
+} from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
 export default abstract class BaseService {
@@ -36,6 +41,29 @@ export default abstract class BaseService {
 
   protected get organizationsApi() {
     return this.getGenericClient(OrganizationsApi);
+  }
+
+  protected get workspacesApi() {
+    return this.getGenericClient(WorkspacesApi);
+  }
+
+  protected ensureSuccessfulResponseCode(
+    response: AxiosResponse,
+    ...successfulStatusCodes: Array<number>
+  ) {
+    const responseStatusCode = response.status;
+
+    if (
+      successfulStatusCodes.length == 0 &&
+      responseStatusCode >= 200 &&
+      responseStatusCode < 300
+    ) {
+      return;
+    } else if (successfulStatusCodes.includes(responseStatusCode)) {
+      return;
+    }
+
+    throw new Error(response.statusText);
   }
 
   private prolongExistingSession(

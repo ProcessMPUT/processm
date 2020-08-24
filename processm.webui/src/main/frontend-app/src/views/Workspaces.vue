@@ -93,28 +93,21 @@ export default class Workspaces extends Vue {
   }
 
   async createWorkspace() {
-    const lastWorkspaceIndex =
-      this.workspaces.length > 0
-        ? this.workspaces[this.workspaces.length - 1].id
-        : 0;
-    const workspaceName = `${this.$i18n.t(
-      "workspace.default-name"
-    )}${lastWorkspaceIndex + 1}`;
-    const newWorkspace = await this.workspaceService.create(workspaceName);
+    const workspaceName = `${this.$i18n.t("workspace.default-name")}${this
+      .workspaces.length + 1}`;
+    const newWorkspace = await this.workspaceService.createWorkspace(
+      workspaceName
+    );
 
     this.workspaces.push(newWorkspace);
   }
 
   async removeWorkspace() {
     const removedWorkspaceIndex = this.currentWorkspaceIndex;
-    const isRemoved = await this.workspaceService.remove(
+
+    await this.workspaceService.removeWorkspace(
       this.workspaces[removedWorkspaceIndex].id
     );
-
-    if (!isRemoved) {
-      return;
-    }
-
     this.currentWorkspaceIndex = Math.max(0, this.currentWorkspaceIndex - 1);
     this.workspaces.splice(removedWorkspaceIndex, 1);
   }
@@ -125,10 +118,7 @@ export default class Workspaces extends Vue {
     const currentWorkspace = this.workspaces[this.currentWorkspaceIndex];
 
     currentWorkspace.name = newName;
-
-    this.workspaces[
-      this.currentWorkspaceIndex
-    ] = await this.workspaceService.update(currentWorkspace);
+    await this.workspaceService.updateWorkspace(currentWorkspace);
   }
 }
 </script>
