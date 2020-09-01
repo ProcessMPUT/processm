@@ -2,19 +2,21 @@ package processm.core.persistence
 
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
+import processm.core.helpers.isUUID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
 import processm.core.persistence.connection.DatabaseChecker.ensureMainDBNameNotUUID
 import processm.core.persistence.connection.DatabaseChecker.ensurePostgreSQLDatabase
+import processm.core.persistence.connection.DatabaseChecker.readDatabaseConnectionURL
 import processm.core.persistence.connection.DatabaseChecker.switchDatabaseURL
-import kotlin.properties.Delegates
+import java.sql.DriverManager
 
 /**
  * Database migrator.
  */
 object Migrator {
-    internal var baseConnectionURL: String by Delegates.notNull()
+    private val baseConnectionURL = readDatabaseConnectionURL()
     private lateinit var mainDatabaseName: String
 
     /**
@@ -43,11 +45,11 @@ object Migrator {
      * File stored at: `db/processm_datastore_migrations`.
      * @link https://flywaydb.org/documentation/migrations
      */
-    fun migrateDataSourceDatabase(expectedDatabase: String) {
+    fun migrateDataSourceDatabase(dataSourceDBName: String) {
         logger().enter()
         logger().debug("Migrating datasource database if required")
 
-        val expectedDatabaseConnectionURL = switchDatabaseURL(baseConnectionURL, mainDatabaseName, expectedDatabase)
+        val expectedDatabaseConnectionURL = switchDatabaseURL(baseConnectionURL, mainDatabaseName, dataSourceDBName)
 
         with(Flyway.configure().dataSource(expectedDatabaseConnectionURL, null, null)) {
             locations("db/processm_datastore_migrations")
@@ -55,6 +57,26 @@ object Migrator {
             load().migrate()
         }
 
+        logger().exit()
+    }
+
+    fun createDatabaseIfNotExists(dataSourceDBName: String) {
+        logger().enter()
+        logger().debug("Create datasource database if required")
+
+        require(dataSourceDBName.isUUID()) { "Datasource DB should be named with UUID." }
+
+        DriverManager.getConnection(baseConnectionURL).prepareStatement(
+            """
+            SELECT * FROM create_database(?);
+            """.trimIndent()
+        ).use {
+            it.setString(1, dataSourceDBName)
+            it.executeQuery().use { result ->
+                require(result.next()) { "Database can not be created" }
+                require(result.getBoolean("create_database")) { "Database can not be created" }
+            }
+        }
         logger().exit()
     }
 
