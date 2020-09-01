@@ -5,6 +5,19 @@ import processm.core.helpers.isUUID
 
 object DatabaseChecker {
     /**
+     * Read persistence connection URL from system's property.
+     */
+    fun readDatabaseConnectionURL(): String {
+        // FIXME: remove before merge
+        System.setProperty(
+            "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
+            "jdbc:postgresql://db.processm.cs.put.poznan.pl/db?user=bgorka&password=bgorka"
+        )
+
+        return System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
+    }
+
+    /**
      * Validate connection as `jdbc:posgresql://` connection which will be used in regex.
      */
     fun ensurePostgreSQLDatabase(connectionURL: String) {
