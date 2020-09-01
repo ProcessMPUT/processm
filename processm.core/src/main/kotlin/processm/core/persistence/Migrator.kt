@@ -2,77 +2,60 @@ package processm.core.persistence
 
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
-import org.postgresql.ds.PGSimpleDataSource
-import processm.core.helpers.isUUID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
-import java.util.*
+import processm.core.persistence.connection.DatabaseChecker.ensureMainDBNameNotUUID
+import processm.core.persistence.connection.DatabaseChecker.ensurePostgreSQLDatabase
+import processm.core.persistence.connection.DatabaseChecker.switchDatabaseURL
+import kotlin.properties.Delegates
 
 /**
  * Database migrator.
  */
 object Migrator {
+    internal var baseConnectionURL: String by Delegates.notNull()
+    private lateinit var mainDatabaseName: String
 
     /**
-     * Migrates the database to the current version using migration SQL scripts.
+     * Migrates the main database to the current version using migration SQL scripts.
+     * File stored at: `db/processm_main_migrations`.
      * @link https://flywaydb.org/documentation/migrations
      */
-    fun migrate() {
+    fun migrateMainDatabase() {
         logger().enter()
+        logger().debug("Migrating main database if required")
 
-        logger().debug("Migrating database if required")
-        System.setProperty(
-            "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
-            "jdbc:postgresql://db.processm.cs.put.poznan.pl/db?user=bgorka&password=bgorka"
-        )
+        ensurePostgreSQLDatabase(baseConnectionURL)
+        mainDatabaseName = ensureMainDBNameNotUUID(baseConnectionURL)
 
-        val connectionURL = System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
-        ensurePostgreSQLDatabase(connectionURL)
-        val databaseName = ensureMainDBNameNotUUID(connectionURL)
-
-        // Main database
-        val conf = Flyway.configure().dataSource(connectionURL, null, null)
-        conf.locations("db/processm_main_migrations")
-        applyDefaultSchema(conf, connectionURL)
-        conf.load().migrate()
-
-        // DataSource databases
-        val dbs = listOf("test")
-        for (db in dbs) { // TODO: dbs from database - fetch UUIDs list
-            val dbURL = switchDatabaseURL(connectionURL, databaseName, db)
-            with(Flyway.configure().dataSource(dbURL, null, null)) {
-                locations("db/processm_datastore_migrations")
-                applyDefaultSchema(this, dbURL)
-                load().migrate()
-            }
+        with(Flyway.configure().dataSource(baseConnectionURL, null, null)) {
+            locations("db/processm_main_migrations")
+            applyDefaultSchema(this, baseConnectionURL)
+            load().migrate()
         }
 
         logger().exit()
     }
 
-    private fun switchDatabaseURL(connectionURL: String, mainDatabase: String, expectedDatabase: String): String {
-        val withoutPSQL = connectionURL.substring(18)
-        return "jdbc:postgresql://${Regex("/$mainDatabase").replace(withoutPSQL, "/$expectedDatabase")}"
-    }
-
-    private fun ensurePostgreSQLDatabase(connectionURL: String) {
-        require(connectionURL.startsWith("jdbc:postgresql://")) { "Expected PostgreSQL database not found!" }
-    }
-
     /**
-     * Validate main database name - should not be in UUID format.
-     * As result return database name.
+     * Migrates the datasource database passed by name to the current version using migration SQL scripts.
+     * File stored at: `db/processm_datastore_migrations`.
+     * @link https://flywaydb.org/documentation/migrations
      */
-    private fun ensureMainDBNameNotUUID(connectionURL: String): String {
-        val databaseName = with(PGSimpleDataSource()) {
-            setURL(connectionURL)
-            return@with databaseName!!
+    fun migrateDataSourceDatabase(expectedDatabase: String) {
+        logger().enter()
+        logger().debug("Migrating datasource database if required")
+
+        val expectedDatabaseConnectionURL = switchDatabaseURL(baseConnectionURL, mainDatabaseName, expectedDatabase)
+
+        with(Flyway.configure().dataSource(expectedDatabaseConnectionURL, null, null)) {
+            locations("db/processm_datastore_migrations")
+            applyDefaultSchema(this, expectedDatabaseConnectionURL)
+            load().migrate()
         }
 
-        require(!databaseName.isUUID()) { "Database name can't be in UUID format" }
-
-        return databaseName
+        logger().exit()
     }
 
     /**
