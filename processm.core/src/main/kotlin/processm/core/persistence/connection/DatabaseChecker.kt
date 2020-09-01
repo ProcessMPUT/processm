@@ -2,16 +2,27 @@ package processm.core.persistence.connection
 
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.helpers.isUUID
+import kotlin.properties.Delegates
 
 object DatabaseChecker {
+    var baseConnectionURL = readDatabaseConnectionURL()
+        private set
+    var mainDatabaseName: String by Delegates.notNull()
+        private set
+
+    init {
+        ensurePostgreSQLDatabase()
+        mainDatabaseName = ensureMainDBNameNotUUID()
+    }
+
     /**
      * Read persistence connection URL from system's property.
      */
-    fun readDatabaseConnectionURL(): String {
+    private fun readDatabaseConnectionURL(): String {
         // FIXME: remove before merge
         System.setProperty(
             "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
-            "jdbc:postgresql://db.processm.cs.put.poznan.pl/db?user=bgorka&password=bgorka"
+            "jdbc:postgresql://db.processm.cs.put.poznan.pl/bgorka?user=bgorka&password=bgorka"
         )
 
         return System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
@@ -20,17 +31,17 @@ object DatabaseChecker {
     /**
      * Validate connection as `jdbc:posgresql://` connection which will be used in regex.
      */
-    fun ensurePostgreSQLDatabase(connectionURL: String) {
-        require(connectionURL.startsWith("jdbc:postgresql://")) { "Expected PostgreSQL database not found!" }
+    private fun ensurePostgreSQLDatabase() {
+        require(baseConnectionURL.startsWith("jdbc:postgresql://")) { "Expected PostgreSQL database not found!" }
     }
 
     /**
      * Validate main database name - should not be in UUID format.
      * As result return database name.
      */
-    fun ensureMainDBNameNotUUID(connectionURL: String): String {
+    private fun ensureMainDBNameNotUUID(): String {
         val databaseName = with(PGSimpleDataSource()) {
-            setURL(connectionURL)
+            setURL(baseConnectionURL)
             return@with databaseName!!
         }
 
@@ -42,7 +53,7 @@ object DatabaseChecker {
     /**
      * Switch database by create new connection URL to selected database.
      */
-    fun switchDatabaseURL(baseConnectionURL: String, mainDatabaseName: String, expectedDatabase: String): String {
+    fun switchDatabaseURL(expectedDatabase: String): String {
         val withoutPSQL = baseConnectionURL.substring(18)
         return "jdbc:postgresql://${Regex("/${mainDatabaseName}").replace(withoutPSQL, "/$expectedDatabase")}"
     }

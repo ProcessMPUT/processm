@@ -6,9 +6,7 @@ import processm.core.helpers.isUUID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
-import processm.core.persistence.connection.DatabaseChecker.ensureMainDBNameNotUUID
-import processm.core.persistence.connection.DatabaseChecker.ensurePostgreSQLDatabase
-import processm.core.persistence.connection.DatabaseChecker.readDatabaseConnectionURL
+import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.DatabaseChecker.switchDatabaseURL
 import java.sql.DriverManager
 
@@ -16,8 +14,7 @@ import java.sql.DriverManager
  * Database migrator.
  */
 object Migrator {
-    private val baseConnectionURL = readDatabaseConnectionURL()
-    private lateinit var mainDatabaseName: String
+    private val dbConfig = DatabaseChecker
 
     /**
      * Migrates the main database to the current version using migration SQL scripts.
@@ -28,12 +25,9 @@ object Migrator {
         logger().enter()
         logger().debug("Migrating main database if required")
 
-        ensurePostgreSQLDatabase(baseConnectionURL)
-        mainDatabaseName = ensureMainDBNameNotUUID(baseConnectionURL)
-
-        with(Flyway.configure().dataSource(baseConnectionURL, null, null)) {
+        with(Flyway.configure().dataSource(dbConfig.baseConnectionURL, null, null)) {
             locations("db/processm_main_migrations")
-            applyDefaultSchema(this, baseConnectionURL)
+            applyDefaultSchema(this, dbConfig.baseConnectionURL)
             load().migrate()
         }
 
@@ -49,7 +43,7 @@ object Migrator {
         logger().enter()
         logger().debug("Migrating datasource database if required")
 
-        val expectedDatabaseConnectionURL = switchDatabaseURL(baseConnectionURL, mainDatabaseName, dataSourceDBName)
+        val expectedDatabaseConnectionURL = switchDatabaseURL(dataSourceDBName)
 
         with(Flyway.configure().dataSource(expectedDatabaseConnectionURL, null, null)) {
             locations("db/processm_datastore_migrations")
@@ -66,7 +60,7 @@ object Migrator {
 
         require(dataSourceDBName.isUUID()) { "Datasource DB should be named with UUID." }
 
-        DriverManager.getConnection(baseConnectionURL).prepareStatement(
+        DriverManager.getConnection(dbConfig.baseConnectionURL).prepareStatement(
             """
             SELECT * FROM create_database(?);
             """.trimIndent()
