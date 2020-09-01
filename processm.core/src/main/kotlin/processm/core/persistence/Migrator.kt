@@ -16,12 +16,17 @@ import java.sql.DriverManager
 object Migrator {
     private val dbConfig = DatabaseChecker
 
+    fun migrate(dataSourceDBName: String) {
+        if (dataSourceDBName.isUUID()) migrateDataSourceDatabase(dataSourceDBName)
+        else migrateMainDatabase()
+    }
+
     /**
      * Migrates the main database to the current version using migration SQL scripts.
      * File stored at: `db/processm_main_migrations`.
      * @link https://flywaydb.org/documentation/migrations
      */
-    fun migrateMainDatabase() {
+    private fun migrateMainDatabase() {
         logger().enter()
         logger().debug("Migrating main database if required")
 
@@ -39,10 +44,11 @@ object Migrator {
      * File stored at: `db/processm_datastore_migrations`.
      * @link https://flywaydb.org/documentation/migrations
      */
-    fun migrateDataSourceDatabase(dataSourceDBName: String) {
+    private fun migrateDataSourceDatabase(dataSourceDBName: String) {
         logger().enter()
         logger().debug("Migrating datasource database if required")
 
+        createDatabaseIfNotExists(dataSourceDBName)
         val expectedDatabaseConnectionURL = switchDatabaseURL(dataSourceDBName)
 
         with(Flyway.configure().dataSource(expectedDatabaseConnectionURL, null, null)) {
@@ -54,7 +60,7 @@ object Migrator {
         logger().exit()
     }
 
-    fun createDatabaseIfNotExists(dataSourceDBName: String) {
+    private fun createDatabaseIfNotExists(dataSourceDBName: String) {
         logger().enter()
         logger().debug("Create datasource database if required")
 
