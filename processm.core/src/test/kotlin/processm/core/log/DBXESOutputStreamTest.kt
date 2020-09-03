@@ -1,8 +1,11 @@
 package processm.core.log
 
+import processm.core.persistence.connection.DBCache
+import java.util.*
 import kotlin.test.Test
 
 internal class DBXESOutputStreamTest {
+    private val dbName = UUID.randomUUID().toString()
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
         <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
             <extension name="Lifecycle" prefix="lifecycle" uri="http://www.xes-standard.org/lifecycle.xesext"/>
@@ -73,7 +76,7 @@ internal class DBXESOutputStreamTest {
         content.byteInputStream().use { stream ->
             val xesElements = XMLXESInputStream(stream).asSequence()
 
-            DBXESOutputStream().use { db ->
+            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { db ->
                 db.write(xesElements)
             }
         }

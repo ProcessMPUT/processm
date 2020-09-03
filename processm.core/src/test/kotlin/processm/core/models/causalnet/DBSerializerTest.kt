@@ -1,12 +1,15 @@
 package processm.core.models.causalnet
 
 import processm.core.helpers.mapToSet
+import processm.core.persistence.connection.DBCache
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DBSerializerTest {
+    private val dbName = UUID.randomUUID().toString()
 
     //activities inspired by Fig 3.12 in "Process Mining" by Van van der Alst
     private val a = Node("register request")
@@ -59,8 +62,8 @@ class DBSerializerTest {
             setOf(h to z)
         ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
-        val id = DBSerializer.insert(mm)
-        val fetched = DBSerializer.fetch(id)
+        val id = DBSerializer.insert(DBCache.get(dbName), mm)
+        val fetched = DBSerializer.fetch(DBCache.get(dbName), id)
         assertEquals(mm.start, fetched.start)
         assertEquals(mm.end, fetched.end)
         assertEquals(mm.instances, fetched.instances)
@@ -73,8 +76,8 @@ class DBSerializerTest {
     @Test
     fun `special nodes handling`() {
         val orig = MutableCausalNet()
-        val id = DBSerializer.insert(orig)
-        val copy = DBSerializer.fetch(id)
+        val id = DBSerializer.insert(DBCache.get(dbName), orig)
+        val copy = DBSerializer.fetch(DBCache.get(dbName), id)
         assertEquals(orig.instances, copy.instances)
         assertEquals(orig.start, copy.start)
         assertEquals(orig.start, copy.start)
@@ -85,19 +88,19 @@ class DBSerializerTest {
     @Test
     fun `insert fetch delete fetch`() {
         val mm = MutableCausalNet()
-        val id = DBSerializer.insert(mm)
-        DBSerializer.fetch(id)
-        DBSerializer.delete(id)
-        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(id) }
+        val id = DBSerializer.insert(DBCache.get(dbName), mm)
+        DBSerializer.fetch(DBCache.get(dbName), id)
+        DBSerializer.delete(DBCache.get(dbName), id)
+        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(DBCache.get(dbName), id) }
     }
 
     @Test
     fun `fetch nonexisting model`() {
-        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(-1) }
+        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(DBCache.get(dbName), -1) }
     }
 
     @Test
     fun `delete nonexisting model`() {
-        assertFailsWith<NoSuchElementException> { DBSerializer.delete(-1) }
+        assertFailsWith<NoSuchElementException> { DBSerializer.delete(DBCache.get(dbName), -1) }
     }
 }

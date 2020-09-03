@@ -2,12 +2,11 @@ package processm.core.log.hierarchical
 
 import processm.core.helpers.NestableAutoCloseable
 import processm.core.helpers.mapToArray
-import processm.core.helpers.toUUID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
 import processm.core.logging.trace
-import processm.core.persistence.DBConnectionPool
+import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.*
 import processm.core.querylanguage.Function
 import java.sql.Connection
@@ -20,7 +19,11 @@ import kotlin.collections.LinkedHashMap
 import kotlin.collections.LinkedHashSet
 
 @Suppress("MapGetWithNotNullAssertionOperator")
-internal class TranslatedQuery(private val pql: Query, private val batchSize: Int = 1) {
+internal class TranslatedQuery(
+    private val dbName: String,
+    private val pql: Query,
+    private val batchSize: Int = 1
+) {
     companion object {
         private val logger = logger()
         internal val idOffsetPlaceholder = Any()
@@ -47,7 +50,7 @@ internal class TranslatedQuery(private val pql: Query, private val batchSize: In
     }
 
     private val connection: NestableAutoCloseable<Connection> = NestableAutoCloseable {
-        DBConnectionPool.getConnection().apply {
+        DBCache.get(dbName).getConnection().apply {
             assert(metaData.supportsMultipleResultSets())
             assert(metaData.supportsCorrelatedSubqueries())
             assert(metaData.supportsTransactions())

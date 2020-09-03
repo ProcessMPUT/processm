@@ -8,19 +8,18 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.persistence.connection.DBCache
 import java.lang.management.ManagementFactory
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Semaphore
-import javax.management.ObjectName
 import kotlin.concurrent.thread
 import kotlin.test.*
 
-class DBConnectionPoolTests {
-
+class DBCacheTest {
     @Test
     fun jmxTest() {
         // make sure DBConnectionPool is loaded
-        DBConnectionPool.getConnection().close()
+        DBCache.get("processm").getConnection().close()
 
         // verify if JMX interface is up and running
         val jmxServer = ManagementFactory.getPlatformMBeanServer()
@@ -33,21 +32,21 @@ class DBConnectionPoolTests {
 
     @Test
     fun getConnectionTest() {
-        DBConnectionPool.getConnection().use {
+        DBCache.get("processm").getConnection().use {
             assertEquals(true, it.isValid(3))
         }
     }
 
     @Test
     fun getDataSourceTest() {
-        DBConnectionPool.getDataSource().connection.use {
+        DBCache.get("processm").getDataSource().connection.use {
             assertEquals(true, it.isValid(3))
         }
     }
 
     @Test
     fun databaseTest() {
-        transaction(DBConnectionPool.database) {
+        transaction(DBCache.get("processm").database) {
             assertEquals(false, this.db.connector().isClosed)
         }
     }
@@ -65,7 +64,7 @@ class DBConnectionPoolTests {
             val finallyExpected = setOf("A", "B", "C", "D")
 
             thread {
-                transaction(DBConnectionPool.database) {
+                transaction(DBCache.get("processm").database) {
                     addLogger(StdOutSqlLogger)
                     SchemaUtils.create(Dummies)
 
@@ -111,7 +110,7 @@ class DBConnectionPoolTests {
                     barrier.await()
                 }
 
-                transaction(DBConnectionPool.database) {
+                transaction(DBCache.get("processm").database) {
                     barrier.await()
                     // verify durability
                     val actual = Dummy.all().map { it.value }
@@ -122,7 +121,7 @@ class DBConnectionPoolTests {
             }
 
             thread {
-                transaction(DBConnectionPool.database) {
+                transaction(DBCache.get("processm").database) {
                     addLogger(StdOutSqlLogger)
                     SchemaUtils.create(Dummies)
 
@@ -167,7 +166,7 @@ class DBConnectionPoolTests {
                     barrier.await()
                 }
 
-                transaction(DBConnectionPool.database) {
+                transaction(DBCache.get("processm").database) {
                     barrier.await()
                     // verify durability
                     val actual = Dummy.all().map { it.value }
@@ -179,7 +178,7 @@ class DBConnectionPoolTests {
 
             finishSemaphore.acquire(2)
         } finally {
-            transaction(DBConnectionPool.database) {
+            transaction(DBCache.get("processm").database) {
                 SchemaUtils.drop(Dummies)
             }
         }

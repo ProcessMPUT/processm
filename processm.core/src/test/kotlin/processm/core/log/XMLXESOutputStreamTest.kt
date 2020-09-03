@@ -3,14 +3,16 @@ package processm.core.log
 import processm.core.helpers.hierarchicalCompare
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
-import processm.core.persistence.DBConnectionPool
+import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.io.StringWriter
+import java.util.*
 import javax.xml.stream.XMLOutputFactory
 import kotlin.test.*
 
 
 internal class XMLXESOutputStreamTest {
+    private val dbName = UUID.randomUUID().toString()
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
         <!-- OpenXES library version: 1.0RC7 -->
         <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
@@ -158,7 +160,7 @@ internal class XMLXESOutputStreamTest {
             storeLog(XMLXESInputStream(it).asSequence())
         }
         val firstLogId = getLastLogId()
-        val fromDB = DBHierarchicalXESInputStream(Query(firstLogId))
+        val fromDB = DBHierarchicalXESInputStream(dbName, Query(firstLogId))
 
         // Log to XML file
         StringWriter().use { received ->
@@ -170,21 +172,21 @@ internal class XMLXESOutputStreamTest {
             storeLog(XMLXESInputStream(received.toString().byteInputStream()).asSequence())
         }
 
-        val logFromDB = DBHierarchicalXESInputStream(Query(firstLogId))
-        val logFromXML = DBHierarchicalXESInputStream(Query(getLastLogId()))
+        val logFromDB = DBHierarchicalXESInputStream(dbName, Query(firstLogId))
+        val logFromXML = DBHierarchicalXESInputStream(dbName, Query(getLastLogId()))
 
         assertTrue(hierarchicalCompare(logFromDB, logFromXML))
     }
 
 
     private fun storeLog(sequence: Sequence<XESComponent>) {
-        DBXESOutputStream().use {
+        DBXESOutputStream(DBCache.get(dbName).getConnection()).use {
             it.write(sequence)
         }
     }
 
     private fun getLastLogId(): Int {
-        DBConnectionPool.getConnection().use {
+        DBCache.get(dbName).getConnection().use {
             val response = it.prepareStatement("""SELECT id FROM logs ORDER BY id DESC LIMIT 1""").executeQuery()
             response.next()
 

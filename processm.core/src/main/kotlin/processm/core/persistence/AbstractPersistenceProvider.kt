@@ -1,8 +1,11 @@
 package processm.core.persistence
 
-import kotlinx.serialization.*
+import kotlinx.serialization.ImplicitReflectionSerializer
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
+import kotlinx.serialization.serializer
+import processm.core.persistence.connection.DBCache
 import java.net.URI
 import kotlin.reflect.KClass
 
@@ -15,11 +18,11 @@ import kotlin.reflect.KClass
 @ImplicitReflectionSerializer
 abstract class AbstractPersistenceProvider(protected val tableName: String) : PersistenceProvider, AutoCloseable {
 
-    protected val connection = DBConnectionPool.getConnection()
+    protected val connection = DBCache.get("processm").getConnection()
 
     private val insert by lazy {
         connection.prepareStatement(
-            """INSERT INTO $tableName(urn, data) VALUES (?, ?::json) 
+            """INSERT INTO $tableName(urn, data) VALUES (?, ?::json)
             ON CONFLICT (urn) DO UPDATE SET urn=EXCLUDED.urn, data=EXCLUDED.data"""
         )
     }

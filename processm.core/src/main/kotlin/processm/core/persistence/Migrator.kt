@@ -16,6 +16,11 @@ import java.sql.DriverManager
 object Migrator {
     private val dbConfig = DatabaseChecker
 
+    init {
+        // Required - we need `create_database` function in PostgreSQL main database
+        migrateMainDatabase()
+    }
+
     fun migrate(dataSourceDBName: String) {
         if (dataSourceDBName.isUUID()) migrateDataSourceDatabase(dataSourceDBName)
         else migrateMainDatabase()

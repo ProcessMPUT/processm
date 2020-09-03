@@ -11,6 +11,7 @@ import processm.core.querylanguage.Query
 import processm.core.querylanguage.Scope
 import java.lang.ref.Cleaner
 import java.lang.ref.SoftReference
+import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Types
 import java.util.*
@@ -31,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * @property query An instance of a PQL query.
  */
-class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
+class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogInputStream {
     companion object {
         private val logger = logger()
         private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
@@ -82,9 +83,9 @@ class DBHierarchicalXESInputStream(val query: Query) : LogInputStream {
      */
     @Suppress("DEPRECATION")
     @Deprecated("Use the primary constructor instead.", level = DeprecationLevel.WARNING)
-    constructor(logId: Int) : this(Query(logId))
+    constructor(dbName: String, logId: Int) : this(dbName, Query(logId))
 
-    private val translator = TranslatedQuery(query, batchSize)
+    private val translator = TranslatedQuery(dbName, query, batchSize)
 
     /**
      * The key is a bitwise combination of three values:

@@ -5,6 +5,8 @@ import processm.core.helpers.isUUID
 import kotlin.properties.Delegates
 
 object DatabaseChecker {
+    private const val mainDBInternalName = "processm"
+
     var baseConnectionURL = readDatabaseConnectionURL()
         private set
     var mainDatabaseName: String by Delegates.notNull()
@@ -22,7 +24,7 @@ object DatabaseChecker {
         // FIXME: remove before merge
         System.setProperty(
             "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
-            "jdbc:postgresql://db.processm.cs.put.poznan.pl/bgorka?user=bgorka&password=bgorka"
+            "jdbc:postgresql://db.processm.cs.put.poznan.pl/test?user=bgorka&password=bgorka"
         )
 
         return System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
@@ -54,6 +56,9 @@ object DatabaseChecker {
      * Switch database by create new connection URL to selected database.
      */
     fun switchDatabaseURL(expectedDatabase: String): String {
+        // Main ProcessM database
+        if (expectedDatabase == mainDBInternalName) return baseConnectionURL
+
         val withoutPSQL = baseConnectionURL.substring(18)
         return "jdbc:postgresql://${Regex("/${mainDatabaseName}").replace(withoutPSQL, "/$expectedDatabase")}"
     }

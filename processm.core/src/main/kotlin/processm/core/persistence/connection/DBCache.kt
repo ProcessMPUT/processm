@@ -2,13 +2,12 @@ package processm.core.persistence.connection
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import processm.core.persistence.DBConnectionPool
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
-class Cache {
-    private val lockMap = ConcurrentHashMap<UUID, CacheKey>()
+object DBCache {
+    private val lockMap = ConcurrentHashMap<String, CacheKey>()
     private val db = Caffeine.newBuilder()
         .removalListener<CacheKey, DBConnectionPool> { key, connection, _ ->
             key!!.lock.write {
@@ -16,16 +15,13 @@ class Cache {
             }
         }
         .build<CacheKey, DBConnectionPool> { key ->
-            // FIXME
-//            key.actualKey
-            DBConnectionPool()
+            println("Build with ${key.actualKey}")
+            DBConnectionPool(key.actualKey)
         }
 
-    fun get(identity: UUID, synchronized: (db: DBConnectionPool) -> Unit) {
+    fun get(identity: String): DBConnectionPool {
         lockMap.computeIfAbsent(identity) { CacheKey(identity) }.let { key ->
-            key.lock.read {
-                synchronized(db[key]!!)
-            }
+            key.lock.read { return db[key]!! }
         }
     }
 }

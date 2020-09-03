@@ -3,13 +3,16 @@ package processm.core.log
 import org.junit.jupiter.api.Tag
 import processm.core.helpers.zipOrThrow
 import processm.core.logging.logger
-import processm.core.persistence.DBConnectionPool
+import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.io.File
+import java.util.*
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 
 class XESPerformanceTest {
+    private val dbName = UUID.randomUUID().toString()
+
     @Test
     @Tag("performance")
     fun `Analyze logs from 4TU repository`() {
@@ -18,7 +21,7 @@ class XESPerformanceTest {
                 if (file.canonicalPath.endsWith(".xes.gz")) {
                     println(file.canonicalPath)
 
-                    DBXESOutputStream().use { db ->
+                    DBXESOutputStream(DBCache.get(dbName).getConnection()).use { db ->
                         file.absoluteFile.inputStream().use { fileStream ->
                             GZIPInputStream(fileStream).use { stream ->
                                 db.write(XMLXESInputStream(stream))
@@ -26,7 +29,7 @@ class XESPerformanceTest {
                         }
                     }
 
-                    val dbInput = DBXESInputStream(Query(getLogId()))
+                    val dbInput = DBXESInputStream(dbName, Query(getLogId()))
 
                     file.absoluteFile.inputStream().use { fileStream ->
                         GZIPInputStream(fileStream).use { stream ->
@@ -42,7 +45,7 @@ class XESPerformanceTest {
     }
 
     private fun getLogId(): Int {
-        DBConnectionPool.getConnection().use {
+        DBCache.get(dbName).getConnection().use {
             val response = it.prepareStatement("""SELECT id FROM logs ORDER BY id DESC LIMIT 1""").executeQuery()
             response.next()
 

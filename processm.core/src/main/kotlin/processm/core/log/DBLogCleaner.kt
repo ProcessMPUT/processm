@@ -1,23 +1,20 @@
 package processm.core.log
 
-import processm.core.persistence.DBConnectionPool
 import java.sql.Connection
 
 object DBLogCleaner {
-    fun removeLog(logId: Int) {
-        DBConnectionPool.getConnection().use { connection ->
-            connection.autoCommit = false
+    fun removeLog(connection: Connection, logId: Int) {
+        connection.autoCommit = false
 
-            removeLogRecord(connection, logId)
-            removeClassifiers(connection, logId)
-            removeExtensions(connection, logId)
-            removeLogAttributes(connection, logId)
-            removeGlobals(connection, logId)
+        removeLogRecord(connection, logId)
+        removeClassifiers(connection, logId)
+        removeExtensions(connection, logId)
+        removeLogAttributes(connection, logId)
+        removeGlobals(connection, logId)
 
-            removeTraces(connection, logId)
+        removeTraces(connection, logId)
 
-            connection.commit()
-        }
+        connection.commit()
     }
 
     private fun removeTraces(connection: Connection, logId: Int) {
@@ -101,6 +98,3 @@ object DBLogCleaner {
         }
     }
 }
-
-@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")
-typealias DatabaseLogCleaner = DBLogCleaner
