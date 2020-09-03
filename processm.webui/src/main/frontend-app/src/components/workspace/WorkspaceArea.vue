@@ -1,5 +1,15 @@
 <template>
   <v-container>
+    <!-- <v-card>
+      <v-card-actions>
+              <v-spacer></v-spacer> -->
+    <v-row dense>
+      <v-col offset="11" dense>
+        <v-switch v-model="locked" :label="$t('workspace.locked')" />
+      </v-col>
+    </v-row>
+    <!-- </v-card-actions> -->
+
     <v-row>
       <v-col cols="12">
         <grid-layout
@@ -20,7 +30,7 @@
             :h="item.h"
             :i="item.i"
             :key="item.i"
-            drag-ignore-from="div.workspace-component"
+            drag-ignore-from="div.workspace-component-content"
             class="elevation-1"
           >
             <workspace-component
@@ -34,7 +44,7 @@
         </grid-layout>
       </v-col>
     </v-row>
-    <v-switch v-model="locked" :label="$t('workspace.locked')" />
+    <!-- </v-card> -->
     <single-component-view
       v-if="displayViewModal"
       v-model="displayViewModal"
@@ -62,6 +72,10 @@
   outline-color: var(--v-primary-lighten1);
   outline-style: solid;
   outline-width: thin;
+}
+
+.vue-grid-layout {
+  max-height: 0px;
 }
 </style>
 

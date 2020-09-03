@@ -115,9 +115,10 @@ export default class CausalNet {
       | null = null
   ) {
     const isLayoutPredefined =
-      dataNodes.length == layout?.length &&
+      layout != null &&
+      dataNodes.length <= layout.length &&
       dataNodes.every(node =>
-        layout?.some(nodeLayout => nodeLayout.id == node.id)
+        layout.some(nodeLayout => nodeLayout.id == node.id)
       );
 
     this.nodesLayout =

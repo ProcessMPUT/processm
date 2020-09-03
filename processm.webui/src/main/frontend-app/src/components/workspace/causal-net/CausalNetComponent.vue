@@ -241,9 +241,9 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   public readonly contentWidth: number = 250;
   public displayPreferences = {
     nodeSize: 20,
-    bindingNodeSize: 6,
-    edgeThickness: 3,
-    bindingEdgeThickness: 2,
+    bindingNodeSize: 4,
+    edgeThickness: 2,
+    bindingEdgeThickness: 1,
     edgeArrowSize: 12,
     nodeLabelSize: 16,
     regularNodeColor: "black",
@@ -280,7 +280,12 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   public runSimulation() {
-    this.simulation?.nodes(this.causalNet.nodes);
+    this.simulation?.nodes(this.causalNet.nodes).force(
+      "charge",
+      d3
+        .forceManyBody()
+        .strength(d => ((d as Node).hasType(ElementType.Regular) ? -1 : -5))
+    );
     this.simulation
       ?.force<ForceLink<Node, Link>>("link")
       ?.links(this.causalNet.links);
@@ -424,7 +429,10 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             .filter(d => d.hasType(ElementType.Regular))
             .append("rect")
             .attr("class", "node-name-background")
-            .attr("width", d => d.id.length * 3 + linearNodeSize * 3.6)
+            .attr(
+              "width",
+              d => d.id.length * 3 + linearNodeSize * 3.6 + linearNodeSize * 0.2
+            )
             .attr("height", linearNodeSize * 2 * 1.2)
             .attr("stroke", this.displayPreferences.regularNodeColor)
             .attr("rx", linearNodeSize)
