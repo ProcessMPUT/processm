@@ -2,7 +2,7 @@ package processm.services.logic
 
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.persistence.DBConnectionPool
+import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.Organization
 import processm.dbmodels.models.Organizations
 import java.util.*
@@ -13,7 +13,8 @@ class OrganizationService {
      * Returns all users explicitly assigned to the specified [organizationId].
      * Throws [ValidationException] if the specified [organizationId] doesn't exist.
      */
-    fun getOrganizationMembers(organizationId: UUID) = transaction(DBConnectionPool.database) {
+    fun getOrganizationMembers(organizationId: UUID) = transaction(DBCache.get("processm").database) {
+        // this returns only users explicitly assigned to the organization
         val organization = getOrganizationDao(organizationId)
 
         organization.userRoles.map { it.toDto() }
@@ -23,7 +24,7 @@ class OrganizationService {
      * Returns all user groups explicitly assigned to the specified [organizationId].
      * Throws [ValidationException] if the specified [organizationId] doesn't exist.
      */
-    fun getOrganizationGroups(organizationId: UUID) = transaction(DBConnectionPool.database) {
+    fun getOrganizationGroups(organizationId: UUID) = transaction(DBCache.get("processm").database) {
         val organization = getOrganizationDao(organizationId)
 
         return@transaction listOf(organization.sharedGroup.toDto())
@@ -33,7 +34,7 @@ class OrganizationService {
      * Returns organization by the specified [sharedGroupId].
      * Throws [ValidationException] if the organization doesn't exist.
      */
-    fun getOrganizationBySharedGroupId(sharedGroupId: UUID) = transaction(DBConnectionPool.database) {
+    fun getOrganizationBySharedGroupId(sharedGroupId: UUID) = transaction(DBCache.get("processm").database) {
         val organization = Organizations.select { Organizations.sharedGroupId eq sharedGroupId }.firstOrNull()
             ?: throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
@@ -43,7 +44,7 @@ class OrganizationService {
         return@transaction Organization.wrapRow(organization).toDto()
     }
 
-    private fun getOrganizationDao(organizationId: UUID) = transaction(DBConnectionPool.database) {
+    private fun getOrganizationDao(organizationId: UUID) = transaction(DBCache.get("processm").database) {
         Organization.findById(organizationId) ?: throw ValidationException(
             ValidationException.Reason.ResourceNotFound, "The specified organization does not exist"
         )

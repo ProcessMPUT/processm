@@ -1,14 +1,11 @@
 package processm.core.log
 
+import processm.core.Brand.dbName
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import java.util.*
-import kotlin.collections.HashMap
 import kotlin.test.*
 
 internal class DBLogCleanerTest {
-    private val dbName = UUID.randomUUID().toString()
-
     @BeforeTest
     fun `Insert log`() {
         """<?xml version="1.0" encoding="UTF-8" ?>

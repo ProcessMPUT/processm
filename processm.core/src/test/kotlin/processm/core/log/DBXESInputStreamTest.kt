@@ -1,18 +1,17 @@
 package processm.core.log
 
+import processm.core.Brand.dbName
 import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 internal class DBXESInputStreamTest {
-    private val dbName = UUID.randomUUID().toString()
     private val content: String = """<?xml version="1.0" encoding="UTF-8" ?>
         <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">
             <extension name="Lifecycle" prefix="lifecycle" uri="http://www.xes-standard.org/lifecycle.xesext"/>

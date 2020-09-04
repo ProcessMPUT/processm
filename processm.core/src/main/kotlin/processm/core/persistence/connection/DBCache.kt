@@ -15,7 +15,6 @@ object DBCache {
             }
         }
         .build<CacheKey, DBConnectionPool> { key ->
-            println("Build with ${key.actualKey}")
             DBConnectionPool(key.actualKey)
         }
 

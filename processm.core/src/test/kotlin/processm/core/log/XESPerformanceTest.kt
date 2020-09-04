@@ -1,18 +1,16 @@
 package processm.core.log
 
 import org.junit.jupiter.api.Tag
+import processm.core.Brand.dbName
 import processm.core.helpers.zipOrThrow
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.io.File
-import java.util.*
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
 
 class XESPerformanceTest {
-    private val dbName = UUID.randomUUID().toString()
-
     @Test
     @Tag("performance")
     fun `Analyze logs from 4TU repository`() {

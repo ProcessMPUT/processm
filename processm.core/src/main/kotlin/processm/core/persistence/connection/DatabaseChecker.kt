@@ -21,12 +21,7 @@ object DatabaseChecker {
      * Read persistence connection URL from system's property.
      */
     private fun readDatabaseConnectionURL(): String {
-        // FIXME: remove before merge
-        System.setProperty(
-            "PROCESSM.CORE.PERSISTENCE.CONNECTION.URL",
-            "jdbc:postgresql://db.processm.cs.put.poznan.pl/test?user=bgorka&password=bgorka"
-        )
-
+        println(System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL"))
         return System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
     }
 

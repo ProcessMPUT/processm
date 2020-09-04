@@ -3,6 +3,7 @@ package processm.core.log.hierarchical
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
+import processm.core.Brand.dbName
 import processm.core.helpers.implies
 import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
@@ -26,7 +27,6 @@ import kotlin.test.*
 @Tag("PQL")
 class DBHierarchicalXESInputStreamWithQueryTests {
     companion object {
-        private val dbName = UUID.randomUUID().toString()
         private val logger = logger()
 
         // region test log

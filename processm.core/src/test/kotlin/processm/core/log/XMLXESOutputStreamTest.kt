@@ -1,18 +1,17 @@
 package processm.core.log
 
+import processm.core.Brand.dbName
 import processm.core.helpers.hierarchicalCompare
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.io.StringWriter
-import java.util.*
 import javax.xml.stream.XMLOutputFactory
 import kotlin.test.*
 
 
 internal class XMLXESOutputStreamTest {
-    private val dbName = UUID.randomUUID().toString()
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
         <!-- OpenXES library version: 1.0RC7 -->
         <log xes.version="1.0" xes.features="nested-attributes" openxes.version="1.0RC7" xmlns="http://www.xes-standard.org/">

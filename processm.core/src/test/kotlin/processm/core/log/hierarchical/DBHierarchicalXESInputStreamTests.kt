@@ -1,20 +1,18 @@
 package processm.core.log.hierarchical
 
+import processm.core.Brand.dbName
 import processm.core.helpers.hierarchicalCompare
 import processm.core.log.DBXESOutputStream
 import processm.core.log.Event
 import processm.core.log.XESInputStream
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DBHierarchicalXESInputStreamTests {
-    private val dbName = UUID.randomUUID().toString()
-
     val log: Sequence<Log> =
         sequenceOf(Log(sequenceOf(
             Trace(sequenceOf(

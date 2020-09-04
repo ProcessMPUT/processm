@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.Brand.dbName
 import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
 import java.util.*
@@ -9,8 +10,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class DBSerializerTest {
-    private val dbName = UUID.randomUUID().toString()
-
     //activities inspired by Fig 3.12 in "Process Mining" by Van van der Alst
     private val a = Node("register request")
     private val b = Node("examine thoroughly")
