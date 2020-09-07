@@ -21,7 +21,6 @@ object DatabaseChecker {
      * Read persistence connection URL from system's property.
      */
     private fun readDatabaseConnectionURL(): String {
-        println(System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL"))
         return System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
     }
 
