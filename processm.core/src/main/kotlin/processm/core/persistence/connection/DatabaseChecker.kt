@@ -2,6 +2,7 @@ package processm.core.persistence.connection
 
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.helpers.isUUID
+import processm.core.helpers.loadConfiguration
 import kotlin.properties.Delegates
 
 object DatabaseChecker {
@@ -21,6 +22,7 @@ object DatabaseChecker {
      * Read persistence connection URL from system's property.
      */
     private fun readDatabaseConnectionURL(): String {
+        loadConfiguration()
         return System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
     }
 

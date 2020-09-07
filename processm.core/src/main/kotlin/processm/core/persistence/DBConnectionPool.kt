@@ -7,7 +7,6 @@ import org.apache.commons.dbcp2.PoolingDataSource
 import org.apache.commons.pool2.ObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPool
 import org.jetbrains.exposed.sql.Database
-import processm.core.helpers.loadConfiguration
 import processm.core.persistence.connection.DatabaseChecker
 import java.sql.Connection
 import javax.management.ObjectName
@@ -26,7 +25,6 @@ class DBConnectionPool(databaseName: String) {
     private val connectionURL = dbConfig.switchDatabaseURL(databaseName)
 
     private val connectionPool: ObjectPool<PoolableConnection> by lazy {
-        loadConfiguration()
         migrator.migrate(databaseName)
 
         // First, we'll create a ConnectionFactory that the
