@@ -1,15 +1,13 @@
 <template>
-  <v-container class="d-flex align-stretch pb-0 px-0" fluid fill-height>
-    <v-row align="stretch" class="ma-0">
-      <v-col cols="12" class="pa-0">
-        <v-tabs-items v-model="currentWorkspaceIndex">
-          <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
-            <workspace-area :workspaceId="workspace.id" />
-          </v-tab-item>
-        </v-tabs-items>
-      </v-col>
+  <v-container class="pb-0 px-0">
+    <v-row class="workspace mx-0">
+      <v-tabs-items v-model="currentWorkspaceIndex">
+        <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
+          <workspace-area :workspaceId="workspace.id" />
+        </v-tab-item>
+      </v-tabs-items>
     </v-row>
-    <v-row align="end" class="ma-0">
+    <v-row class="workspace-selector mx-0">
       <v-tabs
         v-model="currentWorkspaceIndex"
         background-color="primary lighten-2"
@@ -64,6 +62,28 @@
   min-width: 30px;
   width: 30px;
   height: 100%;
+}
+
+.container .v-tabs-items {
+  width: 100%;
+}
+
+.container {
+  display: flex;
+  flex-flow: column;
+  height: 100%;
+  align-items: stretch;
+}
+
+.container .workspace {
+  flex: 1 1 auto;
+  overflow: scroll;
+  width: 100%;
+}
+
+.container .workspace-selector {
+  flex: 0 1 auto;
+  width: 100%;
 }
 </style>
 
