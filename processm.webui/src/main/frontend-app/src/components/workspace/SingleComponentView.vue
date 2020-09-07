@@ -24,7 +24,8 @@
 <style scoped>
 .v-card,
 .v-card > div:last-child {
-  height: 100%;
+  height: 90%;
+  overflow: hidden;
 }
 </style>
 

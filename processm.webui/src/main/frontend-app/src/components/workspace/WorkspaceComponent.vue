@@ -35,6 +35,7 @@
       :is="`${componentDetails.type}Component`"
       :data="componentDetails"
       :component-mode="componentMode"
+      class="workspace-component-content"
     />
   </div>
 </template>
