@@ -1,14 +1,10 @@
 <template>
   <v-container>
-    <!-- <v-card>
-      <v-card-actions>
-              <v-spacer></v-spacer> -->
     <v-row dense>
       <v-col offset="11" dense>
         <v-switch v-model="locked" :label="$t('workspace.locked')" />
       </v-col>
     </v-row>
-    <!-- </v-card-actions> -->
 
     <v-row>
       <v-col cols="12">
