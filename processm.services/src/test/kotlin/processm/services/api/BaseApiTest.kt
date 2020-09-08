@@ -30,7 +30,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 abstract class BaseApiTest : AutoCloseKoinTest() {
-
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
 

@@ -7,13 +7,13 @@ import io.mockk.mockk
 import org.junit.Test
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
+import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.ErrorMessageBody
 import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.OrganizationMemberCollectionMessageBody
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
-import processm.dbmodels.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -22,7 +22,6 @@ import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OrganizationsApiTest : BaseApiTest() {
-
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/organizations",
         HttpMethod.Post to "/api/organizations",
@@ -90,37 +89,46 @@ class OrganizationsApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to random organization groups list request with 403 and error message`() = withConfiguredTestApplication {
-        val unknownOrganizationId = UUID.randomUUID()
+    fun `responds to random organization groups list request with 403 and error message`() =
+        withConfiguredTestApplication {
+            val unknownOrganizationId = UUID.randomUUID()
 
-        withAuthentication {
-            with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/groups")) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
-                assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of the related organization"))
+            withAuthentication {
+                with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/groups")) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+                    assertTrue(
+                        response.deserializeContent<ErrorMessageBody>().error
+                            .contains("The user is not a member of the related organization")
+                    )
+                }
             }
         }
-    }
 
     @Test
-    fun `responds to groups list of recently removed organization request with 404 and error message`() = withConfiguredTestApplication {
-        val removedOrganizationId = UUID.randomUUID()
+    fun `responds to groups list of recently removed organization request with 404 and error message`() =
+        withConfiguredTestApplication {
+            val removedOrganizationId = UUID.randomUUID()
 
-        withAuthentication {
-            every { organizationService.getOrganizationGroups(removedOrganizationId) } throws ValidationException(ValidationException.Reason.ResourceNotFound, userMessage = "Organization not found")
-            every { accountService.getRolesAssignedToUser(any()) } returns listOf(
-                mockk {
-                    every { user.id } returns UUID.randomUUID()
-                    every { organization.id } returns removedOrganizationId
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
-                })
-            with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/groups")) {
-                assertEquals(HttpStatusCode.NotFound, response.status())
-                assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("Organization not found"))
+            withAuthentication {
+                every { organizationService.getOrganizationGroups(removedOrganizationId) } throws ValidationException(
+                    ValidationException.Reason.ResourceNotFound,
+                    userMessage = "Organization not found"
+                )
+                every { accountService.getRolesAssignedToUser(any()) } returns listOf(
+                    mockk {
+                        every { user.id } returns UUID.randomUUID()
+                        every { organization.id } returns removedOrganizationId
+                        every { this@mockk.role } returns OrganizationRoleDto.Reader
+                    })
+                with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/groups")) {
+                    assertEquals(HttpStatusCode.NotFound, response.status())
+                    assertTrue(
+                        response.deserializeContent<ErrorMessageBody>().error
+                            .contains("Organization not found")
+                    )
+                }
             }
         }
-    }
 
     @Test
     fun `responds to organization members request with 200 and members list`() = withConfiguredTestApplication {
@@ -160,34 +168,40 @@ class OrganizationsApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to random organization members list request with 403 and error message`() = withConfiguredTestApplication {
-        val unknownOrganizationId = UUID.randomUUID()
+    fun `responds to random organization members list request with 403 and error message`() =
+        withConfiguredTestApplication {
+            val unknownOrganizationId = UUID.randomUUID()
 
-        withAuthentication {
-            with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/members")) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
-                assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of the related organization"))
+            withAuthentication {
+                with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/members")) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+                    assertTrue(
+                        response.deserializeContent<ErrorMessageBody>().error
+                            .contains("The user is not a member of the related organization")
+                    )
+                }
             }
         }
-    }
 
     @Test
-    fun `responds to members list of recently removed organization request with 404 and error message`() = withConfiguredTestApplication {
-        val removedOrganizationId = UUID.randomUUID()
+    fun `responds to members list of recently removed organization request with 404 and error message`() =
+        withConfiguredTestApplication {
+            val removedOrganizationId = UUID.randomUUID()
 
-        withAuthentication {
-            every { organizationService.getOrganizationMembers(removedOrganizationId) } throws ApiException(publicMessage = "", responseCode = HttpStatusCode.NotFound)
-            every { accountService.getRolesAssignedToUser(any()) } returns listOf(
-                mockk {
-                    every { user.id } returns UUID.randomUUID()
-                    every { organization.id } returns removedOrganizationId
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
-                })
-            with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/members")) {
-                assertEquals(HttpStatusCode.NotFound, response.status())
+            withAuthentication {
+                every { organizationService.getOrganizationMembers(removedOrganizationId) } throws ApiException(
+                    publicMessage = "",
+                    responseCode = HttpStatusCode.NotFound
+                )
+                every { accountService.getRolesAssignedToUser(any()) } returns listOf(
+                    mockk {
+                        every { user.id } returns UUID.randomUUID()
+                        every { organization.id } returns removedOrganizationId
+                        every { this@mockk.role } returns OrganizationRoleDto.Reader
+                    })
+                with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/members")) {
+                    assertEquals(HttpStatusCode.NotFound, response.status())
+                }
             }
         }
-    }
-
 }

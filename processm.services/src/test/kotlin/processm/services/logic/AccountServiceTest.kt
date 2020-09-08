@@ -14,7 +14,6 @@ import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AccountServiceTest : ServiceTestBase() {
-
     private val correctPassword = "pass"
     private val correctPasswordHash = "\$argon2d\$v=19\$m=65536,t=3,p=1\$P0P1NSt1aP8ONWirWMbAWQ\$bDvD/v5/M7T3gRq8BXqbQA"
 

@@ -22,7 +22,6 @@ import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GroupsApiTest : BaseApiTest() {
-
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/groups",
         HttpMethod.Post to "/api/groups",
@@ -203,5 +202,4 @@ class GroupsApiTest : BaseApiTest() {
             }
         }
     }
-
 }

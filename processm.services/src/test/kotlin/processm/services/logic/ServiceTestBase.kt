@@ -3,21 +3,13 @@ package processm.services.logic
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.BeforeAll
-import processm.core.persistence.DBConnectionPool
+import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.util.*
 
 abstract class ServiceTestBase {
-
-    @BeforeAll
-    protected fun setUpAll() {
-        // create initial connection to enforce execution of db migrations
-        DBConnectionPool.database
-    }
-
     protected fun <R> withCleanTables(vararg tables: Table, testLogic: Transaction.() -> R) =
-        transaction(DBConnectionPool.database) {
+        transaction(DBCache.get("processm").database) {
             tables.forEach { it.deleteAll() }
             testLogic(this)
         }

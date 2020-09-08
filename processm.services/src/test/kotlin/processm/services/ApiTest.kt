@@ -1,16 +1,13 @@
 package processm.services
 
-import io.ktor.config.MapApplicationConfig
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.testing.handleRequest
-import io.ktor.server.testing.withTestApplication
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import io.ktor.config.*
+import io.ktor.http.*
+import io.ktor.locations.*
+import io.ktor.server.testing.*
+import io.ktor.util.*
+import kotlin.test.*
 
 class ApiTest {
-
     @Test
     fun `responds to direct request to api path with 301 and api documentation location`() = withTestApplication {
         (environment.config as MapApplicationConfig).apply {

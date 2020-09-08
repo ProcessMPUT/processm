@@ -1,8 +1,8 @@
 package processm.services
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.apache.Apache
-import io.ktor.client.request.get
+import io.ktor.client.*
+import io.ktor.client.engine.apache.*
+import io.ktor.client.request.*
 import kotlinx.coroutines.runBlocking
 import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
@@ -31,7 +31,7 @@ class StaticContentTest {
     }
 
     @Test
-    fun GetRootHTML() = runBlocking {
+    fun getRootHTML() = runBlocking {
         val client = HttpClient(Apache) {
             engine {
                 customizeClient {

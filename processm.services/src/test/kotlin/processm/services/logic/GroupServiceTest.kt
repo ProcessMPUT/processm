@@ -1,11 +1,19 @@
 package processm.services.logic
 
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
 import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
+import processm.dbmodels.models.UserGroups
+import processm.dbmodels.models.Users
+import processm.dbmodels.models.UsersInGroups
 import java.util.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class GroupServiceTest : ServiceTestBase() {
 
@@ -49,7 +57,10 @@ class GroupServiceTest : ServiceTestBase() {
         assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
         assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
 
-        assertEquals(1, UsersInGroups.select { UsersInGroups.userId eq userId and(UsersInGroups.groupId eq groupId) }.count())
+        assertEquals(
+            1,
+            UsersInGroups.select { UsersInGroups.userId eq userId and (UsersInGroups.groupId eq groupId) }.count()
+        )
     }
 
     @Test
@@ -59,7 +70,9 @@ class GroupServiceTest : ServiceTestBase() {
 
         assertDoesNotThrow { groupService.attachUserToGroup(userId.value, groupId.value) }
 
-        assertTrue { UsersInGroups.select { UsersInGroups.userId eq userId and(UsersInGroups.groupId eq groupId) }.any() }
+        assertTrue {
+            UsersInGroups.select { UsersInGroups.userId eq userId and (UsersInGroups.groupId eq groupId) }.any()
+        }
     }
 
     @Test
