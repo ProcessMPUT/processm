@@ -138,49 +138,31 @@ class CausalNetVisualizationTest {
 
     private fun generateSeparateSequencesNet() {
         val start = Node("s*")
-        val a1 = Node("a1")
-        val b1 = Node("b1")
-        val c1 = Node("c1")
-        val a2 = Node("a2")
-        val b2 = Node("b2")
-        val a3 = Node("a3")
-        val b3 = Node("b3")
-        val c3 = Node("c3")
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val d = Node("d")
         val end = Node("e*")
 
         var mm = MutableCausalNet(start = start, end = end)
-        mm.addInstance(start, a1, b1, c1, a2, b2, a3, b3, c3, end)
+        mm.addInstance(start, a, b, c, d, end)
         listOf(
-            start to a1, a1 to b1, b1 to c1, c1 to end,
-            start to a2, a2 to b2, b2 to end,
-            start to a3, a3 to b3, b3 to c3, c3 to end
+            start to a, a to b, b to c, c to d, d to end
         ).forEach { mm.addDependency(it.first, it.second) }
         listOf(
-            setOf(start to a1),
-            setOf(a1 to b1),
-            setOf(b1 to c1),
-            setOf(c1 to end),
-            setOf(start to a2),
-            setOf(a2 to b2),
-            setOf(b2 to end),
-            setOf(start to a3),
-            setOf(a3 to b3),
-            setOf(b3 to c3),
-            setOf(c3 to end)
+            setOf(start to a),
+            setOf(a to b),
+            setOf(b to c),
+            setOf(c to d),
+            setOf(d to end)
         ).map { split -> split.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addSplit(Split(it)) }
         listOf(
-            setOf(start to a1),
-            setOf(a1 to b1),
-            setOf(b1 to c1),
-            setOf(c1 to end),
-            setOf(start to a2),
-            setOf(a2 to b2),
-            setOf(b2 to end),
-            setOf(start to a3),
-            setOf(a3 to b3),
-            setOf(b3 to c3),
-            setOf(c3 to end)
+            setOf(start to a),
+            setOf(a to b),
+            setOf(b to c),
+            setOf(c to d),
+            setOf(d to end)
         ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
         DBSerializer.insert(mm)
