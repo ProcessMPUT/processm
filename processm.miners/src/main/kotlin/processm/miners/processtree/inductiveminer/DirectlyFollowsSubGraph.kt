@@ -59,7 +59,7 @@ class DirectlyFollowsSubGraph(
          * Cuts with validated support for each activity
          * If parent applied one of cuts in this collection - check activity trace support.
          *
-         * Runs in O(1)
+         * Memory usage: O(1)
          */
         private val cutsWithSupportValidated = setOf(CutType.Sequence, CutType.Parallel)
     }
