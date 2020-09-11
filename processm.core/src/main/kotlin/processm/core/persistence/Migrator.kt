@@ -5,6 +5,7 @@ import org.flywaydb.core.api.configuration.FluentConfiguration
 import processm.core.helpers.isUUID
 import processm.core.logging.enter
 import processm.core.logging.exit
+import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.DatabaseChecker.switchDatabaseURL
@@ -50,39 +51,39 @@ object Migrator {
      * @link https://flywaydb.org/documentation/migrations
      */
     private fun migrateDataSourceDatabase(dataSourceDBName: String) {
-        logger().enter()
-        logger().debug("Migrating datasource database if required")
+        loggedScope { logger ->
+            logger.debug("Migrating datasource database if required")
 
-        createDatabaseIfNotExists(dataSourceDBName)
-        val expectedDatabaseConnectionURL = switchDatabaseURL(dataSourceDBName)
+            ensureDatabaseExists(dataSourceDBName)
+            val expectedDatabaseConnectionURL = switchDatabaseURL(dataSourceDBName)
 
-        with(Flyway.configure().dataSource(expectedDatabaseConnectionURL, null, null)) {
-            locations("db/processm_datastore_migrations")
-            applyDefaultSchema(this, expectedDatabaseConnectionURL)
-            load().migrate()
+            with(Flyway.configure().dataSource(expectedDatabaseConnectionURL, null, null)) {
+                locations("db/processm_datastore_migrations")
+                applyDefaultSchema(this, expectedDatabaseConnectionURL)
+                load().migrate()
+            }
+
         }
-
-        logger().exit()
     }
 
-    private fun createDatabaseIfNotExists(dataSourceDBName: String) {
-        logger().enter()
-        logger().debug("Create datasource database if required")
+    private fun ensureDatabaseExists(dataSourceDBName: String) {
+        loggedScope { logger ->
+            logger.debug("Create datasource database if required")
 
-        require(dataSourceDBName.isUUID()) { "Datasource DB should be named with UUID." }
+            require(dataSourceDBName.isUUID()) { "Datasource DB should be named with UUID." }
 
-        DriverManager.getConnection(dbConfig.baseConnectionURL).prepareStatement(
-            """
+            DriverManager.getConnection(dbConfig.baseConnectionURL).prepareStatement(
+                """
             SELECT * FROM create_database(?);
             """.trimIndent()
-        ).use {
-            it.setString(1, dataSourceDBName)
-            it.executeQuery().use { result ->
-                require(result.next()) { "Database can not be created" }
-                require(result.getBoolean("create_database")) { "Database can not be created" }
+            ).use {
+                it.setString(1, dataSourceDBName)
+                it.executeQuery().use { result ->
+                    require(result.next()) { "Database cannot be created" }
+                    require(result.getBoolean("create_database")) { "Database cannot be created" }
+                }
             }
         }
-        logger().exit()
     }
 
     /**

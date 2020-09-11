@@ -64,6 +64,10 @@ class DBConnectionPool(databaseName: String) {
      */
     fun getDataSource(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool)
 
+    fun close() {
+        connectionPool.close()
+    }
+
     /**
      * Database object for transactions managed by org.jetbrains.exposed library.
      */

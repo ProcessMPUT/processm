@@ -1,6 +1,7 @@
 package processm.core.persistence
 
 import kotlinx.serialization.ImplicitReflectionSerializer
+import processm.core.Brand
 import processm.core.persistence.connection.DBCache
 import java.net.URI
 import kotlin.test.Test
@@ -11,7 +12,7 @@ import kotlin.test.assertFailsWith
 class DurablePersistenceProviderTests : PersistenceProviderBaseTests() {
 
     init {
-        DBCache.get("processm").getConnection().use {
+        DBCache.get(Brand.mainDBInternalName).getConnection().use {
             it.createStatement().execute("DELETE FROM durable_storage WHERE urn LIKE 'urn:tests:myclass%'")
         }
     }

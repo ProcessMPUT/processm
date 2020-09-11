@@ -9,9 +9,9 @@ import kotlin.concurrent.write
 object DBCache {
     private val lockMap = ConcurrentHashMap<String, CacheKey>()
     private val db = Caffeine.newBuilder()
-        .removalListener<CacheKey, DBConnectionPool> { key, connection, _ ->
+        .removalListener<CacheKey, DBConnectionPool> { key, pool, _ ->
             key!!.lock.write {
-                connection!!.getConnection().close()
+                pool!!.close()
             }
         }
         .build<CacheKey, DBConnectionPool> { key ->

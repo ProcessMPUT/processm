@@ -1,13 +1,13 @@
 package processm.core.persistence.connection
 
 import org.postgresql.ds.PGSimpleDataSource
+import processm.core.Brand.mainDBInternalName
 import processm.core.helpers.isUUID
 import processm.core.helpers.loadConfiguration
 import kotlin.properties.Delegates
 
 object DatabaseChecker {
-    private const val mainDBInternalName = "processm"
-
+    const val jdbcPostgresqlStart = "jdbc:postgresql://"
     var baseConnectionURL = readDatabaseConnectionURL()
         private set
     var mainDatabaseName: String by Delegates.notNull()
@@ -30,7 +30,7 @@ object DatabaseChecker {
      * Validate connection as `jdbc:posgresql://` connection which will be used in regex.
      */
     private fun ensurePostgreSQLDatabase() {
-        require(baseConnectionURL.startsWith("jdbc:postgresql://")) { "Expected PostgreSQL database not found!" }
+        require(baseConnectionURL.startsWith(jdbcPostgresqlStart)) { "Expected PostgreSQL database not found!" }
     }
 
     /**
@@ -54,8 +54,12 @@ object DatabaseChecker {
     fun switchDatabaseURL(expectedDatabase: String): String {
         // Main ProcessM database
         if (expectedDatabase == mainDBInternalName) return baseConnectionURL
+        val withoutPSQL = baseConnectionURL.substring(jdbcPostgresqlStart.length)
 
-        val withoutPSQL = baseConnectionURL.substring(18)
-        return "jdbc:postgresql://${Regex("/${mainDatabaseName}").replace(withoutPSQL, "/$expectedDatabase")}"
+        return with(StringBuilder()) {
+            append(jdbcPostgresqlStart)
+            append(Regex("/${mainDatabaseName}").replace(withoutPSQL, "/$expectedDatabase"))
+            toString()
+        }
     }
 }

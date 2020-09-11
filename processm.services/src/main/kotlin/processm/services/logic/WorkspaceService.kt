@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.Brand
 import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
@@ -17,7 +18,7 @@ class WorkspaceService(private val accountService: AccountService) {
     /**
      * Returns all user workspaces for the specified [userId] in the context of the specified [organizationId].
      */
-    fun getUserWorkspaces(userId: UUID, organizationId: UUID) = transaction(DBCache.get("processm").database) {
+    fun getUserWorkspaces(userId: UUID, organizationId: UUID) = transaction(DBCache.get(Brand.mainDBInternalName).database) {
         Workspace.wrapRows(UserGroups
             .innerJoin(UsersInGroups)
             .innerJoin(UserGroupWithWorkspaces)
@@ -31,7 +32,7 @@ class WorkspaceService(private val accountService: AccountService) {
      * Creates new workspace with [workspaceName] in the context of specified [organizationId] and assigns it to private group of the specified [userId].
      */
     fun createWorkspace(workspaceName: String, userId: UUID, organizationId: UUID) =
-        transaction(DBCache.get("processm").database) {
+        transaction(DBCache.get(Brand.mainDBInternalName).database) {
             val user = accountService.getAccountDetails(userId)
             val privateGroupId = user.privateGroup.id
             val workspaceId = Workspaces.insertAndGetId {
@@ -52,7 +53,7 @@ class WorkspaceService(private val accountService: AccountService) {
      * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceId] doesn't exist.
      */
     fun removeWorkspace(workspaceId: UUID, userId: UUID, organizationId: UUID) =
-        transaction(DBCache.get("processm").database) {
+        transaction(DBCache.get(Brand.mainDBInternalName).database) {
             val canBeRemoved = UsersInGroups
                 .innerJoin(UserGroups)
                 .innerJoin(UserGroupWithWorkspaces)
@@ -80,7 +81,7 @@ class WorkspaceService(private val accountService: AccountService) {
      * Returns all components in the specified [workspaceId].
      */
     fun getWorkspaceComponents(workspaceId: UUID, userId: UUID, organizationId: UUID) = loggedScope { logger ->
-        transaction(DBCache.get("processm").database) {
+        transaction(DBCache.get(Brand.mainDBInternalName).database) {
             WorkspaceComponent.wrapRows(
                 WorkspaceComponents
                     .innerJoin(Workspaces)
@@ -122,7 +123,7 @@ class WorkspaceService(private val accountService: AccountService) {
         name: String?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null
-    ): Unit = transaction(DBCache.get("processm").database) {
+    ): Unit = transaction(DBCache.get(Brand.mainDBInternalName).database) {
         val canBeUpdated = UsersInGroups
             .innerJoin(UserGroups)
             .innerJoin(UserGroupWithWorkspaces)
