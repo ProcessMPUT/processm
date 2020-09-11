@@ -1,7 +1,7 @@
 package processm.core.log
 
 import org.junit.jupiter.api.Tag
-import processm.core.Brand.dbName
+import processm.core.DBTestHelper.dbName
 import processm.core.helpers.zipOrThrow
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache

@@ -10,7 +10,7 @@ import java.util.*
 fun String?.toUUID(): UUID? = this?.let { UUID.fromString(it) }
 
 /**
- * Check String is in UUID format.
+ * Verifies whether the [String] is in [UUID] format.
  */
 fun String?.isUUID(): Boolean {
     return try {

@@ -1,6 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.Brand.dbName
+import processm.core.DBTestHelper.dbName
 import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
 import java.util.*

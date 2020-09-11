@@ -1,6 +1,6 @@
 package processm.core.log.hierarchical
 
-import processm.core.Brand.dbName
+import processm.core.DBTestHelper.dbName
 import processm.core.helpers.hierarchicalCompare
 import processm.core.log.DBXESOutputStream
 import processm.core.log.Event

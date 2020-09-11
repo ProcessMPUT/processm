@@ -1,6 +1,6 @@
 package processm.core.log
 
-import processm.core.Brand.dbName
+import processm.core.DBTestHelper.dbName
 import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value

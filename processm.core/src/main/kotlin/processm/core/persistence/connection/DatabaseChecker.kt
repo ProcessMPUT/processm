@@ -49,11 +49,12 @@ object DatabaseChecker {
     }
 
     /**
-     * Switch database by create new connection URL to selected database.
+     * Switches the database by creating new connection URL to the selected database.
      */
     fun switchDatabaseURL(expectedDatabase: String): String {
         // Main ProcessM database
         if (expectedDatabase == mainDBInternalName) return baseConnectionURL
+        require(expectedDatabase.isUUID()) { "Datasource DB should be in UUID format" }
         val withoutPSQL = baseConnectionURL.substring(jdbcPostgresqlStart.length)
 
         return with(StringBuilder()) {

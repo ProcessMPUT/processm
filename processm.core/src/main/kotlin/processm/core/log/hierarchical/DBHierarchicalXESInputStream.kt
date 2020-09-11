@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap
  * * The resulting view on [XESComponent]s is read-only,
  * * This class is not thread-safe: for concurrent evaluation one needs to use a synchronization mechanism.
  *
+ * @property dbName A database's name - target database.
  * @property query An instance of a PQL query.
  */
 class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogInputStream {

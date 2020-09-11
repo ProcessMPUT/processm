@@ -1,6 +1,6 @@
 package processm.core.log
 
-import processm.core.Brand.dbName
+import processm.core.DBTestHelper.dbName
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import kotlin.test.*
