@@ -1,9 +1,6 @@
 package processm.services.logic
 
 import io.mockk.*
-import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertAndGetId
 import org.junit.Before
 import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
@@ -11,13 +8,12 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import processm.services.models.*
+import processm.dbmodels.models.*
 import java.util.*
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AccountServiceTest : ServiceTestBase() {
-
     private val correctPassword = "pass"
     private val correctPasswordHash = "\$argon2d\$v=19\$m=65536,t=3,p=1\$P0P1NSt1aP8ONWirWMbAWQ\$bDvD/v5/M7T3gRq8BXqbQA"
 
@@ -90,15 +86,16 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `account registration throws if organization already registered`() = withCleanTables(Users, Organizations, UserGroups) {
-        createOrganization(name = "Org1", isPrivate = true)
+    fun `account registration throws if organization already registered`() =
+        withCleanTables(Users, Organizations, UserGroups) {
+            createOrganization(name = "Org1", isPrivate = true)
 
-        val exception =
-            assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
-                accountService.createAccount("user@example.com", "Org1")
-            }
-        assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
-    }
+            val exception =
+                assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
+                    accountService.createAccount("user@example.com", "Org1")
+                }
+            assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
+        }
 
     @Test
     fun `account registration is sensitive to user email case`() = withCleanTables(Users, Organizations) {
@@ -191,25 +188,27 @@ class AccountServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns current user roles in assigned organizations`() = withCleanTables(Users, Organizations, UsersRolesInOrganizations) {
-        val userId = createUser()
-        val organizationId1 = createOrganization("Org1")
-        val organizationId2 = createOrganization("Org2")
-        attachUserToOrganization(userId.value, organizationId1.value, OrganizationRoleDto.Reader)
-        attachUserToOrganization(userId.value, organizationId2.value, OrganizationRoleDto.Writer)
+    fun `returns current user roles in assigned organizations`() =
+        withCleanTables(Users, Organizations, UsersRolesInOrganizations) {
+            val userId = createUser()
+            val organizationId1 = createOrganization("Org1")
+            val organizationId2 = createOrganization("Org2")
+            attachUserToOrganization(userId.value, organizationId1.value, OrganizationRoleDto.Reader)
+            attachUserToOrganization(userId.value, organizationId2.value, OrganizationRoleDto.Writer)
 
-        val userRoles = assertDoesNotThrow { accountService.getRolesAssignedToUser(userId.value) }
+            val userRoles = assertDoesNotThrow { accountService.getRolesAssignedToUser(userId.value) }
 
-        assertEquals(2, userRoles.count())
-        assertTrue { userRoles.any {it.organization.name == "Org1" && it.role == OrganizationRoleDto.Reader }}
-        assertTrue { userRoles.any {it.organization.name == "Org2" && it.role == OrganizationRoleDto.Writer }}
-    }
+            assertEquals(2, userRoles.count())
+            assertTrue { userRoles.any { it.organization.name == "Org1" && it.role == OrganizationRoleDto.Reader } }
+            assertTrue { userRoles.any { it.organization.name == "Org2" && it.role == OrganizationRoleDto.Writer } }
+        }
 
     @Test
-    fun `user roles in assigned organizations throws if nonexistent user`() = withCleanTables(Users, Organizations, UsersRolesInOrganizations) {
-        val exception = assertFailsWith<ValidationException> {
-            accountService.getRolesAssignedToUser(userId = UUID.randomUUID())
+    fun `user roles in assigned organizations throws if nonexistent user`() =
+        withCleanTables(Users, Organizations, UsersRolesInOrganizations) {
+            val exception = assertFailsWith<ValidationException> {
+                accountService.getRolesAssignedToUser(userId = UUID.randomUUID())
+            }
+            assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
         }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
-    }
 }

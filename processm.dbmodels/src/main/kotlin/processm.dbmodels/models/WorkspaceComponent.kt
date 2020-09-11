@@ -1,4 +1,4 @@
-package processm.services.models
+package processm.dbmodels.models
 
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
@@ -16,17 +16,29 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
 }
 
 class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<WorkspaceComponent>(WorkspaceComponents)
+    companion object : UUIDEntityClass<WorkspaceComponent>(
+        WorkspaceComponents
+    )
 
     var name by WorkspaceComponents.name
     var workspace by Workspace referencedOn WorkspaceComponents.workspaceId
     var query by WorkspaceComponents.query
     var componentType by WorkspaceComponents.componentType.transform(
-        { it.typeName }, { ComponentTypeDto.byTypeNameInDatabase(it) })
+        { it.typeName }, {
+            ComponentTypeDto.byTypeNameInDatabase(
+                it
+            )
+        })
     var componentDataSourceId by WorkspaceComponents.componentDataSourceId
     var customizationData by WorkspaceComponents.customizationData
 
-    fun toDto() = WorkspaceComponentDto(id.value, name, query, componentType, customizationData = customizationData)
+    fun toDto() = WorkspaceComponentDto(
+        id.value,
+        name,
+        query,
+        componentType,
+        customizationData = customizationData
+    )
 }
 
 enum class ComponentTypeDto(val typeName: String) {

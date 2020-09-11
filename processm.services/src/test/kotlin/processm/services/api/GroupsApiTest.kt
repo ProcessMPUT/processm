@@ -10,7 +10,7 @@ import org.koin.test.mock.declareMock
 import processm.services.api.models.ErrorMessageBody
 import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.GroupMessageBody
-import processm.services.api.models.OrganizationRole.reader
+import processm.services.api.models.OrganizationRole
 import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
@@ -22,7 +22,6 @@ import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GroupsApiTest : BaseApiTest() {
-
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/groups",
         HttpMethod.Post to "/api/groups",
@@ -66,7 +65,7 @@ class GroupsApiTest : BaseApiTest() {
         val subgroupId2 = UUID.randomUUID()
         val organizationId = UUID.randomUUID()
 
-        withAuthentication(role = reader to organizationId) {
+        withAuthentication(role = OrganizationRole.reader to organizationId) {
             every { groupService.getRootGroupId(groupId) } returns rootGroupId
             every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
                 every { id } returns organizationId
@@ -98,32 +97,40 @@ class GroupsApiTest : BaseApiTest() {
         val groupId = UUID.randomUUID()
 
         withAuthentication {
-            every { groupService.getRootGroupId(groupId) } throws ValidationException(ValidationException.Reason.ResourceNotFound, "The specified group does not exist")
+            every { groupService.getRootGroupId(groupId) } throws ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified group does not exist"
+            )
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
-                assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The specified group does not exist"))
+                assertTrue(
+                    response.deserializeContent<ErrorMessageBody>().error
+                        .contains("The specified group does not exist")
+                )
             }
         }
     }
 
     @Test
-    fun `responds to request for subgroups in organization not related to user with 403 and error message`() = withConfiguredTestApplication {
-        val groupId = UUID.randomUUID()
-        val rootGroupId = UUID.randomUUID()
+    fun `responds to request for subgroups in organization not related to user with 403 and error message`() =
+        withConfiguredTestApplication {
+            val groupId = UUID.randomUUID()
+            val rootGroupId = UUID.randomUUID()
 
-        withAuthentication {
-            every { groupService.getRootGroupId(groupId) } returns rootGroupId
-            every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
-                every { id } returns UUID.randomUUID()
-            }
-            with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
-                assertTrue(response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of the related organization"))
+            withAuthentication {
+                every { groupService.getRootGroupId(groupId) } returns rootGroupId
+                every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
+                    every { id } returns UUID.randomUUID()
+                }
+                with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+                    assertTrue(
+                        response.deserializeContent<ErrorMessageBody>().error
+                            .contains("The user is not a member of the related organization")
+                    )
+                }
             }
         }
-    }
 
     @Test
     fun `responds with 200 and the specified group`() = withConfiguredTestApplication {
@@ -131,7 +138,7 @@ class GroupsApiTest : BaseApiTest() {
         val rootGroupId = UUID.randomUUID()
         val organizationId = UUID.randomUUID()
 
-        withAuthentication(role = reader to organizationId) {
+        withAuthentication(role = OrganizationRole.reader to organizationId) {
             every { groupService.getRootGroupId(groupId) } returns rootGroupId
             every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
                 every { id } returns organizationId
@@ -151,22 +158,25 @@ class GroupsApiTest : BaseApiTest() {
     }
 
     @Test
-    fun `responds to request for group in organization not related to user with 403 and error message`() = withConfiguredTestApplication {
-        val groupId = UUID.randomUUID()
-        val rootGroupId = UUID.randomUUID()
+    fun `responds to request for group in organization not related to user with 403 and error message`() =
+        withConfiguredTestApplication {
+            val groupId = UUID.randomUUID()
+            val rootGroupId = UUID.randomUUID()
 
-        withAuthentication {
-            every { groupService.getRootGroupId(groupId) } returns rootGroupId
-            every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
-                every { id } returns UUID.randomUUID()
-            }
-            with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
-                assertEquals(HttpStatusCode.Forbidden, response.status())
-                assertTrue { response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The user is not a member of the related organization") }
+            withAuthentication {
+                every { groupService.getRootGroupId(groupId) } returns rootGroupId
+                every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
+                    every { id } returns UUID.randomUUID()
+                }
+                with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+                    assertTrue {
+                        response.deserializeContent<ErrorMessageBody>().error
+                            .contains("The user is not a member of the related organization")
+                    }
+                }
             }
         }
-    }
 
     @Test
     fun `responds to unknown group request with 404 and error message`() = withConfiguredTestApplication {
@@ -174,18 +184,22 @@ class GroupsApiTest : BaseApiTest() {
         val rootGroupId = UUID.randomUUID()
         val organizationId = UUID.randomUUID()
 
-        withAuthentication(role = reader to organizationId) {
+        withAuthentication(role = OrganizationRole.reader to organizationId) {
             every { groupService.getRootGroupId(groupId) } returns rootGroupId
             every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
                 every { id } returns organizationId
             }
-            every { groupService.getGroup(groupId) } throws ValidationException(ValidationException.Reason.ResourceNotFound, "The specified group does not exist")
+            every { groupService.getGroup(groupId) } throws ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified group does not exist"
+            )
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
-                assertTrue { response.deserializeContent<ErrorMessageBody>().error
-                    .contains("The specified group does not exist") }
+                assertTrue {
+                    response.deserializeContent<ErrorMessageBody>().error
+                        .contains("The specified group does not exist")
+                }
             }
         }
     }
-
 }

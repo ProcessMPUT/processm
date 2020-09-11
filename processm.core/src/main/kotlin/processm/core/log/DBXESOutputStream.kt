@@ -1,20 +1,15 @@
 package processm.core.log
 
 import processm.core.log.attribute.*
-import processm.core.persistence.DBConnectionPool
+import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.*
 
-class DBXESOutputStream : XESOutputStream {
+class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     companion object {
         private const val batchSize = 32
     }
-
-    /**
-     * Connection with the database
-     */
-    private val connection = DBConnectionPool.getConnection()
 
     /**
      * Log ID of inserted Log record

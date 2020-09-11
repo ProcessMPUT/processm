@@ -1,10 +1,10 @@
-package processm.services.models
+package processm.dbmodels.models
 
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
-import processm.services.ilike
+import processm.dbmodels.ilike
 import java.util.*
 
 object GroupRoles : UUIDTable("group_roles") {
@@ -14,7 +14,7 @@ object GroupRoles : UUIDTable("group_roles") {
 class GroupRole(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<GroupRole>(GroupRoles)
 
-    var name: GroupRoleDto by GroupRoles.name.transform({it.roleName}, {GroupRoleDto.byNameInDatabase(it)})
+    var name: GroupRoleDto by GroupRoles.name.transform({ it.roleName }, { GroupRoleDto.byNameInDatabase(it) })
 }
 
 fun GroupRoles.getIdByName(groupRole: GroupRoleDto): EntityID<UUID> {
@@ -27,6 +27,6 @@ enum class GroupRoleDto(val roleName: String) {
     Reader("reader");
 
     companion object {
-        fun byNameInDatabase(nameInDatabase: String) = values().first {it.roleName == nameInDatabase }
+        fun byNameInDatabase(nameInDatabase: String) = values().first { it.roleName == nameInDatabase }
     }
 }

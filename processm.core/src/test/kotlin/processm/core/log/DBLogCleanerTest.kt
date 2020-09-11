@@ -1,6 +1,7 @@
 package processm.core.log
 
-import processm.core.persistence.DBConnectionPool
+import processm.core.DBTestHelper.dbName
+import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import kotlin.test.*
 
@@ -29,7 +30,7 @@ internal class DBLogCleanerTest {
             </trace>
         </log>
     """.trimIndent().byteInputStream().use { stream ->
-            DBXESOutputStream().use { db ->
+            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { db ->
                 db.write(XMLXESInputStream(stream))
             }
         }
@@ -39,11 +40,12 @@ internal class DBLogCleanerTest {
     fun `Remove whole log from the DB`() {
         val logId = getLastLogId()
         val before = setStateBefore()
-        assertTrue(DBXESInputStream(Query(logId)).iterator().hasNext())
 
-        DBLogCleaner.removeLog(logId)
+        assertTrue(DBXESInputStream(dbName, Query(logId)).iterator().hasNext())
 
-        assertFalse(DBXESInputStream(Query(logId)).iterator().hasNext())
+        DBLogCleaner.removeLog(DBCache.get(dbName).getConnection(), logId)
+
+        assertFalse(DBXESInputStream(dbName, Query(logId)).iterator().hasNext())
 
         assertEquals(countRecordsInTable("logs"), before["logs"]!! - 1)
         assertEquals(countRecordsInTable("traces"), before["traces"]!! - 1)
@@ -71,7 +73,7 @@ internal class DBLogCleanerTest {
     }
 
     private fun countRecordsInTable(table: String): Int {
-        return DBConnectionPool.getConnection().use {
+        return DBCache.get(dbName).getConnection().use {
             val response = it.prepareStatement("SELECT COUNT(id) AS count FROM $table").executeQuery()
             response.next()
             response.getInt("count")
@@ -79,7 +81,7 @@ internal class DBLogCleanerTest {
     }
 
     private fun getLastLogId(): Int {
-        return DBConnectionPool.getConnection().use {
+        return DBCache.get(dbName).getConnection().use {
             val response = it.prepareStatement("""SELECT id FROM logs ORDER BY id DESC LIMIT 1""").executeQuery()
             response.next()
             response.getInt("id")

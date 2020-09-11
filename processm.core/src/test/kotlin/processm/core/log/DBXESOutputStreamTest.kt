@@ -1,5 +1,7 @@
 package processm.core.log
 
+import processm.core.DBTestHelper.dbName
+import processm.core.persistence.connection.DBCache
 import kotlin.test.Test
 
 internal class DBXESOutputStreamTest {
@@ -73,7 +75,7 @@ internal class DBXESOutputStreamTest {
         content.byteInputStream().use { stream ->
             val xesElements = XMLXESInputStream(stream).asSequence()
 
-            DBXESOutputStream().use { db ->
+            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { db ->
                 db.write(xesElements)
             }
         }

@@ -3,6 +3,7 @@ package processm.core.log.hierarchical
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
+import processm.core.DBTestHelper.dbName
 import processm.core.helpers.implies
 import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
@@ -12,7 +13,7 @@ import processm.core.log.attribute.RealAttr
 import processm.core.log.attribute.StringAttr
 import processm.core.log.attribute.value
 import processm.core.logging.logger
-import processm.core.persistence.DBConnectionPool
+import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.time.DayOfWeek
 import java.time.Duration
@@ -58,7 +59,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 logger.info("Loading data")
                 measureTimeMillis {
                     val stream = this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes")
-                    DBXESOutputStream().use { output ->
+                    DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
                         output.write(XMLXESInputStream(stream).map {
                             if (it is processm.core.log.Log) /* The base class for log */
                                 it.identityId = uuid
@@ -67,7 +68,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                     }
                 }.also { logger.info("Data loaded in ${it}ms.") }
 
-                DBConnectionPool.getConnection().use {
+                DBCache.get(dbName).getConnection().use {
                     val response = it.prepareStatement("SELECT id FROM logs ORDER BY id DESC LIMIT 1").executeQuery()
                     response.next()
 
@@ -82,7 +83,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         @AfterAll
         @JvmStatic
         fun tearDown() {
-            DBLogCleaner.removeLog(logId)
+            DBLogCleaner.removeLog(DBCache.get(dbName).getConnection(), logId)
         }
         // endregion
     }
@@ -1573,7 +1574,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         }
     }
 
-    private fun q(query: String): DBHierarchicalXESInputStream = DBHierarchicalXESInputStream(Query(query))
+    private fun q(query: String): DBHierarchicalXESInputStream = DBHierarchicalXESInputStream(dbName, Query(query))
 
     private fun standardAndAllAttributesMatch(log: Log, component: XESComponent) {
         val nameMap = getStandardToCustomNameMap(log)

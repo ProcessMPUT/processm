@@ -7,7 +7,7 @@ import org.apache.commons.dbcp2.PoolingDataSource
 import org.apache.commons.pool2.ObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPool
 import org.jetbrains.exposed.sql.Database
-import processm.core.helpers.loadConfiguration
+import processm.core.persistence.connection.DatabaseChecker
 import java.sql.Connection
 import javax.management.ObjectName
 import javax.sql.DataSource
@@ -18,25 +18,26 @@ import javax.sql.DataSource
  * * JDBC [DataSource]
  * * JetBrains Exposed [Database]
  */
-object DBConnectionPool {
-    private const val jmxDomain = "processm"
+class DBConnectionPool(databaseName: String) {
+    /**
+     * Selected `databaseName` connection URL supported by JDBC.
+     */
+    private val connectionURL = dbConfig.switchDatabaseURL(databaseName)
 
     private val connectionPool: ObjectPool<PoolableConnection> by lazy {
-        loadConfiguration()
-        Migrator.migrate()
+        migrator.migrate(databaseName)
 
         // First, we'll create a ConnectionFactory that the
         // pool will use to create Connections.
         // We'll use the DriverManagerConnectionFactory,
         // using the connect string passed in the command line
         // arguments.
-        val connectURI = System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
-        val connectionFactory = DriverManagerConnectionFactory(connectURI)
+        val connectionFactory = DriverManagerConnectionFactory(connectionURL)
 
         // Next we'll create the PoolableConnectionFactory, which wraps
         // the "real" Connections created by the ConnectionFactory with
         // the classes that implement the pooling functionality.
-        val jmxName = ObjectName("${jmxDomain}:name=DBConnectionPool")
+        val jmxName = ObjectName("${jmxDomain}:name=DBConnectionPool(${databaseName})")
         val poolableConnectionFactory = PoolableConnectionFactory(connectionFactory, jmxName)
         poolableConnectionFactory.setConnectionInitSql(listOf("SET timezone='UTC'"))
 
@@ -63,10 +64,20 @@ object DBConnectionPool {
      */
     fun getDataSource(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool)
 
+    fun close() {
+        connectionPool.close()
+    }
+
     /**
      * Database object for transactions managed by org.jetbrains.exposed library.
      */
     val database: Database by lazy {
         Database.connect(getDataSource())
+    }
+
+    companion object {
+        private const val jmxDomain = "processm"
+        private val dbConfig = DatabaseChecker
+        private val migrator = Migrator
     }
 }
