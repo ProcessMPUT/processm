@@ -16,7 +16,7 @@
       <circle
         class="nodeToBeCreated"
         opacity="0.5"
-        :r="(displayPreferences.nodeSize * currentScalingFactor) / 2"
+        :r="displayPreferences.nodeSize"
         :style="{ display: editMode == EditMode.Addition ? 'inline' : 'none' }"
       />
       <line
@@ -30,11 +30,31 @@
         <marker
           :id="`arrow${arrowMarkerId}`"
           markerUnits="userSpaceOnUse"
-          viewBox="0 0 10 10"
+          :viewBox="
+            `0 0 ${displayPreferences.edgeArrowMaximumSize} ${displayPreferences.edgeArrowMaximumSize}`
+          "
           orient="auto"
-          :refX="8 + displayPreferences.nodeSize ** 0.5"
-          refY="4"
-        />
+          :refX="
+            `${displayPreferences.edgeArrowHeight +
+              displayPreferences.nodeSize}`
+          "
+          :refY="`${displayPreferences.edgeArrowWidth / 2}`"
+          :markerWidth="`${displayPreferences.edgeArrowMaximumSize}`"
+          :markerHeight="`${displayPreferences.edgeArrowMaximumSize}`"
+        >
+          <path
+            :d="
+              `M 0 0
+              ${
+                displayPreferences.edgeArrowHeight
+              } ${displayPreferences.edgeArrowWidth / 2}
+              0 ${displayPreferences.edgeArrowWidth} 
+              ${displayPreferences.edgeArrowWidth /
+                2} ${displayPreferences.edgeArrowWidth / 2}`
+            "
+            :fill="`${this.displayPreferences.edgeColor}`"
+          />
+        </marker>
       </defs>
     </svg>
     <div class="node-details" />
@@ -160,7 +180,8 @@ import {
   InteractiveModeInputHandler
 } from "./UserInputHandlers";
 import WorkspaceComponentModel, {
-  CausalNetComponentData, CausalNetComponentCustomizationData
+  CausalNetComponentData,
+  CausalNetComponentCustomizationData
 } from "../../../models/WorkspaceComponent";
 
 enum EditMode {
@@ -240,16 +261,20 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   public readonly contentHeight: number = 250;
   public readonly contentWidth: number = 250;
   public displayPreferences = {
-    nodeSize: 20,
-    bindingNodeSize: 4,
+    nodeSize: 4,
+    bindingNodeSize: 2,
     edgeThickness: 2,
     bindingEdgeThickness: 1,
-    edgeArrowSize: 12,
+    edgeArrowHeight: 7,
+    edgeArrowWidth: 5,
     nodeLabelSize: 16,
     regularNodeColor: "black",
     splitNodeColor: "blue",
     joinNodeColor: "green",
-    edgeColor: "grey"
+    edgeColor: "grey",
+    get edgeArrowMaximumSize() {
+      return Math.max(this.edgeArrowHeight, this.edgeArrowWidth);
+    }
   };
 
   public get nodeDetails() {
@@ -363,11 +388,6 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
         this.userInputHandler?.backgroundMousemove(this.getMousePosition())
       );
 
-    this.arrowheads()
-      .append("path")
-      .attr("d", "M 0 0 10 4 0 8 2 4")
-      .style("fill", this.displayPreferences.edgeColor);
-
     this.refreshLinks();
     this.refreshNodes();
 
@@ -417,12 +437,17 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
                 )
             );
 
-          const linearNodeSize = this.displayPreferences.nodeSize ** 0.5;
-
           enteredItems
             .filter(d => d.hasType(ElementType.Binding))
             .append("path")
             .attr("opacity", 1)
+            .attr(
+              "d",
+              d3
+                .symbol()
+                .type(d3.symbolCircle)
+                .size((this.displayPreferences.bindingNodeSize * 2) ** 2)
+            )
             .style("cursor", "pointer")
             .style("fill", d => this.nodeColor(d.nodeType));
           enteredItems
@@ -431,22 +456,28 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             .attr("class", "node-name-background")
             .attr(
               "width",
-              d => d.id.length * 3 + linearNodeSize * 3.6 + linearNodeSize * 0.2
+              d =>
+                d.id.length * 3 +
+                this.displayPreferences.nodeSize * 3.6 +
+                this.displayPreferences.nodeSize * 0.2
             )
-            .attr("height", linearNodeSize * 2 * 1.2)
+            .attr("height", this.displayPreferences.nodeSize * 2 * 1.2)
             .attr("stroke", this.displayPreferences.regularNodeColor)
-            .attr("rx", linearNodeSize)
-            .attr("x", -linearNodeSize * 1.2)
-            .attr("y", -linearNodeSize * 1.2);
+            .attr("rx", this.displayPreferences.nodeSize)
+            .attr("x", -this.displayPreferences.nodeSize * 1.2)
+            .attr("y", -this.displayPreferences.nodeSize * 1.2);
           enteredItems
             .filter(d => d.hasType(ElementType.Regular))
             .append("circle")
-            .attr("r", linearNodeSize);
+            .attr("r", this.displayPreferences.nodeSize);
           enteredItems
             .append("text")
             .attr("class", "node-name")
-            .attr("x", linearNodeSize * 1.2)
-            .attr("textLength", d => d.id.length * 3 + linearNodeSize * 1.2)
+            .attr("x", this.displayPreferences.nodeSize * 1.2)
+            .attr(
+              "textLength",
+              d => d.id.length * 3 + this.displayPreferences.nodeSize * 1.2
+            )
             .text(d => (d.hasType(ElementType.Regular) ? d.id : ""));
 
           return enteredItems;
@@ -499,16 +530,6 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   public scaleElements(scalingFactor = this.currentScalingFactor) {
     if (scalingFactor == Number.POSITIVE_INFINITY) return;
 
-    this.arrowheads()
-      .attr(
-        "markerWidth",
-        this.displayPreferences.edgeArrowSize * scalingFactor
-      )
-      .attr(
-        "markerHeight",
-        this.displayPreferences.edgeArrowSize * scalingFactor
-      );
-
     this.links().attr(
       "stroke-width",
       d =>
@@ -517,12 +538,6 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
           : this.displayPreferences.edgeThickness) * scalingFactor
     );
     this.nodes().attr("stroke-width", scalingFactor);
-    this.bindingNodeShapes().attr("d", () =>
-      d3
-        .symbol()
-        .type(d3.symbolCircle)
-        .size((this.displayPreferences.bindingNodeSize * scalingFactor) ** 2)()
-    );
     this.nodeLabels().attr(
       "font-size",
       this.displayPreferences.nodeLabelSize * scalingFactor
