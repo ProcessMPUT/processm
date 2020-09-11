@@ -21,6 +21,8 @@ class DirectlyFollowsGraph {
      *    B    C
      * A  1    -
      * B  2    1
+     *
+     * Memory usage: O(|activities|^2)
      */
     val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
 
@@ -32,6 +34,8 @@ class DirectlyFollowsGraph {
      *
      * Log <A, B, C> will be build as:
      *  A, cardinality 1
+     *
+     * Memory usage: O(|activities|)
      */
     val startActivities = HashMap<ProcessTreeActivity, Arc>()
 
@@ -43,6 +47,8 @@ class DirectlyFollowsGraph {
      *
      * Log <A, B, C> will be build as:
      *  C, cardinality 1
+     *
+     * Memory usage: O(|activities|)
      */
     val endActivities = HashMap<ProcessTreeActivity, Arc>()
 
@@ -66,6 +72,8 @@ class DirectlyFollowsGraph {
      * - C: 2 (duplicates ignored)
      * - D: 2
      * - E: 1
+     *
+     * Memory usage: O(|activities|)
      */
     val activityTraceSupport = HashMap<ProcessTreeActivity, Int>()
 
@@ -80,6 +88,8 @@ class DirectlyFollowsGraph {
      * You will receive collection:
      * - B => 2 (duplicated in second trace)
      * - D => 1 (duplicated in third trace)
+     *
+     * Memory usage: O(|activities|)
      */
     val activitiesDuplicatedInTraces = ConcurrentHashMap<ProcessTreeActivity, Int>()
 
@@ -108,6 +118,8 @@ class DirectlyFollowsGraph {
     /**
      * Calculate maximum trace support for activities given as input collection.
      * If activity not found in internal structure - support: 0
+     *
+     * Runs in: O(|collection|), maximum O(|activities|)
      */
     fun maximumTraceSupport(collection: Collection<ProcessTreeActivity>): Int {
         val activityWithHighestSupport = collection.maxBy { activityTraceSupport[it] ?: 0 }
@@ -117,6 +129,8 @@ class DirectlyFollowsGraph {
     /**
      * Discover connections between pair of activities based on given trace.
      * If `buildDiff` - return changes in DFG.
+     *
+     * Runs in: O(|traces| * |activities|)
      */
     private fun discoverGraph(
         log: LogInputStream,
@@ -139,21 +153,26 @@ class DirectlyFollowsGraph {
                     val activity = ProcessTreeActivity(event.conceptName!!)
 
                     // Update activity occurrence in trace
+                    // Runs in O(1)
                     activitiesInTrace.add(activity)
 
                     // Analyze new activity only if enabled diff AND no seen new activity yet.
                     // This should speed-up after found first non seen previous activity.
                     if (buildDiff && !newActivityFound) {
+                        // Runs in O(1)
                         if (activity !in graph.rows && activity !in graph.columns) newActivityFound = true
                     }
 
                     // Add connection from source to activity
                     if (previousActivity == null) {
+                        // Runs in O(1)
                         if (activity in startActivities) {
                             // Just only insert
+                            // Runs in O(1)
                             startActivities[activity]!!.increment()
                         } else {
                             // Insert and increment
+                            // Runs in O(1)
                             startActivities[activity] = Arc().increment()
 
                             // Remember - changed start activities
@@ -162,6 +181,7 @@ class DirectlyFollowsGraph {
                     } else {
                         // If activity duplicated - remember in special collection
                         if (activity == previousActivity) {
+                            // Runs in O(1)
                             duplicatedActivities.add(activity)
                         }
 
@@ -169,8 +189,10 @@ class DirectlyFollowsGraph {
                         with(graph[previousActivity!!, activity]) {
                             if (this == null) {
                                 // If enabled diff - store new connection as pair
+                                // Runs in O(1)
                                 if (buildDiff) addedConnectionsCollection.add(previousActivity!! to activity)
 
+                                // Runs in O(1)
                                 graph[previousActivity!!, activity] = Arc().increment()
                             } else {
                                 increment()
@@ -185,11 +207,14 @@ class DirectlyFollowsGraph {
                 // Add connection with sink
                 if (previousActivity != null) {
                     // TODO: This is really strange - previous Activity is ProcessTree Activity but compiler suggests it can be any type.
+                    // Runs in O(1)
                     if (previousActivity in endActivities) {
                         // Just only insert
+                        // Runs in O(1)
                         endActivities[previousActivity!!]!!.increment()
                     } else {
                         // Insert and increment
+                        // Runs in O(1)
                         endActivities[previousActivity!!] = Arc().increment()
 
                         // Remember - changed end activity
@@ -197,6 +222,7 @@ class DirectlyFollowsGraph {
                     }
                 }
 
+                // Runs in O(|activities|)
                 updateTraceStatistics(activitiesInTrace, duplicatedActivities)
             }
         }
@@ -211,6 +237,8 @@ class DirectlyFollowsGraph {
 
     /**
      * Discover removed connections between pair of activities based on given trace.
+     *
+     * Runs in: O(|traces| * |activities|)
      */
     fun discoverRemovedPartOfGraph(log: LogInputStream): Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>? {
         var changedStartActivity = false
@@ -233,6 +261,7 @@ class DirectlyFollowsGraph {
                     val activity = ProcessTreeActivity(event.conceptName!!)
 
                     // Update activity occurrence in trace
+                    // Runs in O(1)
                     activitiesInTrace.add(activity)
 
                     // Connection from source to activity
@@ -240,21 +269,26 @@ class DirectlyFollowsGraph {
                         require(activity in startActivities) { "The log provided for deletion has not been previously inserted into DFG." }
 
                         // Decrement support and remove from DFG if cardinality equal to zero
+                        // Runs in O(1)
                         with(startActivities[activity]!!) {
                             decrement()
 
                             if (cardinality == 0) {
+                                // Runs in O(1)
                                 startActivities.remove(activity)
                                 changedStartActivity = true
                             }
                         }
                     } else {
                         // If activity duplicated - remember in special collection
+                        // Runs in O(1)
                         if (activity !in duplicatedActivities && activity == previousActivity) {
+                            // Runs in O(1)
                             duplicatedActivities.add(activity)
                         }
 
                         // Connection between pair of activities in graph
+                        // Runs in O(1)
                         with(graph[previousActivity!!, activity]) {
                             requireNotNull(this) { "Expected a path between activities $previousActivity and $activity." }
 
@@ -262,12 +296,15 @@ class DirectlyFollowsGraph {
                             decrement()
 
                             if (cardinality <= 0) {
+                                // Runs in O(1)
                                 graph.removeValue(previousActivity!!, activity)
 
                                 // Add connection if not removed activity found
                                 // If found - this collection will be ignored
-                                if (!removedActivity)
+                                if (!removedActivity) {
+                                    // Runs in O(1)
                                     removedConnections.add(previousActivity!! to activity)
+                                }
                             }
                         }
                     }
@@ -282,10 +319,12 @@ class DirectlyFollowsGraph {
                     previousActivity as ProcessTreeActivity
 
                     // Decrement support and remove from DFG if cardinality equal to zero
+                    // Runs in O(1)
                     with(endActivities[previousActivity as ProcessTreeActivity]!!) {
                         decrement()
 
                         if (cardinality == 0) {
+                            // Runs in O(1)
                             endActivities.remove(previousActivity as ProcessTreeActivity)
                             changedEndActivity = true
                         }
@@ -293,20 +332,27 @@ class DirectlyFollowsGraph {
                 }
 
                 // Update trace support for each activity in current trace
+                // Runs in O(|activities|)
                 activitiesInTrace.forEach { activity ->
+                    // Runs in O(1)
                     val support = activityTraceSupport.compute(activity) { _, v -> if (v === null) 0 else v - 1 }
                     if ((support ?: 0) <= 0) {
                         removedActivity = true
+                        // Runs in O(1)
                         activityTraceSupport.remove(activity)
                         // Remove row and column with this activity
+                        // Runs in O(1)
                         graph.removeColumn(activity)
+                        // Runs in O(1)
                         graph.removeRow(activity)
                     }
                 }
 
                 // Update duplicates activities
+                // Runs in O(|activites|)
                 duplicatedActivities.forEach { activity ->
                     activitiesDuplicatedInTraces.compute(activity) { _, v ->
+                        // Runs in O(1)
                         when (v) {
                             null, 1 -> activitiesDuplicatedInTraces.remove(activity)
                             else -> v - 1
@@ -325,6 +371,8 @@ class DirectlyFollowsGraph {
      * - update trace support for each activity in current trace
      * - increment already analyzed traces
      * - update duplicated activities
+     *
+     * Runs in: O(|activities|)
      */
     private fun updateTraceStatistics(
         activitiesInTrace: Set<ProcessTreeActivity>,
