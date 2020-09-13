@@ -3,14 +3,13 @@ package processm.services.logic
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.Brand
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.util.*
 
 abstract class ServiceTestBase {
     protected fun <R> withCleanTables(vararg tables: Table, testLogic: Transaction.() -> R) =
-        transaction(DBCache.get(Brand.mainDBInternalName).database) {
+        transaction(DBCache.getMainDBPool().database) {
             tables.forEach { it.deleteAll() }
             testLogic(this)
         }

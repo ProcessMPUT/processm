@@ -5,7 +5,6 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.Brand
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.ilike
@@ -24,7 +23,7 @@ class AccountService(private val groupService: GroupService) {
      */
     fun verifyUsersCredentials(username: String, password: String) =
         loggedScope { logger ->
-            transaction(DBCache.get(Brand.mainDBInternalName).database) {
+            transaction(DBCache.getMainDBPool().database) {
                 val user = User.find(Users.email ilike username).firstOrNull()
 
                 if (user == null) {
@@ -44,7 +43,7 @@ class AccountService(private val groupService: GroupService) {
      */
     fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null): Unit =
         loggedScope { logger ->
-            transaction(DBCache.get(Brand.mainDBInternalName).database) {
+            transaction(DBCache.getMainDBPool().database) {
                 val organizationsCount =
                     Organizations.select { Organizations.name eq organizationName }.limit(1).count()
                 val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
@@ -98,7 +97,7 @@ class AccountService(private val groupService: GroupService) {
      * Returns [UserDto] object for the user with the specified [userId].
      * Throws [ValidationException] if the specified [userId] doesn't exist.
      */
-    fun getAccountDetails(userId: UUID) = transaction(DBCache.get(Brand.mainDBInternalName).database) {
+    fun getAccountDetails(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         getUserDao(userId).toDto()
     }
 
@@ -108,7 +107,7 @@ class AccountService(private val groupService: GroupService) {
      */
     fun changePassword(userId: UUID, currentPassword: String, newPassword: String) =
         loggedScope { logger ->
-            transaction(DBCache.get(Brand.mainDBInternalName).database) {
+            transaction(DBCache.getMainDBPool().database) {
                 val user = getUserDao(userId)
 
                 if (!verifyPassword(currentPassword, user.password)) {
@@ -127,7 +126,7 @@ class AccountService(private val groupService: GroupService) {
      * Changes user's [locale] settings for the user with the specified [userId].
      * Throws [ValidationException] if the specified [userId] doesn't exist or the [locale] cannot be parsed.
      */
-    fun changeLocale(userId: UUID, locale: String) = transaction(DBCache.get(Brand.mainDBInternalName).database) {
+    fun changeLocale(userId: UUID, locale: String) = transaction(DBCache.getMainDBPool().database) {
         val user = getUserDao(userId)
         val localeObject = parseLocale(locale)
 
@@ -138,7 +137,7 @@ class AccountService(private val groupService: GroupService) {
      * Returns a collection of all user's roles assigned to the organizations the user with the specified [userId] is member of.
      * Throws [ValidationException] if the specified [userId] doesn't exist.
      */
-    fun getRolesAssignedToUser(userId: UUID) = transaction(DBCache.get(Brand.mainDBInternalName).database) {
+    fun getRolesAssignedToUser(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         // This returns only organizations explicitly assigned to the user account.
         // Inferring the complete set of user roles (including inherited roles) is expensive
         // so its probably faster to check the appropriate roles on case by case basis
@@ -161,7 +160,7 @@ class AccountService(private val groupService: GroupService) {
             }
     }
 
-    private fun getUserDao(userId: UUID) = transaction(DBCache.get(Brand.mainDBInternalName).database) {
+    private fun getUserDao(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         User.findById(userId) ?: throw ValidationException(
             ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
         )

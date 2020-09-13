@@ -5,7 +5,6 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
 import kotlinx.serialization.serializer
-import processm.core.Brand
 import processm.core.persistence.connection.DBCache
 import java.net.URI
 import kotlin.reflect.KClass
@@ -19,7 +18,7 @@ import kotlin.reflect.KClass
 @ImplicitReflectionSerializer
 abstract class AbstractPersistenceProvider(protected val tableName: String) : PersistenceProvider, AutoCloseable {
 
-    protected val connection = DBCache.get(Brand.mainDBInternalName).getConnection()
+    protected val connection = DBCache.getMainDBPool().getConnection()
 
     private val insert by lazy {
         connection.prepareStatement(
