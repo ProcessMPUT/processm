@@ -1,7 +1,7 @@
 package processm.core.persistence.connection
 
 import org.postgresql.ds.PGSimpleDataSource
-import processm.core.Brand.mainDBInternalName
+import processm.core.Brand
 import processm.core.helpers.isUUID
 import processm.core.helpers.loadConfiguration
 import kotlin.properties.Delegates
@@ -53,7 +53,7 @@ object DatabaseChecker {
      */
     fun switchDatabaseURL(expectedDatabase: String): String {
         // Main ProcessM database
-        if (expectedDatabase == mainDBInternalName) return baseConnectionURL
+        if (expectedDatabase == Brand.mainDBInternalName) return baseConnectionURL
         require(expectedDatabase.isUUID()) { "Datasource DB should be in UUID format" }
         val withoutPSQL = baseConnectionURL.substring(jdbcPostgresqlStart.length)
 

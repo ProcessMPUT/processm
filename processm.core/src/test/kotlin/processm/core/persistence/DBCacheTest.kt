@@ -8,7 +8,6 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.Brand
 import processm.core.persistence.connection.DBCache
 import java.lang.management.ManagementFactory
 import java.util.concurrent.CyclicBarrier
@@ -20,7 +19,7 @@ class DBCacheTest {
     @Test
     fun jmxTest() {
         // make sure DBConnectionPool is loaded
-        DBCache.get(Brand.mainDBInternalName).getConnection().close()
+        DBCache.getMainDBPool().getConnection().close()
 
         // verify if JMX interface is up and running
         val jmxServer = ManagementFactory.getPlatformMBeanServer()
@@ -33,21 +32,21 @@ class DBCacheTest {
 
     @Test
     fun getConnectionTest() {
-        DBCache.get(Brand.mainDBInternalName).getConnection().use {
+        DBCache.getMainDBPool().getConnection().use {
             assertEquals(true, it.isValid(3))
         }
     }
 
     @Test
     fun getDataSourceTest() {
-        DBCache.get(Brand.mainDBInternalName).getDataSource().connection.use {
+        DBCache.getMainDBPool().getDataSource().connection.use {
             assertEquals(true, it.isValid(3))
         }
     }
 
     @Test
     fun databaseTest() {
-        transaction(DBCache.get(Brand.mainDBInternalName).database) {
+        transaction(DBCache.getMainDBPool().database) {
             assertEquals(false, this.db.connector().isClosed)
         }
     }
@@ -65,7 +64,7 @@ class DBCacheTest {
             val finallyExpected = setOf("A", "B", "C", "D")
 
             thread {
-                transaction(DBCache.get(Brand.mainDBInternalName).database) {
+                transaction(DBCache.getMainDBPool().database) {
                     addLogger(StdOutSqlLogger)
                     SchemaUtils.create(Dummies)
 
@@ -111,7 +110,7 @@ class DBCacheTest {
                     barrier.await()
                 }
 
-                transaction(DBCache.get(Brand.mainDBInternalName).database) {
+                transaction(DBCache.getMainDBPool().database) {
                     barrier.await()
                     // verify durability
                     val actual = Dummy.all().map { it.value }
@@ -122,7 +121,7 @@ class DBCacheTest {
             }
 
             thread {
-                transaction(DBCache.get(Brand.mainDBInternalName).database) {
+                transaction(DBCache.getMainDBPool().database) {
                     addLogger(StdOutSqlLogger)
                     SchemaUtils.create(Dummies)
 
@@ -167,7 +166,7 @@ class DBCacheTest {
                     barrier.await()
                 }
 
-                transaction(DBCache.get(Brand.mainDBInternalName).database) {
+                transaction(DBCache.getMainDBPool().database) {
                     barrier.await()
                     // verify durability
                     val actual = Dummy.all().map { it.value }
@@ -179,7 +178,7 @@ class DBCacheTest {
 
             finishSemaphore.acquire(2)
         } finally {
-            transaction(DBCache.get(Brand.mainDBInternalName).database) {
+            transaction(DBCache.getMainDBPool().database) {
                 SchemaUtils.drop(Dummies)
             }
         }
