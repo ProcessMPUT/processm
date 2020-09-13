@@ -1,13 +1,13 @@
 package processm.services.logic
 
 import org.junit.Before
-import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
 import processm.dbmodels.models.UsersRolesInOrganizations
 import java.util.*
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue

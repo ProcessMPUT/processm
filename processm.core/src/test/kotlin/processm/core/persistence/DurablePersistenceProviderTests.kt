@@ -1,13 +1,13 @@
 package processm.core.persistence
 
-import kotlinx.serialization.ImplicitReflectionSerializer
+import kotlinx.serialization.UnsafeSerializationApi
 import processm.core.persistence.connection.DBCache
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-@ImplicitReflectionSerializer
+@UnsafeSerializationApi
 class DurablePersistenceProviderTests : PersistenceProviderBaseTests() {
 
     init {

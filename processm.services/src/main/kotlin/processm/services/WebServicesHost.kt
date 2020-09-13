@@ -12,7 +12,7 @@ import processm.core.logging.logger
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-@UseExperimental(KtorExperimentalAPI::class)
+@OptIn(KtorExperimentalAPI::class)
 class WebServicesHost : Service {
 
     companion object {

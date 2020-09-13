@@ -1,19 +1,14 @@
 package processm.services
 
-import io.ktor.application.Application
-import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.auth.Authentication
+import io.ktor.application.*
+import io.ktor.auth.*
 import io.ktor.features.*
-import io.ktor.gson.GsonConverter
-import io.ktor.http.ContentType
-import io.ktor.locations.KtorExperimentalLocationsAPI
-import io.ktor.locations.Locations
-import io.ktor.response.respondRedirect
-import io.ktor.routing.get
-import io.ktor.routing.route
-import io.ktor.routing.routing
-import io.ktor.util.KtorExperimentalAPI
+import io.ktor.gson.*
+import io.ktor.http.*
+import io.ktor.locations.*
+import io.ktor.response.*
+import io.ktor.routing.*
+import io.ktor.util.*
 import org.koin.dsl.module
 import org.koin.ktor.ext.Koin
 import processm.services.api.*
@@ -22,6 +17,7 @@ import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
 import processm.services.logic.WorkspaceService
 
+@OptIn(ExperimentalStdlibApi::class)
 @KtorExperimentalLocationsAPI
 @KtorExperimentalAPI
 fun Application.apiModule() {
