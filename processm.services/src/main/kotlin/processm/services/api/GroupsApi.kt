@@ -13,10 +13,13 @@ import io.ktor.routing.post
 import io.ktor.routing.put
 import io.ktor.routing.route
 import org.koin.ktor.ext.inject
-import processm.services.api.models.*
+import processm.dbmodels.models.OrganizationDto
+import processm.services.api.models.Group
+import processm.services.api.models.GroupCollectionMessageBody
+import processm.services.api.models.GroupMessageBody
+import processm.services.api.models.GroupRole
 import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
-import processm.services.models.OrganizationDto
 import java.util.*
 
 @KtorExperimentalLocationsAPI
@@ -33,7 +36,7 @@ fun Route.GroupsApi() {
     authenticate {
         route("/groups/{groupId}/members") {
             post {
-                val principal = call.authentication.principal<ApiUser>()
+                call.authentication.principal<ApiUser>()
 
                 call.respond(HttpStatusCode.NotImplemented)
             }
@@ -65,7 +68,16 @@ fun Route.GroupsApi() {
             val userGroup = groupService.getGroup(group.groupId)
 
             call.respond(
-                HttpStatusCode.OK, GroupMessageBody(Group(userGroup.name ?: "", userGroup.isImplicit, organization.id, GroupRole.reader, userGroup.id))
+                HttpStatusCode.OK,
+                GroupMessageBody(
+                    Group(
+                        userGroup.name ?: "",
+                        userGroup.isImplicit,
+                        organization.id,
+                        GroupRole.reader,
+                        userGroup.id
+                    )
+                )
             )
         }
 

@@ -1,16 +1,18 @@
 package processm.services.logic
 
 import org.junit.Before
-import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
-import processm.services.models.*
+import processm.dbmodels.models.Organizations
+import processm.dbmodels.models.UserGroups
+import processm.dbmodels.models.Users
+import processm.dbmodels.models.UsersRolesInOrganizations
 import java.util.*
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class OrganizationServiceTest : ServiceTestBase() {
-
     @Before
     @BeforeEach
     fun setUp() {
@@ -29,22 +31,23 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns all members attached to organization`(): Unit = withCleanTables(Organizations, Users, UsersRolesInOrganizations) {
-        val organizationId1 = createOrganization()
-        val organizationId2 = createOrganization()
-        val userId1 = createUser("user1@example.com")
-        val userId2 = createUser("user2@example.com")
-        val userId3 = createUser("user3@example.com")
-        attachUserToOrganization(userId1.value, organizationId1.value)
-        attachUserToOrganization(userId2.value, organizationId2.value)
-        attachUserToOrganization(userId3.value, organizationId1.value)
+    fun `returns all members attached to organization`(): Unit =
+        withCleanTables(Organizations, Users, UsersRolesInOrganizations) {
+            val organizationId1 = createOrganization()
+            val organizationId2 = createOrganization()
+            val userId1 = createUser("user1@example.com")
+            val userId2 = createUser("user2@example.com")
+            val userId3 = createUser("user3@example.com")
+            attachUserToOrganization(userId1.value, organizationId1.value)
+            attachUserToOrganization(userId2.value, organizationId2.value)
+            attachUserToOrganization(userId3.value, organizationId1.value)
 
-        val organizationMembers = organizationService.getOrganizationMembers(organizationId1.value)
+            val organizationMembers = organizationService.getOrganizationMembers(organizationId1.value)
 
-        assertEquals(2, organizationMembers.count())
-        assertTrue { organizationMembers.any { it.user.email == "user1@example.com" } }
-        assertTrue { organizationMembers.any { it.user.email == "user3@example.com" } }
-    }
+            assertEquals(2, organizationMembers.count())
+            assertTrue { organizationMembers.any { it.user.email == "user1@example.com" } }
+            assertTrue { organizationMembers.any { it.user.email == "user3@example.com" } }
+        }
 
     @Test
     fun `getting organization groups throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
@@ -80,9 +83,10 @@ class OrganizationServiceTest : ServiceTestBase() {
 
     @Test
     fun `getting organization groups throws if nonexistent shared group`(): Unit = withCleanTables(Organizations) {
-        val exception = assertFailsWith<ValidationException>("The specified shared group id is not assigned to any organization") {
-            organizationService.getOrganizationBySharedGroupId(UUID.randomUUID())
-        }
+        val exception =
+            assertFailsWith<ValidationException>("The specified shared group id is not assigned to any organization") {
+                organizationService.getOrganizationBySharedGroupId(UUID.randomUUID())
+            }
 
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }

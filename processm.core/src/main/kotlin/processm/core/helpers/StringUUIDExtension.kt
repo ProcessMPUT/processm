@@ -8,3 +8,14 @@ import java.util.*
  * @throws IllegalArgumentException for an invalid string.
  */
 fun String?.toUUID(): UUID? = this?.let { UUID.fromString(it) }
+
+/**
+ * Verifies whether the [String] is in [UUID] format.
+ */
+fun String?.isUUID(): Boolean {
+    return try {
+        this.toUUID() !== null
+    } catch (exception: IllegalArgumentException) {
+        false
+    }
+}

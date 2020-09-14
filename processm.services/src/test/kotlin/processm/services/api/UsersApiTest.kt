@@ -9,9 +9,9 @@ import io.ktor.server.testing.handleRequest
 import io.mockk.*
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.TestInstance
+import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.*
 import processm.services.logic.ValidationException
-import processm.services.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.random.Random
@@ -20,7 +20,6 @@ import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UsersApiTest : BaseApiTest() {
-
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/users",
         HttpMethod.Delete to "/api/users/session",
@@ -409,19 +408,19 @@ class UsersApiTest : BaseApiTest() {
             val userId = UUID.randomUUID()
             withAuthentication(userId) {
                 every { accountService.getRolesAssignedToUser(userId) } returns listOf(
-                        mockk {
-                            every { user.id } returns userId
-                            every { organization.id } returns UUID.randomUUID()
-                            every { organization.name } returns "Org1"
-                            every { role } returns OrganizationRoleDto.Writer
-                        }
-                    )
+                    mockk {
+                        every { user.id } returns userId
+                        every { organization.id } returns UUID.randomUUID()
+                        every { organization.name } returns "Org1"
+                        every { role } returns OrganizationRoleDto.Writer
+                    }
+                )
 
                 with(handleRequest(HttpMethod.Get, "/api/users/me/organizations")) {
                     assertEquals(HttpStatusCode.OK, response.status())
                     val deserializedContent = response.deserializeContent<UserOrganizationCollectionMessageBody>()
                     assertEquals(1, deserializedContent.data.count())
-                    assertTrue { deserializedContent.data.any {it.name == "Org1" && it.organizationRole == OrganizationRole.writer }}
+                    assertTrue { deserializedContent.data.any { it.name == "Org1" && it.organizationRole == OrganizationRole.writer } }
                 }
             }
 

@@ -1,10 +1,9 @@
-package processm.services.models
+package processm.dbmodels.models
 
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
-import processm.services.models.Organizations.nullable
 import java.util.*
 
 object Users : UUIDTable("users") {
@@ -27,6 +26,7 @@ class User(id: EntityID<UUID>) : UUIDEntity(id) {
     var password by Users.password
     var locale by Users.locale
     var organizations by Organization via UsersRolesInOrganizations
+
     // do not declare the following until exposed supports DAO with composite key
     // val rolesInOrganizations by UserRolesInOrganizations referrersOn UsersRolesInOrganizations.userId
     var privateGroup by UserGroup referencedOn Users.privateGroupId

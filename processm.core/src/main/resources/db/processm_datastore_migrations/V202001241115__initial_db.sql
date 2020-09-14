@@ -1,0 +1,2 @@
+CREATE EXTENSION IF NOT EXISTS timescaledb SCHEMA ${flyway:defaultSchema} CASCADE;
+CREATE EXTENSION IF NOT EXISTS dblink;

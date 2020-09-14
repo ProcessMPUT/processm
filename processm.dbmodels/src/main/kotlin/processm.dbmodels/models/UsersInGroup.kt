@@ -1,4 +1,4 @@
-package processm.services.models
+package processm.dbmodels.models
 
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass

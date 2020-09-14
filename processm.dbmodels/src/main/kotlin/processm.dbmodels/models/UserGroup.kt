@@ -1,10 +1,9 @@
-package processm.services.models
+package processm.dbmodels.models
 
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
-import processm.services.models.Organization.Companion.referrersOn
 import java.util.*
 
 object UserGroups : UUIDTable("user_groups") {

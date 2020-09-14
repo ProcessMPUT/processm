@@ -197,11 +197,9 @@ export class AdditionModeInputHandler implements UserInputHandler {
       .attr("fill", nodeColor)
       .attr(
         "r",
-        ((nodeType == ElementType.Regular
+        nodeType == ElementType.Regular
           ? this.component.displayPreferences.nodeSize
-          : this.component.displayPreferences.bindingNodeSize) *
-          this.component.currentScalingFactor) /
-          2
+          : this.component.displayPreferences.bindingNodeSize
       );
   }
 
