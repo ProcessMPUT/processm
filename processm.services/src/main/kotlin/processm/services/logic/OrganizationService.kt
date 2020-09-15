@@ -8,7 +8,9 @@ import processm.dbmodels.models.Organizations
 import java.util.*
 
 class OrganizationService {
-
+    /**
+     * Returns organization struct by ID ([organizationId]).
+     */
     fun getById(organizationId: UUID) = transaction(DBCache.getMainDBPool().database) {
         return@transaction Organization[organizationId]
     }
