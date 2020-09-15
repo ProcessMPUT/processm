@@ -14,6 +14,8 @@ tags:
     description: User groups and groups membership management
   - name: organizations
     description: User organizations and organizations membership management
+  - name: dataSources
+    description: Data sources management
 paths:
   /users:
     get:
@@ -166,6 +168,52 @@ paths:
                 $ref: '#/components/schemas/UserOrganizationCollectionMessageBody'
         '404':
           $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-sources:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataSources
+      summary: Get all datasources assigned to given OrganizationID and to the calling User.
+      operationId: getDataSources
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataSourceCollectionMessageBody'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - dataSources
+      summary: Create a new data source in the context of the specified organization and user
+      operationId: createDataSource
+      requestBody:
+        description: Data source details
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/DataSourceMessageBody'
+        required: true
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataSourceMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
   /organizations/{organizationId}/workspaces:
@@ -1043,6 +1091,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserOrganization'
+    DataSource:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    DataSourceMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DataSource'
+    DataSourceCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSource'
     Workspace:
       type: object
       required: [name]

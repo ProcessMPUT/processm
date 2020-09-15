@@ -47,6 +47,7 @@ fun Application.apiModule() {
             OrganizationsApi()
             UsersApi()
             WorkspacesApi()
+            DataSourcesApi()
             get { call.respondRedirect("/api-docs/", permanent = true) }
         }
     }

@@ -9,6 +9,10 @@ import java.util.*
 
 class OrganizationService {
 
+    fun getById(organizationId: UUID) = transaction(DBCache.getMainDBPool().database) {
+        return@transaction Organization[organizationId]
+    }
+
     /**
      * Returns all users explicitly assigned to the specified [organizationId].
      * Throws [ValidationException] if the specified [organizationId] doesn't exist.

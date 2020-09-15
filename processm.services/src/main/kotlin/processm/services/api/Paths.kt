@@ -106,6 +106,14 @@ object Paths {
     @Location("/organizations/{organizationId}/members/{userId}") class OrganizationMember(val organizationId: java.util.UUID, val userId: java.util.UUID)
 
     /**
+     * Data sources assigned to [organizationId].
+     *
+     * @param organizationId Organization ID
+     */
+    @KtorExperimentalLocationsAPI
+    @Location("/organizations/{organizationId}/data-sources") class DataSources(val organizationId: java.util.UUID)
+
+    /**
      * Get details about current user
      *
      */
