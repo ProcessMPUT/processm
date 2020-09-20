@@ -4,9 +4,9 @@
 
     <app-navigation v-if="$sessionStorage.sessionExists" />
 
-    <v-content>
+    <v-main>
       <router-view />
-    </v-content>
+    </v-main>
   </v-app>
 </template>
 
