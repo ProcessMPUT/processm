@@ -17,7 +17,7 @@
     "d3": "^5.16.0",
     "dagre": "^0.8.5",
     "flag-icon-css": "^3.4.6",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.20",
     "material-design-icons-iconfont": "^5.0.1",
     "typeface-roboto": "0.0.75",
     "uuid": "^8.1.0",
