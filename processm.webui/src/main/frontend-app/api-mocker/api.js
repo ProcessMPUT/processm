@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { v4 as uuid } from 'uuid';
 const _ = require("lodash");
 
 const workspaces = [
@@ -502,6 +501,14 @@ const componentsData = [
 
 const userSessions = [];
 
+function createUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0,
+      v = c == "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 const api = {
   "GET /api/organizations/:organizationId/workspaces": { data: workspaces },
   "GET /api/organizations/:organizationId/workspaces/:workspaceId": (
@@ -524,7 +531,7 @@ const api = {
       return res.status(400).json();
     }
 
-    workspace.id = uuid()
+    workspace.id = createUUID();
     workspaces.push(workspace);
 
     return res.status(201).json({ data: workspace });
