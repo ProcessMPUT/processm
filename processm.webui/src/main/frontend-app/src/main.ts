@@ -13,6 +13,7 @@ import SessionStorage from "@/plugins/SessionStorage";
 import WorkspaceService from "@/services/WorkspaceService";
 import AccountService from "@/services/AccountService";
 import OrganizationService from "@/services/OrganizationService";
+import DataSourceService from "@/services/DataSourceService";
 
 Vue.config.productionTip = false;
 Vue.use(SessionStorage, { persist: true });
@@ -24,6 +25,7 @@ new Vue({
   i18n,
   provide: () => ({
     workspaceService: new WorkspaceService(),
+    dataSourceService: new DataSourceService(),
     accountService: new AccountService(),
     organizationService: new OrganizationService()
   }),

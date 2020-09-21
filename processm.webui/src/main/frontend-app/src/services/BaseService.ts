@@ -5,7 +5,7 @@ import {
   Configuration,
   UsersApi,
   OrganizationsApi,
-  WorkspacesApi
+  WorkspacesApi, DataSourcesApi
 } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
@@ -45,6 +45,10 @@ export default abstract class BaseService {
 
   protected get workspacesApi() {
     return this.getGenericClient(WorkspacesApi);
+  }
+
+  protected get dataSourcesApi() {
+    return this.getGenericClient(DataSourcesApi);
   }
 
   protected ensureSuccessfulResponseCode(
