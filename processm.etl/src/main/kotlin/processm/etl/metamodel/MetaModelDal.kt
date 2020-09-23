@@ -19,7 +19,11 @@ class AttributesName(id: EntityID<Int>) : IntEntity(id) {
     val type by AttributesNames.type
     val attributeClass by Class referencedOn AttributesNames.classId
     val attributesValues by AttributesValue referrersOn AttributesValues.attributeNameId
+
+    fun toDto() = AttributeNameDto(id.value, name, type, attributeClass.id.value)
 }
+
+data class AttributeNameDto(val id: Int, val name: String, val type: String, val classId: Int)
 
 object AttributesValues : IntIdTable("attributes_values") {
     val value = text("value")
@@ -30,16 +34,18 @@ object AttributesValues : IntIdTable("attributes_values") {
 class AttributesValue(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<AttributesValue>(AttributesValues)
 
-    val objectVersionId by AttributesValues.objectVersionId
-    val attributeNameId by AttributesValues.attributeNameId
     val value by AttributesValues.value
     val attributeName by AttributesName referencedOn AttributesValues.attributeNameId
     val objectVersion by ObjectVersion referencedOn AttributesValues.objectVersionId
+
+    fun toDto() = AttributeValueDto(id.value, value, objectVersion.id.value, attributeName.id.value)
 }
+
+data class AttributeValueDto(val id: Int, val value: String, val objectVersionId: Int, val attributeNameId: Int)
 
 object Classes : IntIdTable("classes") {
     val name = text("name")
-    val dataModelId = reference("datamodel_id", DataModels)
+    val dataModelId = reference("data_model_id", DataModels)
 }
 
 class Class(id: EntityID<Int>) : IntEntity(id) {
@@ -49,16 +55,22 @@ class Class(id: EntityID<Int>) : IntEntity(id) {
     val dataModel by DataModel referencedOn Classes.dataModelId
     val attributesNames by AttributesName referrersOn AttributesNames.classId
     val objects by Object referrersOn Objects.classId
+
+    fun toDto() = ClassDto(id.value, name, dataModel.id.value)
 }
 
-object DataModels : IntIdTable("datamodels") {
+data class ClassDto(val id: Int, val name: String, val dataModelId: Int)
+
+object DataModels : IntIdTable("data_models") {
     val name = text("name")
+    val versionDate = datetime("version_date")
 }
 
 class DataModel(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<DataModel>(DataModels)
 
     val name by DataModels.name
+    val versionDate by DataModels.versionDate
     val classes by Class referrersOn Classes.dataModelId
 }
 
@@ -122,4 +134,8 @@ class Relationship(id: EntityID<Int>) : IntEntity(id) {
     val sourceClass by Class referencedOn Relationships.sourceClassId
     val targetClass by Class referencedOn Relationships.targetClassId
     val relations by Relation referrersOn Relations.relationshipId
+
+    fun toDto() = RelationshipDto(id.value, name, sourceClass.id.value, targetClass.id.value)
 }
+
+data class RelationshipDto(val id: Int, val name: String, val sourceClassId: Int, val targetClassId: Int)

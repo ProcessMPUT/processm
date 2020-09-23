@@ -1,6 +1,7 @@
 CREATE TABLE data_models (
     id serial PRIMARY KEY,
-    name text
+    name text,
+    version_date timestamp NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE classes (
