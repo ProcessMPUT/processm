@@ -15,6 +15,10 @@
 
     <name>ProcessM ETL</name>
 
+    <properties>
+        <schemacrawler.version>16.9.5</schemacrawler.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>
@@ -35,6 +39,28 @@
             <groupId>org.jetbrains.exposed</groupId>
             <artifactId>exposed-jdbc</artifactId>
             <version>${org.jetbrains.exposed.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>us.fatehi</groupId>
+            <artifactId>schemacrawler</artifactId>
+            <version>16.9.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-dbcp2</artifactId>
+            <version>2.7.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.2.12</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>core</artifactId>
+            <version>0.1-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
