@@ -1,9 +1,9 @@
 package processm.core.persistence
 
-import kotlinx.serialization.ImplicitReflectionSerializer
+import kotlinx.serialization.UnsafeSerializationApi
 
 /**
  * Database-based durable storage.
  */
-@ImplicitReflectionSerializer
+@UnsafeSerializationApi
 class DurablePersistenceProvider : AbstractPersistenceProvider("durable_storage")

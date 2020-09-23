@@ -1,12 +1,15 @@
 package processm.core.models.causalnet
 
 import processm.core.helpers.mapToSet
+import processm.core.persistence.connection.DBCache
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class CausalNetVisualizationTest {
+
+    val dbName = "2c68ff5a-6e74-4630-93f1-2b0bda3b5cd1"
 
     //constructing model represented at Fig 3.12 in "Process Mining" by Wil van der Aalst
     @Test
@@ -73,7 +76,7 @@ class CausalNetVisualizationTest {
             setOf(reject to end)
         ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
-        DBSerializer.insert(mm)
+        DBSerializer.insert(DBCache.get(dbName), mm)
     }
 
     private fun generateFlowerNet() {
@@ -133,7 +136,7 @@ class CausalNetVisualizationTest {
             setOf(a to end)
         ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
-        DBSerializer.insert(mm)
+        DBSerializer.insert(DBCache.get(dbName), mm)
     }
 
     private fun generateSeparateSequencesNet() {
@@ -165,6 +168,6 @@ class CausalNetVisualizationTest {
             setOf(d to end)
         ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
-        DBSerializer.insert(mm)
+        DBSerializer.insert(DBCache.get(dbName), mm)
     }
 }

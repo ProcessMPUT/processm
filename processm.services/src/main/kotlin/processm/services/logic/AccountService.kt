@@ -1,12 +1,14 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
-import processm.core.persistence.DBConnectionPool
-import processm.services.ilike
-import processm.services.models.*
+import processm.core.persistence.connection.DBCache
+import processm.dbmodels.ilike
+import processm.dbmodels.models.*
 import java.util.*
 
 class AccountService(private val groupService: GroupService) {
@@ -21,13 +23,14 @@ class AccountService(private val groupService: GroupService) {
      */
     fun verifyUsersCredentials(username: String, password: String) =
         loggedScope { logger ->
-            transaction(DBConnectionPool.database) {
+            transaction(DBCache.getMainDBPool().database) {
                 val user = User.find(Users.email ilike username).firstOrNull()
 
                 if (user == null) {
                     logger.debug("The specified username ${username} is unknown and cannot be verified")
                     throw ValidationException(
-                        ValidationException.Reason.ResourceNotFound, "The specified user account does not exist")
+                        ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
+                    )
                 }
 
                 return@transaction if (verifyPassword(password, user.password)) user.toDto() else null
@@ -40,7 +43,7 @@ class AccountService(private val groupService: GroupService) {
      */
     fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null): Unit =
         loggedScope { logger ->
-            transaction(DBConnectionPool.database) {
+            transaction(DBCache.getMainDBPool().database) {
                 val organizationsCount =
                     Organizations.select { Organizations.name eq organizationName }.limit(1).count()
                 val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
@@ -48,7 +51,8 @@ class AccountService(private val groupService: GroupService) {
                 if (usersCount > 0 || organizationsCount > 0) {
                     throw ValidationException(
                         ValidationException.Reason.ResourceAlreadyExists,
-                        "The specified user and/or organization already exists")
+                        "The specified user and/or organization already exists"
+                    )
                 }
                 //TODO: registered accounts should be stored as "pending' until confirmed
                 // user password should be specified upon successful confirmation
@@ -93,7 +97,7 @@ class AccountService(private val groupService: GroupService) {
      * Returns [UserDto] object for the user with the specified [userId].
      * Throws [ValidationException] if the specified [userId] doesn't exist.
      */
-    fun getAccountDetails(userId: UUID) = transaction(DBConnectionPool.database) {
+    fun getAccountDetails(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         getUserDao(userId).toDto()
     }
 
@@ -103,7 +107,7 @@ class AccountService(private val groupService: GroupService) {
      */
     fun changePassword(userId: UUID, currentPassword: String, newPassword: String) =
         loggedScope { logger ->
-            transaction(DBConnectionPool.database) {
+            transaction(DBCache.getMainDBPool().database) {
                 val user = getUserDao(userId)
 
                 if (!verifyPassword(currentPassword, user.password)) {
@@ -122,7 +126,7 @@ class AccountService(private val groupService: GroupService) {
      * Changes user's [locale] settings for the user with the specified [userId].
      * Throws [ValidationException] if the specified [userId] doesn't exist or the [locale] cannot be parsed.
      */
-    fun changeLocale(userId: UUID, locale: String) = transaction(DBConnectionPool.database) {
+    fun changeLocale(userId: UUID, locale: String) = transaction(DBCache.getMainDBPool().database) {
         val user = getUserDao(userId)
         val localeObject = parseLocale(locale)
 
@@ -133,7 +137,7 @@ class AccountService(private val groupService: GroupService) {
      * Returns a collection of all user's roles assigned to the organizations the user with the specified [userId] is member of.
      * Throws [ValidationException] if the specified [userId] doesn't exist.
      */
-    fun getRolesAssignedToUser(userId: UUID) = transaction(DBConnectionPool.database) {
+    fun getRolesAssignedToUser(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         // This returns only organizations explicitly assigned to the user account.
         // Inferring the complete set of user roles (including inherited roles) is expensive
         // so its probably faster to check the appropriate roles on case by case basis
@@ -149,12 +153,14 @@ class AccountService(private val groupService: GroupService) {
             .innerJoin(Organizations)
             .innerJoin(OrganizationRoles)
             .select {
-                UsersRolesInOrganizations.userId eq userId }
+                UsersRolesInOrganizations.userId eq userId
+            }
             .map {
-                OrganizationMemberDto(user, Organization.wrapRow(it).toDto(), OrganizationRole.wrapRow(it).name) }
+                OrganizationMemberDto(user, Organization.wrapRow(it).toDto(), OrganizationRole.wrapRow(it).name)
+            }
     }
 
-    private fun getUserDao(userId: UUID) = transaction(DBConnectionPool.database) {
+    private fun getUserDao(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         User.findById(userId) ?: throw ValidationException(
             ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
         )

@@ -37,7 +37,7 @@ fun Route.UsersApi() {
                 when {
                     credentials != null -> {
                         val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
-                                   ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
+                            ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
                         val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
                             .map { it.organization.id to OrganizationRole.valueOf(it.role.roleName) }
                             .toMap()
@@ -47,23 +47,28 @@ fun Route.UsersApi() {
                             userRolesInOrganizations,
                             Instant.now().plus(jwtTokenTtl),
                             jwtIssuer,
-                            jwtSecret)
+                            jwtSecret
+                        )
 
                         logger.debug("The user ${user.id} has successfully logged in")
                         call.respond(
-                            HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token)))
+                            HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token))
+                        )
                     }
                     call.request.authorization() != null -> {
                         val authorizationHeader =
                             call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
-                                "Invalid authorization token format", HttpStatusCode.Unauthorized)
+                                "Invalid authorization token format", HttpStatusCode.Unauthorized
+                            )
                         val prolongedToken = JwtAuthentication.verifyAndProlongToken(
-                            authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl)
+                            authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl
+                        )
 
                         logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
                         call.respond(
                             HttpStatusCode.Created,
-                            AuthenticationResultMessageBody(AuthenticationResult(prolongedToken)))
+                            AuthenticationResultMessageBody(AuthenticationResult(prolongedToken))
+                        )
                     }
                     else -> {
                         throw ApiException("Either user credentials or authentication token needs to be provided")
@@ -77,7 +82,7 @@ fun Route.UsersApi() {
         post {
             loggedScope { logger ->
                 val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
-                                  ?: throw ApiException("The provided account details cannot be parsed")
+                    ?: throw ApiException("The provided account details cannot be parsed")
                 val locale = call.request.acceptLanguageItems().getOrNull(0)
 
                 accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName, locale?.value)
@@ -108,15 +113,18 @@ fun Route.UsersApi() {
                     loggedScope { logger ->
                         val principal = call.authentication.principal<ApiUser>()!!
                         val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
-                                           ?: throw ApiException("The provided password data cannot be parsed")
+                            ?: throw ApiException("The provided password data cannot be parsed")
 
                         if (accountService.changePassword(
-                                principal.userId, passwordData.currentPassword, passwordData.newPassword)) {
+                                principal.userId, passwordData.currentPassword, passwordData.newPassword
+                            )
+                        ) {
                             logger.info("The user ${principal.userId} has successfully changed his password")
                             call.respond(HttpStatusCode.OK)
                         } else {
                             call.respond(
-                                HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed"))
+                                HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed")
+                            )
                         }
                     }
                 }
@@ -136,7 +144,13 @@ fun Route.UsersApi() {
         get<Paths.UserOrganizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
             val userOrganizations = accountService.getRolesAssignedToUser(principal.userId)
-                .map { UserOrganization(it.organization.id, it.organization.name, OrganizationRole.valueOf(it.role.roleName)) }
+                .map {
+                    UserOrganization(
+                        it.organization.id,
+                        it.organization.name,
+                        OrganizationRole.valueOf(it.role.roleName)
+                    )
+                }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, UserOrganizationCollectionMessageBody(userOrganizations))

@@ -15,6 +15,8 @@ import kotlin.properties.Delegates
 class DirectlyFollowsSubGraph(
     /**
      * Activities in directly-follows subGraph
+     *
+     * Memory usage: O(|activities|)
      */
     internal val activities: Set<ProcessTreeActivity>,
     /**
@@ -25,11 +27,15 @@ class DirectlyFollowsSubGraph(
     /**
      * Initial start activities  in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
+     *
+     * Memory usage: O(|activities|)
      */
     private var initialStartActivities: Set<ProcessTreeActivity>? = null,
     /**
      * Initial end activities in graph based on connections from initial DFG.
      * If not given - will be calculate based on initial connections map.
+     *
+     * Memory usage: O(|activities|)
      */
     private var initialEndActivities: Set<ProcessTreeActivity>? = null,
     /**
@@ -52,6 +58,8 @@ class DirectlyFollowsSubGraph(
         /**
          * Cuts with validated support for each activity
          * If parent applied one of cuts in this collection - check activity trace support.
+         *
+         * Memory usage: O(1)
          */
         private val cutsWithSupportValidated = setOf(CutType.Sequence, CutType.Parallel)
     }
@@ -70,12 +78,16 @@ class DirectlyFollowsSubGraph(
     /**
      * Current start activities in this subGraph.
      * Calculated once, used by parallel and loop cut detection.
+     *
+     * Memory usage: O(|activities|)
      */
     private val currentStartActivities by lazy(LazyThreadSafetyMode.NONE) { currentStartActivities() }
 
     /**
      * Current end activities in this subGraph.
      * Calculated once, used by parallel and loop cut detection.
+     *
+     * Memory usage: O(|activities|)
      */
     private val currentEndActivities by lazy(LazyThreadSafetyMode.NONE) { currentEndActivities() }
 
@@ -85,11 +97,15 @@ class DirectlyFollowsSubGraph(
     private var currentTraceSupport by Delegates.notNull<Int>()
 
     init {
+        // Runs in O(|activities|)
         updateCurrentTraceSupport()
 
+        // Runs in O(1) + O(|activities|)
         if (initialEndActivities.isNullOrEmpty()) initialEndActivities = inferEndActivities()
+        // Runs in O(1) + O(|activities|)
         if (initialStartActivities.isNullOrEmpty()) initialStartActivities = inferStartActivities()
 
+        // Runs in O(|activities|^2)
         detectCuts()
     }
 
@@ -97,6 +113,8 @@ class DirectlyFollowsSubGraph(
      * Check is possible to finish calculation.
      *
      * Possible only if one activity left.
+     *
+     * Runs in O(1)
      */
     fun canFinishCalculationsOnSubGraph(): Boolean {
         return activities.size == 1
@@ -104,6 +122,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Finish calculations and return activity
+     *
+     * Runs in O(1)
      */
     fun finishCalculations(): ProcessTreeActivity {
         // Check can finish condition
@@ -119,6 +139,8 @@ class DirectlyFollowsSubGraph(
      * Based on assigned label activities merged into groups.
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
+     *
+     * Runs in O(|activities|^2)
      */
     fun calculateExclusiveCut(): MutableMap<ProcessTreeActivity, Int>? {
         // Last assigned label, on start 0 (not assigned yet)
@@ -196,6 +218,8 @@ class DirectlyFollowsSubGraph(
      *
      * If subGraph already contain τ, ignore action to prevent adding second τ.
      * If subGraph contain τ but shouldn't - remove it.
+     *
+     * Runs in O(|activities|)
      */
     fun modifySilentActivityInsideExclusiveChoice() {
         val subGraphWithSilentActivity =
@@ -224,6 +248,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Split graph into subGraphs based on assignment map [ProcessTreeActivity] => [Int]
+     *
+     * Runs in O(|activities|)
      */
     private fun splitIntoSubGraphs(assignment: Map<ProcessTreeActivity, Int>) {
         val activityGroups = TreeMap<Int, HashSet<ProcessTreeActivity>>()
@@ -249,6 +275,8 @@ class DirectlyFollowsSubGraph(
     /**
      * Default rule for Inductive Miner - generate redo loop with silent activity and each activity in graph:
      * ⟲(τ, a1, a2, ..., an)
+     *
+     * Runs in O(|activities|)
      */
     fun finishWithDefaultRule(): RedoLoop {
         val listOfActivities = arrayOfNulls<ProcessTreeActivity>(size = activities.size + 1)
@@ -272,6 +300,8 @@ class DirectlyFollowsSubGraph(
      * More details:
      *  R. Tarjan (1972), Depth-first search and linear graph algorithms. SIAM Journal of Computing 1(2):146-160.
      *  E. Nuutila and E. Soisalon-Soinen (1994), On finding the strongly connected components in a directed graph. Information Processing Letters 49(1): 9-14.
+     *
+     *  Runs in O(|activities|)
      */
     fun stronglyConnectedComponents(): List<Set<ProcessTreeActivity>> {
         val stronglyConnectedComponents = LinkedList<HashSet<ProcessTreeActivity>>()
@@ -368,6 +398,8 @@ class DirectlyFollowsSubGraph(
      * Prepare the connection matrix between strongly connected components
      * It returns a group_id x group_id matrix, where an element in ith row and jth column
      * indicates that reference between groups.
+     *
+     * Runs in O(|activities|^2)
      */
     fun connectionMatrix(stronglyConnectedComponents: List<Set<ProcessTreeActivity>>): Array<ByteArray> {
         // Mapping activity -> group ID
@@ -408,6 +440,8 @@ class DirectlyFollowsSubGraph(
      * Detect sequential cut in directly-follows graph
      *
      * This function generates a map of [ProcessTreeActivity] => [Int] label reference.
+     *
+     * Runs in O(|activities|^2)
      */
     fun calculateSequentialCut(stronglyConnectedComponents: List<Set<ProcessTreeActivity>>): Map<ProcessTreeActivity, Int>? {
         // This makes sense only if more than one strongly connected component
@@ -504,6 +538,8 @@ class DirectlyFollowsSubGraph(
     /**
      * Based on assignment activity to group prepare a hashmap
      * This will make checks simpler
+     *
+     * Runs in O(|activities|)
      */
     private fun componentsToGroup(connectedComponents: Map<ProcessTreeActivity, Int>): HashMap<Int, HashSet<ProcessTreeActivity>> {
         val connectedComponentsGroups = HashMap<Int, HashSet<ProcessTreeActivity>>()
@@ -517,6 +553,8 @@ class DirectlyFollowsSubGraph(
     /**
      * Validate - start and end activity in each group
      * Apply reassignment inside function => create component assignment.
+     *
+     * Runs in O(|activities|^2)
      */
     private fun startAndEndActivityInEachReassignment(connectedComponents: MutableMap<ProcessTreeActivity, Int>): MutableMap<ProcessTreeActivity, Int>? {
         val connectedComponentsGroups = componentsToGroup(connectedComponents)
@@ -604,6 +642,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Prepare a set of activities marked as start based on initial DFG and current connections (in sub graph)
+     *
+     * Runs in O(|activities|^2)
      */
     fun currentStartActivities(): MutableSet<ProcessTreeActivity> {
         var collection = HashSet<ProcessTreeActivity>(initialStartActivities!!)
@@ -629,6 +669,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Prepare a set of activities marked as end based on initial DFG and current connections (in sub graph)
+     *
+     * Runs in O(|activities|^2)
      */
     fun currentEndActivities(): MutableSet<ProcessTreeActivity> {
         var collection = HashSet<ProcessTreeActivity>(initialEndActivities!!)
@@ -656,6 +698,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Merge two components - second component will be kept.
+     *
+     * Runs in O(|activities|)
      */
     private fun mergeComponents(
         a1: ProcessTreeActivity,
@@ -672,6 +716,8 @@ class DirectlyFollowsSubGraph(
     /**
      * Detect parallel cut in directly-follows graph
      * This function with generate map with activity => label reference.
+     *
+     * Runs in O(|activities|^2)
      */
     fun calculateParallelCut(): Map<ProcessTreeActivity, Int>? {
         // Initialise each activity as a component
@@ -702,6 +748,8 @@ class DirectlyFollowsSubGraph(
      * and computing the connected components.
      *
      * In the resulting graph roughly gives the loop cut.
+     *
+     * Runs in O(|activities|^2)
      */
     private fun calculateLoopCut(): Map<ProcessTreeActivity, Int>? {
         // Without start / end we can't generate loop
@@ -808,6 +856,8 @@ class DirectlyFollowsSubGraph(
      * 2. ×(Activity, τ)
      * 3. ⟲(Activity, τ)
      * 4. ⟲(τ, Activity)
+     *
+     * Runs in O(1)
      */
     fun detectActivityCutType() {
         assert(activities.size == 1)
@@ -832,6 +882,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Update trace support based on list of activities in current subGraph.
+     *
+     * Runs in O(|activities|)
      */
     fun updateCurrentTraceSupport() {
         currentTraceSupport = dfg.maximumTraceSupport(activities)
@@ -839,6 +891,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Detect cuts in graph
+     *
+     * Runs in O(|activities|^2)
      */
     fun detectCuts() {
         if (canFinishCalculationsOnSubGraph()) {
@@ -882,6 +936,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Case: ×(Activity, τ)
+     *
+     * Runs in O(1)
      */
     fun finishWithOptionalActivity(): Exclusive {
         val listOfActivities = arrayOfNulls<ProcessTreeActivity>(size = 2)
@@ -893,6 +949,8 @@ class DirectlyFollowsSubGraph(
 
     /**
      * Case: ⟲(Activity, τ)
+     *
+     * Runs in O(1)
      */
     fun finishWithRedoActivityAlways(): RedoLoop {
         val listOfActivities = arrayOfNulls<ProcessTreeActivity>(size = 2)

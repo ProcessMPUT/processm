@@ -32,6 +32,8 @@ class OnlineInductiveMiner : InductiveMiner() {
     /**
      * Directly-follows graph used by Inductive Miner
      * It should be stored as part of miner - we need modify it after each step.
+     *
+     * Memory usage: O(|activities|^2)
      */
     private val dfg = DirectlyFollowsGraph()
 
@@ -44,6 +46,8 @@ class OnlineInductiveMiner : InductiveMiner() {
 
     /**
      * Given log collection convert to process tree structure.
+     *
+     * Runs in: O(|traces| * |activities|^2)
      */
     override fun processLog(logsCollection: LogInputStream): ProcessTree {
         discover(logsCollection)
@@ -62,6 +66,8 @@ class OnlineInductiveMiner : InductiveMiner() {
      *
      * `increaseTraces` parameter is responsible for the direction of changes
      * When true - adding new trace. Otherwise, remove trace from model's memory.
+     *
+     * Runs in: O(|traces| * |activities|^2)
      */
     fun discover(log: LogInputStream, increaseTraces: Boolean = true) {
         // Statistics changed
@@ -102,6 +108,8 @@ class OnlineInductiveMiner : InductiveMiner() {
     /**
      * Breadth first search iterative.
      * Find minimal common subGraph based on changed activities.
+     *
+     * Runs in: O(|affectedActivities|)
      */
     private fun breadthFirstSearchMinimalCommonSubGraph(
         affectedActivities: Collection<ProcessTreeActivity>,
@@ -123,6 +131,8 @@ class OnlineInductiveMiner : InductiveMiner() {
 
     /**
      * Detect activities affected by the changes.
+     *
+     * Runs in: O(|activities|^2)
      */
     private fun detectAffectedActivities(pairs: Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>): Collection<ProcessTreeActivity> {
         val affectedActivities = mutableSetOf<ProcessTreeActivity>()
@@ -144,6 +154,8 @@ class OnlineInductiveMiner : InductiveMiner() {
      * Add τ if missing, remove if redundant.
      *
      * BFS was used to prevent recursion.
+     *
+     * Runs in: O(|activities|^2)
      */
     private fun propagateStatistics() {
         val exclusiveChoicesInsideGraph = LinkedList<DirectlyFollowsSubGraph>()
@@ -154,6 +166,7 @@ class OnlineInductiveMiner : InductiveMiner() {
             val subGraph = stack.pop()
 
             // Update statistics
+            // Runs in O(|activities|)
             subGraph.updateCurrentTraceSupport()
 
             if (subGraph.detectedCut in operatorCuts) {

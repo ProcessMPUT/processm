@@ -19,18 +19,17 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.AutoCloseKoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
+import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
-import processm.services.models.OrganizationRoleDto
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 abstract class BaseApiTest : AutoCloseKoinTest() {
-
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
 
@@ -96,18 +95,22 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     }
 
     protected fun TestApplicationEngine.withAuthentication(
-        userId: UUID = UUID.randomUUID(), login: String = "user@example.com", password: String = "pass", role: Pair<OrganizationRole, UUID> = OrganizationRole.owner to UUID.randomUUID(), callback: JwtAuthenticationTrackingEngine.() -> Unit
+        userId: UUID = UUID.randomUUID(),
+        login: String = "user@example.com",
+        password: String = "pass",
+        role: Pair<OrganizationRole, UUID> = OrganizationRole.owner to UUID.randomUUID(),
+        callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
             every { id } returns userId
             every { email } returns login
         }
         every { accountService.getRolesAssignedToUser(userId) } returns
-            listOf(mockk {
-                every { user.id } returns userId
-                every { organization.id } returns role.second
-                every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.first.name)
-            })
+                listOf(mockk {
+                    every { user.id } returns userId
+                    every { organization.id } returns role.second
+                    every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.first.name)
+                })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
     }

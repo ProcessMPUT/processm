@@ -40,7 +40,6 @@
         </grid-layout>
       </v-col>
     </v-row>
-    <!-- </v-card> -->
     <single-component-view
       v-if="displayViewModal"
       v-model="displayViewModal"

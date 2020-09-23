@@ -8,8 +8,8 @@ import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
-import processm.core.persistence.DBConnectionPool
-import processm.services.models.*
+import processm.core.persistence.connection.DBCache
+import processm.dbmodels.models.*
 import java.util.*
 
 class WorkspaceService(private val accountService: AccountService) {
@@ -17,80 +17,91 @@ class WorkspaceService(private val accountService: AccountService) {
     /**
      * Returns all user workspaces for the specified [userId] in the context of the specified [organizationId].
      */
-    fun getUserWorkspaces(userId: UUID, organizationId: UUID) = transaction(DBConnectionPool.database) {
+    fun getUserWorkspaces(userId: UUID, organizationId: UUID) = transaction(DBCache.getMainDBPool().database) {
         Workspace.wrapRows(UserGroups
             .innerJoin(UsersInGroups)
             .innerJoin(UserGroupWithWorkspaces)
             .innerJoin(Workspaces)
             .slice(Workspaces.columns)
-            .select { UsersInGroups.userId eq userId and (UserGroupWithWorkspaces.organizationId eq organizationId) }).map { it.toDto() }
+            .select { UsersInGroups.userId eq userId and (UserGroupWithWorkspaces.organizationId eq organizationId) })
+            .map { it.toDto() }
     }
 
     /**
      * Creates new workspace with [workspaceName] in the context of specified [organizationId] and assigns it to private group of the specified [userId].
      */
-    fun createWorkspace(workspaceName: String, userId: UUID, organizationId: UUID) = transaction(DBConnectionPool.database) {
-        val user = accountService.getAccountDetails(userId)
-        val privateGroupId = user.privateGroup.id
-        val workspaceId= Workspaces.insertAndGetId {
-            it[this.name] = workspaceName
-        }
+    fun createWorkspace(workspaceName: String, userId: UUID, organizationId: UUID) =
+        transaction(DBCache.getMainDBPool().database) {
+            val user = accountService.getAccountDetails(userId)
+            val privateGroupId = user.privateGroup.id
+            val workspaceId = Workspaces.insertAndGetId {
+                it[this.name] = workspaceName
+            }
 
-        UserGroupWithWorkspaces.insertAndGetId {
-            it[this.workspaceId] = workspaceId
-            it[userGroupId] = EntityID(privateGroupId, UserGroups)
-            it[this.organizationId] = EntityID(organizationId, Organizations)
-        }
+            UserGroupWithWorkspaces.insertAndGetId {
+                it[this.workspaceId] = workspaceId
+                it[userGroupId] = EntityID(privateGroupId, UserGroups)
+                it[this.organizationId] = EntityID(organizationId, Organizations)
+            }
 
-        return@transaction workspaceId.value
-    }
+            return@transaction workspaceId.value
+        }
 
     /**
      * Removes the specified [workspaceId].
      * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceId] doesn't exist.
      */
-    fun removeWorkspace(workspaceId: UUID, userId: UUID, organizationId: UUID) = transaction(DBConnectionPool.database) {
-        val canBeRemoved = UsersInGroups
-            .innerJoin(UserGroups)
-            .innerJoin(UserGroupWithWorkspaces)
-            .select { UserGroupWithWorkspaces.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader)) }
-            .limit(1)
-            .any()
+    fun removeWorkspace(workspaceId: UUID, userId: UUID, organizationId: UUID) =
+        transaction(DBCache.getMainDBPool().database) {
+            val canBeRemoved = UsersInGroups
+                .innerJoin(UserGroups)
+                .innerJoin(UserGroupWithWorkspaces)
+                .select {
+                    UserGroupWithWorkspaces.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(
+                        GroupRoleDto.Reader
+                    ))
+                }
+                .limit(1)
+                .any()
 
-        if (!canBeRemoved) {
-            throw ValidationException(
-                ValidationException.Reason.ResourceNotFound, "The specified workspace does not exist or the user has insufficient permissions to it")
+            if (!canBeRemoved) {
+                throw ValidationException(
+                    ValidationException.Reason.ResourceNotFound,
+                    "The specified workspace does not exist or the user has insufficient permissions to it"
+                )
+            }
+
+            Workspaces.deleteWhere {
+                Workspaces.id eq workspaceId
+            } > 0
         }
-
-        Workspaces.deleteWhere {
-            Workspaces.id eq workspaceId
-        } > 0
-    }
 
     /**
      * Returns all components in the specified [workspaceId].
      */
     fun getWorkspaceComponents(workspaceId: UUID, userId: UUID, organizationId: UUID) = loggedScope { logger ->
-        transaction(DBConnectionPool.database) {
+        transaction(DBCache.getMainDBPool().database) {
             WorkspaceComponent.wrapRows(
                 WorkspaceComponents
                     .innerJoin(Workspaces)
                     .innerJoin(UserGroupWithWorkspaces)
                     .innerJoin(UserGroups)
                     .innerJoin(UsersInGroups)
-                    .select(WorkspaceComponents.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId)))
+                    .select(WorkspaceComponents.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId))
+            )
                 .fold(mutableListOf<WorkspaceComponentDto>()) { acc, component ->
                     val componentDto = component.toDto()
 
                     if (component.componentType == ComponentTypeDto.CausalNet) {
                         try {
-                            componentDto.data = DBSerializer.fetch(component.componentDataSourceId).toDto()
+                            componentDto.data =
+                                DBSerializer.fetch(DBCache.get(workspaceId.toString()), component.componentDataSourceId)
+                                    .toDto()
                             acc.add(componentDto)
                         } catch (ex: NoSuchElementException) {
                             logger.warn("The data source ${component.componentDataSourceId} of ${component.componentType} workspace component ${component.id} does not exist")
                         }
-                    }
-                    else {
+                    } else {
                         acc.add(componentDto)
                     }
 
@@ -103,19 +114,33 @@ class WorkspaceService(private val accountService: AccountService) {
      * Updates the specified [workspaceComponentId]. If particular parameter: [name], [componentType], [customizationData] is not specified, then it's not updated.
      * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceComponentId] doesn't exist.
      */
-    fun updateWorkspaceComponent(workspaceComponentId: UUID, workspaceId: UUID, userId: UUID, organizationId: UUID, name: String?, componentType: ComponentTypeDto?, customizationData: String? = null): Unit = transaction(DBConnectionPool.database) {
+    fun updateWorkspaceComponent(
+        workspaceComponentId: UUID,
+        workspaceId: UUID,
+        userId: UUID,
+        organizationId: UUID,
+        name: String?,
+        componentType: ComponentTypeDto?,
+        customizationData: String? = null
+    ): Unit = transaction(DBCache.getMainDBPool().database) {
         val canBeUpdated = UsersInGroups
             .innerJoin(UserGroups)
             .innerJoin(UserGroupWithWorkspaces)
             .innerJoin(Workspaces)
             .innerJoin(WorkspaceComponents)
-            .select { WorkspaceComponents.id eq workspaceComponentId and (UserGroupWithWorkspaces.workspaceId eq workspaceId) and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader)) }
+            .select {
+                WorkspaceComponents.id eq workspaceComponentId and (UserGroupWithWorkspaces.workspaceId eq workspaceId) and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(
+                    GroupRoleDto.Reader
+                ))
+            }
             .limit(1)
             .any()
 
         if (!canBeUpdated) {
             throw ValidationException(
-                ValidationException.Reason.ResourceNotFound, "The specified workspace component does not exist or the user has insufficient permissions to it")
+                ValidationException.Reason.ResourceNotFound,
+                "The specified workspace component does not exist or the user has insufficient permissions to it"
+            )
         }
 
         WorkspaceComponents.update({ WorkspaceComponents.id eq workspaceComponentId }) {
@@ -130,13 +155,20 @@ class WorkspaceService(private val accountService: AccountService) {
             (sequenceOf(start) +
                     activities.filter { it != start && it != end } +
                     sequenceOf(end))
-                .map { CausalNetNodeDto(
-                    it.name,
-                    splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
-                    joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
-                ) }
+                .map {
+                    CausalNetNodeDto(
+                        it.name,
+                        splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
+                        joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
+                    )
+                }
                 .toList()
-        val edges = dependencies.map { CausalNetEdgeDto(it.source.name, it.target.name) }
+        val edges = dependencies.map {
+            CausalNetEdgeDto(
+                it.source.name,
+                it.target.name
+            )
+        }
 
         return CausalNetDto(nodes, edges)
     }

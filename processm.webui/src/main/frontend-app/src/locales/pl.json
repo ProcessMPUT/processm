@@ -3,6 +3,7 @@
   "code": "pl_PL",
   "flag": "pl",
   "navigation": {
+    "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
     "users": "Użytkownicy",
     "about": "@:about.page-title"
