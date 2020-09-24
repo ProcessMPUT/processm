@@ -1,9 +1,9 @@
 <template>
   <v-treeview
-    dense
-    open-on-click
     :items="items"
     :load-children="fetchUsers"
+    dense
+    open-on-click
   ></v-treeview>
 </template>
 
@@ -91,8 +91,6 @@ export default class UserGroupList extends Vue {
     }
   ];
 
-  async fetchUsers() {
-
-  }
+  async fetchUsers() {}
 }
 </script>

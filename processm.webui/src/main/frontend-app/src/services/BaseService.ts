@@ -5,7 +5,8 @@ import {
   Configuration,
   UsersApi,
   OrganizationsApi,
-  WorkspacesApi, DataSourcesApi
+  WorkspacesApi,
+  DataSourcesApi
 } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
@@ -15,7 +16,7 @@ export default abstract class BaseService {
 
   constructor() {
     this.axiosInstance = axios.create();
-    createAuthRefreshInterceptor(this.axiosInstance, error =>
+    createAuthRefreshInterceptor(this.axiosInstance, (error) =>
       this.prolongExistingSession(error, this.usersApi)
     );
   }
@@ -79,7 +80,7 @@ export default abstract class BaseService {
 
     return api
       .signUserIn(getAuthorizationHeaderValue(expiredToken))
-      .then(tokenRefreshResponse => {
+      .then((tokenRefreshResponse) => {
         const newToken = tokenRefreshResponse.data.data.authorizationToken;
         Vue.prototype.$sessionStorage.sessionToken = newToken;
 

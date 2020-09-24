@@ -29,5 +29,5 @@ new Vue({
     accountService: new AccountService(),
     organizationService: new OrganizationService()
   }),
-  render: h => h(App)
+  render: (h) => h(App)
 }).$mount("#app");

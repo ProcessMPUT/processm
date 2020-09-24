@@ -113,8 +113,9 @@ export default class Workspaces extends Vue {
   }
 
   async createWorkspace() {
-    const workspaceName = `${this.$i18n.t("workspace.default-name")}${this
-      .workspaces.length + 1}`;
+    const workspaceName = `${this.$i18n.t("workspace.default-name")}${
+      this.workspaces.length + 1
+    }`;
     const newWorkspace = await this.workspaceService.createWorkspace(
       workspaceName
     );

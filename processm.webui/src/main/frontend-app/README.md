@@ -2,7 +2,7 @@
 
 ## Tools
 
-The project is developed using the following tools:
+The project developed using the following tools:
 * Vue.js framework (v2.6.11),
 * Vue CLI (v4.2.2) - serves as a webpack wrapper,
 * Vuetify - Vue.js components library,
@@ -34,9 +34,15 @@ npm run build
 npm run lint
 ```
 
+### Prettier
+```
+npx prettier --write '**/*.ts'
+```
+
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
 
 ## Environment
 
-Visual Studio Code with Vetur extension is recommended as IDE. Another recommended tool is Vue.js devtools extension for web browsers.
+Visual Studio Code with Vetur extension recommended as IDE.
+Another recommended tool is Vue.js devtools extension for web browsers.

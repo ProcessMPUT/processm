@@ -51,7 +51,7 @@ const router = new VueRouter({
 
 router.beforeEach((to, _from, next) => {
   Vue.prototype.$sessionStorage.sessionExists ||
-  to.matched.some(record => record.meta.allowUnauthenticated)
+  to.matched.some((record) => record.meta.allowUnauthenticated)
     ? next()
     : next({ name: "login" });
 });

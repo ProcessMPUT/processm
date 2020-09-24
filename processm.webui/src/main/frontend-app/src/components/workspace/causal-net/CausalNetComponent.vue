@@ -17,7 +17,9 @@
         class="nodeToBeCreated"
         opacity="0.5"
         :r="displayPreferences.nodeSize"
-        :style="{ display: editMode == EditMode.Addition ? 'inline' : 'none' }"
+        :style="{
+          display: editMode == EditMode.Addition ? 'inline' : 'none'
+        }"
       />
       <line
         class="linkToBeCreated"
@@ -30,28 +32,24 @@
         <marker
           :id="`arrow${arrowMarkerId}`"
           markerUnits="userSpaceOnUse"
-          :viewBox="
-            `0 0 ${displayPreferences.edgeArrowMaximumSize} ${displayPreferences.edgeArrowMaximumSize}`
-          "
+          :viewBox="`0 0 ${displayPreferences.edgeArrowMaximumSize} ${displayPreferences.edgeArrowMaximumSize}`"
           orient="auto"
-          :refX="
-            `${displayPreferences.edgeArrowHeight +
-              displayPreferences.nodeSize}`
-          "
+          :refX="`${
+            displayPreferences.edgeArrowHeight + displayPreferences.nodeSize
+          }`"
           :refY="`${displayPreferences.edgeArrowWidth / 2}`"
           :markerWidth="`${displayPreferences.edgeArrowMaximumSize}`"
           :markerHeight="`${displayPreferences.edgeArrowMaximumSize}`"
         >
           <path
-            :d="
-              `M 0 0
-              ${
-                displayPreferences.edgeArrowHeight
-              } ${displayPreferences.edgeArrowWidth / 2}
+            :d="`M 0 0
+              ${displayPreferences.edgeArrowHeight} ${
+              displayPreferences.edgeArrowWidth / 2
+            }
               0 ${displayPreferences.edgeArrowWidth} 
-              ${displayPreferences.edgeArrowWidth /
-                2} ${displayPreferences.edgeArrowWidth / 2}`
-            "
+              ${displayPreferences.edgeArrowWidth / 2} ${
+              displayPreferences.edgeArrowWidth / 2
+            }`"
             :fill="`${this.displayPreferences.edgeColor}`"
           />
         </marker>
@@ -251,9 +249,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   private arrowheads(): Selection<BaseType, unknown, null, undefined> {
-    return this.rootSvg()
-      .select("defs")
-      .select("marker");
+    return this.rootSvg().select("defs").select("marker");
   }
 
   public causalNet!: CausalNet;
@@ -309,7 +305,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
       "charge",
       d3
         .forceManyBody()
-        .strength(d => ((d as Node).hasType(ElementType.Regular) ? -1 : -5))
+        .strength((d) => ((d as Node).hasType(ElementType.Regular) ? -1 : -5))
     );
     this.simulation
       ?.force<ForceLink<Node, Link>>("link")
@@ -369,9 +365,9 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
       "link",
       d3
         .forceLink()
-        .id(d => (d as Link).id)
-        .distance(d => ((d as Link).isLoopLink ? 20 : 0.1))
-        .strength(d =>
+        .id((d) => (d as Link).id)
+        .distance((d) => ((d as Link).isLoopLink ? 20 : 0.1))
+        .strength((d) =>
           (d as Link).hasType(ElementType.Binding)
             ? 0
             : (d as Link).isBetweenSplitAndJoin
@@ -406,7 +402,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
       this.links().attr("d", this.linkArc);
       this.nodes().attr(
         "transform",
-        d => `translate(${d.x as number},${d.y as number})`
+        (d) => `translate(${d.x as number},${d.y as number})`
       );
     });
     this.runSimulation();
@@ -415,30 +411,30 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
 
   public refreshNodes() {
     this.nodes()
-      .data(this.causalNet.nodes, d => (d as Node).id)
+      .data(this.causalNet.nodes, (d) => (d as Node).id)
       .join(
-        enter => {
+        (enter) => {
           const enteredItems = enter
             .append("g")
-            .on("mouseover", d => this.userInputHandler?.nodeMouseover(d))
-            .on("mouseout", d => this.userInputHandler?.nodeMouseout(d))
-            .on("click", d => {
+            .on("mouseover", (d) => this.userInputHandler?.nodeMouseover(d))
+            .on("mouseout", (d) => this.userInputHandler?.nodeMouseout(d))
+            .on("click", (d) => {
               this.userInputHandler?.nodeClick(d);
               d3.event.stopPropagation();
             })
             .call(
               drag<SVGGElement, Node, SVGGElement>()
-                .on("start", d => this.userInputHandler?.nodeDragstarted(d))
-                .on("drag", d =>
+                .on("start", (d) => this.userInputHandler?.nodeDragstarted(d))
+                .on("drag", (d) =>
                   this.userInputHandler?.nodeDragged(d, d3.event)
                 )
-                .on("end", d =>
+                .on("end", (d) =>
                   this.userInputHandler?.nodeDragended(d, d3.event)
                 )
             );
 
           enteredItems
-            .filter(d => d.hasType(ElementType.Binding))
+            .filter((d) => d.hasType(ElementType.Binding))
             .append("path")
             .attr("opacity", 1)
             .attr(
@@ -449,14 +445,14 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
                 .size((this.displayPreferences.bindingNodeSize * 2) ** 2)
             )
             .style("cursor", "pointer")
-            .style("fill", d => this.nodeColor(d.nodeType));
+            .style("fill", (d) => this.nodeColor(d.nodeType));
           enteredItems
-            .filter(d => d.hasType(ElementType.Regular))
+            .filter((d) => d.hasType(ElementType.Regular))
             .append("rect")
             .attr("class", "node-name-background")
             .attr(
               "width",
-              d =>
+              (d) =>
                 d.id.length * 3 +
                 this.displayPreferences.nodeSize * 3.6 +
                 this.displayPreferences.nodeSize * 0.2
@@ -467,7 +463,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             .attr("x", -this.displayPreferences.nodeSize * 1.2)
             .attr("y", -this.displayPreferences.nodeSize * 1.2);
           enteredItems
-            .filter(d => d.hasType(ElementType.Regular))
+            .filter((d) => d.hasType(ElementType.Regular))
             .append("circle")
             .attr("r", this.displayPreferences.nodeSize);
           enteredItems
@@ -476,53 +472,45 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             .attr("x", this.displayPreferences.nodeSize * 1.2)
             .attr(
               "textLength",
-              d => d.id.length * 3 + this.displayPreferences.nodeSize * 1.2
+              (d) => d.id.length * 3 + this.displayPreferences.nodeSize * 1.2
             )
-            .text(d => (d.hasType(ElementType.Regular) ? d.id : ""));
+            .text((d) => (d.hasType(ElementType.Regular) ? d.id : ""));
 
           return enteredItems;
         },
-        update => update,
-        exit =>
-          exit.call(exit =>
-            exit
-              .transition()
-              .duration(300)
-              .style("opacity", 0)
-              .remove()
+        (update) => update,
+        (exit) =>
+          exit.call((exit) =>
+            exit.transition().duration(300).style("opacity", 0).remove()
           )
       );
   }
 
   public refreshLinks() {
     this.links()
-      .data(this.causalNet.links, d => (d as Link).id)
+      .data(this.causalNet.links, (d) => (d as Link).id)
       .join(
-        enter =>
+        (enter) =>
           enter
             .append("path")
-            .attr("stroke-opacity", d =>
+            .attr("stroke-opacity", (d) =>
               d.hasType(ElementType.Binding) ? 0.5 : 0.7
             )
-            .attr("marker-end", d =>
+            .attr("marker-end", (d) =>
               d.isTargetNodeRegular() ? `url(#arrow${this.arrowMarkerId})` : ""
             )
-            .on("mouseover", d =>
+            .on("mouseover", (d) =>
               this.userInputHandler?.linkMouseover(d, this.getMousePosition())
             )
-            .on("mouseout", d => this.userInputHandler?.linkMouseout(d))
-            .on("click", d => {
+            .on("mouseout", (d) => this.userInputHandler?.linkMouseout(d))
+            .on("click", (d) => {
               this.userInputHandler?.linkClick(d, this.getMousePosition());
               d3.event.stopPropagation();
             }),
-        update => update,
-        exit =>
-          exit.call(exit =>
-            exit
-              .transition()
-              .duration(300)
-              .style("opacity", 0)
-              .remove()
+        (update) => update,
+        (exit) =>
+          exit.call((exit) =>
+            exit.transition().duration(300).style("opacity", 0).remove()
           )
       );
   }
@@ -532,7 +520,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
 
     this.links().attr(
       "stroke-width",
-      d =>
+      (d) =>
         (d.hasType(ElementType.Binding)
           ? this.displayPreferences.bindingEdgeThickness
           : this.displayPreferences.edgeThickness) * scalingFactor
@@ -550,7 +538,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
     if (this.data.customizationData?.layout == null) return;
 
     const nodeIndex = this.data.customizationData.layout.findIndex(
-      node => node.id == nodeId
+      (node) => node.id == nodeId
     );
 
     if (nodeIndex < 0) {
