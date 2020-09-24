@@ -26,6 +26,14 @@
         </v-list-item-action>
         <v-list-item-content>{{ $t("navigation.users") }}</v-list-item-content>
       </v-list-item>
+      <v-list-item :to="'data-sources'" color="primary">
+        <v-list-item-action>
+          <v-icon>folder</v-icon>
+        </v-list-item-action>
+        <v-list-item-content>{{
+          $t("navigation.data-sources")
+        }}</v-list-item-content>
+      </v-list-item>
       <v-list-item :to="'about'" color="primary">
         <v-list-item-action>
           <v-icon>info</v-icon>
