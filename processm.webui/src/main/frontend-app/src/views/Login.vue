@@ -14,7 +14,7 @@
                 prepend-icon="person"
                 type="text"
                 :rules="[
-                  v =>
+                  (v) =>
                     /.+@.+\..+/.test(v) ||
                     $t('login-form.validation.email-format')
                 ]"
@@ -27,7 +27,7 @@
                 prepend-icon="lock"
                 type="password"
                 :rules="[
-                  v => !!v || $t('login-form.validation.password-empty')
+                  (v) => !!v || $t('login-form.validation.password-empty')
                 ]"
                 @keypress.enter="authenticate"
               ></v-text-field>

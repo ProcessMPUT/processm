@@ -120,15 +120,15 @@ export class AdditionModeInputHandler implements UserInputHandler {
     this.hideNodeToBeCreated();
     this.newLinkTargetNode = eventNode;
     this.component
-      .nodes(node => node.id == eventNode.id)
-      .attr("stroke", d => this.component.nodeColor(d.nodeType));
+      .nodes((node) => node.id == eventNode.id)
+      .attr("stroke", (d) => this.component.nodeColor(d.nodeType));
   }
 
   nodeMouseout(eventNode: Node) {
     this.showNodeToBeCreated();
     this.newLinkTargetNode = null;
     this.component
-      .nodes(node => node.id == eventNode.id)
+      .nodes((node) => node.id == eventNode.id)
       .attr("stroke", "#fff");
   }
 
@@ -241,7 +241,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const intermediateLinksToBeRemoved = isBindingNode
       ? []
       : this.component.causalNet.links.filter(
-          link =>
+          (link) =>
             link.indirectSourceNodeId == eventNode.id ||
             link.indirectTargetNodeId == eventNode.id
         );
@@ -257,12 +257,16 @@ export class DeletionModeInputHandler implements UserInputHandler {
       eventNode.id
     ]);
     const linksToBeRemoved = new Set([
-      ...intermediateLinksToBeRemoved.map(link => link.id),
+      ...intermediateLinksToBeRemoved.map((link) => link.id),
       ...bindingLinksToBeRemoved
     ]);
 
-    this.component.causalNet.removeNodes(node => nodesToBeRemoved.has(node.id));
-    this.component.causalNet.removeLinks(link => linksToBeRemoved.has(link.id));
+    this.component.causalNet.removeNodes((node) =>
+      nodesToBeRemoved.has(node.id)
+    );
+    this.component.causalNet.removeLinks((link) =>
+      linksToBeRemoved.has(link.id)
+    );
     this.component.refreshNodes();
     this.component.refreshLinks();
   }
@@ -272,7 +276,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const intermediateLinksToBeRemoved = isBindingLink
       ? []
       : this.component.causalNet.links.filter(
-          link => link.groupId == eventLink.groupId
+          (link) => link.groupId == eventLink.groupId
         );
     const bindingNodesToBeRemoved = isBindingLink
       ? new Set<string>()
@@ -284,20 +288,22 @@ export class DeletionModeInputHandler implements UserInputHandler {
     this.markElementsToBeRemoved(
       bindingNodesToBeRemoved,
       new Set([
-        ...intermediateLinksToBeRemoved.map(link => link.id),
+        ...intermediateLinksToBeRemoved.map((link) => link.id),
         ...bindingLinksToBeRemoved
       ])
     );
 
     const linksToBeRemoved = new Set([
-      ...intermediateLinksToBeRemoved.map(link => link.id),
+      ...intermediateLinksToBeRemoved.map((link) => link.id),
       ...bindingLinksToBeRemoved
     ]);
 
-    this.component.causalNet.removeNodes(node =>
+    this.component.causalNet.removeNodes((node) =>
       bindingNodesToBeRemoved.has(node.id)
     );
-    this.component.causalNet.removeLinks(link => linksToBeRemoved.has(link.id));
+    this.component.causalNet.removeLinks((link) =>
+      linksToBeRemoved.has(link.id)
+    );
     this.component.refreshNodes();
     this.component.refreshLinks();
   }
@@ -307,7 +313,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const intermediateLinksToBeRemoved = isBindingNode
       ? []
       : this.component.causalNet.links.filter(
-          link =>
+          (link) =>
             link.indirectSourceNodeId == eventNode.id ||
             link.indirectTargetNodeId == eventNode.id
         );
@@ -321,7 +327,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     this.markElementsToBeRemoved(
       new Set([...bindingNodesToBeRemoved, eventNode.id]),
       new Set([
-        ...intermediateLinksToBeRemoved.map(link => link.id),
+        ...intermediateLinksToBeRemoved.map((link) => link.id),
         ...bindingLinksToBeRemoved
       ])
     );
@@ -336,7 +342,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     const intermediateLinksToBeRemoved = isBindingLink
       ? []
       : this.component.causalNet.links.filter(
-          link => link.groupId == eventLink.groupId
+          (link) => link.groupId == eventLink.groupId
         );
     const bindingNodesToBeRemoved = isBindingLink
       ? new Set<string>()
@@ -348,7 +354,7 @@ export class DeletionModeInputHandler implements UserInputHandler {
     this.markElementsToBeRemoved(
       bindingNodesToBeRemoved,
       new Set([
-        ...intermediateLinksToBeRemoved.map(link => link.id),
+        ...intermediateLinksToBeRemoved.map((link) => link.id),
         ...bindingLinksToBeRemoved
       ])
     );
@@ -372,29 +378,21 @@ export class DeletionModeInputHandler implements UserInputHandler {
   private markElementsToBeRemoved(nodes: Set<string>, links: Set<string>) {
     this.component
       .nodes()
-      .filter(node => nodes.has(node.id))
+      .filter((node) => nodes.has(node.id))
       .transition()
       .duration(200)
       .style("opacity", 0.3);
     this.component
       .links()
-      .filter(link => links.has(link.id))
+      .filter((link) => links.has(link.id))
       .transition()
       .duration(200)
       .style("opacity", 0.3);
   }
 
   private unmarkElementsToBeRemoved() {
-    this.component
-      .nodes()
-      .transition()
-      .duration(500)
-      .style("opacity", 1);
-    this.component
-      .links()
-      .transition()
-      .duration(500)
-      .style("opacity", 1);
+    this.component.nodes().transition().duration(500).style("opacity", 1);
+    this.component.links().transition().duration(500).style("opacity", 1);
   }
 
   private selectBindingNodesToBeRemoved(...links: Link[]) {
@@ -470,31 +468,35 @@ export class InteractiveModeInputHandler implements UserInputHandler {
   nodeMouseover(eventNode: Node): void {
     const selectedNodes = eventNode.hasType(ElementType.Binding)
       ? this.component.nodes(
-          node => node.bindingLinkId == eventNode.bindingLinkId
+          (node) => node.bindingLinkId == eventNode.bindingLinkId
         )
-      : this.component.nodes(node => node.id == eventNode.id);
-    selectedNodes.attr("stroke", d => this.component.nodeColor(d.nodeType));
+      : this.component.nodes((node) => node.id == eventNode.id);
+    selectedNodes.attr("stroke", (d) => this.component.nodeColor(d.nodeType));
 
     if (selectedNodes.size() > 1) {
       this.component
-        .links(link => link.groupId == eventNode.bindingLinkId)
+        .links((link) => link.groupId == eventNode.bindingLinkId)
         .attr("stroke-opacity", "1");
     }
     this.nodeDetails
       .html(`ID: ${eventNode.id}\nX: ${eventNode.x}\nY: ${eventNode.y}`)
       .style(
         "left",
-        `${this.convertToAbsolutePercentage(
-          (eventNode.x as number) / this.component.contentWidth,
-          this.component.componentWidth
-        ) * 100}%`
+        `${
+          this.convertToAbsolutePercentage(
+            (eventNode.x as number) / this.component.contentWidth,
+            this.component.componentWidth
+          ) * 100
+        }%`
       )
       .style(
         "top",
-        `${this.convertToAbsolutePercentage(
-          (eventNode.y as number) / this.component.contentHeight,
-          this.component.componentHeight
-        ) * 100}%`
+        `${
+          this.convertToAbsolutePercentage(
+            (eventNode.y as number) / this.component.contentHeight,
+            this.component.componentHeight
+          ) * 100
+        }%`
       )
       .transition()
       .duration(200)
@@ -504,51 +506,46 @@ export class InteractiveModeInputHandler implements UserInputHandler {
   nodeMouseout(eventNode: Node): void {
     const selectedNodes = eventNode.hasType(ElementType.Binding)
       ? this.component.nodes(
-          node => node.bindingLinkId == eventNode.bindingLinkId
+          (node) => node.bindingLinkId == eventNode.bindingLinkId
         )
-      : this.component.nodes(node => node.id == eventNode.id);
+      : this.component.nodes((node) => node.id == eventNode.id);
     selectedNodes.attr("stroke", "#fff");
 
     if (selectedNodes.size() > 1) {
       this.component
-        .links(link => link.groupId == eventNode.bindingLinkId)
-        .attr("stroke-opacity", d =>
+        .links((link) => link.groupId == eventNode.bindingLinkId)
+        .attr("stroke-opacity", (d) =>
           d.hasType(ElementType.Binding) ? 0.5 : 0.7
         );
     }
 
-    this.nodeDetails
-      .transition()
-      .duration(500)
-      .style("opacity", 0);
+    this.nodeDetails.transition().duration(500).style("opacity", 0);
   }
 
   linkMouseover(eventLink: Link): void {
     this.component
-      .links(link => link.groupId == eventLink.groupId)
+      .links((link) => link.groupId == eventLink.groupId)
       .attr("stroke-opacity", "1");
-
     (eventLink.hasType(ElementType.Binding)
-      ? this.component.nodes(node => node.bindingLinkId == eventLink.groupId)
+      ? this.component.nodes((node) => node.bindingLinkId == eventLink.groupId)
       : this.component.nodes(
-          node => node.intermediateLinkId == eventLink.groupId
+          (node) => node.intermediateLinkId == eventLink.groupId
         )
-    ).attr("stroke", d => this.component.nodeColor(d.nodeType));
+    ).attr("stroke", (d) => this.component.nodeColor(d.nodeType));
   }
 
   linkMouseout(eventLink: Link): void {
     this.component
-      .links(link => link.groupId == eventLink.groupId)
+      .links((link) => link.groupId == eventLink.groupId)
       .transition()
       .duration(500)
-      .attr("stroke-opacity", d =>
+      .attr("stroke-opacity", (d) =>
         d.hasType(ElementType.Binding) ? 0.5 : 0.7
       );
-
     (eventLink.hasType(ElementType.Binding)
-      ? this.component.nodes(node => node.bindingLinkId == eventLink.groupId)
+      ? this.component.nodes((node) => node.bindingLinkId == eventLink.groupId)
       : this.component.nodes(
-          node => node.intermediateLinkId == eventLink.groupId
+          (node) => node.intermediateLinkId == eventLink.groupId
         )
     )
       .transition()

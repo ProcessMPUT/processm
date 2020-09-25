@@ -15,7 +15,7 @@
                   v-model="currentPassword"
                   type="password"
                   :rules="[
-                    v =>
+                    (v) =>
                       !!v ||
                       $t('password-change-dialog.validation.password-empty')
                   ]"
@@ -28,10 +28,10 @@
                   v-model="newPassword"
                   type="password"
                   :rules="[
-                    v =>
+                    (v) =>
                       !!v ||
                       $t('password-change-dialog.validation.password-empty'),
-                    v =>
+                    (v) =>
                       v != currentPassword ||
                       $t(
                         'password-change-dialog.validation.new-password-is-the-same'
@@ -46,10 +46,10 @@
                   v-model="passwordConfirmation"
                   type="password"
                   :rules="[
-                    v =>
+                    (v) =>
                       !!v ||
                       $t('password-change-dialog.validation.password-empty'),
-                    v =>
+                    (v) =>
                       v == newPassword ||
                       $t(
                         'password-change-dialog.validation.password-confirmation-not-the-same'

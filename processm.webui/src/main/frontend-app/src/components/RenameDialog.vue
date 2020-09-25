@@ -13,7 +13,7 @@
                   v-model="newName"
                   :label="$t('rename-dialog.new-name-placeholder')"
                   :rules="[
-                    v => !!v || $t('rename-dialog.validation.name-empty')
+                    (v) => !!v || $t('rename-dialog.validation.name-empty')
                   ]"
                   required
                 />

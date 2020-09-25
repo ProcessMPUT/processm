@@ -5,6 +5,7 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
+    "data-sources": "Źródła danych",
     "users": "Użytkownicy",
     "about": "@:about.page-title"
   },

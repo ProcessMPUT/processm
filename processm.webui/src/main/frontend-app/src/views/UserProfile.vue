@@ -75,7 +75,7 @@ import AccountService from "@/services/AccountService";
   components: { PasswordChangeDialog },
   filters: {
     objectify(input: Array<string>) {
-      return input.map(item => {
+      return input.map((item) => {
         return { value: item };
       });
     }

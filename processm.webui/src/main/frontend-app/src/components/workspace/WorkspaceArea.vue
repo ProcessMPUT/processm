@@ -106,7 +106,13 @@ export default class WorkspaceArea extends Vue {
   displayEditModal = false;
   displayedComponentDetails?: WorkspaceComponentModel;
   componentsDetails: Record<string, WorkspaceComponentModel> = {};
-  layout: Array<{ i: string; x: number; y: number; w: number; h: number }> = [];
+  layout: Array<{
+    i: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }> = [];
 
   async created() {
     const components = await this.workspaceService.getWorkspaceComponents(
@@ -143,7 +149,7 @@ export default class WorkspaceArea extends Vue {
 
   removeComponent(id: string) {
     const componentIndex = this.layout.findIndex(
-      component => component.i == id
+      (component) => component.i == id
     );
 
     if (componentIndex >= 0) {

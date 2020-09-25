@@ -28,7 +28,7 @@
               <v-text-field
                 v-model="componentDetails.name"
                 :rules="[
-                  v =>
+                  (v) =>
                     !!v || $t('workspace.component.edit.validation.name-empty')
                 ]"
                 required
@@ -47,7 +47,10 @@
                     text: $t('workspace.component.causal-net'),
                     value: 'causalNet'
                   },
-                  { text: $t('workspace.component.kpi'), value: 'kpi' }
+                  {
+                    text: $t('workspace.component.kpi'),
+                    value: 'kpi'
+                  }
                 ]"
               ></v-select>
             </v-list-item-content>
@@ -60,7 +63,7 @@
               <v-text-field
                 v-model="componentDetails.data.query"
                 :rules="[
-                  v =>
+                  (v) =>
                     !!v || $t('workspace.component.edit.validation.query-empty')
                 ]"
                 required
