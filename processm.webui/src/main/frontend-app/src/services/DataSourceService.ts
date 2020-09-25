@@ -16,7 +16,6 @@ export default class DataSourceService extends BaseService {
 
     this.ensureSuccessfulResponseCode(response);
 
-    // TODO: is it required? Maybe just use origin data from API?
     return response.data.data.reduce(
       (dataSources: DataSource[], dataSource: ApiDataSource) => {
         if (dataSource.id != null) {
