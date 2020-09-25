@@ -1100,6 +1100,9 @@ components:
           format: uuid
         name:
           type: string
+        createdAt:
+          type: string
+          format: date-time
     DataSourceMessageBody:
       type: object
       required: [data]

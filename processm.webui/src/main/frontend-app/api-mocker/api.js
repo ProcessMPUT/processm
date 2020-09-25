@@ -16,12 +16,14 @@ const dataSources = [
     {
         id: "6925b43f-cc6d-4320-8565-8388f2a7f6d7",
         organizationId: "1",
-        name: "DataSource #1"
+        name: "DataSource #1",
+        createdAt: "2020-09-25T06:32:28Z"
     },
     {
         id: "0096ec34-dd2f-47ee-9ccf-c804637df4dc",
         organizationId: "1",
-        name: "DataSource #2"
+        name: "DataSource #2",
+        createdAt: "2020-07-11T07:12:02Z"
     }
 ];
 

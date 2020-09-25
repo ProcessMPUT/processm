@@ -2,6 +2,7 @@ import Vue from "vue";
 import DataSource from "@/models/DataSource";
 import BaseService from "./BaseService";
 import { DataSource as ApiDataSource } from "@/openapi";
+import DateTimeFormat = Intl.DateTimeFormat;
 
 export default class DataSourceService extends BaseService {
   private static get currentOrganizationId() {
@@ -21,7 +22,8 @@ export default class DataSourceService extends BaseService {
         if (dataSource.id != null) {
           dataSources.push({
             id: dataSource.id,
-            name: dataSource.name
+            name: dataSource.name,
+            createdAt: new Date(dataSource.createdAt!).toLocaleString()
           });
         }
 
@@ -44,6 +46,10 @@ export default class DataSourceService extends BaseService {
     this.ensureSuccessfulResponseCode(response);
     const dataSource = response.data.data;
 
-    return { id: dataSource.id!, name: dataSource.name };
+    return {
+      id: dataSource.id!,
+      name: dataSource.name,
+      createdAt: new Date(dataSource.createdAt!).toLocaleString()
+    };
   }
 }

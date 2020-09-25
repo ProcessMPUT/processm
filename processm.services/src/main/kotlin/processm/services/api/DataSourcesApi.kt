@@ -12,6 +12,8 @@ import processm.services.api.models.DataSource
 import processm.services.api.models.DataSourceCollectionMessageBody
 import processm.services.api.models.DataSourceMessageBody
 import processm.services.logic.DataSourceService
+import java.time.Instant
+import java.time.ZoneOffset
 
 @KtorExperimentalLocationsAPI
 fun Route.DataSourcesApi() {
@@ -36,7 +38,10 @@ fun Route.DataSourcesApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
 
             val dataSources = service.allByOrganizationId(organizationId = pathParams.organizationId)
-                .map { DataSource(it.name, it.id) }
+                .map {
+                    val instant = Instant.ofEpochMilli(it.creationDate.millis)
+                    DataSource(it.name, it.id, java.time.LocalDateTime.ofInstant(instant, ZoneOffset.UTC))
+                }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, DataSourceCollectionMessageBody(dataSources))
