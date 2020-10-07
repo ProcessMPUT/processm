@@ -1,9 +1,10 @@
 package processm.core.log
 
+import processm.core.DBTestHelper.dbName
 import processm.core.helpers.hierarchicalCompare
-import processm.core.log.hierarchical.DatabaseHierarchicalXESInputStream
+import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
-import processm.core.persistence.DBConnectionPool
+import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.io.StringWriter
 import javax.xml.stream.XMLOutputFactory
@@ -158,7 +159,7 @@ internal class XMLXESOutputStreamTest {
             storeLog(XMLXESInputStream(it).asSequence())
         }
         val firstLogId = getLastLogId()
-        val fromDB = DatabaseHierarchicalXESInputStream(Query(firstLogId))
+        val fromDB = DBHierarchicalXESInputStream(dbName, Query(firstLogId))
 
         // Log to XML file
         StringWriter().use { received ->
@@ -170,21 +171,21 @@ internal class XMLXESOutputStreamTest {
             storeLog(XMLXESInputStream(received.toString().byteInputStream()).asSequence())
         }
 
-        val logFromDB = DatabaseHierarchicalXESInputStream(Query(firstLogId))
-        val logFromXML = DatabaseHierarchicalXESInputStream(Query(getLastLogId()))
+        val logFromDB = DBHierarchicalXESInputStream(dbName, Query(firstLogId))
+        val logFromXML = DBHierarchicalXESInputStream(dbName, Query(getLastLogId()))
 
         assertTrue(hierarchicalCompare(logFromDB, logFromXML))
     }
 
 
-    private fun storeLog(sequence: Sequence<XESElement>) {
-        DatabaseXESOutputStream().use {
+    private fun storeLog(sequence: Sequence<XESComponent>) {
+        DBXESOutputStream(DBCache.get(dbName).getConnection()).use {
             it.write(sequence)
         }
     }
 
     private fun getLastLogId(): Int {
-        DBConnectionPool.getConnection().use {
+        DBCache.get(dbName).getConnection().use {
             val response = it.prepareStatement("""SELECT id FROM logs ORDER BY id DESC LIMIT 1""").executeQuery()
             response.next()
 

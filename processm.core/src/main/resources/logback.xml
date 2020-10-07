@@ -35,13 +35,13 @@
     </appender>
 
     <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
-        <appender-ref ref="STDOUT"/>
         <appender-ref ref="FILE"/>
     </appender>
 
     <!-- Default level -->
     <root level="WARN">
         <appender-ref ref="ASYNC"/>
+        <appender-ref ref="STDOUT"/>
     </root>
     <!-- Level for our classes -->
     <logger name="processm" level="INFO"/>

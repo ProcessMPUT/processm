@@ -1,4 +1,4 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
   title: Processm
   description: Description of api methods used in processm.
@@ -9,11 +9,13 @@ tags:
   - name: users
     description: User registration and session management
   - name: workspaces
-    description: User workspace management
+    description: User workspaces management
   - name: groups
     description: User groups and groups membership management
   - name: organizations
     description: User organizations and organizations membership management
+  - name: dataSources
+    description: Data sources management
 paths:
   /users:
     get:
@@ -23,7 +25,7 @@ paths:
       operationId: getUsers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -44,7 +46,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -71,7 +73,7 @@ paths:
         required: false
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -100,7 +102,7 @@ paths:
       operationId: getUserAccountDetails
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -122,7 +124,7 @@ paths:
         required: true
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -144,22 +146,93 @@ paths:
         required: true
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
-  /workspaces:
+  /users/me/organizations:
+    get:
+      tags:
+        - users
+      summary: Get organizations which the current user is a member of
+      operationId: getUserOrganizations
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/UserOrganizationCollectionMessageBody'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-sources:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataSources
+      summary: Get all datasources assigned to given OrganizationID and to the calling User.
+      operationId: getDataSources
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataSourceCollectionMessageBody'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - dataSources
+      summary: Create a new data source in the context of the specified organization and user
+      operationId: createDataSource
+      requestBody:
+        description: Data source details
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/DataSourceMessageBody'
+        required: true
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataSourceMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/workspaces:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
     get:
       tags:
         - workspaces
-      summary: Get workspaces which user has access to
+      summary: Get all workspaces available to the calling user in the context of the specified organization
       operationId: getWorkspaces
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -169,7 +242,7 @@ paths:
     post:
       tags:
         - workspaces
-      summary: Create workspace
+      summary: Create a new workspace in the context of the specified organization
       operationId: createWorkspace
       requestBody:
         description: Workspace details
@@ -180,7 +253,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -189,8 +262,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
-  /workspaces/{workspaceId}:
+  /organizations/{organizationId}/workspaces/{workspaceId}:
     parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
       - name: workspaceId
         in: path
         description: Workspace ID
@@ -201,11 +281,11 @@ paths:
     get:
       tags:
         - workspaces
-      summary: Get specified workspace
+      summary: Get the specified workspace in the context of the specified organization
       operationId: getWorkspace
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -219,7 +299,7 @@ paths:
     put:
       tags:
         - workspaces
-      summary: Update specified workspace
+      summary: Update the specified workspace in the context of the specified organization
       operationId: updateWorkspace
       requestBody:
         description: Workspace details to update
@@ -230,7 +310,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -240,11 +320,152 @@ paths:
     delete:
       tags:
         - workspaces
-      summary: Remove specified workspace
+      summary: Remove the specified workspace in the context of the specified organization
       operationId: deleteWorkspace
       responses:
         '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/workspaces/{workspaceId}/components:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - workspaces
+        - components
+      summary: Get all components available to the calling user in the specified workspace in the context of the specified organization
+      operationId: getWorkspaceComponents
+      responses:
+        '200':
           description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentCollectionMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: componentId
+        in: path
+        description: Component ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - workspaces
+        - components
+      summary: Get the specified component in the specified workspace in the context of the specified organization
+      operationId: getWorkspaceComponent
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - workspaces
+        - components
+      summary: Update the specified component in the specified workspace in the context of the specified organization
+      operationId: updateWorkspaceComponent
+      requestBody:
+        description: Component details to update
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ComponentMessageBody'
+        required: true
+      responses:
+        '204':
+          description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: componentId
+        in: path
+        description: Component ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - workspaces
+        - components
+      summary: Get data of the specified component in the specified workspace in the context of the specified organization
+      operationId: getWorkspaceComponentData
+      responses:
+        '200':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentDataMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -255,11 +476,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get groups belonging to user organization
+      summary: Get groups belonging to the current user's organization
       operationId: getGroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -280,7 +501,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -301,11 +522,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get specified group
+      summary: Get the specified group
       operationId: getGroup
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -328,7 +549,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -342,7 +563,7 @@ paths:
       operationId: removeGroup
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -361,11 +582,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get members of specified group
+      summary: Get members of the specified group
       operationId: getGroupMembers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -375,7 +596,7 @@ paths:
     post:
       tags:
         - groups
-      summary: Add new member to group
+      summary: Add new member to the specified group
       operationId: addGroupMember
       requestBody:
         description: New member ID
@@ -388,7 +609,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -414,11 +635,11 @@ paths:
     delete:
       tags:
         - groups
-      summary: Remove member from group
+      summary: Remove member from the specified group
       operationId: removeGroupMember
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -437,11 +658,11 @@ paths:
     get:
       tags:
         - groups
-      summary: Get subgroups of specified group
+      summary: Get subgroups of the specified group
       operationId: getSubgroups
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -462,7 +683,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -490,11 +711,11 @@ paths:
     delete:
       tags:
         - groups
-      summary: Remove speciified subgroup
+      summary: Remove the specified subgroup
       operationId: removeSubgroup
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -509,7 +730,7 @@ paths:
       operationId: getOrganizations
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -530,7 +751,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -549,11 +770,11 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get specified organization
+      summary: Get the specified organization
       operationId: getOrganization
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
@@ -576,7 +797,7 @@ paths:
         required: true
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -586,11 +807,11 @@ paths:
     delete:
       tags:
         - organizations
-      summary: Remove specified organization
+      summary: Remove the specified organization
       operationId: removeOrganization
       responses:
         '204':
-          description: successful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -609,21 +830,27 @@ paths:
     get:
       tags:
         - organizations
-      summary: Get members of specified organization
+      summary: Get members of the specified organization
       operationId: getOrganizationMembers
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
+                $ref: '#/components/schemas/OrganizationMemberCollectionMessageBody'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
     post:
       tags:
         - organizations
-      summary: Add new member to organization
+      summary: Add new member to the specified organization
       operationId: addOrganizationMember
       requestBody:
         description: New member username
@@ -635,7 +862,7 @@ paths:
         required: true
       responses:
         '201':
-          description: successful operation
+          description: Successful operation
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -661,11 +888,38 @@ paths:
     delete:
       tags:
         - organizations
-      summary: Remove member from organization
+      summary: Remove member from the specified organization
       operationId: removeOrganizationMember
       responses:
         '204':
-          description: successful operation
+          description: uccessful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/groups:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - organizations
+      summary: Get groups associated with the specified organization
+      operationId: getOrganizationGroups
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/GroupCollectionMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -679,7 +933,7 @@ components:
       required: [error]
       properties:
         error:
-          description: error details
+          description: Error details
           type: string
     OrganizationRole:
       type: string
@@ -687,6 +941,9 @@ components:
     GroupRole:
       type: string
       enum: [owner, writer, reader]
+    ComponentType:
+      type: string
+      enum: [kpi, causalNet]
     AccountRegistrationInfo:
       type: object
       required: [userEmail, organizationName]
@@ -764,6 +1021,7 @@ components:
       properties:
         locale:
           type: string
+          description: New locale settings in ICU format
     LocaleChangeMessageBody:
       type: object
       required: [data]
@@ -795,6 +1053,70 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserInfo'
+    OrganizationMember:
+      type: object
+      required: [id, username, organizationRole]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        organizationRole:
+          $ref: '#/components/schemas/OrganizationRole'
+    OrganizationMemberCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationMember'
+    UserOrganization:
+      type: object
+      required: [id, name, organizationRole]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationRole:
+          $ref: '#/components/schemas/OrganizationRole'
+    UserOrganizationCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserOrganization'
+    DataSource:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    DataSourceMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DataSource'
+    DataSourceCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSource'
     Workspace:
       type: object
       required: [name]
@@ -818,15 +1140,158 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Workspace'
-    Group:
+    Component:
       type: object
-      required: [name, groupRole]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
+        type:
+          $ref: '#/components/schemas/ComponentType'
+        data:
+          type: object
+          properties:
+            query:
+              type: string
+    AbstractComponent:
+      oneOf:
+        - $ref: '#/components/schemas/KpiComponent'
+        - $ref: '#/components/schemas/CausalNetComponent'
+      discriminator:
+        propertyName: type
+        mapping:
+          kpi: '#/components/schemas/KpiComponent'
+          causal: '#/components/schemas/CausalNetComponent'
+    ComponentData:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ComponentType'
+    AbstractComponentData:
+      oneOf:
+        - $ref: '#/components/schemas/KpiComponentData'
+        - $ref: '#/components/schemas/CausalNetComponentData'
+      discriminator:
+        propertyName: type
+        mapping:
+          kpi: '#/components/schemas/KpiComponentData'
+          causalNet: '#/components/schemas/CausalNetComponentData'
+    KpiComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          required: [value]
+          properties:
+            type:
+              $ref: '#/components/schemas/ComponentType'
+            value:
+              type: number
+    KpiComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/KpiComponentData'
+            customizationData:
+              type: object
+    CausalNetComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          required: [nodes, edges]
+          properties:
+            type:
+              $ref: '#/components/schemas/ComponentType'
+            nodes:
+              type: array
+              items:
+                type: object
+                required: [id, splits, joins]
+                properties:
+                  id:
+                    type: string
+                  splits:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: string
+                  joins:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: string
+            edges:
+              type: array
+              items:
+                type: object
+                required: [sourceNodeId, targetNodeId]
+                properties:
+                  sourceNodeId:
+                    type: string
+                  targetNodeId:
+                    type: string
+    CausalNetComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CausalNetComponentData'
+            customizationData:
+              type: object
+              properties:
+                layout:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, x, y]
+                    properties:
+                      id:
+                        type: string
+                      x:
+                        type: number
+                      y:
+                        type: number
+    ComponentMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AbstractComponent'
+    ComponentDataMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AbstractComponentData'
+    ComponentCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AbstractComponent'
+    Group:
+      type: object
+      required: [name, groupRole, isImplicit, organizationId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isImplicit:
+          type: boolean
+          description: Indicates whether the group was explicitly created by a user or implicitly created by the system (default groups)
+        organizationId:
+          type: string
+          format: uuid
         groupRole:
           $ref: '#/components/schemas/GroupRole'
     GroupMessageBody:
@@ -854,8 +1319,10 @@ components:
           type: string
         contact:
           type: string
+          description: An address associated with the organization
         isPrivate:
           type: boolean
+          description: Indicates whether the organization can be accessed by ancestral organizations members
     OrganizationMessageBody:
       type: object
       required: [data]
@@ -872,31 +1339,31 @@ components:
             $ref: '#/components/schemas/Organization'
   responses:
     BadRequest:
-      description: invalid request body
+      description: Invalid request body
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Unauthorized:
-      description: user not authenticated
+      description: The user is not authenticated
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Forbidden:
-      description: user not authorized
+      description: The user is not authorized
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     NotFound:
-      description: specified resource was not found
+      description: The specified resource was not found
       content:
         'application/json':
           schema:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
-      description: resource with sepcified identifier already exists
+      description: The resource with the sepcified identifier already exists
       content:
         'application/json':
           schema:

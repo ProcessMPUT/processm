@@ -9,7 +9,7 @@ module.exports = {
     port: 8081,
     before(app) {
       apiMocker(app, path.resolve("./api-mocker/api.js"));
-    }
+    },
   },
 
   pluginOptions: {
@@ -17,7 +17,7 @@ module.exports = {
       locale: "en",
       fallbackLocale: "en",
       localeDir: "locales",
-      enableInSFC: false
-    }
-  }
+      enableInSFC: false,
+    },
+  },
 };

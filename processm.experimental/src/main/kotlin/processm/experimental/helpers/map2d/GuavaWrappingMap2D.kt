@@ -80,6 +80,14 @@ class GuavaWrappingMap2D<Row, Column, Value>(val backend: Table<Row, Column, Val
         backend.put(row, col, v)
     }
 
+    override fun removeColumn(column: Column) {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeRow(row: Row) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = backend.rowKeySet()
     override val columns: Set<Column>

@@ -1,12 +1,13 @@
 package processm.miners.processtree.inductiveminer
 
-import processm.core.log.hierarchical.Log
+import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.*
+import java.util.*
 
 /**
  * Inductive miners common abstract implementation.
  * Can be used by:
- * - [OfflineInductiveMinerWithoutLogStatistics]
+ * - [OfflineInductiveMiner]
  * - [OnlineInductiveMiner]
  * as code-base reduces. You should use [InductiveMiner] instead of duplicating code.
  */
@@ -14,17 +15,15 @@ abstract class InductiveMiner {
     /**
      * Perform mining on a given log.
      */
-    abstract fun processLog(logsCollection: Iterable<Log>)
+    abstract fun processLog(logsCollection: LogInputStream): ProcessTree
 
-    /**
-     * The mined model
-     */
-    abstract val result: ProcessTree
-
-    /**
-     * Internal set of operations when we should analyze children stored in subGraph
-     */
-    private val nestedOperators = setOf(CutType.RedoLoop, CutType.Sequence, CutType.Parallel, CutType.Exclusive)
+    companion object {
+        /**
+         * Internal set of operations when we should analyze children stored in subGraph
+         */
+        private val nestedOperators =
+            EnumSet.of(CutType.RedoLoop, CutType.Sequence, CutType.Parallel, CutType.Exclusive)
+    }
 
     /**
      * Assign children to node discovered by subGraph cut.
@@ -34,7 +33,7 @@ abstract class InductiveMiner {
         val node = discoveredCutToNodeObject(graph)
 
         if (graph.detectedCut in nestedOperators) {
-            val it = graph.children.filterNotNull().iterator()
+            val it = graph.children.iterator()
             while (it.hasNext()) {
                 with(assignChildrenToNode(it.next())) {
                     node.addChild(this)
@@ -56,6 +55,9 @@ abstract class InductiveMiner {
             CutType.Sequence -> Sequence()
             CutType.Parallel -> Parallel()
             CutType.RedoLoop -> RedoLoop()
+            CutType.OptionalActivity -> graph.finishWithOptionalActivity()
+            CutType.RedoActivityAtLeastOnce -> graph.finishWithRedoActivityAlways()
+            CutType.RedoActivityAtLeastZeroTimes -> graph.finishWithDefaultRule()
             CutType.FlowerModel -> graph.finishWithDefaultRule()
         }
     }

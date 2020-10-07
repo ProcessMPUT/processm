@@ -5,6 +5,8 @@ import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import java.math.BigInteger
 import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoField
 import java.util.*
@@ -519,6 +521,8 @@ inline fun String.fastParseISO8601(): Instant =
         Instant.ofEpochSecond(instantSecs, nanoOfSecond)
     }
 
+inline fun Instant.toDateTime(): OffsetDateTime = this.atOffset(ZoneOffset.UTC)
+
 /**
  * Returns a set containing the results of applying the given [transform] function
  * to each element in the original collection.
@@ -531,8 +535,54 @@ inline fun <T, R> Iterable<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(Hash
  */
 inline fun <T, R> Sequence<T>.mapToSet(transform: (T) -> R): Set<R> = mapTo(HashSet<R>(), transform)
 
+/**
+ * Returns an [Array] containing the results of applying the given [transform] function
+ * to each element in the original [Collection].
+ */
+inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
+    Array<R>(this.size) { _ -> transform(it.next()) }
+}
+
+/**
+ * Returns an [Array] containing the results of applying the given [transform] function
+ * to each element in the original [Array].
+ */
+inline fun <T, reified R> Array<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
+    Array<R>(this.size) { _ -> transform(it.next()) }
+}
+
+/**
+ * Retuns a map whose keys refer to the values of the given map and values refer to the keys of the given map.
+ * @throws IllegalArgumentException If the mapping of the given map is non-injective.
+ */
+inline fun <K, V> Map<K, V>.inverse(): Map<V, K> = HashMap<V, K>().also {
+    for ((key, value) in this)
+        require(it.put(value, key) == null) { "The given mapping is non-injective." }
+}
+
 inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
     if (this.isNullOrEmpty())
         default()
     else
         this
+
+
+/**
+ * Casts [IntProgression] to an equivalent [LongRange].
+ */
+inline fun IntProgression.toLongRange(): LongRange = this.first.toLong()..this.last.toLong()
+
+/**
+ * Material conditional.
+ *
+ * @see [https://en.wikipedia.org/wiki/Material_conditional]
+ */
+inline infix fun Boolean.implies(consequence: Boolean) = !this || consequence
+
+/**
+ * Material conditional.
+ *
+ * This override of the [implies] function evaluates [consequence] only of the receiver condition evaluates to true.
+ * @see [https://en.wikipedia.org/wiki/Material_conditional]
+ */
+inline infix fun (() -> Boolean).implies(consequence: () -> Boolean) = !(this() && !consequence())

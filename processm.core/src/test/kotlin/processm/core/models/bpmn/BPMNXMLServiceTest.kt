@@ -9,21 +9,12 @@ import processm.core.models.bpmn.jaxb.TUserTask
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import javax.xml.stream.XMLStreamException
-import kotlin.test.*
+import kotlin.test.Ignore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class BPMNXMLServiceTest {
-    private val invalidEncoding = setOf(
-        "/GenMyModel 0.47/C.1.1-roundtrip.bpmn",
-        "/GenMyModel 0.47/C.1.1-export.bpmn",
-        "/GenMyModel 0.47/C.1.0-export.bpmn",
-        "/GenMyModel 0.47/C.1.0-roundtrip.bpmn",
-        "/ARIS Architect 10.0.10/C.1.1-roundtrip.bpmn",
-        "/ARIS Architect 10.0.10/C.1.1-export.bpmn",
-        "/ARIS Architect 10.0.10/C.1.0-export.bpmn",
-        "/ARIS Architect 10.0.10/C.1.0-roundtrip.bpmn"
-    )
-
     private val nonStrict = setOf(
         "/ModelFoundry 1.1.1/C.1.1-roundtrip.bpmn",
         "/ModelFoundry 1.1.1/A.2.1-roundtrip.bpmn",
@@ -72,7 +63,7 @@ class BPMNXMLServiceTest {
         .filter { it.extension.toLowerCase() == "bpmn" }
         .iterator()
         .asSequence()
-    private val strictFiles = files.filter { !(nonStrict + invalidEncoding).any { p -> it.path.endsWith(p) } }
+    private val strictFiles = files.filterNot { nonStrict.any { p -> it.path.endsWith(p) } }
     private val nonStrictFiles = files.filter { nonStrict.any { p -> it.path.endsWith(p) } }
     private val idempotentFiles = strictFiles.filter { !nonIdempotent.any { p -> it.path.endsWith(p) } }
     private val nonIdempotentFiles = strictFiles.filter { nonIdempotent.any { p -> it.path.endsWith(p) } }
@@ -83,7 +74,7 @@ class BPMNXMLServiceTest {
         return nonStrictFiles
             .map {
                 DynamicTest.dynamicTest(it.path.replace(base, "")) {
-                    val (value, warnings) = BPMNXMLService.load(it.inputStream())
+                    val (_: Any?, warnings) = BPMNXMLService.load(it.inputStream())
                     assertTrue { warnings.isNotEmpty() }
                 }
             }
@@ -97,7 +88,7 @@ class BPMNXMLServiceTest {
             .map {
                 DynamicTest.dynamicTest(it.path.replace(base, ""))
                 {
-                    val (value, warnings) = BPMNXMLService.load(it.inputStream())
+                    val (_: Any?, warnings) = BPMNXMLService.load(it.inputStream())
                     assertTrue { warnings.isEmpty() }
                 }
             }.toList()
@@ -115,17 +106,6 @@ class BPMNXMLServiceTest {
                     assertTrue { warnings.isEmpty() }
                     assertTrue { JaxbRecursiveComparer(true)(stax, jaxb) }
                 }
-            }.toList()
-    }
-
-    @Tag("BPMN")
-    @TestFactory
-    fun loadInvalidEncoding(): Iterable<DynamicTest> {
-        return files
-            .filter { invalidEncoding.any { p -> it.path.endsWith(p) } }
-            .map {
-                DynamicTest.dynamicTest(it.path.replace(base, ""))
-                { assertFailsWith<XMLStreamException> { BPMNXMLService.load(it.inputStream()) } }
             }.toList()
     }
 

@@ -13,7 +13,6 @@ import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class WebServicesHostTest {
-
     private val baseURIs = URL("https://localhost:2443/")
     private val host = WebServicesHost()
     private val client = HttpClient(Apache) {
@@ -45,5 +44,4 @@ class WebServicesHostTest {
             }
         }
     }
-
 }

@@ -1,0 +1,166 @@
+<template>
+  <v-container>
+    <v-row dense>
+      <v-col offset="11" dense>
+        <v-switch v-model="locked" :label="$t('workspace.locked')" />
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col cols="12">
+        <grid-layout
+          :layout.sync="layout"
+          :row-height="30"
+          :is-draggable="!locked"
+          :is-resizable="!locked"
+          :is-mirrored="false"
+          :vertical-compact="true"
+          :margin="[10, 10]"
+          :use-css-transforms="true"
+        >
+          <grid-item
+            v-for="item in layout"
+            :x="item.x"
+            :y="item.y"
+            :w="item.w"
+            :h="item.h"
+            :i="item.i"
+            :key="item.i"
+            drag-ignore-from="div.workspace-component-content"
+            class="elevation-1"
+          >
+            <workspace-component
+              :component-details="componentsDetails[item.i]"
+              :component-mode="ComponentMode.Static"
+              @view="viewComponent"
+              @edit="editComponent"
+              @remove="removeComponent"
+            />
+          </grid-item>
+        </grid-layout>
+      </v-col>
+    </v-row>
+    <single-component-view
+      v-if="displayViewModal"
+      v-model="displayViewModal"
+      :component-details="displayedComponentDetails"
+      @close="closeModals"
+      @view="viewComponent"
+      @edit="editComponent"
+      @remove="removeComponent"
+    ></single-component-view>
+    <edit-component-view
+      v-if="displayEditModal"
+      v-model="displayEditModal"
+      :component-details="displayedComponentDetails"
+      :workspace-id="workspaceId"
+      @close="closeModals"
+      @view="viewComponent"
+      @edit="editComponent"
+      @remove="removeComponent"
+    ></edit-component-view>
+  </v-container>
+</template>
+
+<style scoped>
+.vue-grid-item:hover {
+  outline-color: var(--v-primary-lighten1);
+  outline-style: solid;
+  outline-width: thin;
+}
+
+.vue-grid-layout {
+  max-height: 0px;
+}
+</style>
+
+<script lang="ts">
+import Vue from "vue";
+import Component from "vue-class-component";
+import { Prop, Inject } from "vue-property-decorator";
+import { GridLayout, GridItem } from "vue-grid-layout";
+import SingleComponentView from "./SingleComponentView.vue";
+import EditComponentView from "./EditComponentView.vue";
+import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
+import WorkspaceService from "@/services/WorkspaceService";
+import WorkspaceComponentModel from "@/models/WorkspaceComponent";
+
+@Component({
+  components: {
+    GridLayout,
+    GridItem,
+    WorkspaceComponent,
+    SingleComponentView,
+    EditComponentView
+  }
+})
+export default class WorkspaceArea extends Vue {
+  ComponentMode = ComponentMode;
+
+  @Prop({ default: "" })
+  readonly workspaceId!: string;
+  @Inject() workspaceService!: WorkspaceService;
+
+  locked = false;
+  displayViewModal = false;
+  displayEditModal = false;
+  displayedComponentDetails?: WorkspaceComponentModel;
+  componentsDetails: Record<string, WorkspaceComponentModel> = {};
+  layout: Array<{
+    i: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }> = [];
+
+  async created() {
+    const components = await this.workspaceService.getWorkspaceComponents(
+      this.workspaceId
+    );
+
+    for (const component of components) {
+      this.componentsDetails[component.id] = component;
+      this.layout.push({
+        i: component.id,
+        x: 0,
+        y: 0,
+        w: 3,
+        h: 4
+      });
+    }
+  }
+
+  toggleLocked() {
+    this.locked = !this.locked;
+  }
+
+  viewComponent(id: string) {
+    this.closeModals();
+    this.displayedComponentDetails = this.componentsDetails[id];
+    this.displayViewModal = true;
+  }
+
+  editComponent(id: string) {
+    this.closeModals();
+    this.displayedComponentDetails = this.componentsDetails[id];
+    this.displayEditModal = true;
+  }
+
+  removeComponent(id: string) {
+    const componentIndex = this.layout.findIndex(
+      (component) => component.i == id
+    );
+
+    if (componentIndex >= 0) {
+      this.layout.splice(componentIndex, 1);
+      this.closeModals();
+    }
+  }
+
+  closeModals() {
+    this.displayViewModal = false;
+    this.displayEditModal = false;
+  }
+}
+</script>

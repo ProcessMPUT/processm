@@ -23,7 +23,7 @@
         <bpmn2:targetRef>_9fNG_h_TEeW9keBtFZy97Q</bpmn2:targetRef>
       </bpmn2:dataOutputAssociation>
     </bpmn2:task>
-    <bpmn2:task id="_9fNG_x_TEeW9keBtFZy97Q" name="Rechnung klären">
+    <bpmn2:task id="_9fNG_x_TEeW9keBtFZy97Q" name="Rechnung klÃ¤ren">
       <bpmn2:incoming>_9fNHAB_TEeW9keBtFZy97Q</bpmn2:incoming>
       <bpmn2:outgoing>_9fNHAR_TEeW9keBtFZy97Q</bpmn2:outgoing>
       <bpmn2:ioSpecification id="_9fNHAh_TEeW9keBtFZy97Q">

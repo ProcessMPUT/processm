@@ -1,5 +1,7 @@
 package processm.core.log.attribute
 
+import java.util.*
+
 /**
  * ID attribute
  *
@@ -8,12 +10,12 @@ package processm.core.log.attribute
  *
  * Tag inside XES file: <id>
  */
-class IDAttr(key: String, val value: String) : Attribute<String>(key) {
+class IDAttr(key: String, val value: UUID) : Attribute<UUID>(key) {
     override fun getValue() = this.value
     override val xesTag: String
         get() = "id"
 
     override fun valueToString(): String {
-        return this.value
+        return this.value.toString()
     }
 }

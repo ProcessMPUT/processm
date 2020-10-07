@@ -11,6 +11,11 @@ const routes = [
     component: () => import("@/views/Workspaces.vue")
   },
   {
+    path: "/users",
+    name: "users",
+    component: () => import("@/views/Users.vue")
+  },
+  {
     path: "/about",
     name: "about",
     component: () => import("@/views/About.vue")
@@ -19,6 +24,11 @@ const routes = [
     path: "/profile",
     name: "profile",
     component: () => import("@/views/UserProfile.vue")
+  },
+  {
+    path: "/data-sources",
+    name: "data-sources",
+    component: () => import("@/views/DataSources.vue")
   },
   {
     path: "/login",
@@ -46,7 +56,7 @@ const router = new VueRouter({
 
 router.beforeEach((to, _from, next) => {
   Vue.prototype.$sessionStorage.sessionExists ||
-  to.matched.some(record => record.meta.allowUnauthenticated)
+  to.matched.some((record) => record.meta.allowUnauthenticated)
     ? next()
     : next({ name: "login" });
 });

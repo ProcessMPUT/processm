@@ -16,7 +16,7 @@
                 prepend-icon="business"
                 type="text"
                 :rules="[
-                  v =>
+                  (v) =>
                     !!v || $t('registration-form.validation.organization-empty')
                 ]"
               ></v-text-field>
@@ -27,7 +27,7 @@
                 prepend-icon="person"
                 type="text"
                 :rules="[
-                  v =>
+                  (v) =>
                     /.+@.+\..+/.test(v) ||
                     $t('registration-form.validation.email-format')
                 ]"
@@ -99,6 +99,7 @@ export default class Registration extends Vue {
         this.messageTimeout
       );
     } catch (error) {
+      console.error(error);
       this.errorMessage = true;
     }
   }

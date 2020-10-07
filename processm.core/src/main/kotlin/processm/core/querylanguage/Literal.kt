@@ -1,6 +1,7 @@
 package processm.core.querylanguage
 
 import org.apache.commons.text.StringEscapeUtils
+import processm.core.helpers.toUUID
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -9,6 +10,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoField
+import java.util.*
 
 /**
  * Represents a literal in a PQL query. The subclasses of this class hold particular types of literals.
@@ -21,6 +23,9 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
     }
 
     final override val scope: Scope?
+
+    final override val expectedChildrenTypes: Array<Type>
+        get() = emptyArray()
 
     /**
      * The parsed value of the literal. This property is stronly-typed.
@@ -46,7 +51,7 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
      */
     protected abstract fun parse(literal: String): T
 
-    override fun toString(): String = value.toString()
+    override fun toString(): String = scope.prefix + value.toString()
 }
 
 /**
@@ -54,6 +59,10 @@ sealed class Literal<out T>(literal: String, override val line: Int, override va
  */
 class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<String>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.String
+
     override fun parse(literal: String): String {
         require((literal[0] == '"' || literal[0] == '\'') && literal[0] == literal[literal.length - 1]) {
             "Line $line position $charPositionInLine: Invalid format of string literal: $literal."
@@ -61,6 +70,20 @@ class StringLiteral(literal: String, line: Int, charPositionInLine: Int) :
 
         return StringEscapeUtils.unescapeJava(literal.substring(1, literal.length - 1))
     }
+}
+
+/**
+ * Represents a UUID literal in a PQL query.
+ */
+class UUIDLiteral(literal: String, line: Int, charPositionInLine: Int) :
+    Literal<UUID>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.UUID
+
+    override fun parse(literal: String): UUID =
+        literal.toUUID()
+            ?: throw IllegalArgumentException("Line $line position $charPositionInLine: Invalid format of UUID literal: $literal.")
 }
 
 /**
@@ -143,13 +166,16 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
         )
     }
 
+    override val type: Type
+        get() = Type.Datetime
+
     override fun parse(literal: String): Instant {
         val datetime = literal.substring(1)
         var exception: DateTimeParseException? = null
         for (parser in parsers) {
             try {
                 val result = parser.runCatching { parse(datetime, ZonedDateTime::from).toInstant() }
-                return result.getOrNull() ?: parser.parse(datetime, LocalDateTime::from)?.toInstant(ZoneOffset.UTC)!!
+                return result.getOrNull() ?: parser.parse(datetime, LocalDateTime::from).toInstant(ZoneOffset.UTC)!!
             } catch (e: DateTimeParseException) {
                 if (exception === null)
                     exception = e
@@ -162,6 +188,8 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
             exception!!
         )
     }
+
+    override fun toString(): String = "${scope.prefix}D$value"
 }
 
 /**
@@ -169,6 +197,10 @@ class DateTimeLiteral(literal: String, line: Int, charPositionInLine: Int) :
  */
 class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<Double>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.Number
+
     override fun parse(literal: String): Double = literal.toDouble()
 }
 
@@ -177,6 +209,10 @@ class NumberLiteral(literal: String, line: Int, charPositionInLine: Int) :
  */
 class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<Boolean>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.Boolean
+
     override fun parse(literal: String): Boolean = when (literal) {
         "true" -> true
         "false" -> false
@@ -191,5 +227,9 @@ class BooleanLiteral(literal: String, line: Int, charPositionInLine: Int) :
  */
 class NullLiteral(literal: String, line: Int, charPositionInLine: Int) :
     Literal<Any?>(literal, line, charPositionInLine) {
+
+    override val type: Type
+        get() = Type.Unknown
+
     override fun parse(literal: String): Any? = null
 }

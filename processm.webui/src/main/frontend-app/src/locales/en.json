@@ -5,6 +5,8 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
+    "data-sources": "Data sources",
+    "users": "@:users.page-title",
     "about": "@:about.page-title"
   },
   "topbar": {
@@ -13,7 +15,20 @@
   },
   "workspace": {
     "default-name": "Workspace",
-    "locked": "Locked"
+    "locked": "Locked",
+    "component": {
+      "causal-net": "Causal net",
+      "kpi": "KPI",
+      "edit": {
+        "name": "Name",
+        "type": "Type",
+        "query": "Query",
+        "validation": {
+          "name-empty": "The name cannot be empty",
+          "query-empty": "The query cannot be empty"
+        }
+      }
+    }
   },
   "about": {
     "page-title": "About page",
@@ -22,6 +37,11 @@
   "user-profile": {
     "language": "Language",
     "change-password": "Change password"
+  },
+  "users": {
+    "page-title": "Users",
+    "users": "Users",
+    "groups": "Groups"
   },
   "rename-dialog": {
     "dialog-title": "Rename",
@@ -77,6 +97,8 @@
     "rename": "Rename",
     "remove": "Remove",
     "close": "Close",
-    "submit": "Submit"
+    "submit": "Submit",
+    "view": "View",
+    "edit": "Edit"
   }
 }

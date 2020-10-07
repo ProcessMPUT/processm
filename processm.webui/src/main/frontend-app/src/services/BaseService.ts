@@ -1,8 +1,13 @@
 import Vue from "vue";
 import { BaseAPI } from "@/openapi/base";
-import axios, { AxiosInstance, AxiosError } from "axios";
-import { Configuration } from "@/openapi";
-import { UsersApi } from "@/openapi";
+import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import {
+  Configuration,
+  UsersApi,
+  OrganizationsApi,
+  WorkspacesApi,
+  DataSourcesApi
+} from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
 export default abstract class BaseService {
@@ -11,7 +16,7 @@ export default abstract class BaseService {
 
   constructor() {
     this.axiosInstance = axios.create();
-    createAuthRefreshInterceptor(this.axiosInstance, error =>
+    createAuthRefreshInterceptor(this.axiosInstance, (error) =>
       this.prolongExistingSession(error, this.usersApi)
     );
   }
@@ -35,6 +40,37 @@ export default abstract class BaseService {
     return this.getGenericClient(UsersApi);
   }
 
+  protected get organizationsApi() {
+    return this.getGenericClient(OrganizationsApi);
+  }
+
+  protected get workspacesApi() {
+    return this.getGenericClient(WorkspacesApi);
+  }
+
+  protected get dataSourcesApi() {
+    return this.getGenericClient(DataSourcesApi);
+  }
+
+  protected ensureSuccessfulResponseCode(
+    response: AxiosResponse,
+    ...successfulStatusCodes: Array<number>
+  ) {
+    const responseStatusCode = response.status;
+
+    if (
+      successfulStatusCodes.length == 0 &&
+      responseStatusCode >= 200 &&
+      responseStatusCode < 300
+    ) {
+      return;
+    } else if (successfulStatusCodes.includes(responseStatusCode)) {
+      return;
+    }
+
+    throw new Error(response.statusText);
+  }
+
   private prolongExistingSession(
     failedRequest: AxiosError<object>,
     api: UsersApi
@@ -44,7 +80,7 @@ export default abstract class BaseService {
 
     return api
       .signUserIn(getAuthorizationHeaderValue(expiredToken))
-      .then(tokenRefreshResponse => {
+      .then((tokenRefreshResponse) => {
         const newToken = tokenRefreshResponse.data.data.authorizationToken;
         Vue.prototype.$sessionStorage.sessionToken = newToken;
 

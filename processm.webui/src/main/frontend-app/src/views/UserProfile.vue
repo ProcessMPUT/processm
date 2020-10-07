@@ -16,7 +16,7 @@
                 dense
                 outlined
               >
-                <template v-slot:selection="data">
+                <template #selection="data">
                   <span
                     v-bind:class="[
                       'flag-icon flag-icon-' + $t('flag', data.item.value),
@@ -25,7 +25,7 @@
                   />
                   {{ $t("language-name", data.item.value) }}
                 </template>
-                <template v-slot:item="data">
+                <template #item="data">
                   <span
                     v-bind:class="[
                       'flag-icon flag-icon-' + $t('flag', data.item.value),
@@ -75,7 +75,7 @@ import AccountService from "@/services/AccountService";
   components: { PasswordChangeDialog },
   filters: {
     objectify(input: Array<string>) {
-      return input.map(item => {
+      return input.map((item) => {
         return { value: item };
       });
     }
@@ -98,6 +98,7 @@ export default class UserProfile extends Vue {
         const locale = this.$t("code", this.selectedLocale).toString();
         await this.accountService.changeLocale(locale);
       } catch (error) {
+        console.error(error);
         //TODO: display the error on the global snackbar
       }
     }
@@ -108,6 +109,7 @@ export default class UserProfile extends Vue {
       await this.accountService.changePassword(currentPassword, newPassword);
       this.passwordChangeDialog = false;
     } catch (error) {
+      console.error(error);
       //TODO: display the error on the global snackbar
     }
   }

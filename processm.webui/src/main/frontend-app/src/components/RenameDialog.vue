@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="value" max-width="400">
+  <v-dialog v-model="value" @click:outside="cancel" max-width="400">
     <v-card>
       <v-card-title class="headline">
         {{ $t("rename-dialog.dialog-title") }} {{ oldName }}
@@ -13,7 +13,7 @@
                   v-model="newName"
                   :label="$t('rename-dialog.new-name-placeholder')"
                   :rules="[
-                    v => !!v || $t('rename-dialog.validation.name-empty')
+                    (v) => !!v || $t('rename-dialog.validation.name-empty')
                   ]"
                   required
                 />

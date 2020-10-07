@@ -191,4 +191,51 @@ class DoublingMap2DTest {
         assertTrue(c.containsValue(2))
         assertTrue(c.containsValue(3))
     }
+
+    @Test
+    fun `remove column`() {
+        val m = create()
+        m[1, 1] = 3
+        m[1, 2] = 4
+        m[1, 3] = 1
+        m[2, 1] = 5
+
+        assertEquals(3, m[1, 1])
+        assertEquals(4, m[1, 2])
+        assertEquals(1, m[1, 3])
+        assertEquals(5, m[2, 1])
+        assertEquals(setOf(1, 2), m.rows)
+        assertEquals(setOf(1, 2, 3), m.columns)
+
+        m.removeColumn(1)
+
+        assertNotEquals(3, m[1, 1])
+        assertEquals(4, m[1, 2])
+        assertEquals(1, m[1, 3])
+        assertNotEquals(5, m[2, 1])
+        assertEquals(setOf(1, 2), m.rows)
+        assertEquals(setOf(2, 3), m.columns)
+    }
+
+    @Test
+    fun `remove row`() {
+        val m = create()
+        m[1, 1] = 3
+        m[1, 2] = 4
+        m[2, 1] = 5
+
+        assertEquals(3, m[1, 1])
+        assertEquals(4, m[1, 2])
+        assertEquals(5, m[2, 1])
+        assertEquals(setOf(1, 2), m.rows)
+        assertEquals(setOf(1, 2), m.columns)
+
+        m.removeRow(1)
+
+        assertNotEquals(3, m[1, 1])
+        assertNotEquals(4, m[1, 2])
+        assertEquals(5, m[2, 1])
+        assertEquals(setOf(2), m.rows)
+        assertEquals(setOf(1, 2), m.columns)
+    }
 }

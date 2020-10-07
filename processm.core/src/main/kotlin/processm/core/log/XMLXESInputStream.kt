@@ -1,17 +1,17 @@
 package processm.core.log
 
 import processm.core.helpers.fastParseISO8601
+import processm.core.helpers.toUUID
 import processm.core.log.attribute.*
 import processm.core.logging.logger
 import java.io.InputStream
 import java.text.NumberFormat
-import java.time.Instant
 import java.util.*
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamReader
 
 /**
- * Extracts a sequence of [XESElement]s from the underlying stream.
+ * Extracts a sequence of [XESComponent]s from the underlying stream.
  * @see XESInputStream
  */
 class XMLXESInputStream(private val input: InputStream) : XESInputStream {
@@ -29,7 +29,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         override fun get(key: String): String? = super.get(key) ?: key
     }
 
-    override fun iterator(): Iterator<XESElement> = sequence<XESElement> {
+    override fun iterator(): Iterator<XESComponent> = sequence<XESComponent> {
         val xmlInputFactory: XMLInputFactory = XMLInputFactory.newInstance()
         val reader = xmlInputFactory.createXMLStreamReader(input)
 
@@ -93,19 +93,19 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             }
         }
 
-        addGeneralMeaningFieldsIntoLog(it)
+        it.setStandardAttributes(nameMap)
     }
 
     private fun parseTrace(reader: XMLStreamReader) = Trace().also {
         lastSeenElement = null
         parseTraceOrEventTag(reader, it)
-        addGeneralMeaningFieldsIntoTrace(it)
+        it.setStandardAttributes(nameMap)
     }
 
     private fun parseEvent(reader: XMLStreamReader) = Event().also {
         lastSeenElement = null
         parseTraceOrEventTag(reader, it)
-        addGeneralMeaningFieldsIntoEvent(it)
+        it.setStandardAttributes(nameMap)
     }
 
     private fun addExtensionToLogElement(log: Log, reader: XMLStreamReader) {
@@ -116,16 +116,9 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             reader.getAttributeValue(null, "uri")
         )
 
-        // Add mapping extension's URI -> user's prefix
-        if (extension.extension != null) {
-            // this.nameMap[extension.extension.uri] = prefix
-            for (name in extension.extension.log.keys)
-                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
-            for (name in extension.extension.trace.keys)
-                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
-            for (name in extension.extension.event.keys)
-                this.nameMap["${extension.extension.prefix}:$name"] = "$prefix:$name"
-        }
+        // map standard attribute names to custom names in the log
+        if (extension.extension != null)
+            extension.mapStandardToCustomNames(this.nameMap)
 
         log.extensionsInternal[prefix] = extension
     }
@@ -134,7 +127,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         val classifiers = when (reader.getAttributeValue(null, "scope") ?: "event") {
             "trace" -> log.traceClassifiersInternal
             "event" -> log.eventClassifiersInternal
-            else -> throw Exception(
+            else -> throw IllegalArgumentException(
                 "Illegal <classifier> scope. Expected 'trace' or 'event', found ${reader.getAttributeValue(
                     null,
                     "scope"
@@ -209,42 +202,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         return attribute
     }
 
-    private fun addGeneralMeaningFieldsIntoLog(log: Log) {
-        log.conceptName = log.attributes[nameMap["concept:name"]]?.getValue() as String?
-        log.identityId = log.attributes[nameMap["identity:id"]]?.getValue() as String?
-        log.lifecycleModel = log.attributes[nameMap["lifecycle:model"]]?.getValue() as String?
-    }
-
-    private fun addGeneralMeaningFieldsIntoTrace(trace: Trace) {
-        trace.conceptName = trace.attributes[nameMap["concept:name"]]?.getValue() as String?
-
-        trace.costTotal = trace.attributes[nameMap["cost:total"]]?.getValue() as Double?
-        trace.costCurrency = trace.attributes[nameMap["cost:currency"]]?.getValue() as String?
-
-        trace.identityId = trace.attributes[nameMap["identity:id"]]?.getValue() as String?
-    }
-
-    private fun addGeneralMeaningFieldsIntoEvent(event: Event) {
-        event.conceptName = event.attributes[nameMap["concept:name"]]?.getValue() as String?
-        event.conceptInstance = event.attributes[nameMap["concept:instance"]]?.getValue() as String?
-
-        event.costTotal = event.attributes[nameMap["cost:total"]]?.getValue() as Double?
-        event.costCurrency = event.attributes[nameMap["cost:currency"]]?.getValue() as String?
-
-        event.identityId = event.attributes[nameMap["identity:id"]]?.getValue() as String?
-
-        event.lifecycleState = event.attributes[nameMap["lifecycle:state"]]?.getValue() as String?
-        event.lifecycleTransition =
-            event.attributes[nameMap["lifecycle:transition"]]?.getValue() as String?
-
-        event.orgRole = event.attributes[nameMap["org:role"]]?.getValue() as String?
-        event.orgGroup = event.attributes[nameMap["org:group"]]?.getValue() as String?
-        event.orgResource = event.attributes[nameMap["org:resource"]]?.getValue() as String?
-
-        event.timeTimestamp = event.attributes[nameMap["time:timestamp"]]?.getValue() as Instant?
-    }
-
-    private fun parseTraceOrEventTag(reader: XMLStreamReader, xesElement: XESElement) {
+    private fun parseTraceOrEventTag(reader: XMLStreamReader, xesComponent: XESComponent) {
         // Read until has next and not found next 'event' or 'trace' element
         while (reader.hasNext()) {
             reader.next()
@@ -258,11 +216,11 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 when (reader.localName) {
                     in attributeTags -> {
                         with(parseAttributeTags(reader, reader.localName)) {
-                            xesElement.attributesInternal[this.key] = this
+                            xesComponent.attributesInternal[this.key] = this
                         }
                     }
                     else -> {
-                        throw Exception("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                        throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
                 }
             } else if (reader.isEndElement && reader.localName in exitTags) {
@@ -272,25 +230,15 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun castToAttribute(type: String, key: String, value: String): Attribute<*> {
-        return when (type) {
-            "float" ->
-                RealAttr(key, numberFormatter.parse(value).toDouble())
-            "string" ->
-                StringAttr(key, value)
-            "boolean" ->
-                BoolAttr(key, value.toBoolean())
-            "id" ->
-                IDAttr(key, value)
-            "int" ->
-                IntAttr(key, value.toLong())
-            "list" ->
-                ListAttr(key)
-            "date" -> {
-                DateTimeAttr(key, value.fastParseISO8601())
-            }
-            else ->
-                throw Exception("Attribute not recognized. Received $type type.")
+    private fun castToAttribute(type: String, key: String, value: String): Attribute<*> =
+        when (type) {
+            "string" -> StringAttr(key, value)
+            "float" -> RealAttr(key, numberFormatter.parse(value).toDouble())
+            "id" -> IDAttr(key, requireNotNull(value.toUUID()))
+            "int" -> IntAttr(key, value.toLong())
+            "date" -> DateTimeAttr(key, value.fastParseISO8601())
+            "boolean" -> BoolAttr(key, value.toBoolean())
+            "list" -> ListAttr(key)
+            else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
         }
-    }
 }

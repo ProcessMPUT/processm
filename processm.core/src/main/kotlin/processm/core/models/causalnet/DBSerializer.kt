@@ -97,9 +97,9 @@ object DBSerializer {
      *
      * Does not handle metadata nor decision models
      */
-    fun insert(model: CausalNet): Int {
+    fun insert(dbConnectionPool: DBConnectionPool, model: CausalNet): Int {
         var result: Int? = null
-        transaction(DBConnectionPool.database) {
+        transaction(dbConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
             val daomodel = DAOModel.new {
             }
@@ -142,9 +142,9 @@ object DBSerializer {
      *
      * Decision model and metadata handlers are left default
      */
-    fun fetch(modelId: Int): MutableCausalNet {
+    fun fetch(dbConnectionPool: DBConnectionPool, modelId: Int): MutableCausalNet {
         var result: MutableCausalNet? = null
-        transaction(DBConnectionPool.database) {
+        transaction(dbConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
             val daomodel = DAOModel.findById(modelId) ?: throw NoSuchElementException()
             val idNode = daomodel.nodes
@@ -180,8 +180,8 @@ object DBSerializer {
     /**
      * Deletes a model with specified modelId
      */
-    fun delete(modelId: Int) {
-        transaction(DBConnectionPool.database) {
+    fun delete(dbConnectionPool: DBConnectionPool, modelId: Int) {
+        transaction(dbConnectionPool.database) {
             addLogger(Slf4jSqlDebugLogger)
             val model = DAOModel.findById(modelId) ?: throw NoSuchElementException()
             model.delete()

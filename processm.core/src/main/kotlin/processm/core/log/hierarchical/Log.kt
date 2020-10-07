@@ -1,6 +1,6 @@
 package processm.core.log.hierarchical
 
-import processm.core.log.XESElement
+import processm.core.log.XESComponent
 import processm.core.log.XESInputStream
 import processm.core.log.Log as BaseLog
 
@@ -18,7 +18,7 @@ class Log(traces: Sequence<Trace> = emptySequence()) : BaseLog() {
 /**
  * Transforms this log into a flat sequence of XES elements.
  * @see XESInputStream
- * @see XESElement
+ * @see XESComponent
  * @see processm.core.log.Log
  * @see processm.core.log.Trace
  * @see processm.core.log.Event
@@ -28,7 +28,7 @@ fun Log.toFlatSequence(): XESInputStream = sequenceOf(this).toFlatSequence()
 /**
  * Transforms this sequence of logs into a flat sequence of XES elements.
  * @see XESInputStream
- * @see XESElement
+ * @see XESComponent
  * @see processm.core.log.Log
  * @see processm.core.log.Trace
  * @see processm.core.log.Event

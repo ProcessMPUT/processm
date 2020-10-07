@@ -1,15 +1,13 @@
 <template>
-  <v-container class="d-flex align-stretch pb-0 px-0" fluid fill-height>
-    <v-row align="stretch" class="ma-0">
-      <v-col cols="12" class="pa-0">
-        <v-tabs-items v-model="currentWorkspaceIndex">
-          <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
-            <workspace-area />
-          </v-tab-item>
-        </v-tabs-items>
-      </v-col>
+  <v-container class="pb-0 px-0">
+    <v-row class="workspace mx-0">
+      <v-tabs-items v-model="currentWorkspaceIndex">
+        <v-tab-item v-for="workspace in workspaces" :key="workspace.index">
+          <workspace-area :workspaceId="workspace.id" />
+        </v-tab-item>
+      </v-tabs-items>
     </v-row>
-    <v-row align="end" class="ma-0">
+    <v-row class="workspace-selector mx-0">
       <v-tabs
         v-model="currentWorkspaceIndex"
         background-color="primary lighten-2"
@@ -17,7 +15,7 @@
         show-arrows
       >
         <v-menu top offset-y>
-          <template v-slot:activator="{ on }">
+          <template #activator="{ on }">
             <v-btn tile color="primary lighten-1" v-on="on">
               <v-icon>more_vert</v-icon>
             </v-btn>
@@ -65,12 +63,34 @@
   width: 30px;
   height: 100%;
 }
+
+.container .v-tabs-items {
+  width: 100%;
+}
+
+.container {
+  display: flex;
+  flex-flow: column;
+  height: 100%;
+  align-items: stretch;
+}
+
+.container .workspace {
+  flex: 1 1 auto;
+  overflow: scroll;
+  width: 100%;
+}
+
+.container .workspace-selector {
+  flex: 0 1 auto;
+  width: 100%;
+}
 </style>
 
 <script lang="ts">
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
-import WorkspaceArea from "@/components/WorkspaceArea.vue";
+import WorkspaceArea from "@/components/workspace/WorkspaceArea.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import Workspace from "@/models/Workspace";
@@ -93,28 +113,22 @@ export default class Workspaces extends Vue {
   }
 
   async createWorkspace() {
-    const lastWorkspaceIndex =
-      this.workspaces.length > 0
-        ? this.workspaces[this.workspaces.length - 1].id
-        : 0;
-    const workspaceName = `${this.$i18n.t(
-      "workspace.default-name"
-    )}${lastWorkspaceIndex + 1}`;
-    const newWorkspace = await this.workspaceService.create(workspaceName);
+    const workspaceName = `${this.$i18n.t("workspace.default-name")}${
+      this.workspaces.length + 1
+    }`;
+    const newWorkspace = await this.workspaceService.createWorkspace(
+      workspaceName
+    );
 
     this.workspaces.push(newWorkspace);
   }
 
   async removeWorkspace() {
     const removedWorkspaceIndex = this.currentWorkspaceIndex;
-    const isRemoved = await this.workspaceService.remove(
+
+    await this.workspaceService.removeWorkspace(
       this.workspaces[removedWorkspaceIndex].id
     );
-
-    if (!isRemoved) {
-      return;
-    }
-
     this.currentWorkspaceIndex = Math.max(0, this.currentWorkspaceIndex - 1);
     this.workspaces.splice(removedWorkspaceIndex, 1);
   }
@@ -125,10 +139,7 @@ export default class Workspaces extends Vue {
     const currentWorkspace = this.workspaces[this.currentWorkspaceIndex];
 
     currentWorkspace.name = newName;
-
-    this.workspaces[
-      this.currentWorkspaceIndex
-    ] = await this.workspaceService.update(currentWorkspace);
+    await this.workspaceService.updateWorkspace(currentWorkspace);
   }
 }
 </script>

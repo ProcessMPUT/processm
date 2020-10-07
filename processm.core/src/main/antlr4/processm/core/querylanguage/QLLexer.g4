@@ -1,12 +1,16 @@
 lexer grammar QLLexer;
 // lexer rules start with uppercase letters
 tokens {STRING}
+@lexer::members {
+    private void go(int diff) {
+        _input.seek(_input.index() + diff);
+    }
+}
 
 
 SELECT      : 'select' ;
 WHERE       : 'where' ;
-GROUP       : 'group' ;
-BY          : 'by' ;
+GROUP_BY    : 'group' [ \t\r\n]+ 'by' ;
 ORDER_BY    : 'order' [ \t\r\n]+ 'by' ;
 LIMIT       : 'limit' ;
 OFFSET      : 'offset' ;
@@ -19,6 +23,8 @@ SCOPE       : 'log'
             | 'e'
             ;
 
+UUID        : SCOPE_PREFIX HEX_4 HEX_4 '-' HEX_4 '-' HEX_4 '-' HEX_4 '-' HEX_4 HEX_4 HEX_4 ;
+
 STRING_SINGLE : SCOPE_PREFIX '\'' ( '\\\'' | . )*? '\'' -> type(STRING) ;
 STRING_DOUBLE : SCOPE_PREFIX '"' ( '\\"' | . )*? '"' -> type(STRING) ;
 
@@ -30,31 +36,10 @@ DATETIME    : SCOPE_PREFIX 'D' ISODATE ('T' ISOTIME ISOTIMEZONE?)?
 
 NULL        : SCOPE_PREFIX 'null' ;
 
-FUNC_AGGR   : 'min'
-            | 'max'
-            | 'avg'
-            | 'count'
-            | 'sum'
-            ;
-
-FUNC_SCALAR1: 'date'
-            | 'time'
-            | 'year'
-            | 'month'
-            | 'day'
-            | 'hour'
-            | 'minute'
-            | 'second'
-            | 'millisecond'
-            | 'quarter'
-            | 'dayofweek'
-            | 'upper'
-            | 'lower'
-            | 'round'
-            ;
-
-FUNC_SCALAR0: 'now'
-            ;
+FUNC_AGGR   : SCOPE_PREFIX ('min' | 'max' | 'avg' | 'count' | 'sum') '(' { go(-1); } ;
+FUNC_SCALAR1: SCOPE_PREFIX ('date' | 'time' | 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second' | 'millisecond' |
+                            'quarter' | 'dayofweek' | 'upper' | 'lower' | 'round') '(' { go(-1); } ;
+FUNC_SCALAR0: SCOPE_PREFIX 'now' '(' { go(-1); } ;
 
 OP_MUL      : '*' ;
 OP_DIV      : '/' ;
@@ -123,3 +108,5 @@ fragment ISOSECOND: ISOMINUTE ;
 fragment ISOMILLI: DIGIT DIGIT DIGIT ;
 fragment ISOTIMEZONE: 'Z' | ('+'|'-') ISOTZONEHOUR (':'? ISOMINUTE)? ;
 fragment ISOTZONEHOUR: '0' DIGIT | '10' | '11' | '12' ;
+fragment HEX_4: HEX HEX HEX HEX;
+fragment HEX: [0-9a-fA-F];

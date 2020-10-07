@@ -2,7 +2,7 @@
   <v-app-bar app color="primary" absolute dense dark flat>
     <v-spacer></v-spacer>
     <v-menu left bottom offset-y>
-      <template v-slot:activator="{ on }">
+      <template #activator="{ on }">
         <v-btn icon v-on="on">
           <v-icon>person</v-icon>
         </v-btn>

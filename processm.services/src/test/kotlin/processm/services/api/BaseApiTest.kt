@@ -12,7 +12,6 @@ import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkClass
-import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.Before
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
@@ -20,7 +19,9 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.AutoCloseKoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
+import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.AuthenticationResult
+import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
 import java.util.*
@@ -29,7 +30,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 abstract class BaseApiTest : AutoCloseKoinTest() {
-
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
 
@@ -40,6 +40,10 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
         MockProvider.register { mockedClass -> mockkClass(mockedClass) }
+    }
+
+    protected open fun componentsRegistration() {
+        accountService = declareMock()
     }
 
     @ParameterizedTest
@@ -85,20 +89,28 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
             put("ktor.jwt.tokenTtl", "PT10S")
         }
         configurationCustomization?.invoke(configuration)
-
         application.apiModule()
-        accountService = declareMock { }
-
+        componentsRegistration()
         testLogic(this)
     }
 
     protected fun TestApplicationEngine.withAuthentication(
-        login: String = "user@example.com", password: String = "pass", callback: JwtAuthenticationTrackingEngine.() -> Unit
+        userId: UUID = UUID.randomUUID(),
+        login: String = "user@example.com",
+        password: String = "pass",
+        role: Pair<OrganizationRole, UUID> = OrganizationRole.owner to UUID.randomUUID(),
+        callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
-            every { id } returns EntityID<UUID>(UUID.randomUUID(), mockk())
+            every { id } returns userId
             every { email } returns login
         }
+        every { accountService.getRolesAssignedToUser(userId) } returns
+                listOf(mockk {
+                    every { user.id } returns userId
+                    every { organization.id } returns role.second
+                    every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.first.name)
+                })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
     }
