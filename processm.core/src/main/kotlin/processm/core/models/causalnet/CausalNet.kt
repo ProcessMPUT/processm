@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -103,21 +104,26 @@ abstract class CausalNet(
     /**
      * In the given [state], list of nodes that can be executed, along with corresponding split and join
      */
-    fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
+    fun available(state: CausalNetState): List<DecoupledNodeExecution> {
+        val flatState = state.uniqueSet()
         if (state.isNotEmpty()) {
-            for (node in state.map { it.target }.toSet())
+            val result = ArrayList<DecoupledNodeExecution>()
+            for ((node, relevant) in flatState.groupBy { it.target }) {
+                val relevantSources = relevant.mapToSet { it.source }
+                val splits = if (node != end) splits[node].orEmpty() else setOf(null)
                 for (join in joins[node].orEmpty())
-                    if (state.containsAll(join.dependencies)) {
-                        val splits = if (node != end) splits[node].orEmpty() else setOf(null)
-                        yieldAll(splits.map { split ->
+                    if (relevantSources.containsAll(join.sources)) {
+//                    if (flatState.containsAll(join.dependencies)) {
+                        splits.mapTo(result) { split ->
                             DecoupledNodeExecution(node, join, split)
-                        })
+                        }
                     }
+            }
+            return result
 
         } else
-            yieldAll(
-                splits[start].orEmpty()
-                    .map { split -> DecoupledNodeExecution(start, null, split) })
+            return splits[start].orEmpty()
+                .map { split -> DecoupledNodeExecution(start, null, split) }
     }
 
     fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {

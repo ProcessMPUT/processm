@@ -15,7 +15,8 @@ open class BasicDependencyGraphProvider(protected val minDirectlyFollows: Int) :
     override val start = Node("start", special = true)
     override val end = Node("end", special = true)
     protected val mutableNodes = mutableSetOf(start, end)
-    override val nodes: Set<Node> = mutableNodes
+    override val nodes: Set<Node>
+        get() = mutableNodes
 
     internal val directlyFollows = Counter<Dependency>()
 
@@ -29,6 +30,21 @@ open class BasicDependencyGraphProvider(protected val minDirectlyFollows: Int) :
             prev = curr
         }
         directlyFollows.inc(Dependency(prev, end))
+    }
+
+    override fun unprocessTrace(nodeTrace: NodeTrace) {
+        val i = nodeTrace.iterator()
+        var prev = start
+        while (i.hasNext()) {
+            val curr = i.next()
+            directlyFollows.dec(Dependency(prev, curr))
+            prev = curr
+        }
+        directlyFollows.dec(Dependency(prev, end))
+        mutableNodes.clear()
+        val dg = computeDependencyGraph()
+        mutableNodes.addAll(dg.map { it.source })
+        mutableNodes.addAll(dg.map { it.target })
     }
 
     override fun computeDependencyGraph(): Collection<Dependency> = directlyFollows

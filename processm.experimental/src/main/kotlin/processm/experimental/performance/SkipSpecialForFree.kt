@@ -4,7 +4,7 @@ import processm.core.log.Event
 import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
 
-class SkipSpecialForFree(val base: Distance) : Distance {
+open class SkipSpecialForFree(val base: Distance) : Distance {
     override val maxAcceptableDistance: Double
         get() = base.maxAcceptableDistance
 

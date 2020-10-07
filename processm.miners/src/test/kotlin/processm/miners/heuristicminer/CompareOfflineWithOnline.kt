@@ -14,6 +14,7 @@ import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMin
 import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.miners.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.miners.heuristicminer.traceregisters.TraceRegister
+import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -28,11 +29,13 @@ class CompareOfflineWithOnline {
             .toSet()
 
     private fun online(log: Log, traceRegister: TraceRegister): Set<List<Node>> {
-        val hm = OnlineHeuristicMiner(
+        /*val hm = OnlineHeuristicMiner(
             traceRegister = traceRegister,
             dependencyGraphProvider = DefaultDependencyGraphProvider(1, 1e-5),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
+         */
+        val hm = WindowingHeuristicMiner()
         hm.processLog(log)
         val onlineModel = hm.result
         return seqs(onlineModel)

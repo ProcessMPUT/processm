@@ -10,6 +10,8 @@ import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
+import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -63,6 +65,22 @@ class HeuristicMinerTest {
             """.trimIndent())
         val hm = OnlineHeuristicMiner()
         hm.processLog(log)
+        println(hm.result)
+    }
+
+    @Test
+    fun diamond2() {
+        val log= logFromString(   """
+                a b c d
+                a c b d 
+            """.trimIndent()).traces.toList()
+        val hm = OnlineHeuristicMiner(
+            traceRegister = CompleteTraceRegister(),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+        hm.processTrace(log[0])
+        println(hm.result)
+        hm.unprocessTrace(log[0])
+        hm.processTrace(log[1])
         println(hm.result)
     }
 }

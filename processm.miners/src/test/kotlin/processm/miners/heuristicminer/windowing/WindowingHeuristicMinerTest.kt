@@ -92,6 +92,7 @@ class WindowingHeuristicMinerTest {
         hm.processDiff(log, Log(emptySequence()))
         println(hm.result)
         test(log, hm.result)
+        println(hm.result.toDSL())
     }
 
     @Test

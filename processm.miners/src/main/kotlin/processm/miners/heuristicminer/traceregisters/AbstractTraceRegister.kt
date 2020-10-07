@@ -19,8 +19,8 @@ abstract class AbstractTraceRegister : TraceRegister {
         bindingCounter.values.forEach { it.removeAll(traces) }
     }
 
-    override operator fun get(binding: Binding): Set<NodeTrace> {
-        return bindingCounter[binding]
+    override operator fun get(bindings: Collection<Binding>): Set<NodeTrace> {
+        return bindings.flatMapTo(HashSet()) {bindingCounter[it]}
     }
 
     override fun selectBest(selector: (Set<NodeTrace>) -> Boolean): Set<Binding> {

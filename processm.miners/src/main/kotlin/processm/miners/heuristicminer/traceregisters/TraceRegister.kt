@@ -25,5 +25,5 @@ interface TraceRegister {
     /**
      * Returns the traces relevant for the binding, possibly an empty set.
      */
-    operator fun get(binding: Binding): Set<NodeTrace>
+    operator fun get(binding: Collection<Binding>): Collection<NodeTrace>
 }

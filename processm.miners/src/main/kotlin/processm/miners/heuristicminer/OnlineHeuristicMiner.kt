@@ -35,25 +35,36 @@ class OnlineHeuristicMiner(
 
     private var unableToReplay = ArrayList<List<Node>>()
     private var currentBindings = setOf<Binding>()
-    private val model = MutableCausalNet(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
-    override val result: MutableCausalNet = model
+    private lateinit var model:MutableCausalNet
+    override val result: MutableCausalNet
+            get() = model
 
     override fun processLog(log: Log) {
         for (trace in log.traces)
             processTrace(trace)
     }
 
+    fun unprocessTrace(trace:Trace) {
+        val nodeTrace = traceToNodeTrace(trace)
+        dependencyGraphProvider.unprocessTrace(nodeTrace)
+        val nodeTraceWithLimits = listOf(model.start) + nodeTrace + listOf(model.end)
+        traceRegister.removeAll(setOf(nodeTraceWithLimits))
+    }
+
     fun processTrace(trace: Trace) {
         val nodeTrace = traceToNodeTrace(trace)
         dependencyGraphProvider.processTrace(nodeTrace)
 
-        model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
+        model = MutableCausalNet(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
+        model.addInstance(*dependencyGraphProvider.nodes.toTypedArray())
+//        model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
         model.clearDependencies()
         for (dep in dependencyGraphProvider.computeDependencyGraph())
             model.addDependency(dep)
 
         val nodeTraceWithLimits = listOf(model.start) + nodeTrace + listOf(model.end)
         mineBindings(nodeTraceWithLimits)
+        /*
         longDistanceDependencyMiner.processTrace(nodeTraceWithLimits)
         while (true) {
             val ltdeps = longDistanceDependencyMiner.mine(model)
@@ -75,6 +86,7 @@ class OnlineHeuristicMiner(
             } else
                 break
         }
+         */
     }
 
     private fun replay(toReplay: Collection<List<Node>>) {
@@ -125,9 +137,7 @@ class OnlineHeuristicMiner(
                     binding.dependencies.any { dependenciesOfNewBindings.contains(it) }
                 }
 
-            val toReplay = (bindingsWithUnavailableDependencies + bindingsWithDependenciesOfNewBindings)
-                .flatMap { traceRegister[it] }
-                .toSet()
+            val toReplay = traceRegister[bindingsWithUnavailableDependencies + bindingsWithDependenciesOfNewBindings]
 
             replay(toReplay)
             updateBindings()

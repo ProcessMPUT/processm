@@ -5,7 +5,7 @@ import processm.core.models.commons.ActivityExecution
 /**
  * Represents the possiblity of executing [activity] using [join] and [split]
  */
-open class DecoupledNodeExecution internal constructor(
+open class DecoupledNodeExecution(
     override val activity: Node,
     val join: Join?,
     val split: Split?

@@ -1,8 +1,6 @@
 package processm.experimental.performance
 
 import ch.qos.logback.classic.Level
-import io.mockk.every
-import io.mockk.mockk
 import org.slf4j.LoggerFactory.getLogger
 import processm.core.helpers.mapToSet
 import processm.core.log.Event
@@ -12,15 +10,44 @@ import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
+import processm.core.models.commons.Activity
+import processm.core.verifiers.CausalNetVerifier
+import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.experimental.onlinehmpaper.filterLog
+import processm.experimental.onlinehmpaper.toDanielJS
+import processm.miners.heuristicminer.HashMapWithDefault
 import processm.miners.heuristicminer.OfflineHeuristicMiner
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.test.*
+
+fun CausalNet.toPython(): String {
+    fun wrap(obj: Any): String {
+        val text = obj.toString()
+        require('\'' !in text)
+        return "'%s'".format(text.replace("\n", "\\n"))
+    }
+    val result = StringBuilder()
+    fun bindings(bindings:Iterable<Binding>, name: String) {
+        result.append(name)
+        result.appendln(" = [")
+        result.append(bindings.joinToString(separator = ",\n") { b->"    [" + b.dependencies.joinToString(separator = ", ") { "(%s, %s)".format(wrap(it.source), wrap(it.target)) } +"]" })
+        result.appendln()
+        result.appendln("]")
+    }
+    result.append("nodes = [")
+    result.append(this.instances.joinToString(separator = ", ", transform = ::wrap))
+    result.appendln("]")
+    bindings(joins.values.flatten(), "joins")
+    bindings(splits.values.flatten(), "splits")
+    return result.toString()
+}
 
 @InMemoryXESProcessing
 class PerformanceAnalyzerTest {
@@ -35,7 +62,7 @@ class PerformanceAnalyzerTest {
     private val h = Node("h")
 
     private fun event(name: String): Event {
-        return object :Event() {
+        return object : Event() {
             override var conceptName: String? = name
         }
         /*
@@ -59,7 +86,7 @@ class PerformanceAnalyzerTest {
 
     @BeforeTest
     fun setupLogger() {
-//        (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
+        (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
     }
 
     private val model0 = causalnet {
@@ -246,18 +273,19 @@ class PerformanceAnalyzerTest {
         }.map { Trace(sequenceOf(event("start")) + it.events + sequenceOf(event("end"))) }
     )
 
-    private val model4:CausalNet
+    private val model4: CausalNet
 
     init {
         val m = MutableCausalNet()
-        for((tidx, trace) in logs.traces.withIndex())  {
-            val n =trace.events.count()
-            val nodes = listOf(m.start) + trace.events.filterIndexed {eidx, e -> eidx in 1 until n-1}.mapIndexed { eidx, e ->  Node(e.conceptName!!, "$tidx/$eidx") }.toList() + listOf(m.end)
+        for ((tidx, trace) in logs.traces.withIndex()) {
+            val n = trace.events.count()
+            val nodes = listOf(m.start) + trace.events.filterIndexed { eidx, e -> eidx in 1 until n - 1 }
+                .mapIndexed { eidx, e -> Node(e.conceptName!!, "$tidx/$eidx") }.toList() + listOf(m.end)
             m.addInstance(*nodes.toTypedArray())
-            for(i in 0 until nodes.size-1) {
-                val src=nodes[i]
-                val dst = nodes[i+1]
-                val d= m.addDependency(src, dst)
+            for (i in 0 until nodes.size - 1) {
+                val src = nodes[i]
+                val dst = nodes[i + 1]
+                val d = m.addDependency(src, dst)
                 m.addSplit(Split(setOf(d)))
                 m.addJoin(Join(setOf(d)))
             }
@@ -281,7 +309,8 @@ class PerformanceAnalyzerTest {
     @Test
     fun `model1 precision`() {
         // The paper gives 0.97 here, but both model representation and precision definition are different
-        assertDoubleEquals(0.912, PerformanceAnalyzer(log, model1).precision)
+        (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
+        assertDoubleEquals(0.978, PerformanceAnalyzer(log, model1).precision)
     }
 
     @Test
@@ -354,10 +383,10 @@ class PerformanceAnalyzerTest {
 
     @Test
     fun generalization() {
-        val pa1=PerformanceAnalyzer(logs, model1)
-        val pa2=PerformanceAnalyzer(logs, model2)
-        val pa3=PerformanceAnalyzer(logs, model3)
-        val pa4=PerformanceAnalyzer(logs, model4)
+        val pa1 = PerformanceAnalyzer(logs, model1)
+        val pa2 = PerformanceAnalyzer(logs, model2)
+        val pa3 = PerformanceAnalyzer(logs, model3)
+        val pa4 = PerformanceAnalyzer(logs, model4)
         println("state: g1=${pa1.stateLevelGeneralization} g2=${pa2.stateLevelGeneralization} g3=${pa3.stateLevelGeneralization} g4=${pa4.stateLevelGeneralization}")
         println("event: g1=${pa1.eventLevelGeneralization} g2=${pa2.eventLevelGeneralization} g3=${pa3.eventLevelGeneralization} g4=${pa4.eventLevelGeneralization}")
 //        assertTrue(
@@ -403,20 +432,29 @@ class PerformanceAnalyzerTest {
 
     @Test
     fun `model6 alignment without start and end`() {
-        val alignment = PerformanceAnalyzer(emptyLog, model6).computeOptimalAlignment(trace(a,b,c,d,e)).first
+        val alignment = PerformanceAnalyzer(emptyLog, model6).computeOptimalAlignment(trace(a, b, c, d, e)).first
         assertAlignmentEquals(
             2.0,
-            listOf(null to model6.start, a  to a , b to b, c to c, d to d, e to e, null to model6.end),
+            listOf(null to model6.start, a to a, b to b, c to c, d to d, e to e, null to model6.end),
             alignment
         )
     }
 
     @Test
     fun `model6 alignment ignoring start and end`() {
-        val alignment = PerformanceAnalyzer(emptyLog, model6, SkipSpecialForFree(StandardDistance())).computeOptimalAlignment(trace(a,b,c,d,e)).first
+        val alignment =
+            PerformanceAnalyzer(emptyLog, model6, SkipSpecialForFree(StandardDistance())).computeOptimalAlignment(
+                trace(
+                    a,
+                    b,
+                    c,
+                    d,
+                    e
+                )
+            ).first
         assertAlignmentEquals(
             0.0,
-            listOf(null to model6.start, a  to a , b to b, c to c, d to d, e to e, null to model6.end),
+            listOf(null to model6.start, a to a, b to b, c to c, d to d, e to e, null to model6.end),
             alignment
         )
     }
@@ -424,8 +462,8 @@ class PerformanceAnalyzerTest {
     @Test
     fun `nongreedy alignment`() {
         val model7 = causalnet {
-            start =a
-            end =e
+            start = a
+            end = e
             a splits b or c
             b splits e
             c splits d
@@ -435,8 +473,10 @@ class PerformanceAnalyzerTest {
             c joins d
             b or d join e
         }
-        val alignment = PerformanceAnalyzer(emptyLog, model7).computeOptimalAlignment(trace(a,b,e,c,d,e)).first
-        assertAlignmentEquals(2.0,
+        val alignment = PerformanceAnalyzer(emptyLog, model7).computeOptimalAlignment(trace(a, b, e, c, d, e)).first
+        println(alignment.alignment.toList().map { "${it.event?.conceptName} -> ${it.activity}" })
+        assertAlignmentEquals(
+            2.0,
             listOf(a to a, b to null, e to null, c to c, d to d, e to e),
             alignment
         )
@@ -445,9 +485,9 @@ class PerformanceAnalyzerTest {
     @Test
     fun `deferred prize`() {
         val model = causalnet {
-            start =a
-            end =e
-            a splits b+f or b+g or b+h
+            start = a
+            end = e
+            a splits b + f or b + g or b + h
             b splits c
             c splits d
             d splits e
@@ -457,12 +497,23 @@ class PerformanceAnalyzerTest {
             a joins b
             b joins c
             c joins d
-            d+f or d+g or d+h join e
+            d + f or d + g or d + h join e
             a joins f
             a joins g
             a joins h
         }
-        val alignments = listOf(f,g,h).associateWith{ PerformanceAnalyzer(emptyLog, model).computeOptimalAlignment(trace(a,b,c,d,it,e)) }
+        val alignments = listOf(f, g, h).associateWith {
+            PerformanceAnalyzer(emptyLog, model).computeOptimalAlignment(
+                trace(
+                    a,
+                    b,
+                    c,
+                    d,
+                    it,
+                    e
+                )
+            )
+        }
         val length = alignments.values.map { it.second }
         println(length)
         assertTrue { length.max()!! <= 7 }
@@ -487,20 +538,23 @@ class PerformanceAnalyzerTest {
 
     @Ignore
     @Test
-    fun `BPIC15_2`() {
-        val log=load("../xes-logs/BPIC15_2.xes.gz")
-        val offline = OfflineHeuristicMiner(bindingProvider = BestFirstBindingProvider(maxQueueSize = 100), longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+    fun `BPIC15_2f`() {
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+        val offline = WindowingHeuristicMiner()
         offline.processLog(log)
         println(offline.result)
-        val pa = PerformanceAnalyzer(log, offline.result)
-        println(pa.fitness)
+        val pa = PerformanceAnalyzer(log, offline.result, SkipSpecialForFree(StandardDistance()))
         println(pa.precision)
     }
 
+    @Ignore
     @Test
     fun `CoSeLoG_WABO_2`() {
-        val log=load("../xes-logs/CoSeLoG_WABO_2.xes.gz")
-        val offline = OfflineHeuristicMiner(bindingProvider = BestFirstBindingProvider(maxQueueSize = 100), longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+        val log = load("../xes-logs/CoSeLoG_WABO_2.xes.gz")
+        val offline = OfflineHeuristicMiner(
+            bindingProvider = BestFirstBindingProvider(maxQueueSize = 100),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
         offline.processLog(log)
         println(offline.result)
         println()
@@ -519,22 +573,29 @@ class PerformanceAnalyzerTest {
     @Ignore
     @Test
     fun `bpi_challenge_2017`() {
-        val log=load("../xes-logs/bpi_challenge_2017.xes.gz")
-        val offline = OfflineHeuristicMiner(bindingProvider = BestFirstBindingProvider(maxQueueSize = 100), longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+        val log = load("../xes-logs/bpi_challenge_2017.xes.gz")
+        val offline = OfflineHeuristicMiner(
+            bindingProvider = BestFirstBindingProvider(maxQueueSize = 100),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
         offline.processLog(log)
         println(offline.result)
     }
 
 
+    @Ignore
     @Test
     fun `nasa-cev-complete-splitted`() {
-        val fulllog=load("../xes-logs/nasa-cev-complete-splitted.xes.gz")
+        val fulllog = load("../xes-logs/nasa-cev-complete-splitted.xes.gz")
         val log = filterLog(fulllog)
-        val offline = OfflineHeuristicMiner(bindingProvider = BestFirstBindingProvider(maxQueueSize = 100), longDistanceDependencyMiner = VoidLongDistanceDependencyMiner())
+        val offline = OfflineHeuristicMiner(
+            bindingProvider = BestFirstBindingProvider(maxQueueSize = 100),
+            longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
+        )
         offline.processLog(log)
         println(offline.result)
         val pa = PerformanceAnalyzer(log, offline.result, SkipSpecialForFree(StandardDistance()))
-        val bot="⊥"
+        val bot = "⊥"
 //        for((i, a) in pa.optimalAlignment.withIndex()) {
 //            println("$i -> ${a.cost}")
 ////            for(step in a.alignment)
@@ -542,6 +603,260 @@ class PerformanceAnalyzerTest {
 //        }
         println(pa.fitness)
         println(pa.precision)
+    }
+
+    @Test
+    fun `CoSeLoG_WABO_2 - windowing`() {
+        (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.DEBUG
+        val fulllog = load("../xes-logs/CoSeLoG_WABO_2.xes.gz")
+        val log = filterLog(fulllog)
+        val offline = WindowingHeuristicMiner()
+        offline.processLog(log)
+        println(offline.result)
+        /*
+        File("../gurobi/model.py").writeText(offline.result.toPython())
+        assert(false)
+         */
+        val dst = object : SkipSpecialForFree(StandardDistance()) {
+            override val maxAcceptableDistance: Double = 0.5
+        }
+        val partial = Log(log.traces.toList().subList(0, 1).asSequence())
+        val pa = PerformanceAnalyzer(partial, offline.result, SkipSpecialForFree(StandardDistance()))
+        val bot = "⊥"
+//        for((i, a) in pa.optimalAlignment.withIndex()) {
+//            println("$i -> ${a.cost}")
+////            for(step in a.alignment)
+////                println("\t${step.event?.conceptName?:bot} -> ${step.activity?:bot}")
+//        }
+//        println(pa.fitness)
+        println(pa.precision)
+    }
+
+    @Test
+    fun `nasa-cev-complete-splitted - windowing`() {
+        (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.DEBUG
+        val fulllog = load("../xes-logs/nasa-cev-complete-splitted.xes.gz")
+        val log = filterLog(fulllog)
+        val offline = WindowingHeuristicMiner()
+        offline.processLog(log)
+        println(offline.result)
+        /*
+        File("../gurobi/model.py").writeText(offline.result.toPython())
+        assert(false)
+         */
+        val dst = object : SkipSpecialForFree(StandardDistance()) {
+            override val maxAcceptableDistance: Double = 0.5
+        }
+        //val partial = Log(log.traces.toList().subList(38, 45).asSequence())
+        val partial = Log(log.traces.toList().subList(0, 30).asSequence())
+        val pa = PerformanceAnalyzer(partial, offline.result, SkipSpecialForFree(StandardDistance()))
+        val bot = "⊥"
+//        for((i, a) in pa.optimalAlignment.withIndex()) {
+//            println("$i -> ${a.cost}")
+////            for(step in a.alignment)
+////                println("\t${step.event?.conceptName?:bot} -> ${step.activity?:bot}")
+//        }
+//        println(pa.fitness)
+        println(pa.precision)
+    }
+
+    @Ignore
+    @Test
+    fun `blah`() {
+        val a1 = Node("a1")
+        val a2 = Node("a2")
+        val a3 = Node("a3")
+        val b = Node("b")
+        val c1 = Node("c1")
+        val c2 = Node("c2")
+        val c3 = Node("c3")
+        val model = causalnet {
+            start splits a1 + a2 + a3
+            a1 splits b
+            a2 splits b
+            a3 splits b
+            b splits c1 or c2 or c3
+            c1 splits end
+            c2 splits end
+            c3 splits end
+            start joins a1
+            start joins a2
+            start joins a3
+            a1 or a2 or a3 join b
+            b joins c1
+            b joins c2
+            b joins c3
+            c1 + c2 + c3 join end
+        }
+        println(model.toDanielJS("test"))
+//        CausalNetVerifierImpl(model).validSequences.forEach { println(it.map { it.a }) }
+    }
+
+    fun logFromModel(model: CausalNet): Log {
+        val tmp = CausalNetVerifier().verify(model).validLoopFreeSequences.map { seq -> seq.map { it.a } }
+            .toSet()
+        return Log(tmp.map { seq -> Trace(seq.asSequence().map { event(it.name) }) }.asSequence())
+    }
+
+    fun logFromString(text: String): Log =
+        Log(
+            text.split('\n')
+                .map { line -> Trace(line.split(" ").filter { it.isNotEmpty() }.map { event(it) }.asSequence()) }
+                .asSequence()
+        )
+
+    @Test
+    fun `diamond of diamonds`() {
+        val a = Node("a")
+        val b1 = Node("b1")
+        val c1 = Node("c1")
+        val d1 = Node("d1")
+        val e1 = Node("e1")
+        val b2 = Node("b2")
+        val c2 = Node("c2")
+        val d2 = Node("d2")
+        val e2 = Node("e2")
+        val f = Node("f")
+        val dodReference = causalnet {
+            start = a
+            end = f
+            a splits b1 + b2
+            b1 splits c1 + d1
+            b2 splits c2 + d2
+            c1 splits e1
+            d1 splits e1
+            c2 splits e2
+            d2 splits e2
+            e1 splits f
+            e2 splits f
+            a joins b1
+            a joins b2
+            b1 joins c1
+            b1 joins d1
+            b2 joins c2
+            b2 joins d2
+            c1 + d1 join e1
+            c2 + d2 join e2
+            e1 + e2 join f
+        }
+        val log = logFromModel(dodReference)
+        println(PerformanceAnalyzer(log, dodReference).precision)
+    }
+
+    @Test
+    fun `loops`() {
+        val log = logFromString(
+            """
+            a b  e
+            a b c  e
+            a b c d e
+            a b c d b  e
+            a b c d b c  e
+            a b c d b c d  e
+        """.trimIndent()
+        )
+        val hm = WindowingHeuristicMiner()
+        hm.processDiff(log, Log(emptySequence()))
+        println(hm.result)
+        val str = "a " + (0..100).joinToString(separator = " ") { "b c d" } + " e"
+        println(str)
+        val log2 = logFromString(str)
+        //      (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
+        println(PerformanceAnalyzer(log2, hm.result, SkipSpecialForFree(StandardDistance())).optimalAlignment)
+    }
+
+    private fun testPossible(model: CausalNet, maxSeqLen: Int = Int.MAX_VALUE, maxPrefixLen: Int = Int.MAX_VALUE) {
+        val validSequences = CausalNetVerifierImpl(model)
+            .computeSetOfValidSequences(false) { it.size < maxSeqLen }
+            .map { it.map { it.a } }.toList()
+        val prefix2possible = HashMapWithDefault<List<Node>, HashSet<Activity>>() { HashSet() }
+        for (seq in validSequences) {
+            for (i in 0 until min(seq.size, maxPrefixLen))
+                prefix2possible[seq.subList(0, i)].add(seq[i])
+        }
+        println(validSequences)
+        println(prefix2possible)
+        val pa = PerformanceAnalyzer(Log(emptySequence()), model, SkipSpecialForFree(StandardDistance()))
+        for ((prefix, expected) in prefix2possible.entries) {
+            val actual = pa.possibleNext(listOf(prefix)).values.single()
+            assertEquals(expected, actual, "prefix=$prefix expected=$expected actual=$actual")
+        }
+    }
+
+    @Test
+    fun possible1() {
+        val model = causalnet {
+            start splits a + b or a + c or b + c
+            a splits d or e
+            b splits d or f
+            c splits e or f
+            d splits end
+            e splits end
+            f splits end
+            start joins a
+            start joins b
+            start joins c
+            a + b join d
+            a + c join e
+            b + c join f
+            d or e or f join end
+        }
+        testPossible(model)
+    }
+
+    @Test
+    fun possible2() {
+        val model = causalnet {
+            start splits a
+            a splits a + b or c
+            b splits b or end
+            c splits b
+            start or a join a
+            c or a + b join b
+            a joins c
+            b joins end
+        }
+        println(model)
+        val s = model.start
+        val pa = PerformanceAnalyzer(Log(emptySequence()), model, SkipSpecialForFree(StandardDistance()))
+        assertEquals(setOf(a), pa.possibleNext(listOf(listOf(s))).values.single())
+        assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(s, a))).values.single())
+        assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(s, a, a))).values.single())
+        assertEquals(setOf(b), pa.possibleNext(listOf(listOf(s, a, a, c))).values.single())
+        assertEquals(setOf(b), pa.possibleNext(listOf(listOf(s, a, a, c, b))).values.single())
+        assertEquals(setOf(model.end), pa.possibleNext(listOf(listOf(s, a, a, c, b, b))).values.single())
+    }
+
+    @Test
+    fun possible3() {
+        val a = List(3) { i -> Node("a$i") }
+        val b = List(3) { i -> Node("b$i") }
+        val c = List(3) { i -> Node("c$i") }
+        val model = causalnet {
+            start splits a[0] or a[1] or a[2] or a[0] + a[1] or a[0] + a[2] or a[1] + a[2] or a[0] + a[1] + a[2]
+            a[0] splits b[0] or b[1] or b[2] or b[0] + b[1] or b[0] + b[2] or b[1] + b[2] or b[0] + b[1] + b[2]
+            a[1] splits b[0] or b[1] or b[2] or b[0] + b[1] or b[0] + b[2] or b[1] + b[2] or b[0] + b[1] + b[2]
+            a[2] splits b[0] or b[1] or b[2] or b[0] + b[1] or b[0] + b[2] or b[1] + b[2] or b[0] + b[1] + b[2]
+            b[0] splits c[0] or c[1] or c[2] or c[0] + c[1] or c[0] + c[2] or c[1] + c[2] or c[0] + c[1] + c[2]
+            b[1] splits c[0] or c[1] or c[2] or c[0] + c[1] or c[0] + c[2] or c[1] + c[2] or c[0] + c[1] + c[2]
+            b[2] splits c[0] or c[1] or c[2] or c[0] + c[1] or c[0] + c[2] or c[1] + c[2] or c[0] + c[1] + c[2]
+            c[0] splits end
+            c[1] splits end
+            c[2] splits end
+            start joins a[0]
+            start joins a[1]
+            start joins a[2]
+            a[0] or a[1] or a[2] or a[0] + a[1] or a[0] + a[2] or a[1] + a[2] or a[0] + a[1] + a[2] join b[0]
+            a[0] or a[1] or a[2] or a[0] + a[1] or a[0] + a[2] or a[1] + a[2] or a[0] + a[1] + a[2] join b[1]
+            a[0] or a[1] or a[2] or a[0] + a[1] or a[0] + a[2] or a[1] + a[2] or a[0] + a[1] + a[2] join b[2]
+            b[0] or b[1] or b[2] or b[0] + b[1] or b[0] + b[2] or b[1] + b[2] or b[0] + b[1] + b[2] join c[0]
+            b[0] or b[1] or b[2] or b[0] + b[1] or b[0] + b[2] or b[1] + b[2] or b[0] + b[1] + b[2] join c[1]
+            b[0] or b[1] or b[2] or b[0] + b[1] or b[0] + b[2] or b[1] + b[2] or b[0] + b[1] + b[2] join c[2]
+            c[0] or c[1] or c[2] or c[0] + c[1] or c[0] + c[2] or c[1] + c[2] or c[0] + c[1] + c[2] join end
+        }
+        val pa = PerformanceAnalyzer(Log(emptySequence()), model, SkipSpecialForFree(StandardDistance()))
+        //pa.possibleNext(listOf(model.start, a[0], a[1]))
+        pa.replayWithSearch(listOf(model.start, a[0], a[1], c[0]))
     }
 
 }

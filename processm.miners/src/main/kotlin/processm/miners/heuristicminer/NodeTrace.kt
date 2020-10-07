@@ -3,7 +3,7 @@ package processm.miners.heuristicminer
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Node
 
-internal typealias NodeTrace = List<Node>
+typealias NodeTrace = List<Node>
 
 /**
  * Convert a given [Trace] to a list of [Node]s

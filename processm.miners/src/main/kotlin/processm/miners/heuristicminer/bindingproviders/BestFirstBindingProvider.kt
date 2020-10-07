@@ -69,6 +69,10 @@ class LazyCausalNetState(
         return tmp
     }
 
+    override fun hashCode(): Int = backend.hashCode()
+
+    override fun equals(other: Any?): Boolean = Objects.equals(backend, other)
+
     override fun contains(element: Dependency?): Boolean = backend.contains(element)
 
     override fun addAll(elements: Collection<Dependency>): Boolean = backend.addAll(elements)
@@ -152,7 +156,7 @@ class BestFirstBindingProvider(
             availableAt[idx] = HashSet(available)
             available.add(currentNode)
         }
-        check(trace.size<=11 || produceCandidates[11].count()>0)
+//        check(trace.size<=11 || produceCandidates[11].count()>0)
 //        var printCtr = 0
 //        var skipCtr = 0
         while (queue.isNotEmpty()) {
@@ -205,7 +209,7 @@ class BestFirstBindingProvider(
             }
         }
         logger.warn("Failed to compute bindings for $trace")
-        logger.warn(model.toString())
+//        logger.warn(model.toString())
         return emptyList()
     }
 }
