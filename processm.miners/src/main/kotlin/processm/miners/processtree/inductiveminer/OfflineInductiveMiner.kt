@@ -15,7 +15,7 @@ class OfflineInductiveMiner : InductiveMiner() {
      *
      * Runs in: O(|traces| * |activities|)
      */
-    override fun processLog(logsCollection: LogInputStream): ProcessTree {
+    override fun processLog(logsCollection: LogInputStream, increaseTraces: Boolean): ProcessTree {
         // Build directly follows graph
         val dfg = DirectlyFollowsGraph()
         dfg.discover(logsCollection)

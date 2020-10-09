@@ -149,7 +149,7 @@ class Experiment {
             csv(file.name, "traces", allTraces.size)
             csv(file.name, "activities", allNames.size)
 
-            allTraces = filterTraces(allTraces, Random(seed=config.seed), config)
+            allTraces = filterTraces(allTraces, Random(seed = config.seed), config)
             val allTracesSize = allTraces.size
 
             for (step in config.windowsSteps) {
@@ -238,8 +238,8 @@ class Experiment {
 
                             // Calculate changes
                             timeOnline = measureResources {
-                                imOnline.discover(sequenceOf(removeLog), increaseTraces = false)
-                                modelOnline = imOnline.processLog(sequenceOf(newLog))
+                                imOnline.discover(sequenceOf(newLog), increaseTraces = true)
+                                modelOnline = imOnline.processLog(sequenceOf(removeLog), increaseTraces = false)
                             }
 
                             // Clean up
