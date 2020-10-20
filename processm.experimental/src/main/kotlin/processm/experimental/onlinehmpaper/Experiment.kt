@@ -2,7 +2,6 @@ package processm.experimental.onlinehmpaper
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonConfiguration
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -104,7 +103,7 @@ class Experiment {
 
         operator fun invoke(line: List<String>) {
             val text = line.joinToString(separator = separator) { if (it.contains(separator)) "\"$it\"" else it }
-            stream.appendln(text)
+            stream.appendLine(text)
             stream.flush()
         }
     }
@@ -119,10 +118,11 @@ class Experiment {
         val seed: Int
     ) {
         companion object {
-            val json = Json(JsonConfiguration.Default)
+            val json = Json { allowStructuredMapKeys = true }
 
             fun load(jsonFile: String): Config {
-                return File(jsonFile).bufferedReader().use { return@use json.parse(serializer(), it.readText()) }
+                return File(jsonFile).bufferedReader()
+                    .use { return@use json.decodeFromString(serializer(), it.readText()) }
             }
         }
     }
