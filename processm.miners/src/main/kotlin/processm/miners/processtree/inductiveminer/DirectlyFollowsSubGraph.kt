@@ -42,7 +42,8 @@ class DirectlyFollowsSubGraph(
      * Parent subGraph.
      * Will be null only for root graph.
      */
-    private val parentSubGraph: DirectlyFollowsSubGraph? = null
+    private val parentSubGraph: DirectlyFollowsSubGraph? = null,
+    private val useStatistics: Boolean = true
 ) {
     companion object {
         /**
@@ -98,7 +99,8 @@ class DirectlyFollowsSubGraph(
 
     init {
         // Runs in O(|activities|)
-        updateCurrentTraceSupport()
+        if (useStatistics)
+            updateCurrentTraceSupport()
 
         // Runs in O(1) + O(|activities|)
         if (initialEndActivities.isNullOrEmpty()) initialEndActivities = inferEndActivities()
@@ -226,24 +228,25 @@ class DirectlyFollowsSubGraph(
             children.firstOrNull { it.activities.size == 1 && it.activities.first() is SilentActivity }
 
         // Append silent activity if sum of child support < parent support and not contain silent activity
-        if (children.sumBy { it.currentTraceSupport } < (parentSubGraph?.currentTraceSupport ?: 0)) {
-            if (subGraphWithSilentActivity === null) {
-                children.add(
-                    DirectlyFollowsSubGraph(
-                        activities = setOf(SilentActivity()),
-                        dfg = dfg,
-                        initialStartActivities = currentStartActivities,
-                        initialEndActivities = currentEndActivities,
-                        parentSubGraph = this
+        if (useStatistics)
+            if (children.sumBy { it.currentTraceSupport } < (parentSubGraph?.currentTraceSupport ?: 0)) {
+                if (subGraphWithSilentActivity === null) {
+                    children.add(
+                        DirectlyFollowsSubGraph(
+                            activities = setOf(SilentActivity()),
+                            dfg = dfg,
+                            initialStartActivities = currentStartActivities,
+                            initialEndActivities = currentEndActivities,
+                            parentSubGraph = this
+                        )
                     )
-                )
+                }
+            } else {
+                // Remove silent activity if inside exclusive choice cut
+                if (subGraphWithSilentActivity != null) {
+                    children.remove(subGraphWithSilentActivity)
+                }
             }
-        } else {
-            // Remove silent activity if inside exclusive choice cut
-            if (subGraphWithSilentActivity != null) {
-                children.remove(subGraphWithSilentActivity)
-            }
-        }
     }
 
     /**
@@ -266,7 +269,8 @@ class DirectlyFollowsSubGraph(
                     dfg = dfg,
                     initialStartActivities = currentStartActivities,
                     initialEndActivities = currentEndActivities,
-                    parentSubGraph = this
+                    parentSubGraph = this,
+                    useStatistics = useStatistics
                 )
             )
         }
@@ -464,7 +468,7 @@ class DirectlyFollowsSubGraph(
         // Analyze rows of connection matrix and find
         matrix.forEachIndexed { index, group ->
             // 0 and -1 allowed here
-            if (group.max() ?: 1 <= zeroByte) {
+            if (group.maxOrNull() ?: 1 <= zeroByte) {
                 components.last.add(index)
                 closedGroups.add(index)
                 previousGroup.add(index)
@@ -832,9 +836,13 @@ class DirectlyFollowsSubGraph(
         // Put the start and end activity component first
         val startLabel = components[currentStartActivities.first()]!!
 
-        // Introduce silent activity if first group of activities are part optional based on stats
-        if (components.values.toSet().size >= 2 && dfg.maximumTraceSupport(components.filterValues { it == startLabel }.keys) < (parentSubGraph?.currentTraceSupport ?: 0)) {
-            components[SilentActivity()] = -2
+        if (useStatistics) {
+            // Introduce silent activity if first group of activities are part optional based on stats
+            if (components.values.toSet().size >= 2 && dfg.maximumTraceSupport(components.filterValues { it == startLabel }.keys) < (parentSubGraph?.currentTraceSupport
+                    ?: 0)
+            ) {
+                components[SilentActivity()] = -2
+            }
         }
 
         // Normally we have indexes 0, 1, 2...
@@ -870,13 +878,17 @@ class DirectlyFollowsSubGraph(
         }
 
         // Activity duplicated in any trace?
-        val parentTraceSupport = parentSubGraph?.currentTraceSupport ?: 0
-        detectedCut = if (dfg.activitiesDuplicatedInTraces.containsKey(activity)) {
-            if (currentTraceSupport < parentTraceSupport) CutType.RedoActivityAtLeastZeroTimes
-            else CutType.RedoActivityAtLeastOnce
+        if (useStatistics) {
+            val parentTraceSupport = parentSubGraph?.currentTraceSupport ?: 0
+            detectedCut = if (dfg.activitiesDuplicatedInTraces.containsKey(activity)) {
+                if (currentTraceSupport < parentTraceSupport) CutType.RedoActivityAtLeastZeroTimes
+                else CutType.RedoActivityAtLeastOnce
+            } else {
+                if (parentSubGraph?.detectedCut in cutsWithSupportValidated && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
+                else CutType.Activity
+            }
         } else {
-            if (parentSubGraph?.detectedCut in cutsWithSupportValidated && currentTraceSupport < parentTraceSupport) CutType.OptionalActivity
-            else CutType.Activity
+            detectedCut = CutType.Activity
         }
     }
 

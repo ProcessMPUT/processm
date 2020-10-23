@@ -164,6 +164,7 @@ class Experiment {
 
                         // Offline
                         val imOffline = OfflineInductiveMiner()
+                        imOffline.useStatistics = false
                         var modelOffline: ProcessTree? = null
 
                         // Clean up
@@ -173,6 +174,7 @@ class Experiment {
                         val timeOffline = measureResources {
                             modelOffline = imOffline.processLog(sequenceOf(logInWindow))
                         }
+                        println(modelOffline)
 
                         // Clean up
                         System.gc()

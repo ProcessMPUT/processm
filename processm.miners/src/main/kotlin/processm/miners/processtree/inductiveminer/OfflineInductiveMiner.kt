@@ -10,6 +10,7 @@ import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
  * Build a process tree based on directly-follows graph only.
  */
 class OfflineInductiveMiner : InductiveMiner() {
+    var useStatistics: Boolean = true
     /**
      * Process log and build process tree based on it
      *
@@ -34,7 +35,8 @@ class OfflineInductiveMiner : InductiveMiner() {
             assignChildrenToNode(
                 DirectlyFollowsSubGraph(
                     activities = activities,
-                    dfg = dfg
+                    dfg = dfg,
+                    useStatistics = useStatistics
                 )
             )
         )
