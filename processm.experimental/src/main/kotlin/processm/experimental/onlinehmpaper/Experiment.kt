@@ -14,7 +14,6 @@ import processm.miners.processtree.inductiveminer.PerformanceAnalyzer
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
-import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.streams.asSequence
 
@@ -60,19 +59,7 @@ class Experiment {
         return selectedTraces
     }
 
-    private data class Stats(
-        val fitness: Double,
-        val precision: Double,
-        val resources: ResourceStats
-    )
-
     private data class ResourceStats(val cpuTimeMillis: Long, val peakMemory: Long)
-
-    private fun Collection<Double>.descriptiveStats(): Pair<Double, Double> {
-        val mean = this.average()
-        val stdev = this.map { (it - mean).pow(2) }.average()
-        return mean to stdev
-    }
 
     private fun measureResources(block: () -> Unit): ResourceStats {
         for (pool in ManagementFactory.getMemoryPoolMXBeans())
@@ -146,8 +133,6 @@ class Experiment {
             val allNames = allTraces.flatMap { trace -> trace.events.map { it.conceptName }.toSet() }.toSet()
 
             println("File ${file.name}: ${allTraces.size} traces with ${allNames.size} activities")
-            csv(file.name, "traces", allTraces.size)
-            csv(file.name, "activities", allNames.size)
 
             allTraces = filterTraces(allTraces, Random(seed = config.seed), config)
             val allTracesSize = allTraces.size
@@ -163,115 +148,78 @@ class Experiment {
                         println("Window [$current; ${current + windowSize}]")
 
                         // Offline
-                        val imOffline = OfflineInductiveMiner()
-                        imOffline.useStatistics = false
-                        var modelOffline: ProcessTree? = null
+                        calcOffline(allTraces, current, step, windowSize, csv, file, useStatsMode = false)
+                        calcOffline(allTraces, current, step, windowSize, csv, file, useStatsMode = true)
 
-                        // Clean up
-                        System.gc()
-
-                        val logInWindow = logToSequence(allTraces, from = current, to = current + windowSize)
-                        val timeOffline = measureResources {
-                            modelOffline = imOffline.processLog(sequenceOf(logInWindow))
-                        }
-                        println(modelOffline)
-
-                        // Clean up
-                        System.gc()
-
-                        // Statistics for offline
-                        val paOffline = PerformanceAnalyzer(modelOffline!!)
-                        logToSequence(
-                            allTraces,
-                            from = current,
-                            to = current + windowSize
-                        ).traces.forEach { paOffline.analyze(it) }
-                        csv(file.name, "fitnessTrain", "offline", windowSize, step, current, paOffline.fitness())
-                        csv(file.name, "precisionTrain", "offline", windowSize, step, current, paOffline.precision())
-                        paOffline.cleanNode(modelOffline!!.root!!)
-                        logToSequence(
-                            allTraces,
-                            from = current + windowSize,
-                            to = current + (windowSize * 2)
-                        ).traces.forEach { paOffline.analyze(it) }
-                        csv(file.name, "fitnessTest", "offline", windowSize, step, current, paOffline.fitness())
-                        csv(file.name, "precisionTest", "offline", windowSize, step, current, paOffline.precision())
-                        csv(file.name, "time", "offline", windowSize, step, current, timeOffline.cpuTimeMillis)
-                        csv(file.name, "memory", "offline", windowSize, step, current, timeOffline.peakMemory)
-                        csv(file.name, "model", "offline", windowSize, step, current, modelOffline.toString())
-
-                        // Clean up
-                        System.gc()
-
-                        // Online
-                        var modelOnline: ProcessTree? = null
-                        var timeOnline: ResourceStats
-
-                        // Separate first use and next iterations
-                        if (firstMove) {
-                            firstMove = false
-
-                            // Clean up
-                            System.gc()
-
-                            // Calculate basic model (first)
-                            timeOnline = measureResources {
-                                modelOnline = imOnline.processLog(
-                                    sequenceOf(
-                                        logToSequence(
-                                            allTraces,
-                                            from = current,
-                                            to = current + windowSize
-                                        )
-                                    )
-                                )
-                            }
-
-                            // Clean up
-                            System.gc()
-                        } else {
-                            // Clean up
-                            System.gc()
-
-                            // Prepare changes in DFG
-                            val newLog =
-                                logToSequence(allTraces, from = current - step + windowSize, to = current + windowSize)
-                            val removeLog = logToSequence(allTraces, from = current - step, to = current)
-
-                            // Calculate changes
-                            timeOnline = measureResources {
-                                imOnline.discover(sequenceOf(newLog), increaseTraces = true)
-                                modelOnline = imOnline.processLog(sequenceOf(removeLog), increaseTraces = false)
-                            }
-
-                            // Clean up
-                            System.gc()
-                        }
-
-                        // Statistics for online
-                        val paOnline = PerformanceAnalyzer(modelOnline!!)
-                        paOnline.cleanNode(modelOnline!!.root!!)
-                        logToSequence(
-                            allTraces,
-                            from = current,
-                            to = current + windowSize
-                        ).traces.forEach { paOnline.analyze(it) }
-                        csv(file.name, "fitnessTrain", "online", windowSize, step, current, paOnline.fitness())
-                        csv(file.name, "precisionTrain", "online", windowSize, step, current, paOnline.precision())
-                        paOnline.cleanNode(modelOnline!!.root!!)
-                        logToSequence(
-                            allTraces,
-                            from = current + windowSize,
-                            to = current + (windowSize * 2)
-                        ).traces.forEach { paOnline.analyze(it) }
-                        csv(file.name, "fitnessTest", "online", windowSize, step, current, paOnline.fitness())
-                        csv(file.name, "precisionTest", "online", windowSize, step, current, paOnline.precision())
-                        csv(file.name, "time", "online", windowSize, step, current, timeOnline.cpuTimeMillis)
-                        csv(file.name, "memory", "online", windowSize, step, current, timeOnline.peakMemory)
-                        csv(file.name, "model", "online", windowSize, step, current, modelOnline.toString())
-
-                        // Clean up
-                        System.gc()
+//                        // Online
+//                        var modelOnline: ProcessTree? = null
+//                        var timeOnline: ResourceStats
+//
+//                        // Separate first use and next iterations
+//                        if (firstMove) {
+//                            firstMove = false
+//
+//                            // Clean up
+//                            System.gc()
+//
+//                            // Calculate basic model (first)
+//                            timeOnline = measureResources {
+//                                modelOnline = imOnline.processLog(
+//                                    sequenceOf(
+//                                        logToSequence(
+//                                            allTraces,
+//                                            from = current,
+//                                            to = current + windowSize
+//                                        )
+//                                    )
+//                                )
+//                            }
+//
+//                            // Clean up
+//                            System.gc()
+//                        } else {
+//                            // Clean up
+//                            System.gc()
+//
+//                            // Prepare changes in DFG
+//                            val newLog =
+//                                logToSequence(allTraces, from = current - step + windowSize, to = current + windowSize)
+//                            val removeLog = logToSequence(allTraces, from = current - step, to = current)
+//
+//                            // Calculate changes
+//                            timeOnline = measureResources {
+//                                imOnline.discover(sequenceOf(newLog), increaseTraces = true)
+//                                modelOnline = imOnline.processLog(sequenceOf(removeLog), increaseTraces = false)
+//                            }
+//
+//                            // Clean up
+//                            System.gc()
+//                        }
+//
+//                        // Statistics for online
+//                        val paOnline = PerformanceAnalyzer(modelOnline!!)
+//                        paOnline.cleanNode(modelOnline!!.root!!)
+//                        logToSequence(
+//                            allTraces,
+//                            from = current,
+//                            to = current + windowSize
+//                        ).traces.forEach { paOnline.analyze(it) }
+//                        csv(file.name, "fitnessTrain", "online", windowSize, step, current, paOnline.fitness())
+//                        csv(file.name, "precisionTrain", "online", windowSize, step, current, paOnline.precision())
+//                        paOnline.cleanNode(modelOnline!!.root!!)
+//                        logToSequence(
+//                            allTraces,
+//                            from = current + windowSize,
+//                            to = current + (windowSize * 2)
+//                        ).traces.forEach { paOnline.analyze(it) }
+//                        csv(file.name, "fitnessTest", "online", windowSize, step, current, paOnline.fitness())
+//                        csv(file.name, "precisionTest", "online", windowSize, step, current, paOnline.precision())
+//                        csv(file.name, "time", "online", windowSize, step, current, timeOnline.cpuTimeMillis)
+//                        csv(file.name, "memory", "online", windowSize, step, current, timeOnline.peakMemory)
+//                        csv(file.name, "model", "online", windowSize, step, current, modelOnline.toString())
+//
+//                        // Clean up
+//                        System.gc()
 
                         // Step
                         current += step
@@ -285,6 +233,52 @@ class Experiment {
                 }
             }
         }
+    }
+
+    private fun calcOffline(
+        allTraces: List<Trace>,
+        current: Int,
+        step: Int,
+        windowSize: Int,
+        csv: CSVWriter,
+        file: File,
+        useStatsMode: Boolean = true
+    ) {
+        // Clean up
+        System.gc()
+
+        val imOffline = OfflineInductiveMiner()
+        imOffline.useStatistics = useStatsMode
+        var modelOffline: ProcessTree? = null
+
+        val logInWindow = logToSequence(allTraces, from = current, to = current + windowSize)
+        val timeOffline = measureResources {
+            modelOffline = imOffline.processLog(sequenceOf(logInWindow))
+        }
+
+        // Statistics for offline
+        val paOffline = PerformanceAnalyzer(modelOffline!!)
+        logToSequence(
+            allTraces,
+            from = current,
+            to = current + windowSize
+        ).traces.forEach { paOffline.analyze(it) }
+        csv(file.name, "fitnessTrain", "offline", useStatsMode, windowSize, step, current, paOffline.fitness())
+        csv(file.name, "precisionTrain", "offline", useStatsMode, windowSize, step, current, paOffline.precision())
+        paOffline.cleanNode(modelOffline!!.root!!)
+        logToSequence(
+            allTraces,
+            from = current + windowSize,
+            to = current + (windowSize * 2)
+        ).traces.forEach { paOffline.analyze(it) }
+        csv(file.name, "fitnessTest", "offline", useStatsMode, windowSize, step, current, paOffline.fitness())
+        csv(file.name, "precisionTest", "offline", useStatsMode, windowSize, step, current, paOffline.precision())
+        csv(file.name, "time", "offline", useStatsMode, windowSize, step, current, timeOffline.cpuTimeMillis)
+        csv(file.name, "memory", "offline", useStatsMode, windowSize, step, current, timeOffline.peakMemory)
+        csv(file.name, "model", "offline", useStatsMode, windowSize, step, current, modelOffline.toString())
+
+        // Clean up
+        System.gc()
     }
 
     fun main(args: Array<String>) {
