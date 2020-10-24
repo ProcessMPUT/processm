@@ -139,100 +139,99 @@ class Experiment {
 
             for (step in config.windowsSteps) {
                 for (windowSize in config.windowsSizes) {
-                    println("K = $windowSize \t|\t Step = $step")
                     var current = 0
                     var firstMove = true
                     val imOnline = OnlineInductiveMiner()
 
                     do {
-                        println("Window [$current; ${current + windowSize}]")
+                        println("[FILE=${file.name}][SIZE=$windowSize][STEP=$step][$current; ${current + windowSize}]")
 
                         // Offline
                         calcOffline(allTraces, current, step, windowSize, csv, file, useStatsMode = false)
                         calcOffline(allTraces, current, step, windowSize, csv, file, useStatsMode = true)
 
-//                        // Online
-//                        var modelOnline: ProcessTree? = null
-//                        var timeOnline: ResourceStats
-//
-//                        // Separate first use and next iterations
-//                        if (firstMove) {
-//                            firstMove = false
-//
-//                            // Clean up
-//                            System.gc()
-//
-//                            // Calculate basic model (first)
-//                            timeOnline = measureResources {
-//                                modelOnline = imOnline.processLog(
-//                                    sequenceOf(
-//                                        logToSequence(
-//                                            allTraces,
-//                                            from = current,
-//                                            to = current + windowSize
-//                                        )
-//                                    )
-//                                )
-//                            }
-//
-//                            // Clean up
-//                            System.gc()
-//                        } else {
-//                            // Clean up
-//                            System.gc()
-//
-//                            // Prepare changes in DFG
-//                            val newLog =
-//                                logToSequence(allTraces, from = current - step + windowSize, to = current + windowSize)
-//                            val removeLog = logToSequence(allTraces, from = current - step, to = current)
-//
-//                            // Calculate changes
-//                            timeOnline = measureResources {
-//                                imOnline.discover(sequenceOf(newLog), increaseTraces = true)
-//                                modelOnline = imOnline.processLog(sequenceOf(removeLog), increaseTraces = false)
-//                            }
-//
-//                            // Clean up
-//                            System.gc()
-//                        }
-//
-//                        // Statistics for online
-//                        val paOnline = PerformanceAnalyzer(modelOnline!!)
-//                        paOnline.cleanNode(modelOnline!!.root!!)
-//                        logToSequence(
-//                            allTraces,
-//                            from = current,
-//                            to = current + windowSize
-//                        ).traces.forEach { paOnline.analyze(it) }
-//                        csv(file.name, "fitnessTrain", "online", windowSize, step, current, paOnline.fitness())
-//                        csv(file.name, "precisionTrain", "online", windowSize, step, current, paOnline.precision())
-//                        paOnline.cleanNode(modelOnline!!.root!!)
-//                        logToSequence(
-//                            allTraces,
-//                            from = current + windowSize,
-//                            to = current + (windowSize * 2)
-//                        ).traces.forEach { paOnline.analyze(it) }
-//                        csv(file.name, "fitnessTest", "online", windowSize, step, current, paOnline.fitness())
-//                        csv(file.name, "precisionTest", "online", windowSize, step, current, paOnline.precision())
-//                        csv(file.name, "time", "online", windowSize, step, current, timeOnline.cpuTimeMillis)
-//                        csv(file.name, "memory", "online", windowSize, step, current, timeOnline.peakMemory)
-//                        csv(file.name, "model", "online", windowSize, step, current, modelOnline.toString())
-//
-//                        // Clean up
-//                        System.gc()
+                        // Online
+                        calcOnline(imOnline, allTraces, current, step, windowSize, csv, file, firstMove)
+                        firstMove = false
 
                         // Step
                         current += step
-
-                        println("${imOnline.builtFromZero} ${imOnline.rebuild} ${imOnline.tracesNoRebuildNeeds}")
                     } while (current + windowSize - step < allTracesSize)
 
-                    csv(file.name, "modelBuildFromZero]", "online", imOnline.builtFromZero)
-                    csv(file.name, "modelRebuild", "online", imOnline.rebuild)
-                    csv(file.name, "modelIgnoredRebuild", "online", imOnline.tracesNoRebuildNeeds)
+                    csv(file.name, "modelBuildFromZero", "online", true, imOnline.builtFromZero)
+                    csv(file.name, "modelRebuild", "online", true, imOnline.rebuild)
+                    csv(file.name, "modelIgnoredRebuild", "online", true, imOnline.tracesNoRebuildNeeds)
                 }
             }
         }
+    }
+
+    private fun calcOnline(
+        imOnline: OnlineInductiveMiner,
+        allTraces: List<Trace>,
+        current: Int,
+        step: Int,
+        windowSize: Int,
+        csv: CSVWriter,
+        file: File,
+        firstMove: Boolean
+    ) {
+        // Clean up
+        System.gc()
+
+        var modelOnline: ProcessTree? = null
+        var timeOnline: ResourceStats
+
+        // Separate first use and next iterations
+        if (firstMove) {
+            // Calculate basic model (first)
+            timeOnline = measureResources {
+                modelOnline = imOnline.processLog(
+                    sequenceOf(
+                        logToSequence(
+                            allTraces,
+                            from = current,
+                            to = current + windowSize
+                        )
+                    )
+                )
+            }
+        } else {
+            // Prepare changes in DFG
+            val newLog = logToSequence(allTraces, from = current - step + windowSize, to = current + windowSize)
+            val removeLog = logToSequence(allTraces, from = current - step, to = current)
+
+            // Calculate changes
+            timeOnline = measureResources {
+                imOnline.discover(sequenceOf(newLog), increaseTraces = true)
+                modelOnline = imOnline.processLog(sequenceOf(removeLog), increaseTraces = false)
+            }
+        }
+
+        // Statistics for online
+        val paOnline = PerformanceAnalyzer(modelOnline!!)
+        paOnline.cleanNode(modelOnline!!.root!!)
+        logToSequence(
+            allTraces,
+            from = current,
+            to = current + windowSize
+        ).traces.forEach { paOnline.analyze(it) }
+        csv(file.name, "fitnessTrain", "online", true, windowSize, step, current, paOnline.fitness())
+        csv(file.name, "precisionTrain", "online", true, windowSize, step, current, paOnline.precision())
+        paOnline.cleanNode(modelOnline!!.root!!)
+        logToSequence(
+            allTraces,
+            from = current + windowSize,
+            to = current + (windowSize * 2)
+        ).traces.forEach { paOnline.analyze(it) }
+        csv(file.name, "fitnessTest", "online", true, windowSize, step, current, paOnline.fitness())
+        csv(file.name, "precisionTest", "online", true, windowSize, step, current, paOnline.precision())
+        csv(file.name, "time", "online", true, windowSize, step, current, timeOnline.cpuTimeMillis)
+        csv(file.name, "memory", "online", true, windowSize, step, current, timeOnline.peakMemory)
+        csv(file.name, "model", "online", true, windowSize, step, current, modelOnline.toString())
+
+        // Clean up
+        System.gc()
     }
 
     private fun calcOffline(
