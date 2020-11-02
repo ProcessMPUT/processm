@@ -121,8 +121,8 @@ class Experiment {
         return Log(traces = allTraces.take(to).stream().skip(from.toLong()).asSequence())
     }
 
-    private fun log2File(log: Log, mode: String, windowSize: Int, step: Int, current: Int) {
-        FileOutputStream("logFile-$mode-$windowSize-$step-$current.xes").use { received ->
+    private fun log2File(log: Log, name: String, mode: String, windowSize: Int, step: Int, current: Int) {
+        FileOutputStream("logFile-$mode-$windowSize-$step-$current-$name.xes").use { received ->
             val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
 
             writer.write(log.toFlatSequence())
@@ -164,6 +164,7 @@ class Experiment {
                                 from = current,
                                 to = current + windowSize
                             ),
+                            name = name,
                             mode = "train",
                             windowSize = windowSize,
                             step = step,
@@ -177,6 +178,7 @@ class Experiment {
                                 from = current + windowSize,
                                 to = current + (windowSize * 2)
                             ),
+                            name = name,
                             mode = "test",
                             windowSize = windowSize,
                             step = step,
@@ -190,6 +192,7 @@ class Experiment {
                             step,
                             windowSize,
                             offlineStats,
+                            name,
                             useStatsMode = false
                         )
 
@@ -200,6 +203,7 @@ class Experiment {
                             step,
                             windowSize,
                             offlineNoStats,
+                            name,
                             useStatsMode = true
                         )
 
@@ -211,6 +215,7 @@ class Experiment {
                             step,
                             windowSize,
                             onlineStats,
+                            name,
                             firstMove
                         )
                         firstMove = false
@@ -230,7 +235,7 @@ class Experiment {
             }
 
             // Execute python's precision & fitness checker
-//            Runtime.getRuntime().exec("python3 tree_stats.py $name")
+            Runtime.getRuntime().exec("python3 tree_stats.py $name ${config.iteration}")
         }
     }
 
@@ -241,6 +246,7 @@ class Experiment {
         step: Int,
         windowSize: Int,
         csv: CSVWriter,
+        name: String,
         firstMove: Boolean
     ) {
         // Clean up
@@ -279,7 +285,7 @@ class Experiment {
         csv("memory", "online", windowSize, step, current, timeOnline.peakMemory)
         csv("model", "online", windowSize, step, current, modelOnline.toString())
 
-        FileOutputStream("onlineModel-$windowSize-$step-$current.tree").use { file ->
+        FileOutputStream("onlineModel-$windowSize-$step-$current-$name.tree").use { file ->
             modelOnline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
         }
 
@@ -293,6 +299,7 @@ class Experiment {
         step: Int,
         windowSize: Int,
         csv: CSVWriter,
+        name: String,
         useStatsMode: Boolean = true
     ) {
         // Clean up
@@ -311,7 +318,7 @@ class Experiment {
         csv("memory", "offline$useStatsMode", windowSize, step, current, timeOffline.peakMemory)
         csv("model", "offline$useStatsMode", windowSize, step, current, modelOffline.toString())
 
-        FileOutputStream("offline$useStatsMode-$windowSize-$step-$current.tree").use { file ->
+        FileOutputStream("offline$useStatsMode-$windowSize-$step-$current-$name.tree").use { file ->
             modelOffline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
         }
 
