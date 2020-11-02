@@ -83,7 +83,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                     }
                     in attributeTags -> {
                         with(parseAttributeTags(reader, reader.localName)) {
-                            it.attributesInternal[this.key] = this
+                            if (this.key == "concept:name") it.attributesInternal[this.key] = this
                         }
                     }
                     else -> {
@@ -193,7 +193,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                     }
                 } else {
                     with(parseAttributeTags(reader, reader.localName)) {
-                        attribute.childrenInternal[this.key] = this
+                        if (this.key == "concept:name") attribute.childrenInternal[this.key] = this
                     }
                 }
             }
@@ -216,7 +216,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 when (reader.localName) {
                     in attributeTags -> {
                         with(parseAttributeTags(reader, reader.localName)) {
-                            xesComponent.attributesInternal[this.key] = this
+                            if (this.key == "concept:name") xesComponent.attributesInternal[this.key] = this
                         }
                     }
                     else -> {
