@@ -1,5 +1,4 @@
 {
-  "csv": "output-run-01.csv",
   "logs": [
     "xes-logs/BPIC15_1.xes.gz",
     "xes-logs/BPIC15_1f.xes.gz",
@@ -31,5 +30,6 @@
   ],
   "windowsSteps": [
     1
-  ]
+  ],
+  "iteration": "1"
 }

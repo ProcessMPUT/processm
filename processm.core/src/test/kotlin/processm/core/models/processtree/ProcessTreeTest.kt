@@ -1,5 +1,7 @@
 package processm.core.models.processtree
 
+import java.io.FileOutputStream
+import javax.xml.stream.XMLOutputFactory
 import kotlin.test.*
 
 class ProcessTreeTest {
@@ -421,6 +423,10 @@ class ProcessTreeTest {
                     ProcessTreeActivity("H")
                 )
             )
+        }
+
+        FileOutputStream("tree.txt").use { received ->
+            model.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
         }
 
         assertEquals(model.toString(), "→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")

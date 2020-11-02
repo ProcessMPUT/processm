@@ -1,6 +1,7 @@
 package processm.core.models.processtree
 
 import processm.core.models.commons.ProcessModel
+import javax.xml.stream.XMLStreamWriter
 
 /**
  * Process Tree model with `root` reference
@@ -102,5 +103,5 @@ class ProcessTree(root: Node? = null) : ProcessModel {
 
     override fun createInstance() = ProcessTreeInstance(this)
 
-
+    fun toPTML(output: XMLStreamWriter) = PMPLOutput(output).write(this)
 }

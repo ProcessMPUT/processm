@@ -3,17 +3,17 @@ package processm.experimental.onlinehmpaper
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import processm.core.log.XMLXESInputStream
-import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
-import processm.core.log.hierarchical.InMemoryXESProcessing
-import processm.core.log.hierarchical.Log
-import processm.core.log.hierarchical.Trace
+import processm.core.log.XMLXESOutputStream
+import processm.core.log.hierarchical.*
 import processm.core.models.processtree.ProcessTree
 import processm.miners.processtree.inductiveminer.OfflineInductiveMiner
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 import processm.miners.processtree.inductiveminer.PerformanceAnalyzer
 import java.io.File
+import java.io.FileOutputStream
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
+import javax.xml.stream.XMLOutputFactory
 import kotlin.random.Random
 import kotlin.streams.asSequence
 
@@ -100,9 +100,9 @@ class Experiment {
         val logs: List<String>,
         val windowsSizes: List<Int>,
         val windowsSteps: List<Int>,
-        val csv: String,
         val maxActivities: Int,
-        val seed: Int
+        val seed: Int,
+        val iteration: String
     ) {
         companion object {
             val json = Json { allowStructuredMapKeys = true }
@@ -122,20 +122,32 @@ class Experiment {
         return Log(traces = allTraces.take(to).stream().skip(from.toLong()).asSequence())
     }
 
+    private fun log2File(log: Log, mode: String) {
+        FileOutputStream("logFile-$mode.xes").use { received ->
+            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+
+            writer.write(log.toFlatSequence())
+            writer.close()
+        }
+    }
+
     private fun compareWindow(config: Config) {
-        val csv = CSVWriter(File(config.csv))
         for (logfile in config.logs) {
             val file = File(logfile)
+            val name = file.name.removeSuffix(".xes.gz")
+
+            // Read log file
             val wholeLog = load(file)
             // Traces in log (whole log file)
-            var allTraces = wholeLog.traces.toList()
-            // Unique activities labels
-            val allNames = allTraces.flatMap { trace -> trace.events.map { it.conceptName }.toSet() }.toSet()
-
-            println("File ${file.name}: ${allTraces.size} traces with ${allNames.size} activities")
-
-            allTraces = filterTraces(allTraces, Random(seed = config.seed), config)
+            val allTraces = filterTraces(wholeLog.traces.toList(), Random(seed = config.seed), config)
             val allTracesSize = allTraces.size
+
+            println("---------------- $name: $allTracesSize traces ---------------- ")
+
+            val onlineExtraStats = CSVWriter(File("${config.iteration}-online-extra-$name"))
+            val offlineStats = CSVWriter(File("${config.iteration}-offlinetrue-$name"))
+            val offlineNoStats = CSVWriter(File("${config.iteration}-offlinefalse-$name"))
+            val onlineStats = CSVWriter(File("${config.iteration}-online-stats-$name"))
 
             for (step in config.windowsSteps) {
                 for (windowSize in config.windowsSizes) {
@@ -144,23 +156,69 @@ class Experiment {
                     val imOnline = OnlineInductiveMiner()
 
                     do {
-                        println("[FILE=${file.name}][SIZE=$windowSize][STEP=$step][$current; ${current + windowSize}]")
+                        println("[FILE=${name}][$current; ${current + windowSize}]")
 
-                        // Offline
-                        calcOffline(allTraces, current, step, windowSize, csv, file, useStatsMode = false)
-                        calcOffline(allTraces, current, step, windowSize, csv, file, useStatsMode = true)
+                        // Store train log file
+                        log2File(
+                            logToSequence(
+                                allTraces,
+                                from = current,
+                                to = current + windowSize
+                            ), "train"
+                        )
+
+                        // Store test log file
+                        log2File(
+                            logToSequence(
+                                allTraces,
+                                from = current + windowSize,
+                                to = current + (windowSize * 2)
+                            ), "test"
+                        )
+
+                        // Offline without stats
+                        calcOffline(
+                            allTraces,
+                            current,
+                            step,
+                            windowSize,
+                            offlineStats,
+                            name,
+                            config.iteration,
+                            useStatsMode = false
+                        )
+
+                        // Offline with stats
+                        calcOffline(
+                            allTraces,
+                            current,
+                            step,
+                            windowSize,
+                            offlineNoStats,
+                            name,
+                            config.iteration,
+                            useStatsMode = true
+                        )
 
                         // Online
-                        calcOnline(imOnline, allTraces, current, step, windowSize, csv, file, firstMove)
+                        calcOnline(
+                            imOnline,
+                            allTraces,
+                            current,
+                            step,
+                            windowSize,
+                            onlineStats,
+                            name,
+                            config.iteration,
+                            firstMove
+                        )
                         firstMove = false
 
                         // Step
                         current += step
                     } while (current + windowSize - step < allTracesSize)
 
-                    csv(file.name, "modelBuildFromZero", "online", true, imOnline.builtFromZero)
-                    csv(file.name, "modelRebuild", "online", true, imOnline.rebuild)
-                    csv(file.name, "modelIgnoredRebuild", "online", true, imOnline.tracesNoRebuildNeeds)
+                    onlineExtraStats(windowSize, step, imOnline.builtFromZero, imOnline.rebuild, imOnline.tracesNoRebuildNeeds)
                 }
             }
         }
@@ -173,14 +231,15 @@ class Experiment {
         step: Int,
         windowSize: Int,
         csv: CSVWriter,
-        file: File,
+        xesFile: String,
+        iteration: String,
         firstMove: Boolean
     ) {
         // Clean up
         System.gc()
 
         var modelOnline: ProcessTree? = null
-        var timeOnline: ResourceStats
+        val timeOnline: ResourceStats
 
         // Separate first use and next iterations
         if (firstMove) {
@@ -208,27 +267,20 @@ class Experiment {
             }
         }
 
-        // Statistics for online
-        val paOnline = PerformanceAnalyzer(modelOnline!!)
-        paOnline.cleanNode(modelOnline!!.root!!)
-        logToSequence(
-            allTraces,
-            from = current,
-            to = current + windowSize
-        ).traces.forEach { paOnline.analyze(it) }
-        csv(file.name, "fitnessTrain", "online", true, windowSize, step, current, paOnline.fitness())
-        csv(file.name, "precisionTrain", "online", true, windowSize, step, current, paOnline.precision())
-        paOnline.cleanNode(modelOnline!!.root!!)
-        logToSequence(
-            allTraces,
-            from = current + windowSize,
-            to = current + (windowSize * 2)
-        ).traces.forEach { paOnline.analyze(it) }
-        csv(file.name, "fitnessTest", "online", true, windowSize, step, current, paOnline.fitness())
-        csv(file.name, "precisionTest", "online", true, windowSize, step, current, paOnline.precision())
-        csv(file.name, "time", "online", true, windowSize, step, current, timeOnline.cpuTimeMillis)
-        csv(file.name, "memory", "online", true, windowSize, step, current, timeOnline.peakMemory)
-        csv(file.name, "model", "online", true, windowSize, step, current, modelOnline.toString())
+        csv("time", "online", windowSize, step, current, timeOnline.cpuTimeMillis)
+        csv("memory", "online", windowSize, step, current, timeOnline.peakMemory)
+        csv("model", "online", windowSize, step, current, modelOnline.toString())
+
+        FileOutputStream("onlineModel.tree").use { file ->
+            modelOnline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
+        }
+        val train = Runtime.getRuntime()
+            .exec("python3 tree_stats.py $xesFile onlineModel.tree $iteration online train $windowSize $step $current")
+        train.waitFor()
+
+        val test = Runtime.getRuntime()
+            .exec("python3 tree_stats.py $xesFile onlineModel.tree $iteration online test $windowSize $step $current")
+        test.waitFor()
 
         // Clean up
         System.gc()
@@ -240,7 +292,8 @@ class Experiment {
         step: Int,
         windowSize: Int,
         csv: CSVWriter,
-        file: File,
+        xesFile: String,
+        iteration: String,
         useStatsMode: Boolean = true
     ) {
         // Clean up
@@ -255,26 +308,20 @@ class Experiment {
             modelOffline = imOffline.processLog(sequenceOf(logInWindow))
         }
 
-        // Statistics for offline
-        val paOffline = PerformanceAnalyzer(modelOffline!!)
-        logToSequence(
-            allTraces,
-            from = current,
-            to = current + windowSize
-        ).traces.forEach { paOffline.analyze(it) }
-        csv(file.name, "fitnessTrain", "offline", useStatsMode, windowSize, step, current, paOffline.fitness())
-        csv(file.name, "precisionTrain", "offline", useStatsMode, windowSize, step, current, paOffline.precision())
-        paOffline.cleanNode(modelOffline!!.root!!)
-        logToSequence(
-            allTraces,
-            from = current + windowSize,
-            to = current + (windowSize * 2)
-        ).traces.forEach { paOffline.analyze(it) }
-        csv(file.name, "fitnessTest", "offline", useStatsMode, windowSize, step, current, paOffline.fitness())
-        csv(file.name, "precisionTest", "offline", useStatsMode, windowSize, step, current, paOffline.precision())
-        csv(file.name, "time", "offline", useStatsMode, windowSize, step, current, timeOffline.cpuTimeMillis)
-        csv(file.name, "memory", "offline", useStatsMode, windowSize, step, current, timeOffline.peakMemory)
-        csv(file.name, "model", "offline", useStatsMode, windowSize, step, current, modelOffline.toString())
+        csv("time", "offline$useStatsMode", windowSize, step, current, timeOffline.cpuTimeMillis)
+        csv("memory", "offline$useStatsMode", windowSize, step, current, timeOffline.peakMemory)
+        csv("model", "offline$useStatsMode", windowSize, step, current, modelOffline.toString())
+
+        FileOutputStream("offline$useStatsMode.tree").use { file ->
+            modelOffline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
+        }
+        val train = Runtime.getRuntime()
+            .exec("python3 tree_stats.py $xesFile offline$useStatsMode.tree $iteration offline$useStatsMode train $windowSize $step $current")
+        train.waitFor()
+
+        val test = Runtime.getRuntime()
+            .exec("python3 tree_stats.py $xesFile offline$useStatsMode.tree $iteration offline$useStatsMode test $windowSize $step $current")
+        test.waitFor()
 
         // Clean up
         System.gc()

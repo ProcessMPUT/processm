@@ -122,7 +122,7 @@ class DirectlyFollowsGraph {
      * Runs in: O(|collection|), maximum O(|activities|)
      */
     fun maximumTraceSupport(collection: Collection<ProcessTreeActivity>): Int {
-        val activityWithHighestSupport = collection.maxBy { activityTraceSupport[it] ?: 0 }
+        val activityWithHighestSupport = collection.maxByOrNull { activityTraceSupport[it] ?: 0 }
         return activityTraceSupport[activityWithHighestSupport] ?: 0
     }
 
