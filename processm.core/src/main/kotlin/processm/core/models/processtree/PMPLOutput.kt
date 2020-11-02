@@ -58,6 +58,12 @@ class PMPLOutput(private val output: XMLStreamWriter) {
             // Add extra xor node required by PMPL converter
             if (node.parent is RedoLoop) {
                 if (node === node.parent!!.children.first()) {
+                    // Add normal node
+                    output.writeEmptyElement("parentsNode")
+                    output.writeAttribute("id", nodeHashCode)
+                    output.writeAttribute("sourceId", parentHashCode)
+                    output.writeAttribute("targetId", nodeHashCode)
+
                     // Extra XOR
                     output.writeEmptyElement("xor")
                     output.writeAttribute("id", "$parentHashCode-$parentHashCode")
@@ -68,12 +74,6 @@ class PMPLOutput(private val output: XMLStreamWriter) {
                     output.writeAttribute("id", "assign-to-parent-$parentHashCode")
                     output.writeAttribute("sourceId", parentHashCode)
                     output.writeAttribute("targetId", "$parentHashCode-$parentHashCode")
-
-                    // Add normal node
-                    output.writeEmptyElement("parentsNode")
-                    output.writeAttribute("id", nodeHashCode)
-                    output.writeAttribute("sourceId", parentHashCode)
-                    output.writeAttribute("targetId", nodeHashCode)
                 } else {
                     // Add reference to extra XOR node
                     output.writeEmptyElement("parentsNode")

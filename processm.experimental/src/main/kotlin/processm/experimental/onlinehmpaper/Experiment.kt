@@ -8,7 +8,6 @@ import processm.core.log.hierarchical.*
 import processm.core.models.processtree.ProcessTree
 import processm.miners.processtree.inductiveminer.OfflineInductiveMiner
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
-import processm.miners.processtree.inductiveminer.PerformanceAnalyzer
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.management.ManagementFactory
@@ -218,7 +217,13 @@ class Experiment {
                         current += step
                     } while (current + windowSize - step < allTracesSize)
 
-                    onlineExtraStats(windowSize, step, imOnline.builtFromZero, imOnline.rebuild, imOnline.tracesNoRebuildNeeds)
+                    onlineExtraStats(
+                        windowSize,
+                        step,
+                        imOnline.builtFromZero,
+                        imOnline.rebuild,
+                        imOnline.tracesNoRebuildNeeds
+                    )
                 }
             }
         }
