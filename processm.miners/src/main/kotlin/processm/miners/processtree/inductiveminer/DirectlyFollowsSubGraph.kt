@@ -653,9 +653,10 @@ class DirectlyFollowsSubGraph(
         var collection = HashSet<ProcessTreeActivity>(initialStartActivities!!)
 
         for (_i in 0..(activities.size * 10000)) {
-            collection.filter { it in activities }.also {
+
+            collection.filterTo(HashSet()) { it in activities }.also {
                 // If at least one start activity still in graph - return start activities
-                if (it.isNotEmpty()) return it.toMutableSet()
+                if (it.isNotEmpty()) return it
             }
 
             // Else we should find activities connected to current StartActivities
@@ -665,6 +666,8 @@ class DirectlyFollowsSubGraph(
             }
 
             collection = startActivities
+            if (collection.isEmpty())
+                return collection
         }
 
         // Return empty set - not recognized start activities
@@ -680,20 +683,22 @@ class DirectlyFollowsSubGraph(
         var collection = HashSet<ProcessTreeActivity>(initialEndActivities!!)
 
         for (_i in 0..(activities.size * 10000)) {
-            collection.filter { it in activities }.also {
+            collection.filterTo(HashSet()) { it in activities }.also {
                 // If at least one end activity still in graph - return start activities
-                if (it.isNotEmpty()) return it.toMutableSet()
+                if (it.isNotEmpty()) return it
             }
 
             // Else we should find activities connected to current EndActivities
             val endActivities = HashSet<ProcessTreeActivity>()
             dfg.graph.rows.forEach { from ->
-                if (dfg.graph.getRow(from).keys.firstOrNull { it in collection } !== null) {
+                if (dfg.graph.getRow(from).keys.any { it in collection }) {
                     endActivities.add(from)
                 }
             }
 
             collection = endActivities
+            if (collection.isEmpty())
+                return collection
         }
 
         // Return empty set - not recognized end activities

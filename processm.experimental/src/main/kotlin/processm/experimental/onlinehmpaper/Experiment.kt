@@ -8,6 +8,7 @@ import processm.core.log.hierarchical.*
 import processm.core.models.processtree.ProcessTree
 import processm.miners.processtree.inductiveminer.OfflineInductiveMiner
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.management.ManagementFactory
@@ -118,15 +119,16 @@ class Experiment {
         from: Int,
         to: Int
     ): Log {
-        return Log(traces = allTraces.take(to).stream().skip(from.toLong()).asSequence())
+        return Log(traces = allTraces.asSequence().drop(from).take(to - from))
     }
 
     private fun log2File(log: Log, name: String, mode: String, windowSize: Int, step: Int, current: Int) {
-        FileOutputStream("logFile-$mode-$windowSize-$step-$current-$name.xes").use { received ->
-            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
-
-            writer.write(log.toFlatSequence())
-            writer.close()
+        FileOutputStream("logFile-$mode-$windowSize-$step-$current-$name.xes").use { out ->
+            BufferedOutputStream(out).use { received ->
+                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received)).use { writer ->
+                    writer.write(log.toFlatSequence())
+                }
+            }
         }
     }
 
@@ -285,8 +287,10 @@ class Experiment {
         csv("memory", "online", windowSize, step, current, timeOnline.peakMemory)
         csv("model", "online", windowSize, step, current, modelOnline.toString())
 
-        FileOutputStream("onlineModel-$windowSize-$step-$current-$name.tree").use { file ->
-            modelOnline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
+        FileOutputStream("onlineModel-$windowSize-$step-$current-$name.tree").use { out ->
+            BufferedOutputStream(out).use { file ->
+                modelOnline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
+            }
         }
 
         // Clean up
@@ -318,8 +322,10 @@ class Experiment {
         csv("memory", "offline$useStatsMode", windowSize, step, current, timeOffline.peakMemory)
         csv("model", "offline$useStatsMode", windowSize, step, current, modelOffline.toString())
 
-        FileOutputStream("offline$useStatsMode-$windowSize-$step-$current-$name.tree").use { file ->
-            modelOffline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
+        FileOutputStream("offline$useStatsMode-$windowSize-$step-$current-$name.tree").use { out ->
+            BufferedOutputStream(out).use { file ->
+                modelOffline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
+            }
         }
 
         // Clean up
