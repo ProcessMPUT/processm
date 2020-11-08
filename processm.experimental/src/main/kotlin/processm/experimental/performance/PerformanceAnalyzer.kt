@@ -1,5 +1,6 @@
 package processm.experimental.performance
 
+import org.apache.commons.collections4.multiset.HashMultiSet
 import org.apache.commons.lang3.math.Fraction
 import processm.core.helpers.Counter
 import processm.core.helpers.HierarchicalIterable
@@ -110,8 +111,7 @@ open class CausalNetStateWithJoins : CausalNetStateImpl {
              */
         } else {
             newJoins = HashSet(joins)
-            if (null in joins)
-                newJoins.remove(null)
+            newJoins.remove(null)
         }
         /*
         for ((target, deps) in addedDeps.groupBy { it.target })
@@ -155,52 +155,512 @@ class PerformanceAnalyzer(
         private val logger = logger()
     }
 
-    private fun align(partialAlignment: Alignment, dec: DecoupledNodeExecution?, event: Event?): Alignment? {
-        val newCost = partialAlignment.cost + distance(dec?.activity, event)
-        if (newCost < distance.maxAcceptableDistance) {
-            val nextState = CausalNetStateWithJoins(partialAlignment.state as CausalNetStateWithJoins)
-            if (dec != null)
-                nextState.execute(dec.join, dec.split)
-            val step = AlignmentStep(event, dec?.activity, partialAlignment.state)
-            val nextAlignment = HierarchicalIterable(partialAlignment.alignment, step)
-            var nextPosition = partialAlignment.tracePosition
-            if (event != null)
-                nextPosition += 1
-            val remainder = partialAlignment.context.events.subList(
-                partialAlignment.tracePosition,
-                partialAlignment.context.events.size
-            )
-            val minOccurrences = Counter<Node>()
-            for (e in partialAlignment.state.entrySet())
-                minOccurrences.compute(e.element.target) { _, v -> max(v ?: 0, e.count) }
-            var heuristic = 0.0
-            for ((n, minOcc) in minOccurrences.entries) {
-                val skipDst = distance(n, null)
-                val dsts = ArrayList<Double>()
-                for (e in remainder) {
-                    val d = distance(n, e)
-                    if (d < skipDst)
-                        dsts.add(d)
+    private val encoder = object : HashMap<Node, UInt128>() {
+        var ctr = UInt128.ONE
+        override operator fun get(key: processm.core.models.causalnet.Node) = computeIfAbsent(key) {
+            val old = ctr
+            ctr = ctr shl 1
+            check(ctr != UInt128.ZERO) {"There are too many nodes in the model"}
+            return@computeIfAbsent old
+        }
+
+        operator fun get(nodes: Iterable<processm.core.models.causalnet.Node>): UInt128 {
+            var r = UInt128.ZERO
+            for (n in nodes)
+                r = r or this[n]
+            return r
+        }
+    }
+
+    private val sourcesCache = object : HashMap<Node, List<UInt128>>() {
+        override operator fun get(key: processm.core.models.causalnet.Node) = computeIfAbsent(key) {
+            return@computeIfAbsent model.joins[key]?.map { encoder[it.sources] }.orEmpty()
+        }
+    }
+
+    //This is a relaxed version of the problem assuming that there's always exactly one split consisting of all the outgoing dependencies and that joins don't consume tokens, only require their presence
+    private val reachableCache = object : HashMap<Set<Dependency>, Set<Node>>() {
+        override operator fun get(key: Set<Dependency>): Set<processm.core.models.causalnet.Node> =
+            computeIfAbsent(key) {
+                logger.trace {"key=$key"}
+                var freshReachable = HashSet<processm.core.models.causalnet.Node>()
+                for (n in key.mapToSet { it.target })
+                    if (model.joins[n].orEmpty().any { key.containsAll(it.dependencies) })
+                        freshReachable.add(n)
+                val aux = encoder[key.mapToSet { it.source }]
+                /*
+                var freshReachable = HashSet(key)
+                for(n in key)
+                    for(dep in model.outgoing[n].orEmpty())
+                        freshReachable.add(dep.target)
+    */
+                val reachable = HashSet(freshReachable)
+                var reachableEnc = encoder[reachable]
+                while (true) {
+                    val newReachable = HashSet<processm.core.models.causalnet.Node>()
+                    var newReachableEnc = UInt128.ZERO
+                    for (node in freshReachable) {
+                        for (dep in model.outgoing[node].orEmpty()) {
+                            val t = encoder[dep.target]
+                            if ((reachableEnc or newReachableEnc) and t != UInt128.ZERO)
+                                continue
+                            /* I think one cannot perform filering on outgoing dependences.
+                            If we managed to reach this node, any split can be executed here (from a local point of view),
+                            so all successor nodes are reachable.
+                            Can be seen in `BPIC15_2f - h1 admissibility`
+
+                            On the other hand, one could and should at least filter out nodes that are NOT reachable because
+                            they depend on a node that is not reachable anymore.
+
+                            I am utterly confused.
+                            */
+                            val joins = sourcesCache[dep.target]
+                            if (joins.any { j -> j and (reachableEnc or aux) == j }) {
+                                //if (true) {
+                                newReachable.add(dep.target)
+                                reachable.add(dep.target)
+                                newReachableEnc = newReachableEnc or t
+                            }
+                        }
+                    }
+                    if (newReachableEnc == UInt128.ZERO)
+                        break
+                    freshReachable = newReachable
+                    reachableEnc = reachableEnc or newReachableEnc
+/*
+                freshReachable = freshReachable
+                    .flatMapTo(HashSet()) { node ->
+                        model
+                            .outgoing[node]
+                            ?.mapToSet { dep -> dep.target }
+                            ?.filter {
+                                reachableEnc and encoder[it] == UInt128.ZERO && sourcesCache[it].any { j-> j and reachableEnc == j }
+                            }.orEmpty()
+                    }
+                if(freshReachable.isEmpty())
+                    break
+                reachable.addAll(freshReachable)
+                reachableEnc = reachableEnc or encoder[freshReachable]
+*/
+                    //assert(encoder[reachable] == reachableEnc)
                 }
+                return@computeIfAbsent reachable
+            }
+
+    }
+
+    private fun computeMinOccurrences3(state: CausalNetStateWithJoins): Map<Node, Int> {
+        val result = HashMap<Node, Int>()
+        for ((target, relevantEntries) in state.entrySet().groupBy { it.element.target }) {
+            val relevant = HashMultiSet<Node>()
+            for (e in relevantEntries)
+                relevant.add(e.element.source, e.count)
+            val joins = model.joins[target]?.map { it.sources }.orEmpty()
+            var ctr = 0
+            while (relevant.isNotEmpty()) {
+                val best = joins.maxByOrNull { join -> join.count { n -> n in relevant } }!!
+                ctr++
+                var last = false
+                while (!last) {
+                    last = false
+                    for (node in best)
+                        last = last or (relevant.remove(node, 1) == 1)
+                }
+            }
+            result[target] = ctr
+        }
+        return result
+    }
+
+    private fun computeMinOccurrences(state: CausalNetStateWithJoins): Map<Node, Int> {
+        val minOccurrences = Counter<Node>()
+        for (e in state.entrySet())
+            minOccurrences.compute(e.element.target) { _, v -> max(v ?: 0, e.count) }
+        return minOccurrences
+    }
+
+    private val largestJoins = object : HashMap<Node, List<Join>>() {
+        override fun get(key: processm.core.models.causalnet.Node): List<Join> = computeIfAbsent(key) {
+            val allJoins = model.joins[key] ?: return@computeIfAbsent emptyList()
+            return@computeIfAbsent allJoins.filter { join ->
+                allJoins.all { other ->
+                    join === other || !other.dependencies.containsAll(
+                        join.dependencies
+                    )
+                }
+            }
+        }
+    }
+
+
+    private fun computeMinOccurrences2(state: CausalNetStateWithJoins): Map<Node, Int> {
+        val depCounter = state.entrySet().associate { it.element to it.count }
+        val byTarget = state.entrySet().groupBy { it.element.target }
+        val minOccurrences = HashMap<Node, Int>()
+        for ((target, deps) in byTarget) {
+            val relevantStateSubset = deps.mapToSet { it.element }
+            /*val relevantJoins = largestJoins[target]
+                .mapNotNullTo(HashSet()) { /*val tmp = it.dependencies.intersect(relevantStateSubset)
+                    if(tmp.isNotEmpty())
+                        tmp.mapToSet { it.source }
+                    else
+                        null*/
+                    if(it.dependencies.any { dep -> dep in relevantStateSubset })
+                        it.sources
+                    else
+                        null
+                }
+            val maximalJoins = relevantJoins.filter {join ->
+                relevantJoins.all { other -> other === join || !other.containsAll(join) }
+            }
+            val families = separateDisjointFamilies(maximalJoins)
+            if(maximalJoins.size>1)
+                println("F=$families")
+            minOccurrences[target] = families.keys.sumBy { it.maxOfOrNull { src -> depCounter[Dependency(src, target)]?:0 }?:0 }
+                */
+            val universe = relevantStateSubset.mapToSet { it.source }
+            val joins = model.joins[target]?.map { it.sources }.orEmpty()
+            val covering = notReallySetCovering(universe, joins).map { joins[it] }
+            assert(covering.size <= universe.size) { "Covering $covering is larger than its universe $universe" }
+//            if(covering.size>1)
+//                println("covering=$covering for $universe at $target with $joins")
+//            val missing = covering.flatten()-relevantStateSubset.map { it.source }
+////            if(missing.isNotEmpty())
+//            println("missing=$missing")
+            minOccurrences[target] = covering.size
+        }
+        return minOccurrences
+    }
+
+    /**
+     * Estimate cost for any event that is yet to be aligned - it either can be aligned with some (possibly) reachable activity or must be skipped
+     *
+     * This works correctly as long as there are no skips in the trace. Otherwise, this may overestimate, because
+     */
+    private fun minCostOfEventAlignments(
+        remainder: List<Event>,
+        cheap: List<List<Pair<Node, Double>>>,
+        nextState: CausalNetStateWithJoins,
+        partialAlignment: Alignment
+    ): Double {
+        val reachable = when {
+            nextState.isNotEmpty() -> reachableCache[nextState.uniqueSet()]
+            //nextPosition == 0 -> model.instances
+            //else -> emptySet()
+            partialAlignment.alignment.all { it.activity == null } -> model.instances
+            else -> emptySet()
+        }
+
+        var h1 = 0.0
+        for ((i, e) in remainder.withIndex()) {
+            var m = distance(null, e)
+            if (m > 0.0) {
+                for ((n, c) in cheap[i])
+                    if ((c < m) && (n in reachable)) {
+                        m = c
+                        if (m == 0.0)
+                            break
+                    }
+                h1 += m
+            }
+        }
+        return h1
+    }
+
+    private fun doSomeMagic(nextState: CausalNetStateWithJoins): MutableMap<Node, Int> {
+        val joinsThatMustBeUsed = HashMap<Join, Int>()
+        for (e in nextState.entrySet()) {
+            val join = model.joins[e.element.target]?.singleOrNull { e.element in it }
+            //joins of size 1 are not interesting here - but must filter it afterwards, because it still must be the only possible join
+            if (join != null && join.size >= 2)
+                joinsThatMustBeUsed.compute(join) { _, v -> if (v != null) max(e.count, v) else e.count }
+        }
+        val requiredTokens = HashMap<Dependency, Int>()
+        for ((join, ctr) in joinsThatMustBeUsed)
+            for (dep in join.dependencies)
+                requiredTokens.compute(dep) { _, v -> if (v != null) ctr + v else ctr }
+        for (e in nextState.entrySet())
+            requiredTokens.compute(e.element) { _, v -> if (v != null && v > e.count) v - e.count else null }
+        val minOccurrences = computeMinOccurrences(nextState).toMutableMap()
+        for ((dep, ctr) in requiredTokens) {
+            //            minOccurrences.compute(dep.source) { s, v -> if (v != null) max(ctr, v) else ctr }
+            //            minOccurrences.compute(dep.source) { s, v -> if (v == null || v < ctr) {println("Hit: $s $v -> $ctr"); ctr} else v }
+            minOccurrences.compute(dep.source) { _, v -> if (v == null || v < ctr) ctr else v }
+        }
+        return minOccurrences
+    }
+
+    private val intersectionOfTargets = object : HashMap<Node, Set<Node>>() {
+        override operator fun get(key: processm.core.models.causalnet.Node): Set<processm.core.models.causalnet.Node> =
+            computeIfAbsent(key) { key ->
+                var intersection: Set<processm.core.models.causalnet.Node>? = null
+                for (split in model.splits[key].orEmpty()) {
+                    if (intersection == null)
+                        intersection = split.targets
+                    else
+                        intersection = intersection.intersect(split.targets)
+                    if (intersection.isEmpty())
+                        break
+                }
+                return@computeIfAbsent intersection.orEmpty()
+            }
+    }
+
+    /*
+     * Minimalna liczba wystapien wierzcholka to maksymalna liczba tokenow, ktore musza sie pojawic na dowolnej krawedzi.
+     * To jest poprawne, ale niestabilne
+     */
+    private fun pushForward(minOccurrences: MutableMap<Node, Int>): MutableMap<Node, Int> {
+        var fresh: Collection<Pair<Node, Int>> = minOccurrences.entries.map { it.key to it.value }
+        while (fresh.isNotEmpty()) {
+            val new = HashMap<Node, Int>()
+            for ((src, ctr) in fresh) {
+                for (t in intersectionOfTargets[src])
+                    new.compute(t) { _, v -> if (v == null || v < ctr) ctr else v }
+            }
+            val newFresh = ArrayList<Pair<Node, Int>>()
+            for ((t, ctr) in new)
+                minOccurrences.compute(t) { t, v ->
+                    if (v == null || ctr > v) {
+                        newFresh.add(t to ctr)
+                        return@compute ctr
+                    } else
+                        return@compute v
+                }
+            fresh = newFresh
+        }
+        return minOccurrences
+    }
+
+    /**
+     * nextState contains come pending obligations that must be fulfiled in order to construct a complete alignment.
+     * Some of them correspond to executing some events from the remainder and do not incur additional cost.
+     * It is, however, possible that some of them require executing an activity that cannot be aligned with anything in the remainder - this is the cost to estimate.
+     */
+    private fun minCostOfFulfillingAllPendingObligations(
+        start: Int,
+//        remainder: List<Event>,
+        //aggregatedRemainder: Map<Event, Int>,
+        nextState: CausalNetStateWithJoins,
+        context: AlignmentContext,
+        partialAlignment: Alignment,
+        dec: DecoupledNodeExecution?
+    ): Pair<Double, Map<Node, Int>> {
+        //idea jest taka, że przepisujemy wszystko z poprzedniego, odejmujemy bieżącą decyzję i uwzględniamy nowy stan
+        val minOccurrences = doSomeMagic(nextState)
+        pushForward(minOccurrences)
+        val current = if (dec != null) minOccurrences[dec.activity] else null
+        for ((n, occ) in partialAlignment.minOccurrences) {
+            minOccurrences.compute(n) { _, v ->
+                if (v != null && v > occ)
+                    return@compute v
+                else
+                    return@compute occ
+            }
+        }
+        if (dec != null)
+            minOccurrences.computeIfPresent(dec.activity) { _, v ->
+                if (current == null || v > current) {
+                    if (v > 1)
+                        return@computeIfPresent v - 1
+                    else
+                        return@computeIfPresent null
+                } else
+                    return@computeIfPresent v
+            }
+
+        //logger.trace { "minOccurrences $minOccurrences for $nextState at $nextPosition" }
+        /*if(minOccurrences[model.end]?:0 >= 2)   //executing end twice is unrecoverable
+            return Double.POSITIVE_INFINITY*/
+        /*
+        var h2 = 0.0
+//        val aggregatedRemainder = Counter<Event>()
+//        for(e in remainder)
+//            aggregatedRemainder.inc(e)
+        for ((n, minOcc) in minOccurrences) {
+            val skipDst = distance(n, null)
+            val dsts = ArrayList<Double>()
+            for((e, d) in context.cheapNodeAlignments[n].orEmpty()) {
+                val ctr = aggregatedRemainder[e]?:0
+                assert(d < skipDst)
+                for(i in 0 until ctr)
+                    dsts.add(d)
+            }
+            dsts.sort()
+            var h = 0.0
+            for (i in 0 until minOcc)
+                h += if (i < dsts.size) min(skipDst, dsts[i]) else skipDst
+            // logger.trace { "$n $minOcc -> $dsts -> $h" }
+            h2 += h
+        }
+        return h2
+         */
+        var h2 = 0.0
+
+        val dsts = ArrayList<Double>()
+
+        for ((n, minOcc) in minOccurrences) {
+            val skipDst = distance(n, null)
+            dsts.clear()
+//            for (e in remainder) {
+            for (i in start until context.events.size) {
+                val e = context.events[i]
+                val d = distance(n, e)
+                if (d < skipDst)
+                    dsts.add(d)
+            }
+            if (dsts.size <= minOcc) {
+                h2 += dsts.sum()
+                h2 += (minOcc - dsts.size) * skipDst
+            } else {
                 dsts.sort()
                 for (i in 0 until minOcc)
-                    heuristic += if (i < dsts.size) min(skipDst, dsts[i]) else skipDst
+                    h2 += dsts[i]
             }
+            /*
+            dsts.sort()
+            var h = 0.0
+            for (i in 0 until minOcc)
+                h += if (i < dsts.size) min(skipDst, dsts[i]) else skipDst
+            // logger.trace { "$n $minOcc -> $dsts -> $h" }
+            h2 += h
+             */
+        }
+        return h2 to minOccurrences
+    }
+
+
+    private fun align(partialAlignment: Alignment, dec: DecoupledNodeExecution?, event: Event?): Alignment? {
+        val newCost = partialAlignment.cost + distance(dec?.activity, event)
+        logger.trace {
+            "Aligning ${dec?.activity} with ${event?.conceptName} for ${partialAlignment.cost}+${
+                distance(
+                    dec?.activity,
+                    event
+                )
+            } @$dec"
+        }
+        if (newCost < distance.maxAcceptableDistance) {
+            val nextState = if (dec != null) {
+                val nextState = CausalNetStateWithJoins(partialAlignment.state as CausalNetStateWithJoins)
+                nextState.execute(dec.join, dec.split)
+                nextState
+            } else
+                partialAlignment.state as CausalNetStateWithJoins
+            val step = AlignmentStep(event, dec?.activity, partialAlignment.state)
+            val nextAlignment = HierarchicalIterable(partialAlignment.alignment, step)
+            val nextPosition = partialAlignment.tracePosition + (if (event != null) 1 else 0)
+            val remainder =
+                if (nextPosition < partialAlignment.context.events.size) partialAlignment.context.events.subList(
+                    nextPosition,
+                    partialAlignment.context.events.size
+                ) else emptyList<Event>()
+            val cheapRemainder =
+                if (nextPosition < partialAlignment.context.events.size) partialAlignment.context.cheapEventAlignments.subList(
+                    nextPosition,
+                    partialAlignment.context.events.size
+                ) else emptyList()
+//            val aggregatedRemainder = if (nextPosition < partialAlignment.context.events.size)
+//                partialAlignment.context.aggregatedRemainders[nextPosition]
+//            else
+//                emptyMap()
+
+            if (dec?.split?.targets?.any { it.toString() == "a(0/0)" } == true) {
+                println("hit!")
+            }
+            val h1 = minCostOfEventAlignments(remainder, cheapRemainder, nextState, partialAlignment)
+            val (h2, minOccurrences) = minCostOfFulfillingAllPendingObligations(
+                nextPosition, nextState, partialAlignment.context,
+                partialAlignment, dec
+            )
+            logger.trace { "h1=$h1 h2=$h2" }
+
             /*
             val heuristic = partialAlignment.state
                 .mapToSet { it.target }
                 .sumByDouble { n -> (remainder.map { e -> distance(n,e) } + listOf(distance(n, null))).min()?:0.0 }
              */
 //            println("$heuristic ${partialAlignment.state} ${remainder.map {it.conceptName}}")
-            return Alignment(newCost, heuristic, nextAlignment, nextState, nextPosition, partialAlignment.context)
+//            val nActivePossibleFutureActivities = nextState
+//                .activeJoins
+//                .mapToSet { it?.target }
+//                .filterNotNull()
+//                .map {  a->
+//                    remainder
+//                        .mapIndexed{idx,e -> idx to distance(a,e)}
+//                        .filter { it.second == 0.0 }
+//                        .minOfOrNull { it.first }
+//                }
+//                .filterNotNull()
+//                .maxByOrNull { it }?:0
+            val reachToTheFuture = dec?.split?.targets?.mapNotNull { a ->
+                remainder
+                    .mapIndexedNotNull { idx, e -> if (distance(a, e) == 0.0) idx else null }
+                    .minOfOrNull { it }
+            }
+                ?.maxByOrNull { it } ?: 0
+            val heuristic = h1 + h2
+            //println("h1=$h1 h2=$h2")
+            assert(partialAlignment.cost <= newCost) { "The cost is decreasing. Go figure." }
+            /*
+            if(!(dec?.activity == model.start || currentlyReachable.containsAll(nextReachable))) {
+                val diff = nextReachable-currentlyReachable
+                println("Reachable cache went bonkers @$dec")
+                println("currentState=${partialAlignment.state}")
+                println("nextState=${nextState}")
+                println("currently=$currentlyReachable")
+                println("next=$nextReachable")
+                for(n in diff)
+                    println("$n: ${model.joins[n]}")
+                assert(false)
+            }
+             */
+            if (partialAlignment.cost + partialAlignment.heuristic > newCost + heuristic) {
+                val currentlyReachable = reachableCache[partialAlignment.state.uniqueSet()]
+                val nextReachable = reachableCache[nextState.uniqueSet()]
+                println("Position ${partialAlignment.tracePosition} -> $nextPosition")
+                println("Current state ${partialAlignment.state}")
+                println("Decision $dec")
+                println("Joins ${model.joins[dec?.activity]}")
+                println("Splits ${model.splits[dec?.activity]}")
+                println("Next state ${nextState}")
+                println("Min occ@current ${partialAlignment.minOccurrences}")
+                println("Min occ@next ${minOccurrences}")
+//                println("Reachable from current state ${currentlyReachable}")
+//                println("Reachable from next state ${nextReachable}")
+//                println("next-currently=${nextReachable - currentlyReachable}")
+            }
+            assert(partialAlignment.cost + partialAlignment.heuristic <= newCost + heuristic) { "The heuristic is not admissible: ${partialAlignment.cost}+${partialAlignment.heuristic}<=$newCost+$heuristic = $newCost + $h1 + $h2; dec=$dec nextState=$nextState remainder=${remainder.map { it.conceptName }}" }
+//            if(nextPosition >= 46) {
+//                println("newCost=$newCost h1=$h1 h2=$h2 ns=$nextState mo=$minOccurrences remainder=${remainder.map { it.conceptName }}")
+//                TODO()
+//            }
+//            if (nextPosition >= 51)
+//                println("\t$nextState h1=$h1 h2=$h2")
+            //logger.trace{"newCost=$newCost h1=$h1 h2=$h2"}
+            return Alignment(
+                newCost,
+                heuristic,
+                nextAlignment,
+                nextState,
+                nextPosition,
+                partialAlignment.context,
+                reachToTheFuture,
+                minOccurrences
+            )
         }
         return null
     }
 
-    private class AlignmentComparator : Comparator<Alignment> {
+    private class AlignmentComparator(val costThreshold: Int) : Comparator<Alignment> {
 
         override fun compare(a: Alignment, b: Alignment): Int {
-            for (i in a.features.indices) {
+            val costA = max(a.features[0] - costThreshold, 0.0)
+            val costB = max(b.features[0] - costThreshold, 0.0)
+            val v = costA.compareTo(costB)
+            if (v != 0)
+                return v
+            for (i in 1 until a.features.size) {
                 val fa = a.features[i] //.value
                 val fb = b.features[i] //.value
                 val v = fa.compareTo(fb)
@@ -215,7 +675,28 @@ class PerformanceAnalyzer(
     private val stateContext = StateContext(model, HashMap())
 
     private fun initialAlignment(events: List<Event>): List<Alignment> {
-        val context = AlignmentContext(model, events, distance)
+        val nodes = model.instances.toList()
+        val cheapEventAlignments = events.map { e ->
+            val skipCost = distance(null, e)
+            nodes.mapNotNull { n ->
+                val d = distance(n, e)
+                if (d < skipCost)
+                    return@mapNotNull n to d
+                else
+                    return@mapNotNull null
+            }
+        }
+        val cheapNodeAlignments = model.instances.associateWith { n ->
+            val skipCost = distance(n, null)
+            events.mapNotNull { e ->
+                val d = distance(n, e)
+                if (d < skipCost)
+                    return@mapNotNull e to d
+                else
+                    return@mapNotNull null
+            }
+        }
+        val context = AlignmentContext(model, events, distance, cheapEventAlignments, cheapNodeAlignments)
         return listOf(
             Alignment(
                 0.0,
@@ -223,10 +704,13 @@ class PerformanceAnalyzer(
                 emptyList<AlignmentStep>(),
                 CausalNetStateWithJoins(stateContext),
                 0,
-                context
+                context,
+                1,
+                emptyMap()
             )
         )
     }
+
 
     internal fun allFreePartialAlignments(events: List<Activity>): Sequence<Alignment> = sequence {
         logger.trace { "prefix $events" }
@@ -260,7 +744,18 @@ class PerformanceAnalyzer(
                     val step = AlignmentStep(null, dec.activity, partialAlignment.state)
                     val nextAlignment = HierarchicalIterable(partialAlignment.alignment, step)
                     val nextPosition = partialAlignment.tracePosition + 1
-                    queue.add(Alignment(0.0, 0.0, nextAlignment, nextState, nextPosition, partialAlignment.context))
+                    queue.add(
+                        Alignment(
+                            0.0,
+                            0.0,
+                            nextAlignment,
+                            nextState,
+                            nextPosition,
+                            partialAlignment.context,
+                            0,
+                            emptyMap()
+                        )
+                    )
                 }
             } else
                 yield(partialAlignment)
@@ -268,7 +763,14 @@ class PerformanceAnalyzer(
     }
 
     private fun modelReachedEnd(partialAlignment: Alignment): Boolean {
-        return partialAlignment.state.isEmpty() && partialAlignment.alignment.any { it.activity != null }
+        if (partialAlignment.state.isEmpty() && partialAlignment.alignment.any { it.activity != null }) {
+            val materialized = partialAlignment.alignment.toList()
+            val nStarts = materialized.count { it.activity == model.start }
+            val nEnds = materialized.count { it.activity == model.end }
+            //println("nStart=$nStarts nEnds=$nEnds")
+            return /*partialAlignment.state.isEmpty() && partialAlignment.alignment.any { it.activity != null } &&*/ nStarts == 1 && nEnds == 1
+        }
+        return false
     }
 
     private fun addMissingEnd(alignment: Alignment): Alignment {
@@ -297,32 +799,63 @@ class PerformanceAnalyzer(
          */
     }
 
+    private var callCtr = 0
+
+    private val costLimitPerNode = 200
+
+    data class AlignmentComputationResult(val alignment: Alignment?, val counter: Int, val totalCost: Double) {
+
+    }
+
     /**
      * @return Alignment + number of visited states
      */
-    internal fun computeOptimalAlignment(trace: Trace): Pair<Alignment, Int> {
+    internal fun computeOptimalAlignment(trace: Trace, acceptableCost: Int): AlignmentComputationResult {
+        val traceLength = trace.events.count()
+        logger.debug { "callctr=$callCtr" }
+        callCtr++
         val bestCost = CostCache()
         val events = trace.events.toList()
-        val queue = PriorityQueue(AlignmentComparator())
+//        println(events.map{it.conceptName})
+        val queue = PriorityQueue(AlignmentComparator(0))
 //        val queue = MinMaxPriorityQueue.orderedBy(AlignmentComparator()).maximumSize(100).create<Alignment>()
         queue.addAll(initialAlignment(events))
+
         var ctr = 0
         var skipCtr = 0
         while (queue.isNotEmpty()) {
             val partialAlignment = queue.poll()
-            if (bestCost[partialAlignment.alignmentState] <= partialAlignment.cost) {
+            /*if (bestCost[partialAlignment.alignmentState] <= partialAlignment.cost) {
                 skipCtr++
                 continue
             }
             if (partialAlignment.state.isNotEmpty())
                 bestCost[partialAlignment.alignmentState] = partialAlignment.cost
+             */
             ctr += 1
+            if (ctr % 1000 == 0 /*|| partialAlignment.tracePosition >= 50*/)
+                logger.debug {
+                    "In progress visited $ctr skip $skipCtr queue ${queue.size} current cost ${partialAlignment.cost}+${partialAlignment.heuristic} position ${partialAlignment.tracePosition}/${partialAlignment.context.events.size} features=${partialAlignment.features} ${partialAlignment.state} ${
+                        partialAlignment.context.events.subList(
+                            partialAlignment.tracePosition,
+                            partialAlignment.context.events.size
+                        ).map { it.conceptName }
+                    } ${(partialAlignment.state as CausalNetStateWithJoins).activeJoins}"
+                }
+            if (ctr > acceptableCost)
+                return AlignmentComputationResult(null, ctr, partialAlignment.cost + partialAlignment.heuristic)
             val modelReachedEnd = modelReachedEnd(partialAlignment)
             val traceReachedEnd = partialAlignment.tracePosition >= events.size
-            logger.trace { "Queue size: ${queue.size}, cost: ${partialAlignment.cost}+${partialAlignment.heuristic} pos: ${partialAlignment.tracePosition} model ended $modelReachedEnd trace ended $traceReachedEnd ${partialAlignment.state} | " + partialAlignment.alignment.joinToString { "${it.event?.conceptName ?: '⊥'} -> ${it.activity ?: '⊥'}" } }
+            //logger.trace { "Queue size: ${queue.size}, cost: ${partialAlignment.cost}+${partialAlignment.heuristic} pos: ${partialAlignment.tracePosition} model ended $modelReachedEnd trace ended $traceReachedEnd ${partialAlignment.state} | " + partialAlignment.alignment.joinToString { "${it.event?.conceptName ?: '⊥'} -> ${it.activity ?: '⊥'}" } }
+            logger.trace { "$ctr Queue size: ${queue.size}, cost: ${partialAlignment.cost}+${partialAlignment.heuristic} pos: ${partialAlignment.tracePosition} model ended $modelReachedEnd trace ended $traceReachedEnd ${partialAlignment.state} | " }
             if (modelReachedEnd && traceReachedEnd) {
                 logger.trace("Visited $ctr partial alignments, skipctr=$skipCtr")
-                return addMissingEnd(partialAlignment) to ctr
+                //println("Visited $ctr cost ${partialAlignment.cost}+${partialAlignment.heuristic}")
+                return AlignmentComputationResult(
+                    addMissingEnd(partialAlignment),
+                    ctr,
+                    partialAlignment.cost + partialAlignment.heuristic
+                )
             }
             // match is set to true if there is an alignment between possible decisions and current event
             // The idea is that one should not skip if it is possible to advance in log and model at the same time
@@ -356,11 +889,10 @@ class PerformanceAnalyzer(
         throw IllegalStateException("BUG: It was impossible to align the trace with the model.")
     }
 
-    val optimalAlignment: List<Alignment> by lazy {
-        val n = if (logger.isDebugEnabled) log.traces.count() else 0
+    val optimalAlignment: List<Alignment?> by lazy {
         log.traces.mapIndexed { idx, trace ->
-//            logger.debug ( "Optimal alignment progress: ${idx + 1}/$n")
-            computeOptimalAlignment(trace).first
+            val acceptableCost = costLimitPerNode * max(trace.events.count(), model.instances.size)
+            computeOptimalAlignment(trace, acceptableCost).alignment
         }.toList()
     }
 
@@ -368,7 +900,8 @@ class PerformanceAnalyzer(
      * Cost of the shortest valid sequence in the model
      */
     internal val movem: Double by lazy {
-        computeOptimalAlignment(Trace(emptySequence())).first.cost
+        val acceptableCost = costLimitPerNode * model.instances.size
+        computeOptimalAlignment(Trace(emptySequence()), acceptableCost).totalCost
     }
 
     internal val movel: Double by lazy {
@@ -376,7 +909,7 @@ class PerformanceAnalyzer(
     }
 
     val fcost: Double by lazy {
-        optimalAlignment.sumByDouble { it.cost }
+        optimalAlignment.sumByDouble { it?.cost ?: 0.0 }
     }
 
     val fitness: Double by lazy {
@@ -386,11 +919,13 @@ class PerformanceAnalyzer(
     private val prefix2Step: Map<List<Activity>, List<AlignmentStep>> by lazy {
         val result = HashMap<List<Activity>, ArrayList<AlignmentStep>>()
         for (alignment in optimalAlignment) {
-            val prefix = ArrayList<Activity>()
-            for (step in alignment.alignment) {
-                result.getOrPut(ArrayList(prefix)) { ArrayList() }.add(step)
-                if (step.activity != null)
-                    prefix.add(step.activity)
+            if (alignment != null) {
+                val prefix = ArrayList<Activity>()
+                for (step in alignment.alignment) {
+                    result.getOrPut(ArrayList(prefix)) { ArrayList() }.add(step)
+                    if (step.activity != null)
+                        prefix.add(step.activity)
+                }
             }
         }
         return@lazy result
@@ -758,70 +1293,24 @@ class PerformanceAnalyzer(
         return result
     }
 
-    class PrefixTrie(
-        val activity: Activity?,
-        val label: List<Activity>,
-        val children: Map<Activity?, PrefixTrie>
-    ) {
-
-        fun flatten(): Sequence<List<Activity>> = sequence {
-            if (activity == null)
-                yield(label)
-            else
-                for (child in children.values)
-                    yieldAll(child.flatten())
-        }
-
-        /*
-        fun asList(): List<Activity> {
-            var n = this
-            val result = ArrayList<Activity>()
-            while (n.parent != null) {
-                if (n.activity != null)
-                    result.add(n.activity!!)
-                n = n.parent!!
-            }
-            result.add(n.activity!!)
-            return result.reversed()
-        }
-         */
-
-        fun dump(indent: String = "") {
-            println("$indent$activity")
-            for (child in children.values)
-                child.dump("$indent  ")
-        }
-
-        companion object {
-            fun build(prefixes: Collection<List<Activity>>): PrefixTrie {
-                val tries = build(emptyList(), prefixes, 0)
-                return tries.values.single()
-            }
-
-            private fun build(
-                label: List<Activity>,
-                prefixes: Collection<List<Activity>>,
-                pos: Int
-            ): Map<Activity?, PrefixTrie> =
-                prefixes
-                    .groupBy { if (pos < it.size) it[pos] else null }
-                    .mapValues { (activity, relevantPrefixes) ->
-                        if (activity != null) {
-                            val newLabel = label + listOf(activity)
-                            PrefixTrie(activity, newLabel, build(newLabel, relevantPrefixes, pos + 1))
-                        } else
-                            PrefixTrie(activity, label, emptyMap())
-                    }
-        }
-    }
-
     internal fun possibleNextOnPartialAlignments(prefixes: Collection<List<Activity>>): Map<List<Activity>, Set<Activity>> {
         data class SearchState(
             val position: Int,
             val produce: Boolean,
-            val relevantPrefixes: PrefixTrie,
+            val relevantPrefixes: Trie<Activity>,
             val state: CausalNetStateWithJoins
-        )
+        ) {
+            val pending: Int by lazy {
+                val active = this.state.activeJoins.filterNotNull().mapToSet { it.target }
+                try {
+                    return@lazy this
+                        .relevantPrefixes
+                        .maxOf { it.subList(this.relevantPrefixes.prefix.size, it.size).toSet().intersect(active).size }
+                } catch (e: NoSuchElementException) {
+                    return@lazy 0
+                }
+            }
+        }
 
         val maxPartialAlignments = 1
         val result = HashMap<List<Activity>, HashSet<Activity>>()
@@ -830,115 +1319,143 @@ class PerformanceAnalyzer(
             if (prefix.isNotEmpty() && prefix.last() == model.end)
                 result[prefix] = hashSetOf<Activity>(model.end)   //FIXME huh wtf?
         }
+        /*
         // number of visited states, nasa, first 30 traces
-        // b.pos-a.pos b.pr-a.pr b.state-a.state  -> 1021735
-        // a.pos-b.pos b.pr-a.pr b.state-a.state  -> OOM, bo kolejka rosnie
-        // b.pos-a.pos b.pr-a.pr b.rel-a.rel      -> 1567146 i rosnie
-        // b.pos-a.pos b.pr-a.pr a.rel-b.rel      -> 6921708 i rosnie
-        // b.pos-a.pos b.pr-a.pr a.state-b.state  -> 6428902 i rosnie
-        // b.state-a.state                        ->  541520
-        // b.state-a.state b.pos-a.pos            ->  541789
-        // b.active-a.active                      -> 3039034 i rosnie
+         *  9824 b.state.size - a.state.size
+         *  9909 b.position - a.position b.state.size - a.state.size
+         *  9276 b.position - a.position b.produce-a.produce b.state.size - a.state.size
+         *  9279 b.produce-a.produce b.position - a.position b.state.size - a.state.size
+         *  9786 b.state.size - a.state.size b.position - a.position b.produce-a.produce
+         *  9675 b.position - a.position b.produce-a.produce b.state.activeJoins.size - a.state.activeJoins.size
+         *  9442 b.position - a.position b.produce-a.produce b.state.size-a.state.size b.state.activeJoins.size - a.state.activeJoins.size
+         *  >359k b.position - a.position b.produce-a.produce b.state.size-a.state.size a.state.activeJoins.size - b.state.activeJoins.size
+         *  9026 b.position - a.position b.produce-a.produce b.state.size - a.state.size b.pending-a.pending
+         *  9589 b.position - a.position b.produce-a.produce b.pending-a.pending b.state.size - a.state.size
+         *  9521 b.position - a.position b.produce-a.produce b.state.size - a.state.size a.pending-b.pending
+         *  >90k b.position - a.position b.produce-a.produce b.pending-a.pending
+         ================ 0 until 90
+         *  486186 b.position - a.position b.produce-a.produce b.state.size - a.state.size b.pending-a.pending
+         *  544910 b.position - a.position b.produce-a.produce b.state.size - a.state.size
+         *  520770 b.position - a.position b.produce-a.produce b.pending-a.pending b.state.size - a.state.size
+         */
         val queue = PriorityQueue<SearchState>(kotlin.Comparator { a, b ->
-            return@Comparator b.state.size - a.state.size
-            //if (a.position != b.position)
-            //    return@Comparator b.position - a.position
-            //if (a.produce != b.produce)
-            //    return@Comparator (if (b.produce) 1 else 0) - (if (a.produce) 1 else 0)
-            //return@Comparator b.state.size - a.state.size
-//            if(b.state.size != a.state.size)
-//                return@Comparator b.state.size - a.state.size
-//            return@Comparator b.position - a.position
-            //return@Comparator a.relevantPrefixes.size - b.relevantPrefixes.size
+            val ap = 2 * a.position + (if (a.produce) 1 else 0)
+            val bp = 2 * b.position + (if (b.produce) 1 else 0)
+            if (ap != bp)
+                return@Comparator bp - ap
+            if (a.state.size != b.state.size)
+                return@Comparator b.state.size - a.state.size
+            return@Comparator b.pending - a.pending
         })
         var ctr = 0
-        //val queue = ArrayDeque<SearchState>()
         val nonEmptyPrefixes = prefixes - result.keys
 
-        val missing = nonEmptyPrefixes.toMutableSet()
         if (nonEmptyPrefixes.isNotEmpty()) {
-            queue.add(
-                SearchState(
-                    0,
-                    true,
-                    PrefixTrie.build(nonEmptyPrefixes),
-                    CausalNetStateWithJoins(StateContext(model, HashMap()))
+            val missing = Trie.build<Activity>(nonEmptyPrefixes.toMutableSet())
+            if (nonEmptyPrefixes.isNotEmpty()) {
+                queue.add(
+                    SearchState(
+                        0,
+                        true,
+                        missing,
+                        CausalNetStateWithJoins(StateContext(model, HashMap()))
+                    )
                 )
-            )
-            while (missing.isNotEmpty() && queue.size > 0) {
-                val current = queue.poll()
-                if (current.relevantPrefixes.flatten().all { it !in missing })
-                    continue
-                /*
-                assert(current.relevantPrefixes.isNotEmpty())
-                if (current.relevantPrefixes.all { it !in missing })
-                    continue
-                 */
-                ctr++
-                //println("#missing ${missing.size}/${nonEmptyPrefixes.size} #queue ${queue.size} $current ${current.state.activeJoins}")
-                if (current.produce) {
-                    /*
-                    val currentNode = current.relevantPrefixes[0][current.position]
-                    val byNextNode =
-                        current.relevantPrefixes.groupBy { if (current.position + 1 < it.size) it[current.position + 1] else null }
-                     */
-                    val currentNode = current.relevantPrefixes.activity
-                    check(currentNode != null)
-                    for (split in model.splits[currentNode].orEmpty()) {
-                        //val nextState = LazyCausalNetState(current.state, emptyList(), split.dependencies)
-                        val nextState = CausalNetStateWithJoins(current.state)
-                        nextState.execute(null, split)
-                        val keys = hashSetOf<Activity?>(null)
-                        nextState.activeJoins.filterNotNull().mapTo(keys) { it.target }
-                        val relevantChildren = current.relevantPrefixes.children.filterKeys { it in keys }
-                        val relevant = PrefixTrie(current.relevantPrefixes.activity, current.relevantPrefixes.label, relevantChildren)
-                        /*
-                        val relevant = ArrayList<List<Activity>>()
-                        relevant.addAll(byNextNode[null] ?: emptyList())
-                        for (target in nextState.activeJoins.filterNotNull().mapToSet { it.target })
-                            relevant.addAll(byNextNode[target] ?: emptyList())
-                        if (relevant.isNotEmpty())
-                        //if(nextState.activeJoins.filterNotNull().mapToSet { it.target }.any { it in possibleNext })
-                            queue.add(SearchState(current.position + 1, false, relevant.filterNotNull(), nextState))
-                         */
-                        queue.add(SearchState(current.position + 1, false, relevant, nextState))
+                val maximalSplits = HashMap<Activity, List<Split>>()
+                while (missing.isNotEmpty() && queue.size > 0) {
+                    val current = queue.poll()
+                    if (!current.relevantPrefixes.containsAny(missing))
+                        continue
+
+//                println("${current.position} ${current.produce} ${current.state.uniqueSet().size} ${current.state.size} ${current.pending} -> $ctr")
+                    ctr++
+
+                    if (current.produce) {
+                        var hasSatPrefix = false
+                        for (prefix in current.relevantPrefixes) {
+                            // dla kazdego node w przyszłości musi być chociaż jeden join, dla którego wszystkie zależności albo już są albo da się je wyprodukować
+                            // wystarczy, że znajdziemy chociaż jeden taki prefix w relevantPrefixes&missing
+                            if (current.position < prefix.size && prefix in missing) {
+                                val available = HashSet(current.state.uniqueSet())
+                                available.addAll(model.outgoing[prefix[current.position]].orEmpty())
+                                var unsatPrefix = false
+                                for (pos in current.position + 1 until prefix.size) {
+                                    val node = prefix[pos]
+                                    if (!model.joins[node].orEmpty().any { available.containsAll(it.dependencies) }) {
+                                        unsatPrefix = true
+                                        break
+                                    }
+                                    available.addAll(model.outgoing[node].orEmpty())
+                                }
+                                if (!unsatPrefix) {
+                                    hasSatPrefix = true
+                                    break
+                                }
+                            }
+                        }
+
+                        if (!hasSatPrefix)
+                            continue
                     }
-                    /*
-                    for (split in model.splits[currentNode].orEmpty()) {
-                        //val nextState = LazyCausalNetState(current.state, emptyList(), split.dependencies)
-                        val nextState = CausalNetStateWithJoins(current.state)
-                        nextState.execute(null, split)
-                        //if(nextState.activeJoins.filterNotNull().mapToSet { it.target }.any { it in possibleNext })
-                        queue.add(SearchState(current.position + 1, false, current.relevantPrefixes, nextState))
-                    }
-                     */
-                } else {
-                    for ((candidate, activeJoins) in current.state.activeJoins.filterNotNull().groupBy { it.target }) {
-                        //val prefixSoFar = current.relevantPrefixes[0].subList(0, current.position)
-                        val prefixSoFar = current.relevantPrefixes.asList()
-                        result.computeIfAbsent(prefixSoFar) { HashSet() }.add(candidate)
-                        if (missing.remove(prefixSoFar))
-                            println("#missing ${missing.size}/${nonEmptyPrefixes.size} #solved prefix ${prefixSoFar.size} #queue ${queue.size} #ctr $ctr")
-                        //val relevant =
-                        //    current.relevantPrefixes.filter { current.position < it.size && it[current.position] == candidate && it in missing }
-                        val relevant = current.relevantPrefixes.children[candidate]
-                        if (/*relevant.isNotEmpty()*/ relevant != null) {
-                            val smallestJoinSize = activeJoins.map { it.size }.min()!!
-                            val smallestJoins = activeJoins.filter { it.size == smallestJoinSize }
-                            for (join in smallestJoins) {
-                                //val nextState = LazyCausalNetState(current.state, join.dependencies, emptyList())
-                                val nextState = CausalNetStateWithJoins(current.state)
-                                nextState.execute(join, null)
-                                queue.add(SearchState(current.position, true, relevant, nextState))
+
+                    if (current.produce) {
+                        val currentNode = current.relevantPrefixes.node
+                        check(currentNode != null)
+                        val splits = maximalSplits.computeIfAbsent(currentNode) {
+                            val splits = model.splits[currentNode].orEmpty()
+                            return@computeIfAbsent splits.filter { split ->
+                                splits.all { other ->
+                                    split === other || !other.dependencies.containsAll(split.dependencies)
+                                }
+                            }
+                        }
+
+                        for (split in splits) {
+                            val nextState = CausalNetStateWithJoins(current.state)
+                            nextState.execute(null, split)
+                            val keys = hashSetOf<Activity?>(null)
+                            nextState.activeJoins.filterNotNull().mapTo(keys) { it.target }
+                            val relevantChildren = current
+                                .relevantPrefixes
+                                .children
+                                .filterKeys { it in keys }
+                                .toMutableMap()
+                            val relevant = Trie(
+                                current.relevantPrefixes.node,
+                                current.relevantPrefixes.prefix,
+                                relevantChildren
+                            )
+                            queue.add(SearchState(current.position + 1, false, relevant, nextState))
+                        }
+                    } else {
+                        for ((candidate, activeJoins) in current.state.activeJoins.filterNotNull()
+                            .groupBy { it.target }) {
+                            val prefixSoFar = current.relevantPrefixes.prefix
+                            result.computeIfAbsent(prefixSoFar) { HashSet() }.add(candidate)
+                            if (missing.remove(prefixSoFar))
+                                logger.debug {"#missing ${missing.size}/${nonEmptyPrefixes.size} #solved prefix ${prefixSoFar.size} #queue ${queue.size} #ctr $ctr"}
+                            val relevant = current.relevantPrefixes.children[candidate]
+                            if (relevant != null) {
+                                val smallestJoinSize = activeJoins.minOf { it.size }
+                                val smallestJoins = activeJoins.filter { it.size == smallestJoinSize }
+                                for (join in smallestJoins) {
+                                    val nextState = CausalNetStateWithJoins(current.state)
+                                    nextState.execute(join, null)
+                                    queue.add(SearchState(current.position, true, relevant, nextState))
+                                }
                             }
                         }
                     }
                 }
             }
+//        if (missing.size != 0) {
+//            for(m in missing)
+//                println(m)
+//        }
+//        assert(missing.size == 0)
+//        println("#ctr $ctr")
+            //println(result)
         }
-        assert(missing.size == 0)
-        println("#ctr $ctr")
-        println(result)
         return result.filterKeys { it in prefixes }
     }
 
@@ -950,21 +1467,23 @@ class PerformanceAnalyzer(
         val state2Event = Counter<CausalNetState>()
         val state2Activity = HashMap<CausalNetState, HashSet<Activity>>()
         for (alignment in optimalAlignment) {
-            val steps = alignment.alignment.toList()
-            for ((sidx, step) in alignment.alignment.withIndex()) {
-                if (sidx > 0 && step.activity != null && step.event != null) {
-                    var lastPossiblyFreeState: CausalNetState? = null
-                    for (bidx in sidx - 1 downTo 0) {
-                        val before = steps[bidx]
-                        val ready = model.available(before.stateBefore).mapToSet { it.activity }
-                        if (step.activity !in ready) {
-                            lastPossiblyFreeState = before.stateBefore
-                            break
+            if (alignment != null) {
+                val steps = alignment.alignment.toList()
+                for ((sidx, step) in alignment.alignment.withIndex()) {
+                    if (sidx > 0 && step.activity != null && step.event != null) {
+                        var lastPossiblyFreeState: CausalNetState? = null
+                        for (bidx in sidx - 1 downTo 0) {
+                            val before = steps[bidx]
+                            val ready = model.available(before.stateBefore).mapToSet { it.activity }
+                            if (step.activity !in ready) {
+                                lastPossiblyFreeState = before.stateBefore
+                                break
+                            }
                         }
+                        check(lastPossiblyFreeState != null) { "No free state for ${step.activity}. This is outright impossible, there should always be a free state right before start." }
+                        state2Event.inc(lastPossiblyFreeState)
+                        state2Activity.getOrPut(lastPossiblyFreeState) { HashSet() }.add(step.activity)
                     }
-                    check(lastPossiblyFreeState != null) { "No free state for ${step.activity}. This is outright impossible, there should always be a free state right before start." }
-                    state2Event.inc(lastPossiblyFreeState)
-                    state2Activity.getOrPut(lastPossiblyFreeState) { HashSet() }.add(step.activity)
                 }
             }
         }
@@ -995,16 +1514,25 @@ class PerformanceAnalyzer(
 //      check(prefix2Possible[emptyList()].isNullOrEmpty())
         var ctr = 0
         for (alignment in optimalAlignment) {
-            val prefix = ArrayList<Activity>()
-            for (step in alignment.alignment) {
-                if (step.activity != null) {
-                    val observed = prefix2Next.getValue(prefix)
-                    val possible = if (prefix.isNotEmpty()) prefix2Possible.getValue(prefix) else setOf(model.start)
-                    logger().trace { "observed=$observed possible=$possible" }
-                    check(possible.containsAll(observed)) { "prefix=$prefix observed=$observed possible=$possible" }
-                    result += observed.size.toDouble() / possible.size.toDouble()
-                    ctr += 1
-                    prefix.add(step.activity)
+            if (alignment != null) {
+                val prefix = ArrayList<Activity>()
+                for (step in alignment.alignment) {
+                    if (step.activity != null) {
+                        var observed = prefix2Next.getValue(prefix)
+                        val possible = if (prefix.isNotEmpty()) prefix2Possible[prefix] else setOf(model.start)
+                        logger().trace { "observed=$observed possible=$possible" }
+                        if (possible == null) {
+                            logger.warn("Nothing is possible in $prefix")
+                            continue
+                        }
+                        if (!possible.containsAll(observed)) {
+                            logger.warn("For $prefix there are activities that were observed, but are not possible: ${observed - possible}")
+                            observed = observed.filter { it in possible }
+                        }
+                        result += observed.size.toDouble() / possible.size.toDouble()
+                        ctr += 1
+                        prefix.add(step.activity)
+                    }
                 }
             }
         }
