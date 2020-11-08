@@ -612,7 +612,7 @@ class PerformanceAnalyzerTest {
         }
 
 
-    @Ignore("This takes way too long to be executed everytime")
+    //@Ignore("This takes way too long to be executed everytime")
     @Test
     fun `BPIC15_2f  - sweeping`() {
         val windowSize = 20
