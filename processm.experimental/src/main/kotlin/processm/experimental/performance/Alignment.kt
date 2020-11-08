@@ -3,12 +3,32 @@ package processm.experimental.performance
 import processm.core.log.Event
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
-import processm.core.models.causalnet.DecoupledNodeExecution
+import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
 
 class AlignmentStep(val event: Event?, val activity: Activity?, val stateBefore: CausalNetState)
 
-data class AlignmentContext(val model: CausalNet, val events: List<Event>, val distance: Distance)
+data class AlignmentContext(
+    val model: CausalNet,
+    val events: List<Event>,
+    val distance: Distance,
+    val cheapEventAlignments: List<List<Pair<Node, Double>>>,
+    val cheapNodeAlignments: Map<Node, List<Pair<Event, Double>>>
+) {
+    val aggregatedRemainders: List<Map<Event, Int>>
+
+    init {
+        val result = ArrayList<Map<Event, Int>>()
+        val intermediary = HashMap<Event, Int>()
+        for (e in events.reversed()) {
+            intermediary.compute(e) { _, v ->
+                (v ?: 0) + 1
+            }
+            result.add(HashMap(intermediary))
+        }
+        aggregatedRemainders = result.reversed()
+    }
+}
 
 data class AlignmentState(val state: CausalNetState, val tracePosition: Int)
 
@@ -18,9 +38,11 @@ class Alignment(
     val alignment: Iterable<AlignmentStep>,
     internal val state: CausalNetState,
     internal val tracePosition: Int,
-    internal val context: AlignmentContext
+    internal val context: AlignmentContext,
+    reachToTheFuture: Int,
+    internal val minOccurrences:Map<Node,Int>
 ) {
-   internal val features: List<Double>
+    internal val features: List<Double>
 
     internal val alignmentState: AlignmentState
         get() = AlignmentState(state, tracePosition)
@@ -41,8 +63,12 @@ class Alignment(
          */
 //        features = listOf(cost, -tracePosition.toDouble(), -matching.toDouble())
         features = listOf(
-            cost+heuristic,
-            -tracePosition.toDouble() /*,
+            cost + heuristic,
+            -tracePosition.toDouble(),
+            //-nActivePossibleFutureActivities.toDouble(),
+            reachToTheFuture.toDouble(),
+            state.size.toDouble()
+            /*,
             lazy {
                 val matching =
                     if (tracePosition < context.events.size) {

@@ -87,7 +87,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         /**
          * The largest common multiplier for all the sizes present in the respective positions of [largestPossibleSplit]
          */
-        val lcm: List<Int> = largestPossibleSplit.map { m ->
+        /*val lcm: List<Int> = largestPossibleSplit.map { m ->
             m.values
                 .flatten()
                 .fold(0) { acc, i ->
@@ -96,7 +96,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                     else
                         ArithmeticUtils.lcm(acc, i)
                 }
-        }
+        }*/
     }
 
     private fun consumption(current: SearchState, context: Context) {
@@ -116,7 +116,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         for (mayConsume in consumable.allSubsets(excludeEmpty = mustConsume.isEmpty())) {
             val consume = mayConsume + mustConsume
             assert(consume.isNotEmpty())
-            val additionalGain = Fraction.getFraction(consume.size, allConsumable.size)
+            val additionalGain = if(allConsumable.isNotEmpty()) Fraction.getFraction(consume.size, allConsumable.size) else Fraction.ZERO
             val newValue = current.totalGreediness + additionalGain
             val newReplayTrace =
                 ReplayTrace(
@@ -176,6 +176,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         var isNextRunnable = false
         //DF-completness guarantees presence of this dependency. It also guarantees that we don't need to look any further, as any immediate successor is runnable by its direct predecessor
         val depToNext = Dependency(currentNode, trace[current.node + 1])
+        assert(depToNext in context.model.dependencies) {"The dependency graph is not DF-complete, $depToNext is missing"}
         for (e in current.trace.state.entrySet()) {
             if (e.element.source == currentNode && e.count >= context.remainder[current.node][e.element.target] ?: 0) {
                 cannotProduce.add(e.element)
@@ -245,13 +246,16 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         for (mayProduce in prod) {
             val produce = mayProduce + mustProduce
 
+            assert(context.model.dependencies.containsAll(mayProduce))
+
             if (cannotProduceJointly.isNotEmpty() && produce.containsAll(cannotProduceJointly)) {
                 logger.trace { "Skipping production $produce" }
                 continue
             }
 
+            val den= context.producible[current.node].size
             val newValue =
-                current.totalGreediness + Fraction.getFraction(produce.size, context.producible[current.node].size)
+                current.totalGreediness + (if(den!=0) Fraction.getFraction(produce.size, den) else Fraction.ZERO)
             val newReplayTrace =
                 ReplayTrace(
                     LazyCausalNetState(current.trace.state, emptyList(), produce),
@@ -305,8 +309,9 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
             processNode(pos, state, true, context)
         }
 
-        var pnom = 0
-        val lcm = context.lcm[node]
+        val denominators = ArrayList<Int>()
+        //var pnom = 0
+        //val lcm = context.lcm[node]
         for (ctr in state.values) {
             for (e in ctr.entries)
                 if (e.value >= 1) {
@@ -314,13 +319,15 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                     assert(e.value <= tmp.size)
                     // doing it straight on Fractions seems to be terribly inefficient
                     for (i in 0 until e.value) {
-                        assert(lcm % tmp[i] == 0)
-                        pnom += lcm / tmp[i]
+                        //assert(lcm % tmp[i] == 0L)
+                        //pnom += lcm / tmp[i]
+                        denominators.add(tmp[i])
                     }
                 }
         }
-        assert(lcm != 0 || pnom == 0)
-        return if (lcm != 0) Fraction.getFraction(pnom, lcm).reduce() else Fraction.ZERO
+        //assert(lcm != 0 || pnom == 0)
+        //return if (lcm != 0) Fraction.getFraction(pnom, lcm).reduce() else Fraction.ZERO
+        return if(denominators.isEmpty()) Fraction.ZERO else sumInverse(denominators)
     }
 
     /**
@@ -445,13 +452,17 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                 }
             }
         }
-        throw IllegalStateException()
+        throw IllegalStateException("Failed to replay")
     }
+
+    lateinit var replayHistory:Map<NodeTrace, Pair<List<Split>, List<Join>>>
+        private set
 
     override fun replayGroup(model: CausalNet, traces: List<NodeTrace>): Pair<Set<Split>, Set<Join>> {
         val splits = HashSet<Split>()
         val joins = HashSet<Join>()
         var eff = ArrayList<Double>()
+        val replayHistory=HashMap<NodeTrace, Pair<List<Split>, List<Join>>>()
         for ((idx, trace) in traces.withIndex()) {
             logger.debug("$idx/${traces.size}")
             val (tmpsplits, tmpjoins) = replay(model, trace)
@@ -460,8 +471,10 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
             splits.addAll(tmpsplits)
             joins.addAll(tmpjoins)
             eff.add(efficiency)
+            replayHistory[trace] = tmpsplits to tmpjoins
         }
         groupEfficiency = eff
+        this.replayHistory = replayHistory
         return splits to joins
     }
 }

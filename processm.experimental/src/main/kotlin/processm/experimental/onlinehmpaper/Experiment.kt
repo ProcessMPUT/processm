@@ -3,6 +3,8 @@ package processm.experimental.onlinehmpaper
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
+import kotlinx.serialization.parse
+import kotlinx.serialization.stringify
 import processm.core.helpers.mapToSet
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
@@ -239,15 +241,18 @@ class Experiment {
         val minDependency: List<Double>
     ) {
         companion object {
-            val json = Json(JsonConfiguration.Default)
+            val json = Json.Default
 
             fun load(jsonFile: String): Config {
-                return File(jsonFile).bufferedReader().use { return@use json.parse(serializer(), it.readText()) }
+                return File(jsonFile).bufferedReader().use { return@use json.decodeFromString(
+                    serializer(),
+                    it.readText()
+                ) }
             }
         }
 
         fun save(jsonFile: String) {
-            File(jsonFile).bufferedWriter().use { it.write(json.stringify(serializer(), this)) }
+            File(jsonFile).bufferedWriter().use { it.write(json.encodeToString(serializer(), this)) }
         }
     }
 
@@ -549,10 +554,12 @@ class Experiment {
 //            for (i in 0 until log.size - windowSize) {
                 for (i in 0 until log.size) {
                     val (logidx, traceidx, trace) = log[i]
+                    /*
                     if(logidx > 0 && traceidx == 0) {
                         jsFile.appendln(online.result.toDanielJS("$filename-$windowSize-$logidx-$traceidx"))
                         jsFile.flush()
                     }
+                     */
                     val addLog = Log(sequenceOf(trace))
                     val removeLog = Log(if (i >= windowSize) sequenceOf(log[i - windowSize].third) else emptySequence())
                     online.processDiff(addLog, removeLog)
@@ -579,8 +586,10 @@ class Experiment {
                         values.addAll(listOf(Double.NaN, Double.NaN))
                     csv(values, filename, windowSize, logidx, traceidx)
                 }
+                /*
                 jsFile.appendln(online.result.toDanielJS("$filename-$windowSize-final"))
                 jsFile.flush()
+                 */
                 /*
             var prev: Trace? = null
             for ((logidx, log) in partialLogs.withIndex()) {
