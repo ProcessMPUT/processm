@@ -15,7 +15,6 @@ import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
 import javax.xml.stream.XMLOutputFactory
 import kotlin.random.Random
-import kotlin.streams.asSequence
 
 fun filterLog(base: Log) = Log(base.traces.map { trace ->
     Trace(trace.events
@@ -30,7 +29,8 @@ class Experiment {
         }
     }
 
-    private fun filterTraces(allTraces: List<Trace>, random: Random, config: Config): List<Trace> {
+    private fun filterTraces(_allTraces: List<Trace>, random: Random, config: Config): List<Trace> {
+        val allTraces = _allTraces.filter { trace -> trace.events.none { it.conceptName === null } }
         val allNames = allTraces.flatMap { trace -> trace.events.map { it.conceptName }.toSet() }.toSet()
         println("# distinct names: ${allNames.size}")
         if (allNames.size <= config.maxActivities)
@@ -237,7 +237,7 @@ class Experiment {
             }
 
             // Execute python's precision & fitness checker
-            Runtime.getRuntime().exec("python3 tree_stats.py $name ${config.iteration}")
+            Runtime.getRuntime().exec("/usr/local/anaconda3/bin/python3 -OO tree_stats.py $name ${config.iteration}")
         }
     }
 
