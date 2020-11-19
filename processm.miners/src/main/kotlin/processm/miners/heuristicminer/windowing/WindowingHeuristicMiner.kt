@@ -86,8 +86,14 @@ class WindowingHeuristicMiner(
         val joins = HashSet<Join>()
         if (this::model.isInitialized) {
             val untouchedActivities = model.activities.toSet() - touchedActivities
-            untouchedActivities.flatMapTo(splits) { model.splits[it].orEmpty() }
-            untouchedActivities.flatMapTo(joins) { model.joins[it].orEmpty() }
+            for (src in untouchedActivities)
+                for (split in model.splits[src].orEmpty())
+                    if (untouchedActivities.containsAll(split.targets))
+                        splits.add(split)
+            for (dst in untouchedActivities)
+                for (join in model.joins[dst].orEmpty())
+                    if (untouchedActivities.containsAll(join.sources))
+                        joins.add(join)
         }
         logger.debug { "Preserving splits: $splits" }
         logger.debug { "Preserving joins: $joins" }
