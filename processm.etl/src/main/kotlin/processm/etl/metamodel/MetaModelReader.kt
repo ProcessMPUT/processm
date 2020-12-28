@@ -22,14 +22,6 @@ class MetaModelReader(private val dataModelId: Int) {
                 ?.getOrNull(AttributesNames.id) ?: throw NoSuchElementException("An attribute with the specified name $attributeName related to class ${classId.value} does not exist")
         }
 
-    fun getClassName(classId: EntityID<Int>): String {
-        return MetaModelReaderCache.getClassName(classId) {
-            Classes.slice(Classes.name)
-                .select { Classes.id eq classId }
-                .firstOrNull()?.getOrNull(Classes.name) ?: throw NoSuchElementException()
-        }
-    }
-
     fun getLatestObjectVersionId(objectId: String, classId: EntityID<Int>): EntityID<Int>? {
         val relatedToObject: SqlExpressionBuilder.() -> Op<Boolean> = { ObjectVersions.objectId eq objectId and (ObjectVersions.classId eq classId) }
 
@@ -134,7 +126,6 @@ class MetaModelReader(private val dataModelId: Int) {
 
     private companion object MetaModelReaderCache {
         private val classIds = mutableMapOf<String, EntityID<Int>>()
-        private val classNames = mutableMapOf<EntityID<Int>, String>()
         private val attributeIds = mutableMapOf<Pair<EntityID<Int>, String>, EntityID<Int>>()
 
         fun getClassId(className: String, valueGetter: () -> EntityID<Int>) =
@@ -142,8 +133,5 @@ class MetaModelReader(private val dataModelId: Int) {
 
         fun getAttributeId(classId: EntityID<Int>, attributeName: String, valueGetter: () -> EntityID<Int>) =
             attributeIds.getOrPut(classId to attributeName, valueGetter)
-
-        fun getClassName(classId: EntityID<Int>, valueGetter: () -> String) =
-            classNames.getOrPut(classId, valueGetter)
     }
 }

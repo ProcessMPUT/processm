@@ -3,12 +3,12 @@ package processm.etl.metamodel
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jgrapht.Graph
+import org.jgrapht.GraphTests
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath
 import org.jgrapht.alg.spanning.KruskalMinimumSpanningTree
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.graph.DefaultUndirectedGraph
-import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
 import java.util.*
 
@@ -21,27 +21,23 @@ import java.util.*
 class CaseNotionExplorer(private val targetDatabaseName: String, private val metaModelReader: MetaModelReader) {
 
     /**
-     * Discovers case notions consisting of the provided classes.
+     * Discovers case notions consisting of the specified classes.
      *
-     * @param rootClass Case notion's root class.
-     * @param allowedClasses Set of classes which are allowed to be present in the resulting case notions.
-     * @param identifyingClasses Set of case notion's identifying classes.
-     * @return A map containing case notions and their relevance score.
+     * @param rootClassId Case notion's root class.
+     * @param allowedClassesIds Set of classes which are allowed to be present in the resulting case notions.
+     * @return A list containing case notions.
      * @see CaseNotionDefinition.rootClass
-     * @see CaseNotionDefinition.identifyingClasses
      */
-    fun discoverCaseNotions(rootClass: String, allowedClasses: Set<String>, identifyingClasses: Set<String>): Map<CaseNotionDefinition<EntityID<Int>>, Double>
+    fun discoverCaseNotions(rootClassId: EntityID<Int>, allowedClassesIds: Set<EntityID<Int>>): List<CaseNotionDefinition<EntityID<Int>>>
             = transaction(DBCache.get(targetDatabaseName).database) {
-        val rootClassId = metaModelReader.getClassId(rootClass)
-        val identifyingClassesIds = identifyingClasses.mapToSet { metaModelReader.getClassId(it) }
         val relationshipGraph: Graph<EntityID<Int>, String> = DefaultUndirectedGraph(String::class.java)
 
         metaModelReader.getRelationships()
             .forEach { (relationshipName, relationship) ->
                 val (referencingClassId, referencedClassId) = relationship
 
-                if (!allowedClasses.contains(metaModelReader.getClassName(referencingClassId))
-                    || !allowedClasses.contains(metaModelReader.getClassName(referencedClassId))) return@forEach
+                if (!allowedClassesIds.contains(referencingClassId)
+                    || !allowedClassesIds.contains(referencedClassId)) return@forEach
 
                 relationshipGraph.addVertex(referencingClassId)
                 relationshipGraph.addVertex(referencedClassId)
@@ -52,28 +48,41 @@ class CaseNotionExplorer(private val targetDatabaseName: String, private val met
             .connectedSetOf(rootClassId)
 
         return@transaction discoverCaseNotionsStartingWithRoot(
-            rootClassId, rootConnectedSet, identifyingClassesIds, relationshipGraph)
+            rootClassId, rootConnectedSet, relationshipGraph)
     }
 
     private fun discoverCaseNotionsStartingWithRoot(
-        rootName: EntityID<Int>,
+        rootClass: EntityID<Int>,
         allowedClasses: Set<EntityID<Int>>,
-        identifyingClasses: Set<EntityID<Int>>,
-        relationshipGraph: Graph<EntityID<Int>, String>): Map<CaseNotionDefinition<EntityID<Int>>, Double> {
-        val relationshipSubgraph = AsSubgraph(relationshipGraph, allowedClasses)
-        val shortestPaths = DijkstraShortestPath(relationshipSubgraph).getPaths(rootName)
-        val spanningTree = KruskalMinimumSpanningTree(relationshipSubgraph).spanningTree
-        val caseNotionTree = mutableMapOf<EntityID<Int>, EntityID<Int>?>(rootName to null)
+        relationshipGraph: Graph<EntityID<Int>, String>): List<CaseNotionDefinition<EntityID<Int>>> {
+        return allowedClasses.powerSet().fold(mutableListOf()) { caseNotionsDefinitions, allowedClassesSubset ->
+            val allowedClassesSubgraph = AsSubgraph(relationshipGraph, allowedClassesSubset)
 
-        spanningTree.edges.map {
-            val source = relationshipSubgraph.getEdgeSource(it)
-            val target = relationshipSubgraph.getEdgeTarget(it)
+            if (allowedClassesSubset.contains(rootClass) && GraphTests.isConnected(allowedClassesSubgraph)) {
+                val shortestPaths = DijkstraShortestPath(allowedClassesSubgraph).getPaths(rootClass)
+                val spanningTree = KruskalMinimumSpanningTree(allowedClassesSubgraph).spanningTree
+                val caseNotionTree = mutableMapOf<EntityID<Int>, EntityID<Int>?>(rootClass to null)
 
-            if (shortestPaths.getPath(source).length > shortestPaths.getPath(target).length) caseNotionTree[source] = target
-            else caseNotionTree[target] = source
+                spanningTree.edges.forEach {
+                    val source = allowedClassesSubgraph.getEdgeSource(it)
+                    val target = allowedClassesSubgraph.getEdgeTarget(it)
+
+                    if (shortestPaths.getPath(source).length > shortestPaths.getPath(target).length)
+                        caseNotionTree[source] = target
+                    else caseNotionTree[target] = source
+                }
+
+                allowedClassesSubset.powerSet().forEach { identifyingClassesSubset ->
+                    val identifyingClassesSubgraph = AsSubgraph(allowedClassesSubgraph, identifyingClassesSubset)
+
+                    if (identifyingClassesSubset.contains(rootClass) && GraphTests.isConnected(identifyingClassesSubgraph)) {
+                        caseNotionsDefinitions.add(CaseNotionDefinition(caseNotionTree, identifyingClassesSubset))
+                    }
+                }
+            }
+
+            caseNotionsDefinitions
         }
-
-        return mapOf(CaseNotionDefinition(caseNotionTree, identifyingClasses) to spanningTree.edges.size.toDouble())
     }
 
     // this is quick and dirty implementation
@@ -84,11 +93,10 @@ class CaseNotionExplorer(private val targetDatabaseName: String, private val met
             return sets
         }
         val list: List<T> = ArrayList(this)
-        val head = list[0]
+        val head = list.first()
         val rest: Set<T> = HashSet(list.subList(1, list.size))
         for (set in rest.powerSet()) {
-            val newSet: MutableSet<T> = HashSet()
-            newSet.add(head)
+            val newSet = mutableSetOf(head)
             newSet.addAll(set)
             sets.add(newSet)
             sets.add(set)
