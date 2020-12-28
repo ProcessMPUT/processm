@@ -1,16 +1,14 @@
 package processm.etl.discovery
 
-import org.apache.commons.dbcp2.DriverManagerConnectionFactory
 import schemacrawler.inclusionrule.RegularExpressionInclusionRule
 import schemacrawler.schema.Table
 import schemacrawler.schema.TableRelationshipType
 import schemacrawler.schema.View
 import schemacrawler.schemacrawler.*
 import schemacrawler.utility.SchemaCrawlerUtility
-import java.io.Closeable
 import java.sql.DriverManager
 
-internal class JdbcDbExplorer(private val connectionString: String, private val schema: String) : DbExplorer {
+internal class SchemaCrawlerExplorer(private val connectionString: String, private val schema: String) : DatabaseExplorer {
 
     private val options: SchemaCrawlerOptions
     private val connection = DriverManager.getConnection(connectionString)
@@ -41,9 +39,12 @@ internal class JdbcDbExplorer(private val connectionString: String, private val 
         val catalog = SchemaCrawlerUtility.getCatalog(connection, options)
 
         return catalog.schemas
-            .map { catalog.getTables(it) }.flatten().filter { it !is View }.map {sourceTable ->
-                sourceTable.getRelatedTables(TableRelationshipType.parent)
-                    .map { targetTable -> Relationship("${sourceTable.name}->${targetTable.name}", sourceTable.convertToClass(), targetTable.convertToClass())}
+            .map { catalog.getTables(it) }.flatten().filter { it !is View }.map {
+                it.importedForeignKeys.map {
+                    val sourceColumn = it.columnReferences.first().foreignKeyColumn
+                    val targetColumn = it.columnReferences.first().primaryKeyColumn
+                    Relationship(it.name, sourceColumn.parent.convertToClass(), targetColumn.parent.convertToClass(), sourceColumn.name)
+                }
             }
             .flatten()
             .toSet()
@@ -53,5 +54,5 @@ internal class JdbcDbExplorer(private val connectionString: String, private val 
         connection.close()
     }
 
-    private fun Table.convertToClass() = Class(this.name, this.columns.map {Attribute(it.name, it.columnDataType.name) })
+    private fun Table.convertToClass() = Class(this.name, this.columns.map {Attribute(it.name, it.columnDataType.name, it.isPartOfForeignKey) })
 }

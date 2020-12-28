@@ -2,13 +2,17 @@ package processm.etl.metamodel
 
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.dao.LongEntity
+import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.jodatime.datetime
 
 object AttributesNames : IntIdTable("attributes_names") {
     val name = text("name")
     val type = text("type")
+    val isReferencingAttribute = bool("is_referencing_attribute")
     val classId = reference("class_id", Classes)
 }
 
@@ -54,7 +58,8 @@ class Class(id: EntityID<Int>) : IntEntity(id) {
     val name by Classes.name
     val dataModel by DataModel referencedOn Classes.dataModelId
     val attributesNames by AttributesName referrersOn AttributesNames.classId
-    val objects by Object referrersOn Objects.classId
+    //    val objects by Object referrersOn Objects.classId
+    val objects by ObjectVersion referrersOn ObjectVersions.classId
 
     fun toDto() = ClassDto(id.value, name, dataModel.id.value)
 }
@@ -68,16 +73,19 @@ object DataModels : IntIdTable("data_models") {
 
 class DataModel(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<DataModel>(DataModels)
-
     val name by DataModels.name
     val versionDate by DataModels.versionDate
     val classes by Class referrersOn Classes.dataModelId
 }
 
 object ObjectVersions : IntIdTable("object_versions") {
-    val startTime = datetime("start_time")
-    val endTime = datetime("end_time")
-    val objectId = reference("object_id", Objects)
+    val startTime = long("start_time").nullable()
+    val endTime = long("end_time").nullable()
+    val previousObjectVersionId = reference("previous_object_version_id", ObjectVersions).nullable()
+    val classId = reference("class_id", Classes)
+    val objectId = text("object_id")
+    val causingEventType = text("causing_event_type").nullable()
+    val additionalData = text("additional_data").nullable()
 }
 
 class ObjectVersion(id: EntityID<Int>) : IntEntity(id) {
@@ -85,27 +93,17 @@ class ObjectVersion(id: EntityID<Int>) : IntEntity(id) {
 
     val startTime by ObjectVersions.startTime
     val endTime by ObjectVersions.endTime
-    val versionObject by Object referencedOn ObjectVersions.objectId
+    val versionClass by Class referencedOn ObjectVersions.classId
+    val originalId by ObjectVersions.objectId
+    val causingEventType by ObjectVersions.causingEventType
     val attributesValues by AttributesValue referrersOn AttributesValues.objectVersionId
     val relationSource by Relation referrersOn Relations.sourceObjectVersionId
     val relationTarget by Relation referrersOn Relations.targetObjectVersionId
 }
 
-object Objects : IntIdTable("objects") {
-    val classId = reference("class_id", Classes)
-}
-
-class Object(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<Object>(Objects)
-
-    val classId by Objects.classId
-    val objectClass by Class referencedOn Objects.classId
-    val objectVersion by ObjectVersion referrersOn ObjectVersions.objectId
-}
-
 object Relations : IntIdTable("relations") {
-    val startTime = datetime("start_time")
-    val endTime = datetime("end_time")
+    val startTime = long("start_time").nullable()
+    val endTime = long("end_time").nullable()
     val sourceObjectVersionId = reference("source_object_version_id", ObjectVersions)
     val targetObjectVersionId = reference("target_object_version_id", ObjectVersions)
     val relationshipId = reference("relationship_id", Relationships)
@@ -125,6 +123,7 @@ object Relationships : IntIdTable("relationships") {
     val name = text("name")
     val sourceClassId = reference("source_class_id", Classes)
     val targetClassId = reference("target_class_id", Classes)
+    val referencingAttributeNameId = reference("referencing_attribute_name_id", AttributesNames)
 }
 
 class Relationship(id: EntityID<Int>) : IntEntity(id) {
@@ -133,9 +132,34 @@ class Relationship(id: EntityID<Int>) : IntEntity(id) {
     val name by Relationships.name
     val sourceClass by Class referencedOn Relationships.sourceClassId
     val targetClass by Class referencedOn Relationships.targetClassId
+    val referencingAttributesName by AttributesName referencedOn Relationships.referencingAttributeNameId
     val relations by Relation referrersOn Relations.relationshipId
 
-    fun toDto() = RelationshipDto(id.value, name, sourceClass.id.value, targetClass.id.value)
+    fun toDto() = RelationshipDto(id.value, name, sourceClass.id.value, targetClass.id.value, referencingAttributesName.id.value)
 }
 
-data class RelationshipDto(val id: Int, val name: String, val sourceClassId: Int, val targetClassId: Int)
+data class RelationshipDto(val id: Int, val name: String, val sourceClassId: Int, val targetClassId: Int, val referencingAttributesName: Int)
+
+object Events : LongIdTable("events") {
+    val name = text("concept:name").nullable()
+    val resource = text("org:resource").nullable()
+}
+
+class Event(id: EntityID<Long>) : LongEntity(id) {
+    companion object : LongEntityClass<Event>(Events)
+
+    val name by Events.name
+    val resource by Events.resource
+}
+
+object EventsToObjectVersions : IntIdTable("events_to_object_versions") {
+    val objectVersionId = reference("object_version_id", ObjectVersions)
+    val eventId = long("event_id")
+}
+
+class EventToObjectVersion(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<EventToObjectVersion>(EventsToObjectVersions)
+
+    val objectVersionId by EventsToObjectVersions.objectVersionId
+    val eventId by EventsToObjectVersions.eventId
+}
