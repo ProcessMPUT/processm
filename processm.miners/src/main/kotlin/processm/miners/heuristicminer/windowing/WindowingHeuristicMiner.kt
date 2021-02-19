@@ -1,7 +1,6 @@
 package processm.miners.heuristicminer.windowing
 
 import org.apache.commons.collections4.multiset.HashMultiSet
-import processm.core.helpers.Counter
 import processm.core.log.hierarchical.Log
 import processm.core.logging.debug
 import processm.core.logging.logger
@@ -24,11 +23,11 @@ class WindowingHeuristicMiner(
     override val result: MutableCausalNet
         get() = model
     private val window = HashMultiSet<NodeTrace>()
-    private val directlyFollows = object: HashMap<Dependency, Int>() {
-        override operator fun get(key: Dependency): Int = super.get(key)?:0
+    private val directlyFollows = object : HashMap<Dependency, Int>() {
+        override operator fun get(key: Dependency): Int = super.get(key) ?: 0
 
-        fun inc(key: Dependency, ctr:Int) = this.compute(key) { _, v ->
-            val nv=(v?:0)+ctr
+        fun inc(key: Dependency, ctr: Int) = this.compute(key) { _, v ->
+            val nv = (v ?: 0) + ctr
             check(nv >= 0)
             return@compute nv
         }
@@ -69,11 +68,11 @@ class WindowingHeuristicMiner(
             updateDirectlyFollows(add.element, add.count)
         }
         assert(addTraces.uniqueSet().all { trace ->
-            (0 until trace.size-1).all { i-> directlyFollows[Dependency(trace[i], trace[i+1])] >= 1 }
-        }) {"Directly follows is inconsistent with new traces"}
+            (0 until trace.size - 1).all { i -> directlyFollows[Dependency(trace[i], trace[i + 1])] >= 1 }
+        }) { "Directly follows is inconsistent with new traces" }
         assert(window.uniqueSet().all { trace ->
-            (0 until trace.size-1).all { i-> directlyFollows[Dependency(trace[i], trace[i+1])] >= 1 }
-        }) {"Directly follows is inconsistent with the window"}
+            (0 until trace.size - 1).all { i -> directlyFollows[Dependency(trace[i], trace[i + 1])] >= 1 }
+        }) { "Directly follows is inconsistent with the window" }
 
         val removedAndAdded = newlyAdded.intersect(freshlyRemoved)
         newlyAdded.removeAll(removedAndAdded)
@@ -112,9 +111,9 @@ class WindowingHeuristicMiner(
         splits.addAll(newsplits)
         joins.addAll(newjoins)
         for (split in splits) {
-            if(!model.dependencies.containsAll(split.dependencies)) {
+            if (!model.dependencies.containsAll(split.dependencies)) {
                 println("This is a new split ${split in newsplits}")
-                println("Missing: ${split.dependencies-model.dependencies}")
+                println("Missing: ${split.dependencies - model.dependencies}")
             }
             model.addSplit(split)
         }
