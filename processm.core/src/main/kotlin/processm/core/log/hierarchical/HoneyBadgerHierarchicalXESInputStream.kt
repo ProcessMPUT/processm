@@ -18,33 +18,22 @@ annotation class InMemoryXESProcessing
 @InMemoryXESProcessing
 class HoneyBadgerHierarchicalXESInputStream(base: XESInputStream) : LogInputStream {
 
-    private val log2traces = HashMap<BaseLog, MutableList<BaseTrace>>()
-    private val trace2event = HashMap<BaseTrace, MutableList<Event>>()
     private val result: List<Log> by lazy {
-        var currentBaseLog: BaseLog? = null
-        var currentBaseTrace: BaseTrace? = null
+        val data = ArrayList<Pair<BaseLog, ArrayList<Pair<BaseTrace, ArrayList<Event>>>>>()
         for (element in base) {
             when (element) {
-                is BaseLog -> currentBaseLog = element
+                is BaseLog -> data.add(element to ArrayList())
 
-                is BaseTrace -> {
-                    currentBaseTrace = element
-                    log2traces
-                        .getOrPut(currentBaseLog ?: throw IllegalStateException(), { ArrayList() })
-                        .add(element)
-                }
-                is Event -> {
-                    trace2event
-                        .getOrPut(currentBaseTrace ?: throw IllegalStateException(), { ArrayList() })
-                        .add(element)
-                }
+                is BaseTrace -> data.last().second.add(element to ArrayList())
+                is Event -> data.last().second.last().second.add(element)
                 else -> throw IllegalStateException()
 
             }
         }
-        log2traces.map { (log, traces) ->
-            Log(traces.asSequence()
-                .map { trace -> Trace(trace2event.getOrDefault(trace, mutableListOf()).asSequence()) })
+        return@lazy data.map { (log, traces) ->
+            Log(traces.asSequence().map {(trace, events) ->
+                Trace(events.asSequence())
+            })
         }
     }
 
