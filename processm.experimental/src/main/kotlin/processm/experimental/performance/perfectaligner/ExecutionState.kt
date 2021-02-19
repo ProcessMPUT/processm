@@ -33,7 +33,7 @@ class ExecutionState(val model: IntCausalNet) {
                         deadJoins.add(possiblyDeadJoin)
             }
         }
-        assert(joinIdx in deadJoins)
+        //joinIdx is not necessarily dead, because it may have been activated multiple times
         activeJoins.removeAll(deadJoins)
         activeNodes.clear()
         for (join in activeJoins)
