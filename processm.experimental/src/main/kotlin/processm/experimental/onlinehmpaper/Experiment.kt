@@ -10,7 +10,6 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.toDSL
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
@@ -23,7 +22,6 @@ import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependency
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
-import java.io.FileOutputStream
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
 import kotlin.math.min
@@ -160,7 +158,7 @@ class Experiment {
 
     @Serializable
     internal enum class Measure {
-        TRAIN_FITNESS, TRAIN_PRECISION, TEST_FITNESS, TEST_PRECISION
+        TRAIN_FITNESS, TRAIN_PRECISION, TEST_FITNESS, TEST_PRECISION, TRAIN_PFR, TEST_PFR
     }
 
     @Serializable
@@ -178,7 +176,8 @@ class Experiment {
         val mode: Mode,
         val batchSizes: List<Double>,
         val minDependency: List<Double>,
-        val measures: List<Measure> = listOf(Measure.TEST_FITNESS, Measure.TEST_PRECISION)
+        val measures: List<Measure> = listOf(Measure.TEST_FITNESS, Measure.TEST_PRECISION),
+        val maxVisitedCoefficient: Int = 100
     ) {
         companion object {
             val json = Json.Default
@@ -392,103 +391,49 @@ class Experiment {
                     }
                 }.flatten()
                 println("window size=$windowSize")
-//            for (i in 0 until log.size - windowSize) {
                 for (i in 0 until log.size) {
                     val (logidx, traceidx, trace) = log[i]
-                    /*
-                    if(logidx > 0 && traceidx == 0) {
-                        jsFile.appendln(online.result.toDanielJS("$filename-$windowSize-$logidx-$traceidx"))
-                        jsFile.flush()
-                    }
-                     */
                     val addLog = Log(sequenceOf(trace))
                     val removeLog = Log(if (i >= windowSize) sequenceOf(log[i - windowSize].third) else emptySequence())
                     online.processDiff(addLog, removeLog)
-//                    FileOutputStream("/tmp/model_${logidx}_$i.pnml").use { received ->
-//                        online.result.toPM4PY(received)
-//                    }
-//                    FileOutputStream("/tmp/dslmodel_${logidx}_$i.kt").use {
-//                        it.writer().use {
-//                            val dsl = online.result.toDSL()
-//                            it.write(dsl)
-//                        }
-//                    }
-                    val values = ArrayList<Double>()
+                    val trainLog = if (i + 1 >= windowSize) {
+                        val trainTraces = log.subList(i - windowSize + 1, i + 1).map { it.third }
+                        check(trainTraces.size == windowSize)
+                        check(trace in trainTraces)
+                        Log(trainTraces.asSequence())
+                    } else
+                        null
+                    val testLog = if (i + windowSize + 1 <= log.size) {
+                        val testTraces = log.subList(i + 1, i + 1 + windowSize).map { it.third }
+                        check(testTraces.size == windowSize)
+                        Log(testTraces.asSequence())
+                    } else
+                        null
                     val fa = PerfectAligner(online.result)
-                    if (i + 1 >= windowSize) {
-                        val testTraces = log.subList(i - windowSize + 1, i + 1).map { it.third }
-                        check(testTraces.size == windowSize)
-                        check(trace in testTraces)
-                        val testLog = Log(testTraces.asSequence())
-//                        FileOutputStream("/tmp/trainlog_${logidx}_$i.xes").use { received ->
-//                            val writer =
-//                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
-//                            writer.write(testLog.toFlatSequence())
-//                            writer.close()
-//                        }
-                        values.add(fa.perfectFitRatio(testLog))
-                        //val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
-                        //println("Perfect fit ratio: ${pa.perfectFitRatio}")
-                    } else
-                        values.add(Double.NaN)
-                    if (i + windowSize + 1 <= log.size) {
-                        val testTraces = log.subList(i + 1, i + 1 + windowSize).map { it.third }
-                        check(testTraces.size == windowSize)
-                        val testLog = Log(testTraces.asSequence())
-//                        FileOutputStream("/tmp/testlog_${logidx}_$i.xes").use { received ->
-//                            val writer =
-//                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
-//                            writer.write(testLog.toFlatSequence())
-//                            writer.close()
-//                        }
-                        values.add(fa.perfectFitRatio(testLog, 100))
-                    } else
-                        values.add(Double.NaN)
-                    csv(values, filename, windowSize, logidx, traceidx)
-                    /*
-                    //val testLog = Log(log.subList(i + 1, i + 1 + windowSize).map { it.third }.asSequence())
-                    val values = ArrayList<Double>()
-                    if (i >= windowSize) {
-                        val testTraces = log.subList(i - windowSize + 1, i + 1).map { it.third }
-                        check(testTraces.size == windowSize)
-                        check(trace in testTraces)
-                        val testLog = Log(testTraces.asSequence())
-                        val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
-                        values.add(if(Measure.TRAIN_FITNESS in config.measures) pa.fitness else Double.NaN)
-                        values.add(if(Measure.TRAIN_PRECISION in config.measures) pa.precision else Double.NaN)
-                    } else
-                        values.addAll(listOf(Double.NaN, Double.NaN))
-                    if (i + windowSize + 1 <= log.size) {
-                        val testTraces = log.subList(i + 1, i + 1 + windowSize).map { it.third }
-                        check(testTraces.size == windowSize)
-                        val testLog = Log(testTraces.asSequence())
-                        val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
-                        values.add(if(Measure.TEST_FITNESS in config.measures) pa.fitness else Double.NaN)
-                        values.add(if(Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN)
-                    } else
-                        values.addAll(listOf(Double.NaN, Double.NaN))
-                    csv(values, filename, windowSize, logidx, traceidx)
-                     */
-                }
-                /*
-                jsFile.appendln(online.result.toDanielJS("$filename-$windowSize-final"))
-                jsFile.flush()
-                 */
-                /*
-            var prev: Trace? = null
-            for ((logidx, log) in partialLogs.withIndex()) {
-                for ((traceidx, trace) in log.withIndex()) {
-                    if (prev != null) {
-                        online.processTrace(prev)
-                        val pa = PerformanceAnalyzer(Log(sequenceOf(trace)), online.result, SkipSpecialForFree(StandardDistance()))
-                        println("$logidx $traceidx ${pa.fitness}")
-//                        println("\t${trace.events.map { it.conceptName }.toList()}")
-                        csv(filename, logidx, traceidx, pa.fitness, pa.precision)
+                    val values = List(6) { Double.NaN }.toMutableList()
+                    if (trainLog != null) {
+                        if (Measure.TRAIN_PFR in config.measures)
+                            values[0] =
+                                fa.perfectFitRatio(trainLog)    // train pfr doesn't use maxVisitedCoefficient to always generate accurate results
+                        if (Measure.TRAIN_FITNESS in config.measures || Measure.TRAIN_PRECISION in config.measures) {
+                            val pa =
+                                PerformanceAnalyzer(trainLog, online.result, SkipSpecialForFree(StandardDistance()))
+                            values[1] = if (Measure.TRAIN_FITNESS in config.measures) pa.fitness else Double.NaN
+                            values[2] = if (Measure.TRAIN_PRECISION in config.measures) pa.precision else Double.NaN
+                        }
                     }
-                    prev = trace
+                    if (testLog != null) {
+                        if (Measure.TEST_PFR in config.measures)
+                            values[3] =
+                                fa.perfectFitRatio(testLog, config.maxVisitedCoefficient)
+                        if (Measure.TEST_FITNESS in config.measures || Measure.TEST_PRECISION in config.measures) {
+                            val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
+                            values[4] = if (Measure.TEST_FITNESS in config.measures) pa.fitness else Double.NaN
+                            values[5] = if (Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN
+                        }
+                    }
+                    csv(values, filename, windowSize, logidx, traceidx)
                 }
-            }
-             */
             }
         }
     }
