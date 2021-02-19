@@ -156,18 +156,18 @@ class PerformanceAnalyzer(
     }
 
     private val encoder = object : HashMap<Node, UInt128>() {
-        var ctr = UInt128.ONE
+        var ctr = UInt128(1UL)
         override operator fun get(key: processm.core.models.causalnet.Node) = computeIfAbsent(key) {
-            val old = ctr
-            ctr = ctr shl 1
-            check(ctr != UInt128.ZERO) {"There are too many nodes in the model"}
+            val old = ctr.copy()
+            ctr.shl(1)
+            check(!ctr.isZero()) {"There are too many nodes in the model"}
             return@computeIfAbsent old
         }
 
         operator fun get(nodes: Iterable<processm.core.models.causalnet.Node>): UInt128 {
-            var r = UInt128.ZERO
+            var r = UInt128()
             for (n in nodes)
-                r = r or this[n]
+                r.or(this[n])
             return r
         }
     }
@@ -182,7 +182,7 @@ class PerformanceAnalyzer(
     private val reachableCache = object : HashMap<Set<Dependency>, Set<Node>>() {
         override operator fun get(key: Set<Dependency>): Set<processm.core.models.causalnet.Node> =
             computeIfAbsent(key) {
-                logger.trace {"key=$key"}
+                logger.trace { "key=$key" }
                 var freshReachable = HashSet<processm.core.models.causalnet.Node>()
                 for (n in key.mapToSet { it.target })
                     if (model.joins[n].orEmpty().any { key.containsAll(it.dependencies) })
@@ -198,11 +198,14 @@ class PerformanceAnalyzer(
                 var reachableEnc = encoder[reachable]
                 while (true) {
                     val newReachable = HashSet<processm.core.models.causalnet.Node>()
-                    var newReachableEnc = UInt128.ZERO
+                    var newReachableEnc = UInt128()
                     for (node in freshReachable) {
                         for (dep in model.outgoing[node].orEmpty()) {
                             val t = encoder[dep.target]
-                            if ((reachableEnc or newReachableEnc) and t != UInt128.ZERO)
+                            val tmp=reachableEnc.copy()
+                            tmp.or(newReachableEnc)
+                            tmp.and(t)
+                            if (!tmp.isZero())
                                 continue
                             /* I think one cannot perform filering on outgoing dependences.
                             If we managed to reach this node, any split can be executed here (from a local point of view),
@@ -215,18 +218,23 @@ class PerformanceAnalyzer(
                             I am utterly confused.
                             */
                             val joins = sourcesCache[dep.target]
-                            if (joins.any { j -> j and (reachableEnc or aux) == j }) {
+                            val reachableEncOrAux = reachableEnc.copy()
+                            reachableEncOrAux.or(aux)
+                            if (joins.any { j ->
+                                    val tmp = j.copy()
+                                    tmp.and(reachableEncOrAux)
+                                    return@any tmp == j }) {
                                 //if (true) {
                                 newReachable.add(dep.target)
                                 reachable.add(dep.target)
-                                newReachableEnc = newReachableEnc or t
+                                newReachableEnc.or(t)
                             }
                         }
                     }
-                    if (newReachableEnc == UInt128.ZERO)
+                    if (newReachableEnc.isZero())
                         break
                     freshReachable = newReachable
-                    reachableEnc = reachableEnc or newReachableEnc
+                    reachableEnc.or(newReachableEnc)
 /*
                 freshReachable = freshReachable
                     .flatMapTo(HashSet()) { node ->
@@ -272,7 +280,7 @@ class PerformanceAnalyzer(
         return result
     }
 
-    private fun computeMinOccurrences(state: CausalNetStateWithJoins): Map<Node, Int> {
+    private fun computeMinOccurrences(state: CausalNetStateWithJoins): Counter<Node> {
         val minOccurrences = Counter<Node>()
         for (e in state.entrySet())
             minOccurrences.compute(e.element.target) { _, v -> max(v ?: 0, e.count) }
@@ -350,6 +358,8 @@ class PerformanceAnalyzer(
             partialAlignment.alignment.all { it.activity == null } -> model.instances
             else -> emptySet()
         }
+        if(reachableCache.size>=10000)
+            reachableCache.clear()
 
         var h1 = 0.0
         for ((i, e) in remainder.withIndex()) {
@@ -381,7 +391,7 @@ class PerformanceAnalyzer(
                 requiredTokens.compute(dep) { _, v -> if (v != null) ctr + v else ctr }
         for (e in nextState.entrySet())
             requiredTokens.compute(e.element) { _, v -> if (v != null && v > e.count) v - e.count else null }
-        val minOccurrences = computeMinOccurrences(nextState).toMutableMap()
+        val minOccurrences = computeMinOccurrences(nextState)
         for ((dep, ctr) in requiredTokens) {
             //            minOccurrences.compute(dep.source) { s, v -> if (v != null) max(ctr, v) else ctr }
             //            minOccurrences.compute(dep.source) { s, v -> if (v == null || v < ctr) {println("Hit: $s $v -> $ctr"); ctr} else v }
@@ -565,9 +575,6 @@ class PerformanceAnalyzer(
 //            else
 //                emptyMap()
 
-            if (dec?.split?.targets?.any { it.toString() == "a(0/0)" } == true) {
-                println("hit!")
-            }
             val h1 = minCostOfEventAlignments(remainder, cheapRemainder, nextState, partialAlignment)
             val (h2, minOccurrences) = minCostOfFulfillingAllPendingObligations(
                 nextPosition, nextState, partialAlignment.context,
@@ -615,21 +622,21 @@ class PerformanceAnalyzer(
                 assert(false)
             }
              */
-            if (partialAlignment.cost + partialAlignment.heuristic > newCost + heuristic) {
-                val currentlyReachable = reachableCache[partialAlignment.state.uniqueSet()]
-                val nextReachable = reachableCache[nextState.uniqueSet()]
-                println("Position ${partialAlignment.tracePosition} -> $nextPosition")
-                println("Current state ${partialAlignment.state}")
-                println("Decision $dec")
-                println("Joins ${model.joins[dec?.activity]}")
-                println("Splits ${model.splits[dec?.activity]}")
-                println("Next state ${nextState}")
-                println("Min occ@current ${partialAlignment.minOccurrences}")
-                println("Min occ@next ${minOccurrences}")
-//                println("Reachable from current state ${currentlyReachable}")
-//                println("Reachable from next state ${nextReachable}")
-//                println("next-currently=${nextReachable - currentlyReachable}")
-            }
+//            if (partialAlignment.cost + partialAlignment.heuristic > newCost + heuristic) {
+//                val currentlyReachable = reachableCache[partialAlignment.state.uniqueSet()]
+//                val nextReachable = reachableCache[nextState.uniqueSet()]
+//                println("Position ${partialAlignment.tracePosition} -> $nextPosition")
+//                println("Current state ${partialAlignment.state}")
+//                println("Decision $dec")
+//                println("Joins ${model.joins[dec?.activity]}")
+//                println("Splits ${model.splits[dec?.activity]}")
+//                println("Next state ${nextState}")
+//                println("Min occ@current ${partialAlignment.minOccurrences}")
+//                println("Min occ@next ${minOccurrences}")
+////                println("Reachable from current state ${currentlyReachable}")
+////                println("Reachable from next state ${nextReachable}")
+////                println("next-currently=${nextReachable - currentlyReachable}")
+//            }
             assert(partialAlignment.cost + partialAlignment.heuristic <= newCost + heuristic) { "The heuristic is not admissible: ${partialAlignment.cost}+${partialAlignment.heuristic}<=$newCost+$heuristic = $newCost + $h1 + $h2; dec=$dec nextState=$nextState remainder=${remainder.map { it.conceptName }}" }
 //            if(nextPosition >= 46) {
 //                println("newCost=$newCost h1=$h1 h2=$h2 ns=$nextState mo=$minOccurrences remainder=${remainder.map { it.conceptName }}")
@@ -810,7 +817,16 @@ class PerformanceAnalyzer(
     /**
      * @return Alignment + number of visited states
      */
-    internal fun computeOptimalAlignment(trace: Trace, acceptableCost: Int): AlignmentComputationResult {
+    internal fun computeOptimalAlignment(trace: Trace, acceptableCost: Int): AlignmentComputationResult =
+        computeOptimalAlignment(trace, acceptableCost, Double.POSITIVE_INFINITY)
+            ?: error("BUG: It was impossible to align the trace with the model.")
+
+    internal fun computeOptimalAlignment(
+        trace: Trace,
+        acceptableCost: Int,
+        maxAlignmentCost: Double
+    ): AlignmentComputationResult? {
+        reachableCache.clear()
         val traceLength = trace.events.count()
         logger.debug { "callctr=$callCtr" }
         callCtr++
@@ -868,7 +884,7 @@ class PerformanceAnalyzer(
                         val a = align(partialAlignment, dec, event)
                         if (a != null) {
                             match = true
-                            if (bestCost[a.alignmentState] > a.cost)
+                            if (bestCost[a.alignmentState] > a.cost && a.cost + a.heuristic <= maxAlignmentCost)
                                 queue.add(a)
                         }
                     }
@@ -876,17 +892,28 @@ class PerformanceAnalyzer(
                 if (!match)
                     for (dec in decisions) {
                         val a = align(partialAlignment, dec, null)
-                        if (a != null && bestCost[a.alignmentState] > a.cost)
+                        if (a != null && bestCost[a.alignmentState] > a.cost && a.cost + a.heuristic <= maxAlignmentCost)
                             queue.add(a)
                     }
             }
             if (!match && !traceReachedEnd) {
                 val a = align(partialAlignment, null, events[partialAlignment.tracePosition])
-                if (a != null && bestCost[a.alignmentState] > a.cost)
+                if (a != null && bestCost[a.alignmentState] > a.cost && a.cost + a.heuristic <= maxAlignmentCost)
                     queue.add(a)
             }
         }
-        throw IllegalStateException("BUG: It was impossible to align the trace with the model.")
+        return null
+    }
+
+    val perfectAlignments: List<Alignment?> by lazy {
+        log.traces.mapIndexed { idx, trace ->
+            val acceptableCost = Integer.MAX_VALUE //costLimitPerNode * max(trace.events.count(), model.instances.size)
+            computeOptimalAlignment(trace, acceptableCost, 0.0)?.alignment
+        }.toList()
+    }
+
+    internal val perfectFitRatio: Double by lazy {
+        return@lazy perfectAlignments.sumByDouble { if(it!=null) 1.0 else 0.0 } / perfectAlignments.size.toDouble()
     }
 
     val optimalAlignment: List<Alignment?> by lazy {
@@ -904,12 +931,20 @@ class PerformanceAnalyzer(
         computeOptimalAlignment(Trace(emptySequence()), acceptableCost).totalCost
     }
 
+    internal val ignoringModelCost: List<Double> by lazy {
+        log.traces.map { trace -> trace.events.sumByDouble { distance(null, it) } }.toList()
+    }
+
     internal val movel: Double by lazy {
-        log.traces.sumByDouble { trace -> trace.events.sumByDouble { distance(null, it) } }
+        ignoringModelCost.sum()
     }
 
     val fcost: Double by lazy {
-        optimalAlignment.sumByDouble { it?.cost ?: 0.0 }
+        var result = 0.0
+        for ((idx, it) in optimalAlignment.withIndex()) {
+            result += it?.cost ?: (ignoringModelCost[idx] + movem)
+        }
+        return@lazy result
     }
 
     val fitness: Double by lazy {
@@ -1433,7 +1468,7 @@ class PerformanceAnalyzer(
                             val prefixSoFar = current.relevantPrefixes.prefix
                             result.computeIfAbsent(prefixSoFar) { HashSet() }.add(candidate)
                             if (missing.remove(prefixSoFar))
-                                logger.debug {"#missing ${missing.size}/${nonEmptyPrefixes.size} #solved prefix ${prefixSoFar.size} #queue ${queue.size} #ctr $ctr"}
+                                logger.debug { "#missing ${missing.size}/${nonEmptyPrefixes.size} #solved prefix ${prefixSoFar.size} #queue ${queue.size} #ctr $ctr" }
                             val relevant = current.relevantPrefixes.children[candidate]
                             if (relevant != null) {
                                 val smallestJoinSize = activeJoins.minOf { it.size }

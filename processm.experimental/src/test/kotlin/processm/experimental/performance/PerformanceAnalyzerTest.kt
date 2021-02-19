@@ -154,7 +154,9 @@ class PerformanceAnalyzerTest {
         assertEquals(9.0, alignment.cost)
         val actual = alignment.alignment.map { it.event?.conceptName to it.activity }
         assertEquals(4, actual.count { it == (f.activity to null) })
-        assertEquals(listOf(null to a, null to b, null to d, null to c, null to e), actual.filter { it != f.activity to null })
+        assertEquals(
+            listOf(null to a, null to b, null to d, null to c, null to e),
+            actual.filter { it != f.activity to null })
     }
 
     @Test
@@ -475,6 +477,29 @@ class PerformanceAnalyzerTest {
     }
 
     @Test
+    fun `model6 alignment without start and end with cost limiting`() {
+        val alignment =
+            PerformanceAnalyzer(emptyLog, model6).computeOptimalAlignment(trace(a, b, c, d, e), 100, 0.0)?.alignment
+        assertNull(alignment)
+    }
+
+    @Test
+    fun `model6 alignment ignoring start and end with cost limiting`() {
+        val alignment =
+            PerformanceAnalyzer(emptyLog, model6, SkipSpecialForFree(StandardDistance())).computeOptimalAlignment(
+                trace(a, b, c, d, e),
+                100,
+                0.0
+            )?.alignment
+        assertNotNull(alignment)
+        assertAlignmentEquals(
+            0.0,
+            listOf(null to model6.start, a to a, b to b, c to c, d to d, e to e, null to model6.end),
+            alignment
+        )
+    }
+
+    @Test
     fun `nongreedy alignment`() {
         val model7 = causalnet {
             start = a
@@ -772,7 +797,6 @@ class PerformanceAnalyzerTest {
         }
     }
 
-    @Ignore
     @Test
     fun `CoSeLoG_WABO_2`() {
         val log = load("../xes-logs/CoSeLoG_WABO_2.xes.gz")
@@ -985,7 +1009,9 @@ class PerformanceAnalyzerTest {
             e1 + e2 join f
         }
         val log = logFromModel(dodReference)
-        println(PerformanceAnalyzer(log, dodReference).precision)
+        val pa=PerformanceAnalyzer(log, dodReference)
+        assertDoubleEquals(1.0, pa.precision)
+        assertDoubleEquals(1.0, pa.perfectFitRatio)
     }
 
     @Test

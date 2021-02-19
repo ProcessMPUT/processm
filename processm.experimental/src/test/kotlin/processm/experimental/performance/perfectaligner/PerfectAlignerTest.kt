@@ -8,7 +8,10 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.experimental.onlinehmpaper.createDriftLogs
+import processm.experimental.onlinehmpaper.filterLog
 import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
+import java.io.File
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 import kotlin.test.*
@@ -97,7 +100,7 @@ class PerfectAlignerTest {
             assertNotNull(fa.align(trace))
     }
 
-    @Ignore
+    //@Ignore
     @Test
     fun `BPIC15_2`() {
         val log = FileInputStream("src/test/resources/BPIC15_2-subset.xes").use { base ->
@@ -115,11 +118,62 @@ class PerfectAlignerTest {
         val fa= PerfectAligner(online.result)
         var notNullCounter = 0
         for(trace in completeLog.traces) {
-            val alignment =fa.align(trace)
+            val alignment =fa.align(trace, 100*trace.events.count())
             println(alignment)
             if(alignment!=null)
                 notNullCounter++
         }
+        println("notNullCounter=$notNullCounter log size=${completeLog.traces.count()}")
         assertTrue { notNullCounter >= log.traces.count() }
+        assertEquals(32, notNullCounter)
+    }
+
+    @Test
+    fun `BPIC15_2 drift at 28`() {
+        val logfile = File("../xes-logs/BPIC15_2.xes.gz")
+        val splitSeed = 3737844653L
+        val sampleSeed = 12648430L
+        val keval = 5
+        val knownNamesThreshold = 100
+        val missThreshold = 10
+        val windowSize = 25
+        val completeLog = logfile.inputStream().use { base ->
+            filterLog(HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(base))).first())
+        }
+        val logs = createDriftLogs(
+            completeLog,
+            sampleSeed,
+            splitSeed,
+            keval,
+            knownNamesThreshold,
+            missThreshold
+        )
+        val flatLog = logs.flatten()
+        val hm=WindowingHeuristicMiner()
+        val windowEnd = 28
+        val windowStart = windowEnd - windowSize + 1
+        val trainLog = flatLog.subList(windowStart, windowEnd+1)
+        hm.processDiff(Log(trainLog.asSequence()), Log(emptySequence()))
+        val pa=PerfectAligner(hm.result)
+        println(trainLog.maxOf { it.events.count() }*100)
+        val pfrApprox = pa.perfectFitRatio(Log(trainLog.asSequence()), 100)
+        assertEquals(0.96, pfrApprox)
+        val pfr = pa.perfectFitRatio(Log(trainLog.asSequence()))
+        assertEquals(1.0, pfr)
+    }
+
+    @Test
+    fun `BPIC15_2 drift at 177`() {
+        val logfile = File("../xes-logs/BPIC15_2.xes.gz")
+        val completeLog = logfile.inputStream().use { base ->
+            filterLog(HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(base))).first())
+        }
+
+        val trainLog = Log(sequenceOf(completeLog.traces.toList()[520]))
+        val hm=WindowingHeuristicMiner()
+        hm.processDiff(trainLog, Log(emptySequence()))
+        val pa=PerfectAligner(hm.result)
+        val pfr = pa.perfectFitRatio(trainLog)
+        assertEquals(1.0, pfr)
     }
 }

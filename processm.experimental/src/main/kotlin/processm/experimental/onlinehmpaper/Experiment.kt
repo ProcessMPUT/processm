@@ -2,10 +2,6 @@ package processm.experimental.onlinehmpaper
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonConfiguration
-import kotlinx.serialization.parse
-import kotlinx.serialization.stringify
-import processm.core.helpers.mapToSet
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
@@ -14,18 +10,20 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.toDSL
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
+import processm.experimental.performance.perfectaligner.PerfectAligner
 import processm.miners.heuristicminer.OfflineHeuristicMiner
 import processm.miners.heuristicminer.OnlineHeuristicMiner
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.miners.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
+import java.io.FileOutputStream
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
 import kotlin.math.min
@@ -58,39 +56,6 @@ class Experiment {
         }
     }
 
-    private data class LogStats(val nTraces: Int, val nNames: Int)
-
-    private fun sample(log: Log, random: Random, config: Config): Triple<Log, LogStats, LogStats> {
-        val allTraces = log.traces.toList()
-        val allNames = allTraces.flatMap { trace -> trace.events.map { it.conceptName }.toSet() }.toSet()
-        val completeStats = LogStats(allTraces.size, allNames.size)
-        println("# distinct names: ${allNames.size}")
-        if (allNames.size <= config.knownNamesThreshold)
-            return Triple(log, completeStats, completeStats)
-        var knownNames = emptySet<String?>()
-        val available = allTraces.indices.toMutableList()
-        var ctr = 0
-        while (true) {
-            val idx = random.nextInt(available.size)
-            val trace = allTraces[available[idx]]
-            available.removeAt(idx)
-            val newKnownNames = knownNames + trace.events.map { it.conceptName }.toSet()
-            if (newKnownNames.size > config.knownNamesThreshold) {
-                ctr++
-                if (ctr < config.missThreshold)
-                    continue
-                else
-                    break
-            }
-            knownNames = newKnownNames
-        }
-        println("Selected ${knownNames.size} events: $knownNames")
-        val selectedTraces =
-            log.traces.filter { trace -> knownNames.containsAll(trace.events.map { it.conceptName }.toList()) }
-        println("Selected traces: ${selectedTraces.count()}")
-        return Triple(Log(selectedTraces), completeStats, LogStats(selectedTraces.count(), knownNames.size))
-    }
-
     private fun dependencyGraphProvider(minDependency: Double?) =
         if (minDependency != null)
             DefaultDependencyGraphProvider(1, minDependency)
@@ -118,24 +83,6 @@ class Experiment {
         return offline.result
     }
 
-    private fun cvRanges(n: Int, k: Int): List<Pair<Int, Int>> {
-        val step = n / k
-        val overhead = n - step * k
-        check(overhead < k)
-        val ranges = ArrayList<Pair<Int, Int>>()
-        var start = 0
-        for (i in 0 until k) {
-            val end = start + step + if (i < overhead) 1 else 0
-            ranges.add(start to end)
-            start = end
-        }
-        check(start == n)
-        println(ranges)
-        val lengths = ranges.map { (s, e) -> e - s }
-        println(lengths)
-        return ranges
-    }
-
     private data class Stats(
         val trainFitness: Double, val trainPrecision: Double,
         val testFitness: Double, val testPrecision: Double,
@@ -153,19 +100,6 @@ class Experiment {
     }
     private val end = object : Event() {
         override var conceptName: String? = "end"
-    }
-
-    private fun cvLog(log: Log, k: Int, rnd: Random): Sequence<Pair<Log, Log>> = sequence {
-        val allTraces = log.traces.toList().shuffled(rnd)
-        for (testRange in cvRanges(allTraces.size, k)) {
-            val before = allTraces.subList(0, testRange.first)
-            val after = allTraces.subList(testRange.second, allTraces.size)
-            val test = allTraces.subList(testRange.first, testRange.second)
-            check(before.size + after.size + test.size == allTraces.size)
-            val trainLog = Log(before.asSequence() + after.asSequence())
-            val testLog = Log(test.map { Trace(sequenceOf(start) + it.events + sequenceOf(end)) }.asSequence())
-            yield(trainLog to testLog)
-        }
     }
 
     private data class ResourceStats(val cpuTimeMillis: Long, val peakMemory: Long)
@@ -220,12 +154,17 @@ class Experiment {
     }
 
     @Serializable
-    private enum class Mode {
+    internal enum class Mode {
         BATCH, WINDOW, DRIFT
     }
 
     @Serializable
-    private data class Config(
+    internal enum class Measure {
+        TRAIN_FITNESS, TRAIN_PRECISION, TEST_FITNESS, TEST_PRECISION
+    }
+
+    @Serializable
+    internal data class Config(
         val logs: List<String>,
         val splitSeed: Long,
         val sampleSeed: Long,
@@ -238,16 +177,19 @@ class Experiment {
         val maxQueueSize: Int,
         val mode: Mode,
         val batchSizes: List<Double>,
-        val minDependency: List<Double>
+        val minDependency: List<Double>,
+        val measures: List<Measure> = listOf(Measure.TEST_FITNESS, Measure.TEST_PRECISION)
     ) {
         companion object {
             val json = Json.Default
 
             fun load(jsonFile: String): Config {
-                return File(jsonFile).bufferedReader().use { return@use json.decodeFromString(
-                    serializer(),
-                    it.readText()
-                ) }
+                return File(jsonFile).bufferedReader().use {
+                    return@use json.decodeFromString(
+                        serializer(),
+                        it.readText()
+                    )
+                }
             }
         }
 
@@ -262,17 +204,22 @@ class Experiment {
             val filename = logfile.name
             val completeLog = load(logfile)
             println("${completeLog.traces.count()} $logfile")
-            val (partialLog, completeLogStats, partialLogStats) = sample(completeLog, Random(config.sampleSeed), config)
+            val (partialLog, completeLogStats, partialLogStats) = sample(
+                completeLog,
+                Random(config.sampleSeed),
+                config.knownNamesThreshold,
+                config.missThreshold
+            )
             for ((mode, stats) in listOf("complete" to completeLogStats, "partial" to partialLogStats)) {
                 csv(filename, "log", mode, "traces", stats.nTraces)
                 csv(filename, "log", mode, "names", stats.nNames)
             }
             val (bestMinDependency, evalLog) = if (config.minDependency.size > 1) {
-                val (fitLog, evalLog) = cvLog(partialLog, 2, Random(config.splitSeed)).first()
+                val (fitLog, evalLog) = cvLog(partialLog, 2, Random(config.splitSeed), start, end).first()
                 csv(filename, "log", "fit", "traces", fitLog.traces.count())
                 csv(filename, "log", "eval", "traces", evalLog.traces.count())
                 val minDependencyFittingStats = config.minDependency.map { minDependency ->
-                    minDependency to cvLog(fitLog, config.kfit, Random(config.cvSeed)).map { logpair ->
+                    minDependency to cvLog(fitLog, config.kfit, Random(config.cvSeed), start, end).map { logpair ->
                         try {
                             val model = computeOfflineModel(logpair.first, config.maxQueueSize, minDependency)
                             val pa = PerformanceAnalyzer(logpair.second, model, SkipSpecialForFree(StandardDistance()))
@@ -289,7 +236,7 @@ class Experiment {
             } else
                 (if (config.minDependency.size == 1) config.minDependency.single() else null) to partialLog
             csv(filename, "offline", "fit", "best", bestMinDependency)
-            val stats = cvLog(evalLog, config.keval, Random(config.cvSeed)).map { logpair ->
+            val stats = cvLog(evalLog, config.keval, Random(config.cvSeed), start, end).map { logpair ->
                 val offline = run(logpair) { computeOfflineModel(it, config.maxQueueSize, bestMinDependency) }
                 val online = run(logpair) { computeOnlineModel(it, config.maxQueueSize, bestMinDependency) }
                 return@map offline to online
@@ -317,7 +264,12 @@ class Experiment {
             val filename = logfile.name
             val completeLog = load(logfile)
             println("${completeLog.traces.count()} $logfile")
-            val (partialLog, completeLogStats, partialLogStats) = sample(completeLog, Random(config.sampleSeed), config)
+            val (partialLog, completeLogStats, partialLogStats) = sample(
+                completeLog,
+                Random(config.sampleSeed),
+                config.knownNamesThreshold,
+                config.missThreshold
+            )
             for ((mode, stats) in listOf("complete" to completeLogStats, "partial" to partialLogStats)) {
                 csv(filename, "log", mode, "traces", stats.nTraces)
                 csv(filename, "log", mode, "names", stats.nNames)
@@ -412,137 +364,26 @@ class Experiment {
         }
     }
 
-    private fun groupByVariant(log: Log) = log.traces.groupBy { trace ->
-        trace
-            .events
-            .filter {
-                it.lifecycleTransition === null || "complete".equals(
-                    it.lifecycleTransition,
-                    ignoreCase = true
-                )
-            }
-            .map { it.conceptName.toString() }
-            .toSet()
-    }
 
-    private fun <T> sim(a: Set<T>, b: Set<T>): Double {
-        val ab = a.intersect(b).size
-        return ab.toDouble() / (a.size + b.size - ab)
-    }
-
-    private fun <T> ahc(
-        objects: List<T>,
-        k: Int,
-        sizes: List<Int>,
-        maxSize: Int,
-        sim: (a: T, b: T) -> Double
-    ): List<Set<T>> {
-        fun dist(ca: Set<Int>, cb: Set<Int>): Double =
-            1.0 - ca.map { a -> cb.map { b -> sim(objects[a], objects[b]) }.min()!! }.min()!!
-
-        val clusters: ArrayList<MutableSet<Int>> = objects.indices.mapTo(ArrayList()) { mutableSetOf(it) }
-        val csizes: ArrayList<Int> = ArrayList(sizes)
-        val distances = MutableList(clusters.size) { MutableList(clusters.size) { 0.0 } }
-        for (i in clusters.indices) {
-            for (j in (i + 1) until clusters.size) {
-                val d = dist(clusters[i], clusters[j])
-                distances[i][j] = d
-                distances[j][i] = d
-            }
-        }
-        while (clusters.size > k) {
-            var nearest = Double.POSITIVE_INFINITY
-            var nearesti: Int = -1
-            var nearestj: Int = -1
-//            val avail = clusters.indices.filter { csizes[it] <minSize } //.ifEmpty { clusters.indices.toList() }
-//            check(avail.isNotEmpty())
-            for (th in listOf(maxSize, Integer.MAX_VALUE)) {
-                for (i in clusters.indices) {
-                    for (j in i + 1 until clusters.size) {
-                        val d = distances[i][j]
-                        if (d < nearest && csizes[i] + csizes[j] <= th) {
-                            nearest = d
-                            nearesti = i
-                            nearestj = j
-                        }
-                    }
-                }
-                if (nearest < Double.POSITIVE_INFINITY)
-                    break
-            }
-            check(nearest < Double.POSITIVE_INFINITY && nearesti >= 0 && nearestj > nearesti)
-            clusters[nearesti].addAll(clusters[nearestj])
-            csizes[nearesti] += csizes[nearestj]
-//            println("$nearesti += $nearestj d=$nearest expsize=${csizes[nearesti]} truesize=${clusters[nearesti].map { sizes[it] }
-//                .sum()}")
-            val lastCluster = clusters.removeLast()
-            val lastClusterSize = csizes.removeLast()
-            val recompute = mutableListOf(nearesti)
-            if (nearestj < clusters.size) {
-                clusters[nearestj] = lastCluster
-                csizes[nearestj] = lastClusterSize
-                recompute.add(nearestj)
-            }
-            for (i in recompute) {
-                for (j in clusters.indices) {
-                    if (i != j) {
-                        val d = dist(clusters[i], clusters[j])
-                        distances[i][j] = d
-                        distances[j][i] = d
-                    }
-                }
-            }
-        }
-        println("csizes=$csizes")
-        return clusters.map { cl -> cl.mapToSet { objects[it] } }
-    }
-
-    private fun drift(config: Config) {
+    internal fun drift(config: Config) {
         val csv = CSVWriter(File(config.csv))
         val jsFile = File("models.js").outputStream().bufferedWriter()
-        for(windowSize in config.batchSizes.map { it.toInt() }) {
+        for (windowSize in config.batchSizes.map { it.toInt() }) {
             for (logfile in config.logs.map { File(it) }) {
                 val filename = logfile.name
-                val completeLog = load(logfile)
-                println("${completeLog.traces.count()} $logfile")
-                val (partialLog, completeLogStats, partialLogStats) = sample(
-                    completeLog,
-                    Random(config.sampleSeed),
-                    config
-                )
-                val byVariant = groupByVariant(partialLog)
-                val rnd = Random(config.splitSeed)
-                val variants = byVariant.entries.sortedBy { -it.value.size }
-                val k = config.keval
-                val nTraces = variants.map { it.value.size }.sum()
-                val clusters =
-                    ahc(variants.map { it.key }, 2 * k, variants.map { it.value.size }, nTraces / (2 * k)) { a, b ->
-                        sim(
-                            a,
-                            b
-                        )
-                    }
-                        //.sortedByDescending { cl -> cl.map { byVariant.getValue(it).size }.sum() }
-                        .shuffled(rnd)
-                for (cl in clusters) {
-                    val traces = cl.map { byVariant.getValue(it).size }
-                    println("${cl.size} ${traces.sum()}")
-                    println("\t$traces")
-                }
-                val clusteredTraces = clusters.map { cl -> cl.flatMap { byVariant.getValue(it) } }
-                if (clusteredTraces.size != 2 * k) {
-                    logger().warn("$filename: Clustering produced ${clusteredTraces.size} clusters instead of ${2 * k} clusters. Ignoring log file.")
+                val partialLogs = try {
+                    createDriftLogs(
+                        load(logfile),
+                        config.sampleSeed,
+                        config.splitSeed,
+                        config.keval,
+                        config.knownNamesThreshold,
+                        config.missThreshold
+                    )
+                } catch (e: IllegalStateException) {
+                    logger().warn(filename, e)
                     continue
                 }
-                val coreLog = clusteredTraces
-                    .subList(0, k + 1)
-                    .flatten()
-                    .shuffled(rnd)
-                val coreLogParts = cvRanges(coreLog.size, k + 1).map { (from, to) -> coreLog.subList(from, to) }
-                val driftLogParts = clusteredTraces.subList(k + 1, clusters.size)
-                val partialLogs =
-                    (listOf(coreLogParts[0] + coreLogParts[1]) + driftLogParts.mapIndexed { idx, drift -> coreLogParts[idx + 2] + drift })
-                        .map { it.shuffled(rnd) }
                 println("Sublog sizes: ${partialLogs.map { it.size }}")
                 val online = WindowingHeuristicMiner()
                 val log = partialLogs.mapIndexed { logidx, log ->
@@ -563,6 +404,48 @@ class Experiment {
                     val addLog = Log(sequenceOf(trace))
                     val removeLog = Log(if (i >= windowSize) sequenceOf(log[i - windowSize].third) else emptySequence())
                     online.processDiff(addLog, removeLog)
+//                    FileOutputStream("/tmp/model_${logidx}_$i.pnml").use { received ->
+//                        online.result.toPM4PY(received)
+//                    }
+//                    FileOutputStream("/tmp/dslmodel_${logidx}_$i.kt").use {
+//                        it.writer().use {
+//                            val dsl = online.result.toDSL()
+//                            it.write(dsl)
+//                        }
+//                    }
+                    val values = ArrayList<Double>()
+                    val fa = PerfectAligner(online.result)
+                    if (i + 1 >= windowSize) {
+                        val testTraces = log.subList(i - windowSize + 1, i + 1).map { it.third }
+                        check(testTraces.size == windowSize)
+                        check(trace in testTraces)
+                        val testLog = Log(testTraces.asSequence())
+//                        FileOutputStream("/tmp/trainlog_${logidx}_$i.xes").use { received ->
+//                            val writer =
+//                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+//                            writer.write(testLog.toFlatSequence())
+//                            writer.close()
+//                        }
+                        values.add(fa.perfectFitRatio(testLog))
+                        //val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
+                        //println("Perfect fit ratio: ${pa.perfectFitRatio}")
+                    } else
+                        values.add(Double.NaN)
+                    if (i + windowSize + 1 <= log.size) {
+                        val testTraces = log.subList(i + 1, i + 1 + windowSize).map { it.third }
+                        check(testTraces.size == windowSize)
+                        val testLog = Log(testTraces.asSequence())
+//                        FileOutputStream("/tmp/testlog_${logidx}_$i.xes").use { received ->
+//                            val writer =
+//                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+//                            writer.write(testLog.toFlatSequence())
+//                            writer.close()
+//                        }
+                        values.add(fa.perfectFitRatio(testLog, 100))
+                    } else
+                        values.add(Double.NaN)
+                    csv(values, filename, windowSize, logidx, traceidx)
+                    /*
                     //val testLog = Log(log.subList(i + 1, i + 1 + windowSize).map { it.third }.asSequence())
                     val values = ArrayList<Double>()
                     if (i >= windowSize) {
@@ -571,8 +454,8 @@ class Experiment {
                         check(trace in testTraces)
                         val testLog = Log(testTraces.asSequence())
                         val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
-                        values.add(pa.fitness)
-                        values.add(pa.precision)
+                        values.add(if(Measure.TRAIN_FITNESS in config.measures) pa.fitness else Double.NaN)
+                        values.add(if(Measure.TRAIN_PRECISION in config.measures) pa.precision else Double.NaN)
                     } else
                         values.addAll(listOf(Double.NaN, Double.NaN))
                     if (i + windowSize + 1 <= log.size) {
@@ -580,11 +463,12 @@ class Experiment {
                         check(testTraces.size == windowSize)
                         val testLog = Log(testTraces.asSequence())
                         val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
-                        values.add(pa.fitness)
-                        values.add(pa.precision)
+                        values.add(if(Measure.TEST_FITNESS in config.measures) pa.fitness else Double.NaN)
+                        values.add(if(Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN)
                     } else
                         values.addAll(listOf(Double.NaN, Double.NaN))
                     csv(values, filename, windowSize, logidx, traceidx)
+                     */
                 }
                 /*
                 jsFile.appendln(online.result.toDanielJS("$filename-$windowSize-final"))

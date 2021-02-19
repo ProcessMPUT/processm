@@ -1,5 +1,6 @@
 package processm.experimental.performance.perfectaligner
 
+import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.debug
 import processm.core.logging.logger
@@ -64,7 +65,18 @@ class PerfectAligner(
         return result
     }
 
-    fun align(trace: Trace): List<Binding>? {
+    fun perfectFitRatio(log: Log, maxVisitedCoefficient: Int = 0): Double {
+        var nAligned = 0
+        for (trace in log.traces) {
+            val maxVisited =
+                if (maxVisitedCoefficient <= 0) Int.MAX_VALUE else maxVisitedCoefficient * trace.events.count()
+            if (align(trace, maxVisited) != null)
+                nAligned++
+        }
+        return nAligned.toDouble() / log.traces.count()
+    }
+
+    fun align(trace: Trace, maxVisited: Int = Int.MAX_VALUE): List<Binding>? {
         val intTrace = try {
             traceToInt(trace).toMutableList()
         } catch (e: IllegalStateException) {
@@ -74,7 +86,7 @@ class PerfectAligner(
             intTrace.add(0, model.start)
         if (intTrace.last() != model.end)
             intTrace.add(model.end)
-        return align(intTrace)
+        return align(intTrace, maxVisited)
     }
 
     fun align(trace: List<Int>, maxVisited: Int = Int.MAX_VALUE): List<Binding>? {
