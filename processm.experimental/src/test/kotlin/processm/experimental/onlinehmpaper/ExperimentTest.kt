@@ -1,7 +1,9 @@
 package processm.experimental.onlinehmpaper
 
 import kotlinx.serialization.json.Json
+import org.apache.commons.io.FileUtils
 import processm.core.log.hierarchical.InMemoryXESProcessing
+import java.io.File
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -64,9 +66,10 @@ class ExperimentTest {
 
     @Test
     fun `Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project`() {
+        val artifacts = createTempDir()
         val temp = createTempFile()
-        temp.deleteOnExit()
-        val configText = """
+        try {
+            val configText = """
             {
                     "logs": [
                       "../xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz"
@@ -83,32 +86,58 @@ class ExperimentTest {
                     "mode": "DRIFT",
                     "batchSizes": [5, 10],
                     "minDependency": [0],
-                    "measures": ["TRAIN_PFR", "TEST_PFR"]
+                    "measures": ["TRAIN_PFR", "TEST_PFR"],
+                    "artifacts": "${artifacts.absolutePath}"
             }
 
         """.trimIndent()
-        val config = Json.Default.decodeFromString(Experiment.Config.serializer(), configText)
-        println(config)
-        Experiment().drift(config)
-        temp.useLines { lines ->
-            for ((i, line) in lines.withIndex()) {
-                if (line.trim().isEmpty())
-                    continue
-                val row = line.split("\t")
-                println("$i $row")
-                assertEquals(
-                    "Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz",
-                    row[0]
-                )
-                assertTrue ( row[1].toInt() in setOf(5, 10))
-                assertTrue(row[4].toDouble() in setOf(Double.NaN, 1.0))
-                assertEquals(Double.NaN, row[5].toDouble())
-                assertEquals(Double.NaN, row[6].toDouble())
-                val testPFR = row[7].toDouble()
-                assertTrue ( (testPFR in 0.0..1.0) || testPFR.isNaN())
-                assertEquals(Double.NaN, row[8].toDouble())
-                assertEquals(Double.NaN, row[9].toDouble())
+            val config = Json.Default.decodeFromString(Experiment.Config.serializer(), configText)
+            println(config)
+            Experiment().drift(config)
+            temp.useLines { lines ->
+                for ((i, line) in lines.withIndex()) {
+                    if (line.trim().isEmpty())
+                        continue
+                    val row = line.split("\t")
+                    println("$i $row")
+                    assertEquals(
+                        "Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz",
+                        row[0]
+                    )
+                    assertTrue(row[1].toInt() in setOf(5, 10))
+                    val trainPFR = row[4].toDouble()
+                    assertTrue(trainPFR in setOf(Double.NaN, 1.0))
+                    assertEquals(Double.NaN, row[5].toDouble())
+                    assertEquals(Double.NaN, row[6].toDouble())
+                    val testPFR = row[7].toDouble()
+                    assertTrue((testPFR in 0.0..1.0) || testPFR.isNaN())
+                    assertEquals(Double.NaN, row[8].toDouble())
+                    assertEquals(Double.NaN, row[9].toDouble())
+                    val fileName = row[0]
+                    val logIdx = row[2].toInt()
+                    val traceIdx = row[3].toInt()
+                    with(File(artifacts, Experiment.modelFileName(fileName, logIdx, traceIdx))) {
+                        assertTrue(exists())
+                        assertTrue(isFile)
+                        assertTrue { FileUtils.sizeOf(this) > 0 }
+                    }
+                    if (!trainPFR.isNaN())
+                        with(File(artifacts, Experiment.trainFileName(fileName, logIdx, traceIdx))) {
+                            assertTrue(exists())
+                            assertTrue(isFile)
+                            assertTrue { FileUtils.sizeOf(this) > 0 }
+                        }
+                    if (!testPFR.isNaN())
+                        with(File(artifacts, Experiment.testFileName(fileName, logIdx, traceIdx))) {
+                            assertTrue(exists())
+                            assertTrue(isFile)
+                            assertTrue { FileUtils.sizeOf(this) > 0 }
+                        }
+                }
             }
+        } finally {
+            temp.delete()
+            artifacts.deleteRecursively()
         }
     }
 

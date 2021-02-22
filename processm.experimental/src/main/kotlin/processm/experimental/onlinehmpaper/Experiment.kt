@@ -4,10 +4,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
-import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
-import processm.core.log.hierarchical.InMemoryXESProcessing
-import processm.core.log.hierarchical.Log
-import processm.core.log.hierarchical.Trace
+import processm.core.log.XMLXESOutputStream
+import processm.core.log.hierarchical.*
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.experimental.performance.PerformanceAnalyzer
@@ -24,6 +22,7 @@ import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.util.zip.GZIPInputStream
+import javax.xml.stream.XMLOutputFactory
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -47,6 +46,13 @@ class Experiment {
 //    ).map { File("xes-logs", it) }
 //    private val logs = File("xes-logs").listFiles { dir, name -> name.endsWith(".gz") }.toList()
 
+    companion object {
+        fun modelFileName(logfile: String, logidx: Int, traceidx: Int): String = "model_${logfile}_${logidx}_${traceidx}.pnml"
+        fun trainFileName(logfile: String, logidx: Int, traceidx: Int): String = "train_${logfile}_${logidx}_${traceidx}.xes"
+        fun testFileName(logfile: String, logidx: Int, traceidx: Int): String = "test_${logfile}_${logidx}_${traceidx}.xes"
+
+        private val logger=logger()
+    }
 
     private fun load(logfile: File): Log {
         logfile.inputStream().use { base ->
@@ -177,7 +183,8 @@ class Experiment {
         val batchSizes: List<Double>,
         val minDependency: List<Double>,
         val measures: List<Measure> = listOf(Measure.TEST_FITNESS, Measure.TEST_PRECISION),
-        val maxVisitedCoefficient: Int = 100
+        val maxVisitedCoefficient: Int = 100,
+        val artifacts: String? = null
     ) {
         companion object {
             val json = Json.Default
@@ -409,6 +416,28 @@ class Experiment {
                         Log(testTraces.asSequence())
                     } else
                         null
+                    if(config.artifacts!=null) {
+                        val dir=File(config.artifacts)
+                        if(!dir.exists())
+                            dir.mkdirs()
+                        check(dir.isDirectory)
+                        File(dir, modelFileName(filename, logidx, traceidx)).outputStream().use {
+                            online.result.toPM4PY(it)
+                        }
+                        if(trainLog != null)
+                            File(dir, trainFileName(filename, logidx, traceidx)).outputStream().use {fileStream ->
+                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(fileStream)).use {
+                                    it.write(trainLog.toFlatSequence())
+                                }
+                            }
+                        if(testLog != null)
+                            File(dir, testFileName(filename, logidx, traceidx)).outputStream().use {fileStream ->
+                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(fileStream)).use {
+                                    it.write(testLog.toFlatSequence())
+                                }
+                            }
+                    }
+
                     val fa = PerfectAligner(online.result)
                     val values = List(6) { Double.NaN }.toMutableList()
                     if (trainLog != null) {
