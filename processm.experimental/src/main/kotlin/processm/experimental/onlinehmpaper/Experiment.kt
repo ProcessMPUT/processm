@@ -46,12 +46,18 @@ class Experiment {
 //    ).map { File("xes-logs", it) }
 //    private val logs = File("xes-logs").listFiles { dir, name -> name.endsWith(".gz") }.toList()
 
-    companion object {
-        fun modelFileName(logfile: String, logidx: Int, traceidx: Int): String = "model_${logfile}_${logidx}_${traceidx}.pnml"
-        fun trainFileName(logfile: String, logidx: Int, traceidx: Int): String = "train_${logfile}_${logidx}_${traceidx}.xes"
-        fun testFileName(logfile: String, logidx: Int, traceidx: Int): String = "test_${logfile}_${logidx}_${traceidx}.xes"
 
-        private val logger=logger()
+    data class Key(val logfile: String, val windowSize: Int, val logidx: Int, val traceidx: Int) {
+        val modelFileName: String
+            get() = "model_${logfile}_${windowSize}_${logidx}_${traceidx}.pnml"
+        val trainFileName: String
+            get() = "train_${logfile}_${windowSize}_${logidx}_${traceidx}.xes"
+        val testFileName: String
+            get() = "test_${logfile}_${windowSize}_${logidx}_${traceidx}.xes"
+    }
+
+    companion object {
+        private val logger = logger()
     }
 
     private fun load(logfile: File): Log {
@@ -144,14 +150,14 @@ class Experiment {
 
         private val stream = file.outputStream().bufferedWriter()
 
-        operator fun <T> invoke(values: List<T>, vararg key: Any?) =
-            invoke(key.map { it.toString() }.toList() + values.map { it.toString() })
+        operator fun <T> invoke(values: List<T>, key: Key) =
+            invoke((listOf(key.logfile, key.windowSize, key.logidx, key.traceidx) + values).map { it.toString() })
 
         operator fun invoke(vararg line: Any?) = invoke(line.map { it.toString() })
 
         operator fun invoke(line: List<String>) {
             val text = line.joinToString(separator = separator) { if (it.contains(separator)) "\"$it\"" else it }
-            stream.appendln(text)
+            stream.appendLine(text)
             stream.flush()
             logger().debug(text)
         }
@@ -400,6 +406,7 @@ class Experiment {
                 println("window size=$windowSize")
                 for (i in 0 until log.size) {
                     val (logidx, traceidx, trace) = log[i]
+                    val key = Key(filename, windowSize, logidx, traceidx)
                     val addLog = Log(sequenceOf(trace))
                     val removeLog = Log(if (i >= windowSize) sequenceOf(log[i - windowSize].third) else emptySequence())
                     online.processDiff(addLog, removeLog)
@@ -416,23 +423,27 @@ class Experiment {
                         Log(testTraces.asSequence())
                     } else
                         null
-                    if(config.artifacts!=null) {
-                        val dir=File(config.artifacts)
-                        if(!dir.exists())
+                    if (config.artifacts != null) {
+                        val dir = File(config.artifacts)
+                        if (!dir.exists())
                             dir.mkdirs()
                         check(dir.isDirectory)
-                        File(dir, modelFileName(filename, logidx, traceidx)).outputStream().use {
+                        File(dir, key.modelFileName).outputStream().use {
                             online.result.toPM4PY(it)
                         }
-                        if(trainLog != null)
-                            File(dir, trainFileName(filename, logidx, traceidx)).outputStream().use {fileStream ->
-                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(fileStream)).use {
+                        if (trainLog != null)
+                            File(dir, key.trainFileName).outputStream().use { fileStream ->
+                                XMLXESOutputStream(
+                                    XMLOutputFactory.newInstance().createXMLStreamWriter(fileStream)
+                                ).use {
                                     it.write(trainLog.toFlatSequence())
                                 }
                             }
-                        if(testLog != null)
-                            File(dir, testFileName(filename, logidx, traceidx)).outputStream().use {fileStream ->
-                                XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(fileStream)).use {
+                        if (testLog != null)
+                            File(dir, key.testFileName).outputStream().use { fileStream ->
+                                XMLXESOutputStream(
+                                    XMLOutputFactory.newInstance().createXMLStreamWriter(fileStream)
+                                ).use {
                                     it.write(testLog.toFlatSequence())
                                 }
                             }
@@ -461,7 +472,7 @@ class Experiment {
                             values[5] = if (Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN
                         }
                     }
-                    csv(values, filename, windowSize, logidx, traceidx)
+                    csv(values, key)
                 }
             }
         }

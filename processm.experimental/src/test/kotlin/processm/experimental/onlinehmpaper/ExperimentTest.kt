@@ -113,22 +113,20 @@ class ExperimentTest {
                     assertTrue((testPFR in 0.0..1.0) || testPFR.isNaN())
                     assertEquals(Double.NaN, row[8].toDouble())
                     assertEquals(Double.NaN, row[9].toDouble())
-                    val fileName = row[0]
-                    val logIdx = row[2].toInt()
-                    val traceIdx = row[3].toInt()
-                    with(File(artifacts, Experiment.modelFileName(fileName, logIdx, traceIdx))) {
+                    val key = Experiment.Key(row[0], row[1].toInt(), row[2].toInt(), row[3].toInt())
+                    with(File(artifacts, key.modelFileName)) {
                         assertTrue(exists())
                         assertTrue(isFile)
                         assertTrue { FileUtils.sizeOf(this) > 0 }
                     }
                     if (!trainPFR.isNaN())
-                        with(File(artifacts, Experiment.trainFileName(fileName, logIdx, traceIdx))) {
+                        with(File(artifacts, key.trainFileName)) {
                             assertTrue(exists())
                             assertTrue(isFile)
                             assertTrue { FileUtils.sizeOf(this) > 0 }
                         }
                     if (!testPFR.isNaN())
-                        with(File(artifacts, Experiment.testFileName(fileName, logIdx, traceIdx))) {
+                        with(File(artifacts, key.testFileName)) {
                             assertTrue(exists())
                             assertTrue(isFile)
                             assertTrue { FileUtils.sizeOf(this) > 0 }
