@@ -1,7 +1,7 @@
 package processm.experimental.performance
 
 import org.apache.commons.collections4.multiset.HashMultiSet
-import org.apache.commons.lang3.math.Fraction
+import org.apache.commons.math3.fraction.BigFraction
 import processm.core.helpers.Counter
 import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.mapToSet
@@ -1056,13 +1056,13 @@ class PerformanceAnalyzer(
         ) : HasFeatures() {
             val length: Int
                 get() = position + (if (node != null) 1 else 0)
-            override val features: List<Fraction>
+            override val features: List<BigFraction>
                 get() = listOf(
-                    Fraction.getFraction(cost, 1),
+                    BigFraction(cost, 1),
                     //Fraction.getFraction(ctr, 1),
                     // if(length<prefix.size) Fraction.ZERO else Fraction.getFraction(-length, 1),
                     //if(length<prefix.size) Fraction.ZERO else Fraction.getFraction(state.size, 1)
-                    Fraction.getFraction(stateSize, 1)
+                    BigFraction(stateSize, 1)
                 )
             val cost: Int
             val stateSize: Int

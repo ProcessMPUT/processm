@@ -2,8 +2,13 @@ package processm.experimental.onlinehmpaper
 
 import kotlinx.serialization.json.Json
 import org.apache.commons.io.FileUtils
+import processm.core.log.XMLXESInputStream
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
+import processm.core.log.hierarchical.Log
+import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
+import java.util.zip.GZIPInputStream
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -166,5 +171,33 @@ class ExperimentTest {
         val config = Json.Default.decodeFromString(Experiment.Config.serializer(), configText)
         println(config)
         Experiment().drift(config)
+    }
+
+    @Test
+    fun `BPIC15_2 window 50 sublog 1 trace 7 ArithmeticException`() {
+        val logfile = File("../xes-logs/BPIC15_2.xes.gz")
+        val splitSeed = 3737844653L
+        val sampleSeed = 12648430L
+        val keval = 5
+        val knownNamesThreshold = 100
+        val missThreshold = 10
+        val windowSize = 50
+        val completeLog = logfile.inputStream().use { base ->
+            filterLog(HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(base))).first())
+        }
+        val logs = createDriftLogs(
+            completeLog,
+            sampleSeed,
+            splitSeed,
+            keval,
+            knownNamesThreshold,
+            missThreshold
+        )
+        val flatLog = logs.flatten()
+        val hm = WindowingHeuristicMiner()
+        val windowEnd = logs[0].size + 7
+        val windowStart = windowEnd - windowSize + 1
+        val trainLog = flatLog.subList(windowStart, windowEnd + 1)
+        hm.processDiff(Log(trainLog.asSequence()), Log(emptySequence()))
     }
 }

@@ -1,17 +1,18 @@
 package processm.miners.heuristicminer.windowing
 
 import org.apache.commons.lang3.math.Fraction
+import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
 
-operator fun Fraction.minus(other: Fraction) = this.subtract(other)
-operator fun Fraction.plus(other: Fraction) = this.add(other)
-operator fun Fraction.div(other: Fraction) = this.divideBy(other)
-operator fun Fraction.div(other: Int) = this.divideBy(Fraction.getFraction(other, 1))
+operator fun BigFraction.minus(other: BigFraction): BigFraction = this.subtract(other)
+operator fun BigFraction.plus(other: BigFraction): BigFraction = this.add(other)
+operator fun BigFraction.div(other: BigFraction): BigFraction = this.divide(other)
+operator fun BigFraction.div(other: Int): BigFraction = this.divide(other)
 
-fun sumInverse(values: List<Int>): Fraction {
+fun sumInverse(values: List<Int>): BigFraction {
     require(values.isNotEmpty())
     if (values.size == 1)
-        return Fraction.getFraction(1, values.single())
+        return BigFraction(1, values.single())
     var n = 1L
     var d = values[0].toLong()
     for (i in 1 until values.size) {
@@ -28,5 +29,5 @@ fun sumInverse(values: List<Int>): Fraction {
         check(d < Integer.MAX_VALUE)
         //assert(ArithmeticUtils.gcd(n,d)==1L)
     }
-    return Fraction.getFraction(n.toInt(), d.toInt())
+    return BigFraction(n.toInt(), d.toInt())
 }

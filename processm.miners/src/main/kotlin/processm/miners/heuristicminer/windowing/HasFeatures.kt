@@ -1,10 +1,10 @@
 package processm.miners.heuristicminer.windowing
 
-import org.apache.commons.lang3.math.Fraction
+import org.apache.commons.math3.fraction.BigFraction
 
 abstract class HasFeatures : Comparable<HasFeatures> {
 
-    abstract val features: List<Fraction>
+    abstract val features: List<BigFraction>
 
     override fun compareTo(other: HasFeatures): Int {
         val a = features

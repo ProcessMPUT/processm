@@ -1,8 +1,7 @@
 package processm.miners.heuristicminer.windowing
 
 import com.google.common.collect.MinMaxPriorityQueue
-import org.apache.commons.lang3.math.Fraction
-import org.apache.commons.math3.util.ArithmeticUtils
+import org.apache.commons.math3.fraction.BigFraction
 import processm.core.helpers.Counter
 import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.allSubsets
@@ -116,7 +115,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         for (mayConsume in consumable.allSubsets(excludeEmpty = mustConsume.isEmpty())) {
             val consume = mayConsume + mustConsume
             assert(consume.isNotEmpty())
-            val additionalGain = if(allConsumable.isNotEmpty()) Fraction.getFraction(consume.size, allConsumable.size) else Fraction.ZERO
+            val additionalGain = if(allConsumable.isNotEmpty()) BigFraction(consume.size, allConsumable.size) else BigFraction.ZERO
             val newValue = current.totalGreediness + additionalGain
             val newReplayTrace =
                 ReplayTrace(
@@ -255,7 +254,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
 
             val den= context.producible[current.node].size
             val newValue =
-                current.totalGreediness + (if(den!=0) Fraction.getFraction(produce.size, den) else Fraction.ZERO)
+                current.totalGreediness + (if(den!=0) BigFraction(produce.size, den) else BigFraction.ZERO)
             val newReplayTrace =
                 ReplayTrace(
                     LazyCausalNetState(current.trace.state, emptyList(), produce),
@@ -302,7 +301,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
      * constructing splits and joins as large as possible. Instead, the number of tokens left is an estimation of the cost of
      * correctly completing the solution.
      */
-    private fun relaxedHeuristic(initState: CausalNetState, node: Int, produce: Boolean, context: Context): Fraction {
+    private fun relaxedHeuristic(initState: CausalNetState, node: Int, produce: Boolean, context: Context): BigFraction {
         val state = prepareState(initState)
         processNode(node, state, !produce, context)
         for (pos in node + 1 until context.trace.size) {
@@ -327,7 +326,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         }
         //assert(lcm != 0 || pnom == 0)
         //return if (lcm != 0) Fraction.getFraction(pnom, lcm).reduce() else Fraction.ZERO
-        return if(denominators.isEmpty()) Fraction.ZERO else sumInverse(denominators)
+        return if(denominators.isEmpty()) BigFraction.ZERO else sumInverse(denominators)
     }
 
     /**
@@ -415,8 +414,8 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
             val seen = HashSet<Pair<CausalNetState, Int>>()
             queue.add(
                 SearchState(
-                    Fraction.ZERO,
-                    Fraction.ZERO,
+                    BigFraction.ZERO,
+                    BigFraction.ZERO,
                     0,
                     0,
                     true,

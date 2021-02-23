@@ -1,16 +1,15 @@
 package processm.miners.heuristicminer.windowing
 
-import org.apache.commons.lang3.math.Fraction
-import org.junit.jupiter.api.TestFactory
+import org.apache.commons.math3.fraction.BigFraction
 import kotlin.system.measureNanoTime
 import kotlin.test.*
 
 class HelpersTest {
 
     fun test(values:List<Int>) {
-        var expected = Fraction.ZERO
+        var expected = BigFraction.ZERO
         for(v in values)
-            expected += Fraction.getFraction(1, v)
+            expected += BigFraction(1, v)
         val actual = sumInverse(values)
         assertEquals(expected, actual)
     }
@@ -29,9 +28,9 @@ class HelpersTest {
         val values= List(30) {1 shl it}
         val nReps= 100
         val fractions = (0..nReps).map { measureNanoTime {
-            var expected = Fraction.ZERO
+            var expected = BigFraction.ZERO
             for (v in values)
-                expected += Fraction.getFraction(1, v)
+                expected += BigFraction(1, v)
         }}.sum()
         val sumInverse = (0..nReps).map { measureNanoTime {
             sumInverse(values) } }.sum()
