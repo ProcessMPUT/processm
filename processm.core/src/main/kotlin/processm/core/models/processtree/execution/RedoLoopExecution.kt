@@ -1,5 +1,6 @@
 package processm.core.models.processtree.execution
 
+import processm.core.models.commons.ProcessModelState
 import processm.core.models.processtree.RedoLoop
 
 /**
@@ -46,5 +47,33 @@ class RedoLoopExecution(override val base: RedoLoop, parent: ExecutionNode?) : E
         parent?.postExecution(this)
     }
 
+    override fun copy(): ProcessModelState = RedoLoopExecution(base, parent).also {
+        it.doPhase = this.doPhase
+        it.current = this.current?.copy() as ExecutionNode?
+        it.current?.parent = it
+        it.isComplete = this.isComplete
+    }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as RedoLoopExecution
+
+        if (base != other.base) return false
+        if (doPhase != other.doPhase) return false
+        if (isComplete != other.isComplete) return false
+        if (current != other.current) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = base.hashCode()
+        result = 31 * result + doPhase.hashCode()
+        result = 31 * result + isComplete.hashCode()
+        result = 31 * result + (current?.hashCode() ?: 0)
+
+        return result
+    }
 }

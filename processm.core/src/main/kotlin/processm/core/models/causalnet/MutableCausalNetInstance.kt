@@ -10,8 +10,8 @@ import processm.core.models.metadata.MutableMetadataHandler
  * A mutable model instance equipped with metadata providers corresponding to basic statistics
  */
 class MutableCausalNetInstance(
-        model: CausalNet,
-        metadataHandler: MutableMetadataHandler
+    model: CausalNet,
+    metadataHandler: MutableMetadataHandler
 ) :
     CausalNetInstance(model, metadataHandler),
     MutableMetadataHandler by metadataHandler {
@@ -24,7 +24,7 @@ class MutableCausalNetInstance(
     internal var state: CausalNetState = CausalNetState()
 
     init {
-        resetExecution()
+        setState(null)
     }
 
     override val currentState: ProcessModelState
@@ -33,8 +33,13 @@ class MutableCausalNetInstance(
     override val availableActivities
         get() = availableActivityExecutions.map { it.activity }
 
-    override fun resetExecution() {
-        state.clear()
+    override fun setState(state: ProcessModelState?) {
+        if (state === null) {
+            this.state.clear()
+        } else {
+            require(state is CausalNetState) { "The given object is not a valid Causal Net state." }
+            this.state = state
+        }
     }
 
     /**

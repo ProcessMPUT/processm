@@ -502,19 +502,43 @@ class ProcessTreeTest {
         assertEquals(setOf(ProcessTreeActivity("a")), processTree { ProcessTreeActivity("a") }.startActivities.toSet())
         assertEquals(
             setOf(ProcessTreeActivity("a")),
-            processTree { Sequence(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
+            processTree {
+                Sequence(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.startActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
-            processTree { Exclusive(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
+            processTree {
+                Exclusive(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.startActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
-            processTree { Parallel(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
+            processTree {
+                Parallel(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.startActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a")),
-            processTree { RedoLoop(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.startActivities.toSet()
+            processTree {
+                RedoLoop(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.startActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a")),
@@ -562,19 +586,43 @@ class ProcessTreeTest {
         assertEquals(setOf(ProcessTreeActivity("a")), processTree { ProcessTreeActivity("a") }.endActivities.toSet())
         assertEquals(
             setOf(ProcessTreeActivity("c")),
-            processTree { Sequence(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
+            processTree {
+                Sequence(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.endActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
-            processTree { Exclusive(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
+            processTree {
+                Exclusive(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.endActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")),
-            processTree { Parallel(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
+            processTree {
+                Parallel(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.endActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a")),
-            processTree { RedoLoop(ProcessTreeActivity("a"), ProcessTreeActivity("b"), ProcessTreeActivity("c")) }.endActivities.toSet()
+            processTree {
+                RedoLoop(
+                    ProcessTreeActivity("a"),
+                    ProcessTreeActivity("b"),
+                    ProcessTreeActivity("c")
+                )
+            }.endActivities.toSet()
         )
         assertEquals(
             setOf(ProcessTreeActivity("a")),
@@ -663,5 +711,57 @@ class ProcessTreeTest {
             )
         }
         tree.decisionPoints.expecting(listOf(b, c), listOf(loop.endLoopActivity, e, f))
+    }
+
+    @Test
+    fun parseSingleActivityTest() {
+        val a = ProcessTreeActivity("A")
+        val tree = ProcessTree.parse("A")
+        assertTrue(tree.languageEqual(processTree { a }))
+    }
+
+    @Test
+    fun parseSequenceOneActivityTest() {
+        val a = ProcessTreeActivity("A")
+        val tree = ProcessTree.parse("→(A)")
+        assertTrue(tree.languageEqual(processTree { Sequence(a) }))
+    }
+
+    @Test
+    fun parseSequenceManyActivitiesTest() {
+        val a = ProcessTreeActivity("A")
+        val b = ProcessTreeActivity("B")
+        val c = ProcessTreeActivity("C")
+        val tree = ProcessTree.parse("→(A,B,C)")
+        assertTrue(tree.languageEqual(processTree { Sequence(a, b, c) }))
+    }
+
+    @Test
+    fun parseComplexTest() {
+        val groundTruth = processTree {
+            Sequence(
+                ProcessTreeActivity("A"),
+                RedoLoop(
+                    Sequence(
+                        Parallel(
+                            Exclusive(
+                                ProcessTreeActivity("B"),
+                                ProcessTreeActivity("C")
+                            ),
+                            ProcessTreeActivity("D")
+                        ),
+                        ProcessTreeActivity("E")
+                    ),
+                    ProcessTreeActivity("F")
+                ),
+                Exclusive(
+                    ProcessTreeActivity("G"),
+                    ProcessTreeActivity("H")
+                )
+            )
+        }
+
+        val tree = ProcessTree.parse(groundTruth.toString())
+        assertTrue(tree.languageEqual(groundTruth))
     }
 }

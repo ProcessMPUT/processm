@@ -1,7 +1,7 @@
 package processm.directlyfollowsgraph
 
+import processm.core.log.Helpers.logFromString
 import processm.core.models.processtree.ProcessTreeActivity
-import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import kotlin.test.*
 

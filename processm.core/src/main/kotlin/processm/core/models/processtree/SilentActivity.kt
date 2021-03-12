@@ -6,4 +6,7 @@ open class SilentActivity : ProcessTreeActivity("") {
      */
     override val symbol: String
         get() = "τ"
+
+    override val isSilent: Boolean
+        get() = true
 }

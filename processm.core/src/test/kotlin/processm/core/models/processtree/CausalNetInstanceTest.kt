@@ -31,7 +31,7 @@ class CausalNetInstanceTest {
             expecting(EndLoopSilentActivity(l1), b)[0].execute()
             expecting()
         }
-        instance.resetExecution()
+        instance.setState(null)
         with(instance) {
             expecting(a, c)[1].execute()
             expecting(EndLoopSilentActivity(l2), d)[1].execute()

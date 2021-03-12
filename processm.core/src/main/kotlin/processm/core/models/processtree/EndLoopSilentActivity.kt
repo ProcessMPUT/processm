@@ -7,4 +7,7 @@ class EndLoopSilentActivity(val parentLoop: RedoLoop) : SilentActivity() {
     init {
         parent = parentLoop
     }
+
+    override val isArtificial: Boolean
+        get() = true
 }

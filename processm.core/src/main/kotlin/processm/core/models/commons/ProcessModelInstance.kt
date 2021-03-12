@@ -26,7 +26,14 @@ interface ProcessModelInstance {
     val availableActivityExecutions: Sequence<ActivityExecution>
 
     /**
-     * Resets [currentState] to the initial state to start execution from scratch
+     * True if the process model instance is in the final state and no activity can fire.
      */
-    fun resetExecution()
+    val isFinalState: Boolean
+        get() = availableActivities.none()
+
+    /**
+     * Sets the [currentState] to the given [state]. Resets to the initial state if null is given.
+     * @param state The state to set.
+     */
+    fun setState(state: ProcessModelState?)
 }

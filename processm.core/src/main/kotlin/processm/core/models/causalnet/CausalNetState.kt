@@ -20,4 +20,6 @@ class CausalNetState : HashMultiSet<Dependency>, ProcessModelState {
         if (split != null)
             this.addAll(split.dependencies)
     }
+
+    override fun copy(): ProcessModelState = CausalNetState(this)
 }

@@ -329,6 +329,15 @@ inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R
 }
 
 /**
+ * Returns an [Array] containing the results of applying the given [transform] function to each element in the original
+ * [Sequence].
+ */
+inline fun <T, reified R> Sequence<T>.mapToArray(transform: (T) -> R): Array<R> = ArrayList<R>().apply {
+    for (item in this@mapToArray)
+        add(transform(item))
+}.toTypedArray()
+
+/**
  * Returns an [Array] containing the results of applying the given [transform] function
  * to each element in the original [Array].
  */
