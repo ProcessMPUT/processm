@@ -179,13 +179,19 @@ class AStar(
             return 0 // we reached the end of trace
 
         assert(startIndex in events.indices)
-        var sum =
-            if (
-                endActivities.isNotEmpty() &&
-                events.subList(startIndex, events.size).none { it.conceptName in endActivities }
-            )
-                penalty.modelMove
-            else penalty.synchronousMove
+        var sum = 0
+
+        if (endActivities.isNotEmpty()) {
+            var hasEndActivity = false
+            for (index in startIndex until events.size) {
+                if (events[index].conceptName in endActivities) {
+                    hasEndActivity = true
+                    break
+                }
+            }
+            if (!hasEndActivity)
+                sum += penalty.modelMove
+        }
 
         for (index in startIndex until events.size) {
             sum +=
