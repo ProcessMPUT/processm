@@ -86,7 +86,9 @@ private val charToSuperscript = mapOf(
     'ѱ' to "\u1d60",
     'ⲯ' to "\u1d60",
     'χ' to "\u1d61",
-    'ꭓ' to "\u1d61"
+    'ꭓ' to "\u1d61",
+    'τ' to "\u1D40",
+    'ⲧ' to "\u1D40"
 )
 
 private val charToSubscript = mapOf(
@@ -177,8 +179,8 @@ private val charToSubscript = mapOf(
     'ⲯ' to "\u1d69",
     'χ' to "\u1d6a",
     'ꭓ' to "\u1d6a",
-    'τ' to Character.toString(0x16F93),
-    'ⲧ' to Character.toString(0x16F93)
+//    'τ' to "\u209C",
+//    'ⲧ' to "\u209C"
 )
 
 fun String.toSuperscript(): String = buildString {

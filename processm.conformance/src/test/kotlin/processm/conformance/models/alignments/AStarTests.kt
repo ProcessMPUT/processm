@@ -83,4 +83,149 @@ class AStarTests {
             assertEquals(trace.events.count(), alignment.steps.count { it.logMove !== null })
         }
     }
+
+    @Test
+    fun `Flower model`() {
+        val tree = ProcessTree.parse("⟲(τ,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z)")
+        val log = logFromString(
+            """
+                A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                Z Y X W V U T S R Q P O N M L K J I H G F E D C B A
+                A A A A A A A A A A A A A A A A A A A A A A A A A A
+                Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z
+                A
+                Z
+            """
+        )
+
+        val astar = AStar(tree)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+            assertEquals(trace.events.count() * 2 + 1, alignment.steps.size)
+        }
+    }
+
+    @Test
+    fun `Parallel flower models`() {
+        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
+        val log = logFromString(
+            """
+                A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                Z Y X W V U T S R Q P O N M L K J I H G F E D C B A
+                A A A A A A A A A A A A A A A A A A A A A A A A A A
+                Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z
+                A
+                Z
+            """
+        )
+
+        val astar = AStar(tree)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+            assertEquals(trace.events.count() * 2 + 2, alignment.steps.size)
+        }
+    }
+
+    @Test
+    fun `Parallel flower models non-conforming log`() {
+        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
+        val log = logFromString(
+            """
+                1 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                Z 2 Y X W V U T S R Q P O N M L K J I H G F E D C B A
+                A A 3 A A A A A A A A A A A A A A A A A A A A A A A A
+                Z Z Z 4 Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z
+                A 5
+                Z 6
+            """
+        )
+
+        val astar = AStar(tree)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(1, alignment.cost)
+            assertEquals(trace.events.count() * 2 + 1, alignment.steps.size)
+        }
+    }
+
+    @Test
+    fun `Parallel decisions in loop`() {
+        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
+        val log = logFromString(
+            """
+                A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                Z Y X W V U T S R Q P O N M L K J I H G F E D C B A
+                A Z Z A A Z Z A A Z
+                A Z
+                Z A
+            """
+        )
+
+        val astar = AStar(tree)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+        }
+    }
+
+    @Test
+    fun `Parallel decisions in loop non-conforming log`() {
+        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
+        val log = logFromString(
+            """
+                A A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                Z Z Y X W V U T S R Q P O N M L K J I H G F E D C B A
+                A A Z Z Z
+                Z Z A A A
+                A Y Z B
+                Z B A Y
+                A A A
+                Z Z Z
+            """
+        )
+
+        val expectedCosts = listOf(
+            1,
+            1,
+            3,
+            3,
+            2,
+            2,
+            3,
+            3
+        )
+
+        val astar = AStar(tree)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCosts[i], alignment.cost)
+        }
+    }
 }

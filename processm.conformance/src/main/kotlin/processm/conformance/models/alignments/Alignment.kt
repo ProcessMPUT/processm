@@ -16,7 +16,7 @@ data class Alignment(
     override fun toString(): String = buildString {
         for (step in steps) {
             append(step.logMove?.conceptName?.toSuperscript() ?: "⁼")
-            append(step.modelMove?.name?.toSubscript() ?: "₌")
+            append(if (step.modelMove?.isSilent == true) "τ" else step.modelMove?.name?.toSubscript() ?: "₌")
         }
 //        append('|')
 //        for (step in steps) {

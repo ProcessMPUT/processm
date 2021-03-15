@@ -59,7 +59,8 @@ class AStar(
 
             assert(with(searchState) { activity !== null || event != SKIP_EVENT || previousSearchState == null })
 
-            if (getPreviousEventIndex(searchState) == events.size - 1 && instance.isFinalState) {
+            val previousEventIndex = getPreviousEventIndex(searchState)
+            if (previousEventIndex == events.size - 1 && instance.isFinalState) {
                 // we found the path
                 val steps = ArrayList<Step>()
                 var state: SearchState = searchState
@@ -93,9 +94,12 @@ class AStar(
                 continue
             visited.add(searchState)
 
-            val prevProcessState = searchState.processStateFactory.value.copy() // TODO: do we need copy here?
-            val nextEventIndex =
-                with(getPreviousEventIndex(searchState)) { if (this < events.size - 1) this + 1 else SKIP_EVENT }
+            val prevProcessState = searchState.processStateFactory.value
+            val nextEventIndex = when {
+                previousEventIndex < 0 -> 0
+                previousEventIndex < events.size - 1 -> previousEventIndex + 1
+                else -> SKIP_EVENT
+            }
             val nextEvent = if (nextEventIndex != SKIP_EVENT) events[nextEventIndex] else null
 
             // add possible moves to the queue
@@ -177,10 +181,16 @@ class AStar(
         event !== null && !activity.isSilent && event.conceptName == activity.name
 
     private fun predict(events: List<Event>, startIndex: Int): Int {
+        if (startIndex == SKIP_EVENT || startIndex >= events.size)
+            return 0 // we reached the end of trace
+
+        assert(startIndex in events.indices)
         var sum =
-            if (startIndex < events.size &&
+            if (
+                endActivities.isNotEmpty() &&
                 events.subList(startIndex, events.size).none { it.conceptName in endActivities }
-            ) penalty.modelMove
+            )
+                penalty.modelMove
             else penalty.synchronousMove
 
         for (index in startIndex until events.size) {
