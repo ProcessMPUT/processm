@@ -39,7 +39,6 @@ class AStar(
         val events = trace.events.toList()
 
         val queue = PriorityQueue<SearchState>()
-        val visited = HashSet<SearchState>()
 
         val instance = model.createInstance()
         val initialProcessState = instance.currentState.copy()
@@ -88,11 +87,6 @@ class AStar(
                 assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
                 return Alignment(steps, searchState.currentCost)
             }
-
-            // skip already visited states
-            if (searchState in visited)
-                continue
-            visited.add(searchState)
 
             val prevProcessState = searchState.processStateFactory.value
             val nextEventIndex = when {
