@@ -122,6 +122,8 @@ class AStarTests {
                 Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z
                 A
                 Z
+                Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z A A A A A A A A A A A A A A A A A A A A A A A A A A
+                Z Z Z Z Z Z Z Z Z Z Z Z Z Y Z Z Z Z Z Z Z Z Z Z Z Z A A A A A A A A A A A A B A A A A A A A A A A A A A
             """
         )
 
@@ -149,6 +151,7 @@ class AStarTests {
                 Z Z Z 4 Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z Z
                 A 5
                 Z 6
+                Z Z Z 7 A A A
             """
         )
 
@@ -203,6 +206,7 @@ class AStarTests {
                 Z B A Y
                 A A A
                 Z Z Z
+                Z Z A A A A Z Z
             """
         )
 
@@ -214,7 +218,60 @@ class AStarTests {
             2,
             2,
             3,
-            3
+            3,
+            4
+        )
+
+        val astar = AStar(tree)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCosts[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `PM book Fig 7 29 conforming log`() {
+        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
+        val log = logFromString(
+            """
+                A C E G
+                A E C G
+                B D F G
+                B F D G
+                """
+        )
+
+        val astar = AStar(tree)
+        for (trace in log.traces) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+            assertEquals(trace.events.count(), alignment.steps.size)
+            for (step in alignment.steps)
+                assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
+        }
+    }
+
+    @Test
+    fun `PM book Fig 7 29 non-conforming log`() {
+        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
+        val log = logFromString(
+            """
+                D F B G E C A
+                """
+        )
+
+        val expectedCosts = listOf(
+            7,
         )
 
         val astar = AStar(tree)
