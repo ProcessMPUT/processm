@@ -6,14 +6,19 @@ import processm.core.models.processtree.RedoLoop
 /**
  * An [ExecutionNode] for [RedoLoop]
  */
-class RedoLoopExecution(override val base: RedoLoop, parent: ExecutionNode?) : ExecutionNode(base, parent) {
+class RedoLoopExecution(
+    override val base: RedoLoop,
+    parent: ExecutionNode?,
+    current: ExecutionNode? = null,
+    overrideCurrent: Boolean = false,
+) : ExecutionNode(base, parent) {
 
     private var doPhase = true
 
     private val redoPhase: Boolean
         get() = !doPhase
 
-    private var current: ExecutionNode? = base.children[0].executionNode(this)
+    private var current: ExecutionNode? = if (overrideCurrent) current else base.children[0].executionNode(this)
 
     override val available
         get() = if (!isComplete) {
@@ -47,12 +52,12 @@ class RedoLoopExecution(override val base: RedoLoop, parent: ExecutionNode?) : E
         parent?.postExecution(this)
     }
 
-    override fun copy(): ProcessModelState = RedoLoopExecution(base, parent).also {
-        it.doPhase = this.doPhase
-        it.current = this.current?.copy() as ExecutionNode?
-        it.current?.parent = it
-        it.isComplete = this.isComplete
-    }
+    override fun copy(): ProcessModelState =
+        RedoLoopExecution(base, parent, this.current?.copy() as ExecutionNode?, true).also {
+            it.doPhase = this.doPhase
+            it.isComplete = this.isComplete
+            it.current?.parent = it
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

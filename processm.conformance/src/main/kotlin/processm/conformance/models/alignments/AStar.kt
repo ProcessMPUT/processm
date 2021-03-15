@@ -61,31 +61,7 @@ class AStar(
             val previousEventIndex = getPreviousEventIndex(searchState)
             if (previousEventIndex == events.size - 1 && instance.isFinalState) {
                 // we found the path
-                val steps = ArrayList<Step>()
-                var state: SearchState = searchState
-                while (state !== initialSearchState) {
-                    with(state) {
-                        steps.add(
-                            Step(
-                                modelMove = activity,
-                                modelState = processStateFactory.value,
-                                logMove = if (event != SKIP_EVENT) events[event] else null,
-                                logState = trace.events.take(getPreviousEventIndex(this) + 1),
-                                type = when {
-                                    activity === null -> DeviationType.LogDeviation
-                                    event == SKIP_EVENT -> DeviationType.ModelDeviation
-                                    else -> DeviationType.None
-                                }
-                            )
-                        )
-                    }
-
-                    state = state.previousSearchState!!
-                }
-                steps.reverse()
-
-                assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
-                return Alignment(steps, searchState.currentCost)
+                return formatAlignment(searchState, initialSearchState, events)
             }
 
             val prevProcessState = searchState.processStateFactory.value
@@ -169,6 +145,38 @@ class AStar(
 
         assert(false) { "Cannot find the alignment. This should not happen ever since A* is guaranteed to find a path in the state graph." }
         throw IllegalStateException("Cannot align the log with the model.")
+    }
+
+    private fun formatAlignment(
+        searchState: SearchState,
+        initialSearchState: SearchState,
+        events: List<Event>
+    ): Alignment {
+        val steps = ArrayList<Step>()
+        var state: SearchState = searchState
+        while (state !== initialSearchState) {
+            with(state) {
+                steps.add(
+                    Step(
+                        modelMove = activity,
+                        modelState = processStateFactory.value,
+                        logMove = if (event != SKIP_EVENT) events[event] else null,
+                        logState = events.subList(0, getPreviousEventIndex(this) + 1).asSequence(),
+                        type = when {
+                            activity === null -> DeviationType.LogDeviation
+                            event == SKIP_EVENT -> DeviationType.ModelDeviation
+                            else -> DeviationType.None
+                        }
+                    )
+                )
+            }
+
+            state = state.previousSearchState!!
+        }
+        steps.reverse()
+
+        assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
+        return Alignment(steps, searchState.currentCost)
     }
 
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =

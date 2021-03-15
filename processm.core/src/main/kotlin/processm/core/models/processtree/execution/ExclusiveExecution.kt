@@ -6,17 +6,19 @@ import processm.core.models.processtree.Exclusive
 /**
  * An [ExecutionNode] for [Exclusive]
  */
-class ExclusiveExecution(override val base: Exclusive, parent: ExecutionNode?) : ExecutionNode(base, parent) {
+class ExclusiveExecution(
+    override val base: Exclusive,
+    parent: ExecutionNode?
+) : ExecutionNode(base, parent) {
 
     private var selected: ExecutionNode? = null
-    private val children = base.children.map { it.executionNode(this) }
 
     override val available
         get() = if (!isComplete) {
             if (selected != null)
                 selected!!.available
             else
-                children.asSequence().flatMap { it.available }
+                base.children.asSequence().flatMap { it.executionNode(this).available }
         } else emptySequence()
 
     override var isComplete: Boolean = false
@@ -45,7 +47,6 @@ class ExclusiveExecution(override val base: Exclusive, parent: ExecutionNode?) :
         if (base != other.base) return false
         if (selected != other.selected) return false
         if (isComplete != other.isComplete) return false
-        if (children != other.children) return false
 
         return true
     }
@@ -54,7 +55,6 @@ class ExclusiveExecution(override val base: Exclusive, parent: ExecutionNode?) :
         var result = base.hashCode()
         result = 31 * result + (selected?.hashCode() ?: 0)
         result = 31 * result + isComplete.hashCode()
-        result = 31 * result + children.size
         return result
     }
 }

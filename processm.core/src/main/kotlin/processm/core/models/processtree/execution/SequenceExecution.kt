@@ -6,10 +6,14 @@ import processm.core.models.processtree.Sequence
 /**
  * An [ExecutionNode] for [Sequence]
  */
-class SequenceExecution(override val base: Sequence, parent: ExecutionNode?) : ExecutionNode(base, parent) {
+class SequenceExecution(
+    override val base: Sequence,
+    parent: ExecutionNode?,
+    current: ExecutionNode? = null
+) : ExecutionNode(base, parent) {
 
     private var index = 0
-    private var current = base.children[index].executionNode(this)
+    private var current = current ?: base.children[index].executionNode(this)
 
     override val available
         get() = if (!isComplete) current.available else emptySequence()
@@ -30,11 +34,11 @@ class SequenceExecution(override val base: Sequence, parent: ExecutionNode?) : E
         parent?.postExecution(this)
     }
 
-    override fun copy(): ProcessModelState = SequenceExecution(base, parent).also {
-        it.index = this.index
-        it.current = this.current.copy() as ExecutionNode
-        it.current.parent = it
-    }
+    override fun copy(): ProcessModelState =
+        SequenceExecution(base, parent, this.current.copy() as ExecutionNode).also {
+            it.index = this.index
+            it.current.parent = it
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
