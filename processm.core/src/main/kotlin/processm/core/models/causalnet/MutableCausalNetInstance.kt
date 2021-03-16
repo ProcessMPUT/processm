@@ -1,9 +1,6 @@
 package processm.core.models.causalnet
 
 import processm.core.models.commons.ProcessModelState
-import processm.core.models.metadata.BasicStatistics
-import processm.core.models.metadata.DefaultMetadataProvider
-import processm.core.models.metadata.IntMetadata
 import processm.core.models.metadata.MutableMetadataHandler
 
 /**
@@ -16,11 +13,6 @@ class MutableCausalNetInstance(
     CausalNetInstance(model, metadataHandler),
     MutableMetadataHandler by metadataHandler {
 
-    init {
-        for (name in BasicStatistics.BASIC_TIME_STATISTICS)
-            addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
-    }
-
     internal var state: CausalNetState = CausalNetState()
 
     init {
@@ -32,6 +24,9 @@ class MutableCausalNetInstance(
 
     override val availableActivities
         get() = availableActivityExecutions.map { it.activity }
+
+    override val isFinalState: Boolean
+        get() = !state.isFresh && state.isEmpty()
 
     override fun setState(state: ProcessModelState?) {
         if (state === null) {

@@ -1,10 +1,11 @@
 package processm.conformance.models.alignments
 
 import processm.conformance.models.DeviationType
+import processm.core.helpers.ternarylogic.Ternary
+import processm.core.helpers.ternarylogic.Ternary.Companion.toTernary
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
-import processm.core.models.commons.ActivityExecution
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
 import java.util.*
@@ -46,7 +47,7 @@ class AStar(
         val initialSearchState = SearchState(
             processStateFactory = lazyOf(initialProcessState),
             currentCost = 0,
-            predictedCost = predict(events, 0, instance.availableActivityExecutions),
+            predictedCost = predict(events, 0, instance.availableActivityExecutions.none().toTernary()),
             activity = null, // before first activity
             event = -1, // before first event
             previousSearchState = null
@@ -101,8 +102,8 @@ class AStar(
                             SearchState(
                                 processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
                                 currentCost = searchState.currentCost + penalty.silentMove,
-                                // Pass emptySequence() because obtaining the actual sequence requires execution in the model
-                                predictedCost = predict(events, nextEventIndex, emptySequence())
+                                // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
+                                predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
                                     .coerceAtLeast(searchState.predictedCost - penalty.silentMove),
                                 activity = execution.activity,
                                 event = SKIP_EVENT,
@@ -119,8 +120,8 @@ class AStar(
                         SearchState(
                             processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
                             currentCost = searchState.currentCost + penalty.synchronousMove,
-                            // Pass emptySequence() because obtaining the actual sequence requires execution in the model
-                            predictedCost = predict(events, nextEventIndex + 1, emptySequence())
+                            // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
+                            predictedCost = predict(events, nextEventIndex + 1, Ternary.Unknown)
                                 .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove),
                             activity = execution.activity,
                             event = nextEventIndex,
@@ -133,8 +134,8 @@ class AStar(
                     SearchState(
                         processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
                         currentCost = searchState.currentCost + penalty.modelMove,
-                        // Pass emptySequence() because obtaining the actual sequence requires execution in the model
-                        predictedCost = predict(events, nextEventIndex, emptySequence())
+                        // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
+                        predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
                             .coerceAtLeast(searchState.predictedCost - penalty.modelMove),
                         activity = execution.activity,
                         event = SKIP_EVENT,
@@ -149,7 +150,7 @@ class AStar(
                     SearchState(
                         processStateFactory = lazyOf(prevProcessState),
                         currentCost = searchState.currentCost + penalty.logMove,
-                        predictedCost = predict(events, nextEventIndex + 1, instance.availableActivityExecutions)
+                        predictedCost = predict(events, nextEventIndex + 1, instance.isFinalState.toTernary())
                             .coerceAtLeast(searchState.predictedCost - penalty.logMove),
                         activity = null,
                         event = nextEventIndex,
@@ -196,14 +197,14 @@ class AStar(
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
         event !== null && !activity.isSilent && event.conceptName == activity.name
 
-    private fun predict(events: List<Event>, startIndex: Int, available: Sequence<ActivityExecution>): Int {
+    private fun predict(events: List<Event>, startIndex: Int, isFinalState: Ternary): Int {
         if (startIndex == SKIP_EVENT || startIndex >= events.size)
-            return if (available.count() > 0) 1 else 0 // we reached the end of trace, should we move in the model?
+            return if (isFinalState != Ternary.False) 0 else penalty.modelMove // we reached the end of trace, should we move in the model?
 
         assert(startIndex in events.indices)
 
         var sum = 0
-        if (endActivities.isNotEmpty()) {
+        if (isFinalState == Ternary.False && endActivities.isNotEmpty()) {
             var hasEndActivity = false
             for (index in startIndex until events.size) {
                 if (events[index].conceptName in endActivities) {

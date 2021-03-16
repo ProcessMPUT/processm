@@ -1,7 +1,6 @@
 package processm.core.models.causalnet
 
-import processm.core.models.metadata.DefaultMutableMetadataHandler
-import processm.core.models.metadata.MutableMetadataHandler
+import processm.core.models.metadata.*
 
 /**
  * The default implementation of a causal net model
@@ -12,6 +11,11 @@ class MutableCausalNet(
     private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler()
 ) : CausalNet(start, end, metadataHandler),
     MutableMetadataHandler by metadataHandler {
+
+    init {
+        for (name in BasicStatistics.BASIC_TIME_STATISTICS)
+            addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
+    }
 
     /**
      * Adds a (set of) new activity instance(s) to the model

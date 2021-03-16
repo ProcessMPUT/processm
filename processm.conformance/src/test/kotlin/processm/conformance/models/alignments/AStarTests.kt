@@ -1,6 +1,8 @@
 package processm.conformance.models.alignments
 
 import processm.core.log.Helpers.logFromString
+import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.causalnet
 import processm.core.models.processtree.ProcessTree
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -85,7 +87,7 @@ class AStarTests {
     }
 
     @Test
-    fun `Flower model`() {
+    fun `Flower process tree`() {
         val tree = ProcessTree.parse("⟲(τ,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z)")
         val log = logFromString(
             """
@@ -283,6 +285,309 @@ class AStarTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCosts[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `PM book Fig 3 12 conforming log`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val d = Node("d")
+        val e = Node("e")
+        val f = Node("f")
+        val g = Node("g")
+        val h = Node("h")
+        val z = Node("z")
+        val model = causalnet {
+            start = a
+            end = z
+            a splits b + d
+            a splits c + d
+
+            a joins b
+            f joins b
+            b splits e
+
+            a joins c
+            f joins c
+            c splits e
+
+            a joins d
+            f joins d
+            d splits e
+
+            b + d join e
+            c + d join e
+            e splits g
+            e splits h
+            e splits f
+
+            e joins f
+            f splits b + d
+            f splits c + d
+
+            e joins g
+            g splits z
+
+            e joins h
+            h splits z
+
+            g joins z
+            h joins z
+        }
+
+        val log = logFromString(
+            """
+                a b d e g z
+                a d b e g z
+                a c d e g z
+                a d c e g z
+                a d c e f b d e g z
+                a d c e f b d e h z
+                """
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+        }
+    }
+
+    @Test
+    fun `PM book Fig 3 12 non-conforming log`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val d = Node("d")
+        val e = Node("e")
+        val f = Node("f")
+        val g = Node("g")
+        val h = Node("h")
+        val z = Node("z")
+        val model = causalnet {
+            start = a
+            end = z
+            a splits b + d
+            a splits c + d
+
+            a joins b
+            f joins b
+            b splits e
+
+            a joins c
+            f joins c
+            c splits e
+
+            a joins d
+            f joins d
+            d splits e
+
+            b + d join e
+            c + d join e
+            e splits g
+            e splits h
+            e splits f
+
+            e joins f
+            f splits b + d
+            f splits c + d
+
+            e joins g
+            g splits z
+
+            e joins h
+            h splits z
+
+            g joins z
+            h joins z
+        }
+
+        val log = logFromString(
+            """
+                a b c d e g z
+                a d b e g
+                a c d e g z x
+                a d c e g x z
+                a d c e b d e g z
+                a d c e b d e h z
+                """
+        )
+
+        val expectedCost = arrayOf(
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCost[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `PM book Fig 3 16 conforming log`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val d = Node("d")
+        val e = Node("e")
+        val model = causalnet {
+            start = a
+            end = e
+            a splits b
+
+            a joins b
+            b joins b
+            b splits c + d
+            b splits b + c
+
+            b joins c
+            c splits d
+
+            b + c join d
+            c + d join d
+            d splits d
+            d splits e
+
+            d joins e
+        }
+
+        val log = logFromString(
+            """
+                a b c d e
+                a b c b d c d e
+                a b b c c d d e
+                a b c b c b c b c d d d d e
+                """
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+        }
+    }
+
+    @Test
+    fun `PM book Fig 3 16 non-conforming log`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val d = Node("d")
+        val e = Node("e")
+        val model = causalnet {
+            start = a
+            end = e
+            a splits b
+
+            a joins b
+            b joins b
+            b splits c + d
+            b splits b + c
+
+            b joins c
+            c splits d
+
+            b + c join d
+            c + d join d
+            d splits d
+            d splits e
+
+            d joins e
+        }
+
+        val log = logFromString(
+            """
+                a b d e
+                a b c b d d e
+                a b b c d d e
+                a b c b c b d b c d d d e
+                """
+        )
+
+        val expectedCost = arrayOf(
+            1,
+            1,
+            1,
+            2
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCost[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `Flower C-net`() {
+        val activities = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".map { Node(it.toString()) }
+        val tau = Node("τ", isSilent = true)
+        val model = causalnet {
+            start = activities.first()
+            end = activities.last()
+
+            start splits tau
+            start joins tau
+
+            tau splits end
+            tau joins end
+
+            for (activity in activities.subList(1, activities.size - 1)) {
+                tau splits activity
+                tau joins activity
+                activity splits tau
+                activity joins tau
+            }
+        }
+
+        val log = logFromString(
+            """
+                A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                A Y X W V U T S R Q P O N M L K J I H G F E D C B Z
+                A B B B B B B B B B B B B B B B B B B B B B B B B Z
+                A Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Z
+                A Z
+            """
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+            assertEquals(trace.events.count() * 2 - 1, alignment.steps.size)
         }
     }
 }
