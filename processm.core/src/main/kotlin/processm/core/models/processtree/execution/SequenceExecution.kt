@@ -37,6 +37,7 @@ class SequenceExecution(
     override fun copy(): ProcessModelState =
         SequenceExecution(base, parent, this.current.copy() as ExecutionNode).also {
             it.index = this.index
+            it.isComplete = this.isComplete
             it.current.parent = it
         }
 

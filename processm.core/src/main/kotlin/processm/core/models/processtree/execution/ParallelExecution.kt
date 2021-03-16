@@ -38,6 +38,7 @@ class ParallelExecution(
             parent,
             childrenCopy
         ).also {
+            isComplete = this.isComplete
             childrenCopy.forEach { child -> child.parent = it }
         }
     }
