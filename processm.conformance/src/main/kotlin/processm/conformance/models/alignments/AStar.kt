@@ -4,6 +4,7 @@ import processm.conformance.models.DeviationType
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
+import processm.core.models.commons.ActivityExecution
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
 import java.util.*
@@ -41,19 +42,26 @@ class AStar(
         val queue = PriorityQueue<SearchState>()
 
         val instance = model.createInstance()
-        val initialProcessState = instance.currentState.copy()
+        val initialProcessState = instance.currentState
         val initialSearchState = SearchState(
             processStateFactory = lazyOf(initialProcessState),
             currentCost = 0,
-            predictedCost = predict(events, 0),
+            predictedCost = predict(events, 0, instance.availableActivityExecutions),
             activity = null, // before first activity
             event = -1, // before first event
             previousSearchState = null
         )
         queue.add(initialSearchState)
 
+        var lastCost = 0
         while (queue.isNotEmpty()) {
             val searchState = queue.poll()!!
+
+            //println("${formatAlignment(searchState, initialSearchState, events)}\t${searchState.currentCost + searchState.predictedCost}=${searchState.currentCost} + ${searchState.predictedCost}")
+
+            assert(lastCost <= searchState.currentCost + searchState.predictedCost)
+            lastCost = searchState.currentCost + searchState.predictedCost
+
             instance.setState(searchState.processStateFactory.value)
 
             assert(with(searchState) { activity !== null || event != SKIP_EVENT || previousSearchState == null })
@@ -61,6 +69,7 @@ class AStar(
             val previousEventIndex = getPreviousEventIndex(searchState)
             if (previousEventIndex == events.size - 1 && instance.isFinalState) {
                 // we found the path
+                assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
                 return formatAlignment(searchState, initialSearchState, events)
             }
 
@@ -92,7 +101,9 @@ class AStar(
                             SearchState(
                                 processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
                                 currentCost = searchState.currentCost + penalty.silentMove,
-                                predictedCost = predict(events, nextEventIndex),
+                                // Pass emptySequence() because obtaining the actual sequence requires execution in the model
+                                predictedCost = predict(events, nextEventIndex, emptySequence())
+                                    .coerceAtLeast(searchState.predictedCost - penalty.silentMove),
                                 activity = execution.activity,
                                 event = SKIP_EVENT,
                                 previousSearchState = searchState
@@ -108,7 +119,9 @@ class AStar(
                         SearchState(
                             processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
                             currentCost = searchState.currentCost + penalty.synchronousMove,
-                            predictedCost = predict(events, nextEventIndex + 1),
+                            // Pass emptySequence() because obtaining the actual sequence requires execution in the model
+                            predictedCost = predict(events, nextEventIndex + 1, emptySequence())
+                                .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove),
                             activity = execution.activity,
                             event = nextEventIndex,
                             previousSearchState = searchState
@@ -120,7 +133,9 @@ class AStar(
                     SearchState(
                         processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
                         currentCost = searchState.currentCost + penalty.modelMove,
-                        predictedCost = predict(events, getPreviousEventIndex(searchState) + 1),
+                        // Pass emptySequence() because obtaining the actual sequence requires execution in the model
+                        predictedCost = predict(events, nextEventIndex, emptySequence())
+                            .coerceAtLeast(searchState.predictedCost - penalty.modelMove),
                         activity = execution.activity,
                         event = SKIP_EVENT,
                         previousSearchState = searchState
@@ -129,13 +144,13 @@ class AStar(
             }
 
             // add log-only move
-            // skip if all available activities in model are silent, as move in the log is pointless in this case
-            if (nextEvent !== null && !instance.availableActivities.all { it.isSilent })
+            if (nextEvent !== null)
                 queue.add(
                     SearchState(
                         processStateFactory = lazyOf(prevProcessState),
                         currentCost = searchState.currentCost + penalty.logMove,
-                        predictedCost = predict(events, nextEventIndex + 1),
+                        predictedCost = predict(events, nextEventIndex + 1, instance.availableActivityExecutions)
+                            .coerceAtLeast(searchState.predictedCost - penalty.logMove),
                         activity = null,
                         event = nextEventIndex,
                         previousSearchState = searchState
@@ -175,20 +190,19 @@ class AStar(
         }
         steps.reverse()
 
-        assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
         return Alignment(steps, searchState.currentCost)
     }
 
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
         event !== null && !activity.isSilent && event.conceptName == activity.name
 
-    private fun predict(events: List<Event>, startIndex: Int): Int {
+    private fun predict(events: List<Event>, startIndex: Int, available: Sequence<ActivityExecution>): Int {
         if (startIndex == SKIP_EVENT || startIndex >= events.size)
-            return 0 // we reached the end of trace
+            return if (available.count() > 0) 1 else 0 // we reached the end of trace, should we move in the model?
 
         assert(startIndex in events.indices)
-        var sum = 0
 
+        var sum = 0
         if (endActivities.isNotEmpty()) {
             var hasEndActivity = false
             for (index in startIndex until events.size) {
@@ -241,10 +255,16 @@ class AStar(
     ) : Comparable<SearchState> {
         override fun compareTo(other: SearchState): Int {
             val myTotalCost = currentCost + predictedCost
-            val otherTotalCost = with(other) { currentCost + predictedCost }
+            val otherTotalCost = other.currentCost + other.predictedCost
 
-            return if (myTotalCost == otherTotalCost) predictedCost.compareTo(other.predictedCost) // DFS-based second-order queuing criterion
-            else myTotalCost.compareTo(otherTotalCost)
+            return when {
+                myTotalCost != otherTotalCost -> myTotalCost.compareTo(otherTotalCost)
+                predictedCost != other.predictedCost -> predictedCost.compareTo(other.predictedCost) // DFS-based second-order queuing criterion
+                event >= 0 && other.event >= 0 -> other.event.compareTo(event) // prefer more complete traces
+                event < 0 && other.event >= 0 -> 1 // prefer moves with events
+                event >= 0 && other.event < 0 -> -1
+                else -> (activity === null).compareTo(other.activity === null) // prefer moves with activities
+            }
         }
 
         override fun equals(other: Any?): Boolean {

@@ -271,7 +271,7 @@ class AStarTests {
         )
 
         val expectedCosts = listOf(
-            7,
+            5,
         )
 
         val astar = AStar(tree)
