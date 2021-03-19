@@ -1,5 +1,6 @@
 package processm.conformance.models.alignments
 
+import processm.core.helpers.allSubsets
 import processm.core.log.Helpers.logFromString
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
@@ -171,7 +172,7 @@ class AStarTests {
     }
 
     @Test
-    fun `Parallel decisions in loop`() {
+    fun `Parallel decisions in loop process tree`() {
         val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = logFromString(
             """
@@ -588,6 +589,223 @@ class AStarTests {
 
             assertEquals(0, alignment.cost)
             assertEquals(trace.events.count() * 2 - 1, alignment.steps.size)
+        }
+    }
+
+    @Test
+    fun `Parallel decisions in loop C-net conforming log`() {
+        val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
+        val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
+
+        val st = Node("start", special = true)
+        val en = Node("end", special = true)
+
+        val loopStart = Node("ls")
+        val loopEnd = Node("le")
+
+        val dec1 = Node("d1")
+        val dec2 = Node("d2")
+
+        val model = causalnet {
+            start = st
+            end = en
+
+            st splits loopStart
+            st joins loopStart
+            loopStart splits dec1 + dec2
+
+            loopStart joins dec1
+            for (act1 in activities1) {
+                dec1 splits act1
+                dec1 joins act1
+                act1 splits loopEnd
+                for (act2 in activities2) {
+                    act1 + act2 join loopEnd
+                }
+            }
+
+            loopStart joins dec2
+            for (act2 in activities2) {
+                dec2 splits act2
+                dec2 joins act2
+                act2 splits loopEnd
+            }
+
+            loopEnd splits loopStart
+            loopEnd joins loopStart
+
+            loopEnd splits en
+            loopEnd joins en
+        }
+
+        val log = logFromString(
+            """
+                ls d1 M d2 Z le
+                ls d1 d2 A N le ls d1 C d2 O le ls d1 D d2 P le ls d2 d1 E Q le ls d1 d2 F R le ls d2 d1 G S le ls d1 H d2 T le ls d1 I d2 U le ls d2 d1 J V le ls d1 d2 K W le ls d1 L d2 X le ls d1 M d2 Y le
+            """
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+        }
+    }
+
+    @Test
+    fun `Parallel decisions in loop C-net non-conforming log`() {
+        val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
+        val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
+
+        val st = Node("start", special = true)
+        val en = Node("end", special = true)
+
+        val loopStart = Node("ls")
+        val loopEnd = Node("le")
+
+        val dec1 = Node("d1")
+        val dec2 = Node("d2")
+
+        val model = causalnet {
+            start = st
+            end = en
+
+            st splits loopStart
+            st joins loopStart
+            loopStart splits dec1 + dec2
+
+            loopStart joins dec1
+            for (act1 in activities1) {
+                dec1 splits act1
+                dec1 joins act1
+                act1 splits loopEnd
+                for (act2 in activities2) {
+                    act1 + act2 join loopEnd
+                }
+            }
+
+            loopStart joins dec2
+            for (act2 in activities2) {
+                dec2 splits act2
+                dec2 joins act2
+                act2 splits loopEnd
+            }
+
+            loopEnd splits loopStart
+            loopEnd joins loopStart
+
+            loopEnd splits en
+            loopEnd joins en
+        }
+
+        val log = logFromString(
+            """
+                ls d2 M d1 Z le
+                d2 ls d1 Z M le
+                ls d1 d2 A N ls le ls d1 C d2 O le ls d1 D d2 P le ls d2 d1 E Q le ls d1 d2 F R le ls d2 d1 G S le ls d1 H d2 T le ls d1 I d2 U le ls d2 d1 J V le ls d1 d2 K W le ls d1 L d2 X ls le d1 M d2 Y le
+            """
+        )
+
+        val expectedCost = arrayOf(
+            2,
+            2,
+            3,
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCost[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
+        val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
+        val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
+
+        val st = Node("start", special = true)
+        val en = Node("end", special = true)
+
+        val loopStart = Node("ls")
+        val loopEnd = Node("le")
+
+        val dec1 = Node("d1")
+        val dec2 = Node("d2")
+
+        val model = causalnet {
+            start = st
+            end = en
+
+            st splits loopStart
+            st joins loopStart
+            loopStart splits dec1 + dec2
+
+            loopStart joins dec1
+            for (act1 in activities1) {
+                dec1 joins act1
+                act1 splits loopEnd
+                for (act2 in activities2) {
+                    act1 + act2 join loopEnd
+                }
+            }
+
+            for (act1 in activities1.allSubsets(true).filter { it.size <= 3 }) {
+                dec1 splits act1
+            }
+
+            loopStart joins dec2
+            for (act2 in activities2) {
+                dec2 splits act2
+                dec2 joins act2
+                act2 splits loopEnd
+            }
+
+            for (act2 in activities1.allSubsets(true).filter { it.size <= 3 }) {
+                dec2 splits act2
+            }
+
+            loopEnd splits loopStart
+            loopEnd joins loopStart
+
+            loopEnd splits en
+            loopEnd joins en
+        }
+
+        val log = logFromString(
+            """
+                ls d2 M d1 Z le
+                d2 ls d1 Z M le
+                ls d1 d2 A N ls le ls d1 C d2 O le
+            """
+            //  ls d1 d2 A N ls le ls d1 C d2 O le ls d1 D d2 P le ls d2 d1 E Q le ls d1 d2 F R le ls d2 d1 G S le ls d1 H d2 T le ls d1 I d2 U le ls d2 d1 J V le ls d1 d2 K W le ls d1 L d2 X ls le d1 M d2 Y le
+        )
+
+        val expectedCost = arrayOf(
+            2,
+            2,
+            1,
+        )
+
+        val astar = AStar(model)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCost[i], alignment.cost)
         }
     }
 }

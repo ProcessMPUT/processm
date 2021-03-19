@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
 import processm.core.models.metadata.*
 
 /**
@@ -50,18 +51,26 @@ class MutableCausalNet(
      * Adds a split between dependencies already present in the model
      */
     fun addSplit(split: Split) {
-        require(_outgoing.getValue(split.source).containsAll(split.dependencies)) { "Not all dependencies are in the causal net" }
-        require(_splits[split.source]?.any { it.dependencies == split.dependencies } != true) { "Split already present in the causal net" }
-        _splits.computeIfAbsent(split.source, { HashSet() }).add(split)
+        require(
+            _outgoing.getValue(split.source).containsAll(split.dependencies)
+        ) { "Not all dependencies are in the causal net" }
+        _splits.computeIfAbsent(split.source, { HashSet() }).apply {
+            require(all { it.dependencies != split.dependencies }) { "Split already present in the causal net" }
+            add(split)
+        }
     }
 
     /**
      * Adds a join between dependencies already present in the model
      */
     fun addJoin(join: Join) {
-        require(_incoming.getValue(join.target).containsAll(join.dependencies)) { "Not all dependencies are in the causal net" }
-        require(_joins[join.target]?.any { it.dependencies == join.dependencies } != true) {"Join already present in the causal net"}
-        _joins.computeIfAbsent(join.target, { HashSet() }).add(join)
+        require(
+            _incoming.getValue(join.target).containsAll(join.dependencies)
+        ) { "Not all dependencies are in the causal net" }
+        _joins.computeIfAbsent(join.target, { HashSet() }).apply {
+            require(all { it.dependencies != join.dependencies }) { "Join already present in the causal net" }
+            add(join)
+        }
     }
 
     /**
@@ -148,12 +157,12 @@ class MutableCausalNet(
         for (dep in d2d.values)
             addDependency(dep)
         for (split in origin.splits.values.flatten()) {
-            val s = Split(split.dependencies.map { d2d.getValue(it) }.toSet())
+            val s = Split(split.dependencies.mapToSet { d2d.getValue(it) })
             if (s !in this)
                 addSplit(s)
         }
         for (join in origin.joins.values.flatten()) {
-            val j = Join(join.dependencies.map { d2d.getValue(it) }.toSet())
+            val j = Join(join.dependencies.mapToSet { d2d.getValue(it) })
             if (j !in this)
                 addJoin(j)
         }

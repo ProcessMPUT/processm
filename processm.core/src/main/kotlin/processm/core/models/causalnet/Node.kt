@@ -11,11 +11,14 @@ import processm.core.models.metadata.MetadataSubject
  */
 data class Node(
     val activity: String, val instanceId: String = "", val special: Boolean = false,
-    override val isSilent: Boolean = false
+    override val isSilent: Boolean = special
 ) : MetadataSubject,
     Activity {
     override val name: String
         get() = activity
+
+    override val isArtificial: Boolean
+        get() = special
 
     override fun toString(): String {
         return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (special) "*" else "")

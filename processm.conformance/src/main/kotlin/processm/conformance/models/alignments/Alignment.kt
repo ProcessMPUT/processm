@@ -18,17 +18,20 @@ data class Alignment(
             append(step.logMove?.conceptName?.toSuperscript() ?: "⁼")
             append(if (step.modelMove?.isSilent == true) "τ" else step.modelMove?.name?.toSubscript() ?: "₌")
         }
-//        append('|')
-//        for (step in steps) {
-//            append((step.logMove?.conceptName ?: "").padEnd(step.modelMove?.name?.length ?: 0))
-//            append('|')
-//        }
-//        append('\n')
-//        append("-".repeat(this.length - 1))
-//        append("\n|")
-//        for (step in steps) {
-//            append((step.modelMove?.name ?: "").padEnd(step.logMove!!.conceptName?.length ?: 0))
-//            append('|')
-//        }
+    }
+
+    fun toStringMultiline(): String = buildString {
+        append('|')
+        for (step in steps) {
+            append((step.logMove?.conceptName ?: "").padEnd(step.modelMove?.name?.length ?: 0))
+            append('|')
+        }
+        append('\n')
+        append("-".repeat(this.length - 1))
+        append("\n|")
+        for (step in steps) {
+            append((step.modelMove?.name ?: "").padEnd(step.logMove!!.conceptName?.length ?: 0))
+            append('|')
+        }
     }
 }

@@ -12,6 +12,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 
+
 /**
  * An A*-based calculator of alignments. The implementation is based on the priority queue, the naive heuristics, and
  * DFS-based second-order queuing criterion as described in Sebastiaan J. van Zelst, Alfredo Bolt, and
@@ -71,7 +72,7 @@ class AStar(
             if (previousEventIndex == events.size - 1 && instance.isFinalState) {
                 // we found the path
                 assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
-                return formatAlignment(searchState, initialSearchState, events)
+                return formatAlignment(searchState, events)
             }
 
             val prevProcessState = searchState.processStateFactory.value
@@ -145,18 +146,24 @@ class AStar(
             }
 
             // add log-only move
-            if (nextEvent !== null)
+            if (nextEvent !== null) {
+                val predictedCost = predict(events, nextEventIndex + 1, when {
+                    instance.isFinalState -> Ternary.True
+                    instance.availableActivityExecutions.all { it.activity.isSilent } -> Ternary.Unknown
+                    else -> Ternary.False
+                }).coerceAtLeast(searchState.predictedCost - penalty.logMove)
+                assert(predictedCost == 0 || !instance.isFinalState)
                 queue.add(
                     SearchState(
                         processStateFactory = lazyOf(prevProcessState),
                         currentCost = searchState.currentCost + penalty.logMove,
-                        predictedCost = predict(events, nextEventIndex + 1, instance.isFinalState.toTernary())
-                            .coerceAtLeast(searchState.predictedCost - penalty.logMove),
+                        predictedCost = predictedCost,
                         activity = null,
                         event = nextEventIndex,
                         previousSearchState = searchState
                     )
                 )
+            }
         }
 
         assert(false) { "Cannot find the alignment. This should not happen ever since A* is guaranteed to find a path in the state graph." }
@@ -165,12 +172,11 @@ class AStar(
 
     private fun formatAlignment(
         searchState: SearchState,
-        initialSearchState: SearchState,
         events: List<Event>
     ): Alignment {
         val steps = ArrayList<Step>()
         var state: SearchState = searchState
-        while (state !== initialSearchState) {
+        while (state.event != -1) {
             with(state) {
                 steps.add(
                     Step(
@@ -261,7 +267,7 @@ class AStar(
             return when {
                 myTotalCost != otherTotalCost -> myTotalCost.compareTo(otherTotalCost)
                 predictedCost != other.predictedCost -> predictedCost.compareTo(other.predictedCost) // DFS-based second-order queuing criterion
-                event >= 0 && other.event >= 0 -> other.event.compareTo(event) // prefer more complete traces
+                event >= 0 && other.event >= 0 && event != other.event -> other.event.compareTo(event) // prefer more complete traces
                 event < 0 && other.event >= 0 -> 1 // prefer moves with events
                 event >= 0 && other.event < 0 -> -1
                 else -> (activity === null).compareTo(other.activity === null) // prefer moves with activities

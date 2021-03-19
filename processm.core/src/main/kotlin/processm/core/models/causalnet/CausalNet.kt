@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -26,6 +27,11 @@ abstract class CausalNet(
 ) :
     ProcessModel,
     MetadataHandler by metadataHandler {
+
+    companion object {
+        private val setOfNull = setOf(null)
+    }
+
     protected val _instances = HashSet(listOf(start, end))
 
     /**
@@ -105,19 +111,18 @@ abstract class CausalNet(
      */
     internal fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
         if (state.isNotEmpty()) {
-            for (node in state.map { it.target }.toSet())
+            for (node in state.mapToSet { it.target })
                 for (join in joins[node].orEmpty())
                     if (state.containsAll(join.dependencies)) {
-                        val splits = if (node != end) splits[node].orEmpty() else setOf(null)
-                        yieldAll(splits.map { split ->
-                            DecoupledNodeExecution(node, join, split)
-                        })
+                        val splits = if (node != end) splits[node].orEmpty() else setOfNull
+                        for (split in splits)
+                            yield(DecoupledNodeExecution(node, join, split))
                     }
 
-        } else
-            yieldAll(
-                splits.getValue(start)
-                    .map { split -> DecoupledNodeExecution(start, null, split) })
+        } else {
+            for (split in splits.getValue(start))
+                yield(DecoupledNodeExecution(start, null, split))
+        }
     }
 
     /**

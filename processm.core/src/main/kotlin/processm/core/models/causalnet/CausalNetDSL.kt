@@ -141,8 +141,7 @@ class CausalNetDSL {
 
     fun result(): MutableCausalNet {
         val model = MutableCausalNet(start, end)
-        (joins.map { j -> j.dependencies } + splits.map { s -> s.dependencies })
-            .flatten()
+        (joins.flatMap { j -> j.dependencies } + splits.flatMap { s -> s.dependencies })
             .forEach { dep ->
                 model.addInstance(dep.source)
                 model.addInstance(dep.target)
