@@ -2,6 +2,7 @@ package processm.core.models.processtree
 
 import processm.core.models.commons.ProcessModelInstance
 import processm.core.models.commons.ProcessModelState
+import processm.core.models.processtree.execution.ActivityExecution
 import processm.core.models.processtree.execution.ExecutionNode
 
 class ProcessTreeInstance(override val model: ProcessTree) : ProcessModelInstance {
@@ -15,7 +16,7 @@ class ProcessTreeInstance(override val model: ProcessTree) : ProcessModelInstanc
     }
 
     override val availableActivities
-        get() = currentState.available.map { it.base }
+        get() = currentState.available.map(ActivityExecution::base)
 
     override val availableActivityExecutions
         get() = currentState.available

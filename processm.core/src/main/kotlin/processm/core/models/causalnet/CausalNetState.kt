@@ -16,10 +16,10 @@ class CausalNetState : HashMultiSet<Dependency>, ProcessModelState {
 
     internal fun execute(join: Join?, split: Split?) {
         isFresh = false
-        if (join != null) {
+        if (join !== null) {
             check(this.containsAll(join.dependencies)) { "It is impossible to execute this join in the current state" }
             for (d in join.dependencies)
-                this.remove(d)
+                this.remove(d, 1)
         }
         if (split != null)
             this.addAll(split.dependencies)

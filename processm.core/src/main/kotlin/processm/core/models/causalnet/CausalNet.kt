@@ -1,6 +1,5 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -106,23 +105,46 @@ abstract class CausalNet(
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
                 joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
 
+    private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
+        if (state.isNotEmpty()) {
+            val visitedNodes = HashSet<Node>()
+            for (dep in state) {
+                val node = dep.target
+                if (visitedNodes.add(node)) {
+                    for (join in joins[node].orEmpty())
+                        if (state.containsAll(join.dependencies)) {
+                            val splits = if (node != end) splits[node].orEmpty() else setOfNull
+                            for (split in splits)
+                                callback(node, join, split)
+                        }
+                }
+            }
+        } else {
+            for (split in splits.getValue(start))
+                callback(start, null, split)
+        }
+    }
+
     /**
      * In the given [state], list of nodes that can be executed, along with corresponding split and join
      */
     internal fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
-        if (state.isNotEmpty()) {
-            for (node in state.mapToSet { it.target })
-                for (join in joins[node].orEmpty())
-                    if (state.containsAll(join.dependencies)) {
-                        val splits = if (node != end) splits[node].orEmpty() else setOfNull
-                        for (split in splits)
-                            yield(DecoupledNodeExecution(node, join, split))
-                    }
-
-        } else {
-            for (split in splits.getValue(start))
-                yield(DecoupledNodeExecution(start, null, split))
+        available(state) { node, join, split ->
+            yield(DecoupledNodeExecution(node, join, split))
         }
+    }
+
+    /**
+     * A short-hand function for getting the indexth available execution. It is faster by an order of magnitude
+     * than [available] when accessing only one execution. Do not use for accessing many executions.
+     */
+    internal fun available(state: CausalNetState, index: Int): DecoupledNodeExecution {
+        var i = 0
+        available(state) { node, join, split ->
+            if (i++ == index)
+                return DecoupledNodeExecution(node, join, split)
+        }
+        throw IndexOutOfBoundsException(index)
     }
 
     /**

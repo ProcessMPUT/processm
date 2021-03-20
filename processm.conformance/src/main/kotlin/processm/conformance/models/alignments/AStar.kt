@@ -59,8 +59,6 @@ class AStar(
         while (queue.isNotEmpty()) {
             val searchState = queue.poll()!!
 
-            //println("${formatAlignment(searchState, initialSearchState, events)}\t${searchState.currentCost + searchState.predictedCost}=${searchState.currentCost} + ${searchState.predictedCost}")
-
             assert(lastCost <= searchState.currentCost + searchState.predictedCost)
             lastCost = searchState.currentCost + searchState.predictedCost
 
@@ -85,10 +83,10 @@ class AStar(
 
             // add possible moves to the queue
             for ((execIndex, execution) in instance.availableActivityExecutions.withIndex()) {
-                val factory = {
+                fun factory(): ProcessModelState {
                     instance.setState(prevProcessState.copy())
-                    instance.availableActivityExecutions.elementAt(execIndex).execute()
-                    instance.currentState
+                    instance.availableActivityExecutionAt(execIndex).execute()
+                    return instance.currentState
                 }
 
                 // silent activities are special
@@ -96,12 +94,12 @@ class AStar(
                     if (execution.activity.isArtificial) {
                         // just move the state of the model without moving in the log
                         queue.add(
-                            searchState.copy(processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory))
+                            searchState.copy(processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory))
                         )
                     } else {
                         queue.add(
                             SearchState(
-                                processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
+                                processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
                                 currentCost = searchState.currentCost + penalty.silentMove,
                                 // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                                 predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
@@ -119,7 +117,7 @@ class AStar(
                 if (isSynchronousMove(nextEvent, execution.activity))
                     queue.add(
                         SearchState(
-                            processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
+                            processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
                             currentCost = searchState.currentCost + penalty.synchronousMove,
                             // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                             predictedCost = predict(events, nextEventIndex + 1, Ternary.Unknown)
@@ -133,7 +131,7 @@ class AStar(
                 // add model-only move
                 queue.add(
                     SearchState(
-                        processStateFactory = lazy(LazyThreadSafetyMode.NONE, factory),
+                        processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
                         currentCost = searchState.currentCost + penalty.modelMove,
                         // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                         predictedCost = predict(events, nextEventIndex, Ternary.Unknown)

@@ -26,6 +26,13 @@ interface ProcessModelInstance {
     val availableActivityExecutions: Sequence<ActivityExecution>
 
     /**
+     * A short-hand getter for the [index]th [ActivityExecution]. See [availableActivities].
+     * It is logically equivalent to `availableActivityExecutions.elementAt()` but may run faster
+     * depending on implementation.
+     */
+    fun availableActivityExecutionAt(index: Int): ActivityExecution = availableActivityExecutions.elementAt(index)
+
+    /**
      * True if the process model instance is in the final state and no activity can fire.
      */
     val isFinalState: Boolean

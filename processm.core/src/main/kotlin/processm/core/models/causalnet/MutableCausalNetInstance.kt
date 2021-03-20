@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.models.commons.ActivityExecution
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.metadata.MutableMetadataHandler
 
@@ -44,17 +45,17 @@ class MutableCausalNetInstance(
      * @param split may be null only for the end node
      */
     internal fun execute(join: Join?, split: Split?) {
-        require(join != null || split != null) { "At least one of the arguments must be non-null" }
-        if (join != null) {
+        require(join !== null || split !== null) { "At least one of the arguments must be non-null" }
+        if (join !== null) {
             require(model.joins[join.target]?.contains(join) == true) { "Cannot execute a join not present in the model" }
-            if (split != null)
+            if (split !== null)
                 require(join.target == split.source) { "Join and split must concern the same node" }
             else
                 require(model.outgoing[join.target].isNullOrEmpty()) { "Can skip split only for the end node" }
         }
-        if (split != null) {
+        if (split !== null) {
             require(model.splits[split.source]?.contains(split) == true) { "Cannot execute a split not present in the model" }
-            if (join == null)
+            if (join === null)
                 require(model.incoming[split.source].isNullOrEmpty()) { "Can skip start only for the start node" }
         }
         state.execute(join, split)
@@ -62,4 +63,7 @@ class MutableCausalNetInstance(
 
     override val availableActivityExecutions
         get() = model.available(state).map { NodeExecution(it.activity, this, it.join, it.split) }
+
+    override fun availableActivityExecutionAt(index: Int): ActivityExecution =
+        with(model.available(state, index)) { NodeExecution(activity, this@MutableCausalNetInstance, join, split) }
 }
