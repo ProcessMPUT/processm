@@ -107,8 +107,8 @@ abstract class CausalNet(
 
     private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
         if (state.isNotEmpty()) {
-            val visitedNodes = HashSet<Node>()
-            for (dep in state) {
+            val visitedNodes = HashSet<Node>(this._instances.size)
+            for (dep in state.uniqueSet()) {
                 val node = dep.target
                 if (visitedNodes.add(node)) {
                     for (join in joins[node].orEmpty())

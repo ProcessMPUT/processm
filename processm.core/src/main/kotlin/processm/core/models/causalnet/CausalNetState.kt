@@ -5,6 +5,8 @@ import processm.core.models.commons.ProcessModelState
 
 /**
  * State is a multi-set of pending obligations (the PM book, Definition 3.10)
+ *
+ * Sources in rows, targets in columns, and numbers of occurrences in values.
  */
 class CausalNetState : HashMultiSet<Dependency>, ProcessModelState {
     constructor() : super()
@@ -21,7 +23,7 @@ class CausalNetState : HashMultiSet<Dependency>, ProcessModelState {
             for (d in join.dependencies)
                 this.remove(d, 1)
         }
-        if (split != null)
+        if (split !== null)
             this.addAll(split.dependencies)
     }
 
@@ -29,6 +31,12 @@ class CausalNetState : HashMultiSet<Dependency>, ProcessModelState {
         super.clear()
         isFresh = true
     }
+
+    override fun hashCode(): Int =
+        isFresh.hashCode() xor super.hashCode()
+
+    override fun equals(other: Any?): Boolean =
+        other is CausalNetState && isFresh == other.isFresh && super.equals(other)
 
     override fun copy(): ProcessModelState = CausalNetState(this).also { it.isFresh = this.isFresh }
 }

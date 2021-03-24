@@ -8,6 +8,7 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
+import java.lang.Integer.min
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
@@ -28,6 +29,8 @@ class AStar(
 ) {
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE
+        private const val VISITED_CACHE_LIMIT = 10000
+        private const val VISITED_CACHE_FREE = 50
     }
 
     private val activities: Set<String> by lazy(LazyThreadSafetyMode.PUBLICATION) {
@@ -42,6 +45,7 @@ class AStar(
         val events = trace.events.toList()
 
         val queue = PriorityQueue<SearchState>()
+        val visited = ArrayList<HashSet<ProcessModelState>>()
 
         val instance = model.createInstance()
         val initialProcessState = instance.currentState
@@ -74,6 +78,26 @@ class AStar(
             }
 
             val prevProcessState = searchState.processStateFactory.value
+
+            if (previousEventIndex >= 0) {
+                while (visited.size <= previousEventIndex)
+                    visited.add(HashSet(VISITED_CACHE_LIMIT))
+                val v = visited[previousEventIndex]
+                if (!v.add(prevProcessState)) {
+                    continue
+                }
+
+                if (v.size >= VISITED_CACHE_LIMIT) {
+                    // dropping more than 1 states turns out crucial to run fast
+                    val it = v.iterator()
+                    for (i in 0 until min(VISITED_CACHE_FREE, v.size)) {
+                        it.next()
+                        it.remove()
+                    }
+                }
+                assert(v.size < VISITED_CACHE_LIMIT)
+            }
+
             val nextEventIndex = when {
                 previousEventIndex < 0 -> 0
                 previousEventIndex < events.size - 1 -> previousEventIndex + 1
