@@ -92,4 +92,19 @@ class GuavaWrappingMap2D<Row, Column, Value>(val backend: Table<Row, Column, Val
         get() = backend.rowKeySet()
     override val columns: Set<Column>
         get() = backend.columnKeySet()
+
+    override fun containsKeys(row: Row, column: Column): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun clear() {
+        TODO("Not yet implemented")
+    }
+
+    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?) {
+        TODO("Not yet implemented")
+    }
+
+    override val size: Int
+        get() = TODO("Not yet implemented")
 }
