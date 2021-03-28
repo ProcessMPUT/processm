@@ -143,7 +143,7 @@ private val charToSubscript = mapOf(
     'M' to "ᴍ",
     'N' to "ɴ",
     'O' to "ᴏ",
-    'P' to "ᴏ",
+    'P' to "ᴘ",
     'Q' to "ꞯ",
     'R' to "ʀ",
     'S' to "ꜱ",

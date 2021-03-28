@@ -13,7 +13,7 @@ data class Step(
     /**
      * The state of the model after conducting this step.
      */
-    val modelState: ProcessModelState,
+    val modelState: ProcessModelState?,
     /**
      * The event in the log corresponding to this step. Null for no move.
      */
@@ -21,7 +21,7 @@ data class Step(
     /**
      * The history of events after executing this step.
      */
-    val logState: Sequence<Event>,
+    val logState: Sequence<Event>?,
     /**
      * The type of this step.
      */

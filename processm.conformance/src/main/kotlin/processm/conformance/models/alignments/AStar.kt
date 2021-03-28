@@ -26,7 +26,7 @@ import kotlin.collections.HashSet
 class AStar(
     val model: ProcessModel,
     val penalty: PenaltyFunction = PenaltyFunction()
-) {
+) : Aligner {
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE
         private const val VISITED_CACHE_LIMIT = 10000
@@ -41,7 +41,7 @@ class AStar(
         model.endActivities.mapNotNullTo(HashSet()) { if (it.isSilent) null else it.name }
     }
 
-    fun align(trace: Trace): Alignment {
+    override fun align(trace: Trace): Alignment {
         val events = trace.events.toList()
 
         val queue = PriorityQueue<SearchState>()
@@ -52,7 +52,11 @@ class AStar(
         val initialSearchState = SearchState(
             processStateFactory = lazyOf(initialProcessState),
             currentCost = 0,
-            predictedCost = predict(events, 0, instance.availableActivityExecutions.none().toTernary()),
+            predictedCost = predict(
+                events,
+                0,
+                instance.availableActivityExecutions.none { !it.activity.isSilent }.toTernary()
+            ),
             activity = null, // before first activity
             event = -1, // before first event
             previousSearchState = null
@@ -81,7 +85,7 @@ class AStar(
 
             if (previousEventIndex >= 0) {
                 while (visited.size <= previousEventIndex)
-                    visited.add(HashSet(VISITED_CACHE_LIMIT))
+                    visited.add(HashSet(VISITED_CACHE_LIMIT * 3 / 2))
                 val v = visited[previousEventIndex]
                 if (!v.add(prevProcessState)) {
                     continue
@@ -99,72 +103,73 @@ class AStar(
             }
 
             val nextEventIndex = when {
-                previousEventIndex < 0 -> 0
                 previousEventIndex < events.size - 1 -> previousEventIndex + 1
                 else -> SKIP_EVENT
             }
             val nextEvent = if (nextEventIndex != SKIP_EVENT) events[nextEventIndex] else null
 
-            // add possible moves to the queue
-            for ((execIndex, execution) in instance.availableActivityExecutions.withIndex()) {
-                fun factory(): ProcessModelState {
-                    instance.setState(prevProcessState.copy())
-                    instance.availableActivityExecutionAt(execIndex).execute()
-                    return instance.currentState
-                }
+            if (nextEvent === null || nextEvent.conceptName in activities) {
+                // add possible moves to the queue
+                for ((execIndex, execution) in instance.availableActivityExecutions.withIndex()) {
+                    fun factory(): ProcessModelState {
+                        instance.setState(prevProcessState.copy())
+                        instance.availableActivityExecutionAt(execIndex).execute()
+                        return instance.currentState
+                    }
 
-                // silent activities are special
-                if (execution.activity.isSilent) {
-                    if (execution.activity.isArtificial) {
-                        // just move the state of the model without moving in the log
-                        queue.add(
-                            searchState.copy(processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory))
-                        )
-                    } else {
+                    // silent activities are special
+                    if (execution.activity.isSilent) {
+                        if (execution.activity.isArtificial) {
+                            // just move the state of the model without moving in the log
+                            queue.add(
+                                searchState.copy(processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory))
+                            )
+                        } else {
+                            queue.add(
+                                SearchState(
+                                    processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
+                                    currentCost = searchState.currentCost + penalty.silentMove,
+                                    // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
+                                    predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
+                                        .coerceAtLeast(searchState.predictedCost - penalty.silentMove),
+                                    activity = execution.activity,
+                                    event = SKIP_EVENT,
+                                    previousSearchState = searchState
+                                )
+                            )
+                        }
+                        continue
+                    }
+
+                    // add synchronous move if applies
+                    if (isSynchronousMove(nextEvent, execution.activity))
                         queue.add(
                             SearchState(
                                 processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
-                                currentCost = searchState.currentCost + penalty.silentMove,
+                                currentCost = searchState.currentCost + penalty.synchronousMove,
                                 // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                                predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
-                                    .coerceAtLeast(searchState.predictedCost - penalty.silentMove),
+                                predictedCost = predict(events, nextEventIndex + 1, Ternary.Unknown)
+                                    .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove),
                                 activity = execution.activity,
-                                event = SKIP_EVENT,
+                                event = nextEventIndex,
                                 previousSearchState = searchState
                             )
                         )
-                    }
-                    continue
-                }
 
-                // add synchronous move if applies
-                if (isSynchronousMove(nextEvent, execution.activity))
+                    // add model-only move
                     queue.add(
                         SearchState(
                             processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
-                            currentCost = searchState.currentCost + penalty.synchronousMove,
+                            currentCost = searchState.currentCost + penalty.modelMove,
                             // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                            predictedCost = predict(events, nextEventIndex + 1, Ternary.Unknown)
-                                .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove),
+                            predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
+                                .coerceAtLeast(searchState.predictedCost - penalty.modelMove),
                             activity = execution.activity,
-                            event = nextEventIndex,
+                            event = SKIP_EVENT,
                             previousSearchState = searchState
                         )
                     )
-
-                // add model-only move
-                queue.add(
-                    SearchState(
-                        processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
-                        currentCost = searchState.currentCost + penalty.modelMove,
-                        // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                        predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
-                            .coerceAtLeast(searchState.predictedCost - penalty.modelMove),
-                        activity = execution.activity,
-                        event = SKIP_EVENT,
-                        previousSearchState = searchState
-                    )
-                )
+                }
             }
 
             // add log-only move
