@@ -1,5 +1,6 @@
 package processm.conformance.models.alignments.processtree
 
+import com.carrotsearch.hppc.*
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
 import processm.core.helpers.mapToArray
@@ -53,7 +54,7 @@ class DecompositionAligner(
 
 
             val visited = HashSet<Int>()
-            for ((i, event) in events.withIndex()) {
+            for (i in events.indices) {
                 val subTraceIndex = decomposition.eventMap[i]
                 assert(subTraceIndex >= 0)
 
@@ -177,11 +178,12 @@ class DecompositionAligner(
         if (badAlternative != -1)
             used[badAlternative] = decomposition.nodes[badAlternative]
 
-        assert(used.size > 0)
+        val size = used.size
+        assert(size > 0)
 
         return when {
-            used.size == 1 -> simplify(used.values.first(), events)
-            used.size < node.children.size -> Exclusive(*used.values.mapToArray { simplify(it, events) })
+            size == 1 -> simplify(used.values.first(), events)
+            size < node.children.size -> Exclusive(*used.values.mapToArray { simplify(it, events) })
             else -> simplifyOther(node, events)
         }
     }
