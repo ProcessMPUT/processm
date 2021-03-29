@@ -195,17 +195,17 @@ class DecompositionAlignerTests {
     @Test
     fun `Parallel decisions in loop non-conforming log`() {
         val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
-//        A A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-//        Z Z Y X W V U T S R Q P O N M L K J I H G F E D C B A
-//        A A Z Z Z
-//        Z Z A A A
-//        A Y Z B
-//                Z B A Y
-//                A A A
-//        Z Z Z
 
         val log = Helpers.logFromString(
             """
+                A A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                Z Z Y X W V U T S R Q P O N M L K J I H G F E D C B A
+                A A Z Z Z
+                Z Z A A A
+                A Y Z B
+                Z B A Y
+                A A A
+                Z Z Z
                 Z Z A A A A Z Z
             """
         )

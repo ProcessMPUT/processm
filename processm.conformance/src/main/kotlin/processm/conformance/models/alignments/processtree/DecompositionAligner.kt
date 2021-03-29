@@ -2,6 +2,7 @@ package processm.conformance.models.alignments.processtree
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
+import processm.core.helpers.mapToArray
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.*
@@ -11,6 +12,10 @@ class DecompositionAligner(
     val penalty: PenaltyFunction = PenaltyFunction(),
     val alignerFactory: (tree: ProcessTree, penalty: PenaltyFunction) -> Aligner = ::AStar
 ) : Aligner {
+
+    companion object {
+        private const val INFINITE_UPPER_BOUND = 1000000
+    }
 
     override fun align(trace: Trace): Alignment {
         val events = trace.events.toList()
@@ -142,8 +147,85 @@ class DecompositionAligner(
         return align(node, events)
     }
 
+    private fun simplify(node: Node, events: List<Event>): Node =
+        when (node) {
+            is Exclusive -> simplifyExclusive(node, events)
+            else -> simplifyOther(node, events)
+        }
+
+    private fun simplifyExclusive(node: Exclusive, events: List<Event>): Node {
+        val used = HashMap<Int, Node>(node.children.size)
+        val decomposition = LogDecomposition(node, events)
+
+        // try to reduce the number of options
+        var badAlternative: Int = -1
+        var badAlternativeUB: Int = Int.MAX_VALUE
+        for (i in decomposition.nodes.indices) {
+            if (decomposition.traces[i].isNotEmpty() || hasSilentActivity(decomposition.nodes[i])) {
+                used[i] = decomposition.nodes[i]
+            } else {
+                val ub = upperBound(decomposition.nodes[i])
+                if (ub < badAlternativeUB) {
+                    badAlternative = i
+                    badAlternativeUB = ub
+                }
+            }
+        }
+
+        // add non-matching option for the case it when skipping this alternative is less costly than replaying the trace
+        // on one of the "good" alternatives
+        if (badAlternative != -1)
+            used[badAlternative] = decomposition.nodes[badAlternative]
+
+        assert(used.size > 0)
+
+        return when {
+            used.size == 1 -> simplify(used.values.first(), events)
+            used.size < node.children.size -> Exclusive(*used.values.mapToArray { simplify(it, events) })
+            else -> simplifyOther(node, events)
+        }
+    }
+
+    private fun simplifyOther(node: Node, events: List<Event>): Node {
+        val copy = when (node) {
+            is Sequence -> Sequence()
+            is Exclusive -> Exclusive()
+            is Parallel -> Parallel()
+            is RedoLoop -> RedoLoop()
+            is ProcessTreeActivity -> node
+            else -> throw IllegalArgumentException("Unknown node type: ${node::class.simpleName}.")
+        }
+
+        for (child in node.children) {
+            copy.addChild(simplify(child, events))
+        }
+
+        return copy
+    }
+
+    private fun upperBound(node: Node): Int =
+        when (node) {
+            is ProcessTreeActivity -> if (node.isSilent) penalty.silentMove else penalty.modelMove
+            is Sequence, is Parallel -> node.children.sumOf(::upperBound)
+            is Exclusive -> node.children.minOf(::upperBound)
+            is RedoLoop -> {
+                val firstUB = upperBound(node.children[0])
+                if (firstUB == 0) {
+                    firstUB
+                } else {
+                    val otherUB = node.children.subList(1, node.children.size).minOf(::upperBound)
+                    if (otherUB == 0)
+                        firstUB
+                    else
+                        INFINITE_UPPER_BOUND
+                }
+            }
+            else -> throw IllegalArgumentException("Unknown node ${node::class.simpleName}.")
+        }
+
     private fun align(node: Node, events: List<Event>): Alignment {
-        val aligner = alignerFactory(ProcessTree(node), penalty)
+        val simplified = simplify(node, events)
+        val aligner = alignerFactory(ProcessTree(simplified), penalty)
         return aligner.align(Trace(events.asSequence()))
     }
 
@@ -275,7 +357,7 @@ class DecompositionAligner(
             }
 
             assert(subTraces.size == node.children.size)
-            assert(subTraces.sumOf(List<*>::size) == trace.size)
+            assert(subTraces.sumOf(List<*>::size) == trace.size - eventMap.count { it == -1 })
             assert(eventMap.size == trace.size)
 
             this.nodes = node.children
