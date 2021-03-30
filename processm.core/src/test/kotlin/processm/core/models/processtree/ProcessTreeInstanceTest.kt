@@ -4,7 +4,7 @@ import processm.core.models.processtree.execution.ActivityExecution
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class CausalNetInstanceTest {
+class ProcessTreeInstanceTest {
 
     fun ProcessTreeInstance.expecting(vararg what: ProcessTreeActivity): List<ActivityExecution> {
         val result = this.availableActivityExecutions.toList()
