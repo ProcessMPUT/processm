@@ -360,6 +360,24 @@ inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
     else
         this
 
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the collection.
+ *
+ * @throws NoSuchElementException if the collection is empty.
+ */
+inline fun <T, R : Comparable<R>> Iterator<T>.minOf(selector: (T) -> R): R {
+    if (!hasNext()) throw NoSuchElementException()
+    var minValue = selector(next())
+    while (hasNext()) {
+        val v = selector(next())
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
 
 /**
  * Casts [IntProgression] to an equivalent [LongRange].

@@ -4,6 +4,7 @@ import com.carrotsearch.hppc.*
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
 import processm.core.helpers.mapToArray
+import processm.core.helpers.minOf
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.*
@@ -215,7 +216,7 @@ class DecompositionAligner(
                 if (firstUB == 0) {
                     firstUB
                 } else {
-                    val otherUB = node.children.subList(1, node.children.size).minOf(::upperBound)
+                    val otherUB = node.children.listIterator(1).minOf(::upperBound)
                     if (otherUB == 0)
                         firstUB
                     else
