@@ -411,6 +411,42 @@ inline fun <T, R : Comparable<R>> Iterator<T>.minOf(selector: (T) -> R): R {
     return minValue
 }
 
+/**
+ * Replaces this [List] with either immutable singleton empty list or immutable single-item [List] if this [List] is empty
+ * or contains just one element, respectively. Otherwise, returns this [List].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <T> List<T>.optimize(): List<T> = when (this.size) {
+    0 -> emptyList()
+    1 -> Collections.singletonList(this[0])
+    else -> this
+}
+
+/**
+ * Replaces this [Set] with either immutable singleton empty set or immutable single-item [Set] if this [Set] is empty
+ * or contains just one element, respectively. Otherwise, returns this [Set].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <T> Set<T>.optimize(): Set<T> = when (this.size) {
+    0 -> emptySet()
+    1 -> Collections.singleton(this.first())
+    else -> this
+}
+
+/**
+ * Replaces this [Map] with either immutable singleton empty map or immutable single-item [Map] if this [Map] is empty
+ * or contains just one element, respectively. Otherwise, returns this [Map].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <K, V> Map<K, V>.optimize(): Map<K, V> = when (this.size) {
+    0 -> emptyMap()
+    1 -> Collections.singletonMap(this.keys.first(), this.values.first())
+    else -> this
+}
+
 
 /**
  * Casts [IntProgression] to an equivalent [LongRange].
