@@ -70,10 +70,12 @@ interface Map2D<Row, Column, Value> {
 
     /**
      * Computes new value for the given [row] and [column] based on the [callback] function. The callback function
-     * accept the [row], [column], and [old] value. [old] attains the value of null if the previous value does not exist.
+     * accepts the [row], [column], and [old] value. [old] attains the value of null if the previous value does not exist.
      * The value returned by the callback function replaces the [old] value unless null. For null, the value is removed.
+     *
+     * @return the new value associated with the specified key, or null if none
      */
-    fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?)
+    fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?): Value?
 
     /**
      * The set of all non-empty rows.

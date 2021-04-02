@@ -104,7 +104,7 @@ private val charToSubscript = mapOf(
     '9' to "\u2089",
     'a' to "\u2090",
     'b' to "\uA67A",
-    'c' to "\u2DED",
+//    'c' to "\u2DED",
     'd' to "\uD81B\uDF74",
     'e' to "\u2091",
 //    'f' to "?",

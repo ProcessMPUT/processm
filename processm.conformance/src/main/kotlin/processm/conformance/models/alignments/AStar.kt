@@ -1,6 +1,7 @@
 package processm.conformance.models.alignments
 
 import processm.conformance.models.DeviationType
+import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.ternarylogic.Ternary
 import processm.core.helpers.ternarylogic.Ternary.Companion.toTernary
 import processm.core.log.Event
@@ -45,7 +46,7 @@ class AStar(
         val events = trace.events.toList()
 
         val queue = PriorityQueue<SearchState>()
-        val visited = ArrayList<HashSet<ProcessModelState>>()
+        val visited = DoublingMap2D<Int, Int, HashSet<ProcessModelState>>()
 
         val instance = model.createInstance()
         val initialProcessState = instance.currentState
@@ -70,7 +71,8 @@ class AStar(
             assert(lastCost <= searchState.currentCost + searchState.predictedCost)
             lastCost = searchState.currentCost + searchState.predictedCost
 
-            instance.setState(searchState.processStateFactory.value)
+            val prevProcessState = searchState.processStateFactory.value
+            instance.setState(prevProcessState)
 
             assert(with(searchState) { activity !== null || event != SKIP_EVENT || previousSearchState == null })
 
@@ -81,18 +83,16 @@ class AStar(
                 return formatAlignment(searchState, events)
             }
 
-            val prevProcessState = searchState.processStateFactory.value
-
             if (previousEventIndex >= 0) {
-                while (visited.size <= previousEventIndex)
-                    visited.add(HashSet(VISITED_CACHE_LIMIT * 3 / 2))
-                val v = visited[previousEventIndex]
+                val v = visited.compute(previousEventIndex, searchState.currentCost) { _, _, v ->
+                    v ?: HashSet(VISITED_CACHE_LIMIT + 1)
+                }!!
                 if (!v.add(prevProcessState)) {
                     continue
                 }
 
                 if (v.size >= VISITED_CACHE_LIMIT) {
-                    // dropping more than 1 states turns out crucial to run fast
+                    // dropping more states than 1 turns out crucial to run fast
                     val it = v.iterator()
                     for (i in 0 until min(VISITED_CACHE_FREE, v.size)) {
                         it.next()
@@ -110,6 +110,7 @@ class AStar(
 
             if (nextEvent === null || nextEvent.conceptName in activities) {
                 // add possible moves to the queue
+                assert(instance.currentState === prevProcessState)
                 for ((execIndex, execution) in instance.availableActivityExecutions.withIndex()) {
                     fun factory(): ProcessModelState {
                         instance.setState(prevProcessState.copy())
@@ -193,8 +194,7 @@ class AStar(
             }
         }
 
-        assert(false) { "Cannot find the alignment. This should not happen ever since A* is guaranteed to find a path in the state graph." }
-        throw IllegalStateException("Cannot align the log with the model.")
+        throw IllegalStateException("Cannot align the log with the model. The final state of the model is not reachable.")
     }
 
     private fun formatAlignment(

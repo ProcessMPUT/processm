@@ -106,9 +106,10 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
         crv.clear()
     }
 
-    override fun compute(row: Row, column: Column, func: (row: Row, col: Column, old: Value?) -> Value?) {
+    override fun compute(row: Row, column: Column, func: (row: Row, col: Column, old: Value?) -> Value?): Value? {
         val newVal = rcv.computeIfAbsent(row) { HashMap() }.compute(column) { col, old -> func(row, col, old) }
         crv.computeIfAbsent(column) { HashMap() }.compute(row) { _, _ -> newVal }
+        return newVal
     }
 
     override fun equals(other: Any?): Boolean {

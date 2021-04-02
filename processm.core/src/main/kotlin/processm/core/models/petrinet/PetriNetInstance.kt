@@ -22,7 +22,7 @@ class PetriNetInstance(
         get() = model.available(currentState).map { TransitionExecution(it, currentState) }
 
     override val isFinalState: Boolean
-        get() = currentState == model.finalMarking || availableActivities.none()
+        get() = currentState == model.finalMarking
 
     override fun setState(state: ProcessModelState?) {
         currentState = if (state === null) model.initialMarking else state as Marking

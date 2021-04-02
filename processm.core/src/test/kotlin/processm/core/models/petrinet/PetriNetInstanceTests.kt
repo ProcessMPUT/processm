@@ -180,7 +180,7 @@ class PetriNetInstanceTests {
             expecting(w2)[0].execute()
             expecting(x2, x4)[0].execute()
             expecting(e)[0].execute()
-            expecting()
+            expecting(final = false)
         }
 
         assertEquals(Marking(e3, end), instance.currentState)
