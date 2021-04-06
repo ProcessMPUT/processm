@@ -367,4 +367,270 @@ class AStarPetriNetTests {
             assertEquals(expectedCosts[i], alignment.cost)
         }
     }
+
+    @Test
+    fun `PM book Fig 7 3 conforming log`() {
+        val start = Place()
+        val p1 = Place()
+        val p2 = Place()
+        val p3 = Place()
+        val p4 = Place()
+        val p5 = Place()
+        val end = Place()
+        val a = Transition("a", listOf(start), listOf(p1, p2, p5))
+        val b = Transition("b", listOf(p1), listOf(p3))
+        val c = Transition("c", listOf(p2), listOf(p4))
+        val d = Transition("d", listOf(), listOf())
+        val e = Transition("e", listOf(p3, p4, p5), listOf(end))
+        val net = PetriNet(
+            listOf(start, p1, p2, p3, p4, p5, end),
+            listOf(a, b, c, d, e),
+            Marking(start),
+            Marking(end)
+        )
+
+        val log = logFromString(
+            """
+                a b c e
+                a c b e
+                d a d b d c d e d
+                d d d d d d a d d d d d d d c d d d d d d d b d d d d d d d e d d d d d d d
+            """
+        )
+
+        val astar = AStar(net)
+        for (trace in log.traces) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+            assertEquals(trace.events.count(), alignment.steps.filter { it.logMove !== null }.size)
+            for (step in alignment.steps)
+                if (step.logMove !== null)
+                    assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
+                else
+                    assertTrue(step.modelMove!!.isSilent)
+        }
+    }
+
+    @Test
+    fun `PM book Fig 7 3 non-conforming log`() {
+        val start = Place()
+        val p1 = Place()
+        val p2 = Place()
+        val p3 = Place()
+        val p4 = Place()
+        val p5 = Place()
+        val end = Place()
+        val a = Transition("a", listOf(start), listOf(p1, p2, p5))
+        val b = Transition("b", listOf(p1), listOf(p3))
+        val c = Transition("c", listOf(p2), listOf(p4))
+        val d = Transition("d", listOf(), listOf())
+        val e = Transition("e", listOf(p3, p4, p5), listOf(end))
+        val net = PetriNet(
+            listOf(start, p1, p2, p3, p4, p5, end),
+            listOf(a, b, c, d, e),
+            Marking(start),
+            Marking(end)
+        )
+
+        val log = logFromString(
+            """
+                a b e
+                a c e
+                d a z d b d d e d
+                d d d d d d a d d d d d d d c d d d d d d d b d d d d d d d d d d d d d d
+                d a e d d b c e
+            """
+        )
+
+        val expectedCosts = listOf(
+            1,
+            1,
+            2,
+            1,
+            1
+        )
+
+        val astar = AStar(net)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCosts[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `Flower model conforming log`() {
+        val net = PetriNet(
+            places = emptyList(),
+            transitions = "abcdefghijklmnopqrstuwvxyz".map { Transition(it.toString()) },
+            initialMarking = Marking.empty,
+            finalMarking = Marking.empty
+        )
+
+        val log = logFromString(
+            """
+                a b c d e f g h i j k l m n o p q r s t u w v x y z
+                z y x v w u t s r q p o n m l k j i h g f e d c b a
+                a a a a a a a a a a a a a z z z z z z z z z z z z z
+                z z z z z z z z z z z z z a a a a a a a a a a a a a
+            """
+        )
+
+        val astar = AStar(net)
+        for (trace in log.traces) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+            assertEquals(trace.events.count(), alignment.steps.filter { it.logMove !== null }.size)
+            for (step in alignment.steps)
+                if (step.logMove !== null)
+                    assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
+                else
+                    assertTrue(step.modelMove!!.isSilent)
+        }
+    }
+
+    @Test
+    fun `Flower model non-conforming log`() {
+        val net = PetriNet(
+            places = emptyList(),
+            transitions = "abcdefghijklmnopqrstuwvxyz".map { Transition(it.toString()) },
+            initialMarking = Marking.empty,
+            finalMarking = Marking.empty
+        )
+
+        val log = logFromString(
+            """
+                1 a b c 5 d e f 09 g h i 13 j k l m n o p q r s t u w v x y z
+                z 2 y x v 6 w u t 10 s r q 14 p o n m l k j i h g f e d c b a
+                a a 3 a a a 7 a a a 11 a a a 15 a a z z z z z z z z z z z z z
+                z z z 4 z z z 8 z z z 12 z z z 16 z a a a a a a a a a a a a a
+            """
+        )
+
+        val astar = AStar(net)
+        for (trace in log.traces) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(4, alignment.cost)
+        }
+    }
+
+    @Test
+    fun `Parallel flower models in loop conforming log`() {
+        val flower1Place = Place()
+        val flower2Place = Place()
+        val flower1 = "abcdefghijklm".map {
+            Transition(it.toString(), inPlaces = listOf(flower1Place), outPlaces = listOf(flower1Place))
+        }
+        val flower2 = "nopqrstuwvxyz".map {
+            Transition(it.toString(), inPlaces = listOf(flower2Place), outPlaces = listOf(flower2Place))
+        }
+        val loopStartPlace = Place()
+        val loopEndPlace = Place()
+        val loopStart = Transition("ls", listOf(loopStartPlace), listOf(flower1Place, flower2Place), true)
+        val loopEnd = Transition("le", listOf(flower1Place, flower2Place), listOf(loopEndPlace), true)
+        val redo = Transition("redo", listOf(loopEndPlace), listOf(loopStartPlace), true)
+
+        val net = PetriNet(
+            places = listOf(loopStartPlace, flower1Place, flower2Place, loopEndPlace),
+            transitions = listOf(loopStart, loopEnd, redo) + flower1 + flower2,
+            initialMarking = Marking(loopStartPlace),
+            finalMarking = Marking(loopEndPlace)
+        )
+
+        val log = logFromString(
+            """
+                a b c d e f g h i j k l m n o p q r s t u w v x y z
+                z y x v w u t s r q p o n m l k j i h g f e d c b a
+                a a a a a a a a a a a a a z z z z z z z z z z z z z
+                z z z z z z z z z z z z z a a a a a a a a a a a a a
+            """
+        )
+
+        val astar = AStar(net)
+        for (trace in log.traces) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(0, alignment.cost)
+            assertEquals(trace.events.count(), alignment.steps.filter { it.logMove !== null }.size)
+            for (step in alignment.steps)
+                if (step.logMove !== null)
+                    assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
+                else
+                    assertTrue(step.modelMove!!.isSilent)
+        }
+    }
+
+    @Test
+    fun `Parallel flower models in loop non-conforming log`() {
+        val flower1Place = Place()
+        val flower2Place = Place()
+        val flower1 = "abcdefghijklm".map {
+            Transition(it.toString(), inPlaces = listOf(flower1Place), outPlaces = listOf(flower1Place))
+        }
+        val flower2 = "nopqrstuwvxyz".map {
+            Transition(it.toString(), inPlaces = listOf(flower2Place), outPlaces = listOf(flower2Place))
+        }
+        val loopStartPlace = Place()
+        val loopEndPlace = Place()
+        val loopStart = Transition("ls", listOf(loopStartPlace), listOf(flower1Place, flower2Place), true)
+        val loopEnd = Transition("le", listOf(flower1Place, flower2Place), listOf(loopEndPlace), true)
+        val redo = Transition("redo", listOf(loopEndPlace), listOf(loopStartPlace), true)
+
+        val net = PetriNet(
+            places = listOf(loopStartPlace, flower1Place, flower2Place, loopEndPlace),
+            transitions = listOf(loopStart, loopEnd, redo) + flower1 + flower2,
+            initialMarking = Marking(loopStartPlace),
+            finalMarking = Marking(loopEndPlace)
+        )
+
+        val log = logFromString(
+            """
+                a a a a a a a a a a a a a z 1
+                a b c 1 d e f g h i j k l m
+                z y x v w u t s r q 1 p o n 2
+                2 z z z z z z z z 1 z z z z a
+            """
+        )
+
+        val expectedCosts = listOf(
+            1,
+            1,
+            2,
+            2
+        )
+
+        val astar = AStar(net)
+        for ((i, trace) in log.traces.withIndex()) {
+            val start = System.currentTimeMillis()
+            val alignment = astar.align(trace)
+            val time = System.currentTimeMillis() - start
+
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+
+            assertEquals(expectedCosts[i], alignment.cost)
+        }
+    }
 }

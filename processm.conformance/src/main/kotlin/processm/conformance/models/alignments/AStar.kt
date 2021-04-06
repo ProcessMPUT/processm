@@ -83,24 +83,25 @@ class AStar(
                 return formatAlignment(searchState, events)
             }
 
-            if (previousEventIndex >= 0) {
-                val v = visited.compute(previousEventIndex, searchState.currentCost) { _, _, v ->
-                    v ?: HashSet(VISITED_CACHE_LIMIT + 1)
-                }!!
-                if (!v.add(prevProcessState)) {
-                    continue
-                }
-
-                if (v.size >= VISITED_CACHE_LIMIT) {
-                    // dropping more states than 1 turns out crucial to run fast
-                    val it = v.iterator()
-                    for (i in 0 until min(VISITED_CACHE_FREE, v.size)) {
-                        it.next()
-                        it.remove()
-                    }
-                }
-                assert(v.size < VISITED_CACHE_LIMIT)
+            val v = visited.compute(previousEventIndex, searchState.currentCost) { _, _, v ->
+                v ?: HashSet(VISITED_CACHE_LIMIT + 1)
+            }!!
+            if (!v.add(prevProcessState)) {
+                continue
             }
+
+            if (v.size >= VISITED_CACHE_LIMIT) {
+                // dropping more states than 1 turns out crucial to run fast
+                val it = v.iterator()
+                for (i in 0 until min(VISITED_CACHE_FREE, v.size)) {
+                    it.next()
+                    it.remove()
+                }
+            }
+            assert(v.size < VISITED_CACHE_LIMIT)
+
+//            if (visitedTheSameState(searchState))
+//                continue
 
             val nextEventIndex = when {
                 previousEventIndex < events.size - 1 -> previousEventIndex + 1
@@ -177,10 +178,9 @@ class AStar(
             if (nextEvent !== null) {
                 val predictedCost = predict(events, nextEventIndex + 1, when {
                     instance.isFinalState -> Ternary.True
-                    instance.availableActivityExecutions.all { it.activity.isSilent } -> Ternary.Unknown
+                    instance.availableActivityExecutions.any { it.activity.isSilent } -> Ternary.Unknown
                     else -> Ternary.False
                 }).coerceAtLeast(searchState.predictedCost - penalty.logMove)
-                assert(predictedCost == 0 || !instance.isFinalState)
                 queue.add(
                     SearchState(
                         processStateFactory = lazyOf(prevProcessState),
@@ -264,6 +264,25 @@ class AStar(
         if (state.previousSearchState === null)
             return -1
         return getPreviousEventIndex(state.previousSearchState)
+    }
+
+    private fun visitedTheSameState(state: SearchState): Boolean =
+        state.previousSearchState !== null &&
+                visitedTheSameState(state.previousSearchState, state, getPreviousEventIndex(state))
+
+    private tailrec fun visitedTheSameState(
+        state: SearchState,
+        finalState: SearchState,
+        finalStateEvent: Int
+    ): Boolean {
+        if (state.currentCost < finalState.currentCost || getPreviousEventIndex(state) < finalStateEvent)
+            return false
+        assert(state.currentCost == finalState.currentCost)
+        if (state.processStateFactory.value == finalState.processStateFactory.value)
+            return true
+        if (state.previousSearchState === null)
+            return false
+        return visitedTheSameState(state.previousSearchState, finalState, finalStateEvent)
     }
 
     private data class SearchState(
