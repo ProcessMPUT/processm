@@ -3,8 +3,6 @@ package processm.core.models.causalnet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 /**
  * A read-only causal net model
@@ -111,16 +109,16 @@ abstract class CausalNet(
             for (dep in state.uniqueSet()) {
                 val node = dep.target
                 if (visitedNodes.add(node)) {
-                    for (join in joins[node].orEmpty())
+                    for (join in _joins[node].orEmpty())
                         if (state.containsAll(join.dependencies)) {
-                            val splits = if (node != end) splits[node].orEmpty() else setOfNull
+                            val splits = if (node != end) _splits[node].orEmpty() else setOfNull
                             for (split in splits)
                                 callback(node, join, split)
                         }
                 }
             }
         } else {
-            for (split in splits.getValue(start))
+            for (split in _splits.getValue(start))
                 callback(start, null, split)
         }
     }
@@ -145,6 +143,29 @@ abstract class CausalNet(
                 return DecoupledNodeExecution(node, join, split)
         }
         throw IndexOutOfBoundsException(index)
+    }
+
+    /**
+     * Verifies whether the given [execution] is available in the given [state].
+     */
+    internal fun isAvailable(execution: DecoupledNodeExecution, state: CausalNetState): Boolean {
+        if (state.isEmpty()) {
+            val split = execution.split
+            return execution.activity == start &&
+                    execution.join === null &&
+                    split !== null &&
+                    _splits[start]!!.contains(split)
+        }
+
+        return state.uniqueSet().any { dep ->
+            val node = dep.target
+            val join = checkNotNull(execution.join)
+            val split = execution.split
+            execution.activity == node &&
+                    _joins[node]!!.contains(join) &&
+                    state.containsAll(join.dependencies) &&
+                    ((node == end && split === null) || _splits[node]!!.contains(checkNotNull(split)))
+        }
     }
 
     /**

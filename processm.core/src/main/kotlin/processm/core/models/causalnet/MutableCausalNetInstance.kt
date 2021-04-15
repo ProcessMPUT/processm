@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ActivityExecution
 import processm.core.models.commons.ProcessModelState
 import processm.core.models.metadata.MutableMetadataHandler
@@ -24,7 +25,7 @@ class MutableCausalNetInstance(
         get() = state
 
     override val availableActivities
-        get() = availableActivityExecutions.map { it.activity }
+        get() = model.available(state)
 
     override val isFinalState: Boolean
         get() = !state.isFresh && state.isEmpty()
@@ -64,6 +65,8 @@ class MutableCausalNetInstance(
     override val availableActivityExecutions
         get() = model.available(state).map { NodeExecution(it.activity, this, it.join, it.split) }
 
-    override fun availableActivityExecutionAt(index: Int): ActivityExecution =
-        with(model.available(state, index)) { NodeExecution(activity, this@MutableCausalNetInstance, join, split) }
+    override fun getExecutionFor(activity: Activity): ActivityExecution {
+        check(activity is DecoupledNodeExecution && model.isAvailable(activity, state))
+        return with(activity) { NodeExecution(this.activity, this@MutableCausalNetInstance, join, split) }
+    }
 }

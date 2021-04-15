@@ -11,8 +11,6 @@ import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelState
 import java.lang.Integer.min
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
 
 
 /**
@@ -30,8 +28,8 @@ class AStar(
 ) : Aligner {
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE
-        private const val VISITED_CACHE_LIMIT = 10000
-        private const val VISITED_CACHE_FREE = 50
+        private const val VISITED_CACHE_LIMIT = 50000
+        private const val VISITED_CACHE_FREE = 250
     }
 
     private val activities: Set<String> by lazy(LazyThreadSafetyMode.PUBLICATION) {
@@ -56,7 +54,7 @@ class AStar(
             predictedCost = predict(
                 events,
                 0,
-                instance.availableActivityExecutions.none { !it.activity.isSilent }.toTernary()
+                instance.availableActivities.all(Activity::isSilent).toTernary()
             ),
             activity = null, // before first activity
             event = -1, // before first event
@@ -84,7 +82,7 @@ class AStar(
             }
 
             val v = visited.compute(previousEventIndex, searchState.currentCost) { _, _, v ->
-                v ?: HashSet(VISITED_CACHE_LIMIT + 1)
+                v ?: HashSet(VISITED_CACHE_LIMIT / 2)
             }!!
             if (!v.add(prevProcessState)) {
                 continue
@@ -112,16 +110,16 @@ class AStar(
             if (nextEvent === null || nextEvent.conceptName in activities) {
                 // add possible moves to the queue
                 assert(instance.currentState === prevProcessState)
-                for ((execIndex, execution) in instance.availableActivityExecutions.withIndex()) {
+                for (activity in instance.availableActivities) {
                     fun factory(): ProcessModelState {
                         instance.setState(prevProcessState.copy())
-                        instance.availableActivityExecutionAt(execIndex).execute()
+                        instance.getExecutionFor(activity).execute()
                         return instance.currentState
                     }
 
                     // silent activities are special
-                    if (execution.activity.isSilent) {
-                        if (execution.activity.isArtificial) {
+                    if (activity.isSilent) {
+                        if (activity.isArtificial) {
                             // just move the state of the model without moving in the log
                             queue.add(
                                 searchState.copy(processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory))
@@ -134,7 +132,7 @@ class AStar(
                                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                                     predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
                                         .coerceAtLeast(searchState.predictedCost - penalty.silentMove),
-                                    activity = execution.activity,
+                                    activity = activity,
                                     event = SKIP_EVENT,
                                     previousSearchState = searchState
                                 )
@@ -144,7 +142,7 @@ class AStar(
                     }
 
                     // add synchronous move if applies
-                    if (isSynchronousMove(nextEvent, execution.activity))
+                    if (isSynchronousMove(nextEvent, activity))
                         queue.add(
                             SearchState(
                                 processStateFactory = lazy(LazyThreadSafetyMode.NONE, ::factory),
@@ -152,7 +150,7 @@ class AStar(
                                 // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                                 predictedCost = predict(events, nextEventIndex + 1, Ternary.Unknown)
                                     .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove),
-                                activity = execution.activity,
+                                activity = activity,
                                 event = nextEventIndex,
                                 previousSearchState = searchState
                             )
@@ -166,7 +164,7 @@ class AStar(
                             // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                             predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
                                 .coerceAtLeast(searchState.predictedCost - penalty.modelMove),
-                            activity = execution.activity,
+                            activity = activity,
                             event = SKIP_EVENT,
                             previousSearchState = searchState
                         )
@@ -176,11 +174,13 @@ class AStar(
 
             // add log-only move
             if (nextEvent !== null) {
-                val predictedCost = predict(events, nextEventIndex + 1, when {
-                    instance.isFinalState -> Ternary.True
-                    instance.availableActivityExecutions.any { it.activity.isSilent } -> Ternary.Unknown
-                    else -> Ternary.False
-                }).coerceAtLeast(searchState.predictedCost - penalty.logMove)
+                val predictedCost = predict(
+                    events, nextEventIndex + 1, when {
+                        instance.isFinalState -> Ternary.True
+                        instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
+                        else -> Ternary.False
+                    }
+                ).coerceAtLeast(searchState.predictedCost - penalty.logMove)
                 queue.add(
                     SearchState(
                         processStateFactory = lazyOf(prevProcessState),

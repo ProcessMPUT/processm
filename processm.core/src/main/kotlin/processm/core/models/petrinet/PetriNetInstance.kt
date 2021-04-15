@@ -1,6 +1,7 @@
 package processm.core.models.petrinet
 
 import processm.core.models.commons.Activity
+import processm.core.models.commons.ActivityExecution
 import processm.core.models.commons.ProcessModelInstance
 import processm.core.models.commons.ProcessModelState
 
@@ -26,5 +27,10 @@ class PetriNetInstance(
 
     override fun setState(state: ProcessModelState?) {
         currentState = if (state === null) model.initialMarking else state as Marking
+    }
+
+    override fun getExecutionFor(activity: Activity): ActivityExecution {
+        check(model.isAvailable(activity as Transition, currentState))
+        return TransitionExecution(activity, currentState)
     }
 }
