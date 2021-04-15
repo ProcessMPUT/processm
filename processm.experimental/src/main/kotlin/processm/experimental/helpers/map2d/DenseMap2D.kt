@@ -99,6 +99,10 @@ class DenseMap2D<Row, Column, Value>(val nRows: Int, val nColumns: Int) :
         TODO("Not yet implemented")
     }
 
+    override fun removeValue(row: Row, column: Column) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = row2idx.keys
     override val columns: Set<Column>
@@ -112,7 +116,7 @@ class DenseMap2D<Row, Column, Value>(val nRows: Int, val nColumns: Int) :
         TODO("Not yet implemented")
     }
 
-    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?) {
+    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?): Value? {
         TODO("Not yet implemented")
     }
 

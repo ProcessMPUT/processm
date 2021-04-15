@@ -84,6 +84,10 @@ class WrappingMap2D<Row, Column, Value>(private val data: MutableMap<Pair<Row, C
         TODO("Not yet implemented")
     }
 
+    override fun removeValue(row: Row, column: Column) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = data.keys.map { it.first }.toSet()
 
@@ -98,7 +102,7 @@ class WrappingMap2D<Row, Column, Value>(private val data: MutableMap<Pair<Row, C
         TODO("Not yet implemented")
     }
 
-    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?) {
+    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?): Value? {
         TODO("Not yet implemented")
     }
 

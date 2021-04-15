@@ -64,6 +64,12 @@ interface Map2D<Row, Column, Value> {
     fun removeRow(row: Row)
 
     /**
+     * Remove value from map.
+     * Contract: Calling this method invalidates the previously instantiated views.
+     */
+    fun removeValue(row: Row, column: Column)
+
+    /**
      * Removes all entries from this map.
      */
     fun clear()

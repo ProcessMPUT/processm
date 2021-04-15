@@ -96,7 +96,7 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
      * Remove value from map.
      * Warning: This will not update already created views!
      */
-    fun removeValue(row: Row, column: Column) {
+    override fun removeValue(row: Row, column: Column) {
         rcv[row]?.remove(column)
         crv[column]?.remove(row)
     }

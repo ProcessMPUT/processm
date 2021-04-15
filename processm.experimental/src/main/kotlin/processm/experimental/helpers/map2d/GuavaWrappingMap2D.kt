@@ -88,6 +88,10 @@ class GuavaWrappingMap2D<Row, Column, Value>(val backend: Table<Row, Column, Val
         TODO("Not yet implemented")
     }
 
+    override fun removeValue(row: Row, column: Column) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = backend.rowKeySet()
     override val columns: Set<Column>
@@ -101,7 +105,7 @@ class GuavaWrappingMap2D<Row, Column, Value>(val backend: Table<Row, Column, Val
         TODO("Not yet implemented")
     }
 
-    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?) {
+    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?): Value? {
         TODO("Not yet implemented")
     }
 

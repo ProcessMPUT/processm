@@ -82,6 +82,10 @@ class DoublingMap2DWithOneUpdate<Row, Column, Value> :
         TODO("Not yet implemented")
     }
 
+    override fun removeValue(row: Row, column: Column) {
+        TODO("Not yet implemented")
+    }
+
     override val rows: Set<Row>
         get() = rcv.keys
     override val columns: Set<Column>
@@ -95,7 +99,7 @@ class DoublingMap2DWithOneUpdate<Row, Column, Value> :
         TODO("Not yet implemented")
     }
 
-    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?) {
+    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?): Value? {
         TODO("Not yet implemented")
     }
 
