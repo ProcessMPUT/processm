@@ -3,7 +3,6 @@ package processm.conformance.models.alignments
 import processm.conformance.models.DeviationType
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.ternarylogic.Ternary
-import processm.core.helpers.ternarylogic.Ternary.Companion.toTernary
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
@@ -29,16 +28,15 @@ class AStar(
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE
         private const val VISITED_CACHE_LIMIT = 50000
+        private const val VISITED_CACHE_INIT = VISITED_CACHE_LIMIT / 10
         private const val VISITED_CACHE_FREE = 250
     }
 
-    private val activities: Set<String> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    private val activities: Set<String?> =
         model.activities.mapNotNullTo(HashSet()) { if (it.isSilent) null else it.name }
-    }
 
-    private val endActivities: Set<String> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    private val endActivities: Set<String?> =
         model.endActivities.mapNotNullTo(HashSet()) { if (it.isSilent) null else it.name }
-    }
 
     override fun align(trace: Trace): Alignment {
         val events = trace.events.toList()
@@ -54,7 +52,11 @@ class AStar(
             predictedCost = predict(
                 events,
                 0,
-                instance.availableActivities.all(Activity::isSilent).toTernary()
+                when {
+                    instance.isFinalState -> Ternary.True
+                    instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
+                    else -> Ternary.False
+                }
             ),
             activity = null, // before first activity
             event = -1, // before first event
@@ -82,7 +84,7 @@ class AStar(
             }
 
             val v = visited.compute(previousEventIndex, searchState.currentCost) { _, _, v ->
-                v ?: HashSet(VISITED_CACHE_LIMIT / 2)
+                v ?: HashSet(VISITED_CACHE_INIT)
             }!!
             if (!v.add(prevProcessState)) {
                 continue
@@ -240,7 +242,7 @@ class AStar(
         if (isFinalState == Ternary.False && endActivities.isNotEmpty()) {
             var hasEndActivity = false
             for (index in startIndex until events.size) {
-                if (events[index].conceptName in endActivities) {
+                if (endActivities.contains(events[index].conceptName)) {
                     hasEndActivity = true
                     break
                 }
@@ -251,7 +253,7 @@ class AStar(
 
         for (index in startIndex until events.size) {
             sum +=
-                if (events[index].conceptName in activities) penalty.synchronousMove
+                if (activities.contains(events[index].conceptName)) penalty.synchronousMove
                 else penalty.logMove
         }
 

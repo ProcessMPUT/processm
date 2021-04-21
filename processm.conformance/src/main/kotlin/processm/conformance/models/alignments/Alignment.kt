@@ -30,7 +30,7 @@ data class Alignment(
         append("-".repeat(this.length - 1))
         append("\n|")
         for (step in steps) {
-            append((step.modelMove?.name ?: "").padEnd(step.logMove!!.conceptName?.length ?: 0))
+            append((step.modelMove?.name ?: "").padEnd(step.logMove?.conceptName?.length ?: 0))
             append('|')
         }
     }

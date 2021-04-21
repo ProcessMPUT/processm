@@ -322,6 +322,20 @@ fun <T> List<T>.allPairs(): Collection<Pair<T, T>> =
     PairedCollection(this)
 
 /**
+ * Returns index of the first element matching the given [predicate] beginning from [startIndex], or -1 if the list does
+ * not contain such element.
+ */
+inline fun <T> List<T>.indexOfFirst(startIndex: Int, predicate: (item: T) -> Boolean): Int {
+    val iterator = this.listIterator(startIndex.coerceAtLeast(0))
+    while (iterator.hasNext()) {
+        if (predicate(iterator.next()))
+            return iterator.previousIndex()
+    }
+
+    return -1
+}
+
+/**
  * Parses a timestamp with timezone in the ISO-8601 format into [Instant].
  */
 inline fun String.parseISO8601(): Instant = DateTimeFormatter.ISO_DATE_TIME.parse(this, Instant::from)

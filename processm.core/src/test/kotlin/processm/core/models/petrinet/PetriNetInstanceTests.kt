@@ -45,14 +45,14 @@ class PetriNetInstanceTests {
 
         with(instance) {
             expecting(a)[0].execute()
-            expecting(b, c, d)[1].execute()
+            expecting(b, c, d).first { it.activity == c }.execute()
             expecting(d)[0].execute()
             expecting(e)[0].execute()
-            expecting(f, g, h)[0].execute()
-            expecting(b, c, d)[2].execute()
-            expecting(b, c)[0].execute()
+            expecting(f, g, h).first { it.activity == f }.execute()
+            expecting(b, c, d).first { it.activity == d }.execute()
+            expecting(b, c).first { it.activity == b }.execute()
             expecting(e)[0].execute()
-            expecting(f, g, h)[1].execute()
+            expecting(f, g, h).first { it.activity == g }.execute()
             expecting()
         }
 
@@ -84,18 +84,18 @@ class PetriNetInstanceTests {
 
         with(instance) {
             for (i in 1..4) {
-                expecting(t1, t2, t3, t4, t5)[0].execute()
-                expecting(t1, t2, t3, t4, t5)[1].execute()
-                expecting(t1, t2, t3, t4, t5)[2].execute()
-                expecting(t1, t2, t3, t4, t5)[3].execute()
-                expecting(t1, t2, t3, t4, t5)[4].execute()
+                expecting(t1, t2, t3, t4, t5).first { it.activity == t1 }.execute()
+                expecting(t1, t2, t3, t4, t5).first { it.activity == t2 }.execute()
+                expecting(t1, t2, t3, t4, t5).first { it.activity == t3 }.execute()
+                expecting(t1, t2, t3, t4, t5).first { it.activity == t4 }.execute()
+                expecting(t1, t2, t3, t4, t5).first { it.activity == t5 }.execute()
             }
 
-            expecting(t1, t2, t3, t4, t5)[4].execute()
-            expecting(t1, t2, t3, t4)[3].execute()
-            expecting(t1, t2, t3)[2].execute()
-            expecting(t1, t2)[1].execute()
-            expecting(t1)[0].execute()
+            expecting(t1, t2, t3, t4, t5).first { it.activity == t5 }.execute()
+            expecting(t1, t2, t3, t4).first { it.activity == t4 }.execute()
+            expecting(t1, t2, t3).first { it.activity == t3 }.execute()
+            expecting(t1, t2).first { it.activity == t2 }.execute()
+            expecting(t1).first { it.activity == t1 }.execute()
             expecting()
         }
 
@@ -154,14 +154,14 @@ class PetriNetInstanceTests {
 
         with(instance) {
             expecting(a)[0].execute()
-            expecting(t1, t2, t3, t4, t5)[3].execute()
-            expecting(u2, u3)[1].execute()
-            expecting(u2, d)[1].execute()
-            expecting(u2, w3)[1].execute()
+            expecting(t1, t2, t3, t4, t5).first { it.activity == t4 }.execute()
+            expecting(u2, u3).first { it.activity == u3 }.execute()
+            expecting(u2, d).first { it.activity == d }.execute()
+            expecting(u2, w3).first { it.activity == w3 }.execute()
             expecting(u2)[0].execute()
             expecting(c)[0].execute()
             expecting(w2)[0].execute()
-            expecting(x2, x4)[1].execute()
+            expecting(x2, x4).first { it.activity == x4 }.execute()
             expecting(e)[0].execute()
             expecting()
         }
@@ -171,14 +171,14 @@ class PetriNetInstanceTests {
         instance.setState(Marking(start))
         with(instance) {
             expecting(a)[0].execute()
-            expecting(t1, t2, t3, t4, t5)[3].execute()
-            expecting(u2, u3)[1].execute()
-            expecting(u2, d)[1].execute()
-            expecting(u2, w3)[1].execute()
+            expecting(t1, t2, t3, t4, t5).first { it.activity == t4 }.execute()
+            expecting(u2, u3).first { it.activity == u3 }.execute()
+            expecting(u2, d).first { it.activity == d }.execute()
+            expecting(u2, w3).first { it.activity == w3 }.execute()
             expecting(u2)[0].execute()
             expecting(c)[0].execute()
             expecting(w2)[0].execute()
-            expecting(x2, x4)[0].execute()
+            expecting(x2, x4).first { it.activity == x2 }.execute()
             expecting(e)[0].execute()
             expecting(final = false)
         }
@@ -211,13 +211,13 @@ class PetriNetInstanceTests {
         assertEquals(Marking(start), instance.currentState)
 
         with(instance) {
-            expecting(a, d)[1].execute()
-            expecting(a, d)[0].execute()
-            expecting(b, c, d)[0].execute()
-            expecting(c, d)[1].execute()
-            expecting(c, d)[0].execute()
-            expecting(d, e)[0].execute()
-            expecting(d, e)[1].execute()
+            expecting(a, d).first { it.activity == d }.execute()
+            expecting(a, d).first { it.activity == a }.execute()
+            expecting(b, c, d).first { it.activity == b }.execute()
+            expecting(c, d).first { it.activity == d }.execute()
+            expecting(c, d).first { it.activity == c }.execute()
+            expecting(d, e).first { it.activity == d }.execute()
+            expecting(d, e).first { it.activity == e }.execute()
             expecting(d, final = true)[0].execute()
             expecting(d, final = true)
         }

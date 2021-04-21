@@ -1,14 +1,18 @@
 package processm.conformance.models.alignments.processtree
 
-import com.carrotsearch.hppc.*
-import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
-import processm.core.helpers.mapToArray
-import processm.core.helpers.minOf
+import processm.core.helpers.*
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.processtree.*
 
+/**
+ * An aligner for [ProcessTree]s that calculates alignment using subtree-based decomposition of the given tree.
+ * @property model The Process tree to align with.
+ * @property penalty The penalty function.
+ * @property alignerFactory The factory for base aligners. The base aligner is used to produce partial aligners for
+ * the parts of the decomposed [model].
+ */
 class DecompositionAligner(
     val model: ProcessTree,
     val penalty: PenaltyFunction = PenaltyFunction(),
@@ -21,13 +25,14 @@ class DecompositionAligner(
 
     override fun align(trace: Trace): Alignment {
         val events = trace.events.toList()
-        val eventsWithExistingActivities = events.filter { e -> model.activities.any { a -> a.name == e.conceptName } }
+        val eventsWithExistingActivities =
+            events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
 
         val alignment = decompose(model.root!!, eventsWithExistingActivities)
-        val cost = fillMissingEvents(alignment.steps as MutableList<Step>, events)
+        if (events.size == eventsWithExistingActivities.size)
+            return alignment
 
-        verify(alignment.steps, events)
-        return alignment.copy(cost = alignment.cost + cost)
+        return alignment.fillMissingEvents(events, penalty)
     }
 
     private fun decompose(node: Node, events: List<Event>): Alignment =
@@ -68,7 +73,7 @@ class DecompositionAligner(
                 cost += alignment.cost
             }
 
-            verify(steps, events)
+            steps.verify(events)
             return Alignment(steps, cost)
         }
 
@@ -89,7 +94,7 @@ class DecompositionAligner(
             assert(decomposition.traces[index] == events)
 
             val alignment = decompose(decomposition.nodes[index], decomposition.traces[index])
-            verify(alignment.steps, events)
+            alignment.steps.verify(events)
             return alignment
         }
 
@@ -111,8 +116,8 @@ class DecompositionAligner(
 
         val subAlignments =
             decomposition.nodes.indices.map { decompose(decomposition.nodes[it], decomposition.traces[it]) }
-        val alignment = merge(subAlignments, events)
-        verify(alignment.steps, events)
+        val alignment = subAlignments.merge(events)
+        alignment.steps.verify(events)
         return alignment
     }
 
@@ -232,88 +237,6 @@ class DecompositionAligner(
         return aligner.align(Trace(events.asSequence()))
     }
 
-    private fun fillMissingEvents(steps: MutableList<Step>, events: List<Event>): Int {
-        var cost = 0
-        var stepIndex = 0
-        for (event in events) {
-            val index = steps.indexOfFirst(stepIndex) { it.logMove === event }
-            if (index == -1) {
-                // missing event, inserting
-                steps.add(
-                    stepIndex, Step(
-                        modelMove = null,
-                        modelState = null, // FIXME: obtain model state
-                        logMove = event,
-                        logState = null, // FIXME: obtain log state
-                        type = DeviationType.LogDeviation
-                    )
-                )
-                cost += penalty.logMove
-            } else {
-                stepIndex = index + 1
-            }
-        }
-        verify(steps, events)
-        return cost
-    }
-
-    private fun merge(
-        subAlignments: List<Alignment>,
-        events: List<Event>
-    ): Alignment {
-        val currentSteps = IntArray(subAlignments.size)
-
-        // merge subalignments
-        val steps = ArrayList<Step>()
-        for (event in events) {
-            val prevSteps = steps.size
-            for ((aIndex, subAlignment) in subAlignments.withIndex()) {
-                val matchingEventIndex = subAlignment.steps.indexOfFirst(currentSteps[aIndex]) { it.logMove === event }
-                if (matchingEventIndex >= 0) {
-                    steps.addAll(subAlignment.steps.subList(currentSteps[aIndex], matchingEventIndex + 1))
-                    currentSteps[aIndex] = matchingEventIndex + 1
-                    break
-                }
-            }
-            assert(steps.size > prevSteps)
-        }
-
-        // merge model-only moves in arbitrary order
-        for (i in currentSteps.indices) {
-            while (currentSteps[i] < subAlignments[i].steps.size) {
-                val step = subAlignments[i].steps[currentSteps[i]]
-                assert(step.type == DeviationType.ModelDeviation)
-                steps.add(step)
-                ++currentSteps[i]
-            }
-        }
-
-        assert(currentSteps.withIndex().all { (i, s) -> s == subAlignments[i].steps.size })
-        verify(steps, events)
-        return Alignment(steps, subAlignments.sumOf(Alignment::cost))
-    }
-
-    private inline fun <T> List<T>.indexOfFirst(startIndex: Int, predicate: (item: T) -> Boolean): Int {
-        var index = startIndex.coerceAtLeast(0)
-        while (index < this.size) {
-            if (predicate(this[index]))
-                return index
-            index++
-        }
-        return -1
-    }
-
-    private fun verify(steps: List<Step>, events: List<Event>) {
-        assert(events == steps.mapNotNull(Step::logMove)) {
-            "events:\t${events.joinToString { it.conceptName.toString() }}\n" +
-                    "alignment:\t${steps.mapNotNull(Step::logMove).joinToString { it.conceptName.toString() }}"
-        }
-
-        assert(steps.all { s -> s.type != DeviationType.None || s.logMove?.conceptName == s.modelMove?.name }) {
-            Alignment(steps, -1).toString()
-        }
-    }
-
     private fun hasSilentActivity(node: Node): Boolean {
         if (node is ProcessTreeActivity && node.isSilent)
             return true
@@ -373,9 +296,8 @@ class DecompositionAligner(
             eventuallyFollows(subTrace, follower, HashSet())
 
         private fun eventuallyFollows(subTrace: Int, follower: Int, visited: HashSet<Int>): Boolean {
-            if (subTrace in visited)
+            if (!visited.add(subTrace))
                 return false
-            visited.add(subTrace)
 
             val response = directlyFollows[subTrace]
                 ?.let { followers ->

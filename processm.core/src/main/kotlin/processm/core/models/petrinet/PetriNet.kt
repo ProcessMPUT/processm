@@ -1,5 +1,6 @@
 package processm.core.models.petrinet
 
+import org.apache.commons.collections4.ListValuedMap
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap
 import processm.core.models.commons.Activity
 import processm.core.models.commons.DecisionPoint
@@ -59,27 +60,45 @@ class PetriNet(
 
     override fun createInstance(): PetriNetInstance = PetriNetInstance(this)
 
-    private val placeToTransition: ArrayListValuedHashMap<Place, Transition> =
+    /**
+     * A mapping from a place to the list of following transitions.
+     */
+    val placeToFollowingTransition: ListValuedMap<Place, Transition> =
         ArrayListValuedHashMap<Place, Transition>(places.size, transitions.size).apply {
             for (transition in transitions) {
                 if (transition.inPlaces.isEmpty()) {
                     put(null, transition)
                 } else {
-                    for (place in transition.inPlaces) {
+                    for (place in transition.inPlaces)
                         put(place, transition)
-                    }
                 }
             }
             trimToSize()
         }
 
     /**
-     * Calculates the collection of transitions available for firing at given [marking].
+     * A mapping from a place to the list of preceding transitions.
+     */
+    val placeToPrecedingTransition: ListValuedMap<Place, Transition> =
+        ArrayListValuedHashMap<Place, Transition>(places.size, transitions.size).apply {
+            for (transition in transitions) {
+                if (transition.outPlaces.isEmpty()) {
+                    put(null, transition)
+                } else {
+                    for (place in transition.outPlaces)
+                        put(place, transition)
+                }
+            }
+            trimToSize()
+        }
+
+    /**
+     * Calculates the collection of transitions enabled for firing at given [marking].
      */
     fun available(marking: Marking): Sequence<Transition> = sequence {
         val visited = IdentityHashMap<Transition, Unit>(transitions.size)
         for (place in marking.keys) {
-            for (transition in placeToTransition[place]!!) {
+            for (transition in placeToFollowingTransition[place]!!) {
                 if (visited.put(transition, Unit) !== null)
                     continue
 
@@ -88,11 +107,11 @@ class PetriNet(
             }
         }
 
-        yieldAll(placeToTransition[null]!!)
+        yieldAll(placeToFollowingTransition[null]!!)
     }
 
     /**
-     * Verifies whether [transition] is
+     * Verifies whether [transition] is enabled in the given [marking].
      */
     fun isAvailable(transition: Transition, marking: Marking): Boolean {
         val inPlaces = transition.inPlaces
@@ -106,13 +125,24 @@ class PetriNet(
     fun backwardAvailable(marking: Marking): Sequence<Transition> = sequence {
         val markingKeys = marking.keys
         val markingSize = markingKeys.size
-        for (transition in transitions) {
-            val outPlaces = transition.outPlaces
-            if (outPlaces.size <= markingSize && markingKeys.containsAll(outPlaces))
-                yield(transition)
+
+        val visited = IdentityHashMap<Transition, Unit>(transitions.size)
+        for (place in marking.keys) {
+            for (transition in placeToPrecedingTransition[place]!!) {
+                if (visited.put(transition, Unit) !== null)
+                    continue
+
+                val outPlaces = transition.outPlaces
+                if (outPlaces.size <= markingSize && markingKeys.containsAll(outPlaces))
+                    yield(transition)
+            }
         }
     }
 
+    /**
+     * Produces a copy of this [PetriNet] stripped out of transitions that must not run and places without succeeding
+     * transitions except the places in the [finalMarking].
+     */
     fun dropDeadParts(): PetriNet {
         // drop transitions that must not run because there is no way to put token in its input place(s)
         val usedTransitions = transitions.filter { t ->
