@@ -1,7 +1,6 @@
 package processm.core.models.petrinet
 
-import org.apache.commons.collections4.ListValuedMap
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap
+import processm.core.helpers.optimize
 import processm.core.models.commons.Activity
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.commons.ProcessModel
@@ -63,51 +62,55 @@ class PetriNet(
     /**
      * A mapping from a place to the list of following transitions.
      */
-    val placeToFollowingTransition: ListValuedMap<Place, Transition> =
-        ArrayListValuedHashMap<Place, Transition>(places.size, transitions.size).apply {
+    val placeToFollowingTransition: Map<Place?, List<Transition>> =
+        HashMap<Place?, List<Transition>>(places.size * 4 / 3, 0.75f).apply {
             for (transition in transitions) {
                 if (transition.inPlaces.isEmpty()) {
-                    put(null, transition)
+                    (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
                     for (place in transition.inPlaces)
-                        put(place, transition)
+                        (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
                 }
             }
-            trimToSize()
+            for (entry in this)
+                entry.setValue(entry.value.optimize())
         }
 
     /**
      * A mapping from a place to the list of preceding transitions.
      */
-    val placeToPrecedingTransition: ListValuedMap<Place, Transition> =
-        ArrayListValuedHashMap<Place, Transition>(places.size, transitions.size).apply {
+    val placeToPrecedingTransition: Map<Place?, List<Transition>> =
+        HashMap<Place?, List<Transition>>(places.size * 4 / 3, 0.75f).apply {
             for (transition in transitions) {
                 if (transition.outPlaces.isEmpty()) {
-                    put(null, transition)
+                    (computeIfAbsent(null) { ArrayList() } as ArrayList<Transition>).add(transition)
                 } else {
                     for (place in transition.outPlaces)
-                        put(place, transition)
+                        (computeIfAbsent(place) { ArrayList() } as ArrayList<Transition>).add(transition)
                 }
             }
-            trimToSize()
+            for (entry in this)
+                entry.setValue(entry.value.optimize())
         }
 
     /**
      * Calculates the collection of transitions enabled for firing at given [marking].
      */
     fun available(marking: Marking): Sequence<Transition> = sequence {
-        val visited = IdentityHashMap<Transition, Unit>(transitions.size)
-        for (place in marking.keys) {
-            for (transition in placeToFollowingTransition[place]!!) {
-                if (visited.put(transition, Unit) !== null)
-                    continue
+        if (marking.isNotEmpty()) {
+            val visited = IdentityHashMap<Transition, Unit>(transitions.size * 4 / 3)
+            for (place in marking.keys) {
+                for (transition in placeToFollowingTransition[place].orEmpty()) {
+                    if (visited.put(transition, Unit) !== null)
+                        continue
 
-                if (isAvailable(transition, marking))
-                    yield(transition)
+                    if (isAvailable(transition, marking))
+                        yield(transition)
+                }
             }
         }
 
-        yieldAll(placeToFollowingTransition[null]!!)
+        yieldAll(placeToFollowingTransition[null].orEmpty())
     }
 
     /**
@@ -123,20 +126,23 @@ class PetriNet(
      * The returned transitions might not actually run.
      */
     fun backwardAvailable(marking: Marking): Sequence<Transition> = sequence {
-        val markingKeys = marking.keys
-        val markingSize = markingKeys.size
+        if (marking.isNotEmpty()) {
+            val markingKeys = marking.keys
+            val markingSize = markingKeys.size
+            val visited = IdentityHashMap<Transition, Unit>(transitions.size * 4 / 3)
+            for (place in markingKeys) {
+                for (transition in placeToPrecedingTransition[place].orEmpty()) {
+                    if (visited.put(transition, Unit) !== null)
+                        continue
 
-        val visited = IdentityHashMap<Transition, Unit>(transitions.size)
-        for (place in marking.keys) {
-            for (transition in placeToPrecedingTransition[place]!!) {
-                if (visited.put(transition, Unit) !== null)
-                    continue
-
-                val outPlaces = transition.outPlaces
-                if (outPlaces.size <= markingSize && markingKeys.containsAll(outPlaces))
-                    yield(transition)
+                    val outPlaces = transition.outPlaces
+                    if (outPlaces.size <= markingSize && markingKeys.containsAll(outPlaces))
+                        yield(transition)
+                }
             }
         }
+
+        yieldAll(placeToPrecedingTransition[null].orEmpty())
     }
 
     /**

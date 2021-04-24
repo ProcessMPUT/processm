@@ -515,8 +515,8 @@ class AStarCausalNetAsPetriNetTests {
             """
                 ls d2 M d1 Z le
                 d2 ls d1 Z M le
+                ls d1 d2 A N ls le ls d1 C d2 O le
             """
-            // ls d1 d2 A N ls le ls d1 C d2 O le
             //  ls d1 d2 A N ls le ls d1 C d2 O le ls d1 D d2 P le ls d2 d1 E Q le ls d1 d2 F R le ls d2 d1 G S le ls d1 H d2 T le ls d1 I d2 U le ls d2 d1 J V le ls d1 d2 K W le ls d1 L d2 X ls le d1 M d2 Y le
         )
 
@@ -527,8 +527,7 @@ class AStarCausalNetAsPetriNetTests {
         )
 
         val petri = model.toPetriNet()
-        val petriNoDeadParts = petri.dropDeadParts()
-        val astar = AStar(petriNoDeadParts)
+        val astar = AStar(petri)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)

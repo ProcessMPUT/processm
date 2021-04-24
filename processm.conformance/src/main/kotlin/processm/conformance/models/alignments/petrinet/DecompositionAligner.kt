@@ -2,8 +2,10 @@ package processm.conformance.models.alignments.petrinet
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
+import processm.core.helpers.SameThreadExecutorService
 import processm.core.helpers.allPairs
 import processm.core.helpers.mapToSet
+import processm.core.helpers.optimize
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.debug
@@ -14,6 +16,10 @@ import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
+import java.util.concurrent.CancellationException
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Future
 
 /**
  * An aligner for [PetriNet]s that calculates alignments using the decomposition of the given net.
@@ -29,13 +35,21 @@ import processm.core.models.petrinet.Transition
 class DecompositionAligner(
     val model: PetriNet,
     val penalty: PenaltyFunction = PenaltyFunction(),
-    val alignerFactory: (model: PetriNet, penalty: PenaltyFunction) -> Aligner = ::AStar
+    val alignerFactory: AlignerFactory = AlignerFactory { m, p, _ -> AStar(m, p) },
+    val pool: ExecutorService = SameThreadExecutorService
 ) : Aligner {
 
     companion object {
         private val logger = logger()
     }
 
+    /**
+     * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
+     *
+     * @throws IllegalStateException If the alignment cannot be calculated, e.g., because the final model state is not
+     * reachable.
+     * @throws InterruptedException If the calculation cancelled.
+     */
     override fun align(trace: Trace): Alignment {
         val start = System.currentTimeMillis()
         val events = trace.events.toList()
@@ -63,8 +77,22 @@ class DecompositionAligner(
     private fun decomposedAlign(events: List<Event>): List<Alignment> {
         var decomposition = Decomposition.create(model, events)
         while (true) {
-            val alignments = decomposition.nets.mapIndexed { i, net ->
-                alignerFactory(net, penalty).align(Trace(decomposition.traces[i].asSequence()))
+            val futures = decomposition.nets.mapIndexed { i, net ->
+                pool.submit<Alignment> {
+                    alignerFactory(net, penalty, pool).align(Trace(decomposition.traces[i].asSequence()))
+                }
+            }
+            val alignments = try {
+                futures.map(Future<Alignment>::get)
+            } catch (e: ExecutionException) {
+                throw e.cause ?: e
+            } catch (_: InterruptedException) {
+                throw InterruptedException("DecompositionAligner was requested to cancel.")
+            } catch (_: CancellationException) {
+                throw InterruptedException("DecompositionAligner was requested to cancel.")
+            } finally {
+                for (future in futures)
+                    future.cancel(true)
             }
 
             if (alignments.size == 1)
@@ -117,8 +145,8 @@ class DecompositionAligner(
                 // 2. γ_i^aLM has the same move types as γ_j^aLM, i.e. if γ_i^aLM has one log move, then γ_j^aLM must also have one log move.
                 // 3. The order of moves in γ_i^aLM and γ_j^aLM are the same.
                 // This effectively refers to verifying whether typesi != typesj. However, in our tests this is not
-                // enough. Instead, we require also that the border activities must be involved in synchronous moves only.
-                if (typesi.size != typesj.size || typesi.any { it != DeviationType.None }) {
+                // enough. We require also that the border activities must not be involved in model-only moves.
+                if (typesi != typesj || typesi.any { it == DeviationType.ModelDeviation }) {
                     conflicts.add(j)
                     break
                 }
@@ -151,8 +179,8 @@ class DecompositionAligner(
                 ) { "Transition labels must be unique" }
 
                 val nets = ArrayList<PetriNet>()
-                val usedForward = HashSet<Transition>()
-                val usedBackward = HashSet<Transition>()
+                val usedForward = HashSet<Transition>(model.transitions.size * 4 / 3, 0.75f)
+                val usedBackward = HashSet<Transition>(model.transitions.size * 4 / 3, 0.75f)
 
                 for (transition in model.transitions) {
                     if (transition.isSilent)
@@ -200,8 +228,8 @@ class DecompositionAligner(
                 val finalMarking = model.finalMarking.filterTo(Marking()) { (p, _) -> places.contains(p) }
 
                 return PetriNet(
-                    places.toList(),
-                    transitions.values.toList(),
+                    places.toList().optimize(),
+                    transitions.values.toList().optimize(),
                     initialMarking = if (initialMarking.isEmpty()) Marking.empty else initialMarking,
                     finalMarking = if (finalMarking.isEmpty()) Marking.empty else finalMarking
                 )
@@ -274,14 +302,14 @@ class DecompositionAligner(
                 usedBackward: HashSet<Transition>
             ) {
                 // find the transitions following this place
-                for (followingTransition in model.placeToFollowingTransition[place]!!) {
+                for (followingTransition in model.placeToFollowingTransition[place].orEmpty()) {
                     if (followingTransition.isSilent)
                         collectForward(model, followingTransition, places, transitions, usedForward, usedBackward)
                     collectBackward(model, followingTransition, places, transitions, usedForward, usedBackward)
                 }
 
                 // find the transitions preceding this place
-                for (precedingTransition in model.placeToPrecedingTransition[place]!!) {
+                for (precedingTransition in model.placeToPrecedingTransition[place].orEmpty()) {
                     if (precedingTransition.isSilent)
                         collectBackward(model, precedingTransition, places, transitions, usedForward, usedBackward)
                     collectForward(model, precedingTransition, places, transitions, usedForward, usedBackward)

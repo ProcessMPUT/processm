@@ -434,7 +434,11 @@ inline fun <T, R : Comparable<R>> Iterator<T>.minOf(selector: (T) -> R): R {
 fun <T> List<T>.optimize(): List<T> = when (this.size) {
     0 -> emptyList()
     1 -> Collections.singletonList(this[0])
-    else -> this
+    else -> {
+        if (this is ArrayList<T>)
+            trimToSize()
+        this
+    }
 }
 
 /**

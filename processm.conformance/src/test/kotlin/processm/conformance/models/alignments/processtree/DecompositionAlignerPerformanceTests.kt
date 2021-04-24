@@ -1,22 +1,37 @@
 package processm.conformance.models.alignments.processtree
 
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import processm.conformance.models.alignments.AStar
+import processm.conformance.models.alignments.CompositeAligner
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.Log
 import processm.core.models.processtree.ProcessTree
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import kotlin.test.assertFalse
 
+@Disabled("These tests are intended for manual execution")
 class DecompositionAlignerPerformanceTests {
 
     companion object {
         const val REPETITIONS = 100
 
+        val pool = Executors.newCachedThreadPool()
         val totals = LinkedHashMap<String, Long>()
+
+        @JvmStatic
+        @BeforeAll
+        fun configure() {
+            assertFalse(this::class.java.desiredAssertionStatus(), "Disable assertions (-da) for reliable results.")
+        }
 
         @JvmStatic
         @AfterAll
         fun printSummary() {
+            pool.shutdownNow()
             println("Totals:")
             for ((algorithm, time) in totals) {
                 println(
@@ -28,13 +43,15 @@ class DecompositionAlignerPerformanceTests {
                     )
                 )
             }
+            pool.awaitTermination(1, TimeUnit.SECONDS)
         }
     }
 
     fun compare(tree: ProcessTree, log: Log) {
         val algorithms = listOf(
             AStar(tree),
-            DecompositionAligner(tree)
+            DecompositionAligner(tree),
+            CompositeAligner(tree, pool = pool)
         )
 
         // warm up

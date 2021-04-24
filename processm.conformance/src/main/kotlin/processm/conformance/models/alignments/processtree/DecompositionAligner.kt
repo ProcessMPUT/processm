@@ -16,7 +16,7 @@ import processm.core.models.processtree.*
 class DecompositionAligner(
     val model: ProcessTree,
     val penalty: PenaltyFunction = PenaltyFunction(),
-    val alignerFactory: (tree: ProcessTree, penalty: PenaltyFunction) -> Aligner = ::AStar
+    val alignerFactory: AlignerFactory = AlignerFactory { m, p, _ -> AStar(m, p) }
 ) : Aligner {
 
     companion object {
@@ -233,7 +233,7 @@ class DecompositionAligner(
 
     private fun align(node: Node, events: List<Event>): Alignment {
         val simplified = simplify(node, events)
-        val aligner = alignerFactory(ProcessTree(simplified), penalty)
+        val aligner = alignerFactory(ProcessTree(simplified), penalty, SameThreadExecutorService)
         return aligner.align(Trace(events.asSequence()))
     }
 

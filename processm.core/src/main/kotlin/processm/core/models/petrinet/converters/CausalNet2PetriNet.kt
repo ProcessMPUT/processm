@@ -113,4 +113,4 @@ private class CausalNet2PetriNet(val cnet: CausalNet) {
  * resulting [PetriNet], but the resulting [PetriNet] may allow for a valid firing sequence that does not correspond
  * to a valid binding sequence in this [CausalNet].
  */
-fun CausalNet.toPetriNet(): PetriNet = CausalNet2PetriNet(this).toPetriNet()
+fun CausalNet.toPetriNet(): PetriNet = CausalNet2PetriNet(this).toPetriNet().dropDeadParts()
