@@ -1,8 +1,10 @@
 package processm.conformance.models.alignments
 
 import processm.core.log.hierarchical.Trace
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.converters.toPetriNet
 import processm.core.models.processtree.ProcessTree
 import java.util.concurrent.*
 import processm.conformance.models.alignments.petrinet.DecompositionAligner as PetriDecompositionAligner
@@ -26,6 +28,8 @@ class CompositeAligner(
     vararg val alignerFactories: AlignerFactory =
         listOfNotNull(
             AStarAlignerFactory,
+            if (model is CausalNet) CNetToPetriDecompositionAlignerFactory else null,
+            if (model is CausalNet) CNetToPetriAStarAlignerFactory else null,
             if (model is PetriNet) PetriDecompositionAlignerFactory else null,
             if (model is ProcessTree) ProcessTreeDecompositionAlignerFactory else null,
         ).toTypedArray()
@@ -37,6 +41,14 @@ class CompositeAligner(
          */
         private const val TIMEOUT = 100L
         private val AStarAlignerFactory = AlignerFactory { model, penalty, _ -> AStar(model, penalty) }
+
+        private val CNetToPetriDecompositionAlignerFactory = AlignerFactory { model, penalty, pool ->
+            PetriDecompositionAligner((model as CausalNet).toPetriNet(), penalty, pool = pool)
+        }
+
+        private val CNetToPetriAStarAlignerFactory = AlignerFactory { model, penalty, pool ->
+            AStar((model as CausalNet).toPetriNet(), penalty)
+        }
 
         private val PetriDecompositionAlignerFactory = AlignerFactory { model, penalty, pool ->
             PetriDecompositionAligner(model as PetriNet, penalty, pool = pool)

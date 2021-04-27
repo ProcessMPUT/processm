@@ -5,12 +5,10 @@ import processm.core.helpers.allSubsets
 import processm.core.helpers.mapToSet
 import processm.core.log.Helpers
 import processm.core.models.causalnet.*
-import processm.core.models.petrinet.converters.toPetriNet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.test.Test
-import kotlin.test.Ignore
 import kotlin.test.assertEquals
 
 /**
@@ -85,8 +83,8 @@ class SATTest {
                 val atom =
                     if (mustUse.isNotEmpty()) mustUse[rnd.nextInt(mustUse.size)] else mayUse[rnd.nextInt(mayUse.size)]
                 val sgn = when {
-                    i==0 -> model[atom]
-                    i==1 -> !model[atom]
+                    i == 0 -> model[atom]
+                    i == 1 -> !model[atom]
                     else -> rnd.nextBoolean()
                 }
                 mayUse.remove(atom)
@@ -126,39 +124,39 @@ class SATTest {
      * which in turn is equivalent to enumerating all the models of the formula.
      */
     private fun cnfFormToCNet(form: CNFForm): CausalNet {
-        val start=Node("start")
-        val end=Node("end")
+        val start = Node("start")
+        val end = Node("end")
         val nClauses = form.size
         val nAtoms = form.maxOf { clause -> clause.maxOf { literal -> literal.second } } + 1
-        val cNodes = List(nClauses) {Node("C${it}")}
-        val aNodes = List(nAtoms) {Node("A${it}")}
-        val result=MutableCausalNet(start=start, end=end)
+        val cNodes = List(nClauses) { Node("C${it}") }
+        val aNodes = List(nAtoms) { Node("A${it}") }
+        val result = MutableCausalNet(start = start, end = end)
         result.addInstance(*cNodes.toTypedArray())
         result.addInstance(*aNodes.toTypedArray())
-        for(aIdx in 0 until nAtoms) {
+        for (aIdx in 0 until nAtoms) {
             result.addJoin(Join(setOf(result.addDependency(result.start, aNodes[aIdx]))))
             val posClauses = form.mapIndexedNotNull { cIdx, clause ->
-                if((true to aIdx) in clause)
+                if ((true to aIdx) in clause)
                     cIdx
                 else
                     null
             }
             val negClauses = form.mapIndexedNotNull { cIdx, clause ->
-                if((false to aIdx) in clause)
+                if ((false to aIdx) in clause)
                     cIdx
                 else
                     null
             }
             val posSplit = posClauses.mapToSet { cIdx -> result.addDependency(aNodes[aIdx], cNodes[cIdx]) }
-            if(posSplit.isNotEmpty())
+            if (posSplit.isNotEmpty())
                 result.addSplit(Split(posSplit))
             val negSplit = negClauses.mapToSet { cIdx -> result.addDependency(aNodes[aIdx], cNodes[cIdx]) }
-            if(negSplit.isNotEmpty())
+            if (negSplit.isNotEmpty())
                 result.addSplit(Split(negSplit))
         }
-        for(cIdx in 0 until nClauses) {
+        for (cIdx in 0 until nClauses) {
             val deps = form[cIdx].mapToSet { literal -> Dependency(aNodes[literal.second], cNodes[cIdx]) }
-            for(join in deps.allSubsets(excludeEmpty = true))
+            for (join in deps.allSubsets(excludeEmpty = true))
                 result.addJoin(Join(join))
             result.addSplit(Split(setOf(result.addDependency(cNodes[cIdx], result.end))))
         }
@@ -167,18 +165,18 @@ class SATTest {
         return result
     }
 
-    private fun test(nAtoms:Int) {
+    private fun test(nAtoms: Int) {
         val rnd = Random(42)
         val (form, model) = gen(nAtoms, rnd)
         println("Formula: ${cnfFormToString(form)}")
-        println("Model: "+model.mapIndexed { atom, sgn -> (if (!sgn) "¬" else "") + atom.toString() })
+        println("Model: " + model.mapIndexed { atom, sgn -> (if (!sgn) "¬" else "") + atom.toString() })
         val cnet = cnfFormToCNet(form)
-        val logText =cnet.start.name + " " +
-                cnet.instances.filter { it.name[0] == 'A' }.joinToString(separator = " ") {it.name} + " " +
-                cnet.instances.filter { it.name[0] == 'C' }.joinToString(separator = " ") {it.name} + " " +
+        val logText = cnet.start.name + " " +
+                cnet.instances.filter { it.name[0] == 'A' }.joinToString(separator = " ") { it.name } + " " +
+                cnet.instances.filter { it.name[0] == 'C' }.joinToString(separator = " ") { it.name } + " " +
                 cnet.end.name
         val log = Helpers.logFromString(logText)
-        val aligner = CompositeAligner(cnet.toPetriNet(), pool = SATTest.pool)
+        val aligner = CompositeAligner(cnet, pool = SATTest.pool)
         val alignment = aligner.align(log.traces.first())
         assertEquals(0, alignment.cost)
     }
@@ -192,15 +190,18 @@ class SATTest {
     @Test
     fun `test 6`() = test(6)
 
-    @Ignore("Sometimes takes very long, sometimes finishes in a second or so")
     @Test
     fun `test 7`() = test(7)
 
-    @Ignore("Takes too long")
     @Test
     fun `test 8`() = test(8)
 
-    @Ignore("Takes too long")
     @Test
     fun `test 9`() = test(9)
+
+    @Test
+    fun `test 11`() = test(11)
+
+    @Test
+    fun `test 13`() = test(13)
 }
