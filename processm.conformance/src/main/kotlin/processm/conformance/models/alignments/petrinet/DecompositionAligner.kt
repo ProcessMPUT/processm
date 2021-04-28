@@ -43,6 +43,10 @@ class DecompositionAligner(
         private val logger = logger()
     }
 
+    private val initialDecomposition: List<PetriNet> by lazy {
+        Decomposition.createInitialDecomposition(model)
+    }
+
     /**
      * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
      *
@@ -75,7 +79,7 @@ class DecompositionAligner(
     }
 
     private fun decomposedAlign(events: List<Event>): List<Alignment> {
-        var decomposition = Decomposition.create(model, events)
+        var decomposition = Decomposition.create(initialDecomposition, events)
         while (true) {
             val futures = decomposition.nets.mapIndexed { i, net ->
                 pool.submit<Alignment> {
@@ -170,7 +174,7 @@ class DecompositionAligner(
         val traces: List<List<Event>>
     ) {
         companion object {
-            fun create(model: PetriNet, trace: List<Event>): Decomposition {
+            fun createInitialDecomposition(model: PetriNet): List<PetriNet> {
                 assert(
                     model.transitions
                         .filterNot(Transition::isSilent)
@@ -196,6 +200,10 @@ class DecompositionAligner(
                         nets.add(PetriNet(emptyList(), listOf(transition), Marking.empty, Marking.empty))
                 }
 
+                return nets
+            }
+
+            fun create(nets: List<PetriNet>, trace: List<Event>): Decomposition {
                 val traces = nets.map { net ->
                     val transitionNames: Set<String?> = net.transitions.mapToSet(Transition::name)
                     trace.filter { e -> transitionNames.contains(e.conceptName) }
