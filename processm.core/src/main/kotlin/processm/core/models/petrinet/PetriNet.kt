@@ -165,4 +165,111 @@ class PetriNet(
 
         return PetriNet(usedPlaces, usedTransitions, initialMarking, finalMarking)
     }
+
+    private val hashCode: Int by lazy {
+        Objects.hash(*transitions.map { it.name }.sorted().toTypedArray())
+    }
+
+    override fun hashCode(): Int = hashCode
+
+    override fun equals(other: Any?): Boolean =
+        (this === other) || (other is PetriNet && this.hashCode == other.hashCode && equalsInternal(other))
+
+    private fun generateTransitionsMap(
+        mine2theirs: List<List<Int>>,
+        startAt: Int = 0,
+        theirsUsed: Set<Int> = emptySet()
+    ): Sequence<List<Int>> = sequence {
+        var pos = startAt
+        val prefix = ArrayList<Int>()
+        while (pos < mine2theirs.size && mine2theirs[pos].size == 1) {
+            val theirs = mine2theirs[pos].single()
+            if (theirs in theirsUsed || theirs in prefix)
+                return@sequence
+            prefix.add(theirs)
+            pos++
+        }
+        val newTheirsUsed = theirsUsed + prefix
+        if (pos < mine2theirs.size)
+            for (theirs in mine2theirs[pos])
+                for (tail in generateTransitionsMap(mine2theirs, pos + 1, newTheirsUsed + setOf(theirs)))
+                    yield(prefix + setOf(theirs) + tail)
+        else
+            yield(prefix)
+    }
+
+    private val places2outTransitions = HashMap<Place, MutableList<Transition>>()
+    private val places2inTransitions = HashMap<Place, MutableList<Transition>>()
+
+    init {
+        for (t in transitions) {
+            for (p in t.outPlaces)
+                places2inTransitions.computeIfAbsent(p) { ArrayList<Transition>() }.add(t)
+            for (p in t.inPlaces)
+                places2outTransitions.computeIfAbsent(p) { ArrayList<Transition>() }.add(t)
+        }
+    }
+
+    // TODO verify the assumption that no transition occurs more than once in any of the lists
+    private fun compareTranstionLists(left: List<Transition>?, right: List<Transition>?) =
+        left?.toSet().orEmpty() == right?.toSet().orEmpty()
+
+    private fun matchPlaces(
+        minePlaces: Collection<Place>,
+        theirsPlaces: Collection<Place>,
+        transitionsMap: Map<Transition, Transition>,
+        other: PetriNet
+    ): Boolean {
+        assert(minePlaces.size == theirsPlaces.size)
+        val theirsAvailable = theirsPlaces.toMutableSet()
+        for (mine in minePlaces) {
+            val mineInTransitions = places2inTransitions[mine]?.mapNotNull { transitionsMap[it] }
+            val mineOutTransitions = places2outTransitions[mine]?.mapNotNull { transitionsMap[it] }
+            var hit = false
+            for (theirs in theirsAvailable) {
+                if (compareTranstionLists(mineInTransitions, other.places2inTransitions[theirs]) &&
+                    compareTranstionLists(mineOutTransitions, other.places2outTransitions[theirs])
+                ) {
+                    hit = true
+                    theirsAvailable.remove(theirs)
+                    break
+                }
+            }
+            if (!hit)
+                return false
+        }
+        return true
+    }
+
+    private fun equalsInternal(other: PetriNet): Boolean {
+        if (this.transitions.size != other.transitions.size)
+            return false
+        val mine2theirs = List(this.transitions.size) { ArrayList<Int>() }
+        for (mine in this.transitions.indices)
+            for (theirs in other.transitions.indices) {
+                val mineT = this.transitions[mine]
+                val theirsT = other.transitions[theirs]
+                if (mineT.name == theirsT.name && mineT.inPlaces.size == theirsT.inPlaces.size && mineT.outPlaces.size == theirsT.outPlaces.size) {
+                    mine2theirs[mine].add(theirs)
+                }
+            }
+        for (transitionsMap in generateTransitionsMap(mine2theirs)) {
+            assert(transitionsMap.size == this.transitions.size)
+            val transitionMap2 = (this.transitions.indices zip transitionsMap)
+                .map { (mine, theirs) -> this.transitions[mine] to other.transitions[theirs] }
+                .toMap()
+            var hit = true
+            for ((mine, theirs) in transitionMap2.entries) {
+                if (!(matchPlaces(mine.inPlaces, theirs.inPlaces, transitionMap2, other) &&
+                            matchPlaces(mine.outPlaces, theirs.outPlaces, transitionMap2, other))
+                ) {
+                    hit = false
+                    break
+                }
+            }
+            if (hit)
+                return true
+        }
+        return false
+    }
 }
