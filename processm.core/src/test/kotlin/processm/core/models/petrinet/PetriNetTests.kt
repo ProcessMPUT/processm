@@ -102,9 +102,18 @@ class PetriNetTests {
     @Test
     fun `equals test incorrectly swapped names`() {
         val a = createNet("a", "b", "c", "d", "e", "f", "g", "h")
-        val b = createNet("h", "b", "c", "d", "e", "f", "g", "a")
+        val b = createNet("a", "b", "d", "c", "e", "f", "g", "h")
         assertNotSame(a, b)
         assertEquals(a.hashCode(), b.hashCode())
+        assertNotEquals(a, b)
+    }
+
+    @Test
+    fun `equals test incorrectly swapped names 2`() {
+        val a = createNet("a", "b", "c", "d", "e", "f", "g", "h")
+        val b = createNet("h", "b", "c", "d", "e", "f", "g", "a")
+        assertNotSame(a, b)
+        assertNotEquals(a.hashCode(), b.hashCode())
         assertNotEquals(a, b)
     }
 

@@ -167,7 +167,16 @@ class PetriNet(
     }
 
     private val hashCode: Int by lazy {
-        Objects.hash(*transitions.map { it.name }.sorted().toTypedArray())
+        Objects.hash(*transitions.map { Triple(it.name, it.inPlaces.size, it.outPlaces.size) }.sortedWith { a, b ->
+            val x = a.first.compareTo(b.first)
+            if (x != 0)
+                return@sortedWith x
+            val y = a.second.compareTo(b.second)
+            if (y != 0)
+                return@sortedWith y
+            return@sortedWith a.third.compareTo(b.third)
+
+        }.toTypedArray())
     }
 
     override fun hashCode(): Int = hashCode
