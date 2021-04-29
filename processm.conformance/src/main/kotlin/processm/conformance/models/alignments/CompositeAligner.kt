@@ -36,10 +36,6 @@ class CompositeAligner(
 ) : Aligner {
 
     companion object {
-        /**
-         * Timeout in microseconds for waiting for every single Future.
-         */
-        private const val TIMEOUT = 100L
         private val AStarAlignerFactory = AlignerFactory { model, penalty, _ -> AStar(model, penalty) }
 
         private val CNetToPetriDecompositionAlignerFactory = AlignerFactory { model, penalty, pool ->
@@ -66,30 +62,27 @@ class CompositeAligner(
     }
 
     /**
-     * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
+     * Calculates [Alignment] for the given [trace].
+     *
+     * @return [Alignment] if computation finished before [timeout] and null otherwise.
      *
      * @throws IllegalStateException If the alignment cannot be calculated, e.g., because the final model state is not
      * reachable.
      * @throws InterruptedException If the calculation cancelled.
      */
-    override fun align(trace: Trace): Alignment {
+    fun align(trace: Trace, timeout: Long, unit: TimeUnit): Alignment? {
+        val completionService = ExecutorCompletionService<Alignment>(pool)
         val futures = alignerFactories.map { factory ->
-            pool.submit<Alignment> {
+            completionService.submit {
                 factory(model, penalty, pool).align(trace)
             }
         }
 
         try {
-            while (true) {
-                for (i in futures.indices) {
-                    val future = futures[i]
-                    try {
-                        return future.get(TIMEOUT, TimeUnit.MICROSECONDS)
-                    } catch (_: TimeoutException) {
-                        // ignore
-                    }
-                }
-            }
+            return if (timeout >= 0)
+                completionService.poll(timeout, unit)?.get()
+            else
+                completionService.take().get()
         } catch (e: ExecutionException) {
             throw e.cause ?: e
         } catch (_: InterruptedException) {
@@ -101,4 +94,13 @@ class CompositeAligner(
                 future.cancel(true)
         }
     }
+
+    /**
+     * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
+     *
+     * @throws IllegalStateException If the alignment cannot be calculated, e.g., because the final model state is not
+     * reachable.
+     * @throws InterruptedException If the calculation cancelled.
+     */
+    override fun align(trace: Trace): Alignment = align(trace, -1L, TimeUnit.SECONDS)!!
 }
