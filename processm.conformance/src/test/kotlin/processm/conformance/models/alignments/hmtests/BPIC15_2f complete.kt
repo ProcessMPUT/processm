@@ -2,7 +2,6 @@ package processm.conformance.models.alignments.hmtests
 
 import org.junit.jupiter.api.AfterAll
 import processm.conformance.models.alignments.CompositeAligner
-import processm.conformance.models.alignments.CompositeAlignerPetriNetTests
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -633,7 +632,7 @@ class `BPIC15_2f complete` {
     @Test
     fun `trace 443`() {
         val net = model.toPetriNet()
-        val aligner = CompositeAligner(net, pool = CompositeAlignerPetriNetTests.pool)
+        val aligner = CompositeAligner(net, pool = pool)
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
         val trace = log.traces.toList()[443]
         val start = System.currentTimeMillis()
