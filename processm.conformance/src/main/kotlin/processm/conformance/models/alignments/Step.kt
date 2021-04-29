@@ -32,8 +32,8 @@ data class Step(
     val type: DeviationType
 ) {
     override fun hashCode(): Int =
-        System.identityHashCode(logMove) xor
                 Objects.hash(
+                    logMove,
                     modelMove?.name,
                     modelMove?.isSilent,
                     modelMove?.isArtificial
@@ -42,7 +42,7 @@ data class Step(
     override fun equals(other: Any?): Boolean =
         other is Step &&
                 type == other.type &&
-                logMove === other.logMove &&
+                logMove == other.logMove &&
                 modelMove?.name == other.modelMove?.name &&
                 modelMove?.isSilent == other.modelMove?.isSilent &&
                 modelMove?.isArtificial == other.modelMove?.isArtificial

@@ -44,7 +44,7 @@ fun List<Alignment>.merge(events: List<Event>): Alignment {
 }
 
 /**
- * Merges this list of [Alignment]s using the given list of [events]. The order of steps in all alignments ust be
+ * Merges this list of [Alignment]s using the given list of [events]. The order of steps in all alignments must be
  * consistent with the order of [events].
  */
 fun List<Alignment>.mergeDuplicateAware(events: List<Event>, penalty: PenaltyFunction): Alignment {
@@ -57,7 +57,7 @@ fun List<Alignment>.mergeDuplicateAware(events: List<Event>, penalty: PenaltyFun
         var eventStep: Step? = null
         val skipIndices = HashSet<Int>()
         for ((aIndex, subAlignment) in this.withIndex()) {
-            val matchingEventIndex = subAlignment.steps.indexOfFirst(currentSteps[aIndex]) { it.logMove === event }
+            val matchingEventIndex = subAlignment.steps.indexOfFirst(currentSteps[aIndex]) { it.logMove == event }
             if (matchingEventIndex >= 0) {
                 val matchingEventStep = subAlignment.steps[matchingEventIndex]
                 assert(eventStep == null || eventStep == matchingEventStep)
@@ -98,7 +98,7 @@ fun List<Alignment>.mergeDuplicateAware(events: List<Event>, penalty: PenaltyFun
     assert(modelMoves.isEmpty())
     for (i in currentSteps.indices) {
         val missingSteps = this[i].steps.subList(currentSteps[i], this[i].steps.size)
-        assert(missingSteps.all { it.logMove === null })
+        assert(missingSteps.all { it.logMove == null })
         modelMoves.addAll(missingSteps)
     }
     steps.addAll(modelMoves)
@@ -134,7 +134,7 @@ fun Alignment.fillMissingEvents(events: List<Event>, penalty: PenaltyFunction): 
     var cost = this.cost
     var stepIndex = 0
     for (event in events) {
-        val index = steps.indexOfFirst(stepIndex) { it.logMove === event }
+        val index = steps.indexOfFirst(stepIndex) { it.logMove == event }
         if (index == -1) {
             // missing event, inserting
             steps.add(
@@ -160,7 +160,7 @@ fun Alignment.fillMissingEvents(events: List<Event>, penalty: PenaltyFunction): 
  * Verifies whether this list of alignment [Step]s is consistent with the given list of [events].
  */
 fun List<Step>.verify(events: List<Event>) {
-    assert((events.asSequence() zipOrThrow this.asSequence().mapNotNull(Step::logMove)).all { (e1, e2) -> e1 === e2 }) {
+    assert((events.asSequence() zipOrThrow this.asSequence().mapNotNull(Step::logMove)).all { (e1, e2) -> e1 == e2 }) {
         "events:\t${events.joinToString { it.conceptName.toString() }}\n" +
                 "alignment:\t${this.mapNotNull(Step::logMove).joinToString { it.conceptName.toString() }}"
     }
