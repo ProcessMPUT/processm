@@ -1,5 +1,7 @@
 package processm.conformance.models.alignments.petrinet
 
+import processm.conformance.models.alignments.cache.CachingAlignerFactory
+import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.core.helpers.allPermutations
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
@@ -947,6 +949,7 @@ class DecompositionAlignerTests {
                 trace.events.count(),
                 alignment.steps.count { it.modelMove === null || !it.modelMove!!.isSilent })
         }
+        assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter >= 8 }
     }
 
     @Test
@@ -1168,6 +1171,103 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCost[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `duplicated events`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val d = Node("d")
+        val cnet = causalnet {
+            start = a
+            end = d
+            a splits b + c
+            b splits d
+            c splits d
+            a joins b
+            a joins c
+            b + c join d
+        }
+        val log = Helpers.logFromString(
+            """
+                a b c d
+            a b c d a b c d
+            a a b b c c d d
+        """.trimIndent()
+        )
+        val traces = log.traces.toList()
+        run {
+            val aligner = DecompositionAligner(cnet.toPetriNet())
+            val alignment = aligner.align(traces[0])
+            assertEquals(0, alignment.cost)
+            assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter == 0 }
+        }
+        run {
+            val aligner = DecompositionAligner(cnet.toPetriNet())
+            val alignment = aligner.align(traces[1])
+            assertEquals(4, alignment.cost)
+            assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter >= 1 }
+        }
+        run {
+            val aligner = DecompositionAligner(cnet.toPetriNet())
+            val alignment = aligner.align(traces[2])
+            assertEquals(4, alignment.cost)
+            assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter >= 1 }
+        }
+    }
+
+    @Test
+    fun `duplicated events due to a loop`() {
+        val a = Node("a")
+        val b = Node("b")
+        val c = Node("c")
+        val d = Node("d")
+        val e = Node("e")
+        val f = Node("f")
+        val cnet = causalnet {
+            start = a
+            end = f
+            a splits b
+            b splits c + d
+            c splits e
+            d splits e
+            e splits b or f
+            a or e join b
+            b joins c
+            b joins d
+            c + d join e
+            e joins f
+        }
+
+
+        val log = Helpers.logFromString(
+            """
+                a b c d e f
+                a b c d e b c d e f
+                a a b b c c d d e e f f
+        """.trimIndent()
+        )
+
+        val traces = log.traces.toList()
+        run {
+            val aligner = DecompositionAligner(cnet.toPetriNet())
+            val alignment = aligner.align(traces[0])
+            assertEquals(0, alignment.cost)
+            assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter == 0 }
+        }
+        run {
+            val aligner = DecompositionAligner(cnet.toPetriNet())
+            val alignment = aligner.align(traces[1])
+            assertEquals(0, alignment.cost)
+            assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter == 0 }
+        }
+        run {
+            val aligner = DecompositionAligner(cnet.toPetriNet())
+            val alignment = aligner.align(traces[2])
+            assertEquals(6, alignment.cost)
+            assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter >= 1 }
         }
     }
 }

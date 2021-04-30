@@ -32,12 +32,12 @@ data class Step(
     val type: DeviationType
 ) {
     override fun hashCode(): Int =
-                Objects.hash(
-                    logMove,
-                    modelMove?.name,
-                    modelMove?.isSilent,
-                    modelMove?.isArtificial
-                )
+        Objects.hash(
+            logMove,
+            modelMove?.name,
+            modelMove?.isSilent,
+            modelMove?.isArtificial
+        )
 
     override fun equals(other: Any?): Boolean =
         other is Step &&

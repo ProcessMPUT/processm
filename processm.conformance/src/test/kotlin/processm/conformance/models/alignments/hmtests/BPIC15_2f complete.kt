@@ -14,8 +14,10 @@ import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @InMemoryXESProcessing
 class `BPIC15_2f complete` {
@@ -630,6 +632,7 @@ class `BPIC15_2f complete` {
         }
     }
 
+    @Ignore
     @Test
     fun `trace 443`() {
         val net = model.toPetriNet()
@@ -643,5 +646,17 @@ class `BPIC15_2f complete` {
         println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
         assertEquals(0, alignment.cost)
+    }
+
+    @Test
+    fun `complete log short timeout`() {
+        val net = model.toPetriNet()
+        val aligner = CompositeAligner(net, pool = CompositeAlignerPetriNetTests.pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val alignments = aligner.align(log, 10, TimeUnit.MILLISECONDS).toList()
+
+        assertEquals(log.traces.count(), alignments.size)
+        assertTrue("It is possible that the test failed due to some performance issues") { alignments.any { it != null } }
     }
 }

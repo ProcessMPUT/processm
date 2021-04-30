@@ -2,10 +2,9 @@ package processm.conformance.models.alignments.petrinet
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.*
-import processm.core.helpers.SameThreadExecutorService
-import processm.core.helpers.allPairs
-import processm.core.helpers.mapToSet
-import processm.core.helpers.optimize
+import processm.conformance.models.alignments.cache.CachingAlignerFactory
+import processm.conformance.models.alignments.cache.DefaultAlignmentCache
+import processm.core.helpers.*
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.debug
@@ -33,9 +32,9 @@ import java.util.concurrent.Future
  * the parts of the decomposed [model].
  */
 class DecompositionAligner(
-    val model: PetriNet,
+    override val model: PetriNet,
     val penalty: PenaltyFunction = PenaltyFunction(),
-    val alignerFactory: AlignerFactory = AlignerFactory { m, p, _ -> AStar(m, p) },
+    val alignerFactory: AlignerFactory = CachingAlignerFactory(DefaultAlignmentCache()) { m, p, _ -> AStar(m, p) },
     val pool: ExecutorService = SameThreadExecutorService
 ) : Aligner {
 

@@ -22,7 +22,7 @@ import java.util.*
  * This class is thread-safe.
  */
 class AStar(
-    val model: ProcessModel,
+    override val model: ProcessModel,
     val penalty: PenaltyFunction = PenaltyFunction()
 ) : Aligner {
     companion object {

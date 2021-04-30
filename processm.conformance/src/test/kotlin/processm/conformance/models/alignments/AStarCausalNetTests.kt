@@ -4,6 +4,7 @@ import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -448,6 +449,7 @@ class AStarCausalNetTests {
         }
     }
 
+    @Ignore
     @Test
     fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }

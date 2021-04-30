@@ -198,12 +198,14 @@ class PetriNet(
             prefix.add(theirs)
             pos++
         }
+        assert(prefix.size == pos - startAt)
         val newTheirsUsed = theirsUsed + prefix
-        if (pos < mine2theirs.size)
+        if (pos < mine2theirs.size) {
             for (theirs in mine2theirs[pos])
-                for (tail in generateTransitionsMap(mine2theirs, pos + 1, newTheirsUsed + setOf(theirs)))
-                    yield(prefix + setOf(theirs) + tail)
-        else
+                if (theirs !in newTheirsUsed)
+                    for (tail in generateTransitionsMap(mine2theirs, pos + 1, newTheirsUsed + setOf(theirs)))
+                        yield(prefix + setOf(theirs) + tail)
+        } else
             yield(prefix)
     }
 
@@ -280,5 +282,20 @@ class PetriNet(
                 return true
         }
         return false
+    }
+
+    fun toMultilineString():String {
+        val result=StringBuilder()
+        val place2id=HashMap<Place, String>()
+        fun placeToString(p:Place) = place2id.computeIfAbsent(p) {"p${place2id.size}"}
+        for(t in transitions) {
+            result.append(t.inPlaces.joinToString(separator = " ", prefix = "[", postfix = "]", transform = ::placeToString))
+            result.append(" -> ")
+            result.append(t.name)
+            result.append(" -> ")
+            result.append(t.outPlaces.joinToString(separator = " ", prefix = "[", postfix = "]", transform = ::placeToString))
+            result.appendLine()
+        }
+        return result.toString()
     }
 }
