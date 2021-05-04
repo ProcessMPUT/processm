@@ -4,6 +4,7 @@ import processm.core.log.attribute.NullAttr
 import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.models.commons.Activity
 
 object Helpers {
     fun logFromString(text: String): Log =
@@ -25,4 +26,10 @@ object Helpers {
             )
         )
     }
+
+    /**
+     * Creates a [Trace] for a given sequence of [Activity]s
+     */
+    fun trace(vararg activities: Activity): Trace =
+        Trace(activities.asList().map { event(it.name) }.asSequence())
 }

@@ -23,7 +23,7 @@ import java.util.*
  */
 class AStar(
     override val model: ProcessModel,
-    val penalty: PenaltyFunction = PenaltyFunction()
+    override val penalty: PenaltyFunction = PenaltyFunction()
 ) : Aligner {
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE

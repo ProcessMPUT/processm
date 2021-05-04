@@ -29,7 +29,7 @@ import processm.conformance.models.alignments.processtree.DecompositionAligner a
  */
 class CompositeAligner(
     override val model: ProcessModel,
-    val penalty: PenaltyFunction = PenaltyFunction(),
+    override val penalty: PenaltyFunction = PenaltyFunction(),
     val pool: ExecutorService = Executors.newCachedThreadPool(),
     val cache: AlignmentCache? = DefaultAlignmentCache(),
     vararg alignerFactories: AlignerFactory = emptyArray()

@@ -12,6 +12,11 @@ import processm.core.models.commons.ProcessModel
 interface Aligner {
 
     /**
+     * The penalty function used by [align]
+     */
+    val penalty: PenaltyFunction
+
+    /**
      * The model used by [align]
      */
     val model: ProcessModel

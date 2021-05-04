@@ -33,7 +33,7 @@ import java.util.concurrent.Future
  */
 class DecompositionAligner(
     override val model: PetriNet,
-    val penalty: PenaltyFunction = PenaltyFunction(),
+    override val penalty: PenaltyFunction = PenaltyFunction(),
     val alignerFactory: AlignerFactory = CachingAlignerFactory(DefaultAlignmentCache()) { m, p, _ -> AStar(m, p) },
     val pool: ExecutorService = SameThreadExecutorService
 ) : Aligner {

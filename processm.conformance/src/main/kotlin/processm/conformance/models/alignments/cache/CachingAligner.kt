@@ -2,6 +2,7 @@ package processm.conformance.models.alignments.cache
 
 import processm.conformance.models.alignments.Aligner
 import processm.conformance.models.alignments.Alignment
+import processm.conformance.models.alignments.PenaltyFunction
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.ProcessModel
 
@@ -12,6 +13,9 @@ class CachingAligner(val baseAligner: Aligner, val alignmentCache: AlignmentCach
 
     override val model: ProcessModel
         get() = baseAligner.model
+
+    override val penalty: PenaltyFunction
+        get() = baseAligner.penalty
 
     override fun align(trace: Trace): Alignment {
         val events = trace.events.toList()
