@@ -13,7 +13,7 @@ package processm.core.models.petrinet
  * Place = "P" IncomingTransitions? OutgoingTransitions?
  * IncomingTransitions = "tin" Transitions
  * OutgoingTransitions = "tout" Transitions
- * Transitions = Transition | (Transition ".." Transitions)
+ * Transitions = Transition | (Transition "*" Transitions)
  * Transition = String
  * ```
  *
@@ -21,12 +21,12 @@ package processm.core.models.petrinet
  * ```
  * petrinet {
  * P tout "a" // a place with no incoming transitions and an outgoing transition "a"
- * P tin "a".."f" tout "b".."c" // a place with two incoming transitions ("a" and "f") and two outgoing transitions ("b" and "c")
- * P tin "a".."f" tout "d"
- * P tin "b".."c" tout "e"
+ * P tin "a" * "f" tout "b" * "c" // a place with two incoming transitions ("a" and "f") and two outgoing transitions ("b" and "c")
+ * P tin "a" * "f" tout "d"
+ * P tin "b" * "c" tout "e"
  * P tin "d" tout "e"
- * P tin "e" tout "g".."h".."f"
- * P tin "g".."h"
+ * P tin "e" tout "g" * "h" * "f"
+ * P tin "g" * "h"
  * }
  * ```
  * This example defines Petri net M1 from "Replaying History on Process Models for Conformance Checking and Performance Analysis" (DOI 10.1002/widm.1045).
@@ -58,10 +58,10 @@ class PetriNetDSL {
         }
     }
 
-    operator fun String.rangeTo(other: String): ArrayList<String> = arrayListOf(this, other)
+    operator fun String.times(other: String): ArrayList<String> = arrayListOf(this, other)
 
 
-    operator fun ArrayList<String>.rangeTo(other: String): ArrayList<String> {
+    operator fun ArrayList<String>.times(other: String): ArrayList<String> {
         this.add(other)
         return this
     }

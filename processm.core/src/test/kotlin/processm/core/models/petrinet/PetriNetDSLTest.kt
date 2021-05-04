@@ -31,12 +31,12 @@ class PetriNetDSLTest {
 
         val net = petrinet {
             P tout "a"
-            P tin "a".."f" tout "b".."c"
-            P tin "a".."f" tout "d"
-            P tin "b".."c" tout "e"
+            P tin "a" * "f" tout "b" * "c"
+            P tin "a" * "f" tout "d"
+            P tin "b" * "c" tout "e"
             P tin "d" tout "e"
-            P tin "e" tout "g".."h".."f"
-            P tin "g".."h"
+            P tin "e" tout "g" * "h" * "f"
+            P tin "g" * "h"
         }
 
         assertEquals(expected, net)
