@@ -5,8 +5,8 @@ import processm.conformance.models.alignments.Alignment
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 
-class Fitness(
-    val aligner: Aligner
+open class Fitness(
+    open val aligner: Aligner
 ) : Measure<Log, Double> {
 
 
@@ -16,18 +16,21 @@ class Fitness(
 
     override fun invoke(artifact: Log) = invoke(artifact, aligner.align(artifact).toList())
 
-    operator fun invoke(log: Log, alignments: Collection<Alignment?>): Double {
-        val emptyModelAlignmentCost = log.traces.map { trace ->
-            trace.events.count() * aligner.penalty.logMove
-        }.toList()
-        val n = emptyModelAlignmentCost.size
-        require(n == alignments.size)
+    protected fun computeEmptyModelAlignmentCost(log: Log) = log.traces.map { trace ->
+        trace.events.count() * aligner.penalty.logMove
+    }.toList()
+
+    protected open fun alignmentCost(trace: Trace, alignment: Alignment?): Double? = alignment?.cost?.toDouble()
+
+    open operator fun invoke(log: Log, alignments: List<Alignment?>?): Double {
+        val emptyModelAlignmentCost = computeEmptyModelAlignmentCost(log)
         val movel = emptyModelAlignmentCost.sum()
-        val fcost = (alignments zip emptyModelAlignmentCost)
-            .sumBy { (trueAlignment, emptyAlignmentCost) ->
-                trueAlignment?.cost ?: (emptyAlignmentCost + movem)
-            }
-        return 1.0 - fcost.toDouble() / (movel + n * movem)
+        var fcost = 0.0
+        for ((i, trace) in log.traces.withIndex()) {
+            val alignment = if (alignments != null && i < alignments.size) alignments[i] else null
+            fcost += alignmentCost(trace, alignment) ?: (emptyModelAlignmentCost[i] + movem).toDouble()
+        }
+        return 1.0 - fcost / (movel + emptyModelAlignmentCost.size * movem)
     }
 
 }

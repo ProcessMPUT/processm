@@ -8,11 +8,9 @@ import processm.core.log.Helpers
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
-import processm.core.models.petrinet.Marking
-import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.Place
-import processm.core.models.petrinet.Transition
+import processm.core.models.petrinet.*
 import processm.core.models.petrinet.converters.toPetriNet
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -1269,5 +1267,58 @@ class DecompositionAlignerTests {
             assertEquals(6, alignment.cost)
             assertTrue { ((aligner.alignerFactory as CachingAlignerFactory).cache as DefaultAlignmentCache).hitCounter >= 1 }
         }
+    }
+
+    private val model2: PetriNet = petrinet {
+        P tout "a"
+        P tin "a" tout "c"
+        P tin "c" tout "d"
+        P tin "d" tout "e"
+        P tin "e" tout "h"
+        P tin "h"
+    }
+
+    @Test
+    fun `model2 trace with superfluous repetitions long wait`() {
+        val log = Helpers.logFromString("a c d e d e h")
+        val events = log.traces.first().events.toList()
+        val aligner = DecompositionAligner(model2)
+        val cost = aligner.alignmentCostLowerBound(events, 100, TimeUnit.SECONDS)
+        assertEquals(2.0, cost)
+    }
+
+    @Test
+    fun `model2 trace with superfluous repetitions short wait`() {
+        val model2: PetriNet = petrinet {
+            P tout "a"
+            P tin "a" tout "c"
+            P tin "c" tout "d"
+            P tin "d" tout "e"
+            P tin "e" tout "h"
+            P tin "h"
+        }
+        val log = Helpers.logFromString("a c d e d e h")
+        val events = log.traces.first().events.toList()
+        val aligner = DecompositionAligner(model2)
+        val cost = aligner.alignmentCostLowerBound(events, 1, TimeUnit.NANOSECONDS)
+        assertEquals(2.0, cost)
+    }
+
+    @Test
+    fun `model2 trace with superfluous repetitions and nonexisting activities short wait`() {
+        val log = Helpers.logFromString("a c d e f d b e h")
+        val events = log.traces.first().events.toList()
+        val aligner = DecompositionAligner(model2)
+        val cost = aligner.alignmentCostLowerBound(events, 1, TimeUnit.NANOSECONDS)
+        assertEquals(4.0, cost)
+    }
+
+    @Test
+    fun `model2 trace with superfluous repetitions and nonexisting activities long wait`() {
+        val log = Helpers.logFromString("a c d e f d b e h")
+        val events = log.traces.first().events.toList()
+        val aligner = DecompositionAligner(model2)
+        val cost = aligner.alignmentCostLowerBound(events, 100, TimeUnit.SECONDS)
+        assertEquals(4.0, cost)
     }
 }

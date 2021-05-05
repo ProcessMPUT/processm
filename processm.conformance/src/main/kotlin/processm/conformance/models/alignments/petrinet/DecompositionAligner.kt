@@ -15,10 +15,7 @@ import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
-import java.util.concurrent.CancellationException
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Future
+import java.util.concurrent.*
 
 /**
  * An aligner for [PetriNet]s that calculates alignments using the decomposition of the given net.
@@ -77,35 +74,124 @@ class DecompositionAligner(
         return output
     }
 
+    /**
+     * Follows Definition 20 of https://doi.org/10.1016/j.ins.2018.07.026
+     */
+    private fun mergeAlignmentCosts(alignments: List<Alignment>, nets: List<PetriNet>): Double {
+        var result = 0.0
+        val ctr = Counter<String>()
+        for (net in nets)
+            for (a in net.transitions)
+                ctr.inc(a.name)
+        for (a in alignments) {
+            for (s in a.steps) {
+                val rawPenaltyValue = penalty.calculate(s)
+                if (rawPenaltyValue != 0) {
+                    result += if (s.logMove != null)
+                        rawPenaltyValue / ctr[s.logMove.conceptName]!!
+                    else
+                        rawPenaltyValue
+                }
+            }
+        }
+        return result
+    }
+
+    /**
+     * Computes lower bound on the alignment cost. Takes at most [timeout] [unit]s to compute decomposed alignments,
+     * if no complete, decomposed alignments were computed during this time returns null, otherwise returns a lower
+     * bound for the alignment cost.
+     *
+     * ```
+     * alignmentCostLowerBound(events) <= align(events).cost
+     * ```
+     */
+    fun alignmentCostLowerBound(events: List<Event>, timeout: Long, unit: TimeUnit): Double? {
+        val eventsWithExistingActivities =
+            events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
+        var lastResult: AlignmentStepResult? = null
+        val f = pool.submit {
+            var decomposition = Decomposition.create(initialDecomposition, eventsWithExistingActivities)
+            while (true) {
+                try {
+                    val r = decomposedAlignStep(eventsWithExistingActivities, decomposition)
+                    lastResult = r
+                    if (r.decomposition == null)
+                        break
+                    decomposition = r.decomposition
+                } catch (e: InterruptedException) {
+                    break
+                } catch (e: CancellationException) {
+                    break
+                }
+            }
+        }
+        try {
+            f.get(timeout, unit)
+        } catch (_: TimeoutException) {
+            //ignore
+        } finally {
+            f.cancel(true)
+        }
+        val result = lastResult ?: return null
+        val alignmentsCost = if (result.alignments.size > 1) {
+            if (result.decomposition != null)
+                mergeAlignmentCosts(result.alignments, result.nets)
+            else
+                result.alignments.mergeDuplicateAware(eventsWithExistingActivities, penalty).cost.toDouble()
+        } else
+            result.alignments[0].cost.toDouble()
+        val unmachableEventsCost = (events.size - eventsWithExistingActivities.size) * penalty.logMove
+        return alignmentsCost + unmachableEventsCost
+    }
+
+    private data class AlignmentStepResult(
+        val alignments: List<Alignment>,
+        val nets: List<PetriNet>,
+        val decomposition: Decomposition?
+    )
+
+    private fun decomposedAlignStep(
+        events: List<Event>,
+        decomposition: Decomposition
+    ): AlignmentStepResult {
+        val futures = decomposition.nets.mapIndexed { i, net ->
+            pool.submit<Alignment> {
+                alignerFactory(net, penalty, pool).align(Trace(decomposition.traces[i].asSequence()))
+            }
+        }
+        val alignments = try {
+            futures.map(Future<Alignment>::get)
+        } catch (e: ExecutionException) {
+            throw e.cause ?: e
+        } catch (_: InterruptedException) {
+            throw InterruptedException("DecompositionAligner was requested to cancel.")
+        } catch (_: CancellationException) {
+            throw InterruptedException("DecompositionAligner was requested to cancel.")
+        } finally {
+            for (future in futures)
+                future.cancel(true)
+        }
+
+        if (alignments.size == 1)
+            return AlignmentStepResult(alignments, decomposition.nets, null)
+
+        val conflict = getMaxConflict(alignments, decomposition)
+        if (conflict.isEmpty())
+            return AlignmentStepResult(alignments, decomposition.nets, null)
+
+        val recomposed = decomposition.recompose(conflict.map(decomposition.nets::get), events)
+
+        return AlignmentStepResult(alignments, decomposition.nets, recomposed)
+    }
+
     private fun decomposedAlign(events: List<Event>): List<Alignment> {
         var decomposition = Decomposition.create(initialDecomposition, events)
         while (true) {
-            val futures = decomposition.nets.mapIndexed { i, net ->
-                pool.submit<Alignment> {
-                    alignerFactory(net, penalty, pool).align(Trace(decomposition.traces[i].asSequence()))
-                }
-            }
-            val alignments = try {
-                futures.map(Future<Alignment>::get)
-            } catch (e: ExecutionException) {
-                throw e.cause ?: e
-            } catch (_: InterruptedException) {
-                throw InterruptedException("DecompositionAligner was requested to cancel.")
-            } catch (_: CancellationException) {
-                throw InterruptedException("DecompositionAligner was requested to cancel.")
-            } finally {
-                for (future in futures)
-                    future.cancel(true)
-            }
-
-            if (alignments.size == 1)
-                return alignments
-
-            val conflict = getMaxConflict(alignments, decomposition)
-            if (conflict.isEmpty())
-                return alignments
-
-            decomposition = decomposition.recompose(conflict.map(decomposition.nets::get), events)
+            val stepResult = decomposedAlignStep(events, decomposition)
+            if (stepResult.decomposition == null)
+                return stepResult.alignments
+            decomposition = stepResult.decomposition
         }
     }
 

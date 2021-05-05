@@ -2,7 +2,7 @@ package processm.conformance.models.alignments.hmtests
 
 import org.junit.jupiter.api.AfterAll
 import processm.conformance.models.alignments.CompositeAligner
-import processm.conformance.models.alignments.CompositeAlignerPetriNetTests
+import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -636,7 +636,7 @@ class `BPIC15_2f complete` {
     @Test
     fun `trace 443`() {
         val net = model.toPetriNet()
-        val aligner = CompositeAligner(net, pool = CompositeAlignerPetriNetTests.pool)
+        val aligner = CompositeAligner(net, pool = pool)
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
         val trace = log.traces.toList()[443]
         val start = System.currentTimeMillis()
@@ -651,12 +651,29 @@ class `BPIC15_2f complete` {
     @Test
     fun `complete log short timeout`() {
         val net = model.toPetriNet()
-        val aligner = CompositeAligner(net, pool = CompositeAlignerPetriNetTests.pool)
+        val aligner = CompositeAligner(net, pool = pool)
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
 
         val alignments = aligner.align(log, 10, TimeUnit.MILLISECONDS).toList()
 
         assertEquals(log.traces.count(), alignments.size)
         assertTrue("It is possible that the test failed due to some performance issues") { alignments.any { it != null } }
+    }
+
+    @Test
+    fun `complete log short timeout cost approximation`() {
+        val net = model.toPetriNet()
+        val aligner = DecompositionAligner(net, pool = pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val a = log.traces.count { trace ->
+            aligner.alignmentCostLowerBound(trace.events.toList(), 10, TimeUnit.MILLISECONDS) != null
+        }
+        val b = log.traces.count { trace ->
+            aligner.alignmentCostLowerBound(trace.events.toList(), 20, TimeUnit.MILLISECONDS) != null
+        }
+
+        println("a=$a b=$b")
+        assertTrue { a <= b }
     }
 }
