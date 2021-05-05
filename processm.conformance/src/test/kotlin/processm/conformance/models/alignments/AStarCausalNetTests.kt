@@ -255,15 +255,18 @@ class AStarCausalNetTests {
             2
         )
 
+        val expectedVisitedStatesCount = arrayOf(11, 35, 24, 80)
+
         val astar = AStar(model)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
+            assertEquals(expectedVisitedStatesCount[i], astar.visitedStatesCount)
         }
     }
 
@@ -305,7 +308,7 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(0, alignment.cost)
             assertEquals(trace.events.count() * 2 - 1, alignment.steps.size)
