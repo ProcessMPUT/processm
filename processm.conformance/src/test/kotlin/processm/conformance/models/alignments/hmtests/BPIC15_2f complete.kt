@@ -677,14 +677,17 @@ class `BPIC15_2f complete` {
         assertTrue { a <= b }
     }
 
-    @Ignore("Takes too long")
+    @Ignore("Intended for manual execution as it takes a bit of time")
     @Test
     fun `complete log short timeout fitness`() {
         val net = model.toPetriNet()
         val aligner = DecompositionAligner(net, pool = pool)
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
 
-        val fitness = RangeFitness(aligner, 10, TimeUnit.MILLISECONDS)(log)
-        print(fitness)
+        val fitness10 = RangeFitness(aligner, 10, TimeUnit.MILLISECONDS)(log)
+        val fitness100 = RangeFitness(aligner, 100, TimeUnit.MILLISECONDS)(log)
+
+        assertTrue { fitness10.start < fitness100.start }
+        assertTrue { fitness10.endInclusive >= fitness100.endInclusive }
     }
 }

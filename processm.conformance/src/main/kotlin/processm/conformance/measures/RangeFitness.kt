@@ -1,5 +1,6 @@
 package processm.conformance.measures
 
+import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
@@ -25,7 +26,7 @@ class RangeFitness(
         if (approximation.exact)
             return@lazy approximation.cost
         else
-            return@lazy aligner.align(emptyTrace).cost.toDouble()
+            return@lazy AStar(aligner.model).align(emptyTrace).cost.toDouble() // DecompositionAligner seems to fare poorly with empty traces, whereas AStar seems to work just fine
     }
 
     override fun invoke(artifact: Log) = invoke(artifact, null)
