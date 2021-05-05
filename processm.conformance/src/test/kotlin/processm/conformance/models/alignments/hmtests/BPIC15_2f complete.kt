@@ -1,6 +1,7 @@
 package processm.conformance.models.alignments.hmtests
 
 import org.junit.jupiter.api.AfterAll
+import processm.conformance.measures.RangeFitness
 import processm.conformance.models.alignments.CompositeAligner
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.XMLXESInputStream
@@ -667,13 +668,23 @@ class `BPIC15_2f complete` {
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
 
         val a = log.traces.count { trace ->
-            aligner.alignmentCostLowerBound(trace.events.toList(), 10, TimeUnit.MILLISECONDS) != null
+            aligner.alignmentCostLowerBound(trace.events.toList(), 10, TimeUnit.MILLISECONDS).exact
         }
         val b = log.traces.count { trace ->
-            aligner.alignmentCostLowerBound(trace.events.toList(), 20, TimeUnit.MILLISECONDS) != null
+            aligner.alignmentCostLowerBound(trace.events.toList(), 20, TimeUnit.MILLISECONDS).exact
         }
 
-        println("a=$a b=$b")
         assertTrue { a <= b }
+    }
+
+    @Ignore("Takes too long")
+    @Test
+    fun `complete log short timeout fitness`() {
+        val net = model.toPetriNet()
+        val aligner = DecompositionAligner(net, pool = pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val fitness = RangeFitness(aligner, 10, TimeUnit.MILLISECONDS)(log)
+        print(fitness)
     }
 }

@@ -37,6 +37,8 @@ class DecompositionAligner(
 
     companion object {
         private val logger = logger()
+
+        private val ZERO_LB = CostApproximation(0.0, false)
     }
 
     private val initialDecomposition: List<PetriNet> by lazy {
@@ -97,16 +99,18 @@ class DecompositionAligner(
         return result
     }
 
+    data class CostApproximation(val cost: Double, val exact: Boolean)
+
+
     /**
      * Computes lower bound on the alignment cost. Takes at most [timeout] [unit]s to compute decomposed alignments,
-     * if no complete, decomposed alignments were computed during this time returns null, otherwise returns a lower
-     * bound for the alignment cost.
-     *
-     * ```
-     * alignmentCostLowerBound(events) <= align(events).cost
-     * ```
+     * if no complete, decomposed alignments were computed during this time returns 0 (the lowest possible cost),
+     * otherwise:
+     * * If a complete alignment was computed, a [CostApproximation] with [CostApproximation.exact]=true is returned and
+     *   `alignmentCostLowerBound(events).cost == align(events).cost`
+     * * Otherwise, [CostApproximation.exact]=false and   `alignmentCostLowerBound(events).cost <= align(events).cost`
      */
-    fun alignmentCostLowerBound(events: List<Event>, timeout: Long, unit: TimeUnit): Double? {
+    fun alignmentCostLowerBound(events: List<Event>, timeout: Long, unit: TimeUnit): CostApproximation {
         val eventsWithExistingActivities =
             events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
         var lastResult: AlignmentStepResult? = null
@@ -133,16 +137,18 @@ class DecompositionAligner(
         } finally {
             f.cancel(true)
         }
-        val result = lastResult ?: return null
+        val result = lastResult ?: return ZERO_LB
+        var exact = true
         val alignmentsCost = if (result.alignments.size > 1) {
-            if (result.decomposition != null)
+            if (result.decomposition != null) {
+                exact = false
                 mergeAlignmentCosts(result.alignments, result.nets)
-            else
+            } else
                 result.alignments.mergeDuplicateAware(eventsWithExistingActivities, penalty).cost.toDouble()
         } else
             result.alignments[0].cost.toDouble()
         val unmachableEventsCost = (events.size - eventsWithExistingActivities.size) * penalty.logMove
-        return alignmentsCost + unmachableEventsCost
+        return CostApproximation(alignmentsCost + unmachableEventsCost, exact)
     }
 
     private data class AlignmentStepResult(

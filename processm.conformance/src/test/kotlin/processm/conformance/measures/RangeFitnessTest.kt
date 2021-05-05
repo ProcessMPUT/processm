@@ -1,6 +1,5 @@
 package processm.conformance.measures
 
-import processm.conformance.models.alignments.CompositeAligner
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.trace
@@ -20,7 +19,7 @@ import kotlin.test.assertTrue
  * Tests based on "Replaying History on Process Models for Conformance Checking and Performance Analysis" (DOI 10.1002/widm.1045
 )
  */
-class UBFitnessTest {
+class RangeFitnessTest {
 
     private val a = Node("a")
     private val b = Node("b")
@@ -122,64 +121,61 @@ class UBFitnessTest {
 
     @Test
     fun `model1 movem`() {
-        assertEquals(5, UBFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS).movem)
+        assertEquals(5, RangeFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS).movem)
     }
 
     @Test
     fun `model1 fitness`() {
-        assertDoubleEquals(1.0, UBFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS)(log))
+        val fitness = RangeFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS)(log)
+        assertTrue { fitness.start <= fitness.endInclusive }
+        assertDoubleEquals(1.0, fitness.start)
     }
 
     @Test
     fun `model2 trace with superfluous repetitions long wait`() {
         val log = Log(sequenceOf(trace(a, c, d, e, d, e, h)))
-        val decomposedFitness = UBFitness(DecompositionAligner(model2), 100, TimeUnit.SECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(model2), 100, TimeUnit.SECONDS)(log)
         val trueFitness = 0.833
-        assertTrue { trueFitness <= decomposedFitness }
+        assertDoubleEquals(trueFitness, fitness.start)
+        assertDoubleEquals(trueFitness, fitness.endInclusive)
     }
 
     @Test
     fun `model2 trace with superfluous repetitions short wait`() {
         val log = Log(sequenceOf(trace(a, c, d, e, d, e, h)))
-        val decomposedFitness = UBFitness(DecompositionAligner(model2), 1, TimeUnit.NANOSECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(model2), 1, TimeUnit.NANOSECONDS)(log)
         val trueFitness = 0.833
-        assertTrue { trueFitness <= decomposedFitness }
+        assertDoubleEquals(trueFitness, fitness.start)
+        assertDoubleEquals(trueFitness, fitness.endInclusive)
     }
 
     @Test
     fun `model2 trace with superfluous repetitions and nonexisting activities`() {
         val log = Log(sequenceOf(trace(a, c, d, e, f, d, b, e, h)))
-        val decomposedFitness = UBFitness(DecompositionAligner(model2), 100, TimeUnit.SECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(model2), 100, TimeUnit.SECONDS)(log)
         val trueFitness = 0.714
-        assertTrue { trueFitness <= decomposedFitness }
+        assertDoubleEquals(trueFitness, fitness.start)
+        assertDoubleEquals(trueFitness, fitness.endInclusive)
     }
 
     @Test
     fun `model2 fitness short wait`() {
-        assertDoubleEquals(0.8, UBFitness(DecompositionAligner(model2), 1, TimeUnit.NANOSECONDS)(log))
+        val fitness = RangeFitness(DecompositionAligner(model2), 1, TimeUnit.NANOSECONDS)(log)
+        assertDoubleEquals(0.8, fitness.start)
+        assertDoubleEquals(0.8, fitness.endInclusive)
     }
 
     @Test
     fun `model2 fitness long wait`() {
-        assertDoubleEquals(0.8, UBFitness(DecompositionAligner(model2), 10, TimeUnit.SECONDS)(log))
+        val fitness = RangeFitness(DecompositionAligner(model2), 10, TimeUnit.SECONDS)(log)
+        assertDoubleEquals(0.8, fitness.start)
+        assertDoubleEquals(0.8, fitness.endInclusive)
     }
 
     @Test
     fun `model3 fitness`() {
-        assertDoubleEquals(1.0, UBFitness(DecompositionAligner(model3), 1, TimeUnit.SECONDS)(log))
-    }
-
-    @Test
-    fun `model1 incomplete alignment`() {
-        val alignments = List(log.traces.count()) { null }
-        val f = Fitness(CompositeAligner(model1))
-        assertEquals(0.0, f(log, alignments))
-    }
-
-    @Test
-    fun `model1 partial alignment`() {
-        val alignments = List(log.traces.count()) { null }
-        val f = Fitness(CompositeAligner(model1))
-        assertEquals(0.0, f(log, alignments))
+        val fitness = RangeFitness(DecompositionAligner(model3), 1, TimeUnit.SECONDS)(log)
+        assertDoubleEquals(1.0, fitness.start)
+        assertDoubleEquals(1.0, fitness.endInclusive)
     }
 }
