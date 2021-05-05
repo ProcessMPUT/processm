@@ -209,18 +209,6 @@ class PetriNet(
             yield(prefix)
     }
 
-    private val places2outTransitions = HashMap<Place, MutableList<Transition>>()
-    private val places2inTransitions = HashMap<Place, MutableList<Transition>>()
-
-    init {
-        for (t in transitions) {
-            for (p in t.outPlaces)
-                places2inTransitions.computeIfAbsent(p) { ArrayList<Transition>() }.add(t)
-            for (p in t.inPlaces)
-                places2outTransitions.computeIfAbsent(p) { ArrayList<Transition>() }.add(t)
-        }
-    }
-
     // TODO verify the assumption that no transition occurs more than once in any of the lists
     private fun compareTranstionLists(left: List<Transition>?, right: List<Transition>?) =
         left?.toSet().orEmpty() == right?.toSet().orEmpty()
@@ -234,12 +222,12 @@ class PetriNet(
         assert(minePlaces.size == theirsPlaces.size)
         val theirsAvailable = theirsPlaces.toMutableSet()
         for (mine in minePlaces) {
-            val mineInTransitions = places2inTransitions[mine]?.mapNotNull { transitionsMap[it] }
-            val mineOutTransitions = places2outTransitions[mine]?.mapNotNull { transitionsMap[it] }
+            val mineInTransitions = placeToPrecedingTransition[mine]?.mapNotNull { transitionsMap[it] }
+            val mineOutTransitions = placeToFollowingTransition[mine]?.mapNotNull { transitionsMap[it] }
             var hit = false
             for (theirs in theirsAvailable) {
-                if (compareTranstionLists(mineInTransitions, other.places2inTransitions[theirs]) &&
-                    compareTranstionLists(mineOutTransitions, other.places2outTransitions[theirs])
+                if (compareTranstionLists(mineInTransitions, other.placeToPrecedingTransition[theirs]) &&
+                    compareTranstionLists(mineOutTransitions, other.placeToFollowingTransition[theirs])
                 ) {
                     hit = true
                     theirsAvailable.remove(theirs)
@@ -284,16 +272,30 @@ class PetriNet(
         return false
     }
 
-    fun toMultilineString():String {
-        val result=StringBuilder()
-        val place2id=HashMap<Place, String>()
-        fun placeToString(p:Place) = place2id.computeIfAbsent(p) {"p${place2id.size}"}
-        for(t in transitions) {
-            result.append(t.inPlaces.joinToString(separator = " ", prefix = "[", postfix = "]", transform = ::placeToString))
+    fun toMultilineString(): String {
+        val result = StringBuilder()
+        val place2id = HashMap<Place, String>()
+        fun placeToString(p: Place) = place2id.computeIfAbsent(p) { "p${place2id.size}" }
+        for (t in transitions) {
+            result.append(
+                t.inPlaces.joinToString(
+                    separator = " ",
+                    prefix = "[",
+                    postfix = "]",
+                    transform = ::placeToString
+                )
+            )
             result.append(" -> ")
             result.append(t.name)
             result.append(" -> ")
-            result.append(t.outPlaces.joinToString(separator = " ", prefix = "[", postfix = "]", transform = ::placeToString))
+            result.append(
+                t.outPlaces.joinToString(
+                    separator = " ",
+                    prefix = "[",
+                    postfix = "]",
+                    transform = ::placeToString
+                )
+            )
             result.appendLine()
         }
         return result.toString()
