@@ -2,16 +2,21 @@ package processm.conformance.models.alignments
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.cache.Cache
+import processm.core.helpers.mapToSet
 import processm.core.helpers.ternarylogic.Ternary
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
-import processm.core.models.causalnet.CausalNetInstance
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
 import processm.core.models.commons.ProcessModelState
+import processm.core.models.petrinet.Marking
+import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.Place
 import java.util.*
+import kotlin.math.max
 
 
 /**
@@ -58,6 +63,18 @@ class AStar(
     }
 
     private fun alignInternal(events: List<Event>): Alignment {
+        run {
+            val nEvents = ArrayList<Map<String?, Int>>()
+            val tmp = HashMap<String?, Int>()
+            for (e in events.asReversed()) {
+                tmp.compute(e.conceptName) { _, old ->
+                    (old ?: 0) + 1
+                }
+                nEvents.add(HashMap(tmp))
+            }
+            this.nEvents = nEvents.asReversed()
+            this.consumentsCache.clear()
+        }
         val thread = Thread.currentThread()
         val queue = PriorityQueue<SearchState>()
         val visited = Cache<SearchState>()
@@ -74,7 +91,6 @@ class AStar(
                     instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                     else -> Ternary.False
                 },
-                instance,
                 null
             ),
             activity = null, // before first activity
@@ -161,7 +177,7 @@ class AStar(
                     } else {
                         val currentCost = searchState.currentCost + penalty.silentMove
                         // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown, instance, prevProcessState)
+                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown, prevProcessState)
                             .coerceAtLeast(searchState.predictedCost - penalty.silentMove)
                         if (currentCost + predictedCost <= upperBoundCost) {
                             queue.add(
@@ -185,7 +201,7 @@ class AStar(
                     val currentCost = searchState.currentCost + penalty.synchronousMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
-                        predict(events, nextEventIndex + 1, Ternary.Unknown, instance, searchState.processState)
+                        predict(events, nextEventIndex + 1, Ternary.Unknown, searchState.processState)
                             .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
@@ -205,7 +221,7 @@ class AStar(
                     val currentCost = searchState.currentCost + penalty.modelMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
-                        predict(events, nextEventIndex, Ternary.Unknown, instance, searchState.processState)
+                        predict(events, nextEventIndex, Ternary.Unknown, searchState.processState)
                             .coerceAtLeast(searchState.predictedCost - penalty.modelMove)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
@@ -230,7 +246,6 @@ class AStar(
                         instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                         else -> Ternary.False
                     },
-                    instance,
                     prevProcessState
                 ).coerceAtLeast(searchState.predictedCost - penalty.logMove)
                 if (currentCost + predictedCost <= upperBoundCost) {
@@ -285,11 +300,99 @@ class AStar(
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
         event !== null && event.conceptName == activity.name
 
+    private val following: Map<Place, Set<Set<String>>>? = if (model is PetriNet) {
+        model.places.associateWith { place ->
+            val following = HashSet<Set<String>>()
+            for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.toList()
+                .sortedBy { it.size }) {
+                if (!following.any { subset -> set.containsAll(subset) })
+                    following.add(set)
+            }
+            return@associateWith following
+        }
+    } else
+        null
+
+    private lateinit var nEvents: List<Map<String?, Int>>
+    private val consumentsCache = HashMap<Pair<Place, Int>, Int>()
+
+    private fun computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: Marking): Int {
+        val nEvents = nEvents[startIndex]
+        val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
+        for ((place, counter) in prevProcessState) {
+            val following = this.following!![place] ?: continue
+            val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
+                following.sumBy { set -> set.minOf { nEvents[it] ?: 0 } }
+            }
+            if (counter > consuments)
+                nonConsumable.add(following to counter - consuments)
+            // każdy z tokenów counter musi być zmatchowany przez coś w events co jednocześnie występuje w following, przy czym events się zużywają, a following nie
+            //
+        }
+        if (nonConsumable.isEmpty())
+            return 0
+        // Complete dealing with nonConsumable would require some complex algorithm.
+        // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
+        // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
+        // ([[c, e]]: 2, [[d, e]]: 1) -> cceed - 5 model-skips
+        // Underestimating: each set of sets is flattened and it is assumed that it is sufficient to execute a single activity from it to consume a token
+        // ([c, e]: 2, [d, e]: 1) -> ee - 2 model-skips
+        // Still not entirely clear how to deal with it, e.g., ([c, e]: 2, [d, e]: 1, [d, c]: 3) -> dcc - 3 model-skips seems to be an optimal solution
+        // Underestimating further: computing unions of sets having at least one common element and assigning them the maximal value over all the original counters -> ([c, d, e]: 3).
+        // At this point it is sufficient to sum the counters
+        val disjoint = ArrayList<Pair<HashSet<String>, Int>>()
+        val flat = nonConsumable.mapNotNullTo(LinkedList()) {
+            val set = it.first.flatMapTo(HashSet()) { it }
+            if (set.isNotEmpty())
+                return@mapNotNullTo set to it.second
+            else
+                return@mapNotNullTo null
+        }
+        while (flat.isNotEmpty()) {
+            val set = HashSet<String>()
+            var ctr = 0
+            val i = flat.iterator()
+            while (i.hasNext()) {
+                val e = i.next()
+                if (set.isEmpty() || e.first.any { it in set }) {
+                    set.addAll(e.first)
+                    ctr = max(ctr, e.second)
+                    i.remove()
+                }
+            }
+            assert(set.isNotEmpty())
+            assert(ctr > 0)
+            disjoint.add(set to ctr)
+        }
+        return disjoint.sumBy { it.second }
+    }
+
+    private fun computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: CausalNetState): Int {
+        val nEvents = nEvents[startIndex]
+        // The maximum over the number of tokens on all incoming dependencies for an activity.
+        // As each token must be consumed and a single execution may consume at most one token from the activity,
+        // this is the same as the minimal number of pending executions for the activity.
+        val minFutureExecutions = HashMap<String, Int>()
+        for (e in prevProcessState.entrySet()) {
+            if (!e.element.target.isSilent)
+                minFutureExecutions.compute(e.element.target.activity) { _, old ->
+                    if (old != null && old > e.count) old else e.count
+                }
+        }
+        val unmachedModelMovesCount = minFutureExecutions
+            .entries
+            .sumBy { (activity, counter) ->
+                val e = nEvents[activity] ?: 0
+                (counter - e).coerceAtLeast(0)
+            }
+
+        return unmachedModelMovesCount
+    }
+
     private fun predict(
         events: List<Event>,
         startIndex: Int,
         isFinalState: Ternary,
-        modelInstance: ProcessModelInstance,
         prevProcessState: ProcessModelState?
     ): Int {
         if (startIndex == SKIP_EVENT || startIndex >= events.size)
@@ -310,33 +413,15 @@ class AStar(
                 sum += penalty.modelMove
         }
 
-        if (prevProcessState != null && modelInstance is CausalNetInstance) {
-            prevProcessState as CausalNetState
-            //TODO nEvents can be precomputed
-            val nEvents = events
-                .subList(startIndex, events.size)
-                .groupingBy { it.conceptName }
-                .eachCount()
-            // The maximum over the number of tokens on all incoming dependencies for an activity.
-            // As each token must be consumed and a single execution may consume at most one token from the activity,
-            // this is the same as the minimal number of pending executions for the activity.
-            val minFutureExecutions = HashMap<String, Int>()
-            for (e in prevProcessState.entrySet()) {
-                if (!e.element.target.isSilent)
-                    minFutureExecutions.compute(e.element.target.activity) { _, old ->
-                        if (old != null && old > e.count) old else e.count
-                    }
-            }
-            val unmachedModelMovesCount = minFutureExecutions
-                .entries
-                .sumBy { (activity, counter) ->
-                    val e = nEvents[activity] ?: 0
-                    (counter - e).coerceAtLeast(0)
-                }
-
-            // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
-            sum += (unmachedModelMovesCount - penalty.modelMove).coerceAtLeast(0)
+        val unmachedModelMovesCount = when {
+            prevProcessState == null -> 0
+            model is PetriNet -> computeUnmachedModelMovesCount(startIndex, prevProcessState as Marking)
+            model is CausalNet -> computeUnmachedModelMovesCount(startIndex, prevProcessState as CausalNetState)
+            else -> 0
         }
+
+        // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
+        sum += (unmachedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
 
         return sum
     }
