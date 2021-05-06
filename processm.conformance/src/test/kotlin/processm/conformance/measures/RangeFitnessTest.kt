@@ -121,7 +121,7 @@ class RangeFitnessTest {
 
     @Test
     fun `model1 movem`() {
-        assertEquals(5, RangeFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS).movem)
+        assertEquals(5.0, RangeFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS).movem)
     }
 
     @Test

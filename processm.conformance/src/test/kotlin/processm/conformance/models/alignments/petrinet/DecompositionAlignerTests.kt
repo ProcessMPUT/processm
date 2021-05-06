@@ -1284,7 +1284,8 @@ class DecompositionAlignerTests {
         val events = log.traces.first().events.toList()
         val aligner = DecompositionAligner(model2)
         val cost = aligner.alignmentCostLowerBound(events, 100, TimeUnit.SECONDS)
-        assertEquals(2.0, cost)
+        assertTrue(cost.exact)
+        assertEquals(2.0, cost.cost)
     }
 
     @Test
@@ -1301,7 +1302,8 @@ class DecompositionAlignerTests {
         val events = log.traces.first().events.toList()
         val aligner = DecompositionAligner(model2)
         val cost = aligner.alignmentCostLowerBound(events, 1, TimeUnit.NANOSECONDS)
-        assertEquals(2.0, cost)
+        assertTrue(cost.exact)
+        assertEquals(2.0, cost.cost)
     }
 
     @Test
@@ -1310,7 +1312,8 @@ class DecompositionAlignerTests {
         val events = log.traces.first().events.toList()
         val aligner = DecompositionAligner(model2)
         val cost = aligner.alignmentCostLowerBound(events, 1, TimeUnit.NANOSECONDS)
-        assertEquals(4.0, cost)
+        assertTrue(cost.exact)
+        assertEquals(4.0, cost.cost)
     }
 
     @Test
@@ -1319,6 +1322,7 @@ class DecompositionAlignerTests {
         val events = log.traces.first().events.toList()
         val aligner = DecompositionAligner(model2)
         val cost = aligner.alignmentCostLowerBound(events, 100, TimeUnit.SECONDS)
-        assertEquals(4.0, cost)
+        assertTrue(cost.exact)
+        assertEquals(4.0, cost.cost)
     }
 }
