@@ -1,5 +1,6 @@
 package processm.core.models.petrinet
 
+import com.google.common.collect.Lists
 import processm.core.helpers.optimize
 import processm.core.models.commons.Activity
 import processm.core.models.commons.DecisionPoint
@@ -299,5 +300,29 @@ class PetriNet(
             result.appendLine()
         }
         return result.toString()
+    }
+
+    /**
+     * Returns sets of transitions that can be executed for a single token in [start].
+     * Differs from [placeToFollowingTransition] in that it goes over silent transitions, so a single token may actually
+     * lead to execution of multiple (non-silent) transitions. This is an overestimation, i.e., it assumes that
+     * all other tokens are available/treats AND joins inbound for a transition as OR joins.
+     *
+     * The result is to be treated as a XOR of ANDs, i.e., transitions in a single set must be executed jointly, while
+     * from the top-level sequence exactly one set must be executed.
+     */
+    fun forwardSearch(start: Place, visited: Set<Transition> = emptySet()): Sequence<Set<Transition>> = sequence {
+        for (t in placeToFollowingTransition[start].orEmpty()) {
+            if (t in visited)
+                continue
+            if (t.isSilent) {
+                //TODO possibly replace List.cartesianProduct with something more efficient
+                yieldAll(Lists
+                    .cartesianProduct(t.outPlaces.map { forwardSearch(it, visited + setOf(t)).toList() })
+                    .asSequence()
+                    .map { parts -> parts.flatMapTo(HashSet()) { it } })
+            } else
+                yield(setOf(t))
+        }
     }
 }

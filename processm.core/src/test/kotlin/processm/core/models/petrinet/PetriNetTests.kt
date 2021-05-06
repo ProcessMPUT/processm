@@ -125,4 +125,26 @@ class PetriNetTests {
         assertNotEquals(a.hashCode(), b.hashCode())
         assertNotEquals(a, b)
     }
+
+    @Test
+    fun forwardSearch() {
+        val net = petrinet {
+            P tout "a" * "b" * "_1"
+            P tin "_1" tout "c" * "d"
+            P tin "_1" tout "e" * "_2"
+            P tin "_2" tout "d"
+        }
+        val transitionSets = net.forwardSearch(net.places[0]).toList()
+        assertTrue { transitionSets.all { set -> set.all { !it.isSilent } } }
+        val names = transitionSets.mapTo(HashSet()) { set -> set.mapTo(HashSet()) { it.name } }
+        val expected = setOf(
+            setOf("a"),
+            setOf("b"),
+            setOf("d"),
+            setOf("c", "d"),
+            setOf("c", "e"),
+            setOf("d", "e")
+        )
+        assertEquals(expected, names)
+    }
 }
