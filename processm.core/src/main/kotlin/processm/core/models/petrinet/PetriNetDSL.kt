@@ -14,7 +14,9 @@ package processm.core.models.petrinet
  * IncomingTransitions = "tin" Transitions
  * OutgoingTransitions = "tout" Transitions
  * Transitions = Transition | (Transition "*" Transitions)
- * Transition = String
+ * Transition = NormalTransition | SilentTransition
+ * NormalTransition = A string not starting with an underscore
+ * SilentTransition = A string starting with an underscore
  * ```
  *
  * Example:
@@ -88,7 +90,14 @@ class PetriNetDSL {
             for (tname in pd.tout)
                 tmap.computeIfAbsent(tname) { ArrayList<Place>() to ArrayList() }.second.add(p)
         }
-        val transitions = tmap.entries.map { (name, places) -> Transition(name, places.second, places.first) }
+        val transitions = tmap.entries.map { (name, places) ->
+            Transition(
+                name,
+                places.second,
+                places.first,
+                isSilent = name[0] == '_'
+            )
+        }
         return PetriNet(places, transitions)
     }
 }
