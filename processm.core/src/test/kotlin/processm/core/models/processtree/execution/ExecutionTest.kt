@@ -163,6 +163,126 @@ class ExecutionTest {
     }
 
     @Test
+    fun `×(a,b,c) with state copying`() {
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val c = ProcessTreeActivity("c")
+        val xor = Exclusive(a, b, c)
+
+        val base = xor.executionNode(null)
+        val copy1 = base.copy() as ExecutionNode
+        copy1.expecting(a, b, c)[0].execute()
+        copy1.expecting()
+        base.expecting(a, b, c)
+        val copy2 = base.copy() as ExecutionNode
+        copy2.expecting(a, b, c)[1].execute()
+        copy2.expecting()
+        base.expecting(a, b, c)
+        copy1.expecting()
+        val copy3 = base.copy() as ExecutionNode
+        copy3.expecting(a, b, c)[2].execute()
+        copy3.expecting()
+        copy1.expecting()
+        copy2.expecting()
+        base.expecting(a, b, c)[1].execute()
+        base.expecting()
+        copy1.expecting()
+        copy2.expecting()
+        copy3.expecting()
+    }
+
+    @Test
+    fun `×(∧(a,b),∧(c,d),∧(e,f)) with state copying`() {
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val c = ProcessTreeActivity("c")
+        val d = ProcessTreeActivity("d")
+        val e = ProcessTreeActivity("e")
+        val f = ProcessTreeActivity("f")
+        val p1 = Parallel(a, b)
+        val p2 = Parallel(c, d)
+        val p3 = Parallel(e, f)
+        val xor = Exclusive(p1, p2, p3)
+
+        val base = xor.executionNode(null)
+        val copy1 = base.copy() as ExecutionNode
+        copy1.expecting(a, b, c, d, e, f)[0].execute()
+        copy1.expecting(b)[0].execute()
+        copy1.expecting()
+        base.expecting(a, b, c, d, e, f)
+        val copy2 = base.copy() as ExecutionNode
+        copy2.expecting(a, b, c, d, e, f)[2].execute()
+        copy2.expecting(d)[0].execute()
+        copy2.expecting()
+        copy1.expecting()
+        base.expecting(a, b, c, d, e, f)[5].execute()
+        val copy3 = base.copy() as ExecutionNode
+        copy3.expecting(e)[0].execute()
+        copy3.expecting()
+        copy1.expecting()
+        copy2.expecting()
+        base.expecting(e)[0].execute()
+        base.expecting()
+        copy1.expecting()
+        copy2.expecting()
+        copy3.expecting()
+    }
+
+    @Test
+    fun `PM book Fig 7 29`() {
+        //→(×(→(a,∧(c,e)),→(b,∧(d,f))),g)
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val c = ProcessTreeActivity("c")
+        val d = ProcessTreeActivity("d")
+        val e = ProcessTreeActivity("e")
+        val f = ProcessTreeActivity("f")
+        val g = ProcessTreeActivity("g")
+        val p1 = Parallel(c, e)
+        val seq1 = Sequence(a, p1)
+        val p2 = Parallel(d, f)
+        val seq2 = Sequence(b, p2)
+        val xor = Exclusive(seq1, seq2)
+        val top = Sequence(xor, g)
+
+        val validCases = setOf(
+            "aceg",
+            "aecg",
+            "bdfg",
+            "bfdg",
+        )
+
+        val replayedCases = HashSet<String>()
+
+        val start = top.executionNode(null)
+        val queue = ArrayDeque<ExecutionNodeWithTrace>()
+        queue.add(ExecutionNodeWithTrace(start, ""))
+        while (queue.isNotEmpty()) {
+            val current = queue.removeLast()
+
+            if (current.executionNode.available.count() == 0) {
+                replayedCases.add(current.trace)
+                continue
+            }
+
+            for ((index, execution) in current.executionNode.available.withIndex()) {
+                val copy = current.executionNode.copy() as ExecutionNode
+                copy.available.elementAt(index).execute()
+                queue.add(
+                    ExecutionNodeWithTrace(
+                        copy,
+                        current.trace + execution.activity.name
+                    )
+                )
+            }
+        }
+
+        assertEquals(validCases, replayedCases)
+    }
+
+    private class ExecutionNodeWithTrace(val executionNode: ExecutionNode, val trace: String)
+
+    @Test
     fun `children of an Activity are not supported`() {
         val a = ProcessTreeActivity("a")
         val b = ProcessTreeActivity("b")

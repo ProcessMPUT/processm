@@ -2,8 +2,6 @@ package processm.experimental.helpers.map2d
 
 import processm.core.helpers.map2d.Map2D
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
 
 /**
  * A single hand-made hashmap with some code for combining hasesh. The performance is poor.
@@ -189,9 +187,28 @@ class WheelReinventingMap2D<Row, Column, Value>(expected: Int) :
         TODO("Not yet implemented")
     }
 
+    override fun removeValue(row: Row, column: Column) {
+        TODO("Not yet implemented")
+    }
+
     override val rows
         get() = Collections.unmodifiableSet(_rows)
 
     override val columns
         get() = Collections.unmodifiableSet(_cols)
+
+    override fun containsKeys(row: Row, column: Column): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun clear() {
+        TODO("Not yet implemented")
+    }
+
+    override fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?): Value? {
+        TODO("Not yet implemented")
+    }
+
+    override val size: Int
+        get() = TODO("Not yet implemented")
 }

@@ -1,10 +1,10 @@
 package processm.miners.processtree.inductiveminer
 
+import processm.core.log.Helpers.logFromString
 import processm.core.models.processtree.Exclusive
 import processm.core.models.processtree.Parallel
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.Sequence
-import processm.miners.heuristicminer.Helper.logFromString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

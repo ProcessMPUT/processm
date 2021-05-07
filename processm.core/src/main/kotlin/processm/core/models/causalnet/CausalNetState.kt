@@ -5,19 +5,38 @@ import processm.core.models.commons.ProcessModelState
 
 /**
  * State is a multi-set of pending obligations (the PM book, Definition 3.10)
+ *
+ * Sources in rows, targets in columns, and numbers of occurrences in values.
  */
 class CausalNetState : HashMultiSet<Dependency>, ProcessModelState {
     constructor() : super()
 
     constructor(stateBefore: CausalNetState) : super(stateBefore)
 
+    var isFresh: Boolean = true
+        private set
+
     internal fun execute(join: Join?, split: Split?) {
-        if (join != null) {
+        isFresh = false
+        if (join !== null) {
             check(this.containsAll(join.dependencies)) { "It is impossible to execute this join in the current state" }
             for (d in join.dependencies)
-                this.remove(d)
+                this.remove(d, 1)
         }
-        if (split != null)
+        if (split !== null)
             this.addAll(split.dependencies)
     }
+
+    override fun clear() {
+        super.clear()
+        isFresh = true
+    }
+
+    override fun hashCode(): Int =
+        isFresh.hashCode() xor super.hashCode()
+
+    override fun equals(other: Any?): Boolean =
+        other is CausalNetState && isFresh == other.isFresh && super.equals(other)
+
+    override fun copy(): ProcessModelState = CausalNetState(this).also { it.isFresh = this.isFresh }
 }

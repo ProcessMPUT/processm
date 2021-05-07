@@ -32,11 +32,10 @@ class BasicReplayerTest {
     private fun Node.from(vararg sources: Node): Join = Join(sources.map { Dependency(it, this) }.toSet())
 
     private fun Sequence<Sequence<BindingDecision>>.expecting(vararg what: List<Binding?>) {
-        //this also compares order, possibly not the best idea?
         val actual = this.toList()
         val expected = what.toList()
         assertEquals(actual.size, what.size)
-        (expected zip actual).forEach { (e, a) -> assertEquals(e, a.map { it.binding }.toList()) }
+        expected.forEach { e -> actual.any { a -> e == a.map { it.binding } } }
     }
 
     @Test

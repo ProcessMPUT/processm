@@ -1,7 +1,7 @@
 package processm.miners.processtree.inductiveminer
 
+import processm.core.log.Helpers.logFromString
 import processm.core.models.processtree.ProcessTree
-import processm.miners.heuristicminer.Helper.logFromString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

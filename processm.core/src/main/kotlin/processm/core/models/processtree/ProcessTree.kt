@@ -1,11 +1,67 @@
 package processm.core.models.processtree
 
+import processm.core.helpers.mapToArray
 import processm.core.models.commons.ProcessModel
 
 /**
  * Process Tree model with `root` reference
  */
 class ProcessTree(root: Node? = null) : ProcessModel {
+    companion object {
+        /**
+         * Parses the prefix notation of the process tree into [ProcessTree].
+         * It parses the output of the [toString] method.
+         * Currently, this is a naive implementation intended for use in tests.
+         *
+         * @param string The string to parse.
+         */
+        fun parse(string: String): ProcessTree = ProcessTree(parseInternal(string))
+
+        private fun parseInternal(string: String): Node {
+            val trimmed = string.trim()
+            require(trimmed.isNotEmpty())
+
+            if (trimmed.length > 3 && trimmed[1] == '(' && trimmed[string.length - 1] == ')') {
+                val ctor = when (trimmed[0]) {
+                    '→' -> ::Sequence
+                    '∧' -> ::Parallel
+                    '⟲' -> ::RedoLoop
+                    '×' -> ::Exclusive
+                    else -> throw IllegalArgumentException("Parse error. Expected →, ∧, ⟲, ×; '${trimmed[0]}' found.")
+                }
+                val children = splitArguments(trimmed.substring(2, trimmed.length - 1)).mapToArray(::parseInternal)
+                return ctor(children)
+            }
+            return if (trimmed == "τ") SilentActivity() else ProcessTreeActivity(trimmed)
+        }
+
+        private fun splitArguments(string: String) = sequence {
+            val builder = StringBuilder()
+            var depth = 0
+            for (ch in string) {
+                when (ch) {
+                    ',' ->
+                        if (depth == 0) {
+                            yield(builder.toString())
+                            builder.clear()
+                        } else {
+                            builder.append(ch)
+                        }
+                    '(' -> {
+                        ++depth
+                        builder.append(ch)
+                    }
+                    ')' -> {
+                        --depth
+                        builder.append(ch)
+                    }
+                    else -> builder.append(ch)
+                }
+            }
+            yield(builder.toString())
+        }
+    }
+
     var root: Node? = root
         internal set
 

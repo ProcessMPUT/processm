@@ -38,15 +38,20 @@
         <appender-ref ref="FILE"/>
     </appender>
 
+    <appender name="ASYNC_STDOUT" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="STDOUT"/>
+    </appender>
+
 
     <!-- Default level -->
     <root level="INFO">
         <appender-ref ref="ASYNC"/>
-        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="ASYNC_STDOUT"/>
     </root>
     <!-- Level for our classes -->
     <logger name="processm" level="DEBUG"/>
     <logger name="processm.core.log.hierarchical.SQLQuery" level="TRACE"/>
+    <logger name="processm.conformance.models.alignments.petrinet.DecompositionAligner" level="INFO"/>
     <logger name="kotlin.sequences" level="DEBUG"/>
 
 </configuration>

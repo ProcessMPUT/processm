@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ActivityExecution
 
 /**
@@ -9,7 +10,16 @@ open class DecoupledNodeExecution internal constructor(
     override val activity: Node,
     val join: Join?,
     val split: Split?
-) : ActivityExecution {
+) : ActivityExecution, Activity {
+
+    override val name: String
+        get() = activity.name
+
+    override val isSilent: Boolean
+        get() = activity.isSilent
+
+    override val isArtificial: Boolean
+        get() = activity.isArtificial
 
     override fun execute() {
         throw UnsupportedOperationException()
