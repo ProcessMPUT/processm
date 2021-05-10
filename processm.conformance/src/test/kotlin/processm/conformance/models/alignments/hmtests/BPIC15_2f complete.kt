@@ -12,7 +12,8 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
 import java.io.File
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import kotlin.test.Ignore
@@ -617,7 +618,14 @@ class `BPIC15_2f complete` {
         }
 
     companion object {
-        val pool = Executors.newCachedThreadPool()
+        val pool = ThreadPoolExecutor(
+            Runtime.getRuntime().availableProcessors(),
+            Runtime.getRuntime().availableProcessors(),
+            60,
+            TimeUnit.SECONDS,
+            LinkedBlockingQueue()
+        )
+
 
         @JvmStatic
         @AfterAll
@@ -687,7 +695,25 @@ class `BPIC15_2f complete` {
         val fitness10 = RangeFitness(aligner, 10, TimeUnit.MILLISECONDS)(log)
         val fitness100 = RangeFitness(aligner, 100, TimeUnit.MILLISECONDS)(log)
 
+        println(fitness10)
+        println(fitness100)
+
         assertTrue { fitness10.start < fitness100.start }
         assertTrue { fitness10.endInclusive >= fitness100.endInclusive }
+    }
+
+    @Ignore("Intended for manual execution")
+    @Test
+    fun test() {
+        val net = model.toPetriNet()
+        val aligner = DecompositionAligner(net, pool = pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val fitness = RangeFitness(aligner, 200, TimeUnit.MILLISECONDS)(log)
+
+        println(fitness)
+
+        assertTrue { fitness.start >= 0.16 }    //If one adds "return 0" to the beginning of AStar.computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: Marking), this drops down to around 0.03
+        assertTrue { fitness.endInclusive == 1.0 }
     }
 }

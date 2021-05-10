@@ -300,18 +300,25 @@ class AStar(
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
         event !== null && event.conceptName == activity.name
 
-    private val following: Map<Place, Set<Set<String>>>? = if (model is PetriNet) {
-        model.places.associateWith { place ->
+    private val followingCache: HashMap<Place, Set<Set<String>>> by lazy {
+        if (model is PetriNet)
+            HashMap()
+        else
+            error("followingCache is relevant only for PetriNets")
+    }
+
+    private fun following(place: Place): Set<Set<String>> {
+        return followingCache.computeIfAbsent(place) { place ->
+            model as PetriNet
             val following = HashSet<Set<String>>()
             for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.toList()
                 .sortedBy { it.size }) {
                 if (!following.any { subset -> set.containsAll(subset) })
                     following.add(set)
             }
-            return@associateWith following
+            return@computeIfAbsent following
         }
-    } else
-        null
+    }
 
     private lateinit var nEvents: List<Map<String?, Int>>
     private val consumentsCache = HashMap<Pair<Place, Int>, Int>()
@@ -320,14 +327,12 @@ class AStar(
         val nEvents = nEvents[startIndex]
         val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
         for ((place, counter) in prevProcessState) {
-            val following = this.following!![place] ?: continue
+            val following = this.following(place)
             val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
                 following.sumBy { set -> set.minOf { nEvents[it] ?: 0 } }
             }
             if (counter > consuments)
                 nonConsumable.add(following to counter - consuments)
-            // każdy z tokenów counter musi być zmatchowany przez coś w events co jednocześnie występuje w following, przy czym events się zużywają, a following nie
-            //
         }
         if (nonConsumable.isEmpty())
             return 0
