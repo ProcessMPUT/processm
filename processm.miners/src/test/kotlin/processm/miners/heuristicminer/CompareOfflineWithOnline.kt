@@ -3,11 +3,11 @@ package processm.miners.heuristicminer
 import org.junit.jupiter.api.*
 import processm.core.comparators.CausalNetTraceComparison
 import processm.core.helpers.allPermutations
+import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
 import processm.miners.heuristicminer.Helper.logFromModel
-import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner

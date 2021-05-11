@@ -23,11 +23,11 @@ data class Join(override val dependencies: Set<Dependency>) : Binding {
     /**
      * Sources of all the dependencies of this join
      */
-    val sources by lazy {
+    val sources by lazy(LazyThreadSafetyMode.PUBLICATION) {
         dependencies.mapToSet { d -> d.source }
     }
 
     override fun toString(): String {
-        return "{${sources.map { it }} -> ${target}}"
+        return "{${sources.joinToString()} -> ${target}}"
     }
 }

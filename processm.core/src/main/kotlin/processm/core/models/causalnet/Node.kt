@@ -10,7 +10,10 @@ import java.util.*
  * By default [instanceId] is empty, in order to allow easy ignoring the possibility of having multiple instances of
  * a single activity and allowing only for a single instance of each activity.
  */
-data class Node(val activity: String, val instanceId: String = "", val special: Boolean = false) : MetadataSubject,
+data class Node(
+    val activity: String, val instanceId: String = "", val special: Boolean = false,
+    override val isSilent: Boolean = special
+) : MetadataSubject,
     Activity {
 
     private val hash: Int by lazy {
@@ -19,6 +22,9 @@ data class Node(val activity: String, val instanceId: String = "", val special: 
 
     override val name: String
         get() = activity
+
+    override val isArtificial: Boolean
+        get() = special
 
     override fun toString(): String {
         return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (special) "*" else "")

@@ -1,11 +1,8 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 /**
  * A read-only causal net model
@@ -27,6 +24,11 @@ abstract class CausalNet(
 ) :
     ProcessModel,
     MetadataHandler by metadataHandler {
+
+    companion object {
+        private val setOfNull = setOf(null)
+    }
+
     protected val _instances = HashSet(listOf(start, end))
 
     /**
@@ -101,30 +103,26 @@ abstract class CausalNet(
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
                 joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
 
-    /**
-     * In the given [state], list of nodes that can be executed, along with corresponding split and join
-     */
-    fun available(state: CausalNetState): List<DecoupledNodeExecution> {
-        val flatState = state.uniqueSet()
+    private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
         if (state.isNotEmpty()) {
-            val result = ArrayList<DecoupledNodeExecution>()
-            for ((node, relevant) in flatState.groupBy { it.target }) {
-                val relevantSources = relevant.mapToSet { it.source }
-                val splits = if (node != end) splits[node].orEmpty() else setOf(null)
-                for (join in joins[node].orEmpty())
-                    if (relevantSources.containsAll(join.sources)) {
-//                    if (flatState.containsAll(join.dependencies)) {
-                        splits.mapTo(result) { split ->
-                            DecoupledNodeExecution(node, join, split)
+            val visitedNodes = HashSet<Node>(this._instances.size)
+            for (dep in state.uniqueSet()) {
+                val node = dep.target
+                if (visitedNodes.add(node)) {
+                    for (join in _joins[node].orEmpty())
+                        if (state.containsAll(join.dependencies)) {
+                            val splits = if (node != end) _splits[node].orEmpty() else setOfNull
+                            for (split in splits)
+                                callback(node, join, split)
                         }
-                    }
+                }
             }
-            return result
-
-        } else
-            return splits[start].orEmpty()
-                .map { split -> DecoupledNodeExecution(start, null, split) }
+        } else {
+            for (split in _splits.getValue(start))
+                callback(start, null, split)
+        }
     }
+
 
     fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
         if (state.isNotEmpty()) {
@@ -160,6 +158,51 @@ abstract class CausalNet(
             return result
         } else
             setOf(start)
+    }
+
+    /**
+     * In the given [state], list of nodes that can be executed, along with corresponding split and join
+     */
+    fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
+        available(state) { node, join, split ->
+            yield(DecoupledNodeExecution(node, join, split))
+        }
+    }
+
+    /**
+     * A short-hand function for getting the indexth available execution. It is faster by an order of magnitude
+     * than [available] when accessing only one execution. Do not use for accessing many executions.
+     */
+    internal fun available(state: CausalNetState, index: Int): DecoupledNodeExecution {
+        var i = 0
+        available(state) { node, join, split ->
+            if (i++ == index)
+                return DecoupledNodeExecution(node, join, split)
+        }
+        throw IndexOutOfBoundsException(index)
+    }
+
+    /**
+     * Verifies whether the given [execution] is available in the given [state].
+     */
+    internal fun isAvailable(execution: DecoupledNodeExecution, state: CausalNetState): Boolean {
+        if (state.isEmpty()) {
+            val split = execution.split
+            return execution.activity == start &&
+                    execution.join === null &&
+                    split !== null &&
+                    _splits[start]!!.contains(split)
+        }
+
+        return state.uniqueSet().any { dep ->
+            val node = dep.target
+            val join = checkNotNull(execution.join)
+            val split = execution.split
+            execution.activity == node &&
+                    _joins[node]!!.contains(join) &&
+                    state.containsAll(join.dependencies) &&
+                    ((node == end && split === null) || _splits[node]!!.contains(checkNotNull(split)))
+        }
     }
 
     /**

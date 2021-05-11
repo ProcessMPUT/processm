@@ -503,6 +503,53 @@ fun <T> Collection<T>.allPermutations(): Sequence<ArrayList<T>> = sequence {
     }
 }
 
+private class PairedCollection<T>(val backingCollection: List<T>) : Collection<Pair<T, T>> {
+    override val size: Int
+        get() = backingCollection.size * (backingCollection.size - 1) / 2
+
+    override fun contains(pair: Pair<T, T>): Boolean =
+        pair.first in backingCollection && pair.second in backingCollection
+
+    override fun containsAll(pairs: Collection<Pair<T, T>>): Boolean {
+        for (pair in pairs) {
+            if (pair !in this)
+                return false
+        }
+        return true
+    }
+
+    override fun isEmpty(): Boolean = backingCollection.size <= 1
+
+    override fun iterator(): Iterator<Pair<T, T>> = iterator {
+        for ((i, e) in backingCollection.withIndex()) {
+            val iterator = backingCollection.listIterator(i + 1)
+            while (iterator.hasNext())
+                yield(Pair(e, iterator.next()))
+        }
+    }
+}
+
+/**
+ * Lazily calculates all pairs of the items in this list. The returned collection is view on this list
+ * and all changes to this list are immediately reflected in the returned collection.
+ */
+fun <T> List<T>.allPairs(): Collection<Pair<T, T>> =
+    PairedCollection(this)
+
+/**
+ * Returns index of the first element matching the given [predicate] beginning from [startIndex], or -1 if the list does
+ * not contain such element.
+ */
+inline fun <T> List<T>.indexOfFirst(startIndex: Int, predicate: (item: T) -> Boolean): Int {
+    val iterator = this.listIterator(startIndex.coerceAtLeast(0))
+    while (iterator.hasNext()) {
+        if (predicate(iterator.next()))
+            return iterator.previousIndex()
+    }
+
+    return -1
+}
+
 /**
  * Parses a timestamp with timezone in the ISO-8601 format into [Instant].
  */
@@ -544,6 +591,15 @@ inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R
 }
 
 /**
+ * Returns an [Array] containing the results of applying the given [transform] function to each element in the original
+ * [Sequence].
+ */
+inline fun <T, reified R> Sequence<T>.mapToArray(transform: (T) -> R): Array<R> = ArrayList<R>().apply {
+    for (item in this@mapToArray)
+        add(transform(item))
+}.toTypedArray()
+
+/**
  * Returns an [Array] containing the results of applying the given [transform] function
  * to each element in the original [Array].
  */
@@ -565,6 +621,64 @@ inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
         default()
     else
         this
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the collection.
+ *
+ * @throws NoSuchElementException if the collection is empty.
+ */
+inline fun <T, R : Comparable<R>> Iterator<T>.minOf(selector: (T) -> R): R {
+    if (!hasNext()) throw NoSuchElementException()
+    var minValue = selector(next())
+    while (hasNext()) {
+        val v = selector(next())
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Replaces this [List] with either immutable singleton empty list or immutable single-item [List] if this [List] is empty
+ * or contains just one element, respectively. Otherwise, returns this [List].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <T> List<T>.optimize(): List<T> = when (this.size) {
+    0 -> emptyList()
+    1 -> Collections.singletonList(this[0])
+    else -> {
+        if (this is ArrayList<T>)
+            trimToSize()
+        this
+    }
+}
+
+/**
+ * Replaces this [Set] with either immutable singleton empty set or immutable single-item [Set] if this [Set] is empty
+ * or contains just one element, respectively. Otherwise, returns this [Set].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <T> Set<T>.optimize(): Set<T> = when (this.size) {
+    0 -> emptySet()
+    1 -> Collections.singleton(this.first())
+    else -> this
+}
+
+/**
+ * Replaces this [Map] with either immutable singleton empty map or immutable single-item [Map] if this [Map] is empty
+ * or contains just one element, respectively. Otherwise, returns this [Map].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <K, V> Map<K, V>.optimize(): Map<K, V> = when (this.size) {
+    0 -> emptyMap()
+    1 -> Collections.singletonMap(this.keys.first(), this.values.first())
+    else -> this
+}
 
 
 /**

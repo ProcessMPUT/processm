@@ -1,9 +1,7 @@
 package processm.miners.heuristicminer
 
-import io.mockk.every
-import io.mockk.mockk
 import processm.core.helpers.mapToSet
-import processm.core.log.Event
+import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
@@ -22,15 +20,8 @@ object Helper {
     fun logFromModel(model: CausalNet): Log {
         val tmp = CausalNetVerifier().verify(model).validLoopFreeSequences.map { seq -> seq.map { it.a } }
             .toSet()
-        return Log(tmp.map { seq -> Trace(seq.asSequence().map { event(it.activity) }) }.asSequence())
+        return Log(tmp.asSequence().map { seq -> Trace(seq.asSequence().map { event(it.activity) }) })
     }
-
-    fun logFromString(text: String): Log =
-        Log(
-            text.split('\n')
-                .map { line -> Trace(line.split(" ").filter { it.isNotEmpty() }.map { event(it) }.asSequence()) }
-                .asSequence()
-        )
 
     fun compareWithReference(reference: CausalNet, miner: (Log) -> CausalNet) {
         logger().debug("REFERENCE:\n${reference}")
@@ -55,15 +46,5 @@ object Helper {
         assertEquals(expectedSequences, actualSequences)
         assertTrue(v.noDeadParts)
         assertTrue(v.isSound)
-    }
-
-    fun event(name: String): Event {
-        val e = mockk<Event>()
-        every { e.conceptName } returns name
-        every { e.conceptInstance } returns null
-        every { e.lifecycleTransition } returns "complete"
-        every { e.hashCode() } returns name.hashCode()
-        every { e.toString() } returns name
-        return e
     }
 }

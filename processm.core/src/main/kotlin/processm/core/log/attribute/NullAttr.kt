@@ -9,4 +9,8 @@ class NullAttr(key: String) : Attribute<Any?>(key) {
 
     override val xesTag: String
         get() = throw UnsupportedOperationException("Null attributes are not supported by the IEEE 1849-2016 standard and cannot be serialized.")
+
+    override fun hashCode(): Int = key.hashCode()
+
+    override fun equals(other: Any?): Boolean = other is NullAttr && other.key == this.key
 }

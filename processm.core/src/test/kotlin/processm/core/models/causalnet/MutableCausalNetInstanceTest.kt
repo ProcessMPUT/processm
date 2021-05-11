@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
 import kotlin.test.*
 
 class MutableCausalNetInstanceTest {
@@ -28,13 +29,13 @@ class MutableCausalNetInstanceTest {
     @Test
     fun `execute correct trace 1`() {
         assertTrue { instance.state.isEmpty() }
-        assertEquals(setOf(a), instance.availableActivities.toSet())
+        assertEquals(setOf(a), instance.availableActivities.mapToSet { it.activity })
         instance.execute(null, model.splits.getValue(a).first())
-        assertEquals(setOf(b, c), instance.availableActivities.toSet())
+        assertEquals(setOf(b, c), instance.availableActivities.mapToSet { it.activity })
         instance.execute(model.joins.getValue(b).first(), model.splits.getValue(b).first())
-        assertEquals(setOf(c), instance.availableActivities.toSet())
+        assertEquals(setOf(c), instance.availableActivities.mapToSet { it.activity })
         instance.execute(model.joins.getValue(c).first(), model.splits.getValue(c).first())
-        assertEquals(setOf(d), instance.availableActivities.toSet())
+        assertEquals(setOf(d), instance.availableActivities.mapToSet { it.activity })
         instance.execute(model.joins.getValue(d).first(), null)
         assertTrue { instance.state.isEmpty() }
     }
@@ -42,13 +43,13 @@ class MutableCausalNetInstanceTest {
     @Test
     fun `execute correct trace 2`() {
         assertTrue { instance.state.isEmpty() }
-        assertEquals(setOf(a), instance.availableActivities.toSet())
+        assertEquals(setOf(a), instance.availableActivities.mapToSet { it.activity })
         instance.execute(null, model.splits.getValue(a).first())
-        assertEquals(setOf(b, c), instance.availableActivities.toSet())
+        assertEquals(setOf(b, c), instance.availableActivities.mapToSet { it.activity })
         instance.execute(model.joins.getValue(c).first(), model.splits.getValue(c).first())
-        assertEquals(setOf(b), instance.availableActivities.toSet())
+        assertEquals(setOf(b), instance.availableActivities.mapToSet { it.activity })
         instance.execute(model.joins.getValue(b).first(), model.splits.getValue(b).first())
-        assertEquals(setOf(d), instance.availableActivities.toSet())
+        assertEquals(setOf(d), instance.availableActivities.mapToSet { it.activity })
         instance.execute(model.joins.getValue(d).first(), null)
         assertTrue { instance.state.isEmpty() }
     }
@@ -63,9 +64,9 @@ class MutableCausalNetInstanceTest {
     @Test
     fun `join to one split from another`() {
         assertTrue { instance.state.isEmpty() }
-        assertEquals(setOf(a), instance.availableActivities.toSet())
+        assertEquals(setOf(a), instance.availableActivities.mapToSet { it.activity })
         instance.execute(null, model.splits.getValue(a).first())
-        assertEquals(setOf(b, c), instance.availableActivities.toSet())
+        assertEquals(setOf(b, c), instance.availableActivities.mapToSet { it.activity })
         assertFailsWith<IllegalArgumentException> {
             instance.execute(
                 model.joins.getValue(c).first(),
@@ -82,19 +83,19 @@ class MutableCausalNetInstanceTest {
     @Test
     fun `non-existing bindings`() {
         instance.execute(null, model.splits.getValue(a).first())
-        assertFailsWith<IllegalArgumentException> { instance.execute(Join(setOf(Dependency(a,d))), null) }
+        assertFailsWith<IllegalArgumentException> { instance.execute(Join(setOf(Dependency(a, d))), null) }
     }
 
     @Test
     fun `execute correct trace 1 using abstract interface`() {
         assertTrue { instance.state.isEmpty() }
-        assertEquals(setOf(a), instance.availableActivities.toSet())
+        assertEquals(setOf(a), instance.availableActivities.mapToSet { it.activity })
         instance.availableActivityExecutions.single().execute()
-        assertEquals(setOf(b, c), instance.availableActivities.toSet())
-        instance.availableActivityExecutions.filter { it.activity==b }.single().execute()
-        assertEquals(setOf(c), instance.availableActivities.toSet())
+        assertEquals(setOf(b, c), instance.availableActivities.mapToSet { it.activity })
+        instance.availableActivityExecutions.filter { it.activity == b }.single().execute()
+        assertEquals(setOf(c), instance.availableActivities.mapToSet { it.activity })
         instance.availableActivityExecutions.single().execute()
-        assertEquals(setOf(d), instance.availableActivities.toSet())
+        assertEquals(setOf(d), instance.availableActivities.mapToSet { it.activity })
         instance.availableActivityExecutions.single().execute()
         assertTrue { instance.state.isEmpty() }
     }

@@ -3,13 +3,13 @@ package processm.miners.heuristicminer
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import processm.core.helpers.mapToSet
+import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.miners.heuristicminer.Helper.event
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.heuristicminer.bindingselectors.CountGroups

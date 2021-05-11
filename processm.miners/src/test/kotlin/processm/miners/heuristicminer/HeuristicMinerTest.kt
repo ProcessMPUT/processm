@@ -1,13 +1,13 @@
 package processm.miners.heuristicminer
 
+import processm.core.log.Helpers.event
+import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.miners.heuristicminer.Helper.event
-import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner

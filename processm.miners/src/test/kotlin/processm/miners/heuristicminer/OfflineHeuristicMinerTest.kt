@@ -3,13 +3,13 @@ package processm.miners.heuristicminer
 import org.junit.jupiter.api.Assumptions
 import processm.core.comparators.CausalNetTraceComparison
 import processm.core.helpers.mapToSet
+import processm.core.log.Helpers.event
+import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import processm.miners.heuristicminer.Helper.event
-import processm.miners.heuristicminer.Helper.logFromString
 import processm.miners.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector

@@ -139,14 +139,13 @@ class CausalNetDSL {
     }
 
     infix fun Set<Node>.or(other: Node): SetOfSetOfNodes {
-        return this or setOf(other)
+        return SetOfNodes(this) or SetOfNodes(setOf(other))
     }
 
 
     fun result(): MutableCausalNet {
         val model = MutableCausalNet(start, end)
-        (joins.map { j -> j.dependencies } + splits.map { s -> s.dependencies })
-            .flatten()
+        (joins.flatMap { j -> j.dependencies } + splits.flatMap { s -> s.dependencies })
             .forEach { dep ->
                 model.addInstance(dep.source)
                 model.addInstance(dep.target)

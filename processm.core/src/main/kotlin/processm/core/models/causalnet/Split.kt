@@ -24,11 +24,11 @@ data class Split(override val dependencies: Set<Dependency>) : Binding {
     /**
      * Targets of all the dependencies of this split
      */
-    val targets by lazy {
+    val targets by lazy(LazyThreadSafetyMode.PUBLICATION) {
         dependencies.mapToSet { d -> d.target }
     }
 
     override fun toString(): String {
-        return "{${source} -> ${targets.map { it }}}"
+        return "{${source} -> ${targets.joinToString()}}"
     }
 }

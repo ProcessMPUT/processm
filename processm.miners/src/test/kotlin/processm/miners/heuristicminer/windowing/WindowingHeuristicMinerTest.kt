@@ -1,6 +1,7 @@
 package processm.miners.heuristicminer.windowing
 
 import ch.qos.logback.classic.Level
+import processm.core.log.Helpers.logFromString
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -9,8 +10,6 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.miners.heuristicminer.BasicTraceToNodeTrace
 import processm.miners.heuristicminer.Helper.logFromModel
-import processm.miners.heuristicminer.Helper.logFromString
-import processm.miners.heuristicminer.NodeTrace
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.math.max

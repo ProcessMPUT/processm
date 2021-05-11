@@ -7,6 +7,7 @@ import processm.core.helpers.mapToSet
 import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
+import processm.core.models.commons.ProcessModelState
 import processm.miners.heuristicminer.NodeTrace
 import processm.miners.heuristicminer.ReplayTrace
 import java.lang.ref.SoftReference
@@ -107,6 +108,10 @@ class LazyCausalNetState(
 
     override val size: Int
         get() = backend.size
+
+    override fun copy(): ProcessModelState {
+        TODO("Not yet implemented")
+    }
 }
 
 /**
