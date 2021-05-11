@@ -324,6 +324,15 @@ class AStar(
     private val consumentsCache = HashMap<Pair<Place, Int>, Int>()
 
     private fun computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: Marking): Int {
+        // Complete dealing with nonConsumable would require some complex algorithm.
+        // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
+        // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
+        // ([[c, e]]: 2, [[d, e]]: 1) -> cceed - 5 model-skips
+        // Underestimating: each set of sets is flattened and it is assumed that it is sufficient to execute a single activity from it to consume a token
+        // ([c, e]: 2, [d, e]: 1) -> ee - 2 model-skips
+        // Still not entirely clear how to deal with it, e.g., ([c, e]: 2, [d, e]: 1, [d, c]: 3) -> dcc - 3 model-skips seems to be an optimal solution
+        // Underestimating further: computing unions of sets having at least one common element and assigning them the maximal value over all the original counters -> ([c, d, e]: 3).
+        // At this point it is sufficient to sum the counters
         val nEvents = nEvents[startIndex]
         val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
         for ((place, counter) in prevProcessState) {
@@ -336,16 +345,8 @@ class AStar(
         }
         if (nonConsumable.isEmpty())
             return 0
-        // Complete dealing with nonConsumable would require some complex algorithm.
-        // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
-        // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
-        // ([[c, e]]: 2, [[d, e]]: 1) -> cceed - 5 model-skips
-        // Underestimating: each set of sets is flattened and it is assumed that it is sufficient to execute a single activity from it to consume a token
-        // ([c, e]: 2, [d, e]: 1) -> ee - 2 model-skips
-        // Still not entirely clear how to deal with it, e.g., ([c, e]: 2, [d, e]: 1, [d, c]: 3) -> dcc - 3 model-skips seems to be an optimal solution
-        // Underestimating further: computing unions of sets having at least one common element and assigning them the maximal value over all the original counters -> ([c, d, e]: 3).
-        // At this point it is sufficient to sum the counters
-        val disjoint = ArrayList<Pair<HashSet<String>, Int>>()
+        var disjointSum = 0
+        // use LinkedList to enable efficient removal from the middle
         val flat = nonConsumable.mapNotNullTo(LinkedList()) {
             val set = it.first.flatMapTo(HashSet()) { it }
             if (set.isNotEmpty())
@@ -353,8 +354,9 @@ class AStar(
             else
                 return@mapNotNullTo null
         }
+        val set = HashSet<String>()
         while (flat.isNotEmpty()) {
-            val set = HashSet<String>()
+            set.clear()
             var ctr = 0
             val i = flat.iterator()
             while (i.hasNext()) {
@@ -367,9 +369,9 @@ class AStar(
             }
             assert(set.isNotEmpty())
             assert(ctr > 0)
-            disjoint.add(set to ctr)
+            disjointSum += ctr
         }
-        return disjoint.sumBy { it.second }
+        return disjointSum
     }
 
     private fun computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: CausalNetState): Int {

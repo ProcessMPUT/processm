@@ -6,6 +6,7 @@ import processm.core.models.commons.Activity
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.commons.ProcessModel
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Represents the Petri net.
@@ -302,6 +303,22 @@ class PetriNet(
         return result.toString()
     }
 
+    private fun forwardSearchInternal(start: Place, visited: Set<Transition>): List<Set<Transition>> {
+        val result = ArrayList<Set<Transition>>()
+        for (t in placeToFollowingTransition[start].orEmpty()) {
+            if (t.isSilent) {
+                if (t !in visited)
+                    Lists
+                        .cartesianProduct(t.outPlaces.map { forwardSearchInternal(it, visited + setOf(t)) })
+                        .mapTo(result) { parts -> parts.flatMapTo(HashSet()) { it } }
+            } else
+                result.add(setOf(t))
+        }
+        return result
+    }
+
+    private val forwardSearchCache = HashMap<Place, List<Set<Transition>>>()
+
     /**
      * Returns sets of transitions that can be executed for a single token in [start].
      * Differs from [placeToFollowingTransition] in that it goes over silent transitions, so a single token may actually
@@ -311,18 +328,7 @@ class PetriNet(
      * The result is to be treated as a XOR of ANDs, i.e., transitions in a single set must be executed jointly, while
      * from the top-level sequence exactly one set must be executed.
      */
-    fun forwardSearch(start: Place, visited: Set<Transition> = emptySet()): Sequence<Set<Transition>> = sequence {
-        for (t in placeToFollowingTransition[start].orEmpty()) {
-            if (t in visited)
-                continue
-            if (t.isSilent) {
-                //TODO possibly replace List.cartesianProduct with something more efficient
-                yieldAll(Lists
-                    .cartesianProduct(t.outPlaces.map { forwardSearch(it, visited + setOf(t)).toList() })
-                    .asSequence()
-                    .map { parts -> parts.flatMapTo(HashSet()) { it } })
-            } else
-                yield(setOf(t))
-        }
+    fun forwardSearch(start: Place): List<Set<Transition>> = forwardSearchCache.computeIfAbsent(start) {
+        forwardSearchInternal(it, emptySet())
     }
 }
