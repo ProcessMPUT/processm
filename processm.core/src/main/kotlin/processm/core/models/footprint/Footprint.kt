@@ -30,4 +30,24 @@ class Footprint(
         }
 
     override fun createInstance(): FootprintInstance = FootprintInstance(this)
+
+    override fun toString(): String = buildString {
+        val lengths = activities.map { it.name.length }
+        val maxLength = lengths.maxOrNull() ?: 0
+
+        append(String.format("%${maxLength}s|", ""))
+        for (activity in activities) {
+            append(activity)
+            append('|')
+        }
+        append('\n')
+
+        for (row in activities) {
+            append(String.format("%${maxLength}s|", row))
+            for (col in activities) {
+                append(String.format("%${col.name.length}s|", matrix[row, col]?.symbol ?: ""))
+            }
+            append('\n')
+        }
+    }
 }

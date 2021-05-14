@@ -71,4 +71,44 @@ class XESToFootprintTests {
                 assertEquals(Order.Parallel, footprint.matrix[b, c])
                 assertEquals(Order.Parallel, footprint.matrix[c, b])
         }
+
+        @Test
+        fun repetitions() {
+                val log = logFromString(
+                        """
+            a b c d
+            a c b d
+            a b b d
+        """
+                )
+
+                val footprint = log.toFootprint()
+
+                val a = FootprintActivity("a")
+                val b = FootprintActivity("b")
+                val c = FootprintActivity("c")
+                val d = FootprintActivity("d")
+
+                assertEquals(setOf(a, b, c, d), footprint.activities.toSet())
+                assertEquals(setOf(a), footprint.startActivities.toSet())
+                assertEquals(setOf(d), footprint.endActivities.toSet())
+
+                assertEquals(Order.NoOrder, footprint.matrix[a, a])
+                assertEquals(Order.NoOrder, footprint.matrix[a, d])
+                assertEquals(Order.NoOrder, footprint.matrix[c, c])
+
+                assertEquals(Order.FollowedBy, footprint.matrix[a, b])
+                assertEquals(Order.FollowedBy, footprint.matrix[a, c])
+                assertEquals(Order.FollowedBy, footprint.matrix[b, d])
+                assertEquals(Order.FollowedBy, footprint.matrix[c, d])
+
+                assertEquals(Order.PrecededBy, footprint.matrix[b, a])
+                assertEquals(Order.PrecededBy, footprint.matrix[c, a])
+                assertEquals(Order.PrecededBy, footprint.matrix[d, b])
+                assertEquals(Order.PrecededBy, footprint.matrix[d, c])
+
+                assertEquals(Order.Parallel, footprint.matrix[b, c])
+                assertEquals(Order.Parallel, footprint.matrix[c, b])
+                assertEquals(Order.Parallel, footprint.matrix[b, b])
+        }
 }

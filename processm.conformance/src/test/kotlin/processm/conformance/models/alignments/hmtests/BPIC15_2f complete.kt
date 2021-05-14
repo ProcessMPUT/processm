@@ -1,6 +1,7 @@
 package processm.conformance.models.alignments.hmtests
 
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Disabled
 import processm.conformance.models.alignments.CompositeAligner
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
@@ -630,6 +631,7 @@ class `BPIC15_2f complete` {
     }
 
     @Test
+    @Disabled("Too expensive")
     fun `trace 443`() {
         val net = model.toPetriNet()
         val aligner = CompositeAligner(net, pool = pool)

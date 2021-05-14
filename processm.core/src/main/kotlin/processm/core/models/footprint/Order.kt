@@ -33,4 +33,6 @@ enum class Order(val symbol: String) {
      * antisymmetric relations [FollowedBy] and [PrecededBy] it returns the opposite.
      */
     open fun invert(): Order = this
+
+    override fun toString(): String = symbol
 }

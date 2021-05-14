@@ -8,4 +8,5 @@ import processm.core.models.commons.ProcessModelState
  */
 data class FootprintActivity(override val name: String) : Activity, ProcessModelState {
     override fun copy(): ProcessModelState = FootprintActivity(name)
+    override fun toString(): String = name
 }
