@@ -5,7 +5,7 @@ import processm.core.helpers.mapToSet
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.experimental.heuristicminer.bindingproviders.hypothesisselector.ReplayTraceHypothesisSelector
-import processm.miners.onlineminer.ReplayTrace
+import processm.miners.onlineminer.replayer.ReplayTrace
 
 /**
  * A [BindingProvider] that exhaustively considers all possibilities and uses [hypothesisSelector] to select the best

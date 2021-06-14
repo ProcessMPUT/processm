@@ -2,9 +2,6 @@ package processm.experimental.onlinehmpaper
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import processm.conformance.models.alignments.AStar
-import processm.conformance.models.alignments.cache.CachingAlignerFactory
-import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
 import processm.core.log.XMLXESOutputStream
@@ -445,7 +442,7 @@ class Experiment {
             TimeUnit.SECONDS,
             LinkedBlockingQueue()
         )
-        val astarFactory = CachingAlignerFactory(DefaultAlignmentCache()) { m, p, _ -> AStar(m, p) }
+//        val astarFactory = CachingAlignerFactory(DefaultAlignmentCache()) { m, p, _ -> AStar(m, p) }
         val csv = CSVWriter(File(config.csv))
         val jsFile = File("models.js").outputStream().bufferedWriter()
         for (windowSize in config.batchSizes.map { it.toInt() }) {

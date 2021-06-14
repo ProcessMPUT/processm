@@ -1,6 +1,6 @@
 package processm.experimental.heuristicminer.bindingproviders.hypothesisselector
 
-import processm.miners.onlineminer.ReplayTrace
+import processm.miners.onlineminer.replayer.ReplayTrace
 
 /**
  * Selects "the best" (for any definition of best) replay trace of all possible replay traces of a given trace

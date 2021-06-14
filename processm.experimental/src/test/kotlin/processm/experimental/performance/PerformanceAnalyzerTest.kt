@@ -3,6 +3,7 @@ package processm.experimental.performance
 import ch.qos.logback.classic.Level
 import org.junit.jupiter.api.assertThrows
 import org.slf4j.LoggerFactory.getLogger
+import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.mapToSet
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
@@ -13,19 +14,14 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.CausalNetVerifier
-import processm.core.verifiers.causalnet.ActivityBinding
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import processm.experimental.onlinehmpaper.filterLog
-import processm.core.helpers.HashMapWithDefault
 import processm.experimental.heuristicminer.OfflineHeuristicMiner
 import processm.experimental.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.miners.onlineminer.SingleReplayer
+import processm.experimental.onlinehmpaper.filterLog
 import processm.miners.onlineminer.OnlineMiner
 import java.io.File
-import java.util.*
 import java.util.zip.GZIPInputStream
-import kotlin.collections.HashSet
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -578,35 +574,6 @@ class PerformanceAnalyzerTest {
         }
     }
 
-    //TODO: this test sholud be moved to another file
-    /**
-     * This test was developed in order to ensure that the trace #443 in `BPIC15_2f` can be replayed correctly within the model.
-     * Apparently it can, but the Performance Analyzer seems to be incapable of finding an alignment.
-     */
-    @Test
-    fun `sanity check`() {
-        (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
-        val log = load("../xes-logs/BPIC15_2f.xes.gz")
-        val offline = OnlineMiner()
-        offline.processLog(log)
-        val partialLog = Log(log.traces.toList().subList(443, 444).asSequence())
-        val strangeTrace =
-            listOf(offline.result.start) + offline.traceToNodeTrace(partialLog.traces.first()) + listOf(offline.result.end)
-        val (splits, joins) = (offline.replayer as SingleReplayer).replayHistory[strangeTrace]!!
-        val sequence = ArrayList<ActivityBinding>()
-        var previousState: CausalNetState = CausalNetStateImpl()
-        for ((idx, node) in strangeTrace.withIndex()) {
-            val join = if (idx > 0) joins[idx - 1] else null
-            val split = if (idx < joins.size) splits[idx] else null
-            val ab = ActivityBinding(node, join?.sources.orEmpty(), split?.targets.orEmpty(), previousState)
-            previousState = ab.state
-            sequence.add(ab)
-        }
-        val verifier = CausalNetVerifierImpl(offline.result)
-        assertTrue { verifier.isValid(sequence) }
-        assertFalse { verifier.isValid(sequence.subList(0, sequence.size - 1)) }
-    }
-
     //@Ignore
     @Test
     fun `BPIC15_2f`() {
@@ -1009,7 +976,7 @@ class PerformanceAnalyzerTest {
             e1 + e2 join f
         }
         val log = logFromModel(dodReference)
-        val pa=PerformanceAnalyzer(log, dodReference)
+        val pa = PerformanceAnalyzer(log, dodReference)
         assertDoubleEquals(1.0, pa.precision)
         assertDoubleEquals(1.0, pa.perfectFitRatio)
     }
