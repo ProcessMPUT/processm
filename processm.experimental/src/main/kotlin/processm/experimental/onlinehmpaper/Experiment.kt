@@ -21,7 +21,7 @@ import processm.experimental.heuristicminer.bindingproviders.BestFirstBindingPro
 import processm.experimental.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.experimental.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.miners.onlineminer.OnlineMiner
 import java.io.File
 import java.io.PrintStream
 import java.lang.management.ManagementFactory
@@ -405,7 +405,7 @@ class Experiment {
                     continue
                 }
                 println("Sublog sizes: ${partialLogs.map { it.size }}")
-                val online = WindowingHeuristicMiner()
+                val online = OnlineMiner()
                 val log = partialLogs.mapIndexed { logidx, log ->
                     log.mapIndexed { traceidx, trace ->
                         Triple(logidx, traceidx, trace)
@@ -426,7 +426,7 @@ class Experiment {
                     online.processDiff(addLog, removeLog)
                     onlineTime = threadMXBean.currentThreadCpuTime - onlineTime
 
-                    val offline = WindowingHeuristicMiner()
+                    val offline = OnlineMiner()
                     var offlineTime = threadMXBean.currentThreadCpuTime
                     offline.processLog(trainingLog)
                     offlineTime = threadMXBean.currentThreadCpuTime - offlineTime
@@ -465,7 +465,7 @@ class Experiment {
                     continue
                 }
                 println("Sublog sizes: ${partialLogs.map { it.size }}")
-                val online = WindowingHeuristicMiner()
+                val online = OnlineMiner()
                 val log = partialLogs.mapIndexed { logidx, log ->
                     log.mapIndexed { traceidx, trace ->
                         Triple(logidx, traceidx, trace)

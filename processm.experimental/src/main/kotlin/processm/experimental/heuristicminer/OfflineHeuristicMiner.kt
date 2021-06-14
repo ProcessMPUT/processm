@@ -14,6 +14,10 @@ import processm.experimental.heuristicminer.dependencygraphproviders.BasicDepend
 import processm.experimental.heuristicminer.dependencygraphproviders.DependencyGraphProvider
 import processm.experimental.heuristicminer.longdistance.LongDistanceDependencyMiner
 import processm.experimental.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
+import processm.miners.onlineminer.BasicTraceToNodeTrace
+import processm.miners.onlineminer.HeuristicMiner
+import processm.miners.onlineminer.NodeTrace
+import processm.miners.onlineminer.TraceToNodeTrace
 
 /**
  * An off-line implementation of Heuristic Miner.

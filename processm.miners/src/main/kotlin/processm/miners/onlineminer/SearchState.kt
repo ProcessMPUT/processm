@@ -1,7 +1,6 @@
-package processm.experimental.heuristicminer.windowing
+package processm.miners.onlineminer
 
 import org.apache.commons.math3.fraction.BigFraction
-import processm.experimental.heuristicminer.ReplayTrace
 
 data class SearchState(
     val totalGreediness: BigFraction,

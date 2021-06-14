@@ -12,6 +12,9 @@ import processm.experimental.heuristicminer.longdistance.LongDistanceDependencyM
 import processm.experimental.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import processm.experimental.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.experimental.heuristicminer.traceregisters.TraceRegister
+import processm.miners.onlineminer.BasicTraceToNodeTrace
+import processm.miners.onlineminer.HeuristicMiner
+import processm.miners.onlineminer.TraceToNodeTrace
 
 /**
  * An on-line implementation of the heuristic miner.
@@ -35,16 +38,16 @@ class OnlineHeuristicMiner(
 
     private var unableToReplay = ArrayList<List<Node>>()
     private var currentBindings = setOf<Binding>()
-    private lateinit var model:MutableCausalNet
+    private lateinit var model: MutableCausalNet
     override val result: MutableCausalNet
-            get() = model
+        get() = model
 
     override fun processLog(log: Log) {
         for (trace in log.traces)
             processTrace(trace)
     }
 
-    fun unprocessTrace(trace:Trace) {
+    fun unprocessTrace(trace: Trace) {
         val nodeTrace = traceToNodeTrace(trace)
         dependencyGraphProvider.unprocessTrace(nodeTrace)
         val nodeTraceWithLimits = listOf(model.start) + nodeTrace + listOf(model.end)

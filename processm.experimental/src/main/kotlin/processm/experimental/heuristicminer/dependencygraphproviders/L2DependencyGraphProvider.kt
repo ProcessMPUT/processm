@@ -3,7 +3,7 @@ package processm.experimental.heuristicminer.dependencygraphproviders
 import processm.core.helpers.Counter
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
-import processm.experimental.heuristicminer.NodeTrace
+import processm.miners.onlineminer.NodeTrace
 
 /**
  * [DefaultDependencyGraphProvider] plus additional measure to detect L2 loops from Flexible Heuristic Miner

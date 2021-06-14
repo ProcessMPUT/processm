@@ -7,10 +7,9 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.Binding
 import processm.core.models.causalnet.CausalNet
 import processm.experimental.helpers.BitIntSet
-import processm.experimental.heuristicminer.BasicTraceToNodeTrace
-import processm.experimental.heuristicminer.TraceToNodeTrace
+import processm.miners.onlineminer.BasicTraceToNodeTrace
+import processm.miners.onlineminer.TraceToNodeTrace
 import java.util.*
-import kotlin.collections.ArrayList
 
 
 class PerfectAligner(

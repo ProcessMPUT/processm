@@ -16,7 +16,7 @@ abstract class AbstractBindingProvider : BindingProvider {
         model: CausalNet,
         currentNode: Node,
         available: Set<Dependency>,
-        maxSetSize: Int=Int.SIZE_BITS
+        maxSetSize: Int = Int.SIZE_BITS
     ): Iterable<Collection<Dependency>> {
         val consumable =
             model.incoming.getOrDefault(currentNode, setOf())
@@ -36,10 +36,10 @@ abstract class AbstractBindingProvider : BindingProvider {
      * the source of these dependencies must be [currentNode] and their targets must be present in [available]
      */
     protected fun produceCandidates(
-            model: CausalNet,
-            currentNode: Node,
-            available: Set<Node>,
-            maxSetSize: Int=Int.SIZE_BITS
+        model: CausalNet,
+        currentNode: Node,
+        available: Set<Node>,
+        maxSetSize: Int = Int.SIZE_BITS
     ): Iterable<Set<Dependency>> {
         val producible =
             model.outgoing.getOrDefault(currentNode, setOf())

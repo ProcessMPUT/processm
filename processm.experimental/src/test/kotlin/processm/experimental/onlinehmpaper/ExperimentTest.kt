@@ -8,10 +8,9 @@ import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
-import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.miners.onlineminer.OnlineMiner
 import java.io.File
 import java.util.zip.GZIPInputStream
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -199,7 +198,7 @@ class ExperimentTest {
             missThreshold
         )
         val flatLog = logs.flatten()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         val windowEnd = logs[0].size + 7
         val windowStart = windowEnd - windowSize + 1
         val trainLog = flatLog.subList(windowStart, windowEnd + 1)

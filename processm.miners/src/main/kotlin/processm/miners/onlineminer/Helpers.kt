@@ -1,6 +1,5 @@
-package processm.experimental.heuristicminer.windowing
+package processm.miners.onlineminer
 
-import org.apache.commons.lang3.math.Fraction
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
 

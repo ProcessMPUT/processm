@@ -4,8 +4,6 @@ import processm.core.helpers.allSubsets
 import processm.core.models.causalnet.Node
 import processm.experimental.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
 import kotlin.math.max
 
 /**

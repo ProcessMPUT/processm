@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer
+package processm.miners.onlineminer
 
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.MutableCausalNet

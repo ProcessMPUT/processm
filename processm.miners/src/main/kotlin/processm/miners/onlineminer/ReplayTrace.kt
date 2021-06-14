@@ -1,6 +1,5 @@
-package processm.experimental.heuristicminer
+package processm.miners.onlineminer
 
-import org.apache.commons.collections4.MultiSet
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.Dependency
 

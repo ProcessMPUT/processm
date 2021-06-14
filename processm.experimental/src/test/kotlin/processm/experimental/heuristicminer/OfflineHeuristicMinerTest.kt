@@ -5,6 +5,7 @@ import processm.core.comparators.CausalNetTraceComparison
 import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.logFromString
+import processm.core.log.Helpers.logFromModel
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
@@ -104,7 +105,7 @@ class OfflineHeuristicMinerTest {
         Assumptions.assumeTrue(v.isSound)
         Assumptions.assumeTrue(v.validSequences.mapToSet { seq -> seq.map { it.a } }.size == 5)
         v.validSequences.map { seq -> seq.map { it.a } }.forEach { println(it) }
-        val log = Helper.logFromModel(reference)
+        val log = logFromModel(reference)
         val hmp = OfflineHeuristicMiner(
             bindingProvider = CompleteBindingProvider(MostParsimoniousHypothesisSelector()),
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()

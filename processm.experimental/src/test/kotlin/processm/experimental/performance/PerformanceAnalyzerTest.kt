@@ -16,12 +16,12 @@ import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.ActivityBinding
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.experimental.onlinehmpaper.filterLog
-import processm.experimental.heuristicminer.HashMapWithDefault
+import processm.miners.onlineminer.HashMapWithDefault
 import processm.experimental.heuristicminer.OfflineHeuristicMiner
 import processm.experimental.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.experimental.heuristicminer.windowing.SingleReplayer
-import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.miners.onlineminer.SingleReplayer
+import processm.miners.onlineminer.OnlineMiner
 import java.io.File
 import java.util.*
 import java.util.zip.GZIPInputStream
@@ -587,7 +587,7 @@ class PerformanceAnalyzerTest {
     fun `sanity check`() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
-        val offline = WindowingHeuristicMiner()
+        val offline = OnlineMiner()
         offline.processLog(log)
         val partialLog = Log(log.traces.toList().subList(443, 444).asSequence())
         val strangeTrace =
@@ -612,7 +612,7 @@ class PerformanceAnalyzerTest {
     fun `BPIC15_2f`() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
-        val offline = WindowingHeuristicMiner()
+        val offline = OnlineMiner()
         offline.processLog(log)
         println(offline.result)
         //val partialLog = Log(log.traces.toList().subList(0, 400).asSequence())
@@ -645,7 +645,7 @@ class PerformanceAnalyzerTest {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         (getLogger("processm.miners") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         for ((windowIndices, addIndices, removeIndices) in windowIndices(
             log.size - windowSize,
             windowSize,
@@ -671,7 +671,7 @@ class PerformanceAnalyzerTest {
         val windowIndices = IntRange(start, start + windowSize - 1)
         val train = log.subList(windowIndices.first, windowIndices.last + 1)
         val test = log.subList(windowIndices.last, windowIndices.last + windowSize)
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         hm.processLog(Log(train.asSequence()))
         val patest =
             PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
@@ -687,7 +687,7 @@ class PerformanceAnalyzerTest {
         val windowIndices = IntRange(start, start + windowSize - 1)
         val train = log.subList(windowIndices.first, windowIndices.last + 1)
         val test = log.subList(windowIndices.last + windowSize - 1, windowIndices.last + windowSize)
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         hm.processLog(Log(train.asSequence()))
         val patest =
             PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
@@ -701,7 +701,7 @@ class PerformanceAnalyzerTest {
         val step = 1
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         for ((windowIndices, addIndices, removeIndices) in windowIndices(
             log.size - windowSize,
             windowSize,
@@ -728,7 +728,7 @@ class PerformanceAnalyzerTest {
         val step = 1
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         for ((windowIndices, addIndices, removeIndices) in windowIndices(/*log.size-windowSize*/140,
             windowSize,
             start = 120
@@ -750,13 +750,13 @@ class PerformanceAnalyzerTest {
         }
     }
 
-    /// This concerns processm.experimental.heuristicminer.windowing.SingleReplayer.production
+    /// This concerns processm.miners.onlineminer.SingleReplayer.production
     @Test
     fun `BPIC15_2f - zero in denominator`() {
         val windowSize = 20
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         for ((windowIndices, addIndices, removeIndices) in windowIndices(150, windowSize, start = 100)) {
             println("$windowIndices -> + $addIndices - $removeIndices")
             val remove = log.subList(removeIndices.first, removeIndices.last + 1)
@@ -770,7 +770,7 @@ class PerformanceAnalyzerTest {
         val windowSize = 20
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         val start = 92
         val train = log.subList(start, start + windowSize)
         val test = log.subList(start + 2 * windowSize - 1, start + 2 * windowSize)
@@ -786,7 +786,7 @@ class PerformanceAnalyzerTest {
         val step = 1
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         assertThrows<IllegalStateException> {
             for (start in 0 until 113) {
                 val remove =
@@ -860,7 +860,7 @@ class PerformanceAnalyzerTest {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.DEBUG
         val fulllog = load("../xes-logs/CoSeLoG_WABO_2.xes.gz")
         val log = filterLog(fulllog)
-        val offline = WindowingHeuristicMiner()
+        val offline = OnlineMiner()
         offline.processLog(log)
         println(offline.result)
         /*
@@ -919,7 +919,7 @@ class PerformanceAnalyzerTest {
     fun `nasa-cev-complete-splitted - windowing`() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.INFO
         val log = filterLog(load("../xes-logs/nasa-cev-complete-splitted.xes.gz"))
-        val offline = WindowingHeuristicMiner()
+        val offline = OnlineMiner()
         offline.processLog(log)
         // dla pełnego logu test działa niecałe 5 min, dla pierwszych 500 traces poniżej minuty
         val partial = Log(log.traces.toList().subList(0, 500).asSequence())
@@ -1026,7 +1026,7 @@ class PerformanceAnalyzerTest {
             a b c d b c d  e
         """.trimIndent()
         )
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         hm.processDiff(log, Log(emptySequence()))
         println(hm.result)
         val str = "a " + (0..100).joinToString(separator = " ") { "b c d" } + " e"

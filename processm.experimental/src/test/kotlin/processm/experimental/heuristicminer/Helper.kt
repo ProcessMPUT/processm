@@ -17,12 +17,6 @@ object Helper {
         return inp.map { seq -> seq.map { it.activity } }.toString()
     }
 
-    fun logFromModel(model: CausalNet): Log {
-        val tmp = CausalNetVerifier().verify(model).validLoopFreeSequences.map { seq -> seq.map { it.a } }
-            .toSet()
-        return Log(tmp.asSequence().map { seq -> Trace(seq.asSequence().map { event(it.activity) }) })
-    }
-
     fun compareWithReference(reference: CausalNet, miner: (Log) -> CausalNet) {
         logger().debug("REFERENCE:\n${reference}")
         val referenceVerifier = CausalNetVerifier().verify(reference)

@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer
+package processm.miners.onlineminer
 
 /**
  * Map with [get] behaving like [getOrPut].

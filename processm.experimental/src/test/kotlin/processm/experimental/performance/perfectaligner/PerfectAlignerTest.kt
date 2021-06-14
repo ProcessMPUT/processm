@@ -10,7 +10,7 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.experimental.onlinehmpaper.createDriftLogs
 import processm.experimental.onlinehmpaper.filterLog
-import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.miners.onlineminer.OnlineMiner
 import java.io.File
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
@@ -89,7 +89,7 @@ class PerfectAlignerTest {
         val log = FileInputStream("src/test/resources/BPIC15_2-subset.xes").use { base ->
             HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(base)).first()
         }
-        val online = WindowingHeuristicMiner()
+        val online = OnlineMiner()
         for(trace in log.traces) {
             val addLog = Log(sequenceOf(trace))
             val removeLog = Log(emptySequence())
@@ -109,7 +109,7 @@ class PerfectAlignerTest {
         val completeLog = FileInputStream("../xes-logs/BPIC15_2.xes.gz").use { base ->
             HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(base))).first()
         }
-        val online = WindowingHeuristicMiner()
+        val online = OnlineMiner()
         for(trace in log.traces) {
             val addLog = Log(sequenceOf(trace))
             val removeLog = Log(emptySequence())
@@ -149,7 +149,7 @@ class PerfectAlignerTest {
             missThreshold
         )
         val flatLog = logs.flatten()
-        val hm=WindowingHeuristicMiner()
+        val hm= OnlineMiner()
         val windowEnd = 28
         val windowStart = windowEnd - windowSize + 1
         val trainLog = flatLog.subList(windowStart, windowEnd+1)
@@ -170,7 +170,7 @@ class PerfectAlignerTest {
         }
 
         val trainLog = Log(sequenceOf(completeLog.traces.toList()[520]))
-        val hm=WindowingHeuristicMiner()
+        val hm= OnlineMiner()
         hm.processDiff(trainLog, Log(emptySequence()))
         val pa=PerfectAligner(hm.result)
         val pfr = pa.perfectFitRatio(trainLog)

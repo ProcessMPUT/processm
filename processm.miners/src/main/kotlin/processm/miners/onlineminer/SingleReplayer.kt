@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer.windowing
+package processm.miners.onlineminer
 
 import com.google.common.collect.MinMaxPriorityQueue
 import org.apache.commons.math3.fraction.BigFraction
@@ -9,13 +9,7 @@ import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.logging.trace
 import processm.core.models.causalnet.*
-import processm.experimental.heuristicminer.HashMapWithDefault
-import processm.experimental.heuristicminer.NodeTrace
-import processm.experimental.heuristicminer.ReplayTrace
-import processm.experimental.heuristicminer.bindingproviders.LazyCausalNetState
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
 import kotlin.math.min
 
 private typealias RelaxedState = HashMapWithDefault<Node, Counter<Dependency>>
@@ -115,7 +109,8 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         for (mayConsume in consumable.allSubsets(excludeEmpty = mustConsume.isEmpty())) {
             val consume = mayConsume + mustConsume
             assert(consume.isNotEmpty())
-            val additionalGain = if(allConsumable.isNotEmpty()) BigFraction(consume.size, allConsumable.size) else BigFraction.ZERO
+            val additionalGain =
+                if (allConsumable.isNotEmpty()) BigFraction(consume.size, allConsumable.size) else BigFraction.ZERO
             val newValue = current.totalGreediness + additionalGain
             val newReplayTrace =
                 ReplayTrace(
@@ -175,7 +170,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         var isNextRunnable = false
         //DF-completness guarantees presence of this dependency. It also guarantees that we don't need to look any further, as any immediate successor is runnable by its direct predecessor
         val depToNext = Dependency(currentNode, trace[current.node + 1])
-        assert(depToNext in context.model.dependencies) {"The dependency graph is not DF-complete, $depToNext is missing"}
+        assert(depToNext in context.model.dependencies) { "The dependency graph is not DF-complete, $depToNext is missing" }
         for (e in current.trace.state.entrySet()) {
             if (e.element.source == currentNode && e.count >= context.remainder[current.node][e.element.target] ?: 0) {
                 cannotProduce.add(e.element)
@@ -252,9 +247,9 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                 continue
             }
 
-            val den= context.producible[current.node].size
+            val den = context.producible[current.node].size
             val newValue =
-                current.totalGreediness + (if(den!=0) BigFraction(produce.size, den) else BigFraction.ZERO)
+                current.totalGreediness + (if (den != 0) BigFraction(produce.size, den) else BigFraction.ZERO)
             val newReplayTrace =
                 ReplayTrace(
                     LazyCausalNetState(current.trace.state, emptyList(), produce),
@@ -301,7 +296,12 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
      * constructing splits and joins as large as possible. Instead, the number of tokens left is an estimation of the cost of
      * correctly completing the solution.
      */
-    private fun relaxedHeuristic(initState: CausalNetState, node: Int, produce: Boolean, context: Context): BigFraction {
+    private fun relaxedHeuristic(
+        initState: CausalNetState,
+        node: Int,
+        produce: Boolean,
+        context: Context
+    ): BigFraction {
         val state = prepareState(initState)
         processNode(node, state, !produce, context)
         for (pos in node + 1 until context.trace.size) {
@@ -326,7 +326,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         }
         //assert(lcm != 0 || pnom == 0)
         //return if (lcm != 0) Fraction.getFraction(pnom, lcm).reduce() else Fraction.ZERO
-        return if(denominators.isEmpty()) BigFraction.ZERO else sumInverse(denominators)
+        return if (denominators.isEmpty()) BigFraction.ZERO else sumInverse(denominators)
     }
 
     /**
@@ -454,14 +454,14 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         throw IllegalStateException("Failed to replay")
     }
 
-    lateinit var replayHistory:Map<NodeTrace, Pair<List<Split>, List<Join>>>
+    lateinit var replayHistory: Map<NodeTrace, Pair<List<Split>, List<Join>>>
         private set
 
     override fun replayGroup(model: CausalNet, traces: List<NodeTrace>): Pair<Set<Split>, Set<Join>> {
         val splits = HashSet<Split>()
         val joins = HashSet<Join>()
         var eff = ArrayList<Double>()
-        val replayHistory=HashMap<NodeTrace, Pair<List<Split>, List<Join>>>()
+        val replayHistory = HashMap<NodeTrace, Pair<List<Split>, List<Join>>>()
         for ((idx, trace) in traces.withIndex()) {
             logger.debug("$idx/${traces.size}")
             val (tmpsplits, tmpjoins) = replay(model, trace)

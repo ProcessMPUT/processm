@@ -1,16 +1,12 @@
-package processm.experimental.heuristicminer.windowing
+package processm.miners.onlineminer
 
 import org.apache.commons.collections4.multiset.HashMultiSet
 import processm.core.log.hierarchical.Log
 import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.experimental.heuristicminer.BasicTraceToNodeTrace
-import processm.experimental.heuristicminer.HeuristicMiner
-import processm.experimental.heuristicminer.NodeTrace
-import processm.experimental.heuristicminer.TraceToNodeTrace
 
-class WindowingHeuristicMiner(
+class OnlineMiner(
     val replayer: Replayer = SingleReplayer(),
     val traceToNodeTrace: TraceToNodeTrace = BasicTraceToNodeTrace()
 ) : HeuristicMiner {

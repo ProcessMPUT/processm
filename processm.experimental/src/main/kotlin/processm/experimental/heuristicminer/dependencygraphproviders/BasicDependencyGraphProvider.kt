@@ -3,7 +3,7 @@ package processm.experimental.heuristicminer.dependencygraphproviders
 import processm.core.helpers.Counter
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
-import processm.experimental.heuristicminer.NodeTrace
+import processm.miners.onlineminer.NodeTrace
 
 /**
  * Construct a dependency graph by counting pairs of activities directly following each other in presented traces and then thresholding on this count using [minDirectlyFollows]

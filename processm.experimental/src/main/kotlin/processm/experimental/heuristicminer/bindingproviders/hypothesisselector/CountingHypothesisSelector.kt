@@ -1,7 +1,7 @@
 package processm.experimental.heuristicminer.bindingproviders.hypothesisselector
 
 import processm.core.logging.logger
-import processm.experimental.heuristicminer.ReplayTrace
+import processm.miners.onlineminer.ReplayTrace
 
 /**
  * Selects the best replay trace by counting overall number of used dependencies

@@ -1,6 +1,7 @@
-package processm.experimental.heuristicminer.windowing
+package processm.miners.onlineminer
 
 import ch.qos.logback.classic.Level
+import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
@@ -8,16 +9,15 @@ import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.experimental.heuristicminer.BasicTraceToNodeTrace
-import processm.experimental.heuristicminer.Helper.logFromModel
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class WindowingHeuristicMinerTest {
+class OnlineMinerTest {
 
 //    @BeforeTest
 //    fun beforek() {
@@ -86,7 +86,7 @@ class WindowingHeuristicMinerTest {
             a b b b c d d d e
         """.trimIndent()
         )
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processDiff(log, Log(emptySequence()))
         println(hm.result)
@@ -97,7 +97,7 @@ class WindowingHeuristicMinerTest {
     @Test
     fun `diamond of diamonds - batch`() {
         val log = logFromModel(dodReference)
-        val hm = WindowingHeuristicMiner(SingleReplayer(2))
+        val hm = OnlineMiner(SingleReplayer(2))
         (hm.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processDiff(log, Log(emptySequence()))
         println(hm.result)
@@ -126,7 +126,7 @@ class WindowingHeuristicMinerTest {
         val stepSize = 1
         val log = logFromModel(dodReference)
         val traces = log.traces.toList()
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         for (step in windowGenerator(windowSize, stepSize, traces.size)) {
             val add = if (!step.add.isEmpty()) traces.subList(step.add.first, step.add.last + 1) else emptyList()
             val remove =
@@ -150,7 +150,7 @@ class WindowingHeuristicMinerTest {
                 HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(it))).first()
             }
             val sublog=Log(log.traces.toList().subList(0, 25).asSequence())
-            val hm = WindowingHeuristicMiner()
+            val hm = OnlineMiner()
             hm.processDiff(sublog, Log(emptySequence()))
             println(hm.result)
         }
@@ -158,6 +158,7 @@ class WindowingHeuristicMinerTest {
 
     @InMemoryXESProcessing
     @Test
+    @Ignore
     fun `real logs`() {
         val files = listOf(
             "../xes-logs/BPIC15_2f.xes.gz", "../xes-logs/BPIC15_4f.xes.gz",
@@ -171,7 +172,7 @@ class WindowingHeuristicMinerTest {
             val log = File(file).inputStream().use {
                 HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(it))).first()
             }
-            val hm = WindowingHeuristicMiner()
+            val hm = OnlineMiner()
             hm.processDiff(log, Log(emptySequence()))
             println(hm.result)
         }
@@ -184,7 +185,7 @@ class WindowingHeuristicMinerTest {
             a c d
             a b c d            
         """.trimIndent())
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         hm.processLog(log)
         println(hm.result)
     }

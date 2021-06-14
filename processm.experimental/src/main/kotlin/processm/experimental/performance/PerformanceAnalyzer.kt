@@ -1,5 +1,4 @@
 package processm.experimental.performance
-
 import org.apache.commons.collections4.multiset.HashMultiSet
 import org.apache.commons.math3.fraction.BigFraction
 import processm.core.helpers.Counter
@@ -14,13 +13,10 @@ import processm.core.logging.trace
 import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import processm.experimental.heuristicminer.HashMapWithDefault
-import processm.experimental.heuristicminer.bindingproviders.LazyCausalNetState
-import processm.experimental.heuristicminer.windowing.HasFeatures
+import processm.miners.onlineminer.HasFeatures
+import processm.miners.onlineminer.HashMapWithDefault
+import processm.miners.onlineminer.LazyCausalNetState
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 import kotlin.math.max
 import kotlin.math.min
 

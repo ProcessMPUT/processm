@@ -17,6 +17,8 @@ import processm.experimental.heuristicminer.bindingselectors.CountSeparately
 import processm.experimental.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.experimental.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.experimental.heuristicminer.traceregisters.SingleShortestTraceRegister
+import processm.miners.onlineminer.BasicTraceToNodeTrace
+import processm.miners.onlineminer.HeuristicMiner
 import kotlin.math.absoluteValue
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -5,13 +5,13 @@ import io.mockk.mockkConstructor
 import processm.core.helpers.Counter
 import processm.core.helpers.allPermutations
 import processm.core.helpers.mapToSet
+import processm.core.log.Helpers.logFromModel
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
-import processm.experimental.heuristicminer.Helper.logFromModel
 import processm.experimental.heuristicminer.OfflineHeuristicMiner
 import processm.experimental.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner

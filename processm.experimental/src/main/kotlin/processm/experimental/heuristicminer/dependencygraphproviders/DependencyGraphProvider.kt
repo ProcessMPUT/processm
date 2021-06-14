@@ -2,7 +2,7 @@ package processm.experimental.heuristicminer.dependencygraphproviders
 
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
-import processm.experimental.heuristicminer.NodeTrace
+import processm.miners.onlineminer.NodeTrace
 
 /**
  * An abstraction to build a dependency graph as a set of dependencies
@@ -38,5 +38,6 @@ interface DependencyGraphProvider {
      */
     fun computeDependencyGraph(): Collection<Dependency>
 
-    fun unprocessTrace(nodeTrace: NodeTrace): Unit = throw UnsupportedOperationException("By default this operation is unsupported")
+    fun unprocessTrace(nodeTrace: NodeTrace): Unit =
+        throw UnsupportedOperationException("By default this operation is unsupported")
 }

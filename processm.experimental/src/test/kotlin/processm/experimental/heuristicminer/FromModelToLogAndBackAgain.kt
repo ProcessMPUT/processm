@@ -17,6 +17,7 @@ import processm.experimental.heuristicminer.longdistance.BruteForceLongDistanceD
 import processm.experimental.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import processm.experimental.heuristicminer.longdistance.avoidability.ValidSequenceBasedAvoidabilityChecker
+import processm.miners.onlineminer.HeuristicMiner
 import kotlin.test.*
 
 

@@ -3,18 +3,18 @@ package processm.experimental.heuristicminer
 import org.junit.jupiter.api.*
 import processm.core.comparators.CausalNetTraceComparison
 import processm.core.helpers.allPermutations
+import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
-import processm.experimental.heuristicminer.Helper.logFromModel
 import processm.experimental.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.experimental.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import processm.experimental.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.experimental.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.experimental.heuristicminer.traceregisters.TraceRegister
-import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.miners.onlineminer.OnlineMiner
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,7 +35,7 @@ class CompareOfflineWithOnline {
             longDistanceDependencyMiner = VoidLongDistanceDependencyMiner()
         )
          */
-        val hm = WindowingHeuristicMiner()
+        val hm = OnlineMiner()
         hm.processLog(log)
         val onlineModel = hm.result
         return seqs(onlineModel)

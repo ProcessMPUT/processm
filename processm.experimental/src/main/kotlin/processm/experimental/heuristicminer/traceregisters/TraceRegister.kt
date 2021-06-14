@@ -1,7 +1,7 @@
 package processm.experimental.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
-import processm.experimental.heuristicminer.NodeTrace
+import processm.miners.onlineminer.NodeTrace
 
 /**
  * For a binding, stores a collection of somehow relevant traces

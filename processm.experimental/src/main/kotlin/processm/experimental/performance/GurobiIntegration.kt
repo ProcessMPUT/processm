@@ -7,7 +7,7 @@ import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
 import processm.core.models.commons.Activity
-import processm.experimental.heuristicminer.HashMapWithDefault
+import processm.miners.onlineminer.HashMapWithDefault
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.Collection

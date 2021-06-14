@@ -3,8 +3,8 @@ package processm.experimental.onlinehmpaper
 import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
-import processm.experimental.heuristicminer.NodeTrace
 import processm.experimental.heuristicminer.dependencygraphproviders.DependencyGraphProvider
+import processm.miners.onlineminer.NodeTrace
 
 class WindowingDependencyGraphProvider(val windowSize: Int) : DependencyGraphProvider {
 

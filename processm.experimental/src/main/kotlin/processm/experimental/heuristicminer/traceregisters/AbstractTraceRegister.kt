@@ -1,8 +1,8 @@
 package processm.experimental.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
-import processm.experimental.heuristicminer.HashMapWithDefault
-import processm.experimental.heuristicminer.NodeTrace
+import processm.miners.onlineminer.HashMapWithDefault
+import processm.miners.onlineminer.NodeTrace
 
 /**
  * An abstract trace register providing basic storage capabilities
@@ -20,7 +20,7 @@ abstract class AbstractTraceRegister : TraceRegister {
     }
 
     override operator fun get(bindings: Collection<Binding>): Set<NodeTrace> {
-        return bindings.flatMapTo(HashSet()) {bindingCounter[it]}
+        return bindings.flatMapTo(HashSet()) { bindingCounter[it] }
     }
 
     override fun selectBest(selector: (Set<NodeTrace>) -> Boolean): Set<Binding> {
