@@ -140,6 +140,24 @@ class WindowingHeuristicMinerTest {
 
     @InMemoryXESProcessing
     @Test
+    fun Receipt() {
+        val files = listOf(
+            "../xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz"
+        )
+        for (file in files) {
+            println(file)
+            val log = File(file).inputStream().use {
+                HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(it))).first()
+            }
+            val sublog=Log(log.traces.toList().subList(0, 25).asSequence())
+            val hm = WindowingHeuristicMiner()
+            hm.processDiff(sublog, Log(emptySequence()))
+            println(hm.result)
+        }
+    }
+
+    @InMemoryXESProcessing
+    @Test
     fun `real logs`() {
         val files = listOf(
             "../xes-logs/BPIC15_2f.xes.gz", "../xes-logs/BPIC15_4f.xes.gz",
@@ -159,5 +177,16 @@ class WindowingHeuristicMinerTest {
         }
     }
 
+    @Test
+    fun test() {
+        val log = logFromString("""
+            a b d
+            a c d
+            a b c d            
+        """.trimIndent())
+        val hm = WindowingHeuristicMiner()
+        hm.processLog(log)
+        println(hm.result)
+    }
 
 }

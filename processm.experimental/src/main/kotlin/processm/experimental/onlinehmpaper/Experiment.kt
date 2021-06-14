@@ -2,16 +2,19 @@ package processm.experimental.onlinehmpaper
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import processm.conformance.models.alignments.AStar
+import processm.conformance.models.alignments.cache.CachingAlignerFactory
+import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
 import processm.core.log.XMLXESOutputStream
 import processm.core.log.hierarchical.*
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.toDSL
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
-import processm.experimental.performance.perfectaligner.PerfectAligner
 import processm.miners.heuristicminer.OfflineHeuristicMiner
 import processm.miners.heuristicminer.OnlineHeuristicMiner
 import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
@@ -20,7 +23,11 @@ import processm.miners.heuristicminer.dependencygraphproviders.DefaultDependency
 import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
+import java.io.PrintStream
 import java.lang.management.ManagementFactory
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import javax.xml.stream.XMLOutputFactory
 import kotlin.math.min
@@ -165,12 +172,12 @@ class Experiment {
 
     @Serializable
     internal enum class Mode {
-        BATCH, WINDOW, DRIFT
+        BATCH, WINDOW, DRIFT, PERFORMANCE
     }
 
     @Serializable
     internal enum class Measure {
-        TRAIN_FITNESS, TRAIN_PRECISION, TEST_FITNESS, TEST_PRECISION, TRAIN_PFR, TEST_PFR
+        TRAIN_FITNESS, TRAIN_PRECISION, TEST_FITNESS, TEST_PRECISION, TRAIN_PFR, TEST_PFR, TRAIN_RF, TEST_RF
     }
 
     @Serializable
@@ -190,7 +197,8 @@ class Experiment {
         val minDependency: List<Double>,
         val measures: List<Measure> = listOf(Measure.TEST_FITNESS, Measure.TEST_PRECISION),
         val maxVisitedCoefficient: Int = 100,
-        val artifacts: String? = null
+        val artifacts: String? = null,
+        val rangeFitnessTimeout: Long = -1
     ) {
         companion object {
             val json = Json.Default
@@ -376,8 +384,68 @@ class Experiment {
         }
     }
 
+    internal fun performance(config: Config) {
+        val threadMXBean = ManagementFactory.getThreadMXBean()
+        threadMXBean.isThreadCpuTimeEnabled = true
+        val csv = CSVWriter(File(config.csv))
+        for (windowSize in config.batchSizes.map { it.toInt() }) {
+            for (logfile in config.logs.map { File(it) }) {
+                val filename = logfile.name
+                val partialLogs = try {
+                    createDriftLogs(
+                        load(logfile),
+                        config.sampleSeed,
+                        config.splitSeed,
+                        config.keval,
+                        config.knownNamesThreshold,
+                        config.missThreshold
+                    )
+                } catch (e: IllegalStateException) {
+                    logger().warn(filename, e)
+                    continue
+                }
+                println("Sublog sizes: ${partialLogs.map { it.size }}")
+                val online = WindowingHeuristicMiner()
+                val log = partialLogs.mapIndexed { logidx, log ->
+                    log.mapIndexed { traceidx, trace ->
+                        Triple(logidx, traceidx, trace)
+                    }
+                }.flatten()
+                println("window size=$windowSize")
+                for (i in 0 until log.size) {
+                    println("i=$i")
+                    val (logidx, traceidx, trace) = log[i]
+                    val key = Key(filename, windowSize, logidx, traceidx)
+                    val addLog = Log(sequenceOf(trace))
+                    val removeLog = Log(if (i >= windowSize) sequenceOf(log[i - windowSize].third) else emptySequence())
+                    val trainingTraces = log.subList((i - windowSize + 1).coerceAtLeast(0), i + 1).map { it.third }
+                    assert((i+1 < windowSize && trainingTraces.size == i+1) || (trainingTraces.size == windowSize)) {"i=$i #trainingTraces=${trainingTraces.size}"}
+                    val trainingLog = Log(trainingTraces.asSequence())
+
+                    var onlineTime = threadMXBean.currentThreadCpuTime
+                    online.processDiff(addLog, removeLog)
+                    onlineTime = threadMXBean.currentThreadCpuTime - onlineTime
+
+                    val offline = WindowingHeuristicMiner()
+                    var offlineTime = threadMXBean.currentThreadCpuTime
+                    offline.processLog(trainingLog)
+                    offlineTime = threadMXBean.currentThreadCpuTime - offlineTime
+
+                    csv(listOf(onlineTime, offlineTime), key)
+                }
+            }
+        }
+    }
 
     internal fun drift(config: Config) {
+        val pool = ThreadPoolExecutor(
+            Runtime.getRuntime().availableProcessors(),
+            Runtime.getRuntime().availableProcessors(),
+            60,
+            TimeUnit.SECONDS,
+            LinkedBlockingQueue()
+        )
+        val astarFactory = CachingAlignerFactory(DefaultAlignmentCache()) { m, p, _ -> AStar(m, p) }
         val csv = CSVWriter(File(config.csv))
         val jsFile = File("models.js").outputStream().bufferedWriter()
         for (windowSize in config.batchSizes.map { it.toInt() }) {
@@ -405,6 +473,7 @@ class Experiment {
                 }.flatten()
                 println("window size=$windowSize")
                 for (i in 0 until log.size) {
+                    println("i=$i")
                     val (logidx, traceidx, trace) = log[i]
                     val key = Key(filename, windowSize, logidx, traceidx)
                     val addLog = Log(sequenceOf(trace))
@@ -431,6 +500,11 @@ class Experiment {
                         File(dir, key.modelFileName).outputStream().use {
                             online.result.toPM4PY(it)
                         }
+                        File(dir, key.modelFileName + ".kt").outputStream().use { f ->
+                            PrintStream(f).use { p ->
+                                p.println(online.result.toDSL())
+                            }
+                        }
                         if (trainLog != null)
                             File(dir, key.trainFileName).outputStream().use { fileStream ->
                                 XMLXESOutputStream(
@@ -449,29 +523,44 @@ class Experiment {
                             }
                     }
 
-                    val fa = PerfectAligner(online.result)
-                    val values = List(6) { Double.NaN }.toMutableList()
-                    if (trainLog != null) {
-                        if (Measure.TRAIN_PFR in config.measures)
-                            values[0] =
-                                fa.perfectFitRatio(trainLog)    // train pfr doesn't use maxVisitedCoefficient to always generate accurate results
-                        if (Measure.TRAIN_FITNESS in config.measures || Measure.TRAIN_PRECISION in config.measures) {
-                            val pa =
-                                PerformanceAnalyzer(trainLog, online.result, SkipSpecialForFree(StandardDistance()))
-                            values[1] = if (Measure.TRAIN_FITNESS in config.measures) pa.fitness else Double.NaN
-                            values[2] = if (Measure.TRAIN_PRECISION in config.measures) pa.precision else Double.NaN
-                        }
-                    }
-                    if (testLog != null) {
-                        if (Measure.TEST_PFR in config.measures)
-                            values[3] =
-                                fa.perfectFitRatio(testLog, config.maxVisitedCoefficient)
-                        if (Measure.TEST_FITNESS in config.measures || Measure.TEST_PRECISION in config.measures) {
-                            val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
-                            values[4] = if (Measure.TEST_FITNESS in config.measures) pa.fitness else Double.NaN
-                            values[5] = if (Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN
-                        }
-                    }
+                    val values = List(4) { Double.NaN }.toMutableList()
+//                    val aligner = DecompositionAligner(online.result.toPetriNet(), alignerFactory= astarFactory, pool=pool)
+//                    val rf = RangeFitness(aligner, 100, TimeUnit.MILLISECONDS)
+//                    if(trainLog != null) {
+//                        val rfvalue = rf(trainLog)
+//                        values[0] = rfvalue.start
+//                        values[1] = rfvalue.endInclusive
+//                    }
+
+//                    if(testLog!=null) {
+//                        val rfvalue = rf(testLog)
+//                        values[2] = rfvalue.start
+//                        values[3] = rfvalue.endInclusive
+//                    }
+
+//                    val fa = PerfectAligner(online.result)
+//                    val values = List(6) { Double.NaN }.toMutableList()
+//                    if (trainLog != null) {
+//                        if (Measure.TRAIN_PFR in config.measures)
+//                            values[0] =
+//                                fa.perfectFitRatio(trainLog)    // train pfr doesn't use maxVisitedCoefficient to always generate accurate results
+//                        if (Measure.TRAIN_FITNESS in config.measures || Measure.TRAIN_PRECISION in config.measures) {
+//                            val pa =
+//                                PerformanceAnalyzer(trainLog, online.result, SkipSpecialForFree(StandardDistance()))
+//                            values[1] = if (Measure.TRAIN_FITNESS in config.measures) pa.fitness else Double.NaN
+//                            values[2] = if (Measure.TRAIN_PRECISION in config.measures) pa.precision else Double.NaN
+//                        }
+//                    }
+//                    if (testLog != null) {
+//                        if (Measure.TEST_PFR in config.measures)
+//                            values[3] =
+//                                fa.perfectFitRatio(testLog, config.maxVisitedCoefficient)
+//                        if (Measure.TEST_FITNESS in config.measures || Measure.TEST_PRECISION in config.measures) {
+//                            val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
+//                            values[4] = if (Measure.TEST_FITNESS in config.measures) pa.fitness else Double.NaN
+//                            values[5] = if (Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN
+//                        }
+//                    }
                     csv(values, key)
                 }
             }
@@ -485,6 +574,7 @@ class Experiment {
             compareBatch(config)
         else if (config.mode == Mode.DRIFT)
             drift(config)
+        else if(config.mode == Mode.PERFORMANCE)
         else
             compareWindow(config)
     }

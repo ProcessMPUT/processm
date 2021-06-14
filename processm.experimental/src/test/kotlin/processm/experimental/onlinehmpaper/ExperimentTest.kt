@@ -1,7 +1,9 @@
 package processm.experimental.onlinehmpaper
 
+import ch.qos.logback.classic.Level
 import kotlinx.serialization.json.Json
 import org.apache.commons.io.FileUtils
+import org.slf4j.LoggerFactory
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -20,6 +22,8 @@ class ExperimentTest {
 
     @Test
     fun `CoSeLoG_WABO_2`() {
+        val artifacts = createTempDir()
+        println(artifacts.absolutePath)
         val temp = createTempFile()
         temp.deleteOnExit()
         val configText = """
@@ -39,7 +43,8 @@ class ExperimentTest {
                     "mode": "DRIFT",
                     "batchSizes": [25],
                     "minDependency": [0], 
-                    "measures": ["TRAIN_PFR", "TEST_PFR"]
+                    "measures": ["TRAIN_PFR", "TEST_PFR"],
+                    "artifacts": "${artifacts.absolutePath}"
             }
 
         """.trimIndent()
@@ -144,7 +149,7 @@ class ExperimentTest {
         }
     }
 
-    @Ignore("Not a test")
+//    @Ignore("Not a test")
     @Test
     fun `BPIC15_2`() {
         val configText = """
@@ -199,5 +204,68 @@ class ExperimentTest {
         val windowStart = windowEnd - windowSize + 1
         val trainLog = flatLog.subList(windowStart, windowEnd + 1)
         hm.processDiff(Log(trainLog.asSequence()), Log(emptySequence()))
+    }
+
+    @Test
+    fun `Sepsis_Cases-Event_Log`() {
+        (LoggerFactory.getLogger("processm") as ch.qos.logback.classic.Logger).level = Level.INFO
+        val temp = createTempFile()
+        temp.deleteOnExit()
+        val configText = """
+            {
+                    "logs": [
+                      "../xes-logs/Sepsis_Cases-Event_Log.xes.gz"
+                    ],
+                    "splitSeed": 3737844653,
+                    "sampleSeed": 12648430,
+                    "cvSeed": 4276993775,
+                    "keval": 5,
+                    "kfit": 5,
+                    "csv": "${temp.absolutePath}",
+                    "knownNamesThreshold": 100,
+                    "missThreshold": 10,
+                    "maxQueueSize": 100,
+                    "mode": "DRIFT",
+                    "batchSizes": [25],
+                    "minDependency": [0], 
+                    "measures": []
+            }
+
+        """.trimIndent()
+        val config = Json.Default.decodeFromString(Experiment.Config.serializer(), configText)
+        println(config)
+        Experiment().drift(config)
+    }
+
+    @Test
+    fun `performance`() {
+        (LoggerFactory.getLogger("processm") as ch.qos.logback.classic.Logger).level = Level.INFO
+//        val temp = createTempFile()
+//        temp.deleteOnExit()
+        val temp = File("/tmp/output.csv")
+        val configText = """
+            {
+                    "logs": [
+                      "../xes-logs/CoSeLoG_WABO_2.xes.gz"
+                    ],
+                    "splitSeed": 3737844653,
+                    "sampleSeed": 12648430,
+                    "cvSeed": 4276993775,
+                    "keval": 5,
+                    "kfit": 5,
+                    "csv": "${temp.absolutePath}",
+                    "knownNamesThreshold": 100,
+                    "missThreshold": 10,
+                    "maxQueueSize": 100,
+                    "mode": "PERFORMANCE",
+                    "batchSizes": [100],
+                    "minDependency": [0], 
+                    "measures": []
+            }
+
+        """.trimIndent()
+        val config = Json.Default.decodeFromString(Experiment.Config.serializer(), configText)
+        println(config)
+        Experiment().performance(config)
     }
 }
