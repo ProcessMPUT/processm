@@ -1,7 +1,7 @@
 package processm.experimental.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
-import processm.miners.onlineminer.HashMapWithDefault
+import processm.core.helpers.HashMapWithDefault
 import processm.miners.onlineminer.NodeTrace
 
 /**

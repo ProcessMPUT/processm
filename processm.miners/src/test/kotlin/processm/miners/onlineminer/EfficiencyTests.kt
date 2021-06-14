@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
+import processm.miners.onlineminer.replayer.SingleReplayer
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -16,7 +17,6 @@ class EfficiencyTests {
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         val hm = OnlineMiner()
         hm.processLog(log)
-        println(hm.result)
         assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
@@ -26,7 +26,6 @@ class EfficiencyTests {
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         val hm = OnlineMiner()
         hm.processLog(log)
-        println(hm.result)
         assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
@@ -37,7 +36,6 @@ class EfficiencyTests {
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         val hm = OnlineMiner()
         hm.processLog(log)
-        println(hm.result)
         assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
@@ -48,7 +46,6 @@ class EfficiencyTests {
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         val hm = OnlineMiner()
         hm.processLog(log)
-        println(hm.result)
         assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
@@ -59,7 +56,6 @@ class EfficiencyTests {
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         val hm = OnlineMiner()
         hm.processLog(log)
-        println(hm.result)
         assertTrue { (hm.replayer as SingleReplayer).efficiency <= 1.01 }
     }
 
@@ -74,7 +70,6 @@ class EfficiencyTests {
         val hm = OnlineMiner()
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processLog(log)
-        println(hm.result)
         assertTrue { (hm.replayer as SingleReplayer).groupEfficiency.all { it <= 1.001 } }
     }
 
@@ -90,7 +85,6 @@ class EfficiencyTests {
         val hm = OnlineMiner()
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processDiff(log, Log(emptySequence()))
-        println(hm.result)
         val eff = (hm.replayer as SingleReplayer).groupEfficiency
         assertTrue { eff.all { it <= 1.01 } }
     }

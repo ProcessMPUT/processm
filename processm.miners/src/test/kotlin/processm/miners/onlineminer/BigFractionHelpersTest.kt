@@ -4,13 +4,13 @@ import org.apache.commons.math3.fraction.BigFraction
 import kotlin.system.measureNanoTime
 import kotlin.test.*
 
-class HelpersTest {
+class BigFractionHelpersTest {
 
     fun test(values:List<Int>) {
         var expected = BigFraction.ZERO
         for(v in values)
             expected += BigFraction(1, v)
-        val actual = sumInverse(values)
+        val actual = sumOfReciprocals(values)
         assertEquals(expected, actual)
     }
 
@@ -27,13 +27,13 @@ class HelpersTest {
     fun performance() {
         val values= List(30) {1 shl it}
         val nReps= 100
-        val fractions = (0..nReps).map { measureNanoTime {
+        val naiveTime = (0..nReps).map { measureNanoTime {
             var expected = BigFraction.ZERO
             for (v in values)
                 expected += BigFraction(1, v)
         }}.sum()
-        val sumInverse = (0..nReps).map { measureNanoTime {
-            sumInverse(values) } }.sum()
-        println("fractions=$fractions ns\tsumInverse = $sumInverse ns")
+        val sumOfReciprocalsTime = (0..nReps).map { measureNanoTime {
+            sumOfReciprocals(values) } }.sum()
+        assertTrue { sumOfReciprocalsTime < naiveTime }
     }
 }

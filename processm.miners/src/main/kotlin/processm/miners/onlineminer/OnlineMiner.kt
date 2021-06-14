@@ -5,7 +5,12 @@ import processm.core.log.hierarchical.Log
 import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
+import processm.miners.onlineminer.replayer.Replayer
+import processm.miners.onlineminer.replayer.SingleReplayer
 
+/**
+ * Online miner, generates a valid causal net perfectly fitting the current window, as given by either [processLog] or [processDiff]
+ */
 class OnlineMiner(
     val replayer: Replayer = SingleReplayer(),
     val traceToNodeTrace: TraceToNodeTrace = BasicTraceToNodeTrace()
@@ -48,6 +53,10 @@ class OnlineMiner(
         directlyFollows.inc(Dependency(prev, end), ctr)
     }
 
+    /**
+     * Modifies the underlying window by adding traces in [addLog] and removing traces from [removeLog].
+     * The model in [result] is updated so that it perfectly fits the current window.
+     */
     fun processDiff(addLog: Log, removeLog: Log) {
         val addTraces = aggregateLog(addLog)
         val removeTraces = aggregateLog(removeLog)
@@ -117,6 +126,9 @@ class OnlineMiner(
             model.addJoin(join)
     }
 
+    /**
+     * Add [log] to the current window and update the underlying model in [result]
+     */
     override fun processLog(log: Log) =
         processDiff(log, Log(emptySequence()))
 

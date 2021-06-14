@@ -3,14 +3,10 @@ package processm.miners.onlineminer
 import ch.qos.logback.classic.Level
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
-import processm.core.log.XMLXESInputStream
-import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
-import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import java.io.File
-import java.util.zip.GZIPInputStream
+import processm.miners.onlineminer.replayer.SingleReplayer
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.test.Ignore
@@ -18,12 +14,6 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class OnlineMinerTest {
-
-//    @BeforeTest
-//    fun beforek() {
-//        (hm.logger() as ch.qos.logback.classic.Logger).level = Level.WARN
-//    }
-
 
     val a = Node("a")
     val b1 = Node("b1")
@@ -65,7 +55,6 @@ class OnlineMinerTest {
             val tmp = listOf(model.start) + BasicTraceToNodeTrace()(trace) + listOf(model.end)
             val replay = replayer.replay(tmp)
                 .map { it.toList() }.toList()
-            println("${replay.size} ${trace.events.map { it.conceptName }.toList()}")
             assertTrue { replay.size == replay.toSet().size }
             assertTrue { replay.isNotEmpty() }
             assertTrue { replay.all { it.isNotEmpty() } }
@@ -89,18 +78,17 @@ class OnlineMinerTest {
         val hm = OnlineMiner()
         (SingleReplayer.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processDiff(log, Log(emptySequence()))
-        println(hm.result)
         test(log, hm.result)
-        println(hm.result.toDSL())
     }
 
     @Test
+    @Ignore("Takes a bit too long, because replayer used for testing is slow")
     fun `diamond of diamonds - batch`() {
         val log = logFromModel(dodReference)
-        val hm = OnlineMiner(SingleReplayer(2))
+        val hm = OnlineMiner(SingleReplayer())
         (hm.logger() as ch.qos.logback.classic.Logger).level = Level.TRACE
         hm.processDiff(log, Log(emptySequence()))
-        println(hm.result)
+        test(log, hm.result)
     }
 
     data class Window(val add: IntRange, val remove: IntRange, val window: IntRange)
@@ -110,13 +98,7 @@ class OnlineMinerTest {
             val add = IntRange(i - stepSize, min(i, n) - 1)
             val remove = IntRange(max(i - stepSize - windowSize, 0), max(min(i, n) - windowSize, 0) - 1)
             val window = IntRange(remove.last + 1, add.last)
-            yield(
-                Window(
-                    add,
-                    remove,
-                    window
-                )
-            )
+            yield(Window(add, remove, window))
         }
     }
 
@@ -132,62 +114,23 @@ class OnlineMinerTest {
             val remove =
                 if (!step.remove.isEmpty()) traces.subList(step.remove.first, step.remove.last + 1) else emptyList()
             hm.processDiff(Log(add.asSequence()), Log(remove.asSequence()))
-            println(hm.result)
             val window = traces.subList(step.window.first, step.window.last + 1)
             test(Log(window.asSequence()), hm.result)
         }
     }
 
-    @InMemoryXESProcessing
-    @Test
-    fun Receipt() {
-        val files = listOf(
-            "../xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz"
-        )
-        for (file in files) {
-            println(file)
-            val log = File(file).inputStream().use {
-                HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(it))).first()
-            }
-            val sublog=Log(log.traces.toList().subList(0, 25).asSequence())
-            val hm = OnlineMiner()
-            hm.processDiff(sublog, Log(emptySequence()))
-            println(hm.result)
-        }
-    }
-
-    @InMemoryXESProcessing
-    @Test
-    @Ignore
-    fun `real logs`() {
-        val files = listOf(
-            "../xes-logs/BPIC15_2f.xes.gz", "../xes-logs/BPIC15_4f.xes.gz",
-            "../xes-logs/BPIC15_1f.xes.gz", "../xes-logs/BPIC15_5f.xes.gz", "../xes-logs/BPIC15_3f.xes.gz",
-            "../xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz",
-            "../xes-logs/nasa-cev-complete-splitted.xes.gz",
-            "../xes-logs/Sepsis_Cases-Event_Log.xes.gz"
-        )
-        for (file in files) {
-            println(file)
-            val log = File(file).inputStream().use {
-                HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(it))).first()
-            }
-            val hm = OnlineMiner()
-            hm.processDiff(log, Log(emptySequence()))
-            println(hm.result)
-        }
-    }
-
     @Test
     fun test() {
-        val log = logFromString("""
+        val log = logFromString(
+            """
             a b d
             a c d
             a b c d            
-        """.trimIndent())
+        """.trimIndent()
+        )
         val hm = OnlineMiner()
         hm.processLog(log)
-        println(hm.result)
+        test(log, hm.result)
     }
 
 }

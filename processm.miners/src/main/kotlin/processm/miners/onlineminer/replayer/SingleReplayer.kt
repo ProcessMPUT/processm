@@ -1,55 +1,47 @@
-package processm.miners.onlineminer
+package processm.miners.onlineminer.replayer
 
 import com.google.common.collect.MinMaxPriorityQueue
 import org.apache.commons.math3.fraction.BigFraction
 import processm.core.helpers.Counter
+import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.allSubsets
 import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.logging.trace
 import processm.core.models.causalnet.*
+import processm.miners.onlineminer.LazyCausalNetState
+import processm.miners.onlineminer.NodeTrace
+import processm.miners.onlineminer.plus
+import processm.miners.onlineminer.sumOfReciprocals
 import java.util.*
-import kotlin.math.min
 
 private typealias RelaxedState = HashMapWithDefault<Node, Counter<Dependency>>
 
-class SingleReplayer(val horizon: Int = -1) : Replayer {
+/**
+ * A [Replayer] replyaing a single trace at a time.
+ *
+ * It uses A* with iterative deepening. The underlying priority queue starts with the maximal size of [initialQueueSize]
+ * and every time the algorithm fails to find bindings the queue's size is increased [deepeningSteep] times until
+ * it does not exceed [maximalQueueSize]. By definition [deepeningSteep] must be greater than 1 and
+ * [initialQueueSize] must be lower than [maximalQueueSize]. If no binding is found, an [IllegalStateException] is raised by [replay].
+ *
+ * It is preferrable to start with a low [initialQueueSize], as the cost of queue management for large queues is non-negligible.
+ * Iterative deepening is relatively cheap due to its multiplicative nature - most of the work is performed in the final repetition.
+ */
+class SingleReplayer(
+    val initialQueueSize: Int = 100,
+    val deepeningSteep: Int = 10,
+    val maximalQueueSize: Int = Integer.MAX_VALUE
+) : Replayer {
 
     companion object {
         private val logger = logger()
     }
 
-    private fun canConsumeAllActiveDependencies(remainder: Map<Node, Int>, state: CausalNetState): Boolean {
-        for (e in state.entrySet()) {
-            val avail = remainder[e.element.target] ?: 0
-            if (avail < e.count) {
-                // there are more tokens on some dependency than it will be possible to consume
-                return false
-            }
-        }
-        return true
-    }
-
-    private val alwaysUseDirectlyFollows = false
-
-    private fun hypothesis41(trace: NodeTrace, current: SearchState): Boolean {
-        val joins = current.trace.joins.toList()
-        val splits = current.trace.splits.toList()
-        println("$trace")
-        println("joins=$joins")
-        println("splits=$splits")
-        for ((i, a) in trace.withIndex()) {
-            /*
-            println("a=$a joins[$i]=${joins[i]} splits[$i]=${splits[i]}")
-             */
-            if (i > 0 && !joins[i - 1].contains(Dependency(trace[i - 1], a))) {
-                return false
-            }
-            if (i < trace.size - 1 && !splits[i].contains(Dependency(a, trace[i + 1])))
-                return false
-        }
-        return true
+    init {
+        require(deepeningSteep > 1)
+        require(initialQueueSize < maximalQueueSize)
     }
 
     private data class Context(
@@ -76,20 +68,6 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                     l.sortDescending()
                 return@map result
             }
-
-        /**
-         * The largest common multiplier for all the sizes present in the respective positions of [largestPossibleSplit]
-         */
-        /*val lcm: List<Int> = largestPossibleSplit.map { m ->
-            m.values
-                .flatten()
-                .fold(0) { acc, i ->
-                    return@fold if (acc == 0)
-                        i
-                    else
-                        ArithmeticUtils.lcm(acc, i)
-                }
-        }*/
     }
 
     private fun consumption(current: SearchState, context: Context) {
@@ -179,46 +157,25 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                 isNextRunnable = true
         }
 
-        val mustProduce = if (alwaysUseDirectlyFollows || !isNextRunnable) setOf(depToNext) else emptySet()
+        val mustProduce = if (!isNextRunnable) setOf(depToNext) else emptySet()
 
         if (mustProduce.isNotEmpty() || cannotProduce.isNotEmpty())
             logger.trace { "Must produce $mustProduce cannot produce $cannotProduce" }
         if (cannotProduce.isNotEmpty())
             logger.trace { "Cannot produce $cannotProduce; available ${context.producible[current.node] - cannotProduce}" }
 
-        //-------
-        if (alwaysUseDirectlyFollows) {
-            var futureClash = false
-            val df = HashSet<Node>()
-            for (i in current.node until trace.size - 1) {
-                val b = trace[i + 1]
-                if (!df.contains(b)) {
-                    val dep = Dependency(trace[i], b)
-                    if (cannotProduce.contains(dep)) {
-                        logger.trace("cannot produce $dep but it will be surely produced in the future, aborting")
-                        futureClash = true
-                        break
-                    }
-                    df.add(b)
-                }
-            }
-            if (futureClash)
-                return
-        } else {
-
-            if (current.node != trace.size - 2) {   //if we are at not the second to last node, we cannot produce last dependency
-                cannotProduce.add(lastDep)
-            } else if (cannotProduce.contains(lastDep)) { //otherwise we must produce it
-                logger.debug("Cannot produce contains the last dependency which, by definition, must be executed")
-                return
-            }
-
-            if (mustProduce.any { cannotProduce.contains(it) }) {
-                logger.warn("Unexpected clash, mustProduce $mustProduce cannotProduce $cannotProduce")
-                return
-            }
+        if (current.node != trace.size - 2) {   //if we are at not the second to last node, we cannot produce last dependency
+            cannotProduce.add(lastDep)
+        } else if (cannotProduce.contains(lastDep)) { //otherwise we must produce it
+            logger.debug("Cannot produce contains the last dependency which, by definition, must be executed")
+            return
         }
-        //---------
+
+        if (mustProduce.any { cannotProduce.contains(it) }) {
+            logger.warn("Unexpected clash, mustProduce $mustProduce cannotProduce $cannotProduce")
+            return
+        }
+
         val tmp = context.producible[current.node] - cannotProduce - mustProduce
         val prod: List<Set<Dependency>> = if (tmp.isNotEmpty())
             tmp.allSubsets(excludeEmpty = mustProduce.isEmpty())
@@ -309,8 +266,6 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         }
 
         val denominators = ArrayList<Int>()
-        //var pnom = 0
-        //val lcm = context.lcm[node]
         for (ctr in state.values) {
             for (e in ctr.entries)
                 if (e.value >= 1) {
@@ -318,15 +273,11 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                     assert(e.value <= tmp.size)
                     // doing it straight on Fractions seems to be terribly inefficient
                     for (i in 0 until e.value) {
-                        //assert(lcm % tmp[i] == 0L)
-                        //pnom += lcm / tmp[i]
                         denominators.add(tmp[i])
                     }
                 }
         }
-        //assert(lcm != 0 || pnom == 0)
-        //return if (lcm != 0) Fraction.getFraction(pnom, lcm).reduce() else Fraction.ZERO
-        return if (denominators.isEmpty()) BigFraction.ZERO else sumInverse(denominators)
+        return if (denominators.isEmpty()) BigFraction.ZERO else sumOfReciprocals(denominators)
     }
 
     /**
@@ -336,7 +287,7 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         private set
 
     /**
-     * Minimal number of states visited during the last call to [replay]
+     * Minimal number of states to be visited during the last call to [replay]
      */
     var minimalVisitedStates: Int = 0
         private set
@@ -393,21 +344,21 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
         }
     }
 
+    /**
+     * Replays a single trace [trace] in the [model] and returns bindings to be added to be model in order to the make the trace perfectly replayable
+     */
     fun replay(model: CausalNet, trace: NodeTrace): Pair<List<Split>, List<Join>> {
         val runnableDeps = inferRunnableDependencies(trace)
         val producible = trace.indices.map { idx ->
-            val end = if (horizon > 0) min(idx + 1 + horizon, trace.size) else trace.size
             model.outgoing[trace[idx]].orEmpty()
                 .intersect(runnableDeps[idx])
         }
         minimalVisitedStates = 2 * trace.size - 1
         logger.debug("$trace")
         val remainder = trace.indices.map { idx -> trace.subList(idx + 1, trace.size).groupingBy { it }.eachCount() }
-        var maxSize =
-            10   //it seems that it is actually better to start with a small queue, because the cost of queue management is non-negligible
+        var maxSize = initialQueueSize
         visitedStates = 0
-        while (maxSize <= 1e9) { //TODO make this a parameter
-            maxSize *= 10
+        while (maxSize <= maximalQueueSize) {
             logger.debug { "maxSize=$maxSize" }
             val queue = MinMaxPriorityQueue.maximumSize(maxSize).create<SearchState>()
             val context = Context(model, remainder, producible, trace, queue)
@@ -450,18 +401,15 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
                     consumption(current, context)
                 }
             }
+            maxSize *= deepeningSteep
         }
         throw IllegalStateException("Failed to replay")
     }
 
-    lateinit var replayHistory: Map<NodeTrace, Pair<List<Split>, List<Join>>>
-        private set
-
     override fun replayGroup(model: CausalNet, traces: List<NodeTrace>): Pair<Set<Split>, Set<Join>> {
         val splits = HashSet<Split>()
         val joins = HashSet<Join>()
-        var eff = ArrayList<Double>()
-        val replayHistory = HashMap<NodeTrace, Pair<List<Split>, List<Join>>>()
+        val eff = ArrayList<Double>()
         for ((idx, trace) in traces.withIndex()) {
             logger.debug("$idx/${traces.size}")
             val (tmpsplits, tmpjoins) = replay(model, trace)
@@ -470,10 +418,8 @@ class SingleReplayer(val horizon: Int = -1) : Replayer {
             splits.addAll(tmpsplits)
             joins.addAll(tmpjoins)
             eff.add(efficiency)
-            replayHistory[trace] = tmpsplits to tmpjoins
         }
         groupEfficiency = eff
-        this.replayHistory = replayHistory
         return splits to joins
     }
 }

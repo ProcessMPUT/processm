@@ -3,7 +3,7 @@ package processm.experimental.onlinehmpaper
 import processm.core.helpers.Counter
 import processm.core.models.causalnet.Binding
 import processm.experimental.heuristicminer.traceregisters.TraceRegister
-import processm.miners.onlineminer.HashMapWithDefault
+import processm.core.helpers.HashMapWithDefault
 import processm.miners.onlineminer.NodeTrace
 
 /**

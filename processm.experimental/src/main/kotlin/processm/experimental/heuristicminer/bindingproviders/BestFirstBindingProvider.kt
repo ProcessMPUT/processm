@@ -7,7 +7,7 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.miners.onlineminer.LazyCausalNetState
 import processm.miners.onlineminer.NodeTrace
-import processm.miners.onlineminer.ReplayTrace
+import processm.miners.onlineminer.replayer.ReplayTrace
 import java.util.*
 
 /**

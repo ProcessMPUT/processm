@@ -8,7 +8,12 @@ operator fun BigFraction.plus(other: BigFraction): BigFraction = this.add(other)
 operator fun BigFraction.div(other: BigFraction): BigFraction = this.divide(other)
 operator fun BigFraction.div(other: Int): BigFraction = this.divide(other)
 
-fun sumInverse(values: List<Int>): BigFraction {
+/**
+ * Computes the sum of inverses of the integers given in [values]
+ *
+ * For example, `sumOfReciprocals(listOf(2, 3)) == BigFraction(5, 6)`
+ */
+fun sumOfReciprocals(values: List<Int>): BigFraction {
     require(values.isNotEmpty())
     if (values.size == 1)
         return BigFraction(1, values.single())

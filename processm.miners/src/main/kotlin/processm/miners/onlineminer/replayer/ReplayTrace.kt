@@ -1,4 +1,4 @@
-package processm.miners.onlineminer
+package processm.miners.onlineminer.replayer
 
 import processm.core.models.causalnet.CausalNetState
 import processm.core.models.causalnet.Dependency

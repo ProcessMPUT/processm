@@ -2,6 +2,9 @@ package processm.miners.onlineminer
 
 import org.apache.commons.math3.fraction.BigFraction
 
+/**
+ * A base class for objects comparable according to a sorted list of [BigFraction]s
+ */
 abstract class HasFeatures : Comparable<HasFeatures> {
 
     abstract val features: List<BigFraction>

@@ -16,7 +16,7 @@ import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.ActivityBinding
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.experimental.onlinehmpaper.filterLog
-import processm.miners.onlineminer.HashMapWithDefault
+import processm.core.helpers.HashMapWithDefault
 import processm.experimental.heuristicminer.OfflineHeuristicMiner
 import processm.experimental.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner

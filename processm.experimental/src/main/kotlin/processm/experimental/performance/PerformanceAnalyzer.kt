@@ -14,7 +14,7 @@ import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.miners.onlineminer.HasFeatures
-import processm.miners.onlineminer.HashMapWithDefault
+import processm.core.helpers.HashMapWithDefault
 import processm.miners.onlineminer.LazyCausalNetState
 import java.util.*
 import kotlin.math.max
