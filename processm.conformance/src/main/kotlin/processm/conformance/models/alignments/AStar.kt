@@ -121,7 +121,7 @@ class AStar(
             if (isFinalState) {
                 if (previousEventIndex == events.size - 1) {
                     // we found the path
-//                    assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
+                    assert(searchState.predictedCost == 0) { "Predicted cost: ${searchState.predictedCost}." }
                     return formatAlignment(searchState, events)
                 }
 
