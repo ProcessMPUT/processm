@@ -2,21 +2,16 @@ package processm.conformance.models.alignments
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.cache.Cache
-import processm.core.helpers.mapToSet
 import processm.core.helpers.ternarylogic.Ternary
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.CausalNetState
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
 import processm.core.models.commons.ProcessModelState
-import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.Place
 import java.util.*
-import kotlin.math.max
 
 
 /**
@@ -30,7 +25,13 @@ import kotlin.math.max
  */
 class AStar(
     override val model: ProcessModel,
-    override val penalty: PenaltyFunction = PenaltyFunction()
+    override val penalty: PenaltyFunction = PenaltyFunction(),
+    val countUnmachedModelMoves: CountUnmachedModelMoves? =
+        when (model) {
+            is PetriNet -> CountUnmachedPetriNetMoves(model)
+            is CausalNet -> CountUnmachedCausalNetMoves(model)
+            else -> null
+        }
 ) : Aligner {
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE
@@ -73,7 +74,7 @@ class AStar(
                 nEvents.add(HashMap(tmp))
             }
             this.nEvents = nEvents.asReversed()
-            this.consumentsCache.clear()
+            countUnmachedModelMoves?.reset()
         }
         val thread = Thread.currentThread()
         val queue = PriorityQueue<SearchState>()
@@ -300,101 +301,7 @@ class AStar(
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
         event !== null && event.conceptName == activity.name
 
-    private val followingCache: HashMap<Place, Set<Set<String>>> by lazy {
-        if (model is PetriNet)
-            HashMap()
-        else
-            error("followingCache is relevant only for PetriNets")
-    }
-
-    private fun following(place: Place): Set<Set<String>> {
-        return followingCache.computeIfAbsent(place) { place ->
-            model as PetriNet
-            val following = HashSet<Set<String>>()
-            for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.toList()
-                .sortedBy { it.size }) {
-                if (!following.any { subset -> set.containsAll(subset) })
-                    following.add(set)
-            }
-            return@computeIfAbsent following
-        }
-    }
-
     private lateinit var nEvents: List<Map<String?, Int>>
-    private val consumentsCache = HashMap<Pair<Place, Int>, Int>()
-
-    private fun computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: Marking): Int {
-        // Complete dealing with nonConsumable would require some complex algorithm.
-        // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
-        // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
-        // ([[c, e]]: 2, [[d, e]]: 1) -> cceed - 5 model-skips
-        // Underestimating: each set of sets is flattened and it is assumed that it is sufficient to execute a single activity from it to consume a token
-        // ([c, e]: 2, [d, e]: 1) -> ee - 2 model-skips
-        // Still not entirely clear how to deal with it, e.g., ([c, e]: 2, [d, e]: 1, [d, c]: 3) -> dcc - 3 model-skips seems to be an optimal solution
-        // Underestimating further: computing unions of sets having at least one common element and assigning them the maximal value over all the original counters -> ([c, d, e]: 3).
-        // At this point it is sufficient to sum the counters
-        val nEvents = nEvents[startIndex]
-        val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
-        for ((place, counter) in prevProcessState) {
-            val following = this.following(place)
-            val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
-                following.sumBy { set -> set.minOf { nEvents[it] ?: 0 } }
-            }
-            if (counter > consuments)
-                nonConsumable.add(following to counter - consuments)
-        }
-        if (nonConsumable.isEmpty())
-            return 0
-        var disjointSum = 0
-        // use LinkedList to enable efficient removal from the middle
-        val flat = nonConsumable.mapNotNullTo(LinkedList()) {
-            val set = it.first.flatMapTo(HashSet()) { it }
-            if (set.isNotEmpty())
-                return@mapNotNullTo set to it.second
-            else
-                return@mapNotNullTo null
-        }
-        val set = HashSet<String>()
-        while (flat.isNotEmpty()) {
-            set.clear()
-            var ctr = 0
-            val i = flat.iterator()
-            while (i.hasNext()) {
-                val e = i.next()
-                if (set.isEmpty() || e.first.any { it in set }) {
-                    set.addAll(e.first)
-                    ctr = max(ctr, e.second)
-                    i.remove()
-                }
-            }
-            assert(set.isNotEmpty())
-            assert(ctr > 0)
-            disjointSum += ctr
-        }
-        return disjointSum
-    }
-
-    private fun computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: CausalNetState): Int {
-        val nEvents = nEvents[startIndex]
-        // The maximum over the number of tokens on all incoming dependencies for an activity.
-        // As each token must be consumed and a single execution may consume at most one token from the activity,
-        // this is the same as the minimal number of pending executions for the activity.
-        val minFutureExecutions = HashMap<String, Int>()
-        for (e in prevProcessState.entrySet()) {
-            if (!e.element.target.isSilent)
-                minFutureExecutions.compute(e.element.target.activity) { _, old ->
-                    if (old != null && old > e.count) old else e.count
-                }
-        }
-        val unmachedModelMovesCount = minFutureExecutions
-            .entries
-            .sumBy { (activity, counter) ->
-                val e = nEvents[activity] ?: 0
-                (counter - e).coerceAtLeast(0)
-            }
-
-        return unmachedModelMovesCount
-    }
 
     private fun predict(
         events: List<Event>,
@@ -420,12 +327,10 @@ class AStar(
                 sum += penalty.modelMove
         }
 
-        val unmachedModelMovesCount = when {
-            prevProcessState == null -> 0
-            model is PetriNet -> computeUnmachedModelMovesCount(startIndex, prevProcessState as Marking)
-            model is CausalNet -> computeUnmachedModelMovesCount(startIndex, prevProcessState as CausalNetState)
-            else -> 0
-        }
+        val unmachedModelMovesCount = if (prevProcessState == null)
+            0
+        else
+            countUnmachedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
 
         // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
         sum += (unmachedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
