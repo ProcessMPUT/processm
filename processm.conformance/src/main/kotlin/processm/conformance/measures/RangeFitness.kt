@@ -7,6 +7,7 @@ import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.TimeUnit
 
 class RangeFitness(
@@ -22,11 +23,33 @@ class RangeFitness(
     }
 
     internal val movem: Double by lazy {
-        val approximation = aligner.alignmentCostLowerBound(emptyList(), timeout, unit)
-        if (approximation.exact)
-            return@lazy approximation.cost
-        else
-            return@lazy AStar(aligner.model).align(emptyTrace).cost.toDouble() // DecompositionAligner seems to fare poorly with empty traces, whereas AStar seems to work just fine
+        val ecs = ExecutorCompletionService<Double>(aligner.pool)
+        val futures = listOf(
+            ecs.submit {
+                val lb = aligner.alignmentCostLowerBound(emptyList(), timeout, unit)
+                if (lb.exact)
+                    return@submit lb.cost
+                else
+                    return@submit Double.NaN
+            },
+            ecs.submit {
+                return@submit aligner.align(emptyTrace).cost.toDouble()
+            },
+            ecs.submit {
+                return@submit AStar(aligner.model).align(emptyTrace).cost.toDouble() // DecompositionAligner seems to fare poorly with empty traces, whereas AStar seems to work just fine
+            }
+        )
+        try {
+            while (true) {
+                val v = ecs.take().get()
+                if (!v.isNaN())
+                    return@lazy v
+            }
+        } finally {
+            for (f in futures)
+                f.cancel(true)
+        }
+        error("Cannot compute movem")
     }
 
     override fun invoke(artifact: Log) = invoke(artifact, null)
