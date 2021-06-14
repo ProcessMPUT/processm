@@ -117,7 +117,7 @@ abstract class CausalNet(
                         }
                 }
             }
-        } else {
+        } else if (state.isFresh /*prevent execution of activities in the final state*/) {
             for (split in _splits.getValue(start))
                 callback(start, null, split)
         }

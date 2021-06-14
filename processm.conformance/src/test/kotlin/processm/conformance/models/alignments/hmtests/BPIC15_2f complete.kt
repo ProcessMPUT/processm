@@ -641,8 +641,8 @@ class `BPIC15_2f complete` {
         }
     }
 
-    @Ignore
     @Test
+    @Ignore("Too expensive")
     fun `trace 443`() {
         val net = model.toPetriNet()
         val aligner = CompositeAligner(net, pool = pool)

@@ -10,6 +10,12 @@ import processm.core.log.hierarchical.Trace
 import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.TimeUnit
 
+/**
+ * Range fitness gives a lower and an upper bound for the fitness value. Based on the ideas described in
+ * Wai Lam Jonathan Lee, H.M.W. Verbeek, Jorge Munoz-Gama, Wil M.P. van der Aalst, Marcos Sepulveda, Recomposing
+ * conformance: Closing the circle on decomposed alignment-based conformance checking in process mining, Information
+ * Sciences 466:55-91, Elsevier, 2018. https://doi.org/10.1016/j.ins.2018.07.026
+ */
 class RangeFitness(
     val aligner: DecompositionAligner,
     val timeout: Long,
@@ -75,6 +81,10 @@ class RangeFitness(
         }
     }
 
+    /**
+     * For each trace in [log], if there is a non-null alignment in the corresponding position of [alignments],
+     * use this alignment to compute the cost. Otherwise, use an approximation by [DecompositionAligner].
+     */
     operator fun invoke(log: Log, alignments: List<Alignment?>?): ClosedFloatingPointRange<Double> {
         val emptyModelAlignmentCost = computeEmptyModelAlignmentCost(log)
         val movel = emptyModelAlignmentCost.sum()
@@ -87,7 +97,7 @@ class RangeFitness(
             fcostUB += if (costApproximation.exact)
                 costApproximation.cost
             else
-                (emptyModelAlignmentCost[i] + movem).toDouble()
+                (emptyModelAlignmentCost[i] + movem)
         }
         val fintessLB = 1.0 - fcostUB / (movel + emptyModelAlignmentCost.size * movem)
         val fitnessUB = 1.0 - fcostLB / (movel + emptyModelAlignmentCost.size * movem)
