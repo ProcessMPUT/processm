@@ -5,6 +5,9 @@ import processm.conformance.models.alignments.Alignment
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 
+/**
+ * Computes fitness (as defined by the PM book) using the given [aligner]
+ */
 class Fitness(
     val aligner: Aligner
 ) : Measure<Log, Double> {
@@ -20,11 +23,15 @@ class Fitness(
         trace.events.count() * aligner.penalty.logMove
     }.toList()
 
-    open operator fun invoke(log: Log, alignments: List<Alignment?>?): Double {
+    /**
+     * Use given [alignments] to compute fitness instead of computing alignments from scratch.
+     * In cases when there is no not-null alignment in [alignments] for a trace, the maximal cost (skip all trace + skip the shortest valid binding sequence in the model) is used instead.
+     */
+    operator fun invoke(log: Log, alignments: List<Alignment?>?): Double {
         val emptyModelAlignmentCost = computeEmptyModelAlignmentCost(log)
         val movel = emptyModelAlignmentCost.sum()
         var fcost = 0.0
-        for ((i, trace) in log.traces.withIndex()) {
+        for ((i, _) in log.traces.withIndex()) {
             val alignment = if (alignments != null && i < alignments.size) alignments[i] else null
             fcost += alignment?.cost ?: (emptyModelAlignmentCost[i] + movem)
         }
