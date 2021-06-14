@@ -7,8 +7,8 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.Binding
 import processm.core.models.causalnet.CausalNet
 import processm.experimental.helpers.BitIntSet
-import processm.miners.heuristicminer.BasicTraceToNodeTrace
-import processm.miners.heuristicminer.TraceToNodeTrace
+import processm.experimental.heuristicminer.BasicTraceToNodeTrace
+import processm.experimental.heuristicminer.TraceToNodeTrace
 import java.util.*
 import kotlin.collections.ArrayList
 

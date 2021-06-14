@@ -16,12 +16,12 @@ import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.ActivityBinding
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.experimental.onlinehmpaper.filterLog
-import processm.miners.heuristicminer.HashMapWithDefault
-import processm.miners.heuristicminer.OfflineHeuristicMiner
-import processm.miners.heuristicminer.bindingproviders.BestFirstBindingProvider
-import processm.miners.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.miners.heuristicminer.windowing.SingleReplayer
-import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.experimental.heuristicminer.HashMapWithDefault
+import processm.experimental.heuristicminer.OfflineHeuristicMiner
+import processm.experimental.heuristicminer.bindingproviders.BestFirstBindingProvider
+import processm.experimental.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
+import processm.experimental.heuristicminer.windowing.SingleReplayer
+import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
 import java.util.*
 import java.util.zip.GZIPInputStream
@@ -750,7 +750,7 @@ class PerformanceAnalyzerTest {
         }
     }
 
-    /// This concerns processm.miners.heuristicminer.windowing.SingleReplayer.production
+    /// This concerns processm.experimental.heuristicminer.windowing.SingleReplayer.production
     @Test
     fun `BPIC15_2f - zero in denominator`() {
         val windowSize = 20

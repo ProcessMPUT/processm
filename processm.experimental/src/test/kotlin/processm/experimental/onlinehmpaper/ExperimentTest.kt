@@ -8,7 +8,7 @@ import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
-import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.test.Ignore

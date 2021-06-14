@@ -14,9 +14,9 @@ import processm.core.logging.trace
 import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import processm.miners.heuristicminer.HashMapWithDefault
-import processm.miners.heuristicminer.bindingproviders.LazyCausalNetState
-import processm.miners.heuristicminer.windowing.HasFeatures
+import processm.experimental.heuristicminer.HashMapWithDefault
+import processm.experimental.heuristicminer.bindingproviders.LazyCausalNetState
+import processm.experimental.heuristicminer.windowing.HasFeatures
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap

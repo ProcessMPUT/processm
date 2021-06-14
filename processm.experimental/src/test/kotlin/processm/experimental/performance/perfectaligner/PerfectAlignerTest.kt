@@ -10,7 +10,7 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.experimental.onlinehmpaper.createDriftLogs
 import processm.experimental.onlinehmpaper.filterLog
-import processm.miners.heuristicminer.windowing.WindowingHeuristicMiner
+import processm.experimental.heuristicminer.windowing.WindowingHeuristicMiner
 import java.io.File
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
