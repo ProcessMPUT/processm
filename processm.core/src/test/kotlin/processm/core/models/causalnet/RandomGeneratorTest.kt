@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicContainer
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -15,6 +16,7 @@ class RandomGeneratorTest {
         val logger = logger()
     }
 
+    @Disabled("Suspected to cause OOM on the build system.")
     @TestFactory
     fun factory(): List<DynamicContainer> {
         var out: List<DynamicContainer>? = null
