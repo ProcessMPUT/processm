@@ -52,6 +52,9 @@ class LazyCausalNetState(
 
     override fun removeAll(elements: Collection<Dependency>): Boolean = throw NotImplementedError("Not supported")
 
+    override val isFresh: Boolean
+        get() = backend.isFresh
+
     override fun add(element: Dependency?): Boolean = throw NotImplementedError("Not supported")
 
     override fun add(`object`: Dependency?, occurrences: Int): Int = throw NotImplementedError("Not supported")

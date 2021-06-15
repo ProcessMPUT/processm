@@ -5,6 +5,7 @@ import org.apache.commons.collections4.multiset.HashMultiSet
 import processm.core.models.commons.ProcessModelState
 
 interface CausalNetState : MultiSet<Dependency>, ProcessModelState {
+    val isFresh: Boolean
 }
 
 /**
@@ -17,8 +18,8 @@ open class CausalNetStateImpl : HashMultiSet<Dependency>, CausalNetState {
 
     constructor(stateBefore: CausalNetState) : super(stateBefore)
 
-    var isFresh: Boolean = true
-        private set
+    override var isFresh: Boolean = true
+        protected set
 
     // TODO this should be internal, but it currently interferes with using it in processm.experimental
     open fun execute(join: Join?, split: Split?) {

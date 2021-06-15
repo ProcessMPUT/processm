@@ -1,6 +1,7 @@
 package processm.miners.causalnet.onlineminer
 
 import ch.qos.logback.classic.Level
+import org.junit.jupiter.api.Disabled
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
@@ -82,7 +83,7 @@ class OnlineMinerTest {
     }
 
     @Test
-    @Ignore("Takes a bit too long, because replayer used for testing is slow")
+    @Disabled("Takes a bit too long, because replayer used for testing is slow")
     fun `diamond of diamonds - batch`() {
         val log = logFromModel(dodReference)
         val hm = OnlineMiner(SingleReplayer())
@@ -103,6 +104,24 @@ class OnlineMinerTest {
     }
 
     @Test
+    fun `diamond of diamonds - window - short`() {
+        val windowSize = 20
+        val stepSize = 1
+        val log = logFromModel(dodReference)
+        val traces = log.traces.toList()
+        val hm = OnlineMiner()
+        for (step in windowGenerator(windowSize, stepSize, 50)) {
+            val add = if (!step.add.isEmpty()) traces.subList(step.add.first, step.add.last + 1) else emptyList()
+            val remove =
+                if (!step.remove.isEmpty()) traces.subList(step.remove.first, step.remove.last + 1) else emptyList()
+            hm.processDiff(Log(add.asSequence()), Log(remove.asSequence()))
+            val window = traces.subList(step.window.first, step.window.last + 1)
+            test(Log(window.asSequence()), hm.result)
+        }
+    }
+
+    @Test
+    @Disabled("Takes a bit too long, because replayer used for testing is slow")
     fun `diamond of diamonds - window`() {
         val windowSize = 20
         val stepSize = 1
