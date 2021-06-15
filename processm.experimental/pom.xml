@@ -39,11 +39,6 @@
             <version>1.7.30</version>
         </dependency>
         <dependency>
-            <groupId>local</groupId>
-            <artifactId>gurobi</artifactId>
-            <version>9.0.3</version>
-        </dependency>
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
