@@ -1,9 +1,10 @@
-package processm.miners.causalnet.heuristicminer.longdistance
+package processm.experimental.miners.causalnet.heuristicminer.longdistance
 
 import org.apache.commons.collections4.bidimap.DualHashBidiMap
 import processm.core.helpers.allSubsets
 import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.Node
+import processm.miners.causalnet.heuristicminer.longdistance.AbstractAssociationsRulesLongDistanceDependencyMiner
 import processm.miners.causalnet.heuristicminer.longdistance.avoidability.AvoidabilityChecker
 import java.io.BufferedReader
 import java.io.FileOutputStream
