@@ -4,17 +4,17 @@ import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.experimental.heuristicminer.bindingproviders.BestFirstBindingProvider
-import processm.experimental.heuristicminer.bindingproviders.BindingProvider
-import processm.experimental.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
-import processm.experimental.heuristicminer.dependencygraphproviders.DependencyGraphProvider
-import processm.experimental.heuristicminer.longdistance.LongDistanceDependencyMiner
-import processm.experimental.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
+import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
+import processm.miners.causalnet.heuristicminer.bindingproviders.BindingProvider
+import processm.miners.causalnet.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
+import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DependencyGraphProvider
+import processm.miners.causalnet.heuristicminer.longdistance.LongDistanceDependencyMiner
+import processm.miners.causalnet.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
 import processm.experimental.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.experimental.heuristicminer.traceregisters.TraceRegister
-import processm.miners.onlineminer.BasicTraceToNodeTrace
-import processm.miners.onlineminer.HeuristicMiner
-import processm.miners.onlineminer.TraceToNodeTrace
+import processm.miners.causalnet.onlineminer.BasicTraceToNodeTrace
+import processm.miners.causalnet.CausalNetMiner
+import processm.miners.causalnet.onlineminer.TraceToNodeTrace
 
 /**
  * An on-line implementation of the heuristic miner.
@@ -30,7 +30,7 @@ class OnlineHeuristicMiner(
     val longDistanceDependencyMiner: LongDistanceDependencyMiner = NaiveLongDistanceDependencyMiner(),
     val bindingProvider: BindingProvider = BestFirstBindingProvider(),
     val traceRegister: TraceRegister = DifferentAdfixTraceRegister()
-) : HeuristicMiner {
+) : CausalNetMiner {
 
     companion object {
         private val logger = logger()

@@ -7,8 +7,8 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.experimental.heuristicminer.bindingproviders.CompleteBindingProvider
-import processm.experimental.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
+import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
+import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

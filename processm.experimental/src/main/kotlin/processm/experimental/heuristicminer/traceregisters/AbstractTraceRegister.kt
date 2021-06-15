@@ -2,7 +2,7 @@ package processm.experimental.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
 import processm.core.helpers.HashMapWithDefault
-import processm.miners.onlineminer.NodeTrace
+import processm.miners.causalnet.onlineminer.NodeTrace
 
 /**
  * An abstract trace register providing basic storage capabilities

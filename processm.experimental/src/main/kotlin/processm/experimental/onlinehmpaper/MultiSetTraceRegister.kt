@@ -4,7 +4,7 @@ import processm.core.helpers.Counter
 import processm.core.models.causalnet.Binding
 import processm.experimental.heuristicminer.traceregisters.TraceRegister
 import processm.core.helpers.HashMapWithDefault
-import processm.miners.onlineminer.NodeTrace
+import processm.miners.causalnet.onlineminer.NodeTrace
 
 /**
  * Stores each and every trace

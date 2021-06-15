@@ -10,27 +10,17 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.experimental.heuristicminer.bindingproviders.CompleteBindingProvider
-import processm.experimental.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
-import processm.experimental.heuristicminer.bindingselectors.CountGroups
-import processm.experimental.heuristicminer.bindingselectors.CountSeparately
-import processm.experimental.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.experimental.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.experimental.heuristicminer.traceregisters.SingleShortestTraceRegister
-import processm.miners.onlineminer.BasicTraceToNodeTrace
-import processm.miners.onlineminer.HeuristicMiner
-import kotlin.math.absoluteValue
+import processm.miners.causalnet.CausalNetMiner
+import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
+import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
+import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
+import processm.miners.causalnet.heuristicminer.bindingselectors.CountGroups
+import processm.miners.causalnet.heuristicminer.bindingselectors.CountSeparately
+import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-
-fun assertDoubleEquals(expected: Double?, actual: Double?, eps: Double = 1e-5) {
-    if (expected == null || actual == null)
-        assertEquals(expected, actual)
-    else {
-        assertTrue { (expected.absoluteValue <= eps && actual.absoluteValue <= eps) || ((actual / expected).absoluteValue - 1).absoluteValue <= eps }
-    }
-}
 
 class PM_chapter_72 {
 
@@ -55,7 +45,7 @@ class PM_chapter_72 {
     @Suppress("unused")
     companion object {
         @JvmStatic
-        fun hmFactory(minDirectlyFollows: Int, minDependency: Double): List<HeuristicMiner> =
+        fun hmFactory(minDirectlyFollows: Int, minDependency: Double): List<CausalNetMiner> =
             listOf(
                 OnlineHeuristicMiner(
                     dependencyGraphProvider = DefaultDependencyGraphProvider(
@@ -89,14 +79,14 @@ class PM_chapter_72 {
             )
 
         @JvmStatic
-        fun hmFactory(): List<HeuristicMiner> = hmFactory(1, 1e-5)
+        fun hmFactory(): List<CausalNetMiner> = hmFactory(1, 1e-5)
 
         @JvmStatic
-        fun hmFactory_5_9(): List<HeuristicMiner> =
+        fun hmFactory_5_9(): List<CausalNetMiner> =
             hmFactory(5, .9)
 
         @JvmStatic
-        fun hmFactory_2_7(): List<HeuristicMiner> =
+        fun hmFactory_2_7(): List<CausalNetMiner> =
             listOf(
                 OnlineHeuristicMiner(
                     minBindingSupport = 4,
@@ -112,50 +102,9 @@ class PM_chapter_72 {
             )
     }
 
-
-    @Test
-    fun `directly follows`() {
-        val gp = DefaultDependencyGraphProvider(1, 1e-5)
-        for (trace in log.traces)
-            gp.processTrace(BasicTraceToNodeTrace()(trace))
-        assertEquals(
-            mapOf(
-                Dependency(gp.start, a) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
-                Dependency(e, gp.end) to 5 + 10 + 10 + 1 + 1 + 10 + 2 + 1,
-                Dependency(a, b) to 11,
-                Dependency(a, c) to 11,
-                Dependency(a, d) to 13,
-                Dependency(a, e) to 5,
-                Dependency(b, c) to 10,
-                Dependency(b, e) to 11,
-                Dependency(c, b) to 10,
-                Dependency(c, e) to 11,
-                Dependency(d, d) to 4,
-                Dependency(d, e) to 13
-            ), gp.directlyFollows
-        )
-    }
-
     internal infix fun <A, B> Collection<A>.times(right: Collection<B>): List<Pair<A, B>> =
         this.flatMap { a -> right.map { b -> a to b } }
 
-    @Test
-    fun `dependency measure`() {
-        val gp = DefaultDependencyGraphProvider(1, 1e-5)
-        for (trace in log.traces)
-            gp.processTrace(BasicTraceToNodeTrace()(trace))
-        val dm = listOf(
-            listOf(0.0, 0.92, 0.92, 0.93, 0.83),
-            listOf(-0.92, 0.0, 0.0, 0.0, 0.92),
-            listOf(-0.92, 0.0, 0.0, 0.0, 0.92),
-            listOf(-0.93, 0.0, 0.0, 0.8, 0.93),
-            listOf(-0.83, -0.92, -0.92, -0.93, 0.0)
-        )
-        val indices = nodes.indices.map { it }
-        (indices times indices).forEach { (i, j) ->
-            assertDoubleEquals(gp.dependency(nodes[i], nodes[j]), dm[i][j], 0.01)
-        }
-    }
 
     @Test
     fun `minDirectlyFollows=2 minDependency=,7 Fig 7_6`() {
@@ -222,7 +171,7 @@ class PM_chapter_72 {
 
     @ParameterizedTest
     @MethodSource("hmFactory_5_9")
-    fun `dependency graph minDirectlyFollows=5 minDependency=,9`(hm: HeuristicMiner) {
+    fun `dependency graph minDirectlyFollows=5 minDependency=,9`(hm: CausalNetMiner) {
         hm.processLog(log)
         with(hm.result) {
             assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())

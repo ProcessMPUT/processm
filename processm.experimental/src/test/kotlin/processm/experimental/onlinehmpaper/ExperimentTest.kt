@@ -8,7 +8,7 @@ import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
-import processm.miners.onlineminer.OnlineMiner
+import processm.miners.causalnet.onlineminer.OnlineMiner
 import java.io.File
 import java.util.zip.GZIPInputStream
 import kotlin.test.Test
