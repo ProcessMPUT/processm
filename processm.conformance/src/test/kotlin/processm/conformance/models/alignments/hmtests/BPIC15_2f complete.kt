@@ -1,8 +1,9 @@
 package processm.conformance.models.alignments.hmtests
 
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Disabled
+import processm.conformance.measures.RangeFitness
 import processm.conformance.models.alignments.CompositeAligner
+import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -11,11 +12,14 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
 import java.io.File
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @InMemoryXESProcessing
 class `BPIC15_2f complete` {
@@ -614,7 +618,14 @@ class `BPIC15_2f complete` {
         }
 
     companion object {
-        val pool = Executors.newCachedThreadPool()
+        val pool = ThreadPoolExecutor(
+            Runtime.getRuntime().availableProcessors(),
+            Runtime.getRuntime().availableProcessors(),
+            60,
+            TimeUnit.SECONDS,
+            LinkedBlockingQueue()
+        )
+
 
         @JvmStatic
         @AfterAll
@@ -631,7 +642,7 @@ class `BPIC15_2f complete` {
     }
 
     @Test
-    @Disabled("Too expensive")
+    @Ignore("Too expensive")
     fun `trace 443`() {
         val net = model.toPetriNet()
         val aligner = CompositeAligner(net, pool = pool)
@@ -644,5 +655,65 @@ class `BPIC15_2f complete` {
         println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
         assertEquals(0, alignment.cost)
+    }
+
+    @Test
+    fun `complete log short timeout`() {
+        val net = model.toPetriNet()
+        val aligner = CompositeAligner(net, pool = pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val alignments = aligner.align(log, 10, TimeUnit.MILLISECONDS).toList()
+
+        assertEquals(log.traces.count(), alignments.size)
+        assertTrue("It is possible that the test failed due to some performance issues") { alignments.any { it != null } }
+    }
+
+    @Test
+    fun `complete log short timeout cost approximation`() {
+        val net = model.toPetriNet()
+        val aligner = DecompositionAligner(net, pool = pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val a = log.traces.count { trace ->
+            aligner.alignmentCostLowerBound(trace.events.toList(), 10, TimeUnit.MILLISECONDS).exact
+        }
+        val b = log.traces.count { trace ->
+            aligner.alignmentCostLowerBound(trace.events.toList(), 20, TimeUnit.MILLISECONDS).exact
+        }
+
+        assertTrue { a <= b }
+    }
+
+    @Ignore("Intended for manual execution as it takes a bit of time")
+    @Test
+    fun `complete log short timeout fitness`() {
+        val net = model.toPetriNet()
+        val aligner = DecompositionAligner(net, pool = pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val fitness10 = RangeFitness(aligner, 10, TimeUnit.MILLISECONDS)(log)
+        val fitness100 = RangeFitness(aligner, 100, TimeUnit.MILLISECONDS)(log)
+
+        println(fitness10)
+        println(fitness100)
+
+        assertTrue { fitness10.start < fitness100.start }
+        assertTrue { fitness10.endInclusive >= fitness100.endInclusive }
+    }
+
+    @Ignore("Intended for manual execution")
+    @Test
+    fun test() {
+        val net = model.toPetriNet()
+        val aligner = DecompositionAligner(net, pool = pool)
+        val log = load("../xes-logs/BPIC15_2f.xes.gz")
+
+        val fitness = RangeFitness(aligner, 200, TimeUnit.MILLISECONDS)(log)
+
+        println(fitness)
+
+        assertTrue { fitness.start >= 0.16 }    //If one adds "return 0" to the beginning of AStar.computeUnmachedModelMovesCount(startIndex: Int, prevProcessState: Marking), this drops down to around 0.03
+        assertTrue { fitness.endInclusive == 1.0 }
     }
 }

@@ -1,5 +1,6 @@
 package processm.core.helpers
 
+import org.junit.jupiter.api.Disabled
 import processm.core.logging.logger
 import java.lang.reflect.Field
 import java.util.*
@@ -174,6 +175,7 @@ class HelpersTests {
         }
     }
 
+    @Disabled("Intended for manual execution")
     @Test
     fun `allSubsets performance`() {
         val list = "ABCDEFGHIJKLMNOPQRSTUWVXYZ".toList()

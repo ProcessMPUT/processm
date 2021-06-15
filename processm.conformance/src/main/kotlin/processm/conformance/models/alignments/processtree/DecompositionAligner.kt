@@ -14,8 +14,8 @@ import processm.core.models.processtree.*
  * the parts of the decomposed [model].
  */
 class DecompositionAligner(
-    val model: ProcessTree,
-    val penalty: PenaltyFunction = PenaltyFunction(),
+    override val model: ProcessTree,
+    override val penalty: PenaltyFunction = PenaltyFunction(),
     val alignerFactory: AlignerFactory = AlignerFactory { m, p, _ -> AStar(m, p) }
 ) : Aligner {
 
