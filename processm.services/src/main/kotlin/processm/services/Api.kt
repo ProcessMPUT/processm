@@ -12,10 +12,7 @@ import io.ktor.util.*
 import org.koin.dsl.module
 import org.koin.ktor.ext.Koin
 import processm.services.api.*
-import processm.services.logic.AccountService
-import processm.services.logic.GroupService
-import processm.services.logic.OrganizationService
-import processm.services.logic.WorkspaceService
+import processm.services.logic.*
 
 @OptIn(ExperimentalStdlibApi::class)
 @KtorExperimentalLocationsAPI
@@ -38,6 +35,7 @@ fun Application.apiModule() {
             single { OrganizationService() }
             single { GroupService() }
             single { WorkspaceService(get()) }
+            single { DataSourceService() }
         })
     }
 
