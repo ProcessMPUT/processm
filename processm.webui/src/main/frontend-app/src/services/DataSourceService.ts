@@ -16,7 +16,7 @@ export default class DataSourceService extends BaseService {
 
     this.ensureSuccessfulResponseCode(response);
 
-    return response.data.data.reduce(
+    const dataSources = response.data.data.reduce(
       (dataSources: DataSource[], dataSource: ApiDataSource) => {
         if (dataSource.id != null) {
           dataSources.push({
@@ -30,6 +30,12 @@ export default class DataSourceService extends BaseService {
       },
       []
     );
+
+    if (dataSources.length > 0) {
+      Vue.prototype.$sessionStorage.defaultDataSourceId = dataSources[0].id;
+    }
+
+    return dataSources;
   }
 
   public async createDataStore(name: string): Promise<DataSource> {

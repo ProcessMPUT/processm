@@ -31,6 +31,16 @@ const routes = [
     component: () => import("@/views/DataSources.vue")
   },
   {
+    path: "/pql-interpreter",
+    name: "pql-interpreter",
+    component: () => import("@/views/PQL.vue")
+  },
+  {
+    path: "/pql-docs",
+    name: "pql-docs",
+    component: () => import("@/views/PQLDocs.vue")
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("@/views/Login.vue"),

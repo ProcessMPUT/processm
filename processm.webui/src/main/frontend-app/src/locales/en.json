@@ -5,8 +5,9 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
-    "data-sources": "Data sources",
     "users": "@:users.page-title",
+    "data-sources": "Data sources",
+    "pql-interpreter": "PQL interpreter",
     "about": "@:about.page-title"
   },
   "topbar": {
