@@ -201,12 +201,10 @@ class SATTest {
     @Test
     fun `test 9`() = test(9)
 
-    @Ignore
     @Test
     @Disabled("Too expensive")
     fun `test 11`() = test(11)
 
-    @Ignore
     @Test
     @Disabled("Too expensive")
     fun `test 13`() = test(13)

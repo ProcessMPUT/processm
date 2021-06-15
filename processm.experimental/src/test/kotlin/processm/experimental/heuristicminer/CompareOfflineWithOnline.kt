@@ -167,6 +167,7 @@ class CompareOfflineWithOnline {
         )
     }
 
+    @Disabled("Temporarily disabled pending further consideration in #75")
     @Test
     fun `diamond of diamonds`() {
         val a = Node("a")
@@ -249,6 +250,7 @@ class CompareOfflineWithOnline {
         }
     }
 
+    @Disabled("Temporarily disabled pending further consideration in #75")
     @TestFactory
     fun `nNodes=5`(): Iterator<DynamicNode> {
         return List(1000) { it }.asSequence().map { seed -> helper(seed, 5) }.iterator()

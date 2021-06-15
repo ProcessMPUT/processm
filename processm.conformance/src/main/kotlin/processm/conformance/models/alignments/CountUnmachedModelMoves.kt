@@ -1,0 +1,133 @@
+package processm.conformance.models.alignments
+
+import processm.core.helpers.mapToSet
+import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.CausalNetState
+import processm.core.models.commons.ProcessModelState
+import processm.core.models.petrinet.Marking
+import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.Place
+import java.util.*
+import kotlin.math.max
+
+/**
+ * A base interface for counting necessary skip moves in the log
+ */
+interface CountUnmachedModelMoves {
+    /**
+     * Called before each new trace
+     */
+    fun reset() {
+    }
+
+    /**
+     * Number of skip moves in the log from [startIndex] onwards, given the current state of the model [prevProcessState] and aggregated [nEvents]
+     */
+    fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int
+}
+
+/**
+ * [CountUnmachedModelMoves] for [CausalNet]s
+ */
+class CountUnmachedCausalNetMoves(val model: CausalNet) : CountUnmachedModelMoves {
+    override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
+        prevProcessState as CausalNetState
+        val nEvents = nEvents[startIndex]
+        // The maximum over the number of tokens on all incoming dependencies for an activity.
+        // As each token must be consumed and a single execution may consume at most one token from the activity,
+        // this is the same as the minimal number of pending executions for the activity.
+        val minFutureExecutions = java.util.HashMap<String, Int>()
+        for (e in prevProcessState.entrySet()) {
+            if (!e.element.target.isSilent)
+                minFutureExecutions.compute(e.element.target.activity) { _, old ->
+                    if (old != null && old > e.count) old else e.count
+                }
+        }
+
+        return minFutureExecutions
+            .entries
+            .sumBy { (activity, counter) ->
+                val e = nEvents[activity] ?: 0
+                (counter - e).coerceAtLeast(0)
+            }
+    }
+
+}
+
+/**
+ * [CountUnmachedModelMoves] for [PetriNet]s
+ */
+class CountUnmachedPetriNetMoves(val model: PetriNet) : CountUnmachedModelMoves {
+
+    private val consumentsCache = HashMap<Pair<Place, Int>, Int>()
+
+    private val followingCache: HashMap<Place, Set<Set<String>>> = HashMap()
+
+    private fun following(place: Place): Set<Set<String>> {
+        return followingCache.computeIfAbsent(place) { place ->
+            val following = HashSet<Set<String>>()
+            for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.toList()
+                .sortedBy { it.size }) {
+                if (!following.any { subset -> set.containsAll(subset) })
+                    following.add(set)
+            }
+            return@computeIfAbsent following
+        }
+    }
+
+    override fun reset() {
+        consumentsCache.clear()
+    }
+
+    override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
+        prevProcessState as Marking
+        // Complete dealing with nonConsumable would require some complex algorithm.
+        // Consider: ([[c],[e]]: 1, [[d],[e]]: 1). It is sufficient to model-skip over e to consume these two tokens.
+        // Consider further: ([[c, e]]: 1, [[d, e]]: 1). Now one needs at least three model-skips: c, d, e (used twice)
+        // ([[c, e]]: 2, [[d, e]]: 1) -> cceed - 5 model-skips
+        // Underestimating: each set of sets is flattened and it is assumed that it is sufficient to execute a single activity from it to consume a token
+        // ([c, e]: 2, [d, e]: 1) -> ee - 2 model-skips
+        // Still not entirely clear how to deal with it, e.g., ([c, e]: 2, [d, e]: 1, [d, c]: 3) -> dcc - 3 model-skips seems to be an optimal solution
+        // Underestimating further: computing unions of sets having at least one common element and assigning them the maximal value over all the original counters -> ([c, d, e]: 3).
+        // At this point it is sufficient to sum the counters
+        val nEvents = nEvents[startIndex]
+        val nonConsumable = ArrayList<Pair<Set<Set<String>>, Int>>()
+        for ((place, counter) in prevProcessState) {
+            val following = this.following(place)
+            val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
+                following.sumBy { set -> set.minOf { nEvents[it] ?: 0 } }
+            }
+            if (counter > consuments)
+                nonConsumable.add(following to counter - consuments)
+        }
+        if (nonConsumable.isEmpty())
+            return 0
+        var disjointSum = 0
+        // use LinkedList to enable efficient removal from the middle
+        val flat = nonConsumable.mapNotNullTo(LinkedList()) {
+            val set = it.first.flatMapTo(HashSet()) { it }
+            if (set.isNotEmpty())
+                return@mapNotNullTo set to it.second
+            else
+                return@mapNotNullTo null
+        }
+        val set = HashSet<String>()
+        while (flat.isNotEmpty()) {
+            set.clear()
+            var ctr = 0
+            val i = flat.iterator()
+            while (i.hasNext()) {
+                val e = i.next()
+                if (set.isEmpty() || e.first.any { it in set }) {
+                    set.addAll(e.first)
+                    ctr = max(ctr, e.second)
+                    i.remove()
+                }
+            }
+            assert(set.isNotEmpty())
+            assert(ctr > 0)
+            disjointSum += ctr
+        }
+        return disjointSum
+    }
+}
