@@ -16,6 +16,8 @@ tags:
     description: User organizations and organizations membership management
   - name: dataSources
     description: Data sources management
+  - name: logs
+    description: Log data management
 paths:
   /users:
     get:
@@ -892,7 +894,7 @@ paths:
       operationId: removeOrganizationMember
       responses:
         '204':
-          description: uccessful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -924,6 +926,67 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /data-sources/{dataSourceId}/logs:
+    parameters:
+      - name: dataSourceId
+        in: path
+        description: Data source ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataSources
+        - logs
+      summary: Query logs stored in the specified data source
+      operationId: submitLogsQuery
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: The query to be submitted
+          required: false
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/QueryResultCollectionMessageBody'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - dataSources
+        - logs
+      summary: Upload new log file to the specified data source
+      operationId: uploadLogFile
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                fileName:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Successful operation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
 components:
@@ -1337,6 +1400,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Organization'
+    QueryResultCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
   responses:
     BadRequest:
       description: Invalid request body
@@ -1364,6 +1435,12 @@ components:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
       description: The resource with the sepcified identifier already exists
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ErrorMessageBody'
+    ServiceUnavailable:
+      description: The server is not ready to handle the request
       content:
         'application/json':
           schema:
