@@ -6,7 +6,7 @@ import processm.core.models.commons.ActivityExecution
 /**
  * Represents the possiblity of executing [activity] using [join] and [split]
  */
-open class DecoupledNodeExecution internal constructor(
+open class DecoupledNodeExecution(
     override val activity: Node,
     val join: Join?,
     val split: Split?
@@ -24,4 +24,6 @@ open class DecoupledNodeExecution internal constructor(
     override fun execute() {
         throw UnsupportedOperationException()
     }
+
+    override fun toString(): String = "$join -> $activity -> $split"
 }

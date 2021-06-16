@@ -17,6 +17,14 @@ class HierarchicalIterable<T>(val prefix: Iterable<T>, val suffix: T, val maxDep
     val depth: Int = if (prefix is HierarchicalIterable) prefix.depth + 1 else 0
     private var flat: List<T>? = null
 
+    override fun hashCode(): Int {
+        throw UnsupportedOperationException()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        throw UnsupportedOperationException()
+    }
+
     override fun iterator(): Iterator<T> {
         if (depth < maxDepth) {
             return object : Iterator<T> {

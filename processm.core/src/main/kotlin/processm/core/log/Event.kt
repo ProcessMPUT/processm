@@ -8,7 +8,7 @@ import java.util.*
  *
  * Captures the event component from the XES metadata structure.
  */
-class Event : TraceOrEventBase() {
+open class Event : TraceOrEventBase() {
     /**
      * Standard attribute based on concept:instance
      * Standard extension: Concept

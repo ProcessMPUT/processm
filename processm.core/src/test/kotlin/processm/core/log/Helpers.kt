@@ -4,7 +4,9 @@ import processm.core.log.attribute.NullAttr
 import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
+import processm.core.verifiers.CausalNetVerifier
 
 object Helpers {
     fun logFromString(text: String): Log =
@@ -13,6 +15,12 @@ object Helpers {
                 .filter(String::isNotBlank)
                 .map { line -> Trace(line.splitToSequence(" ").filter(String::isNotEmpty).map(::event)) }
         )
+
+    fun logFromModel(model: CausalNet): Log {
+        val tmp = CausalNetVerifier().verify(model).validLoopFreeSequences.map { seq -> seq.map { it.a } }
+            .toSet()
+        return Log(tmp.asSequence().map { seq -> Trace(seq.asSequence().map { event(it.activity) }) })
+    }
 
     fun event(name: String): Event = Event().apply {
         attributesInternal["concept:name"] = StringAttr("concept:name", name)

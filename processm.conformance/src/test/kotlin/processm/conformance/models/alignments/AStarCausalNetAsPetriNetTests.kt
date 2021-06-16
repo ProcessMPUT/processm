@@ -5,6 +5,7 @@ import processm.core.log.Helpers
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -458,6 +459,7 @@ class AStarCausalNetAsPetriNetTests {
         }
     }
 
+    @Ignore("Intended for manual execution due to high resource requirements")
     @Test
     fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
