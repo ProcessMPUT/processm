@@ -8,7 +8,7 @@ import processm.core.log.XMLXESOutputStream
 import processm.core.log.hierarchical.*
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.toDSL
+import processm.experimental.core.models.causalnet.toDSL
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance

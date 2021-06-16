@@ -1,11 +1,14 @@
-package processm.core.models.causalnet
+package processm.experimental.core.models.causalnet
 
+import processm.core.models.causalnet.Binding
+import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.Dependency
+import processm.core.models.causalnet.Split
 import java.io.File
 import java.io.OutputStream
 import java.io.PrintWriter
 
 fun CausalNet.toJS(path: String) {
-    println("SERIALIZING TO $path")
     File(path).outputStream().use { toJS(it) }
 }
 
@@ -13,6 +16,9 @@ fun CausalNet.toJS(out: OutputStream) {
     PrintWriter(out).use { it.print(this.toJS()) }
 }
 
+/**
+ * Export a [CausalNet] to a JS code compatible with (some) version of ProcessM's UI
+ */
 fun CausalNet.toJS(): String {
     val nodesList =
         ArrayList(instances.map { node -> "{id: \"${node.activity}\", label: \"${node.activity}\"}" })

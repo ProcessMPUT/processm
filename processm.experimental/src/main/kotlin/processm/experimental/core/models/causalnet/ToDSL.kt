@@ -1,6 +1,13 @@
-package processm.core.models.causalnet
+package processm.experimental.core.models.causalnet
 
+import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.Node
 
+/**
+ * Export a [CausalNet] to Kotlin code compatible with [processm.core.models.causalnet.CausalNetDSL]
+ *
+ * @see [processm.core.models.causalnet.causalnet]
+ */
 fun CausalNet.toDSL(): String {
     fun str(s: String) = '"' + s.map {
         if (it in ' '..'\u007f' && it != '"')
