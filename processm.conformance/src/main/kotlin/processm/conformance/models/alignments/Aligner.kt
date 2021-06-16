@@ -29,8 +29,24 @@ interface Aligner {
      */
     fun align(trace: Trace): Alignment
 
+    /**
+     * Calculates [Alignment]s for the given [log].
+     *
+     * @param summarizer An event summarizer to use, traces with equal summaries are grouped together and the alignment
+     * for them is computed only once. If `null`, no grouping is performed and alignment is computed for each trace separately,
+     * event if there are repetitions in [log].
+     * @see align
+     */
     fun align(log: Sequence<Trace>, summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer()) =
         summarizer?.flatMap(log) { trace -> align(trace) } ?: log.map { align(it) }
 
+    /**
+     * Calculates [Alignment]s for the given [log].
+     *
+     * @param summarizer An event summarizer to use, traces with equal summaries are grouped together and the alignment
+     * for them is computed only once. If `null`, no grouping is performed and alignment is computed for each trace separately,
+     * event if there are repetitions in [log].
+     * @see align
+     */
     fun align(log: Log, summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer()) = align(log.traces, summarizer)
 }
