@@ -13,7 +13,7 @@ import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
-import processm.experimental.heuristicminer.OnlineHeuristicMiner
+import processm.experimental.miners.causalnet.heuristicminer.OnlineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider

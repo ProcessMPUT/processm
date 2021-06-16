@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer.traceregisters
+package processm.experimental.miners.causalnet.heuristicminer.traceregisters
 
 import processm.core.models.causalnet.Binding
 import processm.core.models.causalnet.Join

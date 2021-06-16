@@ -1,5 +1,6 @@
 package processm.experimental.performance
 
+import org.junit.jupiter.api.Disabled
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import kotlin.test.Test
@@ -17,6 +18,7 @@ class GurobiIntegrationTest {
         assertEquals(a.size * b.size * c.size, cartesianProduct(a, b, c).count())
     }
 
+    @Disabled("Gurobi integration is currently not available")
     @Test
     fun `blah`() {
         /*

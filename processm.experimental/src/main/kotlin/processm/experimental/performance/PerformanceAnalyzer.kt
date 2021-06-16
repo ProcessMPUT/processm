@@ -1258,7 +1258,7 @@ class PerformanceAnalyzer(
         val result = HashSet<Activity>()
         val hell = CausalNetVerifierImpl(model)
         // valid sequences runs BFS and there is only a finite number of possible successors, so I think this terminates
-        val seqs = hell.computeSetOfValidSequences(false) { seq ->
+        val seqs = hell.computeSetOfValidSequences(false) { seq, _ ->
             val activities = seq.map { it.a }
             if (activities.size <= prefix.size)
                 return@computeSetOfValidSequences activities == prefix.subList(0, activities.size)

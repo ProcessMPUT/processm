@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer
+package processm.experimental.miners.causalnet.heuristicminer
 
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -10,8 +10,8 @@ import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.Split
-import processm.experimental.heuristicminer.traceregisters.CompleteTraceRegister
-import processm.experimental.heuristicminer.traceregisters.SingleShortestTraceRegister
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.SingleShortestTraceRegister
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider

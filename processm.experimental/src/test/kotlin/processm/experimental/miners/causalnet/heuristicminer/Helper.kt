@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer
+package processm.experimental.miners.causalnet.heuristicminer
 
 import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.event

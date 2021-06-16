@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer
+package processm.experimental.miners.causalnet.heuristicminer
 
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.logFromString
@@ -11,7 +11,7 @@ import processm.core.models.causalnet.Split
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostParsimoniousHypothesisSelector
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.experimental.heuristicminer.traceregisters.CompleteTraceRegister
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

@@ -3,6 +3,8 @@ package processm.experimental.onlinehmpaper
 import ch.qos.logback.classic.Level
 import kotlinx.serialization.json.Json
 import org.apache.commons.io.FileUtils
+import org.junit.Ignore
+import org.junit.jupiter.api.Disabled
 import org.slf4j.LoggerFactory
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
@@ -19,6 +21,7 @@ import kotlin.test.assertTrue
 @ExperimentalStdlibApi
 class ExperimentTest {
 
+    @Disabled("Intended for manual execution")
     @Test
     fun `CoSeLoG_WABO_2`() {
         val artifacts = createTempDir()
@@ -73,6 +76,7 @@ class ExperimentTest {
         }
     }
 
+    @Disabled("Intended for manual execution")
     @Test
     fun `Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project`() {
         val artifacts = createTempDir()
@@ -148,7 +152,7 @@ class ExperimentTest {
         }
     }
 
-//    @Ignore("Not a test")
+    @Disabled("Intended for manual execution")
     @Test
     fun `BPIC15_2`() {
         val configText = """
@@ -177,6 +181,7 @@ class ExperimentTest {
         Experiment().drift(config)
     }
 
+    @Disabled("Intended for manual execution")
     @Test
     fun `BPIC15_2 window 50 sublog 1 trace 7 ArithmeticException`() {
         val logfile = File("../xes-logs/BPIC15_2.xes.gz")
@@ -205,6 +210,7 @@ class ExperimentTest {
         hm.processDiff(Log(trainLog.asSequence()), Log(emptySequence()))
     }
 
+    @Disabled("Intended for manual execution")
     @Test
     fun `Sepsis_Cases-Event_Log`() {
         (LoggerFactory.getLogger("processm") as ch.qos.logback.classic.Logger).level = Level.INFO
@@ -236,6 +242,7 @@ class ExperimentTest {
         Experiment().drift(config)
     }
 
+    @Disabled("Intended for manual execution")
     @Test
     fun `performance`() {
         (LoggerFactory.getLogger("processm") as ch.qos.logback.classic.Logger).level = Level.INFO

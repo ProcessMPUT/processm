@@ -5,9 +5,7 @@ import processm.core.helpers.mapToSet
 import processm.core.helpers.withMemory
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
-import processm.core.models.commons.Activity
 import java.util.*
-import kotlin.collections.HashMap
 import kotlin.math.min
 
 typealias CausalNetSequence = List<ActivityBinding>
@@ -55,7 +53,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      * The set of all valid sequences. There is a possiblity that this set is infinite.
      */
     val validSequences: SequenceWithMemory<CausalNetSequence> by lazy {
-        computeSetOfValidSequences(false) { true }.withMemory()
+        computeSetOfValidSequences(false) { _, _ -> true }.withMemory()
     }
 
     /**
@@ -68,7 +66,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      * In simple terms, B is A plus something.
      */
     val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> by lazy {
-        computeSetOfValidSequences(true) { true }.withMemory()
+        computeSetOfValidSequences(true) { _, _ -> true }.withMemory()
     }
 
     /**
@@ -76,11 +74,12 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      */
     val validLoopFreeSequencesWithArbitrarySerialization: SequenceWithMemory<CausalNetSequence> by lazy {
         val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
-        computeSetOfValidSequences(true) { current ->
+        computeSetOfValidSequences(true) { current, visiting ->
             val key = current.mapToSet { it.a } to current.last().state.uniqueSet()
             if (beenThereDoneThat.contains(key))
                 return@computeSetOfValidSequences false
-            beenThereDoneThat.add(key)
+            if (visiting)
+                beenThereDoneThat.add(key)
             return@computeSetOfValidSequences true
         }.withMemory()
     }
@@ -296,7 +295,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      */
     fun computeSetOfValidSequences(
         avoidLoops: Boolean,
-        acceptPartial: (CausalNetSequence) -> Boolean
+        acceptPartial: (CausalNetSequence, Boolean) -> Boolean
     ): Sequence<CausalNetSequence> {
         val queue = ArrayDeque<CausalNetSequenceWithHash>()
         queue.addAll(model
@@ -309,7 +308,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         return sequence {
             while (queue.isNotEmpty()) {
                 val current = queue.pollFirst()
-                if (!acceptPartial(current.data))
+                if (!acceptPartial(current.data, true))
                     continue
 
                 extensions(current, avoidLoops).forEach { last ->
@@ -319,7 +318,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                     } else {
                         val next = CausalNetSequenceWithHash(current)
                         next.add(last)
-                        if(acceptPartial(next.data))
+                        if (acceptPartial(next.data, false))
                             queue.addLast(next)
                     }
                 }
@@ -370,16 +369,16 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         return true
     }
 
-    fun anyValidSequence(prefix:List<Node>): CausalNetSequence? = anyValidSequenceNaive(prefix)
+    fun anyValidSequence(prefix: List<Node>): CausalNetSequence? = anyValidSequenceNaive(prefix)
 
-    fun anyValidSequenceNaive(prefix:List<Node>): CausalNetSequence? {
-        return computeSetOfValidSequences(false) {seq->
+    fun anyValidSequenceNaive(prefix: List<Node>): CausalNetSequence? {
+        return computeSetOfValidSequences(false) { seq, _ ->
             val activities = seq.map { it.a }
             val m = min(prefix.size, activities.size)
             return@computeSetOfValidSequences activities.subList(0, m) == prefix.subList(0, m)
         }.firstOrNull { seq ->
             val activities = seq.map { it.a }
-            return@firstOrNull activities.size>=prefix.size && activities.subList(0, prefix.size) == prefix
+            return@firstOrNull activities.size >= prefix.size && activities.subList(0, prefix.size) == prefix
         }
     }
 

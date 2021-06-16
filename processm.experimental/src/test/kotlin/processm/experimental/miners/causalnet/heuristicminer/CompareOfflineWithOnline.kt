@@ -1,4 +1,4 @@
-package processm.experimental.heuristicminer
+package processm.experimental.miners.causalnet.heuristicminer
 
 import org.junit.jupiter.api.*
 import processm.core.comparators.CausalNetTraceComparison
@@ -11,9 +11,9 @@ import processm.core.verifiers.CausalNetVerifier
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.experimental.heuristicminer.traceregisters.CompleteTraceRegister
-import processm.experimental.heuristicminer.traceregisters.DifferentAdfixTraceRegister
-import processm.experimental.heuristicminer.traceregisters.TraceRegister
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.DifferentAdfixTraceRegister
+import processm.experimental.miners.causalnet.heuristicminer.traceregisters.TraceRegister
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import kotlin.random.Random

@@ -1,5 +1,6 @@
 package processm.conformance.models.alignments
 
+import org.junit.jupiter.api.Disabled
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.models.causalnet.Node
@@ -255,7 +256,7 @@ class AStarCausalNetTests {
             2
         )
 
-        val expectedVisitedStatesCount = arrayOf(11, 35, 24, 80)
+        val expectedVisitedStatesCount = arrayOf(10, 32, 21, 80)
 
         val astar = AStar(model)
         for ((i, trace) in log.traces.withIndex()) {
@@ -452,7 +453,7 @@ class AStarCausalNetTests {
         }
     }
 
-    @Ignore
+    @Disabled("Intended for manual execution due to high resource requirements")
     @Test
     fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }

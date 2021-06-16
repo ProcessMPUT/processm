@@ -1,5 +1,6 @@
-package processm.experimental.heuristicminer
+package processm.experimental.miners.causalnet.heuristicminer
 
+import org.junit.jupiter.api.Disabled
 import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
@@ -70,12 +71,14 @@ class LongTermDependencies {
         }
     }
 
+    @Disabled("See #97")
     @Test
     fun `long term dependencies`() {
         assertTrue { hm.result.outgoing.getValue(b1).contains(Dependency(b1, d1)) }
         assertTrue { hm.result.outgoing.getValue(b2).contains(Dependency(b2, d2)) }
     }
 
+    @Disabled("See #97")
     @Test
     fun `long term splits`() {
         with(hm.result.splits) {
@@ -84,6 +87,7 @@ class LongTermDependencies {
         }
     }
 
+    @Disabled("See #97")
     @Test
     fun `long term joins`() {
         with(hm.result.joins) {

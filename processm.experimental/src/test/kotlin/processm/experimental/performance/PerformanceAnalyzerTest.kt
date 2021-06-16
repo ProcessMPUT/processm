@@ -1,6 +1,7 @@
 package processm.experimental.performance
 
 import ch.qos.logback.classic.Level
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.assertThrows
 import org.slf4j.LoggerFactory.getLogger
 import processm.core.helpers.HashMapWithDefault
@@ -574,7 +575,7 @@ class PerformanceAnalyzerTest {
         }
     }
 
-    //@Ignore
+    @Disabled("Intended for manual execution")
     @Test
     fun `BPIC15_2f`() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
@@ -630,6 +631,7 @@ class PerformanceAnalyzerTest {
     }
 
     @Test
+    @Disabled("Intended for manual execution")
     fun `BPIC15_2f  - h2 admissibility`() {
         val windowSize = 20
         val start = 156
@@ -686,34 +688,6 @@ class PerformanceAnalyzerTest {
                 println("@${windowIndices.first} test fitness=${patest.fitness} test prec=${patest.precision}")
                 break
             }
-        }
-    }
-
-    @Test
-    fun `BPIC15_2f - random test`() {
-        val windowSize = 20
-        val step = 1
-        (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
-        val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
-        val hm = OnlineMiner()
-        for ((windowIndices, addIndices, removeIndices) in windowIndices(/*log.size-windowSize*/140,
-            windowSize,
-            start = 120
-        )) {
-            val remove = log.subList(removeIndices.first, removeIndices.last + 1)
-            val add = log.subList(addIndices.first, addIndices.last + 1)
-            val train = log.subList(windowIndices.first, windowIndices.last - 1)
-            val test = log.subList(windowIndices.last, windowIndices.last + windowSize)
-            hm.processDiff(Log(add.asSequence()), Log(remove.asSequence()))
-            val patrain =
-                PerformanceAnalyzer(Log(train.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
-            val patest = PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
-            println("@${windowIndices.first} train fitness=${patrain.fitness} test fitness=${patest.fitness} test prec=${patest.precision}")
-            //@120 train fitness=1.0 test fitness=0.956140350877193 test prec=0.6208151382823871
-            assertTrue(abs(patrain.fitness - 1.0) <= 0.01)
-            assertTrue(abs(patest.fitness - 0.956) <= 0.01)
-            assertTrue(abs(patest.precision - 0.621) <= 0.01)
-            break
         }
     }
 
@@ -882,6 +856,7 @@ class PerformanceAnalyzerTest {
     }
  */
 
+    @Disabled("Intended for manual execution")
     @Test
     fun `nasa-cev-complete-splitted - windowing`() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.INFO
@@ -1005,7 +980,7 @@ class PerformanceAnalyzerTest {
 
     private fun testPossible(model: CausalNet, maxSeqLen: Int = Int.MAX_VALUE, maxPrefixLen: Int = Int.MAX_VALUE) {
         val validSequences = CausalNetVerifierImpl(model)
-            .computeSetOfValidSequences(false) { it.size < maxSeqLen }
+            .computeSetOfValidSequences(false) { it, _ -> it.size < maxSeqLen }
             .map { it.map { it.a } }.toList()
         val prefix2possible = HashMapWithDefault<List<Node>, HashSet<Activity>>() { HashSet() }
         for (seq in validSequences) {
