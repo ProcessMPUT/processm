@@ -1,6 +1,5 @@
 package processm.experimental.performance.perfectaligner
 
-import org.junit.jupiter.api.Disabled
 import processm.core.log.Event
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
@@ -84,7 +83,7 @@ class PerfectAlignerTest {
         assertNull(fa.align(trace))
     }
 
-    @Disabled("Intended for manual execution")
+    @Ignore("Intended for manual execution")
     @Test
     fun `BPIC15_2-subset`() {
         val log = FileInputStream("src/test/resources/BPIC15_2-subset.xes").use { base ->
@@ -101,7 +100,7 @@ class PerfectAlignerTest {
             assertNotNull(fa.align(trace))
     }
 
-    @Disabled("Intended for manual execution")
+    @Ignore("Intended for manual execution")
     @Test
     fun `BPIC15_2`() {
         val log = FileInputStream("src/test/resources/BPIC15_2-subset.xes").use { base ->

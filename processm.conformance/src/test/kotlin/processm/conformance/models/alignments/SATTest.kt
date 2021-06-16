@@ -1,7 +1,6 @@
 package processm.conformance.models.alignments
 
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Disabled
 import processm.core.helpers.allSubsets
 import processm.core.helpers.mapToSet
 import processm.core.log.Helpers
@@ -202,10 +201,10 @@ class SATTest {
     fun `test 9`() = test(9)
 
     @Test
-    @Disabled("Too expensive")
+    @Ignore("Too expensive")
     fun `test 11`() = test(11)
 
     @Test
-    @Disabled("Too expensive")
+    @Ignore("Too expensive")
     fun `test 13`() = test(13)
 }

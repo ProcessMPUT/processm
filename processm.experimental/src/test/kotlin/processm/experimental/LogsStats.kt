@@ -1,19 +1,19 @@
 package processm.experimental
 
-import org.junit.jupiter.api.Disabled
 import processm.core.log.Event
 import processm.core.log.Trace
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import java.io.File
 import java.util.zip.GZIPInputStream
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 class LogsStats {
 
     @InMemoryXESProcessing
     @Test
-    @Disabled("Not a test")
+    @Ignore("Not a test")
     fun computeStats() {
         val dir = "../xes-logs"
         val keywords = listOf("artificial", "synthetic", "benchmark")

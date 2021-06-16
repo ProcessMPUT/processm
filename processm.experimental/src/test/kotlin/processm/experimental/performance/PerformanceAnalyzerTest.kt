@@ -1,7 +1,6 @@
 package processm.experimental.performance
 
 import ch.qos.logback.classic.Level
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.assertThrows
 import org.slf4j.LoggerFactory.getLogger
 import processm.core.helpers.HashMapWithDefault
@@ -16,10 +15,10 @@ import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
+import processm.experimental.onlinehmpaper.filterLog
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
-import processm.experimental.onlinehmpaper.filterLog
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import java.io.File
 import java.util.zip.GZIPInputStream
@@ -575,7 +574,7 @@ class PerformanceAnalyzerTest {
         }
     }
 
-    @Disabled("Intended for manual execution")
+    @Ignore("Intended for manual execution")
     @Test
     fun `BPIC15_2f`() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
@@ -631,7 +630,7 @@ class PerformanceAnalyzerTest {
     }
 
     @Test
-    @Disabled("Intended for manual execution")
+    @Ignore("Intended for manual execution")
     fun `BPIC15_2f  - h2 admissibility`() {
         val windowSize = 20
         val start = 156
@@ -856,7 +855,7 @@ class PerformanceAnalyzerTest {
     }
  */
 
-    @Disabled("Intended for manual execution")
+    @Ignore("Intended for manual execution")
     @Test
     fun `nasa-cev-complete-splitted - windowing`() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.INFO
