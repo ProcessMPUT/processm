@@ -1,5 +1,6 @@
 package processm.conformance.measures
 
+import org.junit.jupiter.api.Disabled
 import processm.conformance.models.alignments.CompositeAligner
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.trace
@@ -158,6 +159,7 @@ class FitnessTest {
         assertDoubleEquals(1.0, Fitness(CompositeAligner(model3))(log))
     }
 
+    @Disabled("Keeps crashing on TC. Investigate in #96")
     @Test
     fun `model4 fitness`() {
         assertDoubleEquals(1.0, Fitness(CompositeAligner(model4))(log))
