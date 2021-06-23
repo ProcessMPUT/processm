@@ -5,10 +5,12 @@ import processm.conformance.models.alignments.cache.Cache
 import processm.core.helpers.ternarylogic.Ternary
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
 import processm.core.models.commons.ProcessModelState
+import processm.core.models.petrinet.PetriNet
 import java.util.*
 
 
@@ -22,8 +24,14 @@ import java.util.*
  * This class is thread-safe.
  */
 class AStar(
-    val model: ProcessModel,
-    val penalty: PenaltyFunction = PenaltyFunction()
+    override val model: ProcessModel,
+    override val penalty: PenaltyFunction = PenaltyFunction(),
+    val countUnmachedModelMoves: CountUnmachedModelMoves? =
+        when (model) {
+            is PetriNet -> CountUnmachedPetriNetMoves(model)
+            is CausalNet -> CountUnmachedCausalNetMoves(model)
+            else -> null
+        }
 ) : Aligner {
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE
@@ -35,6 +43,9 @@ class AStar(
     private val endActivities: Set<String?> =
         model.endActivities.mapNotNullTo(HashSet()) { if (it.isSilent) null else it.name }
 
+    var visitedStatesCount: Int = 0
+        private set
+
     /**
      * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
      *
@@ -45,6 +56,7 @@ class AStar(
     override fun align(trace: Trace): Alignment {
         val events = trace.events.toList()
         val eventsWithExistingActivities = events.filter { e -> activities.contains(e.conceptName) }
+        visitedStatesCount = 0
         val alignment = alignInternal(eventsWithExistingActivities)
         if (events.size == eventsWithExistingActivities.size)
             return alignment
@@ -52,6 +64,18 @@ class AStar(
     }
 
     private fun alignInternal(events: List<Event>): Alignment {
+        run {
+            val nEvents = ArrayList<Map<String?, Int>>()
+            val tmp = HashMap<String?, Int>()
+            for (e in events.asReversed()) {
+                tmp.compute(e.conceptName) { _, old ->
+                    (old ?: 0) + 1
+                }
+                nEvents.add(HashMap(tmp))
+            }
+            this.nEvents = nEvents.asReversed()
+            countUnmachedModelMoves?.reset()
+        }
         val thread = Thread.currentThread()
         val queue = PriorityQueue<SearchState>()
         val visited = Cache<SearchState>()
@@ -67,7 +91,8 @@ class AStar(
                     instance.isFinalState -> Ternary.True
                     instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                     else -> Ternary.False
-                }
+                },
+                null
             ),
             activity = null, // before first activity
             event = -1, // before first event
@@ -125,6 +150,8 @@ class AStar(
             if (!visited.add(searchState))
                 continue
 
+            visitedStatesCount++
+
             if (thread.isInterrupted) {
                 throw InterruptedException("A* was requested to cancel.")
             }
@@ -151,7 +178,7 @@ class AStar(
                     } else {
                         val currentCost = searchState.currentCost + penalty.silentMove
                         // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
+                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown, prevProcessState)
                             .coerceAtLeast(searchState.predictedCost - penalty.silentMove)
                         if (currentCost + predictedCost <= upperBoundCost) {
                             queue.add(
@@ -174,8 +201,9 @@ class AStar(
                 if (isSynchronousMove(nextEvent, activity)) {
                     val currentCost = searchState.currentCost + penalty.synchronousMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                    val predictedCost = predict(events, nextEventIndex + 1, Ternary.Unknown)
-                        .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove)
+                    val predictedCost =
+                        predict(events, nextEventIndex + 1, Ternary.Unknown, searchState.processState)
+                            .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
                             SearchState(
@@ -193,8 +221,9 @@ class AStar(
                 run {
                     val currentCost = searchState.currentCost + penalty.modelMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                    val predictedCost = predict(events, nextEventIndex, Ternary.Unknown)
-                        .coerceAtLeast(searchState.predictedCost - penalty.modelMove)
+                    val predictedCost =
+                        predict(events, nextEventIndex, Ternary.Unknown, searchState.processState)
+                            .coerceAtLeast(searchState.predictedCost - penalty.modelMove)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
                             SearchState(
@@ -217,7 +246,8 @@ class AStar(
                         isFinalState -> Ternary.True
                         instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                         else -> Ternary.False
-                    }
+                    },
+                    prevProcessState
                 ).coerceAtLeast(searchState.predictedCost - penalty.logMove)
                 if (currentCost + predictedCost <= upperBoundCost) {
                     val state = SearchState(
@@ -271,7 +301,14 @@ class AStar(
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
         event !== null && event.conceptName == activity.name
 
-    private fun predict(events: List<Event>, startIndex: Int, isFinalState: Ternary): Int {
+    private lateinit var nEvents: List<Map<String?, Int>>
+
+    private fun predict(
+        events: List<Event>,
+        startIndex: Int,
+        isFinalState: Ternary,
+        prevProcessState: ProcessModelState?
+    ): Int {
         if (startIndex == SKIP_EVENT || startIndex >= events.size)
             return if (isFinalState != Ternary.False) 0 else penalty.modelMove // we reached the end of trace, should we move in the model?
 
@@ -289,6 +326,14 @@ class AStar(
             if (!hasEndActivity)
                 sum += penalty.modelMove
         }
+
+        val unmachedModelMovesCount = if (prevProcessState == null)
+            0
+        else
+            countUnmachedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
+
+        // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
+        sum += (unmachedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
 
         return sum
     }

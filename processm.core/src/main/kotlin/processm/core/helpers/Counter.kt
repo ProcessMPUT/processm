@@ -1,7 +1,5 @@
 package processm.core.helpers
 
-import kotlin.math.max
-
 /**
  * A map with counting capabilities
  */
@@ -18,7 +16,7 @@ class Counter<K> : HashMap<K, Int>() {
      * Increments the value stored for [key] by [n]
      */
     fun inc(key: K, n: Int = 1) {
-        this[key] += n
+        compute(key) { _, v -> (v ?: 0) + n }
     }
 
     /**
@@ -33,6 +31,6 @@ class Counter<K> : HashMap<K, Int>() {
      * Decrements the value stored for [key] by [n], capping at 0
      */
     fun dec(key: K, n: Int = 1) {
-        this[key] = max(this[key] - n, 0)
+        compute(key) { _, v -> if (v != null && v > n) v - n else null }
     }
 }

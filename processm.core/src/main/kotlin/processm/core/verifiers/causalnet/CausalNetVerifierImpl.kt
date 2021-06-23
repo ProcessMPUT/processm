@@ -6,7 +6,7 @@ import processm.core.helpers.withMemory
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import java.util.*
-import kotlin.collections.HashMap
+import kotlin.math.min
 
 typealias CausalNetSequence = List<ActivityBinding>
 
@@ -53,7 +53,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      * The set of all valid sequences. There is a possiblity that this set is infinite.
      */
     val validSequences: SequenceWithMemory<CausalNetSequence> by lazy {
-        computeSetOfValidSequences(false, false).withMemory()
+        computeSetOfValidSequences(false) { _, _ -> true }.withMemory()
     }
 
     /**
@@ -66,14 +66,22 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      * In simple terms, B is A plus something.
      */
     val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> by lazy {
-        computeSetOfValidSequences(true, false).withMemory()
+        computeSetOfValidSequences(true) { _, _ -> true }.withMemory()
     }
 
     /**
      * @see processm.core.verifiers.CausalNetVerificationReport.validLoopFreeSequencesWithArbitrarySerialization
      */
     val validLoopFreeSequencesWithArbitrarySerialization: SequenceWithMemory<CausalNetSequence> by lazy {
-        computeSetOfValidSequences(true, true).withMemory()
+        val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
+        computeSetOfValidSequences(true) { current, visiting ->
+            val key = current.mapToSet { it.a } to current.last().state.uniqueSet()
+            if (beenThereDoneThat.contains(key))
+                return@computeSetOfValidSequences false
+            if (visiting)
+                beenThereDoneThat.add(key)
+            return@computeSetOfValidSequences true
+        }.withMemory()
     }
 
     /**
@@ -285,28 +293,24 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      * There is possiblity that there are infinitely many such sequences.
      * To circumvent this, this function uses breadth-first search (BFS) and lazy evaluation
      */
-    private fun computeSetOfValidSequences(
+    fun computeSetOfValidSequences(
         avoidLoops: Boolean,
-        chooseArbitrarySerialization: Boolean
+        acceptPartial: (CausalNetSequence, Boolean) -> Boolean
     ): Sequence<CausalNetSequence> {
         val queue = ArrayDeque<CausalNetSequenceWithHash>()
         queue.addAll(model
             .splits.getOrDefault(model.start, setOf())
             .map { split ->
                 val tmp = CausalNetSequenceWithHash()
-                tmp.add(ActivityBinding(model.start, setOf(), split.targets, CausalNetState()))
+                tmp.add(ActivityBinding(model.start, setOf(), split.targets, CausalNetStateImpl()))
                 tmp
             })
-        val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
         return sequence {
             while (queue.isNotEmpty()) {
                 val current = queue.pollFirst()
-                if (chooseArbitrarySerialization) {
-                    val key = current.data.mapToSet { it.a } to current.data.last().state.uniqueSet()
-                    if (beenThereDoneThat.contains(key))
-                        continue
-                    beenThereDoneThat.add(key)
-                }
+                if (!acceptPartial(current.data, true))
+                    continue
+
                 extensions(current, avoidLoops).forEach { last ->
                     if (last.a == model.end) {
                         if (last.state.isEmpty())
@@ -314,7 +318,8 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
                     } else {
                         val next = CausalNetSequenceWithHash(current)
                         next.add(last)
-                        queue.addLast(next)
+                        if (acceptPartial(next.data, false))
+                            queue.addLast(next)
                     }
                 }
             }
@@ -363,4 +368,18 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
         }
         return true
     }
+
+    fun anyValidSequence(prefix: List<Node>): CausalNetSequence? = anyValidSequenceNaive(prefix)
+
+    fun anyValidSequenceNaive(prefix: List<Node>): CausalNetSequence? {
+        return computeSetOfValidSequences(false) { seq, _ ->
+            val activities = seq.map { it.a }
+            val m = min(prefix.size, activities.size)
+            return@computeSetOfValidSequences activities.subList(0, m) == prefix.subList(0, m)
+        }.firstOrNull { seq ->
+            val activities = seq.map { it.a }
+            return@firstOrNull activities.size >= prefix.size && activities.subList(0, prefix.size) == prefix
+        }
+    }
+
 }
