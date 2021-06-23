@@ -8,6 +8,7 @@ import processm.core.models.causalnet.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -200,8 +201,10 @@ class SATTest {
     fun `test 9`() = test(9)
 
     @Test
+    @Ignore("Too expensive")
     fun `test 11`() = test(11)
 
     @Test
+    @Ignore("Too expensive")
     fun `test 13`() = test(13)
 }

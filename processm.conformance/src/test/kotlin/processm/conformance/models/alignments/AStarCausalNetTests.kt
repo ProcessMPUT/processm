@@ -4,6 +4,7 @@ import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -254,15 +255,18 @@ class AStarCausalNetTests {
             2
         )
 
+        val expectedVisitedStatesCount = arrayOf(10, 32, 21, 80)
+
         val astar = AStar(model)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(expectedCost[i], alignment.cost)
+            assertEquals(expectedVisitedStatesCount[i], astar.visitedStatesCount)
         }
     }
 
@@ -304,7 +308,7 @@ class AStarCausalNetTests {
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
 
-            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
+            println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost} #visited states ${astar.visitedStatesCount}")
 
             assertEquals(0, alignment.cost)
             assertEquals(trace.events.count() * 2 - 1, alignment.steps.size)
@@ -448,6 +452,7 @@ class AStarCausalNetTests {
         }
     }
 
+    @Ignore("Intended for manual execution due to high resource requirements")
     @Test
     fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }

@@ -14,9 +14,7 @@ import processm.core.models.petrinet.Transition
 import processm.core.models.petrinet.converters.toPetriNet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class CompositeAlignerPetriNetTests {
     companion object {
@@ -1181,6 +1179,75 @@ class CompositeAlignerPetriNetTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCost[i], alignment.cost)
+        }
+    }
+
+    @Test
+    fun `Parallel decisions in loop with many splits C-net non-conforming log - timeout`() {
+        val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
+        val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
+
+        val st = Node("start", special = true)
+        val en = Node("end", special = true)
+
+        val loopStart = Node("ls")
+        val loopEnd = Node("le")
+
+        val dec1 = Node("d1")
+        val dec2 = Node("d2")
+
+        val model = causalnet {
+            start = st
+            end = en
+
+            st splits loopStart
+            st joins loopStart
+            loopStart splits dec1 + dec2
+
+            loopStart joins dec1
+            for (act1 in activities1) {
+                dec1 joins act1
+                act1 splits loopEnd
+                for (act2 in activities2) {
+                    act1 + act2 join loopEnd
+                }
+            }
+
+            for (act1 in activities1.allSubsets(true).filter { it.size <= 3 }) {
+                dec1 splits act1
+            }
+
+            loopStart joins dec2
+            for (act2 in activities2) {
+                dec2 splits act2
+                dec2 joins act2
+                act2 splits loopEnd
+            }
+
+            for (act2 in activities1.allSubsets(true).filter { it.size <= 3 }) {
+                dec2 splits act2
+            }
+
+            loopEnd splits loopStart
+            loopEnd joins loopStart
+
+            loopEnd splits en
+            loopEnd joins en
+        }
+
+        val log = Helpers.logFromString(
+            """
+                ls d2 M d1 Z le
+                d2 ls d1 Z M le
+                ls d1 d2 A N ls le ls d1 C d2 O le
+            """
+        )
+
+        val petri = model.toPetriNet()
+        val aligner = CompositeAligner(petri, pool = pool)
+        for ((i, trace) in log.traces.withIndex()) {
+            assertNull(aligner.align(trace, 1, TimeUnit.MILLISECONDS))
+            assertNotNull(aligner.align(trace, 100, TimeUnit.SECONDS))
         }
     }
 }

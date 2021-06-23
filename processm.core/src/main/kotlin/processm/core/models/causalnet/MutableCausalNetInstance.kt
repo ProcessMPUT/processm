@@ -15,7 +15,7 @@ class MutableCausalNetInstance(
     CausalNetInstance(model, metadataHandler),
     MutableMetadataHandler by metadataHandler {
 
-    internal var state: CausalNetState = CausalNetState()
+    internal var state: CausalNetStateImpl = CausalNetStateImpl()
 
     init {
         setState(null)
@@ -34,7 +34,7 @@ class MutableCausalNetInstance(
         if (state === null) {
             this.state.clear()
         } else {
-            require(state is CausalNetState) { "The given object is not a valid Causal Net state." }
+            require(state is CausalNetStateImpl) { "The given object is not a valid Causal Net state." }
             this.state = state
         }
     }

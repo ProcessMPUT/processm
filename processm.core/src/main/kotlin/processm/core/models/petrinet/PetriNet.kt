@@ -1,10 +1,12 @@
 package processm.core.models.petrinet
 
+import com.google.common.collect.Lists
 import processm.core.helpers.optimize
 import processm.core.models.commons.Activity
 import processm.core.models.commons.DecisionPoint
 import processm.core.models.commons.ProcessModel
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Represents the Petri net.
@@ -164,5 +166,169 @@ class PetriNet(
         assert(finalMarking.keys.all { p -> p in usedPlaces })
 
         return PetriNet(usedPlaces, usedTransitions, initialMarking, finalMarking)
+    }
+
+    private val hashCode: Int by lazy {
+        Objects.hash(*transitions.map { Triple(it.name, it.inPlaces.size, it.outPlaces.size) }.sortedWith { a, b ->
+            val x = a.first.compareTo(b.first)
+            if (x != 0)
+                return@sortedWith x
+            val y = a.second.compareTo(b.second)
+            if (y != 0)
+                return@sortedWith y
+            return@sortedWith a.third.compareTo(b.third)
+
+        }.toTypedArray())
+    }
+
+    override fun hashCode(): Int = hashCode
+
+    override fun equals(other: Any?): Boolean =
+        (this === other) || (other is PetriNet && this.hashCode == other.hashCode && equalsInternal(other))
+
+    private fun generateTransitionsMap(
+        mine2theirs: List<List<Int>>,
+        startAt: Int = 0,
+        theirsUsed: Set<Int> = emptySet()
+    ): Sequence<List<Int>> = sequence {
+        var pos = startAt
+        val prefix = ArrayList<Int>()
+        while (pos < mine2theirs.size && mine2theirs[pos].size == 1) {
+            val theirs = mine2theirs[pos].single()
+            if (theirs in theirsUsed || theirs in prefix)
+                return@sequence
+            prefix.add(theirs)
+            pos++
+        }
+        assert(prefix.size == pos - startAt)
+        val newTheirsUsed = theirsUsed + prefix
+        if (pos < mine2theirs.size) {
+            for (theirs in mine2theirs[pos])
+                if (theirs !in newTheirsUsed)
+                    for (tail in generateTransitionsMap(mine2theirs, pos + 1, newTheirsUsed + setOf(theirs)))
+                        yield(prefix + setOf(theirs) + tail)
+        } else
+            yield(prefix)
+    }
+
+    // TODO verify the assumption that no transition occurs more than once in any of the lists
+    private fun compareTranstionLists(left: List<Transition>?, right: List<Transition>?) =
+        left?.toSet().orEmpty() == right?.toSet().orEmpty()
+
+    private fun matchPlaces(
+        minePlaces: Collection<Place>,
+        theirsPlaces: Collection<Place>,
+        transitionsMap: Map<Transition, Transition>,
+        other: PetriNet
+    ): Boolean {
+        assert(minePlaces.size == theirsPlaces.size)
+        val theirsAvailable = theirsPlaces.toMutableSet()
+        for (mine in minePlaces) {
+            val mineInTransitions = placeToPrecedingTransition[mine]?.mapNotNull { transitionsMap[it] }
+            val mineOutTransitions = placeToFollowingTransition[mine]?.mapNotNull { transitionsMap[it] }
+            var hit = false
+            for (theirs in theirsAvailable) {
+                if (compareTranstionLists(mineInTransitions, other.placeToPrecedingTransition[theirs]) &&
+                    compareTranstionLists(mineOutTransitions, other.placeToFollowingTransition[theirs])
+                ) {
+                    hit = true
+                    theirsAvailable.remove(theirs)
+                    break
+                }
+            }
+            if (!hit)
+                return false
+        }
+        return true
+    }
+
+    private fun equalsInternal(other: PetriNet): Boolean {
+        if (this.transitions.size != other.transitions.size)
+            return false
+        val mine2theirs = List(this.transitions.size) { ArrayList<Int>() }
+        for (mine in this.transitions.indices)
+            for (theirs in other.transitions.indices) {
+                val mineT = this.transitions[mine]
+                val theirsT = other.transitions[theirs]
+                if (mineT.name == theirsT.name && mineT.inPlaces.size == theirsT.inPlaces.size && mineT.outPlaces.size == theirsT.outPlaces.size) {
+                    mine2theirs[mine].add(theirs)
+                }
+            }
+        for (transitionsMap in generateTransitionsMap(mine2theirs)) {
+            assert(transitionsMap.size == this.transitions.size)
+            val transitionMap2 = (this.transitions.indices zip transitionsMap)
+                .map { (mine, theirs) -> this.transitions[mine] to other.transitions[theirs] }
+                .toMap()
+            var hit = true
+            for ((mine, theirs) in transitionMap2.entries) {
+                if (!(matchPlaces(mine.inPlaces, theirs.inPlaces, transitionMap2, other) &&
+                            matchPlaces(mine.outPlaces, theirs.outPlaces, transitionMap2, other))
+                ) {
+                    hit = false
+                    break
+                }
+            }
+            if (hit)
+                return true
+        }
+        return false
+    }
+
+    fun toMultilineString(): String {
+        val result = StringBuilder()
+        val place2id = HashMap<Place, String>()
+        fun placeToString(p: Place) = place2id.computeIfAbsent(p) { "p${place2id.size}" }
+        for (t in transitions) {
+            result.append(
+                t.inPlaces.joinToString(
+                    separator = " ",
+                    prefix = "[",
+                    postfix = "]",
+                    transform = ::placeToString
+                )
+            )
+            result.append(" -> ")
+            result.append(t.name)
+            result.append(" -> ")
+            result.append(
+                t.outPlaces.joinToString(
+                    separator = " ",
+                    prefix = "[",
+                    postfix = "]",
+                    transform = ::placeToString
+                )
+            )
+            result.appendLine()
+        }
+        return result.toString()
+    }
+
+    private fun forwardSearchInternal(start: Place, visited: Set<Transition>): List<Set<Transition>> {
+        val result = ArrayList<Set<Transition>>()
+        for (t in placeToFollowingTransition[start].orEmpty()) {
+            if (t.isSilent) {
+                if (t !in visited)
+                    Lists
+                        .cartesianProduct(t.outPlaces.map { forwardSearchInternal(it, visited + setOf(t)) })
+                        .mapTo(result) { parts -> parts.flatMapTo(HashSet()) { it } }
+            } else
+                result.add(setOf(t))
+        }
+        return result
+    }
+
+    private val forwardSearchCache = HashMap<Place, List<Set<Transition>>>()
+
+    /**
+     * Returns sets of transitions that can be executed for a single token in [start].
+     * Differs from [placeToFollowingTransition] in that it goes over silent transitions, so a single token may actually
+     * lead to execution of multiple (non-silent) transitions. This is an overestimation, i.e., it assumes that
+     * all other tokens are available/treats AND joins inbound for a transition as OR joins.
+     *
+     * The result is to be treated as a XOR of ANDs, i.e., transitions in a single set must be executed jointly, while
+     * from the top-level sequence exactly one set must be executed.
+     */
+    fun forwardSearch(start: Place): List<Set<Transition>> = forwardSearchCache.computeIfAbsent(start) {
+        forwardSearchInternal(it, emptySet())
     }
 }
