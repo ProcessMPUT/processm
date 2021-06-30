@@ -255,6 +255,18 @@
                     </sourceRoots>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.36.0</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>processm</name>
+                        </image>
+                    </images>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

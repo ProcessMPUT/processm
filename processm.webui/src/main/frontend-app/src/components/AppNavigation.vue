@@ -34,6 +34,14 @@
           $t("navigation.data-sources")
         }}</v-list-item-content>
       </v-list-item>
+      <v-list-item :to="'pql-interpreter'" color="primary">
+        <v-list-item-action>
+          <v-icon>code</v-icon>
+        </v-list-item-action>
+        <v-list-item-content>{{
+          $t("navigation.pql-interpreter")
+        }}</v-list-item-content>
+      </v-list-item>
       <v-list-item :to="'about'" color="primary">
         <v-list-item-action>
           <v-icon>info</v-icon>

@@ -5,8 +5,9 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Workspaces",
-    "data-sources": "Data sources",
     "users": "@:users.page-title",
+    "data-sources": "Data sources",
+    "pql-interpreter": "PQL interpreter",
     "about": "@:about.page-title"
   },
   "topbar": {
@@ -31,7 +32,7 @@
     }
   },
   "about": {
-    "page-title": "About page",
+    "page-title": "About ProcessM",
     "description": "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi obcaecati tempora debitis, minima deleniti ex inventore laboriosam at animi praesentium, quaerat corrupti molestiae recusandae corporis necessitatibus vitae, nam saepe?"
   },
   "user-profile": {

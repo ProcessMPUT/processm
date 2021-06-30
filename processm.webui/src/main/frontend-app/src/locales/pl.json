@@ -5,8 +5,9 @@
   "navigation": {
     "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
-    "data-sources": "Źródła danych",
     "users": "Użytkownicy",
+    "data-sources": "Źródła danych",
+    "pql-interpreter": "Interpreter PQL",
     "about": "@:about.page-title"
   },
   "topbar": {
@@ -31,7 +32,7 @@
     }
   },
   "about": {
-    "page-title": "O aplikacji"
+    "page-title": "O ProcessM"
   },
   "user-profile": {
     "language": "Język",

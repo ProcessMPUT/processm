@@ -126,6 +126,15 @@ object Paths {
     class DataSources(val organizationId: UUID)
 
     /**
+     * Logs stored assigned in [dataSourceId].
+     *
+     * @param dataSourceId Data source ID
+     */
+    @KtorExperimentalLocationsAPI
+    @Location("/data-sources/{dataSourceId}/logs")
+    class Logs(val dataSourceId: UUID)
+
+    /**
      * Get details about current user
      *
      */

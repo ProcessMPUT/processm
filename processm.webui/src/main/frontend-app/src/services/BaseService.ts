@@ -1,4 +1,5 @@
 import Vue from "vue";
+import Router from "@/router";
 import { BaseAPI } from "@/openapi/base";
 import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
 import {
@@ -6,7 +7,8 @@ import {
   UsersApi,
   OrganizationsApi,
   WorkspacesApi,
-  DataSourcesApi
+  DataSourcesApi,
+  LogsApi
 } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
@@ -52,6 +54,10 @@ export default abstract class BaseService {
     return this.getGenericClient(DataSourcesApi);
   }
 
+  protected get logsApi() {
+    return this.getGenericClient(LogsApi);
+  }
+
   protected ensureSuccessfulResponseCode(
     response: AxiosResponse,
     ...successfulStatusCodes: Array<number>
@@ -93,6 +99,7 @@ export default abstract class BaseService {
       })
       .catch(() => {
         Vue.prototype.$sessionStorage.removeSession();
+        Router.push("login");
         return Promise.reject();
       });
   }

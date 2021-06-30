@@ -14,6 +14,7 @@ import WorkspaceService from "@/services/WorkspaceService";
 import AccountService from "@/services/AccountService";
 import OrganizationService from "@/services/OrganizationService";
 import DataSourceService from "@/services/DataSourceService";
+import LogsService from "./services/LogsService";
 
 Vue.config.productionTip = false;
 Vue.use(SessionStorage, { persist: true });
@@ -27,7 +28,8 @@ new Vue({
     workspaceService: new WorkspaceService(),
     dataSourceService: new DataSourceService(),
     accountService: new AccountService(),
-    organizationService: new OrganizationService()
+    organizationService: new OrganizationService(),
+    logsService: new LogsService()
   }),
   render: (h) => h(App)
 }).$mount("#app");
