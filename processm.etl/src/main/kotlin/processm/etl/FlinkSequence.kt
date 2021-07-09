@@ -3,12 +3,11 @@ package processm.etl
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction
 import org.apache.flink.streaming.api.functions.sink.SinkFunction
-import processm.core.esb.Service
-import processm.core.esb.ServiceStatus
+import processm.core.logging.enter
+import processm.core.logging.exit
+import processm.core.logging.logger
 import java.io.Serializable
 import java.util.*
-import javax.jms.*
-import javax.naming.InitialContext
 
 /**
  * Exposes a Flink DataStream as a [Sequence] using JMS as an intermediary.
@@ -22,114 +21,49 @@ import javax.naming.InitialContext
  */
 class FlinkSequence<T : Serializable> : Sequence<T> {
 
-    private data class FlinkSequenceMessage<T>(val data: T?) : Serializable
+    private class Producer<T : Serializable>(val topic: String) : RichSinkFunction<T?>() {
 
-    private class Producer<T>(val topic: String) : RichSinkFunction<T?>(), Service {
+        @Transient
+        private var producerBackend: TopicProducer<T>? = null
 
-        override var status: ServiceStatus = ServiceStatus.Unknown
-            private set
-        override val name: String = "$topic: FlinkSequenceProducer"
-
-
-        private lateinit var jmsConnection: TopicConnection
-        private lateinit var jmsSession: TopicSession
-        private lateinit var jmsPublisher: TopicPublisher
-
-        override fun register() {
-            status = ServiceStatus.Stopped
+        private fun producer(): TopicProducer<T> {
+            val logger = logger()
+            try {
+                logger.enter()
+                if (producerBackend == null) {
+                    producerBackend = TopicProducer(topic)
+                    producerBackend!!.register()
+                }
+                return producerBackend!!
+            } finally {
+                logger.exit()
+            }
         }
-
-        override fun start() {
-            val jmsContext = InitialContext()
-            val jmsConnFactory = jmsContext.lookup("ConnectionFactory") as TopicConnectionFactory
-            jmsConnection = jmsConnFactory.createTopicConnection()
-            jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
-            jmsPublisher = jmsSession.createPublisher(jmsSession.createTopic(topic))
-            jmsConnection.start()
-            status = ServiceStatus.Started
-        }
-
-        override fun stop() {
-            send(null)
-            jmsPublisher.close()
-            jmsSession.close()
-            jmsConnection.close()
-            status = ServiceStatus.Stopped
-        }
-
-        private fun send(e: T?) =
-            jmsPublisher.publish(jmsSession.createObjectMessage(FlinkSequenceMessage(e)))
-
 
         override fun invoke(value: T?, context: SinkFunction.Context?) {
-            if (value != null)
-                send(value)
+            val logger = logger()
+            try {
+                logger.enter()
+                if (value != null)
+                    producer().send(value)
+            } finally {
+                logger.exit()
+            }
         }
 
-        override fun open(parameters: Configuration?) = start()
+        override fun open(parameters: Configuration?) = producer().start()
 
-        override fun close() = stop()
-    }
-
-    private class Consumer<T>(val topic: String) : Iterator<T>, Service {
-
-        private lateinit var jmsConnection: TopicConnection
-        private lateinit var jmsSession: TopicSession
-        private lateinit var jmsConsumer: MessageConsumer
-        private var streamClosed: Boolean = false
-
-        private var nextMessageBackend: FlinkSequenceMessage<T>? = null
-
-        private fun nextMessage(): FlinkSequenceMessage<T> {
-            if (!this::jmsConnection.isInitialized)
-                start()
-            if (nextMessageBackend == null)
-                nextMessageBackend = (jmsConsumer.receive() as ObjectMessage).`object` as FlinkSequenceMessage<T>
-            return nextMessageBackend!!
-        }
-
-        override fun hasNext(): Boolean {
-            if (streamClosed)
-                return false
-            if (nextMessage().data != null)
-                return true
-            stop()
-            return false
-        }
-
-        override fun next(): T = nextMessage().data!!.also { nextMessageBackend = null }
-
-        override fun register() {
-            status = ServiceStatus.Stopped
-        }
-
-        override var status: ServiceStatus = ServiceStatus.Unknown
-        override val name: String = "$topic: FlinkSequenceConsumer"
-
-        override fun start() {
-            check(!streamClosed)
-            val jmsContext = InitialContext()
-            val jmsConnFactory = jmsContext.lookup("ConnectionFactory") as TopicConnectionFactory
-            jmsConnection = jmsConnFactory.createTopicConnection()
-            jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
-            jmsConsumer = jmsSession.createSharedDurableConsumer(jmsSession.createTopic(topic), name)
-            jmsConnection.start()
-            status = ServiceStatus.Started
-        }
-
-        override fun stop() {
-            jmsConsumer.close()
-            jmsSession.close()
-            jmsConnection.close()
-            status = ServiceStatus.Stopped
-            streamClosed = true
-        }
-
+        override fun close() = producer().stop()
     }
 
     private val topic: String = UUID.randomUUID().toString()
 
-    private val iterator: Consumer<T> = Consumer(topic)
+    private val iterator = TopicConsumer<T>(topic)
+
+    init {
+        iterator.register()
+        iterator.start()
+    }
 
     /**
      * Apache Flink sink producing elements for this sequence
