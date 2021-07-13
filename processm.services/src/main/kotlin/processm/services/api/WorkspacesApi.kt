@@ -14,6 +14,7 @@ import processm.dbmodels.models.CausalNetDto
 import processm.dbmodels.models.ComponentTypeDto
 import processm.services.api.models.*
 import processm.services.logic.WorkspaceService
+import java.util.*
 
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
@@ -74,15 +75,19 @@ fun Route.WorkspacesApi() {
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
             workspaceComponent.apply {
-                workspaceService.updateWorkspaceComponent(
+                workspaceService.addOrUpdateWorkspaceComponent(
                     component.componentId,
                     component.workspaceId,
                     principal.userId,
                     component.organizationId,
                     name,
+                    query,
                     ComponentTypeDto.byTypeNameInDatabase(type.toString()),
                     if (workspaceComponent.customizationData != null) Gson().toJson(
                         workspaceComponent.customizationData
+                    ) else null,
+                    if (workspaceComponent.layout != null) Gson().toJson(
+                        workspaceComponent.layout
                     ) else null
                 )
             }
@@ -110,14 +115,34 @@ fun Route.WorkspacesApi() {
                     val customizationData = if (!it.customizationData.isNullOrEmpty())
                         Gson().fromJson(it.customizationData, CausalNetComponentAllOfCustomizationData::class.java)
                     else null
-                    val data = it.data as CausalNetDto
-                    AbstractComponent(it.id, it.name, ComponentType.causalNet, CausalNetComponentData(
-                        data.nodes.mapToArray { CausalNetComponentDataAllOfNodes(it.id, it.splits, it.joins) },
-                        data.edges.mapToArray { CausalNetComponentDataAllOfEdges(it.sourceNodeId, it.targetNodeId) }
+                    val layoutData = if (!it.layoutData.isNullOrEmpty())
+                        Gson().fromJson(it.layoutData, LayoutElement::class.java)
+                    else null
+                    val data = it.data as CausalNetDto?
+                    AbstractComponent(it.id, it.query, ComponentType.causalNet, it.name, layoutData, CausalNetComponentData(
+                        ComponentType.causalNet,
+                        data?.nodes?.mapToArray { CausalNetComponentDataAllOfNodes(it.id, it.splits, it.joins) } ?: emptyArray(),
+                        data?.edges?.mapToArray { CausalNetComponentDataAllOfEdges(it.sourceNodeId, it.targetNodeId) } ?: emptyArray()
                     ), customizationData)
                 }
 
             call.respond(HttpStatusCode.OK, ComponentCollectionMessageBody(components))
+        }
+
+        patch<Paths.WorkspaceLayout> { workspace ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            val workspaceLayout = call.receiveOrNull<LayoutCollectionMessageBody>()?.data
+                ?: throw ApiException("The provided workspace data cannot be parsed")
+
+            principal.ensureUserBelongsToOrganization(workspace.organizationId)
+
+            val layoutData = workspaceLayout
+                .mapKeys { UUID.fromString(it.key) }
+                .mapValues { Gson().toJson(it.value) }
+
+            workspaceService.updateWorkspaceLayout(workspace.workspaceId, principal.userId, workspace.organizationId, layoutData)
+
+            call.respond(HttpStatusCode.NoContent)
         }
     }
 }

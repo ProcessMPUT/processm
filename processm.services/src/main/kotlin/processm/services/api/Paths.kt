@@ -209,6 +209,16 @@ object Paths {
     class WorkspaceComponents(val organizationId: UUID, val workspaceId: UUID)
 
     /**
+     * Update size and position of the specified components
+     *
+     * @param organizationId Organization ID
+     * @param workspaceId Workspace ID
+     */
+    @KtorExperimentalLocationsAPI
+    @Location("/organizations/{organizationId}/workspaces/{workspaceId}/layout")
+    class WorkspaceLayout(val organizationId: UUID, val workspaceId: UUID)
+
+    /**
      * Get all workspaces available to the calling user in the context of the specified organization
      *
      * @param organizationId Organization ID

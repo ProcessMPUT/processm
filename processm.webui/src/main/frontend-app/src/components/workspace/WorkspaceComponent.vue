@@ -1,6 +1,6 @@
 <template>
   <div class="workspace-component">
-    <div class="component-name">
+    <div v-if="componentDetails.type != null" class="component-name">
       <v-menu offset-y bottom min-width="0">
         <template #activator="{ on }">
           <v-btn
@@ -31,12 +31,24 @@
         </v-list>
       </v-menu>
     </div>
+    <div v-else>
+      <v-btn
+        icon
+        small
+        class="remove-button"
+        @click="$emit('remove', componentDetails.id)"
+      >
+        <v-icon>close</v-icon>
+      </v-btn>
+    </div>
     <component
-      :is="`${componentDetails.type}Component`"
+      :is="componentType"
       :data="componentDetails"
       :component-mode="componentMode"
+      v-if="isDisplayable"
       class="workspace-component-content"
     />
+    <p class="no-data" v-else>{{ $t("workspace.component.no-data") }}</p>
   </div>
 </template>
 
@@ -64,16 +76,25 @@ button.v-btn.v-btn.component-name[type="button"] {
 .component-name:hover {
   background-color: var(--v-primary-lighten1);
 }
+
+.remove-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+.no-data {
+  text-align: center;
+}
 </style>
 
 <script lang="ts">
 import Vue from "vue";
 import Component from "vue-class-component";
-import { Prop, Inject } from "vue-property-decorator";
+import { Prop } from "vue-property-decorator";
 import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
 import KpiComponent from "./KpiComponent.vue";
-import WorkspaceService from "@/services/WorkspaceService";
-import WorkspaceComponentModel from "@/models/WorkspaceComponent";
+import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 
 export enum ComponentMode {
   Static,
@@ -87,16 +108,21 @@ export enum ComponentMode {
 export default class WorkspaceComponent extends Vue {
   ComponentMode = ComponentMode;
 
-  @Prop({ default: "" })
-  readonly workspaceId!: string;
-  @Prop({ default: {} })
-  readonly componentDetails!: WorkspaceComponentModel;
+  @Prop({ default: null })
+  readonly componentDetails?: WorkspaceComponentModel;
   @Prop({ default: false })
   readonly interactive!: boolean;
   @Prop({ default: false })
   readonly editable!: boolean;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
-  @Inject() workspaceService!: WorkspaceService;
+
+  get isDisplayable(): boolean {
+    return this.componentDetails?.data?.isDisplayable ?? false;
+  }
+
+  get componentType() {
+    return `${this.componentDetails?.type}Component`;
+  }
 }
 </script>

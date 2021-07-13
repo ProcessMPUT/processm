@@ -1,5 +1,9 @@
 <template>
-  <div v-resize:debounce.10="onResize" class="svg-container">
+  <div
+    v-resize:debounce.10="onResize"
+    class="svg-container"
+    v-if="data != null"
+  >
     <svg
       :viewBox="`0 0 ${contentWidth} ${contentHeight}`"
       x="0"
@@ -109,6 +113,7 @@
       </v-btn>
     </v-speed-dial>
   </div>
+  <p v-else>{{ $t("workspace.component.no-data") }}</p>
 </template>
 
 <style scoped>
@@ -177,9 +182,10 @@ import {
   DeletionModeInputHandler,
   InteractiveModeInputHandler
 } from "./UserInputHandlers";
-import WorkspaceComponentModel, {
+import {
   CausalNetComponentData,
-  CausalNetComponentCustomizationData
+  CausalNetCustomizationData,
+  WorkspaceComponent as WorkspaceComponentModel
 } from "../../../models/WorkspaceComponent";
 
 enum EditMode {
@@ -197,10 +203,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   EditMode = EditMode;
 
   @Prop({ default: {} })
-  readonly data!: WorkspaceComponentModel<
-    CausalNetComponentData,
-    CausalNetComponentCustomizationData
-  >;
+  readonly data!: WorkspaceComponentModel;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
 
@@ -340,18 +343,19 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   mounted() {
-    if (this.data.data == null) {
-      throw new Error("Component data field must not be null");
-    }
+    if (this.data?.data == null) return;
+    const data = this.data?.data as CausalNetComponentData;
+    const customizationData = this.data
+      ?.customizationData as CausalNetCustomizationData;
 
     this.causalNet = new CausalNet(
-      this.data.data.nodes,
-      this.data.data.edges,
-      this.data.customizationData?.layout,
+      data.nodes ?? [],
+      data.edges ?? [],
+      customizationData?.layout,
       this.nodeTransition
     );
 
-    if (this.data.customizationData?.layout == null) {
+    if (customizationData?.layout == null) {
       this.data.customizationData = {
         layout: Array.from(this.causalNet.nodesLayout).map(([id, point]) => ({
           id,
@@ -535,20 +539,23 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   public updateNodeLayoutPosition(nodeId: string, position: Point): void {
-    if (this.data.customizationData?.layout == null) return;
+    const customizationData = this.data
+      ?.customizationData as CausalNetCustomizationData;
 
-    const nodeIndex = this.data.customizationData.layout.findIndex(
+    if (customizationData?.layout == null) return;
+
+    const nodeIndex = customizationData.layout.findIndex(
       (node) => node.id == nodeId
     );
 
     if (nodeIndex < 0) {
-      this.data.customizationData.layout.push({
+      customizationData.layout.push({
         id: nodeId,
         x: position.x,
         y: position.y
       });
     } else {
-      const node = this.data.customizationData?.layout[nodeIndex];
+      const node = customizationData?.layout[nodeIndex];
 
       node.x = position.x;
       node.y = position.y;

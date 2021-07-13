@@ -16,10 +16,17 @@
   },
   "workspace": {
     "default-name": "Przestrzeń robocza",
-    "locked": "Zablokowany",
+    "tooltip": {
+      "lock": "Zablokuj przestrzeń",
+      "unlock": "Odblokuj przestrzeń",
+      "add": "Dodaj nowy komponent",
+      "save": "Zapisz układ"
+    },
     "component": {
       "causal-net": "Sieć przyczynowa",
       "kpi": "KPI",
+      "select": "Wybierz komponent",
+      "no-data": "Brak danych do wyświetlenia",
       "edit": {
         "name": "Nazwa",
         "type": "Typ",
@@ -94,6 +101,7 @@
     "close": "Zamknij",
     "submit": "Zatwierdź",
     "view": "Podgląd",
-    "edit": "Edycja"
+    "edit": "Edycja",
+    "configure": "Konfiguruj"
   }
 }

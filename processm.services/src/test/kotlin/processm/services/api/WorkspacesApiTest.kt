@@ -1,5 +1,6 @@
 package processm.services.api
 
+import com.google.gson.Gson
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -16,6 +17,7 @@ import processm.dbmodels.models.CausalNetEdgeDto
 import processm.dbmodels.models.CausalNetNodeDto
 import processm.dbmodels.models.ComponentTypeDto
 import processm.services.api.models.*
+import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.util.*
 import java.util.stream.Stream
@@ -248,6 +250,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 mockk {
                     every { id } returns componentId1
                     every { name } returns "Component1"
+                    every { query } returns "query1"
                     every { data } returns CausalNetDto(
                         listOf(
                             CausalNetNodeDto(
@@ -259,10 +262,12 @@ class WorkspacesApiTest : BaseApiTest() {
                         listOf(CausalNetEdgeDto("node_id1", "node_id2"))
                     )
                     every { customizationData } returns null
+                    every { layoutData } returns null
                 },
                 mockk {
                     every { id } returns componentId2
                     every { name } returns "Component2"
+                    every { query } returns "query2"
                     every { data } returns CausalNetDto(
                         listOf(
                             CausalNetNodeDto(
@@ -274,6 +279,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         listOf(CausalNetEdgeDto("node_id1", "node_id2"))
                     )
                     every { customizationData } returns null
+                    every { layoutData } returns null
                 }
             )
             with(
@@ -308,6 +314,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 mockk {
                     every { id } returns componentId
                     every { name } returns "Component1"
+                    every { query } returns "query1"
                     every { data } returns CausalNetDto(
                         listOf(
                             CausalNetNodeDto(
@@ -319,6 +326,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         listOf(CausalNetEdgeDto("node_id1", "node_id2"))
                     )
                     every { customizationData } returns "{\"layout\":[{\"id\":\"node_id\",\"x\":15,\"y\":30}]}"
+                    every { layoutData } returns null
                 }
             )
             with(
@@ -345,15 +353,17 @@ class WorkspacesApiTest : BaseApiTest() {
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
             val componentName = "Component1"
+            val dataQuery = "query"
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
-                    workspaceService.updateWorkspaceComponent(
+                    workspaceService.addOrUpdateWorkspaceComponent(
                         componentId,
                         workspaceId,
                         any(),
                         organizationId,
                         componentName,
+                        dataQuery,
                         ComponentTypeDto.CausalNet,
                         customizationData = null
                     )
@@ -367,6 +377,8 @@ class WorkspacesApiTest : BaseApiTest() {
                         withSerializedBody(
                             ComponentMessageBody(
                                 AbstractComponent(
+                                    id = componentId,
+                                    query = dataQuery,
                                     name = "Component1",
                                     type = ComponentType.causalNet,
                                     customizationData = null
@@ -385,15 +397,17 @@ class WorkspacesApiTest : BaseApiTest() {
         val workspaceId = UUID.randomUUID()
         val componentId = UUID.randomUUID()
         val componentName = "Component1"
+        val dataQuery = "query"
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {
-                workspaceService.updateWorkspaceComponent(
+                workspaceService.addOrUpdateWorkspaceComponent(
                     componentId,
                     workspaceId,
                     any(),
                     organizationId,
                     componentName,
+                    dataQuery,
                     ComponentTypeDto.CausalNet,
                     customizationData = """{"layout":[{"id":"id1","x":10,"y":10}]}"""
                 )
@@ -407,6 +421,8 @@ class WorkspacesApiTest : BaseApiTest() {
                     withSerializedBody(
                         ComponentMessageBody(
                             AbstractComponent(
+                                id = componentId,
+                                query = dataQuery,
                                 name = "Component1",
                                 type = ComponentType.causalNet,
                                 customizationData = CausalNetComponentAllOfCustomizationData(
@@ -426,4 +442,59 @@ class WorkspacesApiTest : BaseApiTest() {
             }
         }
     }
+
+    @Test
+    fun `responds to workspace layout update request with 204`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val workspaceId = UUID.randomUUID()
+            val componentId = UUID.randomUUID()
+            val layoutData = mapOf(componentId to LayoutElement(1.toBigDecimal(), 1.toBigDecimal(), 2.toBigDecimal(), 2.toBigDecimal()))
+
+            withAuthentication(role = OrganizationRole.reader to organizationId) {
+                every {
+                    workspaceService.updateWorkspaceLayout(
+                        workspaceId,
+                        any(),
+                        organizationId,
+                        layoutData.mapValues { Gson().toJson(it.value) }
+                    )
+                } just Runs
+                with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/workspaces/$workspaceId/layout") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
+                }) {
+                    assertEquals(HttpStatusCode.NoContent, response.status())
+                }
+            }
+        }
+
+    @Test
+    fun `responds to workspace layout update request with unknown resource with 404 and error message`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val workspaceId = UUID.randomUUID()
+            val componentId = UUID.randomUUID()
+            val layoutData = mapOf(componentId to LayoutElement(1.toBigDecimal(), 1.toBigDecimal(), 2.toBigDecimal(), 2.toBigDecimal()))
+
+            withAuthentication(role = OrganizationRole.reader to organizationId) {
+                every {
+                    workspaceService.updateWorkspaceLayout(
+                        workspaceId,
+                        any(),
+                        organizationId,
+                        layoutData.mapValues { Gson().toJson(it.value) }
+                    )
+                } throws ValidationException(
+                    ValidationException.Reason.ResourceNotFound,
+                    "The specified workspace does not exist or the user has insufficient permissions to it"
+                )
+                with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/workspaces/$workspaceId/layout") {
+                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
+                }) {
+                    assertEquals(HttpStatusCode.NotFound, response.status())
+                }
+            }
+        }
 }

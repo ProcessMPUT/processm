@@ -3,6 +3,7 @@ package processm.services.logic
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
@@ -92,10 +93,10 @@ class WorkspaceService(private val accountService: AccountService) {
                 .fold(mutableListOf<WorkspaceComponentDto>()) { acc, component ->
                     val componentDto = component.toDto()
 
-                    if (component.componentType == ComponentTypeDto.CausalNet) {
+                    if (component.componentType == ComponentTypeDto.CausalNet && component.componentDataSourceId != null) {
                         try {
                             componentDto.data =
-                                DBSerializer.fetch(DBCache.get(workspaceId.toString()), component.componentDataSourceId)
+                                DBSerializer.fetch(DBCache.get(workspaceId.toString()), component.componentDataSourceId!!)
                                     .toDto()
                             acc.add(componentDto)
                         } catch (ex: NoSuchElementException) {
@@ -111,17 +112,63 @@ class WorkspaceService(private val accountService: AccountService) {
     }
 
     /**
-     * Updates the specified [workspaceComponentId]. If particular parameter: [name], [componentType], [customizationData] is not specified, then it's not updated.
-     * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceComponentId] doesn't exist.
+     * Adds or updates the specified [workspaceComponentId]. If particular parameter: [name], [componentType], [customizationData] is not specified, then it's not added/updated.
+     * Throws [ValidationException] if the specified [userId] has insufficient permissions.
      */
-    fun updateWorkspaceComponent(
+    fun addOrUpdateWorkspaceComponent(
         workspaceComponentId: UUID,
         workspaceId: UUID,
         userId: UUID,
         organizationId: UUID,
         name: String?,
+        query: String?,
         componentType: ComponentTypeDto?,
-        customizationData: String? = null
+        customizationData: String? = null,
+        layoutData: String? = null
+    ): Unit = transaction(DBCache.getMainDBPool().database) {
+        val canWorkspaceBeModified = UsersInGroups
+            .innerJoin(UserGroups)
+            .innerJoin(UserGroupWithWorkspaces)
+            .innerJoin(Workspaces)
+            .select {
+                UserGroupWithWorkspaces.workspaceId eq workspaceId and
+                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
+                        (UsersInGroups.userId eq userId) and
+                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
+            }
+            .limit(1)
+            .any()
+
+        if (!canWorkspaceBeModified) {
+            throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified workspace does not exist or the user has insufficient permissions to it"
+            )
+        }
+
+        val componentAlreadyExists = WorkspaceComponents
+            .select {WorkspaceComponents.id eq workspaceComponentId}
+            .limit(1).any()
+
+        if (componentAlreadyExists) {
+            return@transaction updateComponent(workspaceComponentId, workspaceId, name, query, componentType, customizationData, layoutData)
+        }
+
+        if (name == null || query == null || componentType == null) {
+            throw ValidationException(
+                ValidationException.Reason.ResourceFormatInvalid,
+                "The specified workspace component does not exists and cannot be created"
+            )
+        }
+
+        addComponent(workspaceComponentId, workspaceId, name, query, componentType, customizationData, layoutData)
+    }
+
+    fun updateWorkspaceLayout(
+        workspaceId: UUID,
+        userId: UUID,
+        organizationId: UUID,
+        layout: Map<UUID, String>
     ): Unit = transaction(DBCache.getMainDBPool().database) {
         val canBeUpdated = UsersInGroups
             .innerJoin(UserGroups)
@@ -129,24 +176,64 @@ class WorkspaceService(private val accountService: AccountService) {
             .innerJoin(Workspaces)
             .innerJoin(WorkspaceComponents)
             .select {
-                WorkspaceComponents.id eq workspaceComponentId and (UserGroupWithWorkspaces.workspaceId eq workspaceId) and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(
-                    GroupRoleDto.Reader
-                ))
+                WorkspaceComponents.id inList layout.keys and
+                        (UserGroupWithWorkspaces.workspaceId eq workspaceId) and
+                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
+                        (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
             }
-            .limit(1)
-            .any()
+            .count() == layout.size.toLong()
 
         if (!canBeUpdated) {
             throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
-                "The specified workspace component does not exist or the user has insufficient permissions to it"
+                "The specified workspace does not exist or the user has insufficient permissions to it"
             )
         }
 
+        BatchUpdateStatement(WorkspaceComponents).apply {
+            layout.forEach { (componentId, layoutData) ->
+                addBatch(EntityID(componentId, WorkspaceComponents))
+                this[WorkspaceComponents.layoutData] = layoutData
+            }
+        }.execute(this)
+    }
+
+    private fun addComponent(
+        workspaceComponentId: UUID,
+        workspaceId: UUID,
+        name: String,
+        query: String,
+        componentType: ComponentTypeDto,
+        customizationData: String? = null,
+        layoutData: String? = null
+    ) {
+        WorkspaceComponents.insert {
+            it[WorkspaceComponents.id] = EntityID(workspaceComponentId, WorkspaceComponents)
+            it[WorkspaceComponents.name] = name
+            it[WorkspaceComponents.query] = query
+            it[WorkspaceComponents.componentType] = componentType.typeName
+            it[WorkspaceComponents.customizationData] = customizationData
+            it[WorkspaceComponents.layoutData] = layoutData
+            it[WorkspaceComponents.workspaceId] = EntityID(workspaceId, Workspaces)
+        }
+    }
+
+    private fun updateComponent(
+        workspaceComponentId: UUID,
+        workspaceId: UUID?,
+        name: String?,
+        query: String?,
+        componentType: ComponentTypeDto?,
+        customizationData: String? = null,
+        layoutData: String? = null
+    ) {
         WorkspaceComponents.update({ WorkspaceComponents.id eq workspaceComponentId }) {
+            if (workspaceId != null) it[WorkspaceComponents.workspaceId] = EntityID(workspaceId, Workspaces)
             if (name != null) it[WorkspaceComponents.name] = name
+            if (query != null) it[WorkspaceComponents.query] = query
             if (componentType != null) it[WorkspaceComponents.componentType] = componentType.typeName
             if (customizationData != null) it[WorkspaceComponents.customizationData] = customizationData
+            if (layoutData != null) it[WorkspaceComponents.layoutData] = layoutData
         }
     }
 

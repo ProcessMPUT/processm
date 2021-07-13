@@ -16,10 +16,17 @@
   },
   "workspace": {
     "default-name": "Workspace",
-    "locked": "Locked",
+    "tooltip": {
+      "lock": "Lock the area",
+      "unlock": "Unlock the area",
+      "add": "Add new component",
+      "save": "Save layout"
+    },
     "component": {
       "causal-net": "Causal net",
       "kpi": "KPI",
+      "select": "Select type",
+      "no-data": "No data to be displayed",
       "edit": {
         "name": "Name",
         "type": "Type",
@@ -100,6 +107,7 @@
     "close": "Close",
     "submit": "Submit",
     "view": "View",
-    "edit": "Edit"
+    "edit": "Edit",
+    "configure": "Configure"
   }
 }
