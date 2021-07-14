@@ -3,6 +3,7 @@ package processm.core.helpers
 import processm.core.log.attribute.deepEquals
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
+import java.math.BigInteger
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -250,6 +251,220 @@ fun <T> Collection<T>.allSubsets(excludeEmpty: Boolean = false, inline: Boolean 
     return PowerSetImpl(list, if (excludeEmpty) 1 else 0)
 }
 
+private interface Mask<M> {
+    val value: M
+    val bitCount: Int
+    val numberOfTrailingZeros: Int
+    val isZero: Boolean
+
+    /**
+     * @return value and (1 shl bit).inv()
+     */
+    fun erase(bit: Int): Mask<M>
+}
+
+private class IntMask(override val value: Int) : Mask<Int> {
+    override val bitCount: Int
+        get() = Integer.bitCount(value)
+    override val numberOfTrailingZeros: Int
+        get() = Integer.numberOfTrailingZeros(value)
+    override val isZero: Boolean
+        get() = value == 0
+
+    override fun erase(bit: Int) = IntMask(value and (1 shl bit).inv())
+}
+
+private class LongMask(override val value: Long) : Mask<Long> {
+    override val bitCount: Int
+        get() = java.lang.Long.bitCount(value)
+    override val numberOfTrailingZeros: Int
+        get() = java.lang.Long.numberOfTrailingZeros(value)
+    override val isZero: Boolean
+        get() = value == 0L
+
+    override fun erase(bit: Int) = LongMask(value and (1L shl bit).inv())
+}
+
+private class BigIntegerMask(val bitSize: Int, override val value: BigInteger) : Mask<BigInteger> {
+    override val bitCount: Int
+        get() = value.bitCount()
+    override val numberOfTrailingZeros: Int
+        get() {
+            val n = value.lowestSetBit
+            return if (n < 0) bitSize else n
+        }
+    override val isZero: Boolean
+        get() = value == BigInteger.ZERO
+
+    override fun erase(bit: Int) = BigIntegerMask(bitSize, value.clearBit(bit))
+
+}
+
+private class MaskedSubset<T, M>(private val base: List<T>, private val mask: Mask<M>) :
+    kotlin.collections.AbstractCollection<T>(), // avoid loading AbstractSet class, as we override all the methods defined there
+    Set<T> {
+    // Runs in O(1)
+    override val size: Int
+        get() = mask.bitCount
+
+    // Runs in O(size)
+    override fun contains(element: T): Boolean {
+        var mask = this.mask
+        while (!mask.isZero) {
+            val index = mask.numberOfTrailingZeros
+            if (base[index] == element)
+                return true
+            mask = mask.erase(index)
+        }
+        return false
+    }
+
+    // Runs in O(1)
+    override fun isEmpty(): Boolean = mask.isZero
+
+    // The overridden hashCode() is equivalent to the inherited AbstractSet.hashCode() but avoids allocation of an Iterator.
+    // Runs in O(size).
+    override fun hashCode(): Int {
+        var hashCode = 0
+
+        var mask = this.mask
+        while (!mask.isZero) {
+            val index = mask.numberOfTrailingZeros
+            mask = mask.erase(index)
+            hashCode += base[index]?.hashCode() ?: 0
+        }
+
+        return hashCode
+    }
+
+    // The overridden equals() is equivalent to the inherited AbstractSet.equals() but avoids allocation of an Iterator.
+    // Runs in O(size).
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other !is Set<*>) return false
+
+        var mask = this.mask
+        if (other is MaskedSubset<*, *> && mask == other.mask && this.base === other.base) return true
+        if (this.size != other.size) return false
+
+        while (!mask.isZero) {
+            val index = mask.numberOfTrailingZeros
+            mask = mask.erase(index)
+            if (base[index] !in other)
+                return false
+        }
+
+        return true
+    }
+
+    override fun iterator(): Iterator<T> = object : Iterator<T> {
+        private var mask = this@MaskedSubset.mask
+        override fun hasNext(): Boolean = !mask.isZero
+
+        override fun next(): T {
+            val index = mask.numberOfTrailingZeros
+            mask = mask.erase(index)
+            return base[index]
+        }
+    }
+}
+
+private class IntLimitedSubset<T>(private val base: List<T>, private val maxSize: Int) : Iterable<Set<T>> {
+    override fun iterator(): Iterator<Set<T>> = object : Iterator<Set<T>> {
+
+        var size = 1
+        var mask = 1
+        var last = 1 shl (base.size - size)
+
+        override fun hasNext(): Boolean = size <= maxSize
+
+        override fun next(): Set<T> {
+            val result = MaskedSubset(base, IntMask(mask))
+            if (mask == last) {
+                size++
+                mask = (1 shl size) - 1
+                last = mask shl (base.size - size)
+            } else {
+                // http://graphics.stanford.edu/~seander/bithacks.html#NextBitPermutation
+                val t = mask or (mask - 1)
+                mask = (t + 1) or (((t.inv() and -t.inv()) - 1) shr (Integer.numberOfTrailingZeros(mask) + 1))
+            }
+            return result
+        }
+
+    }
+}
+
+private class LongLimitedSubset<T>(private val base: List<T>, private val maxSize: Int) : Iterable<Set<T>> {
+    override fun iterator(): Iterator<Set<T>> = object : Iterator<Set<T>> {
+
+        var size = 1
+        var mask = 1L
+        var last = 1L shl (base.size - size)
+
+        override fun hasNext(): Boolean = size <= maxSize
+
+        override fun next(): Set<T> {
+            val result = MaskedSubset(base, LongMask(mask))
+            if (mask == last) {
+                size++
+                mask = (1L shl size) - 1
+                last = mask shl (base.size - size)
+            } else {
+                // http://graphics.stanford.edu/~seander/bithacks.html#NextBitPermutation
+                val t = mask or (mask - 1)
+                mask = (t + 1) or (((t.inv() and -t.inv()) - 1) shr (java.lang.Long.numberOfTrailingZeros(mask) + 1))
+            }
+            return result
+        }
+
+    }
+}
+
+private class BigIntegerLimitedSubset<T>(private val base: List<T>, private val maxSize: Int) : Iterable<Set<T>> {
+    override fun iterator(): Iterator<Set<T>> = object : Iterator<Set<T>> {
+
+        var size = 1
+        var mask = BigInteger.ONE
+        var last = BigInteger.ONE shl (base.size - size)
+
+        override fun hasNext(): Boolean = size <= maxSize
+
+        override fun next(): Set<T> {
+            val ONE = BigInteger.ONE
+            val result = MaskedSubset(base, BigIntegerMask(base.size, mask))
+            if (mask == last) {
+                size++
+                mask = (ONE shl size) - ONE
+                last = mask shl (base.size - size)
+            } else {
+                // http://graphics.stanford.edu/~seander/bithacks.html#NextBitPermutation
+                val t = mask or (mask - ONE)
+                var numOfTrailinigZeros = mask.lowestSetBit
+                if (numOfTrailinigZeros < 0)
+                    numOfTrailinigZeros = base.size
+                mask = (t + ONE) or (((t.inv() and -t.inv()) - ONE) shr (numOfTrailinigZeros + 1))
+            }
+            return result
+        }
+
+    }
+}
+
+fun <T> List<T>.allSubsetsUpToSize(maxSize: Int): Iterable<Set<T>> {
+    if (maxSize >= this.size)
+        return this.allSubsets(true)
+    else {
+        require(maxSize < Int.MAX_VALUE)
+        if (size < Int.SIZE_BITS)
+            return IntLimitedSubset(this, maxSize)
+        else if (size < Long.SIZE_BITS)
+            return LongLimitedSubset(this, maxSize)
+        else
+            return BigIntegerLimitedSubset(this, maxSize)
+    }
+}
+
 /**
  * Eagerly computes the power set view on the given [Collection]. The empty set is excluded if [filterOutEmpty] is true.
  *
@@ -286,6 +501,53 @@ fun <T> Collection<T>.allPermutations(): Sequence<ArrayList<T>> = sequence {
             ++i
         }
     }
+}
+
+private class PairedCollection<T>(val backingCollection: List<T>) : Collection<Pair<T, T>> {
+    override val size: Int
+        get() = backingCollection.size * (backingCollection.size - 1) / 2
+
+    override fun contains(pair: Pair<T, T>): Boolean =
+        pair.first in backingCollection && pair.second in backingCollection
+
+    override fun containsAll(pairs: Collection<Pair<T, T>>): Boolean {
+        for (pair in pairs) {
+            if (pair !in this)
+                return false
+        }
+        return true
+    }
+
+    override fun isEmpty(): Boolean = backingCollection.size <= 1
+
+    override fun iterator(): Iterator<Pair<T, T>> = iterator {
+        for ((i, e) in backingCollection.withIndex()) {
+            val iterator = backingCollection.listIterator(i + 1)
+            while (iterator.hasNext())
+                yield(Pair(e, iterator.next()))
+        }
+    }
+}
+
+/**
+ * Lazily calculates all pairs of the items in this list. The returned collection is view on this list
+ * and all changes to this list are immediately reflected in the returned collection.
+ */
+fun <T> List<T>.allPairs(): Collection<Pair<T, T>> =
+    PairedCollection(this)
+
+/**
+ * Returns index of the first element matching the given [predicate] beginning from [startIndex], or -1 if the list does
+ * not contain such element.
+ */
+inline fun <T> List<T>.indexOfFirst(startIndex: Int, predicate: (item: T) -> Boolean): Int {
+    val iterator = this.listIterator(startIndex.coerceAtLeast(0))
+    while (iterator.hasNext()) {
+        if (predicate(iterator.next()))
+            return iterator.previousIndex()
+    }
+
+    return -1
 }
 
 /**
@@ -329,6 +591,15 @@ inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R): Array<R
 }
 
 /**
+ * Returns an [Array] containing the results of applying the given [transform] function to each element in the original
+ * [Sequence].
+ */
+inline fun <T, reified R> Sequence<T>.mapToArray(transform: (T) -> R): Array<R> = ArrayList<R>().apply {
+    for (item in this@mapToArray)
+        add(transform(item))
+}.toTypedArray()
+
+/**
  * Returns an [Array] containing the results of applying the given [transform] function
  * to each element in the original [Array].
  */
@@ -350,6 +621,64 @@ inline fun <E, T : Collection<E>> T?.ifNullOrEmpty(default: () -> T): T =
         default()
     else
         this
+
+/**
+ * Returns the smallest value among all values produced by [selector] function
+ * applied to each element in the collection.
+ *
+ * @throws NoSuchElementException if the collection is empty.
+ */
+inline fun <T, R : Comparable<R>> Iterator<T>.minOf(selector: (T) -> R): R {
+    if (!hasNext()) throw NoSuchElementException()
+    var minValue = selector(next())
+    while (hasNext()) {
+        val v = selector(next())
+        if (minValue > v) {
+            minValue = v
+        }
+    }
+    return minValue
+}
+
+/**
+ * Replaces this [List] with either immutable singleton empty list or immutable single-item [List] if this [List] is empty
+ * or contains just one element, respectively. Otherwise, returns this [List].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <T> List<T>.optimize(): List<T> = when (this.size) {
+    0 -> emptyList()
+    1 -> Collections.singletonList(this[0])
+    else -> {
+        if (this is ArrayList<T>)
+            trimToSize()
+        this
+    }
+}
+
+/**
+ * Replaces this [Set] with either immutable singleton empty set or immutable single-item [Set] if this [Set] is empty
+ * or contains just one element, respectively. Otherwise, returns this [Set].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <T> Set<T>.optimize(): Set<T> = when (this.size) {
+    0 -> emptySet()
+    1 -> Collections.singleton(this.first())
+    else -> this
+}
+
+/**
+ * Replaces this [Map] with either immutable singleton empty map or immutable single-item [Map] if this [Map] is empty
+ * or contains just one element, respectively. Otherwise, returns this [Map].
+ * The main purpose of this function is to reduce memory footprint of storing small immutable collections backed by
+ * varying-size mutable collections.
+ */
+fun <K, V> Map<K, V>.optimize(): Map<K, V> = when (this.size) {
+    0 -> emptyMap()
+    1 -> Collections.singletonMap(this.keys.first(), this.values.first())
+    else -> this
+}
 
 
 /**

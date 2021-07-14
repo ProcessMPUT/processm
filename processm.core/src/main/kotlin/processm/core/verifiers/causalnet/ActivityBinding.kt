@@ -1,6 +1,7 @@
 package processm.core.verifiers.causalnet
 
 import processm.core.models.causalnet.CausalNetState
+import processm.core.models.causalnet.CausalNetStateImpl
 import processm.core.models.causalnet.Dependency
 import processm.core.models.causalnet.Node
 
@@ -27,7 +28,7 @@ class ActivityBinding(
      * State after executing this activitiy binding given that the state before was [stateBefore]
      */
     val state: CausalNetState by lazy {
-        val tmp = CausalNetState(stateBefore)
+        val tmp = CausalNetStateImpl(stateBefore)
         i.forEach { tmp.remove(Dependency(it, a)) }   //do not replace with removeAll, it doesn't have appropriate semantics
         tmp.addAll(o.map { Dependency(a, it) })
         tmp

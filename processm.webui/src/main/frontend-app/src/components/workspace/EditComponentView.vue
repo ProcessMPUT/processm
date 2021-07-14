@@ -26,9 +26,9 @@
                 $t("workspace.component.edit.name")
               }}</v-list-item-title>
               <v-text-field
-                v-model="componentDetails.name"
+                v-model="componentName"
                 :rules="[
-                  v =>
+                  (v) =>
                     !!v || $t('workspace.component.edit.validation.name-empty')
                 ]"
                 required
@@ -41,13 +41,16 @@
                 $t("workspace.component.edit.type")
               }}</v-list-item-title>
               <v-select
-                v-model="componentDetails.type"
+                v-model="componentType"
                 :items="[
                   {
                     text: $t('workspace.component.causal-net'),
                     value: 'causalNet'
                   },
-                  { text: $t('workspace.component.kpi'), value: 'kpi' }
+                  {
+                    text: $t('workspace.component.kpi'),
+                    value: 'kpi'
+                  }
                 ]"
               ></v-select>
             </v-list-item-content>
@@ -58,9 +61,9 @@
                 $t("workspace.component.edit.query")
               }}</v-list-item-title>
               <v-text-field
-                v-model="componentDetails.data.query"
+                v-model="componentQuery"
                 :rules="[
-                  v =>
+                  (v) =>
                     !!v || $t('workspace.component.edit.validation.query-empty')
                 ]"
                 required
@@ -84,9 +87,9 @@
 import Vue from "vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import { Component, Prop, Inject } from "vue-property-decorator";
-import WorkspaceComponentModel, {
-  ComponentType,
-  CausalNetComponentData
+import {
+  WorkspaceComponent as WorkspaceComponentModel,
+  ComponentType
 } from "@/models/WorkspaceComponent";
 import WorkspaceService from "@/services/WorkspaceService";
 
@@ -105,35 +108,39 @@ export default class EditComponentView extends Vue {
   @Inject() workspaceService!: WorkspaceService;
 
   isMounted = false;
+  componentType?: ComponentType;
+  componentName?: string;
+  componentQuery?: string;
+
+  created() {
+    this.componentType = this.componentDetails.type;
+    this.componentName = this.componentDetails.name ?? "";
+    this.componentQuery = this.componentDetails.query;
+  }
 
   mounted() {
     this.isMounted = true;
   }
 
   saveChanges() {
-    if (this.componentDetails.data == null) {
-      console.error(
-        `The component ${this.componentDetails.id} has undifined 'data' property`
-      );
-      return;
-    }
+    if (this.componentType == null) return;
 
-    if (this.componentDetails.type == ComponentType.CausalNet) {
-      const causalNetComponentData = this.componentDetails
-        .data as CausalNetComponentData;
+    const componentModel = new WorkspaceComponentModel({
+      id: this.componentDetails.id,
+      type: this.componentType,
+      name: this.componentName,
+      query: this.componentQuery ?? "",
+      data: this.componentDetails.data,
+      customizationData: this.componentDetails.customizationData
+    });
 
-      this.workspaceService.updateComponent(
-        this.workspaceId,
-        this.componentDetails.id,
-        {
-          id: this.componentDetails.id,
-          type: this.componentDetails.type,
-          data: causalNetComponentData,
-          name: this.componentDetails.name,
-          customizationData: this.componentDetails.customizationData
-        }
-      );
-    }
+    this.workspaceService.updateComponent(
+      this.workspaceId,
+      this.componentDetails.id,
+      componentModel
+    );
+
+    this.$emit("component-updated", componentModel);
   }
 }
 </script>

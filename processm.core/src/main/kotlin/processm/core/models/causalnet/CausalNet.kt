@@ -3,8 +3,6 @@ package processm.core.models.causalnet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 /**
  * A read-only causal net model
@@ -26,6 +24,11 @@ abstract class CausalNet(
 ) :
     ProcessModel,
     MetadataHandler by metadataHandler {
+
+    companion object {
+        private val setOfNull = setOf(null)
+    }
+
     protected val _instances = HashSet(listOf(start, end))
 
     /**
@@ -100,24 +103,106 @@ abstract class CausalNet(
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
                 joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
 
+    private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
+        if (state.isNotEmpty()) {
+            val visitedNodes = HashSet<Node>(this._instances.size)
+            for (dep in state.uniqueSet()) {
+                val node = dep.target
+                if (visitedNodes.add(node)) {
+                    for (join in _joins[node].orEmpty())
+                        if (state.containsAll(join.dependencies)) {
+                            val splits = if (node != end) _splits[node].orEmpty() else setOfNull
+                            for (split in splits)
+                                callback(node, join, split)
+                        }
+                }
+            }
+        } else if (state.isFresh /*prevent execution of activities in the final state*/) {
+            for (split in _splits.getValue(start))
+                callback(start, null, split)
+        }
+    }
+
+
+    fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
+        if (state.isNotEmpty()) {
+            val relevant = state.uniqueSet().filterTo(HashSet()) { it.target == node }
+            val result = ArrayList<DecoupledNodeExecution>()
+            for (join in joins[node].orEmpty())
+                if (relevant.containsAll(join.dependencies)) {
+                    val splits = if (node != end) splits[node].orEmpty() else setOf(null)
+                    for (split in splits)
+                        result.add(DecoupledNodeExecution(node, join, split))
+                }
+            return result
+        } else
+            if (node == start)
+                return splits.getValue(start)
+                    .map { split -> DecoupledNodeExecution(start, null, split) }
+            else
+                return emptyList()
+    }
+
+    /**
+     * In the given [state], list of nodes that can be executed
+     */
+    fun availableNodes(state: CausalNetState): Set<Node> {
+        return if (state.isNotEmpty()) {
+            val flatState = HashMap<Node, MutableSet<Dependency>>()
+            for (dep in state.uniqueSet())
+                flatState.getOrPut(dep.target) { HashSet() }.add(dep)
+            val result = HashSet<Node>()
+            for ((node, deps) in flatState)
+                if (joins[node]?.any { join -> deps.containsAll(join.dependencies) } == true)
+                    result.add(node)
+            return result
+        } else
+            setOf(start)
+    }
+
     /**
      * In the given [state], list of nodes that can be executed, along with corresponding split and join
      */
-    internal fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
-        if (state.isNotEmpty()) {
-            for (node in state.map { it.target }.toSet())
-                for (join in joins[node].orEmpty())
-                    if (state.containsAll(join.dependencies)) {
-                        val splits = if (node != end) splits[node].orEmpty() else setOf(null)
-                        yieldAll(splits.map { split ->
-                            DecoupledNodeExecution(node, join, split)
-                        })
-                    }
+    fun available(state: CausalNetState): Sequence<DecoupledNodeExecution> = sequence {
+        available(state) { node, join, split ->
+            yield(DecoupledNodeExecution(node, join, split))
+        }
+    }
 
-        } else
-            yieldAll(
-                splits.getValue(start)
-                    .map { split -> DecoupledNodeExecution(start, null, split) })
+    /**
+     * A short-hand function for getting the indexth available execution. It is faster by an order of magnitude
+     * than [available] when accessing only one execution. Do not use for accessing many executions.
+     */
+    internal fun available(state: CausalNetState, index: Int): DecoupledNodeExecution {
+        var i = 0
+        available(state) { node, join, split ->
+            if (i++ == index)
+                return DecoupledNodeExecution(node, join, split)
+        }
+        throw IndexOutOfBoundsException(index)
+    }
+
+    /**
+     * Verifies whether the given [execution] is available in the given [state].
+     */
+    internal fun isAvailable(execution: DecoupledNodeExecution, state: CausalNetState): Boolean {
+        if (state.isEmpty()) {
+            val split = execution.split
+            return execution.activity == start &&
+                    execution.join === null &&
+                    split !== null &&
+                    _splits[start]!!.contains(split)
+        }
+
+        return state.uniqueSet().any { dep ->
+            val node = dep.target
+            val join = checkNotNull(execution.join)
+            val split = execution.split
+            execution.activity == node &&
+                    _joins[node]!!.contains(join) &&
+                    state.containsAll(join.dependencies) &&
+                    ((node == end && split === null) || _splits[node]!!.contains(checkNotNull(split)))
+        }
     }
 
     /**
@@ -137,7 +222,8 @@ abstract class CausalNet(
     /**
      * True if the causal net contains [dependency]
      */
-    operator fun contains(dependency: Dependency): Boolean = outgoing[dependency.source]?.contains(dependency) == true
+    operator fun contains(dependency: Dependency): Boolean =
+        outgoing[dependency.source]?.contains(dependency) == true
 
     /**
      * A simplified textual representation of the model.
@@ -167,6 +253,7 @@ abstract class CausalNet(
     /**
      * True if [right] is isomorphic with [this], starting with [inital] as a (possibly empty) mapping from [this] to [right].
      */
-    fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? = Isomorphism(this, right).run(initial)
+    fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? =
+        Isomorphism(this, right).run(initial)
 
 }

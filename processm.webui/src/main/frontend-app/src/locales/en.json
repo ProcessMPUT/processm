@@ -6,6 +6,8 @@
     "menu": "Menu",
     "workspaces": "Workspaces",
     "users": "@:users.page-title",
+    "data-sources": "Data sources",
+    "pql-interpreter": "PQL interpreter",
     "about": "@:about.page-title"
   },
   "topbar": {
@@ -14,10 +16,17 @@
   },
   "workspace": {
     "default-name": "Workspace",
-    "locked": "Locked",
+    "tooltip": {
+      "lock": "Lock the area",
+      "unlock": "Unlock the area",
+      "add": "Add new component",
+      "save": "Save layout"
+    },
     "component": {
       "causal-net": "Causal net",
       "kpi": "KPI",
+      "select": "Select type",
+      "no-data": "No data to be displayed",
       "edit": {
         "name": "Name",
         "type": "Type",
@@ -30,7 +39,7 @@
     }
   },
   "about": {
-    "page-title": "About page",
+    "page-title": "About ProcessM",
     "description": "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi obcaecati tempora debitis, minima deleniti ex inventore laboriosam at animi praesentium, quaerat corrupti molestiae recusandae corporis necessitatibus vitae, nam saepe?"
   },
   "user-profile": {
@@ -98,6 +107,7 @@
     "close": "Close",
     "submit": "Submit",
     "view": "View",
-    "edit": "Edit"
+    "edit": "Edit",
+    "configure": "Configure"
   }
 }

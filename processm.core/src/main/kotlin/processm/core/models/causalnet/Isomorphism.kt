@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.component1
@@ -65,34 +66,30 @@ internal class Isomorphism(private val left: CausalNet, private val right: Causa
      * The result is mapped to [right]
      */
     private fun knownInLeft(s: State, l: Node): List<Collection<Any>> {
-        val lin = left.incoming[l].orEmpty().mapNotNull { s.l2r[it.source] }
-        val lout = left.outgoing[l].orEmpty().mapNotNull { s.l2r[it.target] }
+        val lin = left.incoming[l].orEmpty().mapNotNullTo(HashSet()) { s.l2r[it.source] }
+        val lout = left.outgoing[l].orEmpty().mapNotNullTo(HashSet()) { s.l2r[it.target] }
         val lsplits = left.splits[l].orEmpty()
-                .filter { split -> split.targets.all { it in s.l2r.keys } }
-                .map { split -> split.targets.map { s.l2r.getValue(it) }.toSet() }
-                .toSet()
+            .filter { split -> split.targets.all { it in s.l2r.keys } }
+            .mapToSet { split -> split.targets.map { s.l2r.getValue(it) }.toSet() }
         val ljoins = left.joins[l].orEmpty()
-                .filter { join -> join.sources.all { it in s.l2r.keys } }
-                .map { join -> join.sources.map { s.l2r.getValue(it) }.toSet() }
-                .toSet()
+            .filter { join -> join.sources.all { it in s.l2r.keys } }
+            .mapToSet { join -> join.sources.map { s.l2r.getValue(it) }.toSet() }
         return listOf(lin, lout, lsplits, ljoins)
     }
 
     /**
-     * Returns all incoming dependencies, outgoing depencies, splits and joins for [r] of [right] that can be fully mapped to [left].
-     * The result is mapped to [right] (i.e., left intanct).
+     * Returns all incoming dependencies, outgoing dependencies, splits and joins for [r] of [right] that can be fully mapped to [left].
+     * The result is mapped to [right] (i.e., left intact).
      */
     private fun knownInRight(s: State, r: Node): List<Collection<Any>> {
-        val rin = right.incoming[r].orEmpty().map { it.source }.filter { it in s.l2r.values }
-        val rout = right.outgoing[r].orEmpty().map { it.target }.filter { it in s.l2r.values }
+        val rin = right.incoming[r].orEmpty().map { it.source }.filterTo(HashSet()) { it in s.l2r.values }
+        val rout = right.outgoing[r].orEmpty().map { it.target }.filterTo(HashSet()) { it in s.l2r.values }
         val rsplits = right.splits[r].orEmpty()
-                .map { split -> split.targets }
-                .filter { split -> split.all { it in s.l2r.values } }
-                .toSet()
+            .map { split -> split.targets }
+            .filterTo(HashSet()) { split -> split.all { it in s.l2r.values } }
         val rjoins = right.joins[r].orEmpty()
-                .map { join -> join.sources }
-                .filter { join -> join.all { it in s.l2r.values } }
-                .toSet()
+            .map { join -> join.sources }
+            .filterTo(HashSet()) { join -> join.all { it in s.l2r.values } }
         return listOf(rin, rout, rsplits, rjoins)
     }
 
@@ -174,15 +171,16 @@ internal class Isomorphism(private val left: CausalNet, private val right: Causa
      */
     fun run(initial: Map<Node, Node>): Map<Node, Node>? {
         if (left.instances.size != right.instances.size ||
-                left.dependencies.size != right.dependencies.size ||
-                left.splits.values.flatten().size != right.splits.values.flatten().size ||
-                left.joins.values.flatten().size != right.joins.values.flatten().size)
+            left.dependencies.size != right.dependencies.size ||
+            left.splits.values.sumOf { it.size } != right.splits.values.sumOf { it.size } ||
+            left.joins.values.sumOf { it.size } != right.joins.values.sumOf { it.size }
+        )
             return null
         val leftByFeature: Map<List<Int>, List<Node>> = left.instances.groupBy { features(left, it) }
         val rightByFeature: Map<List<Int>, List<Node>> = right.instances.groupBy { features(right, it) }
-        val state = State(RobustMap(initial), leftByFeature, rightByFeature)
         if (leftByFeature.keys != rightByFeature.keys)
             return null
+        val state = State(RobustMap(initial), leftByFeature, rightByFeature)
         return match(state)
     }
 

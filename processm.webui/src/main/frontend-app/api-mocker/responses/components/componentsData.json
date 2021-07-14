@@ -1,0 +1,430 @@
+[
+    {
+        "id": "cf607cb0-0b88-4ccd-9795-5cd0201b3c39",
+        "name": "some name 1",
+        "type": "causalNet",
+        "data": {
+            "query": "SELECT ...",
+            "nodes": [
+                {
+                    "id": "a",
+                    "splits": [["c"], ["d", "b", "c"], ["b", "d"], ["b"], ["c", "d"]],
+                    "joins": []
+                },
+                {"id": "b", "splits": [["e"]], "joins": [["a"]]},
+                {"id": "c", "splits": [["e"]], "joins": [["a"]]},
+                {"id": "d", "splits": [["e"]], "joins": [["a"]]},
+                {
+                    "id": "e",
+                    "splits": [],
+                    "joins": [["c", "d"], ["b"], ["c", "b", "d"], ["c"], ["b", "d"]]
+                }
+            ],
+            "edges": [
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "b"
+                },
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "c"
+                },
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "d"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "e"
+                },
+                {
+                    "sourceNodeId": "c",
+                    "targetNodeId": "e"
+                },
+                {
+                    "sourceNodeId": "d",
+                    "targetNodeId": "e"
+                }
+            ]
+        }
+    },
+    {
+        "id": "c629ba68-aae2-4490-85cd-3875939fc69e",
+        "name": "component 1",
+        "type": "causalNet",
+        "data": {
+            "query": "SELECT ...",
+            "nodes": [
+                {
+                    "id": "a",
+                    "splits": [
+                        ["b", "d"],
+                        ["c", "d"]
+                    ],
+                    "joins": []
+                },
+                {
+                    "id": "b",
+                    "splits": [["e"]],
+                    "joins": [["a"], ["f"]]
+                },
+                {
+                    "id": "c",
+                    "splits": [["e"]],
+                    "joins": [["a"], ["f"]]
+                },
+                {
+                    "id": "d",
+                    "splits": [["e"]],
+                    "joins": [["a"], ["f"]]
+                },
+                {
+                    "id": "e",
+                    "splits": [["f"], ["g"], ["h"]],
+                    "joins": [
+                        ["b", "d"],
+                        ["c", "d"]
+                    ]
+                },
+                {
+                    "id": "f",
+                    "splits": [
+                        ["b", "d"],
+                        ["c", "d"]
+                    ],
+                    "joins": [["e"]]
+                },
+                {"id": "g", "splits": [["z"]], "joins": [["e"]]},
+                {"id": "h", "splits": [["z"]], "joins": [["e"]]},
+                {"id": "z", "splits": [], "joins": [["g"], ["h"]]}
+            ],
+            "edges": [
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "b"
+                },
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "c"
+                },
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "d"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "e"
+                },
+                {
+                    "sourceNodeId": "c",
+                    "targetNodeId": "e"
+                },
+                {
+                    "sourceNodeId": "d",
+                    "targetNodeId": "e"
+                },
+                {
+                    "sourceNodeId": "e",
+                    "targetNodeId": "f"
+                },
+                {
+                    "sourceNodeId": "e",
+                    "targetNodeId": "g"
+                },
+                {
+                    "sourceNodeId": "e",
+                    "targetNodeId": "h"
+                },
+                {
+                    "sourceNodeId": "f",
+                    "targetNodeId": "b"
+                },
+                {
+                    "sourceNodeId": "f",
+                    "targetNodeId": "c"
+                },
+                {
+                    "sourceNodeId": "f",
+                    "targetNodeId": "d"
+                },
+                {
+                    "sourceNodeId": "g",
+                    "targetNodeId": "z"
+                },
+                {
+                    "sourceNodeId": "h",
+                    "targetNodeId": "z"
+                }
+            ]
+        }
+    },
+    {
+        "id": "93bcc033-bbea-490d-93b9-3c8580db5354",
+        "name": "long long long long name",
+        "type": "causalNet",
+        "data": {
+            "query": "SELECT ...",
+            "nodes": [
+                {"id": "a", "splits": [["b"]], "joins": []},
+                {
+                    "id": "b",
+                    "splits": [
+                        ["b", "c"],
+                        ["c", "d"]
+                    ],
+                    "joins": [["a"], ["b"]]
+                },
+                {"id": "c", "splits": [["d"]], "joins": [["b"]]},
+                {
+                    "id": "d",
+                    "splits": [["d"], ["e"]],
+                    "joins": [
+                        ["b", "c"],
+                        ["c", "d"]
+                    ]
+                },
+                {"id": "e", "splits": [], "joins": [["d"]]}
+            ],
+            "edges": [
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "b"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "b"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "c"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "d"
+                },
+                {
+                    "sourceNodeId": "c",
+                    "targetNodeId": "d"
+                },
+                {
+                    "sourceNodeId": "d",
+                    "targetNodeId": "d"
+                },
+                {
+                    "sourceNodeId": "d",
+                    "targetNodeId": "e"
+                }
+            ]
+        },
+        "customizationData": {
+            "layout": [
+                {"id": "a", "x": 125, "y": 25},
+                {"id": "b", "x": 125, "y": 75},
+                {"id": "c", "x": 160, "y": 125},
+                {"id": "d", "x": 125, "y": 175},
+                {"id": "e", "x": 125, "y": 225}
+            ]
+        }
+    },
+    {
+        "id": "f7bad885-6add-4516-b536-d6f88c154b6e",
+        "name": "c1",
+        "type": "causalNet",
+        "data": {
+            "query": "SELECT ...",
+            "nodes": [
+                {
+                    "id": "a",
+                    "splits": [
+                        ["b", "c", "d"],
+                        ["c", "d"]
+                    ],
+                    "joins": []
+                },
+                {
+                    "id": "b",
+                    "splits": [
+                        ["e", "f"],
+                        ["e", "g"]
+                    ],
+                    "joins": [["a"]]
+                },
+                {"id": "c", "splits": [["f"]], "joins": [["a"]]},
+                {
+                    "id": "d",
+                    "splits": [["g", "h"]],
+                    "joins": [["a"]]
+                },
+                {
+                    "id": "e",
+                    "splits": [["i"]],
+                    "joins": [["b", "g"]]
+                },
+                {
+                    "id": "f",
+                    "splits": [
+                        ["h", "j"],
+                        ["m", "l"]
+                    ],
+                    "joins": [["b", "c"]]
+                },
+                {
+                    "id": "g",
+                    "splits": [["e", "n"], ["k"], ["i"]],
+                    "joins": [["b", "d"]]
+                },
+                {
+                    "id": "h",
+                    "splits": [["l"]],
+                    "joins": [["f", "d"]]
+                },
+                {
+                    "id": "i",
+                    "splits": [["n"]],
+                    "joins": [["e", "g"]]
+                },
+                {
+                    "id": "j",
+                    "splits": [["m"], ["n"]],
+                    "joins": [["f"]]
+                },
+                {
+                    "id": "k",
+                    "splits": [["m", "n"]],
+                    "joins": [["g"]]
+                },
+                {
+                    "id": "l",
+                    "splits": [["o"]],
+                    "joins": [["f"], ["h"]]
+                },
+                {
+                    "id": "m",
+                    "splits": [["o"]],
+                    "joins": [["f"], ["j", "k"]]
+                },
+                {
+                    "id": "n",
+                    "splits": [["o"]],
+                    "joins": [["j", "k"], ["g"]]
+                },
+                {
+                    "id": "o",
+                    "splits": [],
+                    "joins": [["m"], ["n"], ["l"]]
+                }
+            ],
+            "edges": [
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "b"
+                },
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "c"
+                },
+                {
+                    "sourceNodeId": "a",
+                    "targetNodeId": "d"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "e"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "f"
+                },
+                {
+                    "sourceNodeId": "b",
+                    "targetNodeId": "g"
+                },
+                {
+                    "sourceNodeId": "c",
+                    "targetNodeId": "f"
+                },
+                {
+                    "sourceNodeId": "d",
+                    "targetNodeId": "g"
+                },
+                {
+                    "sourceNodeId": "d",
+                    "targetNodeId": "h"
+                },
+                {
+                    "sourceNodeId": "e",
+                    "targetNodeId": "i"
+                },
+                {
+                    "sourceNodeId": "f",
+                    "targetNodeId": "h"
+                },
+                {
+                    "sourceNodeId": "f",
+                    "targetNodeId": "j"
+                },
+                {
+                    "sourceNodeId": "g",
+                    "targetNodeId": "e"
+                },
+                {
+                    "sourceNodeId": "g",
+                    "targetNodeId": "n"
+                },
+                {
+                    "sourceNodeId": "g",
+                    "targetNodeId": "k"
+                },
+                {
+                    "sourceNodeId": "g",
+                    "targetNodeId": "i"
+                },
+                {
+                    "sourceNodeId": "h",
+                    "targetNodeId": "l"
+                },
+                {
+                    "sourceNodeId": "i",
+                    "targetNodeId": "n"
+                },
+                {
+                    "sourceNodeId": "j",
+                    "targetNodeId": "m"
+                },
+                {
+                    "sourceNodeId": "j",
+                    "targetNodeId": "n"
+                },
+                {
+                    "sourceNodeId": "k",
+                    "targetNodeId": "m"
+                },
+                {
+                    "sourceNodeId": "k",
+                    "targetNodeId": "n"
+                },
+                {
+                    "sourceNodeId": "l",
+                    "targetNodeId": "o"
+                },
+                {
+                    "sourceNodeId": "m",
+                    "targetNodeId": "o"
+                },
+                {
+                    "sourceNodeId": "n",
+                    "targetNodeId": "o"
+                }
+            ]
+        }
+    },
+    {
+        "id": "06a29e69-a58e-498c-ad66-6435816d9c7b",
+        "name": "KPI example",
+        "type": "kpi",
+        "data": {
+            "query": "SELECT ...",
+            "value": 98.9
+        }
+    }
+]

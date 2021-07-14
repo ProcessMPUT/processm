@@ -1,5 +1,6 @@
 package processm.core.models.bpmn
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestFactory
@@ -68,6 +69,7 @@ class BPMNXMLServiceTest {
     private val idempotentFiles = strictFiles.filter { !nonIdempotent.any { p -> it.path.endsWith(p) } }
     private val nonIdempotentFiles = strictFiles.filter { nonIdempotent.any { p -> it.path.endsWith(p) } }
 
+    @Disabled("Intended for manual execution due to high resource consumption")
     @Tag("BPMN")
     @TestFactory
     fun loadNonStrictWithStAX(): Iterable<DynamicTest> {
@@ -81,6 +83,7 @@ class BPMNXMLServiceTest {
             .toList()
     }
 
+    @Disabled("Intended for manual execution due to high resource consumption")
     @Tag("BPMN")
     @TestFactory
     fun `load non idempotent with StAX`(): Iterable<DynamicTest> {
@@ -94,6 +97,7 @@ class BPMNXMLServiceTest {
             }.toList()
     }
 
+    @Disabled("Intended for manual execution due to high resource consumption")
     @Tag("BPMN")
     @TestFactory
     fun `load idempotent with StAX and compare with JAXB`(): Iterable<DynamicTest> {
@@ -109,6 +113,7 @@ class BPMNXMLServiceTest {
             }.toList()
     }
 
+    @Disabled("Intended for manual execution due to high resource consumption")
     @Tag("BPMN")
     @TestFactory
     fun loadStrictWithJAXB(): Iterable<DynamicTest> {
@@ -119,6 +124,7 @@ class BPMNXMLServiceTest {
             }.toList()
     }
 
+    @Disabled("Intended for manual execution due to high resource consumption")
     @Tag("BPMN")
     @TestFactory
     fun loadAndSave(): Iterable<DynamicTest> {

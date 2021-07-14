@@ -3,8 +3,11 @@
   "code": "pl_PL",
   "flag": "pl",
   "navigation": {
+    "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
     "users": "Użytkownicy",
+    "data-sources": "Źródła danych",
+    "pql-interpreter": "Interpreter PQL",
     "about": "@:about.page-title"
   },
   "topbar": {
@@ -13,10 +16,17 @@
   },
   "workspace": {
     "default-name": "Przestrzeń robocza",
-    "locked": "Zablokowany",
+    "tooltip": {
+      "lock": "Zablokuj przestrzeń",
+      "unlock": "Odblokuj przestrzeń",
+      "add": "Dodaj nowy komponent",
+      "save": "Zapisz układ"
+    },
     "component": {
       "causal-net": "Sieć przyczynowa",
       "kpi": "KPI",
+      "select": "Wybierz komponent",
+      "no-data": "Brak danych do wyświetlenia",
       "edit": {
         "name": "Nazwa",
         "type": "Typ",
@@ -29,7 +39,7 @@
     }
   },
   "about": {
-    "page-title": "O aplikacji"
+    "page-title": "O ProcessM"
   },
   "user-profile": {
     "language": "Język",
@@ -91,6 +101,7 @@
     "close": "Zamknij",
     "submit": "Zatwierdź",
     "view": "Podgląd",
-    "edit": "Edycja"
+    "edit": "Edycja",
+    "configure": "Konfiguruj"
   }
 }

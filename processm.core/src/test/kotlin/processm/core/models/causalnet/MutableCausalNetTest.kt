@@ -19,7 +19,7 @@ class MutableCausalNetTest {
     //constructing model represented at Fig 3.12 in "Process Mining" by Wil van der Aalst
     @Test
     fun constructModel() {
-        var mm = MutableCausalNet(start = a, end = z)
+        val mm = MutableCausalNet(start = a, end = z)
         mm.addInstance(a, b, c, d, e, f, g, h, z)
         listOf(
             a to b, a to c, a to d, b to e, c to e, d to e, e to f, e to g,

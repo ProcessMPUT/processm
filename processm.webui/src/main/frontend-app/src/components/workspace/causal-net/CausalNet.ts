@@ -117,8 +117,8 @@ export default class CausalNet {
     const isLayoutPredefined =
       layout != null &&
       dataNodes.length <= layout.length &&
-      dataNodes.every(node =>
-        layout.some(nodeLayout => nodeLayout.id == node.id)
+      dataNodes.every((node) =>
+        layout.some((nodeLayout) => nodeLayout.id == node.id)
       );
 
     this.nodesLayout =
@@ -151,7 +151,7 @@ export default class CausalNet {
       );
     });
 
-    dataNodes.forEach(node => {
+    dataNodes.forEach((node) => {
       const nodePosition = this.nodesLayout.get(node.id);
 
       if (nodePosition == null) return;
@@ -213,12 +213,12 @@ export default class CausalNet {
     nodesLayout: Map<string, Point>
   ) {
     const maximumBindingSlot = Math.max(
-      ...bindingNodes.map(node => node.bindingSlot)
+      ...bindingNodes.map((node) => node.bindingSlot)
     );
 
     if (!nodesLayout.has(sourceNodeId)) return;
 
-    bindingNodes.forEach(bindingNode => {
+    bindingNodes.forEach((bindingNode) => {
       if (
         bindingNode.relatedNodeId == null ||
         !nodesLayout.has(bindingNode.relatedNodeId)
@@ -262,11 +262,11 @@ export default class CausalNet {
   public nodesLayout: Map<string, Point>;
 
   public removeNodes(filterExpression: (node: Node) => boolean) {
-    this.nodes = this.nodes.filter(node => !filterExpression(node));
+    this.nodes = this.nodes.filter((node) => !filterExpression(node));
   }
 
   public removeLinks(filterExpression: (link: Link) => boolean) {
-    this.links = this.links.filter(link => !filterExpression(link));
+    this.links = this.links.filter((link) => !filterExpression(link));
   }
 
   public addRegularLink(sourceNode: Node, targetNode: Node) {
@@ -381,11 +381,11 @@ export default class CausalNet {
 
   public recalculateLayout() {
     const newLayout = this.calculateLayout(
-      this.nodes.filter(node => node.hasType(ElementType.Regular)),
+      this.nodes.filter((node) => node.hasType(ElementType.Regular)),
       this.dataLinks
     );
 
-    this.nodes.forEach(node => {
+    this.nodes.forEach((node) => {
       const nodePosition = newLayout.get(node.id);
       if (nodePosition != null) {
         (node.fx = node.x = nodePosition.x),
@@ -406,7 +406,7 @@ export default class CausalNet {
 
         bindings.set(
           bindingLinkId,
-          binding.map(bindingNodeId => {
+          binding.map((bindingNodeId) => {
             const intermediateLinkId =
               bindingType == ElementType.Split
                 ? this.createIntermediateLinkId(nodeId, bindingNodeId)
@@ -466,7 +466,7 @@ export default class CausalNet {
     return Array.from(
       this.groupObjectsByProperty(
         bindingNodes,
-        node => node.bindingLinkId || ""
+        (node) => node.bindingLinkId || ""
       ).entries()
     ).reduce(
       (
@@ -517,12 +517,14 @@ export default class CausalNet {
 
         if (bindingNodes == null) return intermediateLinks;
 
-        if (bindingNodes.some(node => frontierNodes.has(node.relatedNodeId))) {
+        if (
+          bindingNodes.some((node) => frontierNodes.has(node.relatedNodeId))
+        ) {
           bindingSlot++;
           frontierNodes.clear();
         }
 
-        bindingNodes.forEach(node => {
+        bindingNodes.forEach((node) => {
           if (node.relatedNodeId == null || node.intermediateLinkId == null)
             return;
           const isSplit = node.hasType(ElementType.Split);
@@ -561,7 +563,7 @@ export default class CausalNet {
     return Array.from(
       this.groupObjectsByProperty(
         nodes,
-        node => node.intermediateLinkId
+        (node) => node.intermediateLinkId
       ).entries()
     ).reduce(
       (
@@ -621,7 +623,7 @@ export default class CausalNet {
         return new Map();
       });
 
-    links.forEach(link =>
+    links.forEach((link) =>
       networkGraph.setEdge(link.sourceNodeId, link.targetNodeId)
     );
     nodes.forEach((node: { id: string }) => {

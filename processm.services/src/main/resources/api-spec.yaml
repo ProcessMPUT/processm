@@ -14,6 +14,10 @@ tags:
     description: User groups and groups membership management
   - name: organizations
     description: User organizations and organizations membership management
+  - name: dataSources
+    description: Data sources management
+  - name: logs
+    description: Log data management
 paths:
   /users:
     get:
@@ -166,6 +170,52 @@ paths:
                 $ref: '#/components/schemas/UserOrganizationCollectionMessageBody'
         '404':
           $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-sources:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataSources
+      summary: Get all datasources assigned to given OrganizationID and to the calling User.
+      operationId: getDataSources
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataSourceCollectionMessageBody'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - dataSources
+      summary: Create a new data source in the context of the specified organization and user
+      operationId: createDataSource
+      requestBody:
+        description: Data source details
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/DataSourceMessageBody'
+        required: true
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataSourceMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
   /organizations/{organizationId}/workspaces:
@@ -364,8 +414,8 @@ paths:
       tags:
         - workspaces
         - components
-      summary: Update the specified component in the specified workspace in the context of the specified organization
-      operationId: updateWorkspaceComponent
+      summary: Add or update the specified component in the specified workspace in the context of the specified organization
+      operationId: addOrUpdateWorkspaceComponent
       requestBody:
         description: Component details to update
         content:
@@ -376,6 +426,25 @@ paths:
       responses:
         '204':
           description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - workspaces
+        - components
+      summary: Remove the specified component in the specified workspace in the context of the specified organization
+      operationId: removeWorkspaceComponent
+      responses:
+        '204':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -418,6 +487,42 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/ComponentDataMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/workspaces/{workspaceId}/layout:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+        - workspaces
+      summary: Update size and position of the specified components
+      operationId: updateWorkspaceLayout
+      requestBody:
+        description: An object containing new size and position of updated components
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/LayoutCollectionMessageBody'
+      responses:
+        '204':
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -844,7 +949,7 @@ paths:
       operationId: removeOrganizationMember
       responses:
         '204':
-          description: uccessful operation
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -876,6 +981,67 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /data-sources/{dataSourceId}/logs:
+    parameters:
+      - name: dataSourceId
+        in: path
+        description: Data source ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataSources
+        - logs
+      summary: Query logs stored in the specified data source
+      operationId: submitLogsQuery
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: The query to be submitted
+          required: false
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/QueryResultCollectionMessageBody'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - dataSources
+        - logs
+      summary: Upload new log file to the specified data source
+      operationId: uploadLogFile
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                fileName:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Successful operation
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
 components:
@@ -1043,6 +1209,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserOrganization'
+    DataSource:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    DataSourceMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DataSource'
+    DataSourceCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSource'
     Workspace:
       type: object
       required: [name]
@@ -1068,19 +1260,38 @@ components:
             $ref: '#/components/schemas/Workspace'
     Component:
       type: object
+      required: [id, query, type]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
+        query:
+          type: string
         type:
           $ref: '#/components/schemas/ComponentType'
+        layout:
+          $ref: '#/components/schemas/LayoutElement'
+    LayoutElement:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+    LayoutCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
         data:
           type: object
-          properties:
-            query:
-              type: string
+          additionalProperties:
+            $ref: '#/components/schemas/LayoutElement'
     AbstractComponent:
       oneOf:
         - $ref: '#/components/schemas/KpiComponent'
@@ -1089,9 +1300,10 @@ components:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
-          causal: '#/components/schemas/CausalNetComponent'
+          causalNet: '#/components/schemas/CausalNetComponent'
     ComponentData:
       type: object
+      required: [type]
       properties:
         type:
           $ref: '#/components/schemas/ComponentType'
@@ -1108,10 +1320,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
         - type: object
-          required: [value]
           properties:
-            type:
-              $ref: '#/components/schemas/ComponentType'
             value:
               type: number
     KpiComponent:
@@ -1129,8 +1338,6 @@ components:
         - type: object
           required: [nodes, edges]
           properties:
-            type:
-              $ref: '#/components/schemas/ComponentType'
             nodes:
               type: array
               items:
@@ -1263,6 +1470,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Organization'
+    QueryResultCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
   responses:
     BadRequest:
       description: Invalid request body
@@ -1290,6 +1505,12 @@ components:
             $ref: '#/components/schemas/ErrorMessageBody'
     Conflict:
       description: The resource with the sepcified identifier already exists
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ErrorMessageBody'
+    ServiceUnavailable:
+      description: The server is not ready to handle the request
       content:
         'application/json':
           schema:

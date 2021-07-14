@@ -26,6 +26,21 @@ const routes = [
     component: () => import("@/views/UserProfile.vue")
   },
   {
+    path: "/data-sources",
+    name: "data-sources",
+    component: () => import("@/views/DataSources.vue")
+  },
+  {
+    path: "/pql-interpreter",
+    name: "pql-interpreter",
+    component: () => import("@/views/PQL.vue")
+  },
+  {
+    path: "/pql-docs",
+    name: "pql-docs",
+    component: () => import("@/views/PQLDocs.vue")
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("@/views/Login.vue"),
@@ -51,7 +66,7 @@ const router = new VueRouter({
 
 router.beforeEach((to, _from, next) => {
   Vue.prototype.$sessionStorage.sessionExists ||
-  to.matched.some(record => record.meta.allowUnauthenticated)
+  to.matched.some((record) => record.meta.allowUnauthenticated)
     ? next()
     : next({ name: "login" });
 });

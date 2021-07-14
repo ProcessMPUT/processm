@@ -1,9 +1,7 @@
 import Vue from "vue";
 import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
-import WorkspaceComponent, {
-  CausalNetComponentData
-} from "@/models/WorkspaceComponent";
+import { LayoutElement, WorkspaceComponent } from "@/models/WorkspaceComponent";
 import { Workspace as ApiWorkspace, AbstractComponent } from "@/openapi";
 
 export default class WorkspaceService extends BaseService {
@@ -72,29 +70,37 @@ export default class WorkspaceService extends BaseService {
       workspaceId,
       componentId
     );
-    const component = response.data.data;
+    const apiComponent = response.data.data;
 
     this.ensureSuccessfulResponseCode(response);
 
-    if (component.id == null) {
+    if (apiComponent.id == null) {
       throw new Error("The received component object should contain id");
     }
 
-    return {
-      id: component.id,
-      name: component.name,
-      type: component.type,
-      data: component.data,
-      customizationData: component.customizationData
-    };
+    return new WorkspaceComponent(apiComponent);
+  }
+
+  public async addComponent(
+    workspaceId: string,
+    component: WorkspaceComponent
+  ) {
+    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(
+      this.currentOrganizationId,
+      workspaceId,
+      component.id,
+      { data: component }
+    );
+
+    return response.status == 204;
   }
 
   public async updateComponent(
     workspaceId: string,
     componentId: string,
-    component: WorkspaceComponent<CausalNetComponentData>
+    component: WorkspaceComponent
   ) {
-    const response = await this.workspacesApi.updateWorkspaceComponent(
+    const response = await this.workspacesApi.addOrUpdateWorkspaceComponent(
       this.currentOrganizationId,
       workspaceId,
       componentId,
@@ -107,7 +113,7 @@ export default class WorkspaceService extends BaseService {
   public async getComponentData(
     workspaceId: string,
     componentId: string
-  ): Promise<{ type?: string; query?: string }> {
+  ): Promise<{}> {
     const response = await this.workspacesApi.getWorkspaceComponentData(
       this.currentOrganizationId,
       workspaceId,
@@ -130,19 +136,39 @@ export default class WorkspaceService extends BaseService {
     return response.data.data.reduce(
       (components: WorkspaceComponent[], apiComponent: AbstractComponent) => {
         if (apiComponent.id != null) {
-          components.push({
-            id: apiComponent.id,
-            name: apiComponent.name,
-            type: apiComponent.type,
-            data: apiComponent.data,
-            customizationData: apiComponent.customizationData
-          });
+          components.push(new WorkspaceComponent(apiComponent));
         }
 
         return components;
       },
       []
     );
+  }
+
+  public async updateLayout(
+    workspaceId: string,
+    updatedLayoutElements: Record<string, LayoutElement>
+  ) {
+    const response = await this.workspacesApi.updateWorkspaceLayout(
+      this.currentOrganizationId,
+      workspaceId,
+      { data: updatedLayoutElements }
+    );
+
+    return response.status == 204;
+  }
+
+  public async removeComponent(
+    workspaceId: string,
+    componentId: string
+  ): Promise<void> {
+    const response = await this.workspacesApi.removeWorkspaceComponent(
+      this.currentOrganizationId,
+      workspaceId,
+      componentId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
   }
 
   private get currentOrganizationId() {

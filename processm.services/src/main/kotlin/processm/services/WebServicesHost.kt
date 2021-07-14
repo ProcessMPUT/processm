@@ -19,6 +19,7 @@ class WebServicesHost : Service {
         private const val keyStoreProperty = "ktor.security.ssl.keyStore"
     }
 
+    private val defaultResponseTimeoutSeconds = 10
     private lateinit var engine: NettyApplicationEngine
     private lateinit var env: ApplicationEngineEnvironment
     override val name = "WebServicesHost"
@@ -66,7 +67,11 @@ class WebServicesHost : Service {
             assert(env.config.propertyOrNull(keyStoreProperty) != null)
         }
 
-        engine = embeddedServer(Netty, env)
+        engine = embeddedServer(Netty, env, configure = {
+            responseWriteTimeoutSeconds =
+                env.config.property("ktor.deployment.responseTimeoutSeconds").getString().toIntOrNull()
+                    ?: defaultResponseTimeoutSeconds
+        })
         engine.start()
         status = ServiceStatus.Started
 

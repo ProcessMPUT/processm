@@ -1,15 +1,43 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const _ = require("lodash");
+const delay = require("mocker-api/utils/delay");
+const fs = require("fs");
+const responseDelay = 500;
+
+function readResponseDataFromFile(path) {
+  return JSON.parse(fs.readFileSync(`./api-mocker/responses/${path}`, "utf8"));
+}
+
+const componentsData = readResponseDataFromFile(
+  "components/componentsData.json"
+);
+
+const xesQueryResult = readResponseDataFromFile("xes/xes3.json");
 
 const workspaces = [
   {
     id: "3a4c6121-4fa4-4017-b0eb-df67be468b95",
-    name: "MyWorkspace1"
+    name: "MyWorkspace1",
   },
   {
     id: "16d431d1-7ad1-475d-86a5-d4aa8578e92d",
-    name: "MyOtherWorkspace"
-  }
+    name: "MyOtherWorkspace",
+  },
+];
+
+const dataSources = [
+  {
+    id: "6925b43f-cc6d-4320-8565-8388f2a7f6d7",
+    organizationId: "1",
+    name: "DataSource #1",
+    createdAt: "2020-09-25T06:32:28Z",
+  },
+  {
+    id: "0096ec34-dd2f-47ee-9ccf-c804637df4dc",
+    organizationId: "1",
+    name: "DataSource #2",
+    createdAt: "2020-07-11T07:12:02Z",
+  },
 ];
 
 const users = [
@@ -20,7 +48,7 @@ const users = [
     organizationName: "Org1",
     organizationRole: "writer",
     password: "pass",
-    locale: "en_GB"
+    locale: "en_GB",
   },
   {
     userId: 12,
@@ -29,7 +57,7 @@ const users = [
     organizationName: "Org1",
     organizationRole: "writer",
     password: "pass",
-    locale: "en_GB"
+    locale: "en_GB",
   },
   {
     userId: 28,
@@ -38,7 +66,7 @@ const users = [
     organizationName: "Org1",
     organizationRole: "reader",
     password: "pass",
-    locale: "en_GB"
+    locale: "en_GB",
   },
   {
     userId: 29,
@@ -47,7 +75,7 @@ const users = [
     organizationName: "Org1",
     organizationRole: "reader",
     password: "pass",
-    locale: "en_GB"
+    locale: "en_GB",
   },
   {
     userId: 31,
@@ -56,7 +84,7 @@ const users = [
     organizationName: "Org1",
     organizationRole: "reader",
     password: "pass",
-    locale: "en_GB"
+    locale: "en_GB",
   },
   {
     userId: 33,
@@ -65,444 +93,14 @@ const users = [
     organizationName: "Org1",
     organizationRole: "owner",
     password: "pass",
-    locale: "en_GB"
-  }
-];
-
-const componentsData = [
-  {
-    id: "cf607cb0-0b88-4ccd-9795-5cd0201b3c39",
-    name: "some name 1",
-    type: "causalNet",
-    data: {
-      query: "SELECT ...",
-      nodes: [
-        {
-          id: "a",
-          splits: [["c"], ["d", "b", "c"], ["b", "d"], ["b"], ["c", "d"]],
-          joins: []
-        },
-        { id: "b", splits: [["e"]], joins: [["a"]] },
-        { id: "c", splits: [["e"]], joins: [["a"]] },
-        { id: "d", splits: [["e"]], joins: [["a"]] },
-        {
-          id: "e",
-          splits: [],
-          joins: [["c", "d"], ["b"], ["c", "b", "d"], ["c"], ["b", "d"]]
-        }
-      ],
-      edges: [
-        {
-          sourceNodeId: "a",
-          targetNodeId: "b"
-        },
-        {
-          sourceNodeId: "a",
-          targetNodeId: "c"
-        },
-        {
-          sourceNodeId: "a",
-          targetNodeId: "d"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "e"
-        },
-        {
-          sourceNodeId: "c",
-          targetNodeId: "e"
-        },
-        {
-          sourceNodeId: "d",
-          targetNodeId: "e"
-        }
-      ]
-    }
+    locale: "en_GB",
   },
-  {
-    id: "c629ba68-aae2-4490-85cd-3875939fc69e",
-    name: "component 1",
-    type: "causalNet",
-    data: {
-      query: "SELECT ...",
-      nodes: [
-        {
-          id: "a",
-          splits: [
-            ["b", "d"],
-            ["c", "d"]
-          ],
-          joins: []
-        },
-        {
-          id: "b",
-          splits: [["e"]],
-          joins: [["a"], ["f"]]
-        },
-        {
-          id: "c",
-          splits: [["e"]],
-          joins: [["a"], ["f"]]
-        },
-        {
-          id: "d",
-          splits: [["e"]],
-          joins: [["a"], ["f"]]
-        },
-        {
-          id: "e",
-          splits: [["f"], ["g"], ["h"]],
-          joins: [
-            ["b", "d"],
-            ["c", "d"]
-          ]
-        },
-        {
-          id: "f",
-          splits: [
-            ["b", "d"],
-            ["c", "d"]
-          ],
-          joins: [["e"]]
-        },
-        { id: "g", splits: [["z"]], joins: [["e"]] },
-        { id: "h", splits: [["z"]], joins: [["e"]] },
-        { id: "z", splits: [], joins: [["g"], ["h"]] }
-      ],
-      edges: [
-        {
-          sourceNodeId: "a",
-          targetNodeId: "b"
-        },
-        {
-          sourceNodeId: "a",
-          targetNodeId: "c"
-        },
-        {
-          sourceNodeId: "a",
-          targetNodeId: "d"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "e"
-        },
-        {
-          sourceNodeId: "c",
-          targetNodeId: "e"
-        },
-        {
-          sourceNodeId: "d",
-          targetNodeId: "e"
-        },
-        {
-          sourceNodeId: "e",
-          targetNodeId: "f"
-        },
-        {
-          sourceNodeId: "e",
-          targetNodeId: "g"
-        },
-        {
-          sourceNodeId: "e",
-          targetNodeId: "h"
-        },
-        {
-          sourceNodeId: "f",
-          targetNodeId: "b"
-        },
-        {
-          sourceNodeId: "f",
-          targetNodeId: "c"
-        },
-        {
-          sourceNodeId: "f",
-          targetNodeId: "d"
-        },
-        {
-          sourceNodeId: "g",
-          targetNodeId: "z"
-        },
-        {
-          sourceNodeId: "h",
-          targetNodeId: "z"
-        }
-      ]
-    }
-  },
-  {
-    id: "93bcc033-bbea-490d-93b9-3c8580db5354",
-    name: "long long long long name",
-    type: "causalNet",
-    data: {
-      query: "SELECT ...",
-      nodes: [
-        { id: "a", splits: [["b"]], joins: [] },
-        {
-          id: "b",
-          splits: [
-            ["b", "c"],
-            ["c", "d"]
-          ],
-          joins: [["a"], ["b"]]
-        },
-        { id: "c", splits: [["d"]], joins: [["b"]] },
-        {
-          id: "d",
-          splits: [["d"], ["e"]],
-          joins: [
-            ["b", "c"],
-            ["c", "d"]
-          ]
-        },
-        { id: "e", splits: [], joins: [["d"]] }
-      ],
-      edges: [
-        {
-          sourceNodeId: "a",
-          targetNodeId: "b"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "b"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "c"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "d"
-        },
-        {
-          sourceNodeId: "c",
-          targetNodeId: "d"
-        },
-        {
-          sourceNodeId: "d",
-          targetNodeId: "d"
-        },
-        {
-          sourceNodeId: "d",
-          targetNodeId: "e"
-        }
-      ]},
-    customizationData: {
-      layout: [
-        { id: "a", x: 125, y: 25 },
-        { id: "b", x: 125, y: 75 },
-        { id: "c", x: 160, y: 125 },
-        { id: "d", x: 125, y: 175 },
-        { id: "e", x: 125, y: 225 }
-      ]
-    }
-  },
-  {
-    id: "f7bad885-6add-4516-b536-d6f88c154b6e",
-    name: "c1",
-    type: "causalNet",
-    data: {
-      query: "SELECT ...",
-      nodes: [
-        {
-          id: "a",
-          splits: [
-            ["b", "c", "d"],
-            ["c", "d"]
-          ],
-          joins: []
-        },
-        {
-          id: "b",
-          splits: [
-            ["e", "f"],
-            ["e", "g"]
-          ],
-          joins: [["a"]]
-        },
-        { id: "c", splits: [["f"]], joins: [["a"]] },
-        {
-          id: "d",
-          splits: [["g", "h"]],
-          joins: [["a"]]
-        },
-        {
-          id: "e",
-          splits: [["i"]],
-          joins: [["b", "g"]]
-        },
-        {
-          id: "f",
-          splits: [
-            ["h", "j"],
-            ["m", "l"]
-          ],
-          joins: [["b", "c"]]
-        },
-        {
-          id: "g",
-          splits: [["e", "n"], ["k"], ["i"]],
-          joins: [["b", "d"]]
-        },
-        {
-          id: "h",
-          splits: [["l"]],
-          joins: [["f", "d"]]
-        },
-        {
-          id: "i",
-          splits: [["n"]],
-          joins: [["e", "g"]]
-        },
-        {
-          id: "j",
-          splits: [["m"], ["n"]],
-          joins: [["f"]]
-        },
-        {
-          id: "k",
-          splits: [["m", "n"]],
-          joins: [["g"]]
-        },
-        {
-          id: "l",
-          splits: [["o"]],
-          joins: [["f"], ["h"]]
-        },
-        {
-          id: "m",
-          splits: [["o"]],
-          joins: [["f"], ["j", "k"]]
-        },
-        {
-          id: "n",
-          splits: [["o"]],
-          joins: [["j", "k"], ["g"]]
-        },
-        {
-          id: "o",
-          splits: [],
-          joins: [["m"], ["n"], ["l"]]
-        }
-      ],
-      edges: [
-        {
-          sourceNodeId: "a",
-          targetNodeId: "b"
-        },
-        {
-          sourceNodeId: "a",
-          targetNodeId: "c"
-        },
-        {
-          sourceNodeId: "a",
-          targetNodeId: "d"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "e"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "f"
-        },
-        {
-          sourceNodeId: "b",
-          targetNodeId: "g"
-        },
-        {
-          sourceNodeId: "c",
-          targetNodeId: "f"
-        },
-        {
-          sourceNodeId: "d",
-          targetNodeId: "g"
-        },
-        {
-          sourceNodeId: "d",
-          targetNodeId: "h"
-        },
-        {
-          sourceNodeId: "e",
-          targetNodeId: "i"
-        },
-        {
-          sourceNodeId: "f",
-          targetNodeId: "h"
-        },
-        {
-          sourceNodeId: "f",
-          targetNodeId: "j"
-        },
-        {
-          sourceNodeId: "g",
-          targetNodeId: "e"
-        },
-        {
-          sourceNodeId: "g",
-          targetNodeId: "n"
-        },
-        {
-          sourceNodeId: "g",
-          targetNodeId: "k"
-        },
-        {
-          sourceNodeId: "g",
-          targetNodeId: "i"
-        },
-        {
-          sourceNodeId: "h",
-          targetNodeId: "l"
-        },
-        {
-          sourceNodeId: "i",
-          targetNodeId: "n"
-        },
-        {
-          sourceNodeId: "j",
-          targetNodeId: "m"
-        },
-        {
-          sourceNodeId: "j",
-          targetNodeId: "n"
-        },
-        {
-          sourceNodeId: "k",
-          targetNodeId: "m"
-        },
-        {
-          sourceNodeId: "k",
-          targetNodeId: "n"
-        },
-        {
-          sourceNodeId: "l",
-          targetNodeId: "o"
-        },
-        {
-          sourceNodeId: "m",
-          targetNodeId: "o"
-        },
-        {
-          sourceNodeId: "n",
-          targetNodeId: "o"
-        }
-      ]
-    }
-  },
-  {
-    id: "06a29e69-a58e-498c-ad66-6435816d9c7b",
-    name: "KPI example",
-    type: "kpi",
-    data: {
-      query: "SELECT ...",
-      value: 98.9
-    }
-  }
 ];
 
 const userSessions = [];
 
 function createUUID() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0,
       v = c == "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
@@ -510,6 +108,19 @@ function createUUID() {
 }
 
 const api = {
+  "GET /api/organizations/:organizationId/data-sources": { data: dataSources },
+  "POST /api/organizations/:organizationId/data-sources": (req, res) => {
+    const dataSource = req.body.data;
+
+    if (!dataSource) {
+      return res.status(400).json();
+    }
+
+    dataSource.id = createUUID();
+    workspaces.push(dataSource);
+
+    return res.status(201).json({ data: dataSource });
+  },
   "GET /api/organizations/:organizationId/workspaces": { data: workspaces },
   "GET /api/organizations/:organizationId/workspaces/:workspaceId": (
     req,
@@ -599,16 +210,58 @@ const api = {
   ) => {
     const { workspaceId, componentId } = req.params;
     const workspace = _.find(workspaces, { id: workspaceId });
-    const component = _.find(componentsData, { id: componentId });
+    let component = _.find(componentsData, { id: componentId });
 
-    if (!workspace || !component) {
+    if (!workspace) {
       return res.status(404).json();
+    }
+
+    if (!component) {
+      component = { id: componentId };
+      componentsData.push(component);
     }
 
     component.name = req.body.data.name;
     component.type = req.body.data.type;
     component.data = req.body.data.data;
     component.customizationData = req.body.data.customizationData;
+
+    return res.status(204).json();
+  },
+  "DELETE /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId": (
+    req,
+    res
+  ) => {
+    const { workspaceId, componentId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+    const component = _.find(componentsData, { id: componentId });
+
+    if (!workspace || !component) {
+      return res.status(404).json();
+    }
+
+    _.remove(componentsData, { id: componentId });
+
+    return res.status(204).json();
+  },
+  "PATCH /api/organizations/:organizationId/workspaces/:workspaceId/layout": (
+    req,
+    res
+  ) => {
+    const { workspaceId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+
+    if (!workspace) {
+      return res.status(404).json();
+    }
+
+    const layoutElements = req.body.data;
+
+    componentsData.forEach((component) => {
+      if (_.has(layoutElements, component.id)) {
+        component.layout = layoutElements[component.id];
+      }
+    });
 
     return res.status(204).json();
   },
@@ -639,19 +292,15 @@ const api = {
     }
 
     const sessionToken =
-      Math.random()
-        .toString(36)
-        .substring(2, 15) +
-      Math.random()
-        .toString(36)
-        .substring(2, 15);
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15);
 
     _.set(userSessions, sessionToken, credentials.login);
 
     return res.status(201).json({
       data: {
-        authorizationToken: `Bearer ${sessionToken}`
-      }
+        authorizationToken: `Bearer ${sessionToken}`,
+      },
     });
   },
   "DELETE /api/users/session": (req, res) => {
@@ -672,7 +321,7 @@ const api = {
         organizationName,
         organizationRole: "owner",
         password: "pass",
-        locale: "en_GB"
+        locale: "en_GB",
       });
       res.status(201).json();
     } else {
@@ -683,8 +332,8 @@ const api = {
     return res.json({
       data: {
         username: _.find(users, { userId: 1 }).username,
-        locale: "en-GB"
-      }
+        locale: "en-GB",
+      },
     });
   },
   "PATCH /api/users/me/password": (req, res) => {
@@ -717,9 +366,9 @@ const api = {
         {
           id: user.organizationId,
           name: user.organizationName,
-          organizationRole: user.organizationRole
-        }
-      ]
+          organizationRole: user.organizationRole,
+        },
+      ],
     });
   },
   "GET /api/organizations/:organizationId/members": (req, res) => {
@@ -731,7 +380,13 @@ const api = {
     }
 
     return res.status(200).json({ data: members });
-  }
+  },
+  "GET /api/data-sources/:dataSourceId/logs": (req, res) => {
+    const { dataSourceId } = req.params;
+    const { query } = req.query;
+
+    return res.status(200).json({ data: xesQueryResult });
+  },
 };
 
-module.exports = api;
+module.exports = delay(api, responseDelay);
