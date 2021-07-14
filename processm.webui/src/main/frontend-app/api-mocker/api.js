@@ -210,16 +210,58 @@ const api = {
   ) => {
     const { workspaceId, componentId } = req.params;
     const workspace = _.find(workspaces, { id: workspaceId });
-    const component = _.find(componentsData, { id: componentId });
+    let component = _.find(componentsData, { id: componentId });
 
-    if (!workspace || !component) {
+    if (!workspace) {
       return res.status(404).json();
+    }
+
+    if (!component) {
+      component = { id: componentId };
+      componentsData.push(component);
     }
 
     component.name = req.body.data.name;
     component.type = req.body.data.type;
     component.data = req.body.data.data;
     component.customizationData = req.body.data.customizationData;
+
+    return res.status(204).json();
+  },
+  "DELETE /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId": (
+    req,
+    res
+  ) => {
+    const { workspaceId, componentId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+    const component = _.find(componentsData, { id: componentId });
+
+    if (!workspace || !component) {
+      return res.status(404).json();
+    }
+
+    _.remove(componentsData, { id: componentId });
+
+    return res.status(204).json();
+  },
+  "PATCH /api/organizations/:organizationId/workspaces/:workspaceId/layout": (
+    req,
+    res
+  ) => {
+    const { workspaceId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+
+    if (!workspace) {
+      return res.status(404).json();
+    }
+
+    const layoutElements = req.body.data;
+
+    componentsData.forEach((component) => {
+      if (_.has(layoutElements, component.id)) {
+        component.layout = layoutElements[component.id];
+      }
+    });
 
     return res.status(204).json();
   },

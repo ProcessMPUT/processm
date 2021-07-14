@@ -33,7 +33,7 @@
 import Vue from "vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import { Component, Prop } from "vue-property-decorator";
-import WorkspaceComponentModel from "@/models/WorkspaceComponent";
+import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 
 @Component({
   components: { WorkspaceComponent }

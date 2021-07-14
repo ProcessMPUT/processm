@@ -414,8 +414,8 @@ paths:
       tags:
         - workspaces
         - components
-      summary: Update the specified component in the specified workspace in the context of the specified organization
-      operationId: updateWorkspaceComponent
+      summary: Add or update the specified component in the specified workspace in the context of the specified organization
+      operationId: addOrUpdateWorkspaceComponent
       requestBody:
         description: Component details to update
         content:
@@ -426,6 +426,25 @@ paths:
       responses:
         '204':
           description: successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - workspaces
+        - components
+      summary: Remove the specified component in the specified workspace in the context of the specified organization
+      operationId: removeWorkspaceComponent
+      responses:
+        '204':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -468,6 +487,42 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/ComponentDataMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/workspaces/{workspaceId}/layout:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: workspaceId
+        in: path
+        description: Workspace ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+        - workspaces
+      summary: Update size and position of the specified components
+      operationId: updateWorkspaceLayout
+      requestBody:
+        description: An object containing new size and position of updated components
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/LayoutCollectionMessageBody'
+      responses:
+        '204':
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1205,19 +1260,38 @@ components:
             $ref: '#/components/schemas/Workspace'
     Component:
       type: object
+      required: [id, query, type]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
+        query:
+          type: string
         type:
           $ref: '#/components/schemas/ComponentType'
+        layout:
+          $ref: '#/components/schemas/LayoutElement'
+    LayoutElement:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+    LayoutCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
         data:
           type: object
-          properties:
-            query:
-              type: string
+          additionalProperties:
+            $ref: '#/components/schemas/LayoutElement'
     AbstractComponent:
       oneOf:
         - $ref: '#/components/schemas/KpiComponent'
@@ -1226,9 +1300,10 @@ components:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
-          causal: '#/components/schemas/CausalNetComponent'
+          causalNet: '#/components/schemas/CausalNetComponent'
     ComponentData:
       type: object
+      required: [type]
       properties:
         type:
           $ref: '#/components/schemas/ComponentType'
@@ -1245,10 +1320,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
         - type: object
-          required: [value]
           properties:
-            type:
-              $ref: '#/components/schemas/ComponentType'
             value:
               type: number
     KpiComponent:
@@ -1266,8 +1338,6 @@ components:
         - type: object
           required: [nodes, edges]
           properties:
-            type:
-              $ref: '#/components/schemas/ComponentType'
             nodes:
               type: array
               items:

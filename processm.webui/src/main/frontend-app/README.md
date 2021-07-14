@@ -9,13 +9,11 @@ The project developed using the following tools:
 * TypeScript,
 * NPM.
 
+The following commands should be executed in the context of `processm/processm.webui/src/main/frontend-app/` directory.
+
 ## Project setup
 ```
 npm install
-```
-
-## Generates source code
-```
 npm run generate-api-sources
 ```
 
@@ -38,6 +36,18 @@ npm run lint
 ```
 npx prettier --write '**/*.ts'
 ```
+
+## Release
+
+Preparing the front-end package for release doesn't require any extra components. You can execute the following without the need of installing development tools.
+
+### Prepares for hosting with processm.sevices
+
+Execute `mvn package` for `processm/processm.webui` module. Once it completed you can launch `processm.services`.
+
+### Prepares for deployment
+
+Make sure `mvn package` is executed during package preparation.
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).

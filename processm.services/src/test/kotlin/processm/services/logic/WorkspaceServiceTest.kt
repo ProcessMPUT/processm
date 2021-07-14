@@ -199,13 +199,15 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val newComponentName = "newName"
         val newComponentType = ComponentTypeDto.Kpi
         val newComponentCustomizationData = """{"data":"new"}"""
+        val newDataQuery = "new query"
 
-        workspaceService.updateWorkspaceComponent(
+        workspaceService.addOrUpdateWorkspaceComponent(
             componentId.value,
             workspaceId.value,
             userId.value,
             organizationId.value,
             newComponentName,
+            newDataQuery,
             newComponentType,
             newComponentCustomizationData
         )
@@ -214,6 +216,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             WorkspaceComponents.select {
                 WorkspaceComponents.id eq componentId and
                         (WorkspaceComponents.name eq newComponentName) and
+                        (WorkspaceComponents.query eq newDataQuery) and
                         (WorkspaceComponents.componentType eq newComponentType.typeName) and
                         (WorkspaceComponents.customizationData eq newComponentCustomizationData)
             }.any()
@@ -229,6 +232,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val oldComponentName = "oldName"
         val oldComponentType = ComponentTypeDto.Kpi
         val oldComponentCustomizationData = """{"data":"new"}"""
+        val oldDataQuery = "query"
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = groupId.value)
@@ -237,16 +241,18 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val componentId = createWorkspaceComponent(
             oldComponentName,
             workspaceId.value,
+            query = oldDataQuery,
             componentType = oldComponentType,
             customizationData = oldComponentCustomizationData
         )
 
-        workspaceService.updateWorkspaceComponent(
+        workspaceService.addOrUpdateWorkspaceComponent(
             componentId.value,
             workspaceId.value,
             userId.value,
             organizationId.value,
             name = null,
+            query = null,
             componentType = null,
             customizationData = null
         )
@@ -255,6 +261,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             WorkspaceComponents.select {
                 WorkspaceComponents.id eq componentId and
                         (WorkspaceComponents.name eq oldComponentName) and
+                        (WorkspaceComponents.query eq oldDataQuery) and
                         (WorkspaceComponents.componentType eq oldComponentType.typeName) and
                         (WorkspaceComponents.customizationData eq oldComponentCustomizationData)
             }.any()
@@ -270,6 +277,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val oldComponentName = "oldName"
         val oldComponentType = ComponentTypeDto.Kpi
         val oldComponentCustomizationData = """{"data":"new"}"""
+        val oldDataQuery = "query"
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Reader)
         val userId = createUser(privateGroupId = groupId.value)
@@ -278,22 +286,139 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val componentId = createWorkspaceComponent(
             oldComponentName,
             workspaceId.value,
+            query = oldDataQuery,
             componentType = oldComponentType,
             customizationData = oldComponentCustomizationData
         )
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
-                workspaceService.updateWorkspaceComponent(
+                workspaceService.addOrUpdateWorkspaceComponent(
                     componentId.value,
                     workspaceId.value,
                     userId.value,
                     organizationId.value,
                     name = null,
+                    query = null,
                     componentType = null,
                     customizationData = null
                 )
             }
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `creates workspace component if the component does not exist`(): Unit = withCleanTables(
+        Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
+        val componentId = UUID.randomUUID();
+        val componentName = "oldName"
+        val componentType = ComponentTypeDto.Kpi
+        val componentCustomizationData = """{"data":"new"}"""
+        val dataQuery = "query"
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val userId = createUser(privateGroupId = groupId.value)
+        val workspaceId = createWorkspace("Workspace1")
+        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+
+        workspaceService.addOrUpdateWorkspaceComponent(
+            componentId,
+            workspaceId.value,
+            userId.value,
+            organizationId.value,
+            name = componentName,
+            query = dataQuery,
+            componentType = componentType,
+            customizationData = componentCustomizationData
+        )
+
+        assertTrue {
+            WorkspaceComponents.select {
+                WorkspaceComponents.id eq componentId and
+                        (WorkspaceComponents.name eq componentName) and
+                        (WorkspaceComponents.query eq dataQuery) and
+                        (WorkspaceComponents.componentType eq componentType.typeName) and
+                        (WorkspaceComponents.customizationData eq componentCustomizationData)
+            }.any()
+        }
+    }
+
+    @Test
+    fun `removes workspace component if the component exists`(): Unit = withCleanTables(
+        Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val userId = createUser(privateGroupId = groupId.value)
+        val workspaceId = createWorkspace("Workspace1")
+        val componentId = createWorkspaceComponent(componentWorkspaceId = workspaceId.value)
+        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+
+        workspaceService.removeWorkspaceComponent(
+            componentId.value,
+            workspaceId.value,
+            userId.value,
+            organizationId.value
+        )
+
+        assertTrue {
+            WorkspaceComponents.select {
+                WorkspaceComponents.id eq componentId
+            }.empty()
+        }
+    }
+
+    @Test
+    fun `component removal fails if user has insufficient permissions`(): Unit = withCleanTables(
+        Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Reader)
+        val userId = createUser(privateGroupId = groupId.value)
+        val workspaceId = createWorkspace("Workspace1")
+        val componentId = createWorkspaceComponent(componentWorkspaceId = workspaceId.value)
+
+        val exception =
+            assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
+                workspaceService.removeWorkspaceComponent(
+                    componentId.value, workspaceId.value, userId.value, organizationId.value
+                )
+            }
+
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertTrue {
+            WorkspaceComponents.select {
+                WorkspaceComponents.id eq componentId
+            }.any()
+        }
+    }
+
+    @Test
+    fun `component removal fails if the component does not exist`(): Unit = withCleanTables(
+        Organizations, Users, UserGroups, UsersInGroups,
+        WorkspaceComponents,
+        Workspaces
+    ) {
+        val organizationId = createOrganization()
+        val groupId = createGroup(groupRole = GroupRoleDto.Reader)
+        val userId = createUser(privateGroupId = groupId.value)
+        val workspaceId = createWorkspace("Workspace1")
+        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+
+        val exception =
+            assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
+                workspaceService.removeWorkspaceComponent(
+                    UUID.randomUUID(), workspaceId.value, userId.value, organizationId.value
+                )
+            }
+
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
 }

@@ -1,9 +1,61 @@
 <template>
   <v-container>
-    <v-row dense>
-      <v-col offset="11" dense>
-        <v-switch v-model="locked" :label="$t('workspace.locked')" />
-      </v-col>
+    <v-row justify="end" class="pa-1">
+      <v-tooltip bottom :open-delay="tooltipOpenDelay">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn
+            fab
+            small
+            depressed
+            class="ma-1"
+            color="primary"
+            @click="createComponent"
+            v-bind="attrs"
+            v-on="on"
+          >
+            <v-icon>add_chart</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ $t("workspace.tooltip.add") }}</span>
+      </v-tooltip>
+      <v-tooltip bottom :open-delay="tooltipOpenDelay">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn
+            fab
+            small
+            depressed
+            :outlined="unlocked"
+            color="primary"
+            class="ma-1"
+            @click="toggleLocked"
+            v-bind="attrs"
+            v-on="on"
+          >
+            <v-icon v-if="unlocked">lock</v-icon>
+            <v-icon v-else>lock_open</v-icon>
+          </v-btn>
+        </template>
+        <span v-if="unlocked">{{ $t("workspace.tooltip.lock") }}</span>
+        <span v-else>{{ $t("workspace.tooltip.unlock") }}</span>
+      </v-tooltip>
+      <v-tooltip bottom :open-delay="tooltipOpenDelay">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn
+            fab
+            small
+            depressed
+            :disabled="componentsWithLayoutsToBeUpdated.size == 0"
+            color="primary"
+            class="ma-1"
+            @click="saveLayout"
+            v-bind="attrs"
+            v-on="on"
+          >
+            <v-icon>save</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ $t("workspace.tooltip.save") }}</span>
+      </v-tooltip>
     </v-row>
 
     <v-row>
@@ -11,8 +63,8 @@
         <grid-layout
           :layout.sync="layout"
           :row-height="30"
-          :is-draggable="!locked"
-          :is-resizable="!locked"
+          :is-draggable="unlocked"
+          :is-resizable="unlocked"
           :is-mirrored="false"
           :vertical-compact="true"
           :margin="[10, 10]"
@@ -28,13 +80,20 @@
             :key="item.i"
             drag-ignore-from="div.workspace-component-content"
             class="elevation-1"
+            @moved="updateComponentPosition"
+            @resized="updateComponentSize"
           >
             <workspace-component
-              :component-details="componentsDetails[item.i]"
+              v-if="componentsDetails.has(item.i)"
+              :component-details="componentsDetails.get(item.i)"
               :component-mode="ComponentMode.Static"
               @view="viewComponent"
               @edit="editComponent"
               @remove="removeComponent"
+            />
+            <empty-component
+              v-else
+              @type-selected="initializeEmptyComponent(item.i, $event)"
             />
           </grid-item>
         </grid-layout>
@@ -58,6 +117,7 @@
       @view="viewComponent"
       @edit="editComponent"
       @remove="removeComponent"
+      @component-updated="updateComponent"
     ></edit-component-view>
   </v-container>
 </template>
@@ -72,6 +132,10 @@
 .vue-grid-layout {
   max-height: 0px;
 }
+
+.container >>> .vue-grid-item.vue-grid-placeholder {
+  background: var(--v-primary-lighten1);
+}
 </style>
 
 <script lang="ts">
@@ -79,11 +143,17 @@ import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop, Inject } from "vue-property-decorator";
 import { GridLayout, GridItem } from "vue-grid-layout";
+import { v4 as uuidv4 } from "uuid";
 import SingleComponentView from "./SingleComponentView.vue";
 import EditComponentView from "./EditComponentView.vue";
+import EmptyComponent from "./EmptyComponent.vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
-import WorkspaceComponentModel from "@/models/WorkspaceComponent";
+import {
+  WorkspaceComponent as WorkspaceComponentModel,
+  LayoutElement,
+  ComponentType
+} from "@/models/WorkspaceComponent";
 
 @Component({
   components: {
@@ -91,7 +161,8 @@ import WorkspaceComponentModel from "@/models/WorkspaceComponent";
     GridItem,
     WorkspaceComponent,
     SingleComponentView,
-    EditComponentView
+    EditComponentView,
+    EmptyComponent
   }
 })
 export default class WorkspaceArea extends Vue {
@@ -101,11 +172,15 @@ export default class WorkspaceArea extends Vue {
   readonly workspaceId!: string;
   @Inject() workspaceService!: WorkspaceService;
 
-  locked = false;
+  readonly defaultComponentWidth = 4;
+  readonly defaultComponentHeight = 4;
+  readonly tooltipOpenDelay = 200;
+  readonly componentsWithLayoutsToBeUpdated = new Set<string>();
+  unlocked = false;
   displayViewModal = false;
   displayEditModal = false;
   displayedComponentDetails?: WorkspaceComponentModel;
-  componentsDetails: Record<string, WorkspaceComponentModel> = {};
+  componentsDetails: Map<string, WorkspaceComponentModel> = new Map();
   layout: Array<{
     i: string;
     x: number;
@@ -118,49 +193,120 @@ export default class WorkspaceArea extends Vue {
     const components = await this.workspaceService.getWorkspaceComponents(
       this.workspaceId
     );
-
     for (const component of components) {
-      this.componentsDetails[component.id] = component;
+      this.componentsDetails.set(component.id, component);
       this.layout.push({
         i: component.id,
-        x: 0,
-        y: 0,
-        w: 3,
-        h: 4
+        x: component.layout?.x ?? 0,
+        y: component.layout?.y ?? 0,
+        w: component.layout?.width ?? this.defaultComponentWidth,
+        h: component.layout?.height ?? this.defaultComponentHeight
       });
     }
   }
 
   toggleLocked() {
-    this.locked = !this.locked;
+    this.unlocked = !this.unlocked;
+  }
+
+  createComponent() {
+    this.layout.unshift({
+      i: uuidv4(),
+      x: 0,
+      y: 0,
+      w: this.defaultComponentWidth,
+      h: this.defaultComponentHeight
+    });
   }
 
   viewComponent(id: string) {
     this.closeModals();
-    this.displayedComponentDetails = this.componentsDetails[id];
+    this.displayedComponentDetails = this.componentsDetails.get(id);
     this.displayViewModal = true;
   }
 
   editComponent(id: string) {
     this.closeModals();
-    this.displayedComponentDetails = this.componentsDetails[id];
+    this.displayedComponentDetails = this.componentsDetails.get(id);
     this.displayEditModal = true;
   }
 
-  removeComponent(id: string) {
+  async removeComponent(componentId: string) {
     const componentIndex = this.layout.findIndex(
-      (component) => component.i == id
+      (component) => component.i == componentId
     );
 
     if (componentIndex >= 0) {
+      await this.workspaceService.removeComponent(
+        this.workspaceId,
+        componentId
+      );
       this.layout.splice(componentIndex, 1);
       this.closeModals();
     }
   }
 
+  updateComponent(componentData: WorkspaceComponentModel) {
+    this.componentsDetails.set(componentData.id, componentData);
+  }
+
   closeModals() {
     this.displayViewModal = false;
     this.displayEditModal = false;
+  }
+
+  updateComponentPosition(id: string, x: number, y: number) {
+    this.updateComponentLayout(id, { x, y });
+  }
+
+  updateComponentSize(id: string, height: number, width: number) {
+    this.updateComponentLayout(id, { height, width });
+  }
+
+  initializeEmptyComponent(componentId: string, componentType: ComponentType) {
+    this.componentsDetails.set(
+      componentId,
+      new WorkspaceComponentModel({
+        id: componentId,
+        query: "",
+        type: componentType
+      })
+    );
+    this.editComponent(componentId);
+  }
+
+  async saveLayout() {
+    const updatedLayoutElements = {} as Record<string, LayoutElement>;
+    this.componentsWithLayoutsToBeUpdated.forEach((componentId) => {
+      const component = this.componentsDetails.get(componentId);
+
+      if (component?.layout != null)
+        updatedLayoutElements[componentId] = component.layout;
+    });
+
+    if (
+      await this.workspaceService.updateLayout(
+        this.workspaceId,
+        updatedLayoutElements
+      )
+    )
+      this.componentsWithLayoutsToBeUpdated.clear();
+  }
+
+  private updateComponentLayout(id: string, layout: Partial<LayoutElement>) {
+    const component = this.componentsDetails.get(id);
+
+    if (component == null) return;
+
+    const componentLayout = component.layout ?? new LayoutElement({});
+
+    if (layout.x != null) componentLayout.x = layout.x;
+    if (layout.y != null) componentLayout.y = layout.y;
+    if (layout.width != null) componentLayout.width = layout.width;
+    if (layout.height != null) componentLayout.height = layout.height;
+
+    component.layout = componentLayout;
+    this.componentsWithLayoutsToBeUpdated.add(id);
   }
 }
 </script>

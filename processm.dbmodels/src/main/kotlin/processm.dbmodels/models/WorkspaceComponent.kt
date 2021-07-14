@@ -11,8 +11,9 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
     val workspaceId = reference("workspace_id", Workspaces)
     val query = text("query")
     val componentType = text("type")
-    val componentDataSourceId = integer("data_source_id")
+    val componentDataSourceId = integer("data_source_id").nullable()
     val customizationData = text("customization_data").nullable()
+    val layoutData = text("layout_data").nullable()
 }
 
 class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -31,13 +32,15 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
         })
     var componentDataSourceId by WorkspaceComponents.componentDataSourceId
     var customizationData by WorkspaceComponents.customizationData
+    var layoutData by WorkspaceComponents.layoutData
 
     fun toDto() = WorkspaceComponentDto(
         id.value,
         name,
         query,
         componentType,
-        customizationData = customizationData
+        customizationData = customizationData,
+        layoutData = layoutData
     )
 }
 
@@ -50,7 +53,15 @@ enum class ComponentTypeDto(val typeName: String) {
     }
 }
 
-data class WorkspaceComponentDto(val id: UUID, val name: String, val query: String = "SELECT ...", val componentType: ComponentTypeDto, var data: Any? = null, val customizationData: String? = null)
+data class WorkspaceComponentDto(
+    val id: UUID,
+    val name: String,
+    val query: String = "SELECT ...",
+    val componentType: ComponentTypeDto,
+    var data: Any? = null,
+    val customizationData: String? = null,
+    val layoutData: String? = null
+)
 data class CausalNetNodeDto(val id: String, val splits: Array<Array<String>>, val joins: Array<Array<String>>)
 data class CausalNetEdgeDto(val sourceNodeId: String, val targetNodeId: String)
 data class CausalNetDto(val nodes: List<CausalNetNodeDto>, val edges: List<CausalNetEdgeDto>)
