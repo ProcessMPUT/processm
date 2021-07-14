@@ -432,6 +432,25 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
+    delete:
+      tags:
+        - workspaces
+        - components
+      summary: Remove the specified component in the specified workspace in the context of the specified organization
+      operationId: removeWorkspaceComponent
+      responses:
+        '204':
+          description: successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ComponentMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
   /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
     parameters:
       - name: organizationId

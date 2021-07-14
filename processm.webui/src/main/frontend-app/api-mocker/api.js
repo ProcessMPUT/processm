@@ -228,6 +228,22 @@ const api = {
 
     return res.status(204).json();
   },
+  "DELETE /api/organizations/:organizationId/workspaces/:workspaceId/components/:componentId": (
+    req,
+    res
+  ) => {
+    const { workspaceId, componentId } = req.params;
+    const workspace = _.find(workspaces, { id: workspaceId });
+    const component = _.find(componentsData, { id: componentId });
+
+    if (!workspace || !component) {
+      return res.status(404).json();
+    }
+
+    _.remove(componentsData, { id: componentId });
+
+    return res.status(204).json();
+  },
   "PATCH /api/organizations/:organizationId/workspaces/:workspaceId/layout": (
     req,
     res

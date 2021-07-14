@@ -142,7 +142,7 @@ class WorkspaceService(private val accountService: AccountService) {
         if (!canWorkspaceBeModified) {
             throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
-                "The specified workspace does not exist or the user has insufficient permissions to it"
+                "The specified workspace/component does not exist or the user has insufficient permissions to it"
             )
         }
 
@@ -164,6 +164,47 @@ class WorkspaceService(private val accountService: AccountService) {
         addComponent(workspaceComponentId, workspaceId, name, query, componentType, customizationData, layoutData)
     }
 
+    /**
+     * Removes the specified [workspaceComponentId].s
+     * Throws [ValidationException] if the specified [userId] has insufficient permissions or [workspaceComponentId] doesn't exist.
+     */
+    fun removeWorkspaceComponent(
+        workspaceComponentId: UUID,
+        workspaceId: UUID,
+        userId: UUID,
+        organizationId: UUID,
+    ) = transaction(DBCache.getMainDBPool().database) {
+        val canWorkspaceBeRemoved = UsersInGroups
+            .innerJoin(UserGroups)
+            .innerJoin(UserGroupWithWorkspaces)
+            .innerJoin(Workspaces)
+            .innerJoin(WorkspaceComponents)
+            .select {
+                UserGroupWithWorkspaces.workspaceId eq workspaceId and
+                        (WorkspaceComponents.id eq workspaceComponentId) and
+                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
+                        (UsersInGroups.userId eq userId) and
+                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
+            }
+            .limit(1)
+            .any()
+
+        if (!canWorkspaceBeRemoved) {
+            throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified workspace/component does not exist or the user has insufficient permissions to it"
+            )
+        }
+
+        WorkspaceComponents.deleteWhere {
+            WorkspaceComponents.id eq workspaceComponentId
+        } > 0
+    }
+
+    /**
+     * Update layout information related to the specified components inside [workspaceId].
+     * Throws [ValidationException] if the specified [userId] has insufficient permissions or a component doesn't exist.
+     */
     fun updateWorkspaceLayout(
         workspaceId: UUID,
         userId: UUID,

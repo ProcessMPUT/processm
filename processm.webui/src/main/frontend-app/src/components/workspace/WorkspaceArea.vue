@@ -231,12 +231,16 @@ export default class WorkspaceArea extends Vue {
     this.displayEditModal = true;
   }
 
-  removeComponent(id: string) {
+  async removeComponent(componentId: string) {
     const componentIndex = this.layout.findIndex(
-      (component) => component.i == id
+      (component) => component.i == componentId
     );
 
     if (componentIndex >= 0) {
+      await this.workspaceService.removeComponent(
+        this.workspaceId,
+        componentId
+      );
       this.layout.splice(componentIndex, 1);
       this.closeModals();
     }

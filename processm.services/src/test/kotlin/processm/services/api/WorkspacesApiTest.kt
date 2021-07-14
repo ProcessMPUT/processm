@@ -497,4 +497,51 @@ class WorkspacesApiTest : BaseApiTest() {
                 }
             }
         }
+
+    @Test
+    fun `responds to component removal request with 204`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val workspaceId = UUID.randomUUID()
+            val componentId = UUID.randomUUID()
+
+            withAuthentication(role = OrganizationRole.reader to organizationId) {
+                every {
+                    workspaceService.removeWorkspaceComponent(
+                        componentId,
+                        workspaceId,
+                        any(),
+                        organizationId
+                    )
+                } returns true
+                with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId")) {
+                    assertEquals(HttpStatusCode.NoContent, response.status())
+                }
+            }
+        }
+
+    @Test
+    fun `responds to component removal request with unknown resource with 404 and error message`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val workspaceId = UUID.randomUUID()
+            val componentId = UUID.randomUUID()
+
+            withAuthentication(role = OrganizationRole.reader to organizationId) {
+                every {
+                    workspaceService.removeWorkspaceComponent(
+                        componentId,
+                        workspaceId,
+                        any(),
+                        organizationId
+                    )
+                } throws ValidationException(
+                    ValidationException.Reason.ResourceNotFound,
+                    "The specified workspace/component does not exist or the user has insufficient permissions to it"
+                )
+                with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId")) {
+                    assertEquals(HttpStatusCode.NotFound, response.status())
+                }
+            }
+        }
 }

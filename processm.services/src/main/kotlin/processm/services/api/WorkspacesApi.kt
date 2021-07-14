@@ -95,6 +95,19 @@ fun Route.WorkspacesApi() {
             call.respond(HttpStatusCode.NoContent)
         }
 
+        delete<Paths.WorkspaceComponent> { component ->
+            val principal = call.authentication.principal<ApiUser>()!!
+
+            principal.ensureUserBelongsToOrganization(component.organizationId)
+            workspaceService.removeWorkspaceComponent(
+                component.componentId,
+                component.workspaceId,
+                principal.userId,
+                component.organizationId)
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+
         get<Paths.WorkspaceComponentData> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 

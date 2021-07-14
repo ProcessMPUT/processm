@@ -158,6 +158,19 @@ export default class WorkspaceService extends BaseService {
     return response.status == 204;
   }
 
+  public async removeComponent(
+    workspaceId: string,
+    componentId: string
+  ): Promise<void> {
+    const response = await this.workspacesApi.removeWorkspaceComponent(
+      this.currentOrganizationId,
+      workspaceId,
+      componentId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+  }
+
   private get currentOrganizationId() {
     return Vue.prototype.$sessionStorage.currentOrganization.id;
   }
