@@ -34,7 +34,7 @@ docker save -o processm-docker-image.tar processm && scp ./processm-docker-image
 
 On the server:
 
-#### Configurirng database access
+#### Configuring database access
 
 Make sure the environment variable PROCESSM_CORE_PERSISTENCE_CONNECTION_URL is set with database connection string.
 
