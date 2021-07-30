@@ -15,6 +15,7 @@ import AccountService from "@/services/AccountService";
 import OrganizationService from "@/services/OrganizationService";
 import DataSourceService from "@/services/DataSourceService";
 import LogsService from "./services/LogsService";
+import ConfigService from "@/services/ConfigService";
 
 Vue.config.productionTip = false;
 Vue.use(SessionStorage, { persist: true });
@@ -25,6 +26,7 @@ new Vue({
   vuetify,
   i18n,
   provide: () => ({
+    configService: new ConfigService(),
     workspaceService: new WorkspaceService(),
     dataSourceService: new DataSourceService(),
     accountService: new AccountService(),

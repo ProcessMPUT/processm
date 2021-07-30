@@ -6,6 +6,8 @@ info:
 servers:
   - url: /api
 tags:
+  - name: config
+    description: System configuration
   - name: users
     description: User registration and session management
   - name: workspaces
@@ -19,6 +21,19 @@ tags:
   - name: logs
     description: Log data management
 paths:
+  /config:
+    get:
+      tags:
+        - config
+      summary: Get system configuration
+      operationId: getConfig
+      responses:
+        '200':
+          description: Successful response
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Config'
   /users:
     get:
       tags:
@@ -1046,6 +1061,18 @@ paths:
         - bearerAuth: []
 components:
   schemas:
+    Config:
+      type: object
+      required: [loginMessage, demoMode]
+      properties:
+        loginMessage:
+          type: string
+          default: ""
+          description: Message to show on login screen. May be empty.
+        demoMode:
+          type: boolean
+          description: Switches modes of operation of certain components into demo mode (e.g., less secure).
+          default: false
     ErrorMessageBody:
       type: object
       required: [error]

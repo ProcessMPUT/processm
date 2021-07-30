@@ -58,6 +58,7 @@ fun Application.apiModule() {
 
         routing {
             route("api") {
+                ConfigApi()
                 GroupsApi()
                 OrganizationsApi()
                 UsersApi()
