@@ -4,8 +4,8 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
-import org.jetbrains.exposed.sql.jodatime.datetime
-import org.joda.time.DateTime
+import org.jetbrains.exposed.sql.`java-time`.datetime
+import java.time.LocalDateTime
 import java.util.*
 
 object DataSources : UUIDTable("data_sources") {
@@ -24,4 +24,4 @@ class DataSource(id: EntityID<UUID>) : UUIDEntity(id) {
     fun toDto() = DataSourceDto(id.value, name, creationDate)
 }
 
-data class DataSourceDto(val id: UUID, val name: String, val creationDate: DateTime)
+data class DataSourceDto(val id: UUID, val name: String, val creationDate: LocalDateTime)

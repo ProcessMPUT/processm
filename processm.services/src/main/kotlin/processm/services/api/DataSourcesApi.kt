@@ -44,9 +44,8 @@ fun Route.DataSourcesApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             val dataSources = dataSourceService.allByOrganizationId(organizationId = pathParams.organizationId).map {
-                    val instant = Instant.ofEpochMilli(it.creationDate.millis)
-                    DataSource(it.name, it.id, java.time.LocalDateTime.ofInstant(instant, ZoneOffset.UTC))
-                }.toTypedArray()
+                DataSource(it.name, it.id, it.creationDate)
+            }.toTypedArray()
 
             call.respond(HttpStatusCode.OK, DataSourceCollectionMessageBody(dataSources))
         }
