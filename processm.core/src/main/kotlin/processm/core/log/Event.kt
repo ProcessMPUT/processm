@@ -1,5 +1,9 @@
 package processm.core.log
 
+import processm.core.log.attribute.DateTimeAttr
+import processm.core.log.attribute.IDAttr
+import processm.core.log.attribute.RealAttr
+import processm.core.log.attribute.StringAttr
 import java.time.Instant
 import java.util.*
 
@@ -88,5 +92,24 @@ open class Event : TraceOrEventBase() {
         orgResource = attributesInternal[nameMap["org:resource"]]?.getValue() as String?
 
         timeTimestamp = attributesInternal[nameMap["time:timestamp"]]?.getValue() as Instant?
+    }
+
+    override fun setCustomAttributes(nameMap: Map<String, String>) {
+        setCustomAttribute(conceptName, "concept:name", ::StringAttr, nameMap)
+        setCustomAttribute(conceptInstance, "concept:instance", ::StringAttr, nameMap)
+
+        setCustomAttribute(costTotal, "cost:total", ::RealAttr, nameMap)
+        setCustomAttribute(costCurrency, "cost:currency", ::StringAttr, nameMap)
+
+        setCustomAttribute(identityId, "identity:id", ::IDAttr, nameMap)
+
+        setCustomAttribute(lifecycleState, "lifecycle:state", ::StringAttr, nameMap)
+        setCustomAttribute(lifecycleTransition, "lifecycle:transition", ::StringAttr, nameMap)
+
+        setCustomAttribute(orgRole, "org:role", ::StringAttr, nameMap)
+        setCustomAttribute(orgGroup, "org:group", ::StringAttr, nameMap)
+        setCustomAttribute(orgResource, "org:resource", ::StringAttr, nameMap)
+
+        setCustomAttribute(timeTimestamp, "time:timestamp", ::DateTimeAttr, nameMap)
     }
 }

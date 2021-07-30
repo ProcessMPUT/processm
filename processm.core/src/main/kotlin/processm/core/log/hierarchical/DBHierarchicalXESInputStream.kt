@@ -220,6 +220,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
             count = result.entity.getIntOrNull("count") ?: 1
 
+            setCustomAttributes(nameMap)
+
             // getTraces is a sequence, so it will be actually called when one reads it
             traces = getTraces(logId, nameMap)
 
@@ -338,6 +340,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             isEventStream = result.entity.getBooleanOrNull("event_stream") ?: false
             count = result.entity.getIntOrNull("count") ?: 1
 
+            setCustomAttributes(nameMap)
+
             // getEvents is a sequence, so it will be actually called when one reads it
             events = getEvents(logId, traceId, nameMap)
 
@@ -369,6 +373,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             orgResource = result.entity.getString("org:resource") ?: orgResource
             timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant() ?: timeTimestamp
             count = result.entity.getIntOrNull("count") ?: 1
+
+            setCustomAttributes(nameMap)
 
             logger.exit()
             return this
