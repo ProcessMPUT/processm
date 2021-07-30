@@ -78,13 +78,16 @@ internal class TranslatedQuery(
         assert(scope < Scope.Trace || pql.isGroupBy[Scope.Trace] == false)
         assert(scope < Scope.Event || pql.isGroupBy[Scope.Event] == false)
 
-        selectId(scope, it)
+        val orderBy = pql.orderByExpressions[scope]!!
+
+        selectId(scope, it, orderBy.isEmpty())
 
         val desiredFromPosition = it.query.length
 
         where(scope, it, logId, traceId)
-        groupById(scope, it)
-        pql.orderByExpressions[scope]!!.toSQL(it, logId, "1", true, true, false)
+        if (orderBy.isNotEmpty())
+            groupById(scope, it)
+        orderBy.toSQL(it, logId, "1", true, true, false)
 
         val from = from(scope, it)
         it.query.insert(desiredFromPosition, from)
@@ -93,8 +96,8 @@ internal class TranslatedQuery(
         offset(scope, it)
     }
 
-    private fun selectId(scope: Scope, sql: MutableSQLQuery) {
-        sql.query.append("SELECT ${scope.alias}.id")
+    private fun selectId(scope: Scope, sql: MutableSQLQuery, distinct: Boolean) {
+        sql.query.append("SELECT ${if (distinct) "DISTINCT" else ""} ${scope.alias}.id")
     }
 
     private fun where(scope: Scope, sql: MutableSQLQuery, logId: Int?, traceId: Long?) {
