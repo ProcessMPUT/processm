@@ -59,6 +59,10 @@ internal fun ApplicationStatusPageConfiguration(): StatusPages.Configuration.() 
         exception<TokenExpiredException> { cause ->
             call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody(cause.message.orEmpty()))
         }
+        exception<BadRequestException> { cause ->
+            logger().error(cause)
+            call.respond(HttpStatusCode.BadRequest)
+        }
         exception<Exception> { cause ->
             logger().error(cause)
             call.respond(HttpStatusCode.InternalServerError)
