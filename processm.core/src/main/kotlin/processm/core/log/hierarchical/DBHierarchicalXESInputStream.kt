@@ -11,7 +11,6 @@ import processm.core.querylanguage.Query
 import processm.core.querylanguage.Scope
 import java.lang.ref.Cleaner
 import java.lang.ref.SoftReference
-import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Types
 import java.util.*
@@ -124,6 +123,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         } else {
             skipAction()
         }
+
+        @Suppress("UNCHECKED_CAST")
         return list as List<T>
     }
 
@@ -468,5 +469,5 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         }
 }
 
-@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")
+@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.", level = DeprecationLevel.ERROR)
 typealias DatabaseHierarchicalXESInputStream = DBHierarchicalXESInputStream
