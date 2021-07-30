@@ -1014,6 +1014,14 @@ paths:
       summary: Query logs stored in the specified data source
       operationId: submitLogsQuery
       parameters:
+        - in: header
+          name: Accept
+          schema:
+            type: string
+            enum:
+              - "application/json"
+              - "application/zip"
+          required: true
         - in: query
           name: query
           schema:

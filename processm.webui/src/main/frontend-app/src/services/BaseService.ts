@@ -79,7 +79,7 @@ export default abstract class BaseService {
       return;
     }
 
-    throw new Error(response.statusText);
+    throw new Error(response.data?.error ?? response.statusText);
   }
 
   private prolongExistingSession(
