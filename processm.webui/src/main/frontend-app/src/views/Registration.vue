@@ -83,7 +83,7 @@ export default class Registration extends Vue {
 
   async register() {
     if (!this.isValidForm) {
-      return (this.$refs.loginForm as Vue & {
+      return (this.$refs.registrationForm as Vue & {
         validate: () => boolean;
       }).validate();
     }
