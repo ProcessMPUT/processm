@@ -29,7 +29,7 @@
       </g>
     </g>
     <g>
-      <title>Layer 1</title>
+      <title>Log</title>
       <ellipse
         fill="none"
         cx="4.812721"

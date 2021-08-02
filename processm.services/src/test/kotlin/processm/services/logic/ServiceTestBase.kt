@@ -3,9 +3,9 @@ package processm.services.logic
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.joda.time.DateTime
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import java.time.LocalDateTime
 import java.util.*
 
 abstract class ServiceTestBase {
@@ -55,7 +55,7 @@ abstract class ServiceTestBase {
     protected fun createDataSource(
         organizationId: UUID,
         name: String = "DataSource#1",
-        creationDate: DateTime = DateTime.now()
+        creationDate: LocalDateTime = LocalDateTime.now()
     ): EntityID<UUID> {
         return DataSources.insertAndGetId {
             it[DataSources.name] = name

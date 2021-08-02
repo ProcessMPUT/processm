@@ -133,7 +133,7 @@ class UsersApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to request with malformed token with 401`() = withConfiguredTestApplication {
+    fun `responds to request with malformed token with 400`() = withConfiguredTestApplication {
         var currentToken: String? = null
 
         withAuthentication {
@@ -153,7 +153,7 @@ class UsersApiTest : BaseApiTest() {
         with(handleRequest(HttpMethod.Get, "/api/users") {
             addHeader(HttpHeaders.Authorization, "Bearer $randomizedToken")
         }) {
-            assertEquals(HttpStatusCode.Unauthorized, response.status())
+            assertEquals(HttpStatusCode.BadRequest, response.status())
         }
     }
 

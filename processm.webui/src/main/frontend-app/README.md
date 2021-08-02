@@ -12,28 +12,33 @@ The project developed using the following tools:
 The following commands should be executed in the context of `processm/processm.webui/src/main/frontend-app/` directory.
 
 ## Project setup
-```
+```shell
 npm install
 npm run generate-api-sources
 ```
 
-### Compiles and hot-reloads for development
-```
+### Compiles and hot-reloads for development (with mocks rather than the actual services)
+```shell
 npm run serve
 ```
 
-### Compiles and minifies for production
+### Hot-reloads with actual services (ProcessM run using Main)
+```shell
+npm run build -- --dest ../../../target/classes/frontend-dist --mode development
 ```
+
+### Compiles and minifies for production
+```shell
 npm run build
 ```
 
 ### Lints and fixes files
-```
+```shell
 npm run lint
 ```
 
 ### Prettier
-```
+```shell
 npx prettier --write '**/*.ts'
 ```
 

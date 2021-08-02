@@ -7,6 +7,9 @@
             <v-toolbar-title>{{ $t("login-form.title") }}</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
+            <v-alert type="info" text v-if="config.loginMessage !== ''">
+              {{ config.loginMessage }}
+            </v-alert>
             <v-form v-model="isValidForm" ref="loginForm">
               <v-text-field
                 :label="$t('login-form.email')"
@@ -32,7 +35,13 @@
                 @keypress.enter="authenticate"
               ></v-text-field>
               <v-layout justify-space-between>
-                <v-btn color="primary" text small to="register">
+                <v-btn
+                  color="primary"
+                  text
+                  small
+                  to="register"
+                  v-if="!config.demoMode"
+                >
                   {{ $t("login-form.register-account") }}
                 </v-btn>
                 <v-btn color="primary" @click.stop="authenticate">
@@ -62,15 +71,27 @@ import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
 import UserOrganization from "@/models/UserOrganization";
+import ConfigService from "@/services/ConfigService";
+import { Config } from "@/openapi";
 
 @Component
 export default class Login extends Vue {
   @Inject() accountService!: AccountService;
+  @Inject() configService!: ConfigService;
   readonly errorTimeout = 3000;
   isValidForm = false;
   errorMessage = false;
   username = "";
   password = "";
+  config: Config = {
+    loginMessage: "",
+    demoMode: false
+  };
+
+  async mounted() {
+    const c = await this.configService.getConfig();
+    Object.assign(this.config, c);
+  }
 
   async authenticate() {
     if (!this.isValidForm) {

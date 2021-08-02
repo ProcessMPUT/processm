@@ -4,12 +4,12 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.joda.time.DateTime
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.DataSource
 import processm.dbmodels.models.DataSourceDto
 import processm.dbmodels.models.DataSources
 import processm.dbmodels.models.Organizations
+import java.time.LocalDateTime
 import java.util.*
 
 class DataSourceService {
@@ -30,7 +30,7 @@ class DataSourceService {
         return transaction(DBCache.getMainDBPool().database) {
             val dataSourceId = DataSources.insertAndGetId {
                 it[this.name] = name
-                it[this.creationDate] = DateTime.now()
+                it[this.creationDate] = LocalDateTime.now()
                 it[this.organizationId] = EntityID(organizationId, Organizations)
             }
 

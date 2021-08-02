@@ -2,6 +2,7 @@ package processm.core.persistence.connection
 
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.Brand
+import processm.core.helpers.getPropertyIgnoreCase
 import processm.core.helpers.isUUID
 import processm.core.helpers.loadConfiguration
 import kotlin.properties.Delegates
@@ -23,7 +24,9 @@ object DatabaseChecker {
      */
     private fun readDatabaseConnectionURL(): String {
         loadConfiguration()
-        return System.getProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")
+        return checkNotNull(getPropertyIgnoreCase("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL")) {
+            "Database connection string is not set. Set the property processm.core.persistence.connection.URL."
+        }
     }
 
     /**

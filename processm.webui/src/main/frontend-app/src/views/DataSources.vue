@@ -1,8 +1,8 @@
 <template>
-  <v-container class="pb-0 px-0">
-    <v-row class="ma-0">
+  <v-container>
+    <v-row>
       <v-col cols="12">
-          <data-sources-list />
+        <data-sources-list />
       </v-col>
     </v-row>
   </v-container>

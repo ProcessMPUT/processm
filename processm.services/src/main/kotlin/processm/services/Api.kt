@@ -1,5 +1,8 @@
 package processm.services
 
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import io.ktor.application.*
 import io.ktor.auth.*
 import io.ktor.features.*
@@ -14,16 +17,26 @@ import org.koin.ktor.ext.Koin
 import processm.core.logging.loggedScope
 import processm.services.api.*
 import processm.services.logic.*
+import java.time.LocalDateTime
 
 @OptIn(ExperimentalStdlibApi::class)
 @KtorExperimentalLocationsAPI
-@KtorExperimentalAPI
 fun Application.apiModule() {
     loggedScope { logger ->
         logger.info("Starting API module")
         install(DefaultHeaders)
         install(ContentNegotiation) {
-            register(ContentType.Application.Json, GsonConverter())
+            // TODO: replace with kotlinx/serialization
+            gson(ContentType.Application.Json) {
+                // Correctly serialize/deserialize LocalDateTime
+                registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
+                    override fun write(out: JsonWriter, value: LocalDateTime?) {
+                        out.value(value.toString())
+                    }
+
+                    override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
+                })
+            }
         }
         install(AutoHeadResponse)
         install(HSTS, ApplicationHstsConfiguration())
@@ -45,6 +58,7 @@ fun Application.apiModule() {
 
         routing {
             route("api") {
+                ConfigApi()
                 GroupsApi()
                 OrganizationsApi()
                 UsersApi()

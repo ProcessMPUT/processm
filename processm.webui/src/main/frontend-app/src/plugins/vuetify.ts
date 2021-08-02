@@ -15,6 +15,7 @@ export default new Vuetify({
     }
   },
   icons: {
+    iconfont: "md",
     values: {
       xesEvent: {
         component: XesEventIcon

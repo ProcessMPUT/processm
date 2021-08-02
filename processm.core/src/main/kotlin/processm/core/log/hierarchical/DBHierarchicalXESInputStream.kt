@@ -11,7 +11,6 @@ import processm.core.querylanguage.Query
 import processm.core.querylanguage.Scope
 import java.lang.ref.Cleaner
 import java.lang.ref.SoftReference
-import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Types
 import java.util.*
@@ -124,6 +123,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         } else {
             skipAction()
         }
+
+        @Suppress("UNCHECKED_CAST")
         return list as List<T>
     }
 
@@ -219,6 +220,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             identityId = result.entity.getString("identity:id").toUUID() ?: identityId
             lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
             count = result.entity.getIntOrNull("count") ?: 1
+
+            setCustomAttributes(nameMap)
 
             // getTraces is a sequence, so it will be actually called when one reads it
             traces = getTraces(logId, nameMap)
@@ -338,6 +341,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             isEventStream = result.entity.getBooleanOrNull("event_stream") ?: false
             count = result.entity.getIntOrNull("count") ?: 1
 
+            setCustomAttributes(nameMap)
+
             // getEvents is a sequence, so it will be actually called when one reads it
             events = getEvents(logId, traceId, nameMap)
 
@@ -369,6 +374,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             orgResource = result.entity.getString("org:resource") ?: orgResource
             timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant() ?: timeTimestamp
             count = result.entity.getIntOrNull("count") ?: 1
+
+            setCustomAttributes(nameMap)
 
             logger.exit()
             return this
@@ -462,5 +469,5 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         }
 }
 
-@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")
+@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.", level = DeprecationLevel.ERROR)
 typealias DatabaseHierarchicalXESInputStream = DBHierarchicalXESInputStream

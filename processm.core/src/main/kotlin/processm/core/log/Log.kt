@@ -1,6 +1,8 @@
 package processm.core.log
 
 import processm.core.log.attribute.Attribute
+import processm.core.log.attribute.IDAttr
+import processm.core.log.attribute.StringAttr
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -111,5 +113,11 @@ open class Log : XESComponent() {
         conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
         identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
         lifecycleModel = attributesInternal[nameMap["lifecycle:model"]]?.getValue() as String?
+    }
+
+    override fun setCustomAttributes(nameMap: Map<String, String>) {
+        setCustomAttribute(conceptName, "concept:name", ::StringAttr, nameMap)
+        setCustomAttribute(identityId, "identity:id", ::IDAttr, nameMap)
+        setCustomAttribute(lifecycleModel, "lifecycle:mode", ::StringAttr, nameMap)
     }
 }

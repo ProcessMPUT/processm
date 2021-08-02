@@ -91,7 +91,8 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.2.12</version>
+            <!-- version 42.2.15 causes strange exceptions: org.postgresql.util.PSQLException: ERROR: invalid input syntax for type bigint: "[J@53ec2968"-->
+            <version>42.2.14</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>

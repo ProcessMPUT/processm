@@ -16,22 +16,25 @@ class DBHierarchicalXESInputStreamTests {
     val log: Sequence<Log> =
         sequenceOf(Log(sequenceOf(
             Trace(sequenceOf(
-                Event().apply { conceptName = "A" },
-                Event().apply { conceptName = "B" },
-                Event().apply { conceptName = "C" }
+                Event().apply { conceptName = "A"; setCustomAttributes(emptyMap()) },
+                Event().apply { conceptName = "B"; setCustomAttributes(emptyMap()) },
+                Event().apply { conceptName = "C"; setCustomAttributes(emptyMap()) }
             )).apply {
                 conceptName = "T"
+                setCustomAttributes(emptyMap())
             },
             Trace(
                 sequenceOf(
-                    Event().apply { conceptName = "D" },
-                    Event().apply { conceptName = "E" },
-                    Event().apply { conceptName = "F" }
+                    Event().apply { conceptName = "D"; setCustomAttributes(emptyMap()) },
+                    Event().apply { conceptName = "E"; setCustomAttributes(emptyMap()) },
+                    Event().apply { conceptName = "F"; setCustomAttributes(emptyMap()) }
                 )).apply {
                 conceptName = "U"
+                setCustomAttributes(emptyMap())
             }
         )).apply {
             conceptName = "L"
+            setCustomAttributes(emptyMap())
         })
     private val logId: Int by lazyOf(setUp())
 

@@ -5,10 +5,11 @@ import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.*
+import kotlin.reflect.KClass
 
 class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     companion object {
-        private const val batchSize = 32
+        private const val batchSize = 384
     }
 
     /**
@@ -17,11 +18,14 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     private var logId: Int? = null
 
     /**
-     * Trace ID of inserted Trace record
+     * Did we see trace component in the current log?
      */
-    private var traceId: Long? = null
+    private var sawTrace: Boolean = false
 
-    private val eventQueue = ArrayList<Event>(batchSize)
+    /**
+     * A buffer of traces and events to write to the database together. Must contain complete traces.
+     */
+    private val queue = ArrayList<XESComponent>(batchSize)
 
     init {
         assert(connection.metaData.supportsGetGeneratedKeys())
@@ -38,32 +42,30 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     override fun write(component: XESComponent) {
         when (component) {
             is Event -> {
-                // We expect that the corresponding Trace object is already stored in the database.
-                // If only Log is stored then we encountered an event stream.
-                if (traceId === null) {
+                // We expect that the corresponding Trace object is already stored in the queue.
+                // Otherwise we encountered an event stream.
+                if (!sawTrace) {
                     val eventStreamTraceElement = Trace()
                     // Set trace as event stream - special boolean flag
                     eventStreamTraceElement.isEventStream = true
                     write(eventStreamTraceElement)
                 }
 
-                eventQueue.add(component)
-                if (eventQueue.size >= batchSize)
-                    flushEvents()
+                queue.add(component)
             }
             is Trace -> {
+                if (queue.size >= batchSize)
+                    flushQueue()
+
                 // We expect to already store Log object in the database
                 check(logId !== null) { "Log ID not set. Can not add trace to the database" }
 
-                flushEvents() // flush events from the previous trace
-
-                val sql = SQL()
-                writeTrace(component, sql)
-                writeAttributes("TRACES_ATTRIBUTES", "trace", 0, component.attributes.values, sql)
-                traceId = sql.executeQuery("trace")
+                queue.add(component)
+                sawTrace = true
             }
             is Log -> {
-                flushEvents() // flush events from the previous log
+                flushQueue() // flush events and traces from the previous log
+                sawTrace = false // we must not refer to a trace from the previous log
 
                 val sql = SQL()
                 writeLog(component, sql)
@@ -84,7 +86,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
      * Commit and close connection with the database
      */
     override fun close() {
-        flushEvents()
+        flushQueue()
         connection.commit()
         connection.close()
     }
@@ -99,73 +101,105 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         connection.close()
     }
 
-    private fun flushEvents() {
-        if (eventQueue.isEmpty())
+    private fun flushQueue() {
+        if (queue.isEmpty())
             return
 
-        val sql = SQL()
-        writeEvents(eventQueue, sql)
-        for ((index, event) in eventQueue.withIndex()) {
-            writeAttributes("EVENTS_ATTRIBUTES", "event", index, event.attributes.values, sql)
-        }
-        eventQueue.clear()
-        sql.execute()
+        val traceSql = SQL()
+        val eventSql = SQL()
+        val attrSql = SQL()
 
-        assert(eventQueue.isEmpty())
-    }
-
-    private fun writeEvents(events: Iterable<Event>, to: SQL) {
-        with(to.sql) {
-            append("WITH event AS (")
-            append("""INSERT INTO EVENTS(trace_id, "concept:name", "concept:instance", "cost:total", "cost:currency", "identity:id", "lifecycle:transition", "lifecycle:state", "org:resource", "org:role", "org:group", "time:timestamp") VALUES """)
+        with(traceSql.sql) {
+            append("WITH trace AS (")
+            append("""INSERT INTO TRACES(log_id,"concept:name","cost:total","cost:currency","identity:id",event_stream) VALUES""")
         }
 
-        for (event in events) {
-            to.sql.append("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), ")
+        with(eventSql.sql) {
+            append(", event AS (")
+            append("""INSERT INTO EVENTS(trace_id,"concept:name","concept:instance","cost:total","cost:currency","identity:id","lifecycle:transition","lifecycle:state","org:resource","org:role","org:group","time:timestamp") VALUES""")
+        }
 
-            with(to.params) {
-                addLast(traceId)
-                addLast(event.conceptName)
-                addLast(event.conceptInstance)
-                addLast(event.costTotal)
-                addLast(event.costCurrency)
-                addLast(event.identityId)
-                addLast(event.lifecycleTransition)
-                addLast(event.lifecycleState)
-                addLast(event.orgResource)
-                addLast(event.orgRole)
-                addLast(event.orgGroup)
-                addLast(event.timeTimestamp?.let { Timestamp.from(it) })
+        var lastEventIndex = -1
+        var lastTraceIndex = -1
+        for (component in queue) {
+            when (component) {
+                is Event -> {
+                    check(lastTraceIndex >= 0) { "Trace must precede event in the queue." }
+                    ++lastEventIndex
+                    writeEventData(component, eventSql, lastTraceIndex)
+                    writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes.values, attrSql)
+                }
+                is Trace -> {
+                    ++lastTraceIndex
+                    writeTraceData(component, traceSql)
+                    writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes.values, attrSql)
+                }
+                else -> throw UnsupportedOperationException("Unexpected $component.")
             }
         }
 
-        with(to.sql) {
+        assert(lastTraceIndex >= 0)
+
+        with(traceSql.sql) {
             delete(length - 2, length)
             append(" RETURNING ID)")
         }
-    }
 
-    private fun writeTrace(element: Trace, to: SQL) {
-        with(to.sql) {
-            append("WITH trace AS (")
-            append("""INSERT INTO TRACES(log_id, "concept:name", "cost:total", "cost:currency", "identity:id", event_stream) VALUES (?, ?, ?, ?, ?, ?) RETURNING ID""")
-            append(')')
+        with(eventSql.sql) {
+            delete(length - 2, length)
+            append(" RETURNING ID)")
         }
 
+        with(traceSql) {
+            if (lastEventIndex >= 0) {
+                sql.append(eventSql.sql)
+                params.addAll(eventSql.params)
+            }
+
+            sql.append(attrSql.sql)
+            params.addAll(attrSql.params)
+        }
+
+        queue.clear()
+        traceSql.execute()
+
+        assert(queue.isEmpty())
+    }
+
+    private fun writeEventData(event: Event, to: SQL, traceIndex: Int?) {
+        to.sql.append("((SELECT id FROM trace LIMIT 1 OFFSET $traceIndex),?,?,?,?,?,?,?,?,?,?,?), ")
+
+        with(to.params) {
+            addLast(event.conceptName)
+            addLast(event.conceptInstance)
+            addLast(event.costTotal)
+            addLast(event.costCurrency)
+            addLast(event.identityId)
+            addLast(event.lifecycleTransition)
+            addLast(event.lifecycleState)
+            addLast(event.orgResource)
+            addLast(event.orgRole)
+            addLast(event.orgGroup)
+            addLast(event.timeTimestamp?.let { Timestamp.from(it) })
+        }
+    }
+
+    private fun writeTraceData(trace: Trace, to: SQL) {
+        to.sql.append("(?,?,?,?,?,?), ")
         with(to.params) {
             addLast(logId)
-            addLast(element.conceptName)
-            addLast(element.costTotal)
-            addLast(element.costCurrency)
-            addLast(element.identityId)
-            addLast(element.isEventStream)
+            addLast(trace.conceptName)
+            addLast(trace.costTotal)
+            addLast(trace.costCurrency)
+            addLast(trace.identityId)
+            addLast(trace.isEventStream)
         }
     }
 
     private fun writeLog(element: Log, to: SQL) {
         with(to.sql) {
             append("WITH log AS (")
-            append("""INSERT INTO LOGS("xes:version", "xes:features", "concept:name", "identity:id", "lifecycle:model") VALUES (?, ?, ?, ?, ?) RETURNING ID""")
+            append("""INSERT INTO LOGS("xes:version","xes:features","concept:name","identity:id","lifecycle:model") VALUES (?,?,?,?,?) RETURNING ID""")
             append(')')
         }
 
@@ -196,8 +230,8 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             topMost: Boolean = true,
             inList: Boolean? = null
         ) {
-            // This function preseves the order of attributes on each level of the tree but does not preserve the order
-            // between levels. This is enough to preserve the order of list attribute. It cannot use the (straightforward)
+            // This function preserves the order of attributes on each level of the tree but does not preserve the order
+            // between the levels. This is enough to preserve the order of list attribute. It cannot use the (straightforward)
             // depth-first-search algorithm, as writable common table extensions in PostgreSQL are evaluated concurrently.
             // From https://www.postgresql.org/docs/current/queries-with.html:
             // The sub-statements in WITH are executed concurrently with each other and with the main query. Therefore,
@@ -212,33 +246,32 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
                 append(
                     "INSERT INTO $destinationTable(${rootTempTable}_id, key, type, " +
                             "string_value, uuid_value, date_value, int_value, bool_value, real_value, " +
-                            "parent_id, in_list_attr ${extraColumns.keys.join()}) "
+                            "parent_id, in_list_attr${extraColumns.keys.join()}) "
                 )
                 append(
                     "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
                             "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
                             "${if (topMost) "NULL" else "(SELECT id FROM attributes$parentTableNumber ORDER BY id LIMIT 1 OFFSET $parentRowIndex)"}, " +
-                            "a.in_list_attr ${extraColumns.values.join { "'$it'" }} FROM (VALUES "
+                            "a.in_list_attr${extraColumns.values.join { "'$it'" }} FROM (VALUES "
                 )
             }
-            for (attribute in attributes) {
-                to.sql.append("(?, ?::attribute_type, ?, ?::uuid, ?::timestamptz, ?::integer, ?::boolean, ?::double precision, ?::boolean), ")
-                with(to.params) {
-                    addLast(attribute.key)
-                    addLast(attribute.xesTag)
-                    addLast((attribute as? StringAttr)?.value)
-                    addLast((attribute as? IDAttr)?.value)
-                    addLast((attribute as? DateTimeAttr)?.value?.let { Timestamp.from(it) })
-                    addLast((attribute as? IntAttr)?.value)
-                    addLast((attribute as? BoolAttr)?.value)
-                    addLast((attribute as? RealAttr)?.value)
-                    addLast(inList)
+            with(to) {
+                for (attribute in attributes) {
+                    sql.append("(?,'${attribute.xesTag}'::attribute_type,")
+                    params.addLast(attribute.key)
+                    writeTypedAttribute(attribute, StringAttr::class, to)
+                    writeTypedAttribute(attribute, IDAttr::class, to)
+                    writeTypedAttribute(attribute, DateTimeAttr::class, to)
+                    writeTypedAttribute(attribute, IntAttr::class, to)
+                    writeTypedAttribute(attribute, BoolAttr::class, to)
+                    writeTypedAttribute(attribute, RealAttr::class, to)
+                    sql.append("$inList::boolean),")
                 }
             }
 
             with(to.sql) {
-                delete(length - 2, length)
-                append(") a(key, type, string_value, uuid_value, date_value, int_value, bool_value, real_value, in_list_attr) ")
+                deleteCharAt(length - 1)
+                append(") a(key,type,string_value,uuid_value,date_value,int_value,bool_value,real_value,in_list_attr) ")
                 append("RETURNING id)")
             }
 
@@ -258,16 +291,34 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         addAttributes(attributes)
     }
 
+    private fun writeTypedAttribute(attribute: Attribute<*>, type: KClass<*>, to: SQL) {
+        val cast = when (type) {
+            StringAttr::class -> ""
+            IDAttr::class -> "::uuid"
+            DateTimeAttr::class -> "::timestamptz"
+            IntAttr::class -> "::integer"
+            BoolAttr::class -> "::boolean"
+            RealAttr::class -> "::double precision"
+            else -> throw UnsupportedOperationException("Unknown attribute type $type.")
+        }
+        if (type.isInstance(attribute)) {
+            to.sql.append("?$cast,")
+            to.params.addLast(if (attribute is DateTimeAttr) Timestamp.from(attribute.value) else attribute.value)
+        } else {
+            to.sql.append("NULL$cast,")
+        }
+    }
+
     private fun writeExtensions(extensions: Collection<Extension>, to: SQL) {
         if (extensions.isEmpty())
             return
 
         with(to.sql) {
-            append(", extensions AS (INSERT INTO EXTENSIONS (log_id, name, prefix, uri) ")
-            append("SELECT log.id, e.name, e.prefix, e.uri FROM log, (VALUES ")
+            append(", extensions AS (INSERT INTO EXTENSIONS (log_id,name,prefix,uri) ")
+            append("SELECT log.id,e.name,e.prefix,e.uri FROM log, (VALUES ")
         }
         for (extension in extensions) {
-            to.sql.append("(?, ?, ?), ")
+            to.sql.append("(?,?,?), ")
             with(to.params) {
                 addLast(extension.name)
                 addLast(extension.prefix)
@@ -275,7 +326,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             }
         }
         to.sql.delete(to.sql.length - 2, to.sql.length)
-        to.sql.append(") e(name, prefix, uri))")
+        to.sql.append(") e(name,prefix,uri))")
     }
 
     private fun writeClassifiers(scope: String, classifiers: Collection<Classifier>, to: SQL) {
@@ -283,12 +334,12 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             return
         with(to.sql) {
             append(", classifiers$scope AS (")
-            append("INSERT INTO CLASSIFIERS(log_id, scope, name, keys) ")
-            append("SELECT log.id, c.scope, c.name, c.keys FROM log, (VALUES ")
+            append("INSERT INTO CLASSIFIERS(log_id,scope,name,keys) ")
+            append("SELECT log.id,c.scope,c.name,c.keys FROM log, (VALUES ")
         }
 
         for (classifier in classifiers) {
-            to.sql.append("(?::scope_type, ?, ?), ")
+            to.sql.append("(?::scope_type,?,?), ")
             with(to.params) {
                 addLast(scope)
                 addLast(classifier.name)
@@ -296,7 +347,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             }
         }
         to.sql.delete(to.sql.length - 2, to.sql.length)
-        to.sql.append(") c(scope, name, keys))")
+        to.sql.append(") c(scope,name,keys))")
     }
 
     private fun writeGlobals(scope: String, globals: Collection<Attribute<*>>, to: SQL) =

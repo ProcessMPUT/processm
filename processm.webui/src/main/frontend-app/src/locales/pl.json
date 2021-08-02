@@ -38,6 +38,11 @@
       }
     }
   },
+  "data-sources": {
+    "name": "Nazwa",
+    "created-at": "Utworzono",
+    "new": "Dodaj nowe"
+  },
   "about": {
     "page-title": "O ProcessM"
   },

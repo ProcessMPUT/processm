@@ -4,6 +4,7 @@ import { BaseAPI } from "@/openapi/base";
 import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
 import {
   Configuration,
+  ConfigApi,
   UsersApi,
   OrganizationsApi,
   WorkspacesApi,
@@ -36,6 +37,10 @@ export default abstract class BaseService {
       this.defaultApiPath,
       this.axiosInstance
     );
+  }
+
+  protected get configApi() {
+    return this.getGenericClient(ConfigApi);
   }
 
   protected get usersApi() {
@@ -74,7 +79,7 @@ export default abstract class BaseService {
       return;
     }
 
-    throw new Error(response.statusText);
+    throw new Error(response.data?.error ?? response.statusText);
   }
 
   private prolongExistingSession(

@@ -7,7 +7,7 @@ import io.ktor.http.*
 import io.ktor.locations.*
 import io.ktor.request.*
 import io.ktor.response.*
-import io.ktor.routing.*
+import io.ktor.routing.Route
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.dbmodels.models.CausalNetDto
