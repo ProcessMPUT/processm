@@ -60,7 +60,7 @@ fun loadConfiguration(overwriteIfAlreadyLoaded: Boolean = false) {
  */
 fun getPropertyIgnoreCase(key: String): String? =
     System.getProperty(key)
-        ?: System.getProperties().entries.first { (k, _) -> (k as String).equals(key, true) }.value as String?
+        ?: System.getProperties().entries.firstOrNull { (k, _) -> (k as String).equals(key, true) }?.value as String?
 
 /**
  * Compares two logs.
