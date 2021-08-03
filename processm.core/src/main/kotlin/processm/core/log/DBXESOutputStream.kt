@@ -1,6 +1,7 @@
 package processm.core.log
 
 import processm.core.log.attribute.*
+import processm.core.querylanguage.Scope
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -10,6 +11,12 @@ import kotlin.reflect.KClass
 class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     companion object {
         private const val batchSize = 384
+
+        /**
+         * The limit of the number of parameters in an SQL query. When exceeded, no new trace will be inserted in the
+         * current batch. The current trace will be still completed.
+         */
+        private const val paramSoftLimit = Short.MAX_VALUE - 2048
     }
 
     /**
@@ -25,7 +32,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     /**
      * A buffer of traces and events to write to the database together. Must contain complete traces.
      */
-    private val queue = ArrayList<XESComponent>(batchSize)
+    private var queue = ArrayList<XESComponent>(batchSize)
 
     init {
         assert(connection.metaData.supportsGetGeneratedKeys())
@@ -55,7 +62,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             }
             is Trace -> {
                 if (queue.size >= batchSize)
-                    flushQueue()
+                    flushQueue(false)
 
                 // We expect to already store Log object in the database
                 check(logId !== null) { "Log ID not set. Can not add trace to the database" }
@@ -64,14 +71,14 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
                 sawTrace = true
             }
             is Log -> {
-                flushQueue() // flush events and traces from the previous log
+                flushQueue(true) // flush events and traces from the previous log
                 sawTrace = false // we must not refer to a trace from the previous log
 
                 val sql = SQL()
                 writeLog(component, sql)
                 writeExtensions(component.extensions.values, sql)
-                writeClassifiers("event", component.eventClassifiers.values, sql)
-                writeClassifiers("trace", component.traceClassifiers.values, sql)
+                writeClassifiers(Scope.Event, component.eventClassifiers.values, sql)
+                writeClassifiers(Scope.Trace, component.traceClassifiers.values, sql)
                 writeGlobals("event", component.eventGlobals.values, sql)
                 writeGlobals("trace", component.traceGlobals.values, sql)
                 writeAttributes("LOGS_ATTRIBUTES", "log", 0, component.attributes.values, sql)
@@ -86,7 +93,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
      * Commit and close connection with the database
      */
     override fun close() {
-        flushQueue()
+        flushQueue(true)
         connection.commit()
         connection.close()
     }
@@ -101,7 +108,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         connection.close()
     }
 
-    private fun flushQueue() {
+    private fun flushQueue(force: Boolean) {
         if (queue.isEmpty())
             return
 
@@ -130,6 +137,10 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
                     writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes.values, attrSql)
                 }
                 is Trace -> {
+                    if (traceSql.params.size + eventSql.params.size + attrSql.params.size >= paramSoftLimit) {
+                        // #102: if the total number of parameters in an SQL query is too large, then DO NOT start new trace
+                        break
+                    }
                     ++lastTraceIndex
                     writeTraceData(component, traceSql)
                     writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes.values, attrSql)
@@ -158,12 +169,23 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
 
             sql.append(attrSql.sql)
             params.addAll(attrSql.params)
+            execute()
         }
 
-        queue.clear()
-        traceSql.execute()
-
-        assert(queue.isEmpty())
+        val countItemsToInsert = lastEventIndex + lastTraceIndex + 2
+        assert(countItemsToInsert in 1..queue.size)
+        if (countItemsToInsert == queue.size) {
+            queue.clear()
+            assert(queue.isEmpty())
+        } else {
+            // #102: if the total number of parameters in an SQL query is too large, keep the remaining traces and events in the queue
+            queue = ArrayList(queue.subList(countItemsToInsert, queue.size))
+            // #102: when ending the log, we must flush the queue
+            if (force) {
+                flushQueue(force)
+                assert(queue.isEmpty())
+            }
+        }
     }
 
     private fun writeEventData(event: Event, to: SQL, traceIndex: Int?) {
@@ -314,8 +336,14 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             }
         } else ""
         if (type.isInstance(attribute)) {
-            to.sql.append("?$cast,")
-            to.params.addLast(if (attribute is DateTimeAttr) Timestamp.from(attribute.value) else attribute.value)
+            when (type) {
+                IntAttr::class, BoolAttr::class -> to.sql.append("${attribute.value}$cast,")
+                IDAttr::class -> to.sql.append("'${attribute.value}'$cast,")
+                else -> {
+                    to.sql.append("?$cast,")
+                    to.params.addLast(if (attribute is DateTimeAttr) Timestamp.from(attribute.value) else attribute.value)
+                }
+            }
         } else {
             to.sql.append("NULL$cast,")
         }
@@ -341,7 +369,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         to.sql.append(") e(name,prefix,uri))")
     }
 
-    private fun writeClassifiers(scope: String, classifiers: Collection<Classifier>, to: SQL) {
+    private fun writeClassifiers(scope: Scope, classifiers: Collection<Classifier>, to: SQL) {
         if (classifiers.isEmpty())
             return
         with(to.sql) {
@@ -352,14 +380,13 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
 
         var first = true
         for (classifier in classifiers) {
-            to.sql.append("(?")
+            to.sql.append("('$scope'")
             if (first) {
                 to.sql.append("::scope_type")
                 first = false
             }
             to.sql.append(",?,?),")
             with(to.params) {
-                addLast(scope)
                 addLast(classifier.name)
                 addLast(classifier.keys)
             }
