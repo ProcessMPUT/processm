@@ -256,17 +256,27 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
                 )
             }
             with(to) {
+                var first = true
                 for (attribute in attributes) {
-                    sql.append("(?,'${attribute.xesTag}'::attribute_type,")
+                    sql.append("(?,'${attribute.xesTag}'")
+                    if (first)
+                        sql.append("::attribute_type")
+                    sql.append(',')
                     params.addLast(attribute.key)
-                    writeTypedAttribute(attribute, StringAttr::class, to)
-                    writeTypedAttribute(attribute, IDAttr::class, to)
-                    writeTypedAttribute(attribute, DateTimeAttr::class, to)
-                    writeTypedAttribute(attribute, IntAttr::class, to)
-                    writeTypedAttribute(attribute, BoolAttr::class, to)
-                    writeTypedAttribute(attribute, RealAttr::class, to)
-                    sql.append("$inList::boolean),")
+                    writeTypedAttribute(attribute, StringAttr::class, to, first)
+                    writeTypedAttribute(attribute, IDAttr::class, to, first)
+                    writeTypedAttribute(attribute, DateTimeAttr::class, to, first)
+                    writeTypedAttribute(attribute, IntAttr::class, to, first)
+                    writeTypedAttribute(attribute, BoolAttr::class, to, first)
+                    writeTypedAttribute(attribute, RealAttr::class, to, first)
+                    sql.append(inList)
+                    if (first) {
+                        sql.append("::boolean")
+                        first = false
+                    }
+                    sql.append("),")
                 }
+                assert(!first)
             }
 
             with(to.sql) {
@@ -291,16 +301,18 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         addAttributes(attributes)
     }
 
-    private fun writeTypedAttribute(attribute: Attribute<*>, type: KClass<*>, to: SQL) {
-        val cast = when (type) {
-            StringAttr::class -> ""
-            IDAttr::class -> "::uuid"
-            DateTimeAttr::class -> "::timestamptz"
-            IntAttr::class -> "::integer"
-            BoolAttr::class -> "::boolean"
-            RealAttr::class -> "::double precision"
-            else -> throw UnsupportedOperationException("Unknown attribute type $type.")
-        }
+    private fun writeTypedAttribute(attribute: Attribute<*>, type: KClass<*>, to: SQL, writeCast: Boolean) {
+        val cast = if (writeCast) {
+            when (type) {
+                StringAttr::class -> ""
+                IDAttr::class -> "::uuid"
+                DateTimeAttr::class -> "::timestamptz"
+                IntAttr::class -> "::integer"
+                BoolAttr::class -> "::boolean"
+                RealAttr::class -> "::double precision"
+                else -> throw UnsupportedOperationException("Unknown attribute type $type.")
+            }
+        } else ""
         if (type.isInstance(attribute)) {
             to.sql.append("?$cast,")
             to.params.addLast(if (attribute is DateTimeAttr) Timestamp.from(attribute.value) else attribute.value)
@@ -318,14 +330,14 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             append("SELECT log.id,e.name,e.prefix,e.uri FROM log, (VALUES ")
         }
         for (extension in extensions) {
-            to.sql.append("(?,?,?), ")
+            to.sql.append("(?,?,?),")
             with(to.params) {
                 addLast(extension.name)
                 addLast(extension.prefix)
                 addLast(extension.uri)
             }
         }
-        to.sql.delete(to.sql.length - 2, to.sql.length)
+        to.sql.deleteCharAt(to.sql.length - 1)
         to.sql.append(") e(name,prefix,uri))")
     }
 
@@ -338,15 +350,22 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             append("SELECT log.id,c.scope,c.name,c.keys FROM log, (VALUES ")
         }
 
+        var first = true
         for (classifier in classifiers) {
-            to.sql.append("(?::scope_type,?,?), ")
+            to.sql.append("(?")
+            if (first) {
+                to.sql.append("::scope_type")
+                first = false
+            }
+            to.sql.append(",?,?),")
             with(to.params) {
                 addLast(scope)
                 addLast(classifier.name)
                 addLast(classifier.keys)
             }
         }
-        to.sql.delete(to.sql.length - 2, to.sql.length)
+        assert(!first)
+        to.sql.deleteCharAt(to.sql.length - 1)
         to.sql.append(") c(scope,name,keys))")
     }
 
