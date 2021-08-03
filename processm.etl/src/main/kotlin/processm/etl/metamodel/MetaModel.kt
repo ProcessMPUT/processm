@@ -11,13 +11,25 @@ import processm.etl.discovery.DatabaseExplorer
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
 import java.time.Instant
-import java.util.*
 
 internal class MetaModel(
-    val targetDatabaseName: String,
-    val dataModelId: Int,
-    val metaModelReader: MetaModelReader,
-    val metaModelAppender: MetaModelAppender): DatabaseChangeApplier {
+    private val dataStoreDBName: String,
+    private val metaModelReader: MetaModelReader,
+    private val metaModelAppender: MetaModelAppender): DatabaseChangeApplier {
+    private val objectVersions = mutableMapOf<EntityID<Int>, MutableMap<String, List<EntityID<Int>>>>()
+    private val objectRelations = mutableMapOf<Pair<EntityID<Int>, EntityID<Int>>, MutableList<Pair<String, String>>>()
+
+    private fun addObjectVersions(objectId: String, objectClassId: EntityID<Int>, objectVersions: List<EntityID<Int>>) {
+        this.objectVersions
+            .getOrPut(objectClassId, { mutableMapOf() })
+            .put(objectId, objectVersions)
+    }
+
+    private fun addObjectRelations(sourceObjectId: String, sourceObjectClassId: EntityID<Int>, targetObjectId: String, targetObjectClassId: EntityID<Int>) {
+        this.objectRelations
+            .getOrPut(sourceObjectClassId to targetObjectClassId, { mutableListOf() })
+            .add(sourceObjectId to targetObjectId)
+    }
 
     /**
      * Saves data from change events to meta model data storage.
@@ -25,7 +37,7 @@ internal class MetaModel(
      * @param databaseChangeEvents List of database events to process.
      */
     override fun ApplyChange(databaseChangeEvents: List<DatabaseChangeEvent>) =
-        transaction(DBCache.get(targetDatabaseName).database) {
+        transaction(DBCache.get(dataStoreDBName).database) {
             loggedScope { logger ->
                 val now = Instant.now().toEpochMilli()
                 // Update timestamps of old object versions
@@ -46,53 +58,143 @@ internal class MetaModel(
         }
 
     /**
-     * Builds set of traces related to provided case notion definition.
+     * Returns a collection of traces built according to the provided business perspective definition.
      *
-     * @param caseNotionDefinition Object storing information about case notion.
+     * @param businessPerspectiveDefinition An object containing business perspective details.
      */
-    fun buildTracesForCaseNotion(caseNotionDefinition: CaseNotionDefinition<EntityID<Int>>) = transaction(DBCache.get(targetDatabaseName).database) {
-        val rootObjectIds = metaModelReader.getObjectVersionsRelatedToClass(caseNotionDefinition.rootClass)
-        val traceSet = TraceSet(caseNotionDefinition, rootObjectIds)
-        val caseNotionClassesQueue = ArrayDeque(setOf(caseNotionDefinition.rootClass))
-        val temporaryVersions = mutableMapOf(caseNotionDefinition.rootClass to rootObjectIds.keys)
-        val relatedObjectVersionsIds = rootObjectIds.mapKeys { caseNotionDefinition.rootClass to it.key }.toMutableMap()
+    fun buildTracesForBusinessPerspective(businessPerspectiveDefinition: DAGBusinessPerspectiveDefinition<EntityID<Int>>)
+            = transaction(DBCache.get(dataStoreDBName).database) {
+        val traceSet = TraceSet<String>(businessPerspectiveDefinition)
 
-        while (caseNotionClassesQueue.isNotEmpty()) {
-            val parentClassId = caseNotionClassesQueue.pop()
-            val parentClassObjectsIds = temporaryVersions[parentClassId]!!
+        businessPerspectiveDefinition.forEach { classId ->
+            val objectsIds = mutableSetOf<String>()
 
-            caseNotionDefinition.getChildren(parentClassId).keys.forEach { childClassId ->
-                val relatedObjectVersions = metaModelReader.getRelatedObjectsVersions(parentClassObjectsIds, parentClassId, childClassId)
+            metaModelReader.getObjectVersionsRelatedToClass(classId).forEach { (objectId, objectVersions) ->
+                addObjectVersions(objectId, classId, objectVersions)
 
-                relatedObjectVersions.forEach { (_, relatedObjectsIds) ->
-                    relatedObjectsIds.forEach {(objectId, objectVersionsIds) ->
-                        relatedObjectVersionsIds[childClassId to objectId] = objectVersionsIds
+                if (businessPerspectiveDefinition.isClassIncludedInCaseNotion(classId)) traceSet.addObjectVersions(objectId, classId, objectVersions)
+
+                objectsIds.add(objectId)
+            }
+
+            businessPerspectiveDefinition.getSuccessors(classId).forEach { successorClassId ->
+                val relatedObjectsVersions = metaModelReader.getRelatedObjectsVersionsGroupedByObjects(objectsIds, classId, successorClassId)
+                relatedObjectsVersions.forEach { (sourceObjectId,relatedObjectVersionsIds) ->
+                    relatedObjectVersionsIds.forEach { (targetObjectId, _) ->
+                        addObjectRelations(sourceObjectId, classId, targetObjectId, successorClassId)
+
+                        if (businessPerspectiveDefinition.isClassIncludedInCaseNotion(classId)) traceSet.addObjectRelations(sourceObjectId, classId, targetObjectId, successorClassId)
                     }
                 }
-
-                relatedObjectVersions.forEach { (objectId, relatedObjectsIds) ->
-                    traceSet.addRelatedObjects(objectId, parentClassId, relatedObjectsIds, childClassId)
-                }
-
-                temporaryVersions[childClassId] = relatedObjectVersions.values.map {it.keys }.flatten().toSet()
-                caseNotionClassesQueue.push(childClassId)
             }
-            temporaryVersions.remove(parentClassId)
         }
 
-        return@transaction traceSet
+        // at this moment the traceSet contains case notions but the full data, it lacks events related to non identifying classes
+
+        return@transaction traceSet.map { caseNotionsClasses ->
+            val processedClasses = caseNotionsClasses.toMutableMap()
+
+            // the following includes successing classes, the trace still lacks i.a. predecessing classes
+
+            val successingClassesToBeProcessed = ArrayDeque(businessPerspectiveDefinition.caseNotionClasses)
+
+            while (successingClassesToBeProcessed.isNotEmpty()) {
+                val currentClassId = successingClassesToBeProcessed.removeFirst()
+
+                businessPerspectiveDefinition.getSuccessors(currentClassId)
+                    .filterNot { businessPerspectiveDefinition.isClassIncludedInCaseNotion(it) }
+                    .forEach { successorClassId ->
+                        val successorObjects = objectRelations[currentClassId to successorClassId]!!
+                            .filter { (sourceObjectId, _) -> processedClasses[currentClassId]?.containsKey(sourceObjectId) ?: false }
+                            .map { (_, targetObjectId) -> targetObjectId }
+
+                        if (processedClasses.containsKey(successorClassId)) {
+                            val currentObjects = processedClasses.getOrPut(successorClassId, { emptyMap()}).toMutableMap()
+                            currentObjects.putAll(successorObjects.map { it to objectVersions[successorClassId]?.get(it).orEmpty() })
+                            processedClasses[successorClassId] = currentObjects
+                        }
+                        else {
+                            processedClasses[successorClassId] = successorObjects.map { it to objectVersions[successorClassId]?.get(it).orEmpty() }.toMap()
+                        }
+
+                        if (successorObjects.isNotEmpty()) successingClassesToBeProcessed.addLast(successorClassId)
+                    }
+            }
+
+            // the following includes predecessing classes, the trace still lacks classes independent of the case notions members (the are neither predecessing nor successing the case notion members)
+
+            val predecessingClassesToBeProcessed = ArrayDeque(businessPerspectiveDefinition.caseNotionClasses)
+
+            while (predecessingClassesToBeProcessed.isNotEmpty()) {
+                val currentClassId = predecessingClassesToBeProcessed.removeFirst()
+
+                businessPerspectiveDefinition.getPredecessors(currentClassId)
+                    .filterNot { businessPerspectiveDefinition.isClassIncludedInCaseNotion(it) }
+                    .forEach { predecessorClassId ->
+                        val predecessorObjects = objectRelations[predecessorClassId to currentClassId]!!
+                            .filter { (_, targetObjectId) -> processedClasses[currentClassId]?.containsKey(targetObjectId) ?: false }
+                            .map { (sourceObjectId, _) -> sourceObjectId }
+
+                        if (processedClasses.containsKey(predecessorClassId)) {
+                            val currentObjects = processedClasses.getOrPut(predecessorClassId, { emptyMap()}).toMutableMap()
+                            currentObjects.putAll(predecessorObjects.map { it to objectVersions[predecessorClassId]?.get(it).orEmpty() })
+                            processedClasses[predecessorClassId] = currentObjects
+                        }
+                        else {
+                            processedClasses[predecessorClassId] = predecessorObjects.map { it to objectVersions[predecessorClassId]?.get(it).orEmpty() }.toMap()
+                        }
+
+                        if (predecessorObjects.isNotEmpty()) predecessingClassesToBeProcessed.addLast(predecessorClassId)
+                    }
+            }
+
+            // the following includes classes independent of case notion members
+
+            val notYetProcessedClasses = ArrayDeque(businessPerspectiveDefinition.toList())
+            val alreadyProcessedClasses = processedClasses.keys
+
+            while (notYetProcessedClasses.isNotEmpty()) {
+                val currentClassId = notYetProcessedClasses.removeFirst()
+
+                businessPerspectiveDefinition.getSuccessors(currentClassId)
+                    .filterNot { alreadyProcessedClasses.contains(it) }
+                    .forEach { successorClassId ->
+                        val successorObjects = objectRelations[currentClassId to successorClassId]!!
+                            .filter { (sourceObjectId, _) -> processedClasses[currentClassId]?.containsKey(sourceObjectId) ?: false }
+                            .map { (_, targetObjectId) -> targetObjectId }
+
+                        if (processedClasses.containsKey(successorClassId)) {
+                            val currentObjects = processedClasses.getOrPut(successorClassId, { emptyMap()}).toMutableMap()
+                            currentObjects.putAll(successorObjects.map { it to objectVersions[successorClassId]?.get(it).orEmpty() })
+                            processedClasses[successorClassId] = currentObjects
+                        }
+                        else {
+                            processedClasses[successorClassId] = successorObjects.map { it to objectVersions[successorClassId]?.get(it).orEmpty() }.toMap()
+                        }
+
+                        if (successorObjects.isNotEmpty()) notYetProcessedClasses.addLast(successorClassId)
+                    }
+            }
+
+            return@map processedClasses
+        }
     }
 
-    fun transformToEventsLogs(traceSet: TraceSet<String>) = transaction(DBCache.get(targetDatabaseName).database) {
-        return@transaction traceSet.map { metaModelReader.getTraceData(it) }
+    /**
+     * Transforms a collection of traces into a collection of events.
+     *
+     * @param traceSet A collection of traces.
+     */
+    fun transformToEventsLogs(traceSet: Map<EntityID<Int>, Map<String, List<EntityID<Int>>>>) = transaction(DBCache.get(dataStoreDBName).database) {
+        return@transaction metaModelReader.getTraceData(traceSet)
     }
 
     companion object {
-        fun build(targetDatabaseName: String, metaModelName: String, databaseExplorer: DatabaseExplorer): EntityID<Int> {
+        fun build(dataStoreDBName: String, metaModelName: String, databaseExplorer: DatabaseExplorer): EntityID<Int> {
             val classes = databaseExplorer.getClasses()
             val relationships = databaseExplorer.getRelationships()
 
-            return transaction(DBCache.get(targetDatabaseName).database) {
+            return transaction(DBCache.get(dataStoreDBName).database) {
                 val dataModelId = DataModels.insertAndGetId {
                     it[name] = metaModelName
                 }

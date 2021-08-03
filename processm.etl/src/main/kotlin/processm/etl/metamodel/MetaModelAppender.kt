@@ -4,13 +4,23 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import processm.etl.tracker.DatabaseChangeApplier
 
-class MetaModelAppender(private val metaModelId: Int, private val metaModelReader: MetaModelReader) {
+/**
+ * Appends database change events to meta model data.
+ */
+class MetaModelAppender(private val metaModelReader: MetaModelReader) {
+
+    /**
+     * Fills end timestamp for the latest version of the specified object.
+     */
     fun updateObjectVersionEndTimestamp(objectId: String, classId: EntityID<Int>, endTime: Long) {
         ObjectVersions.update({ ObjectVersions.classId eq classId and (ObjectVersions.objectId eq objectId) and (ObjectVersions.endTime eq null) }) {
             it[ObjectVersions.endTime] = endTime
         }
     }
 
+    /**
+     * Adds a new version of the specified object.
+     */
     fun addObjectVersion(objectId: String, classId: EntityID<Int>, eventType: DatabaseChangeApplier.EventType, startTime: Long?, attributesValues: Map<EntityID<Int>, String>): EntityID<Int> {
         val latestObjectVersionId = metaModelReader.getLatestObjectVersionId(objectId, classId)
         val objectVersionId = ObjectVersions.insertAndGetId {

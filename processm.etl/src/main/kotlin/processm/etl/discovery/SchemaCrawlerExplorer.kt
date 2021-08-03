@@ -8,7 +8,7 @@ import schemacrawler.schemacrawler.*
 import schemacrawler.utility.SchemaCrawlerUtility
 import java.sql.DriverManager
 
-internal class SchemaCrawlerExplorer(private val connectionString: String, private val schema: String) : DatabaseExplorer {
+internal class SchemaCrawlerExplorer(connectionString: String, schema: String? = null) : DatabaseExplorer {
 
     private val options: SchemaCrawlerOptions
     private val connection = DriverManager.getConnection(connectionString)
@@ -18,6 +18,7 @@ internal class SchemaCrawlerExplorer(private val connectionString: String, priva
             .includeSchemas(RegularExpressionInclusionRule(schema))
         val loadOptionsBuilder: LoadOptionsBuilder = LoadOptionsBuilder.builder()
             .withSchemaInfoLevel(SchemaInfoLevelBuilder.standard())
+
         options = SchemaCrawlerOptionsBuilder.builder()
             .withLimitOptions(limitOptionsBuilder.toOptions())
             .withLoadOptions(loadOptionsBuilder.toOptions())

@@ -30,22 +30,20 @@ class DebeziumChangeTracker(properties: Properties, private val changeApplier: D
         committer: DebeziumEngine.RecordCommitter<ChangeEvent<String, String>>) {
         loggedScope { logger ->
             try {
-                val databaseChangeEvents = records.fold(mutableListOf<DatabaseChangeEvent>(), { deserializedEvents, rawChangeEvent ->
-                        try {
-                            val databaseChangeEvent = deserializeDebeziumEvent(rawChangeEvent)
-                            deserializedEvents.add(databaseChangeEvent)
-                            committer.markProcessed(rawChangeEvent)
-                        }
-                        catch (e: UnsupportedEventFormat) {
-                            logger.warn("An event with unsupported format was received", e)
-                            committer.markProcessed(rawChangeEvent)
-                        }
-                        catch (e: Exception) {
-                            logger.warn("An error occurred while processing DB event", e)
-                            logger.debug("Key: ${rawChangeEvent.key()}\nValue: ${rawChangeEvent.value()}")
-                        }
-                        return@fold deserializedEvents
-                    })
+                val databaseChangeEvents = records.fold(mutableListOf<DatabaseChangeEvent>()) { deserializedEvents, rawChangeEvent ->
+                    try {
+                        val databaseChangeEvent = deserializeDebeziumEvent(rawChangeEvent)
+                        deserializedEvents.add(databaseChangeEvent)
+                        committer.markProcessed(rawChangeEvent)
+                    } catch (e: UnsupportedEventFormat) {
+                        logger.warn("An event with unsupported format was received", e)
+                        committer.markProcessed(rawChangeEvent)
+                    } catch (e: Exception) {
+                        logger.warn("An error occurred while processing DB event", e)
+                        logger.debug("Key: ${rawChangeEvent.key()}\nValue: ${rawChangeEvent.value()}")
+                    }
+                    return@fold deserializedEvents
+                }
 
                 changeApplier.ApplyChange(databaseChangeEvents)
                 committer.markBatchFinished()

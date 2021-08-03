@@ -19,8 +19,7 @@ import kotlin.time.ExperimentalTime
 @ExperimentalTime
 class BusinessDataGenerator {
     // PostgreSQL DvdRental
-    val connectionString = "jdbc:postgresql://postgresql.domek.ovh:5432/dvdrental?user=postgres&password=Y42ZqwGAg^ESr\$q6"
-
+    val externalDataSourceConnectionString = ""
 
     private val customers = mutableSetOf<EntityID<Int>>()
     private val stores = mutableSetOf<EntityID<Int>>()
@@ -43,14 +42,12 @@ class BusinessDataGenerator {
         ::extendRental to 15,
         ::endRental to 45,
         ::addInventory to 30,
-//        ::removeInventory to 50,
         ::addFilm to 10,
         ::addLanguage to 1,
         ::addCountry to 1,
         ::addCity to 1,
         ::addAddress to 5,
         ::addStaff to 5,
-//        ::removeStaff to 3,
         ::startStaffVacation to 2,
         ::endStaffVacation to 2,
         ::addStore to 1,
@@ -101,7 +98,7 @@ class BusinessDataGenerator {
         }
     }
 
-    fun addCustomer():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addCustomer():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val addressId = addresses.randomOrNull() ?: throw NoSuchElementException("AddressId is not available")
         val storeId = stores.randomOrNull() ?: throw NoSuchElementException("StoreId is not available")
         val customerId = DvdRentalDAL.Customers.insertAndGetId {
@@ -119,7 +116,7 @@ class BusinessDataGenerator {
         customers.add(customerId)
     }
 
-    fun deactivateCustomer():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun deactivateCustomer():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val customerId = customers.randomOrNull() ?: throw NoSuchElementException("CustomerId is not available")
         val updatedCount = DvdRentalDAL.Customers.update({ DvdRentalDAL.Customers.id eq customerId }) {
             it[active] = 0
@@ -130,7 +127,7 @@ class BusinessDataGenerator {
     }
 
     @ExperimentalTime
-    fun addRental():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addRental():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val customerId = customers.randomOrNull() ?: throw NoSuchElementException("CustomerId is not available")
         val staffId = activeStaffers.randomOrNull() ?: throw NoSuchElementException("StaffId is not available")
         val inventoryId = availableInventories.randomOrNull() ?: throw NoSuchElementException("InventoryId is not available")
@@ -158,7 +155,7 @@ class BusinessDataGenerator {
         rentedInventories.put(rentalId, inventoryId)
     }
 
-    fun extendRental():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun extendRental():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val rentalId = rentals.keys.randomOrNull() ?: throw NoSuchElementException("RentalId is not available")
         val staffId = activeStaffers.randomOrNull() ?: throw NoSuchElementException("StaffId is not available")
 
@@ -173,7 +170,7 @@ class BusinessDataGenerator {
         }
     }
 
-    fun endRental():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun endRental():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val rentalId = rentals.keys.randomOrNull() ?: throw NoSuchElementException("RentalId is not available")
         val staffId = activeStaffers.randomOrNull() ?: throw NoSuchElementException("StaffId is not available")
         val updatedCount = DvdRentalDAL.Rentals.update({ DvdRentalDAL.Rentals.id eq rentalId }) {
@@ -198,7 +195,7 @@ class BusinessDataGenerator {
         }
     }
 
-    fun addInventory():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addInventory():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val filmId = films.randomOrNull() ?: throw NoSuchElementException("FilmId is not available")
         val storeId = films.randomOrNull() ?: throw NoSuchElementException("StoreId is not available")
         val inventoryId = DvdRentalDAL.Inventories.insertAndGetId {
@@ -210,14 +207,14 @@ class BusinessDataGenerator {
         availableInventories.add(inventoryId)
     }
 
-    fun removeInventory():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun removeInventory():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val inventoryId = availableInventories.randomOrNull() ?: throw NoSuchElementException("InventoryId is not available")
         val deletedCount = DvdRentalDAL.Inventories.deleteWhere { DvdRentalDAL.Inventories.id eq inventoryId }
 
         if (deletedCount > 0) availableInventories.remove(inventoryId)
     }
 
-    fun addFilm():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addFilm():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val languageId = languages.randomOrNull() ?: throw NoSuchElementException("LanguageId is not available")
         val filmId = DvdRentalDAL.Films.insertAndGetId {
             it[title] = getRandomString()
@@ -231,7 +228,7 @@ class BusinessDataGenerator {
         films.add(filmId)
     }
 
-    fun addLanguage():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addLanguage():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val languageId = DvdRentalDAL.Languages.insertAndGetId {
             it[name] = getRandomString(3)
             it[lastUpdate] = getCurrentTime()
@@ -240,7 +237,7 @@ class BusinessDataGenerator {
         languages.add(languageId)
     }
 
-    fun addCountry():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addCountry():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val countryId = DvdRentalDAL.Countries.insertAndGetId {
             it[country] = getRandomString(8)
             it[lastUpdate] = getCurrentTime()
@@ -249,7 +246,7 @@ class BusinessDataGenerator {
         countries.add(countryId)
     }
 
-    fun addCity():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addCity():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val countryId = countries.randomOrNull() ?: throw NoSuchElementException("CountryId is not available")
         val cityId = DvdRentalDAL.Cities.insertAndGetId {
             it[city] = getRandomString()
@@ -260,7 +257,7 @@ class BusinessDataGenerator {
         cities.add(cityId)
     }
 
-    fun addAddress():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addAddress():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val cityId = cities.randomOrNull() ?: throw NoSuchElementException("CityId is not available")
 
         val addressId = DvdRentalDAL.Addresses.insertAndGetId {
@@ -276,7 +273,7 @@ class BusinessDataGenerator {
         addresses.add(addressId)
     }
 
-    fun addStaff():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addStaff():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val addressId = addresses.randomOrNull() ?: throw NoSuchElementException("AddressId is not available")
         val staffId = DvdRentalDAL.Staffs.insertAndGetId {
             it[firstName] = getRandomString()
@@ -293,7 +290,7 @@ class BusinessDataGenerator {
         activeStaffers.add(staffId)
     }
 
-    fun startStaffVacation():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun startStaffVacation():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val staffId = activeStaffers.randomOrNull() ?: throw NoSuchElementException("StaffId is not available")
         val updatedCount = DvdRentalDAL.Staffs.update({ DvdRentalDAL.Staffs.id eq staffId }) {
             it[active] = false
@@ -306,7 +303,7 @@ class BusinessDataGenerator {
         }
     }
 
-    fun endStaffVacation():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun endStaffVacation():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val staffId = staffersOnVacation.randomOrNull() ?: throw NoSuchElementException("StaffId is not available")
         val updatedCount = DvdRentalDAL.Staffs.update({ DvdRentalDAL.Staffs.id eq staffId }) {
             it[active] = true
@@ -319,14 +316,14 @@ class BusinessDataGenerator {
         }
     }
 
-    fun removeStaff():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun removeStaff():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val staffId = activeStaffers.randomOrNull() ?: throw NoSuchElementException("StaffId is not available")
         val deletedCount = DvdRentalDAL.Staffs.deleteWhere { DvdRentalDAL.Staffs.id eq staffId }
 
         if (deletedCount > 0) activeStaffers.remove(staffId)
     }
 
-    fun addStore():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun addStore():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val addressId = addresses.randomOrNull() ?: throw NoSuchElementException("AddressId is not available")
         val staffId = activeStaffers.randomOrNull() ?: throw NoSuchElementException("StaffId is not available")
         val storeId = DvdRentalDAL.Stores.insertAndGetId {
@@ -340,7 +337,7 @@ class BusinessDataGenerator {
         managers.add(staffId)
     }
 
-    fun removeStore():Unit = transaction(Database.connect({ DriverManager.getConnection(connectionString) })) {
+    fun removeStore():Unit = transaction(Database.connect({ DriverManager.getConnection(externalDataSourceConnectionString) })) {
         val storeId = stores.randomOrNull() ?: throw NoSuchElementException("StoreId is not available")
         val deletedCount = DvdRentalDAL.Stores.deleteWhere { DvdRentalDAL.Stores.id eq storeId }
 
