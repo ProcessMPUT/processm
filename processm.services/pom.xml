@@ -20,7 +20,7 @@
         <ktor.version>1.6.1</ktor.version>
         <openapi-tools.version>4.3.1</openapi-tools.version>
         <swagger-ui.version>3.25.0</swagger-ui.version>
-        <koin.version>2.1.5</koin.version>
+        <koin.version>2.2.3</koin.version>
         <jargon2.version>1.1.1</jargon2.version>
         <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
@@ -278,17 +278,17 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>org.koin</groupId>
+            <groupId>io.insert-koin</groupId>
             <artifactId>koin-core</artifactId>
             <version>${koin.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.koin</groupId>
+            <groupId>io.insert-koin</groupId>
             <artifactId>koin-ktor</artifactId>
             <version>${koin.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.koin</groupId>
+            <groupId>io.insert-koin</groupId>
             <artifactId>koin-test</artifactId>
             <version>${koin.version}</version>
             <scope>test</scope>

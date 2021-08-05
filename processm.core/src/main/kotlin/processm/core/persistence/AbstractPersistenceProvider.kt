@@ -2,7 +2,6 @@ package processm.core.persistence
 
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.UnsafeSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import processm.core.persistence.connection.DBCache
@@ -14,7 +13,6 @@ import kotlin.reflect.KClass
  *
  * This class is not thread safe.
  */
-@UnsafeSerializationApi
 @Suppress("SqlResolve")
 abstract class AbstractPersistenceProvider(protected val tableName: String) : PersistenceProvider, AutoCloseable {
 

@@ -1,11 +1,9 @@
 package processm.core.persistence
 
-import kotlinx.serialization.UnsafeSerializationApi
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
-@UnsafeSerializationApi
 class TemporaryPersistenceProviderTests : PersistenceProviderBaseTests() {
     @Test
     fun putGetDeleteTest() {
