@@ -1,12 +1,9 @@
 package processm.core.persistence
 
-import kotlinx.serialization.UnsafeSerializationApi
-
 /**
  * Database-based cache. The cached objects are deleted on close() call. This class is not thread safe.
  * @see close
  */
-@UnsafeSerializationApi
 class TemporaryPersistenceProvider : AbstractPersistenceProvider("temporary_storage") {
     init {
         connection.autoCommit = false

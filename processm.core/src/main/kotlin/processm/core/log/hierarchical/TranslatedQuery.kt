@@ -12,11 +12,7 @@ import processm.core.querylanguage.Function
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.*
 import kotlin.LazyThreadSafetyMode.NONE
-import kotlin.collections.HashMap
-import kotlin.collections.LinkedHashMap
-import kotlin.collections.LinkedHashSet
 
 @Suppress("MapGetWithNotNullAssertionOperator")
 internal class TranslatedQuery(
@@ -318,7 +314,7 @@ internal class TranslatedQuery(
             //}
 
             append("AND key=ANY(?) ")
-            sql.params.add(other.mapToArray { it.name })
+            sql.params.add(other.mapToArray(Attribute::name))
         }
     }
 
