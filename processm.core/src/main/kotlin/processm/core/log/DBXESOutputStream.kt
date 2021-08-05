@@ -4,7 +4,9 @@ import processm.core.log.attribute.*
 import processm.core.querylanguage.Scope
 import java.sql.Connection
 import java.sql.ResultSet
-import java.sql.Timestamp
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -16,7 +18,12 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
          * The limit of the number of parameters in an SQL query. When exceeded, no new trace will be inserted in the
          * current batch. The current trace will be still completed.
          */
-        private const val paramSoftLimit = Short.MAX_VALUE - 2048
+        private const val paramSoftLimit = Short.MAX_VALUE - 8192
+
+        private val ISO8601 = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC)
+
+        private val tagStartChars = ('a'..'z') + ('A'..'Z') + ('_')
+        private val tagChars = ('0'..'9') + tagStartChars
     }
 
     /**
@@ -189,48 +196,52 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     }
 
     private fun writeEventData(event: Event, to: SQL, traceIndex: Int?) {
-        to.sql.append("((SELECT id FROM trace LIMIT 1 OFFSET $traceIndex),?,?,?,?,?,?,?,?,?,?,?), ")
+        with(to) {
+            sql.append("((SELECT id FROM trace LIMIT 1 OFFSET $traceIndex),")
 
-        with(to.params) {
-            addLast(event.conceptName)
-            addLast(event.conceptInstance)
-            addLast(event.costTotal)
-            addLast(event.costCurrency)
-            addLast(event.identityId)
-            addLast(event.lifecycleTransition)
-            addLast(event.lifecycleState)
-            addLast(event.orgResource)
-            addLast(event.orgRole)
-            addLast(event.orgGroup)
-            addLast(event.timeTimestamp?.let { Timestamp.from(it) })
+            addAsParamOrInline(event.conceptName)
+            addAsParamOrInline(event.conceptInstance)
+            addAsParamOrInline(event.costTotal)
+            addAsParamOrInline(event.costCurrency)
+            addAsParamOrInline(event.identityId)
+            addAsParamOrInline(event.lifecycleTransition)
+            addAsParamOrInline(event.lifecycleState)
+            addAsParamOrInline(event.orgResource)
+            addAsParamOrInline(event.orgRole)
+            addAsParamOrInline(event.orgGroup)
+            addAsParamOrInline(event.timeTimestamp, "")
+
+            sql.append("), ")
         }
     }
 
     private fun writeTraceData(trace: Trace, to: SQL) {
-        to.sql.append("(?,?,?,?,?,?), ")
-        with(to.params) {
-            addLast(logId)
-            addLast(trace.conceptName)
-            addLast(trace.costTotal)
-            addLast(trace.costCurrency)
-            addLast(trace.identityId)
-            addLast(trace.isEventStream)
+        with(to) {
+            sql.append('(')
+
+            addAsParamOrInline(logId)
+            addAsParamOrInline(trace.conceptName)
+            addAsParamOrInline(trace.costTotal)
+            addAsParamOrInline(trace.costCurrency)
+            addAsParamOrInline(trace.identityId)
+            addAsParamOrInline(trace.isEventStream, "")
+
+            sql.append("), ")
         }
     }
 
     private fun writeLog(element: Log, to: SQL) {
-        with(to.sql) {
-            append("WITH log AS (")
-            append("""INSERT INTO LOGS("xes:version","xes:features","concept:name","identity:id","lifecycle:model") VALUES (?,?,?,?,?) RETURNING ID""")
-            append(')')
-        }
+        with(to) {
+            sql.append("WITH log AS (")
+            sql.append("""INSERT INTO LOGS("xes:version","xes:features","concept:name","identity:id","lifecycle:model") VALUES (""")
 
-        with(to.params) {
-            addLast(element.xesVersion)
-            addLast(element.xesFeatures)
-            addLast(element.conceptName)
-            addLast(element.identityId)
-            addLast(element.lifecycleModel)
+            addAsParamOrInline(element.xesVersion)
+            addAsParamOrInline(element.xesFeatures)
+            addAsParamOrInline(element.conceptName)
+            addAsParamOrInline(element.identityId)
+            addAsParamOrInline(element.lifecycleModel, "")
+
+            sql.append(") RETURNING ID)")
         }
     }
 
@@ -314,9 +325,8 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
                     addAttributes(attribute.children.values, myTableNumber, index, false)
 
                 // Handle list
-                if (attribute is ListAttr && attribute.value.isNotEmpty()) {
+                if (attribute is ListAttr && attribute.value.isNotEmpty())
                     addAttributes(attribute.value, myTableNumber, index, false, true)
-                }
             }
         }
 
@@ -329,7 +339,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
                 StringAttr::class -> ""
                 IDAttr::class -> "::uuid"
                 DateTimeAttr::class -> "::timestamptz"
-                IntAttr::class -> "::integer"
+                IntAttr::class -> "::bigint"
                 BoolAttr::class -> "::boolean"
                 RealAttr::class -> "::double precision"
                 else -> throw UnsupportedOperationException("Unknown attribute type $type.")
@@ -339,9 +349,10 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             when (type) {
                 IntAttr::class, BoolAttr::class -> to.sql.append("${attribute.value}$cast,")
                 IDAttr::class -> to.sql.append("'${attribute.value}'$cast,")
+                DateTimeAttr::class -> to.sql.append("'${ISO8601.format(attribute.value as Instant)}'$cast,")
                 else -> {
                     to.sql.append("?$cast,")
-                    to.params.addLast(if (attribute is DateTimeAttr) Timestamp.from(attribute.value) else attribute.value)
+                    to.params.addLast(attribute.value)
                 }
             }
         } else {
@@ -413,6 +424,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
 
         @Suppress("SqlResolve")
         fun executeQuery(table: String): Long {
+            inlineParamsOverLimit()
             connection.prepareStatement("$sql SELECT id FROM $table").use {
                 for ((i, obj) in params.withIndex()) {
                     it.setObject(i + 1, obj)
@@ -425,12 +437,60 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         }
 
         fun execute() {
+            inlineParamsOverLimit()
             connection.prepareStatement("$sql SELECT 1 LIMIT 0").use {
                 for ((i, obj) in params.withIndex()) {
                     it.setObject(i + 1, obj)
                 }
                 check(it.execute()) { "Write unsuccessful." }
             }
+        }
+
+        fun <T> addAsParamOrInline(v: T?, suffix: String = ",") {
+            when (v) {
+                null -> sql.append("NULL")
+                is Instant -> sql.append("'${ISO8601.format(v)}'")
+                else -> {
+                    sql.append('?')
+                    params.addLast(v)
+                }
+            }
+            sql.append(suffix)
+        }
+
+        /**
+         * Inlines the parameters of the query being having indices greater than [Short.MAX_VALUE].
+         * See #102
+         */
+        private fun inlineParamsOverLimit() {
+            var lastIndex = sql.length
+            while (params.size > Short.MAX_VALUE) {
+                val index = sql.lastIndexOf("?", lastIndex)
+                if (index == -1)
+                    return
+                val replacement = when (val param = params.removeLast()) {
+                    is Double, is Long, is Boolean -> param.toString()
+                    is Instant -> "'${ISO8601.format(param)}'"
+                    else -> {
+                        val paramAsString = param.toString()
+                        val tag = getEscapeTag(paramAsString)
+                        "$$tag$$paramAsString$$tag$"
+                    }
+                }
+                sql.replace(index, index + 1, replacement)
+                lastIndex = index - 1
+            }
+        }
+
+        /**
+         * See https://stackoverflow.com/a/9742217
+         */
+        private fun getEscapeTag(text: String): String {
+            val tag = StringBuilder(tagStartChars.random().toString())
+            while (text.contains(tag)) {
+                tag.append(tagChars.random())
+            }
+            return tag.toString()
         }
     }
 }
