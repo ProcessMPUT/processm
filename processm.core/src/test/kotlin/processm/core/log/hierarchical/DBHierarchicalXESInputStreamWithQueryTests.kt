@@ -1523,6 +1523,66 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         validate(twoTraces, 2)
     }
 
+    /**
+     * Demonstrates the bug from #105: PQL query does not group traces into variants.
+     */
+    @Test
+    fun groupByWithHoistingAndOrderByCountTest() {
+        // see [groupByWithHoistingAndOrderByWithinGroupTest]
+        val stream = q(
+            "select l:name, count(t:name), e:name\n" +
+                    "where l:id=$uuid\n" +
+                    "group by ^e:name\n" +
+                    "order by count(t:name) desc\n" +
+                    "limit l:1\n"
+        )
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertNull(log.lifecycleModel)
+        assertNull(log.identityId)
+        assertEquals("JournalReview", log.attributes["concept:name"]!!.value as String)
+        standardAndAllAttributesMatch(log, log)
+
+        assertEquals(97, log.traces.count())
+
+        for (trace in log.traces) {
+            assertEquals(trace.attributes["count(trace:concept:name)"]!!.value as Long, trace.count.toLong())
+        }
+
+        for (trace in log.traces.drop(3)) {
+            assertEquals(1, trace.count)
+        }
+
+        val threeTraces = listOf(
+            "invite reviewers,invite reviewers,get review 2,get review 3,get review 1,collect reviews,collect reviews,decide,decide,invite additional reviewer,invite additional reviewer,get review X,reject,reject",
+        ).map { it.split(',') }
+        val twoTraces = listOf(
+            "invite reviewers,invite reviewers,get review 2,get review 1,get review 3,collect reviews,collect reviews,decide,decide,accept,accept",
+            "invite reviewers,invite reviewers,get review 2,get review 1,time-out 3,collect reviews,collect reviews,decide,decide,invite additional reviewer,invite additional reviewer,time-out X,invite additional reviewer,invite additional reviewer,time-out X,invite additional reviewer,invite additional reviewer,get review X,accept,accept",
+        ).map { it.split(',') }
+
+        fun validate(validTraces: List<List<String>>, logTraces: Sequence<Trace>, count: Int) {
+            for (logTrace in logTraces) {
+                assertEquals(count.toLong(), logTrace.attributes["count(trace:concept:name)"]!!.value)
+            }
+            for (validTrace in validTraces) {
+                assertTrue(
+                    logTraces.any {
+                        it.events
+                            .map { it.conceptName!! }
+                            .zip(validTrace.asSequence())
+                            .all { (act, exp) -> act == exp }
+                    }
+                )
+            }
+        }
+
+        validate(threeTraces, log.traces.take(1), 3)
+        validate(twoTraces, log.traces.drop(1).take(2), 2)
+    }
+
     @Test
     fun limitSingleTest() {
         val stream = q("where l:name='JournalReview' limit l:1")
