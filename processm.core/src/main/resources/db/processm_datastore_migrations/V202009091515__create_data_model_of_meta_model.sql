@@ -26,12 +26,6 @@ CREATE TABLE attributes_names (
     type text NOT NULL
 );
 
---CREATE TABLE objects (
---    id serial PRIMARY KEY,
---    class_id integer NOT NULL,
---    original_id text NOT NULL
---);
-
 CREATE TABLE object_versions (
     id serial PRIMARY KEY,
     previous_object_version_id integer,
@@ -77,14 +71,10 @@ ALTER TABLE relationships
     ADD CONSTRAINT relationships_attributes_names_fk FOREIGN KEY (referencing_attribute_name_id) REFERENCES attributes_names(id);;
 ALTER TABLE attributes_names
     ADD CONSTRAINT attributes_names_classes_fk FOREIGN KEY (class_id) REFERENCES classes(id);
---ALTER TABLE objects
---    ADD CONSTRAINT objects_classes_fk FOREIGN KEY (class_id) REFERENCES classes(id);
 ALTER TABLE object_versions
     ADD CONSTRAINT object_versions_object_versions_fk FOREIGN KEY (previous_object_version_id) REFERENCES object_versions(id);
 ALTER TABLE object_versions
     ADD CONSTRAINT object_versions_classes_fk FOREIGN KEY (class_id) REFERENCES classes(id);
---ALTER TABLE object_versions
---    ADD CONSTRAINT object_versions_objects_fk FOREIGN KEY (object_id) REFERENCES objects(id);
 ALTER TABLE relations
 ADD CONSTRAINT relations_source_object_versions_fk FOREIGN KEY (source_object_version_id) REFERENCES object_versions(id);
 ALTER TABLE relations

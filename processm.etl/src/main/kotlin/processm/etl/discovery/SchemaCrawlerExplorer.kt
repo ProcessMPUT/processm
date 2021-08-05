@@ -1,5 +1,6 @@
 package processm.etl.discovery
 
+import processm.core.helpers.mapToSet
 import schemacrawler.inclusionrule.RegularExpressionInclusionRule
 import schemacrawler.schema.Table
 import schemacrawler.schema.TableRelationshipType
@@ -29,26 +30,24 @@ internal class SchemaCrawlerExplorer(connectionString: String, schema: String? =
         val catalog = SchemaCrawlerUtility.getCatalog(connection, options)
 
         return catalog.schemas
-            .map { catalog.getTables(it) }
-            .flatten()
+            .flatMap { catalog.getTables(it) }
             .filter { it !is View }
-            .map { it.convertToClass() }
-            .toSet()
+            .mapToSet { it.convertToClass() }
     }
 
     override fun getRelationships(): Set<Relationship> {
         val catalog = SchemaCrawlerUtility.getCatalog(connection, options)
 
         return catalog.schemas
-            .map { catalog.getTables(it) }.flatten().filter { it !is View }.map {
+            .flatMap { catalog.getTables(it) }
+            .filter { it !is View }
+            .flatMapTo(HashSet()) {
                 it.importedForeignKeys.map {
                     val sourceColumn = it.columnReferences.first().foreignKeyColumn
                     val targetColumn = it.columnReferences.first().primaryKeyColumn
                     Relationship(it.name, sourceColumn.parent.convertToClass(), targetColumn.parent.convertToClass(), sourceColumn.name)
                 }
             }
-            .flatten()
-            .toSet()
     }
 
     override fun close() {

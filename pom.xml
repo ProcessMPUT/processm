@@ -57,6 +57,8 @@
         <mockk.version>1.10.6</mockk.version>
         <antlr4.version>4.8-1</antlr4.version>
         <com.github.ben-manes.caffeine.version>2.8.5</com.github.ben-manes.caffeine.version>
+        <org.apache.commons.commonsDbcp2.version>2.7.0</org.apache.commons.commonsDbcp2.version>
+        <org.postgresql.version>42.2.12</org.postgresql.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>

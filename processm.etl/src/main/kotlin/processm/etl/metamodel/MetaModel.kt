@@ -21,13 +21,13 @@ internal class MetaModel(
 
     private fun addObjectVersions(objectId: String, objectClassId: EntityID<Int>, objectVersions: List<EntityID<Int>>) {
         this.objectVersions
-            .getOrPut(objectClassId, { mutableMapOf() })
+            .getOrPut(objectClassId, ::mutableMapOf)
             .put(objectId, objectVersions)
     }
 
     private fun addObjectRelations(sourceObjectId: String, sourceObjectClassId: EntityID<Int>, targetObjectId: String, targetObjectClassId: EntityID<Int>) {
         this.objectRelations
-            .getOrPut(sourceObjectClassId to targetObjectClassId, { mutableListOf() })
+            .getOrPut(sourceObjectClassId to targetObjectClassId, ::mutableListOf)
             .add(sourceObjectId to targetObjectId)
     }
 

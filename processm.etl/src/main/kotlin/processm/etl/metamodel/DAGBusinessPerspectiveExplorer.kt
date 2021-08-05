@@ -9,9 +9,13 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath
 import org.jgrapht.alg.spanning.KruskalMinimumSpanningTree
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.graph.DefaultDirectedGraph
+import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
 import java.util.*
 import kotlin.collections.ArrayDeque
+import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
@@ -45,33 +49,32 @@ class DAGBusinessPerspectiveExplorer(private val dataStoreDBName: String, privat
                 // self-loop, not supported at the moment
                 if (referencingClassId != referencedClassId) {
                     relationshipGraph.addEdge(referencingClassId, referencedClassId, relationshipName)
-                    successors.getOrPut(referencingClassId, { mutableSetOf() }).add(referencedClassId)
-                    predecessors.getOrPut(referencedClassId, { mutableSetOf() }).add(referencingClassId)
+                    successors.getOrPut(referencingClassId, ::mutableSetOf).add(referencedClassId)
+                    predecessors.getOrPut(referencedClassId, ::mutableSetOf).add(referencingClassId)
                 }
             }
 
         val weights = relationshipGraph.calculateVertexWeights()
 
         return@transaction setOf(relationshipGraph)
-            .map {
+            .flatMap {
                 it.searchForOptimumBottomUp(weights, performFullSearch, goodEnoughScore)
                     .map { DAGBusinessPerspectiveDefinition(it.first) to it.second }
             }
-            .flatten()
     }
 
     private fun Graph<EntityID<Int>, String>.splitByEdge(splittingEdge: String): Set<Graph<EntityID<Int>, String>> {
         val splitGraph = AsSubgraph(this, vertexSet(), edgeSet() - splittingEdge)
         val connectedSets = ConnectivityInspector(splitGraph).connectedSets()
 
-        return connectedSets.map { AsSubgraph(splitGraph, it) }.toSet()
+        return connectedSets.mapToSet { AsSubgraph(splitGraph, it) }
     }
 
     private fun Graph<EntityID<Int>, String>.splitByVertex(splittingVertex: EntityID<Int>): Set<Graph<EntityID<Int>, String>> {
         val splitGraph = AsSubgraph(this, vertexSet() - splittingVertex)
         val connectedSets = ConnectivityInspector(splitGraph).connectedSets()
 
-        return connectedSets.map { AsSubgraph(splitGraph, it) }.toSet()
+        return connectedSets.mapToSet { AsSubgraph(splitGraph, it) }
     }
 
     private fun Graph<EntityID<Int>, String>.searchForOptimumTopDown(vertexWeights: Map<EntityID<Int>, Double>, performFullSearch: Boolean, goodEnoughScore: Double): List<Pair<Graph<EntityID<Int>, String>, Double>> {
@@ -85,15 +88,14 @@ class DAGBusinessPerspectiveExplorer(private val dataStoreDBName: String, privat
             val childGraphs = if (parentScore <= goodEnoughScore) emptyList() else
                 parentGraph.edgeSet()
                 .filter { edgeOrder[it]!! >= parentGraphInducingEdge }
-                .map { edgeName ->
+                .flatMap { edgeName ->
                     val subgraphs = parentGraph.splitByEdge(edgeName)
                     val edgeOrdering = edgeOrder[edgeName]!!
 
-                    return@map subgraphs.filter { it.vertexSet().size > 1 }
+                    return@flatMap subgraphs.filter { it.vertexSet().size > 1 }
                         .map { subgraph -> (subgraph to edgeOrdering) to subgraph.calculateEdgeHeterogeneity() }
                         .filter { performFullSearch || it.second < parentScore }
                 }
-                .flatten()
 
             val bestChild = childGraphs.minByOrNull { it.first.second }
             if (bestChild != null) subgraphQueue.add(bestChild)
@@ -119,18 +121,18 @@ class DAGBusinessPerspectiveExplorer(private val dataStoreDBName: String, privat
         while (supergraphQueue.isNotEmpty()) {
             val (graphInfo, parentScore) = supergraphQueue.removeLast()
             val (parentGraph, parentGraphInducingEdge) = graphInfo
-            val derivedGraphs = if (parentScore <= goodEnoughScore && parentGraph.vertexSet().size in acceptableSize) emptyList() else
-                edgeSet()
-                    .filter { edgeOrder[it]!! >= parentGraphInducingEdge }
-                    .filter { !parentGraph.containsEdge(it) }
-                    .filter { parentGraph.containsVertex(getEdgeSource(it)) || parentGraph.containsVertex(getEdgeTarget(it)) }
-                    .map { edgeName ->
-                        val edgeOrdering = edgeOrder[edgeName]!!
-                        val supergraph = AsSubgraph(this, parentGraph.vertexSet().union(setOf(getEdgeSource(edgeName), getEdgeTarget(edgeName))), parentGraph.edgeSet() + edgeName)
+            val derivedGraphs = if (parentScore <= goodEnoughScore && parentGraph.vertexSet().size in acceptableSize) emptyList() else edgeSet()
+                .asSequence()
+                .filter { edgeOrder[it]!! >= parentGraphInducingEdge }
+                .filter { !parentGraph.containsEdge(it) }
+                .filter { parentGraph.containsVertex(getEdgeSource(it)) || parentGraph.containsVertex(getEdgeTarget(it)) }
+                .map { edgeName ->
+                    val edgeOrdering = edgeOrder[edgeName]!!
+                    val supergraph = AsSubgraph(this, parentGraph.vertexSet().union(setOf(getEdgeSource(edgeName), getEdgeTarget(edgeName))), parentGraph.edgeSet() + edgeName)
 
-                        return@map (supergraph to edgeOrdering) to supergraph.calculateEdgeHeterogeneity()
-                    }
-                    .filter { parentGraph.vertexSet().size < 3 || it.second <= parentScore }
+                    return@map (supergraph to edgeOrdering) to supergraph.calculateEdgeHeterogeneity()
+                }
+                .filter { parentGraph.vertexSet().size < 3 || it.second <= parentScore }.toList()
 
             supergraphQueue.addAll(derivedGraphs)
 
@@ -206,21 +208,21 @@ class DAGBusinessPerspectiveExplorer(private val dataStoreDBName: String, privat
             }
         }
 
-        return graphHeterogeneity / (Math.pow(edges.size.toDouble(), 3.0) / 4.0)
+        return graphHeterogeneity / (edges.size.toDouble().pow(3.0) / 4.0)
     }
 
     private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL1(edge1: String, edge2: String): Double {
         val outDegreeDiff = outDegreeOf(getEdgeSource(edge1)) - outDegreeOf(getEdgeSource(edge2))
         val inDegreeDiff = inDegreeOf(getEdgeTarget(edge1)) - inDegreeOf(getEdgeTarget(edge2))
 
-        return Math.abs(outDegreeDiff).plus(Math.abs(inDegreeDiff)).toDouble()
+        return abs(outDegreeDiff).plus(abs(inDegreeDiff)).toDouble()
     }
 
     private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL2(edge1: String, edge2: String): Double {
         val outDegreeDiff = outDegreeOf(getEdgeSource(edge1)) - outDegreeOf(getEdgeSource(edge2))
         val inDegreeDiff = inDegreeOf(getEdgeTarget(edge1)) - inDegreeOf(getEdgeTarget(edge2))
 
-        return Math.hypot(outDegreeDiff.toDouble(), inDegreeDiff.toDouble())
+        return hypot(outDegreeDiff.toDouble(), inDegreeDiff.toDouble())
     }
 
     private fun AsSubgraph<EntityID<Int>, String>.calculateHomogeneity(): Double {
