@@ -1583,6 +1583,35 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         validate(twoTraces, log.traces.drop(1).take(2), 2)
     }
 
+    /**
+     * Demonstrates the bug from #106: PSQLException: ERROR: aggregate function calls cannot be nested
+     */
+    @Test
+    fun groupByWithAndWithoutHoistingAndOrderByCountTest() {
+        // see [groupByWithHoistingAndOrderByCountTest]
+        val stream = q(
+            "select l:name, count(t:name), e:name\n" +
+                    "group by t:name, ^e:name\n" +
+                    "order by count(t:name) desc\n" +
+                    "limit l:1\n"
+        )
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        assertEquals("JournalReview", log.conceptName)
+        assertNull(log.lifecycleModel)
+        assertNull(log.identityId)
+        assertEquals("JournalReview", log.attributes["concept:name"]!!.value as String)
+        standardAndAllAttributesMatch(log, log)
+
+        assertEquals(101, log.traces.count())
+
+        for (trace in log.traces) {
+            assertEquals(trace.attributes["count(trace:concept:name)"]!!.value as Long, trace.count.toLong())
+            assertEquals(1, trace.count)
+        }
+    }
+
     @Test
     fun limitSingleTest() {
         val stream = q("where l:name='JournalReview' limit l:1")
