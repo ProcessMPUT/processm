@@ -85,6 +85,21 @@ internal class DBXESOutputStreamTest {
     }
 
     /**
+     * Demonstrates the error: "org.postgresql.util.PSQLException: ERROR: index row size 2792 exceeds btree version 4
+     * maximum 2704 for index "_hyper_7_2_chunk_logs_attributes_key"" when inserting XES file into the database.
+     * See #101
+     */
+    @Test
+    fun `PSQLException ERROR index row size 2792 exceeds btree version 4 maximum 2704 for index`() {
+        val LOG_FILE = File("../xes-logs/Hospital_Log.xes.gz")
+        GZIPInputStream(FileInputStream(LOG_FILE)).use { gzip ->
+            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
+                out.write(XMLXESInputStream(gzip))
+            }
+        }
+    }
+
+    /**
      * Demonstrates the error "org.postgresql.util.PSQLException: An I/O error occurred while sending to the backend."
      * when inserting XES file into the database.
      * See #102
