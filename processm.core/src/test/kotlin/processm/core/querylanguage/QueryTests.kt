@@ -2,7 +2,6 @@ package processm.core.querylanguage
 
 import org.antlr.v4.runtime.RecognitionException
 import org.junit.jupiter.api.Tag
-import processm.core.log.hierarchical.DBHierarchicalXESInputStreamWithQueryTests
 import kotlin.test.*
 
 @Tag("PQL")
@@ -911,6 +910,39 @@ class QueryTests {
         assertTrue(query.selectExpressions[Scope.Log]!!.all { it is Function && it.functionType == FunctionType.Aggregation })
         assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
         assertEquals(0, query.groupByStandardAttributes[Scope.Trace]!!.size)
+        assertEquals(0, query.groupByStandardAttributes[Scope.Event]!!.size)
+        assertEquals(0, query.groupByOtherAttributes[Scope.Log]!!.size)
+        assertEquals(0, query.groupByOtherAttributes[Scope.Trace]!!.size)
+        assertEquals(0, query.groupByOtherAttributes[Scope.Event]!!.size)
+    }
+
+    /**
+     * Demonstrates the bug from #105: PQL query does not group traces into variants.
+     */
+    @Test
+    fun groupByWithHoistingAndOrderByCountTest() {
+        val query = Query(
+            "select l:name, count(t:name), e:name\n" +
+                    "group by ^e:name\n" +
+                    "order by count(t:name) desc\n" +
+                    "limit l:1\n"
+        )
+        assertEquals(1, query.selectStandardAttributes[Scope.Log]!!.size)
+        assertEquals(0, query.selectStandardAttributes[Scope.Trace]!!.size)
+        assertEquals(1, query.selectStandardAttributes[Scope.Event]!!.size)
+        assertEquals(0, query.selectExpressions[Scope.Log]!!.size)
+        assertEquals(1, query.selectExpressions[Scope.Trace]!!.size)
+        assertEquals(0, query.selectExpressions[Scope.Event]!!.size)
+        assertTrue(query.selectExpressions[Scope.Trace]!!.all { !it.isTerminal })
+        assertTrue(query.selectExpressions[Scope.Trace]!!.all { it is Function && it.functionType == FunctionType.Aggregation })
+        assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
+        assertEquals(1, query.groupByStandardAttributes[Scope.Trace]!!.size)
+        assertEquals(0, query.groupByStandardAttributes[Scope.Event]!!.size)
+        query.groupByStandardAttributes[Scope.Trace]!!.all { it.isStandard }
+        query.groupByStandardAttributes[Scope.Trace]!!.all { !it.isClassifier }
+        query.groupByStandardAttributes[Scope.Trace]!!.all { it.effectiveScope == Scope.Trace }
+        query.groupByStandardAttributes[Scope.Trace]!!.all { it.isTerminal }
+        query.groupByStandardAttributes[Scope.Trace]!!.all { it.dropHoisting().effectiveScope == Scope.Event }
         assertEquals(0, query.groupByStandardAttributes[Scope.Event]!!.size)
         assertEquals(0, query.groupByOtherAttributes[Scope.Log]!!.size)
         assertEquals(0, query.groupByOtherAttributes[Scope.Trace]!!.size)

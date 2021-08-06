@@ -81,11 +81,11 @@ class LogsService {
                     XMLXESOutputStream(writer).use {
                         it.write(resultsFromLog.toFlatSequence())
                     }
-                    if (logsIterator.hasNext()) write(",".toByteArray())
                 } finally {
                     writer.close()
-                    flush()
                 }
+
+                if (logsIterator.hasNext()) write(",".toByteArray())
             }
 
             write("]}".toByteArray())

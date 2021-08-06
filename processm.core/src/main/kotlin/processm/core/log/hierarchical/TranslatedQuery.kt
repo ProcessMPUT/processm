@@ -374,8 +374,58 @@ internal class TranslatedQuery(
         )
 
         it.query.append("SELECT array_agg(id) AS ids FROM (")
+        it.query.append("SELECT ${scope.alias}.id,")
 
-        val (groupByCount, orderByCount) = selectGroupIds(scope, it, logId)
+        val groupByAttributes =
+            (pql.groupByStandardAttributes[scope]!! +
+                    pql.groupByOtherAttributes[scope]!!).flatMap { attr ->
+                if (logId !== null && attr.isClassifier)
+                    cache.expandClassifier(logId, attr)
+                else
+                    listOf(attr)
+            }
+
+        val orderByAttributes =
+            pql.orderByExpressions[scope]!!.flatMap { order -> order.base.filter { it is Attribute } }
+                .flatMap { attr ->
+                    attr as Attribute
+                    if (logId !== null && attr.isClassifier)
+                        cache.expandClassifier(logId, attr)
+                    else
+                        listOf(attr)
+                }
+
+        val attributes = (groupByAttributes + orderByAttributes).toSet()
+
+        val attributeInverseMap = HashMap<Attribute, Int>().apply {
+            for ((index, attribute) in attributes.withIndex())
+                put(attribute, index)
+        }
+
+        for (attribute in attributes) {
+            attribute.toSQL(
+                it, logId, Type.Any, 1,
+                prefix = { sql ->
+                    if (attribute.scope != scope) sql.query.append("array_agg(") else ""
+                },
+                suffix = { sql ->
+                    if (attribute.scope != scope) {
+                        pql.orderByExpressions[attribute.scope]!!.toSQL(
+                            it,
+                            logId,
+                            "${attribute.scope!!.alias}.id",
+                            true,
+                            true,
+                            true
+                        )
+                        sql.query.append(")")
+                    } else ""
+                },
+                ignoreHoisting = true
+            )
+            it.query.append(',')
+        }
+        it.query.setLength(it.query.length - 1)
 
         val desiredFromPosition = it.query.length
 
@@ -385,108 +435,26 @@ internal class TranslatedQuery(
         it.query.insert(desiredFromPosition, from)
 
         it.query.append(" GROUP BY ${scope.alias}.id")
-        it.query.append(") sub (id, ")
-        for (i in 0 until groupByCount)
-            it.query.append("g$i, ")
-        for (i in 0 until orderByCount)
-            it.query.append("o$i, ")
-        it.query.replace(it.query.length - 2, it.query.length, ")")
+        it.query.append(") sub (id")
+        if (attributes.isNotEmpty())
+            it.query.append(',')
+        it.query.append(attributes.indices.joinToString(",") { "a$it" })
+        it.query.append(")")
 
         if (!pql.isImplicitGroupBy[scope]!!) {
-            groupBy(it, groupByCount)
-            orderByGroup(scope, it, logId)
+            it.query.append(" GROUP BY ")
+            for (attribute in groupByAttributes) {
+                val index = attributeInverseMap[attribute]
+                it.query.append("a$index,")
+            }
+            it.query.setLength(it.query.length - 1)
         }
+
+        pql.orderByExpressions[scope]!!.toSQL(it, logId, "1", true, true, false, attributeInverseMap)
+
         limit(scope, it)
         offset(scope, it)
-    }
 
-    private fun selectGroupIds(scope: Scope, sql: MutableSQLQuery, logId: Int?): Pair<Int, Int> {
-        val upperScopeGroupBy =
-            scope > Scope.Log && (pql.isImplicitGroupBy[Scope.Log] == true || pql.isGroupBy[Scope.Log] == true)
-                    || scope > Scope.Trace && (pql.isImplicitGroupBy[Scope.Trace] == true || pql.isGroupBy[Scope.Trace] == true)
-
-        assert(upperScopeGroupBy || pql.isImplicitGroupBy[scope]!! || pql.isGroupBy[scope]!!)
-
-        var groupByCount = 0
-        var orderByCount = 0
-
-        with(sql.query) {
-            append("SELECT ${scope.alias}.id AS id")
-            for (attribute in pql.groupByStandardAttributes[scope]!! + pql.groupByOtherAttributes[scope]!!) {
-                append(", ")
-                groupByCount += attribute.toSQL(
-                    sql,
-                    logId,
-                    Type.Any,
-                    Int.MAX_VALUE,
-                    { it.query.append("array_agg(") },
-                    {
-                        pql.orderByExpressions[attribute.scope]!!.toSQL(
-                            it,
-                            logId,
-                            "${attribute.scope!!.alias}.id",
-                            true,
-                            true,
-                            true
-                        )
-                        it.query.append(')')
-                    },
-                    true
-                )
-            }
-
-            if (pql.orderByExpressions[scope]!!.isNotEmpty()) {
-                append(", ")
-                orderByCount = pql.orderByExpressions[scope]!!.toSQL(sql, logId, "", false, false, true)
-            }
-        }
-
-        return groupByCount to orderByCount
-    }
-
-    private fun groupBy(sql: MutableSQLQuery, groupByCount: Int) {
-        with(sql.query) {
-            append(" GROUP BY ")
-            assert(groupByCount > 0)
-            for (i in 0 until groupByCount)
-                append("g$i, ")
-            setLength(length - 2)
-        }
-    }
-
-    private fun orderByGroup(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
-        with(sql.query) {
-            append(" ORDER BY ")
-            if (pql.orderByExpressions[scope].isNullOrEmpty()) {
-                append('1')
-                return@orderByGroup
-            }
-
-            var index = 0
-            for (expression in pql.orderByExpressions[scope]!!) {
-                if (expression.base is Attribute) {
-                    val attributes =
-                        if (expression.base.isClassifier)
-                            cache.expandClassifier(logId!!, expression.base)
-                        else
-                            listOf(expression.base)
-                    for (attribute in attributes) {
-                        append("array_agg(o$index ORDER BY o$index)")
-                        ++index
-                        if (expression.direction == OrderDirection.Descending)
-                            append(" DESC")
-                        append(", ")
-                    }
-                } else {
-                    append("array_agg(o$index ORDER BY o$index)")
-                    ++index
-                    if (expression.direction == OrderDirection.Descending)
-                        append(" DESC")
-                    append(", ")
-                }
-            }
-            setLength(length - 2)
-        }
     }
     // endregion
 
@@ -1162,7 +1130,8 @@ internal class TranslatedQuery(
         limitCount: Int,
         prefix: ((sql: MutableSQLQuery) -> Unit)? = null,
         suffix: ((sql: MutableSQLQuery) -> Unit)? = null,
-        ignoreHoisting: Boolean = false
+        ignoreHoisting: Boolean = false,
+        attributeToIndex: Map<Attribute, Int>? = null
     ): Int {
         val sqlScope = ScopeWithMetadata(this.scope!!, if (ignoreHoisting) 0 else this.hoistingPrefix.length)
         sql.scopes.add(sqlScope)
@@ -1179,7 +1148,11 @@ internal class TranslatedQuery(
 
                 if (prefix !== null) prefix(sql)
 
-                if (attribute.isStandard) {
+                val index = attributeToIndex?.let { it[attribute] }
+
+                if (index !== null) {
+                    append("a$index")
+                } else if (attribute.isStandard) {
                     if (attribute.scope == Scope.Log && attribute.standardName == "db:id")
                         append("l.id") // for backward-compatibility with the previous implementation of the XES layer
                     else
@@ -1201,13 +1174,18 @@ internal class TranslatedQuery(
         return attributes.size
     }
 
-    private fun IExpression.toSQL(sql: MutableSQLQuery, _expectedType: Type, ignoreHoisting: Boolean) {
+    private fun IExpression.toSQL(
+        sql: MutableSQLQuery,
+        _expectedType: Type,
+        ignoreHoisting: Boolean,
+        attributeToIndex: Map<Attribute, Int>? = null
+    ) {
         with(sql.query) {
             fun walk(expression: IExpression, expectedType: Type) {
                 when (expression) {
                     is Attribute -> expression.toSQL(
                         sql, null, if (expression.type != Type.Unknown) expression.type else expectedType, 1,
-                        ignoreHoisting = ignoreHoisting
+                        ignoreHoisting = ignoreHoisting, attributeToIndex = attributeToIndex
                     )
                     is Literal<*> -> {
                         if (expression.scope != null)
@@ -1327,7 +1305,8 @@ internal class TranslatedQuery(
         expressionIfEmpty: String,
         printOrderBy: Boolean,
         printDirection: Boolean,
-        ignoreHoisting: Boolean
+        ignoreHoisting: Boolean,
+        attributeToIndex: Map<Attribute, Int>? = null
     ): Int {
         with(sql.query) {
             if (printOrderBy)
@@ -1341,10 +1320,10 @@ internal class TranslatedQuery(
                             it.query.append(" DESC")
                     }
                     orderByCount += expression.base.toSQL(
-                        sql, logId, Type.Any, Int.MAX_VALUE, null, suffix, ignoreHoisting
+                        sql, logId, Type.Any, Int.MAX_VALUE, null, suffix, ignoreHoisting, attributeToIndex
                     )
                 } else {
-                    expression.base.toSQL(sql, Type.Any, ignoreHoisting)
+                    expression.base.toSQL(sql, Type.Any, ignoreHoisting, attributeToIndex)
                     ++orderByCount
                     if (printDirection && expression.direction == OrderDirection.Descending)
                         append(" DESC")
