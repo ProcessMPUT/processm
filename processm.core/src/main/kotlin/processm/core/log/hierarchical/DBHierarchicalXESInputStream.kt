@@ -68,6 +68,10 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
          */
         private val maxParentIdInCache: Long = 1L shl (63 - maxCachedBatchesPerParentLog2)
 
+        private const val logIdBitsInParentId: Int = 24
+        private val traceIdBitsInParentId: Int = 63 - maxCachedBatchesPerParentLog2 - logIdBitsInParentId
+        private val traceIdInParentIdMask: Long = (1L shl traceIdBitsInParentId) - 1L
+
         private val cacheCleaner: Cleaner = Cleaner.create()
 
         init {
@@ -90,7 +94,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
     /**
      * The key is a bitwise combination of three values:
      * * bit 63: the scope of the referenced object (0 for log or trace, 1 for event),
-     * * bits 62-log2([maxCachedBatchesPerParent]): the primary key of the parent entity (all zeros for log, log id for trace, trace id for event),
+     * * bits 62-log2([maxCachedBatchesPerParent]): the primary key of the parent entity (all zeros for log, log id for trace,
+     * (log id shl [traceIdBitsInParentId] or trace id) for event),
      * * bits (log2([maxCachedBatchesPerParent])-1)-0: the batch number.
      * The value is a [SoftReference] to a batch of the entities of the corresponding scope.
      *
@@ -189,7 +194,7 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         { batchIndex, initializer, skipAction ->
             getCachedBatch(
                 Scope.Event,
-                traceId,
+                if (traceId <= traceIdInParentIdMask) (logId.toLong() shl traceIdBitsInParentId) or traceId else maxParentIdInCache,
                 batchIndex,
                 initializer,
                 skipAction
