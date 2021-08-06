@@ -218,6 +218,10 @@ export default class PQL extends Vue {
         "group by ^e:name\n" +
         "order by count(t:name) desc\n" +
         "limit l:5"
+    },
+    {
+      text: "Traces with events at weekends",
+      value: "where dayofweek(^e:timestamp) in (1, 7)"
     }
   ];
 
@@ -273,7 +277,7 @@ export default class PQL extends Vue {
       );
 
       this.app.info("Formatting results...", -1);
-      await waitForRepaint(() => {
+      await waitForRepaint(async () => {
         const {
           headers,
           logItems
@@ -294,7 +298,15 @@ export default class PQL extends Vue {
 
           this.headers.push(header);
         });
-        this.items = logItems;
+        if (this.headers.length === 0)
+          this.headers.push(new LogHeader("scope"));
+
+        for (const item of logItems) {
+          await waitForRepaint(() => {
+            this.items.push(item);
+          });
+        }
+
         this.app.info("Query executed successfully");
       });
     } catch (err) {
