@@ -6,7 +6,7 @@
     "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
     "users": "Użytkownicy",
-    "data-sources": "Źródła danych",
+    "data-stores": "Magazyny danych",
     "pql-interpreter": "Interpreter PQL",
     "about": "@:about.page-title"
   },
@@ -38,7 +38,7 @@
       }
     }
   },
-  "data-sources": {
+  "data-stores": {
     "name": "Nazwa",
     "created-at": "Utworzono",
     "new": "Dodaj nowe"

@@ -5,8 +5,8 @@ import DuplicateKeysJsonParser from "@/utils/DuplicateKeysJsonParser";
 export default class LogsService extends BaseService {
   private readonly jsonParser = new DuplicateKeysJsonParser();
 
-  public async uploadLogFile(dataSourceId: string, file: File): Promise<void> {
-    const response = await this.logsApi.uploadLogFile(dataSourceId, file);
+  public async uploadLogFile(dataStoreId: string, file: File): Promise<void> {
+    const response = await this.logsApi.uploadLogFile(dataStoreId, file);
 
     if (response.status != 201) {
       throw new Error(response.statusText);
@@ -14,7 +14,7 @@ export default class LogsService extends BaseService {
   }
 
   public async submitUserQuery(
-    dataSourceId: string,
+    dataStoreId: string,
     query?: string,
     accept: "application/json" | "application/zip" = "application/json"
   ): Promise<Array<Log>> {
@@ -38,7 +38,7 @@ export default class LogsService extends BaseService {
     }
 
     const response = await this.logsApi.submitLogsQuery(
-      dataSourceId,
+      dataStoreId,
       accept,
       query,
       options

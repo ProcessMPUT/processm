@@ -109,20 +109,20 @@ object Paths {
     class OrganizationMember(val organizationId: UUID, val userId: UUID)
 
     /**
-     * Data sources assigned to [organizationId].
+     * Data stores assigned to [organizationId].
      *
      * @param organizationId Organization ID
      */
-    @Location("/organizations/{organizationId}/data-sources")
-    class DataSources(val organizationId: UUID)
+    @Location("/organizations/{organizationId}/data-stores")
+    class DataStores(val organizationId: UUID)
 
     /**
-     * Logs stored assigned in [dataSourceId].
+     * Logs stored in [dataStoreId].
      *
-     * @param dataSourceId Data source ID
+     * @param dataStoreId Data store ID
      */
-    @Location("/data-sources/{dataSourceId}/logs")
-    class Logs(val dataSourceId: UUID)
+    @Location("/data-stores/{dataStoreId}/logs")
+    class Logs(val dataStoreId: UUID)
 
     /**
      * Get details about current user

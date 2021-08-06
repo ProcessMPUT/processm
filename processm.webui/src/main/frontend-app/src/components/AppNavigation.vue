@@ -26,12 +26,12 @@
         </v-list-item-action>
         <v-list-item-content>{{ $t("navigation.users") }}</v-list-item-content>
       </v-list-item>
-      <v-list-item :to="'data-sources'" color="primary">
+      <v-list-item :to="'data-stores'" color="primary">
         <v-list-item-action>
           <v-icon>folder</v-icon>
         </v-list-item-action>
         <v-list-item-content>{{
-          $t("navigation.data-sources")
+          $t("navigation.data-stores")
         }}</v-list-item-content>
       </v-list-item>
       <v-list-item :to="'pql-interpreter'" color="primary">

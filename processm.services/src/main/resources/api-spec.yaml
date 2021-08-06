@@ -16,8 +16,8 @@ tags:
     description: User groups and groups membership management
   - name: organizations
     description: User organizations and organizations membership management
-  - name: dataSources
-    description: Data sources management
+  - name: dataStores
+    description: Data stores management
   - name: logs
     description: Log data management
 paths:
@@ -187,7 +187,7 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
-  /organizations/{organizationId}/data-sources:
+  /organizations/{organizationId}/data-stores:
     parameters:
       - name: organizationId
         in: path
@@ -198,29 +198,29 @@ paths:
           format: uuid
     get:
       tags:
-        - dataSources
-      summary: Get all datasources assigned to given OrganizationID and to the calling User.
-      operationId: getDataSources
+        - dataStores
+      summary: Get all data stores assigned to given OrganizationID and to the calling User.
+      operationId: getDataStores
       responses:
         '200':
           description: Successful operation
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataSourceCollectionMessageBody'
+                $ref: '#/components/schemas/DataStoreCollectionMessageBody'
       security:
         - bearerAuth: []
     post:
       tags:
-        - dataSources
-      summary: Create a new data source in the context of the specified organization and user
-      operationId: createDataSource
+        - dataStores
+      summary: Create a new data store in the context of the specified organization and user
+      operationId: createDataStore
       requestBody:
-        description: Data source details
+        description: Data store details
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataSourceMessageBody'
+              $ref: '#/components/schemas/DataStoreMessageBody'
         required: true
       responses:
         '201':
@@ -228,7 +228,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataSourceMessageBody'
+                $ref: '#/components/schemas/DataStoreMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
       security:
@@ -998,20 +998,20 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
-  /data-sources/{dataSourceId}/logs:
+  /data-stores/{dataStoreId}/logs:
     parameters:
-      - name: dataSourceId
+      - name: dataStoreId
         in: path
-        description: Data source ID
+        description: Data store ID
         required: true
         schema:
           type: string
           format: uuid
     get:
       tags:
-        - dataSources
+        - dataStores
         - logs
-      summary: Query logs stored in the specified data source
+      summary: Query logs stored in the specified data store
       operationId: submitLogsQuery
       parameters:
         - in: header
@@ -1045,9 +1045,9 @@ paths:
         - bearerAuth: []
     post:
       tags:
-        - dataSources
+        - dataStores
         - logs
-      summary: Upload new log file to the specified data source
+      summary: Upload new log file to the specified data store
       operationId: uploadLogFile
       requestBody:
         content:
@@ -1244,7 +1244,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserOrganization'
-    DataSource:
+    DataStore:
       type: object
       required: [name]
       properties:
@@ -1256,20 +1256,20 @@ components:
         createdAt:
           type: string
           format: date-time
-    DataSourceMessageBody:
+    DataStoreMessageBody:
       type: object
       required: [data]
       properties:
         data:
-          $ref: '#/components/schemas/DataSource'
-    DataSourceCollectionMessageBody:
+          $ref: '#/components/schemas/DataStore'
+    DataStoreCollectionMessageBody:
       type: object
       required: [data]
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/DataSource'
+            $ref: '#/components/schemas/DataStore'
     Workspace:
       type: object
       required: [name]

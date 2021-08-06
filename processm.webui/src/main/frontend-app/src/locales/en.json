@@ -6,7 +6,7 @@
     "menu": "Menu",
     "workspaces": "Workspaces",
     "users": "@:users.page-title",
-    "data-sources": "Data sources",
+    "data-stores": "Data stores",
     "pql-interpreter": "PQL interpreter",
     "about": "@:about.page-title"
   },
@@ -38,7 +38,7 @@
       }
     }
   },
-  "data-sources": {
+  "data-stores": {
     "name": "Name",
     "created-at": "Created at",
     "new": "Add new"

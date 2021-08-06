@@ -169,7 +169,7 @@ import Vue from "vue";
 import { waitForRepaint } from "@/utils/waitForRepaint";
 import { Component, Inject } from "vue-property-decorator";
 import LogsService from "@/services/LogsService";
-import DataSourceService from "@/services/DataSourceService";
+import DataStoreService from "@/services/DataStoreService";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import TreeTable from "tree-table-vue-extend";
 import App from "@/App.vue";
@@ -196,9 +196,9 @@ class LogHeader {
 export default class PQL extends Vue {
   @Inject() app!: App;
   @Inject() logsService!: LogsService;
-  @Inject() dataSourceService!: DataSourceService;
+  @Inject() dataStoreService!: DataStoreService;
   private readonly xesProcessor = new XesProcessor();
-  private dataSourceId: string | null = null;
+  private dataStoreId: string | null = null;
   fileSizeLimit = 5242880;
   isLoadingData = false;
   isUploading = false;
@@ -222,9 +222,9 @@ export default class PQL extends Vue {
   ];
 
   async created() {
-    this.dataSourceId =
-      Vue.prototype.$sessionStorage.defaultDataSourceId ??
-      (await this.dataSourceService.getAll())?.[0]?.id;
+    this.dataStoreId =
+      Vue.prototype.$sessionStorage.defaultDataStoreId ??
+      (await this.dataStoreService.getAll())?.[0]?.id;
   }
 
   selectFile(file: File) {
@@ -240,12 +240,12 @@ export default class PQL extends Vue {
       if (this.selectedFile == null) return;
       if (this.selectedFile.size > this.fileSizeLimit)
         return this.app.error("The selected file exceeds the size limit.");
-      if (this.dataSourceId == null)
-        return this.app.error("No appropriate data source found to query.");
+      if (this.dataStoreId == null)
+        return this.app.error("No appropriate data store found to query.");
 
       this.isUploading = true;
       await this.logsService.uploadLogFile(
-        this.dataSourceId,
+        this.dataStoreId,
         this.selectedFile
       );
       this.selectedFile = null;
@@ -261,14 +261,14 @@ export default class PQL extends Vue {
     try {
       this.headers = [];
       this.items = [];
-      if (this.dataSourceId == null)
-        throw new Error("No appropriate data source found to query.");
+      if (this.dataStoreId == null)
+        throw new Error("No appropriate data store found to query.");
 
       this.isLoadingData = true;
 
       this.app.info("Executing query...", -1);
       const queryResults = await this.logsService.submitUserQuery(
-        this.dataSourceId,
+        this.dataStoreId,
         this.query
       );
 
@@ -306,14 +306,14 @@ export default class PQL extends Vue {
 
   async download() {
     try {
-      if (this.dataSourceId == null)
-        throw new Error("No appropriate data source found to query.");
+      if (this.dataStoreId == null)
+        throw new Error("No appropriate data store found to query.");
 
       this.isDownloading = true;
 
       this.app.info("Executing query...", -1);
       await this.logsService.submitUserQuery(
-        this.dataSourceId,
+        this.dataStoreId,
         this.query,
         "application/zip"
       );

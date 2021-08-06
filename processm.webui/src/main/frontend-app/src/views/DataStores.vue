@@ -2,7 +2,7 @@
   <v-container>
     <v-row>
       <v-col cols="12">
-        <data-sources-list />
+        <data-stores-list />
       </v-col>
     </v-row>
   </v-container>
@@ -13,10 +13,10 @@
 <script lang="ts">
 import Vue from "vue";
 import { Component } from "vue-property-decorator";
-import DataSourcesList from "@/views/DataSourcesList.vue";
+import DataStoresList from "@/views/DataStoresList.vue";
 
 @Component({
-  components: { DataSourcesList }
+  components: { DataStoresList }
 })
-export default class DataSources extends Vue {}
+export default class DataStores extends Vue {}
 </script>

@@ -33,13 +33,13 @@ class LogsService {
         BufferedInputStream(BoundedInputStream(this, streamSizeLimit))
 
     /**
-     * Returns all data sources for the specified [organizationId].
+     * Returns all data stores for the specified [organizationId].
      */
-    fun saveLogFile(dataSourceId: UUID, fileName: String?, logStream: InputStream) {
+    fun saveLogFile(dataStoreId: UUID, fileName: String?, logStream: InputStream) {
         loggedScope { logger ->
-            logger.info("Saving new log file ($fileName) to $dataSourceId")
+            logger.info("Saving new log file ($fileName) to $dataStoreId")
             DBXESOutputStream(
-                DBCache.get(dataSourceId.toString()).getConnection()
+                DBCache.get(dataStoreId.toString()).getConnection()
             ).use { db ->
                 db.write(
                     XMLXESInputStream(
@@ -54,13 +54,13 @@ class LogsService {
     }
 
     /**
-     * Create new data source named [name] and assigned to the specified [organizationId].
+     * Create new data store named [name] and assigned to the specified [organizationId].
      */
-    fun queryDataSourceJSON(dataSourceId: UUID, query: String): OutputStream.() -> Unit {
+    fun queryDataStoreJSON(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
         // from that stage of processing.
-        val queryStream = createQueryStream(dataSourceId, query)
+        val queryStream = createQueryStream(dataStoreId, query)
 
         return {
             val config: JsonXMLConfig =
@@ -92,11 +92,11 @@ class LogsService {
         }
     }
 
-    fun queryDataSourceZIPXES(dataSourceId: UUID, query: String): OutputStream.() -> Unit {
+    fun queryDataStoreZIPXES(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
         // from that stage of processing.
-        val queryStream = createQueryStream(dataSourceId, query, downloadLimitFactor)
+        val queryStream = createQueryStream(dataStoreId, query, downloadLimitFactor)
 
         return {
             ZipOutputStream(this, Charset.forName("utf-8")).use { zip ->
@@ -121,17 +121,17 @@ class LogsService {
     }
 
     private fun createQueryStream(
-        dataSourceId: UUID,
+        dataStoreId: UUID,
         query: String,
         limitFactor: Long = 1L
     ): DBHierarchicalXESInputStream {
         loggedScope { logger ->
-            logger.info("Querying data source: $dataSourceId")
+            logger.info("Querying data store: $dataStoreId")
             logger.debug("User query: $query")
 
             val q = Query(query)
             q.applyLimits(logLimit, traceLimit * limitFactor, eventLimit * limitFactor)
-            val queryStream = DBHierarchicalXESInputStream(dataSourceId.toString(), q)
+            val queryStream = DBHierarchicalXESInputStream(dataStoreId.toString(), q)
 
             return queryStream
         }

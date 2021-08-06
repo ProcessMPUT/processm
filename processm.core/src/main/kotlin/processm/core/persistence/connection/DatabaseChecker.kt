@@ -57,7 +57,7 @@ object DatabaseChecker {
     fun switchDatabaseURL(expectedDatabase: String): String {
         // Main ProcessM database
         if (expectedDatabase == Brand.mainDBInternalName) return baseConnectionURL
-        require(expectedDatabase.isUUID()) { "Datasource DB should be in UUID format" }
+        require(expectedDatabase.isUUID()) { "Datastore DB should be in UUID format" }
         val withoutPSQL = baseConnectionURL.substring(jdbcPostgresqlStart.length)
 
         return with(StringBuilder()) {

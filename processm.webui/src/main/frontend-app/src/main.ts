@@ -13,7 +13,7 @@ import SessionStorage from "@/plugins/SessionStorage";
 import WorkspaceService from "@/services/WorkspaceService";
 import AccountService from "@/services/AccountService";
 import OrganizationService from "@/services/OrganizationService";
-import DataSourceService from "@/services/DataSourceService";
+import DataStoreService from "@/services/DataStoreService";
 import LogsService from "./services/LogsService";
 import ConfigService from "@/services/ConfigService";
 
@@ -28,7 +28,7 @@ new Vue({
   provide: () => ({
     configService: new ConfigService(),
     workspaceService: new WorkspaceService(),
-    dataSourceService: new DataSourceService(),
+    dataStoreService: new DataStoreService(),
     accountService: new AccountService(),
     organizationService: new OrganizationService(),
     logsService: new LogsService()

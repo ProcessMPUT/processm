@@ -156,7 +156,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns only user workspace components with existing data source`(): Unit = withCleanTables(
+    fun `returns only user workspace components with existing data store`(): Unit = withCleanTables(
         Organizations, Users, UserGroups, UsersInGroups,
         WorkspaceComponents,
         Workspaces
@@ -165,22 +165,22 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
-        val componentDataSourceId = DBSerializer.insert(DBCache.get(workspaceId.toString()), MutableCausalNet())
+        val componentDataStoreId = DBSerializer.insert(DBCache.get(workspaceId.toString()), MutableCausalNet())
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
-        val componentWithNotExistingDataSource =
+        val componentWithNotExistingDataStore =
             createWorkspaceComponent("Component1", workspaceId.value, componentType = ComponentTypeDto.CausalNet)
-        val componentWithExistingDataSource = createWorkspaceComponent(
+        val componentWithExistingDataStore = createWorkspaceComponent(
             "Component2",
             workspaceId.value,
             componentType = ComponentTypeDto.CausalNet,
-            dataSourceId = componentDataSourceId
+            dataStoreId = componentDataStoreId
         )
 
         val workspaceComponents =
             workspaceService.getWorkspaceComponents(workspaceId.value, userId.value, organizationId.value)
 
         assertEquals(1, workspaceComponents.size)
-        assertTrue { workspaceComponents.any { it.id == componentWithExistingDataSource.value } }
+        assertTrue { workspaceComponents.any { it.id == componentWithExistingDataStore.value } }
     }
 
     @Test
