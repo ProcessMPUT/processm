@@ -13,7 +13,7 @@ class SessionStorage {
   private static readonly UserInfoKey = "user_info";
   private static readonly UserOrganizationsKey = "user_organizations";
   private static readonly CurrentOrganizationIndexKey = "current_organization";
-  private static readonly DefaultDataSourceKey = "default_data_source";
+  private static readonly DefaultDataStoreKey = "default_data_source";
   private static get session() {
     return _Vue.prototype.$session;
   }
@@ -58,12 +58,12 @@ class SessionStorage {
     return this.userOrganizations[this.currentOrganizationIndex];
   }
 
-  static set defaultDataSourceId(dataSourceId: string) {
-    this.session.set(this.DefaultDataSourceKey, dataSourceId);
+  static set defaultDataStoreId(dataStoreId: string) {
+    this.session.set(this.DefaultDataStoreKey, dataStoreId);
   }
 
-  static get defaultDataSourceId(): string {
-    return this.session.get(this.DefaultDataSourceKey);
+  static get defaultDataStoreId(): string {
+    return this.session.get(this.DefaultDataStoreKey);
   }
 
   static removeSession() {

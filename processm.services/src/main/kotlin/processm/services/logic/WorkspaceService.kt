@@ -93,14 +93,14 @@ class WorkspaceService(private val accountService: AccountService) {
                 .fold(mutableListOf<WorkspaceComponentDto>()) { acc, component ->
                     val componentDto = component.toDto()
 
-                    if (component.componentType == ComponentTypeDto.CausalNet && component.componentDataSourceId != null) {
+                    if (component.componentType == ComponentTypeDto.CausalNet && component.componentDataStoreId != null) {
                         try {
                             componentDto.data =
-                                DBSerializer.fetch(DBCache.get(workspaceId.toString()), component.componentDataSourceId!!)
+                                DBSerializer.fetch(DBCache.get(workspaceId.toString()), component.componentDataStoreId!!)
                                     .toDto()
                             acc.add(componentDto)
                         } catch (ex: NoSuchElementException) {
-                            logger.warn("The data source ${component.componentDataSourceId} of ${component.componentType} workspace component ${component.id} does not exist")
+                            logger.warn("The data store ${component.componentDataStoreId} of ${component.componentType} workspace component ${component.id} does not exist")
                         }
                     } else {
                         acc.add(componentDto)

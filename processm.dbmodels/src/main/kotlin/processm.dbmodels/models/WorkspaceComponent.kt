@@ -11,7 +11,7 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
     val workspaceId = reference("workspace_id", Workspaces)
     val query = text("query")
     val componentType = text("type")
-    val componentDataSourceId = integer("data_source_id").nullable()
+    val componentDataStoreId = integer("data_store_id").nullable()
     val customizationData = text("customization_data").nullable()
     val layoutData = text("layout_data").nullable()
 }
@@ -30,7 +30,7 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
                 it
             )
         })
-    var componentDataSourceId by WorkspaceComponents.componentDataSourceId
+    var componentDataStoreId by WorkspaceComponents.componentDataStoreId
     var customizationData by WorkspaceComponents.customizationData
     var layoutData by WorkspaceComponents.layoutData
 

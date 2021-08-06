@@ -25,17 +25,17 @@ const workspaces = [
   },
 ];
 
-const dataSources = [
+const dataStores = [
   {
     id: "6925b43f-cc6d-4320-8565-8388f2a7f6d7",
     organizationId: "1",
-    name: "DataSource #1",
+    name: "DataStore #1",
     createdAt: "2020-09-25T06:32:28Z",
   },
   {
     id: "0096ec34-dd2f-47ee-9ccf-c804637df4dc",
     organizationId: "1",
-    name: "DataSource #2",
+    name: "DataStore #2",
     createdAt: "2020-07-11T07:12:02Z",
   },
 ];
@@ -108,18 +108,18 @@ function createUUID() {
 }
 
 const api = {
-  "GET /api/organizations/:organizationId/data-sources": { data: dataSources },
-  "POST /api/organizations/:organizationId/data-sources": (req, res) => {
-    const dataSource = req.body.data;
+  "GET /api/organizations/:organizationId/data-stores": { data: dataStores },
+  "POST /api/organizations/:organizationId/data-stores": (req, res) => {
+    const dataStore = req.body.data;
 
-    if (!dataSource) {
+    if (!dataStore) {
       return res.status(400).json();
     }
 
-    dataSource.id = createUUID();
-    workspaces.push(dataSource);
+    dataStore.id = createUUID();
+    workspaces.push(dataStore);
 
-    return res.status(201).json({ data: dataSource });
+    return res.status(201).json({ data: dataStore });
   },
   "GET /api/organizations/:organizationId/workspaces": { data: workspaces },
   "GET /api/organizations/:organizationId/workspaces/:workspaceId": (
@@ -381,8 +381,8 @@ const api = {
 
     return res.status(200).json({ data: members });
   },
-  "GET /api/data-sources/:dataSourceId/logs": (req, res) => {
-    const { dataSourceId } = req.params;
+  "GET /api/data-stores/:dataStoreId/logs": (req, res) => {
+    const { dataStoreId } = req.params;
     const { query } = req.query;
 
     return res.status(200).json({ data: xesQueryResult });

@@ -11,7 +11,6 @@ import io.ktor.http.*
 import io.ktor.locations.*
 import io.ktor.response.*
 import io.ktor.routing.*
-import io.ktor.util.*
 import org.koin.dsl.module
 import org.koin.ktor.ext.Koin
 import processm.core.logging.loggedScope
@@ -51,7 +50,7 @@ fun Application.apiModule() {
                 single { OrganizationService() }
                 single { GroupService() }
                 single { WorkspaceService(get()) }
-                single { DataSourceService() }
+                single { DataStoreService() }
                 single { LogsService() }
             })
         }
@@ -63,7 +62,7 @@ fun Application.apiModule() {
                 OrganizationsApi()
                 UsersApi()
                 WorkspacesApi()
-                DataSourcesApi()
+                DataStoresApi()
                 get { call.respondRedirect("/api-docs/", permanent = true) }
             }
         }

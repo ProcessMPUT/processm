@@ -52,15 +52,15 @@ abstract class ServiceTestBase {
         }
     }
 
-    protected fun createDataSource(
+    protected fun createDataStore(
         organizationId: UUID,
-        name: String = "DataSource#1",
+        name: String = "DataStore#1",
         creationDate: LocalDateTime = LocalDateTime.now()
     ): EntityID<UUID> {
-        return DataSources.insertAndGetId {
-            it[DataSources.name] = name
-            it[DataSources.creationDate] = creationDate
-            it[DataSources.organizationId] = EntityID(organizationId, Organizations)
+        return DataStores.insertAndGetId {
+            it[DataStores.name] = name
+            it[DataStores.creationDate] = creationDate
+            it[DataStores.organizationId] = EntityID(organizationId, Organizations)
         }
     }
 
@@ -115,7 +115,7 @@ abstract class ServiceTestBase {
         componentWorkspaceId: UUID? = null,
         query: String = "SELECT ...",
         componentType: ComponentTypeDto = ComponentTypeDto.CausalNet,
-        dataSourceId: Int = 0,
+        dataStoreId: Int = 0,
         customizationData: String = "{}"
     ): EntityID<UUID> {
         val workspaceId = componentWorkspaceId ?: createWorkspace().value
@@ -125,7 +125,7 @@ abstract class ServiceTestBase {
             it[this.workspaceId] = EntityID(workspaceId, Workspaces)
             it[this.query] = query
             it[this.componentType] = componentType.typeName
-            it[componentDataSourceId] = dataSourceId
+            it[componentDataStoreId] = dataStoreId
             it[this.customizationData] = customizationData
         }
     }
