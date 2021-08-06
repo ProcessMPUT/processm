@@ -55,14 +55,14 @@ class DBConnectionPool(databaseName: String) {
      * Returns a connection from the pool or creates new if necessary. The invoker is required to call close()
      * on the received object in order to return this connection to the pool.
      */
-    fun getConnection(): Connection = getDataSource().connection
+    fun getConnection(): Connection = getDataStore().connection
 
     /**
-     * Returns a data source associated with a connection from the pool or creates new if necessary. The invoker
+     * Returns a data store associated with a connection from the pool or creates new if necessary. The invoker
      * is required to call close() on the received object.connection property in order to return this connection
      * to the pool.
      */
-    fun getDataSource(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool)
+    fun getDataStore(): DataSource = PoolingDataSource<PoolableConnection>(connectionPool)
 
     fun close() {
         connectionPool.close()
@@ -72,7 +72,7 @@ class DBConnectionPool(databaseName: String) {
      * Database object for transactions managed by org.jetbrains.exposed library.
      */
     val database: Database by lazy {
-        Database.connect(getDataSource())
+        Database.connect(getDataStore())
     }
 
     companion object {

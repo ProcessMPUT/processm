@@ -38,8 +38,8 @@ class DBCacheTest {
     }
 
     @Test
-    fun getDataSourceTest() {
-        DBCache.getMainDBPool().getDataSource().connection.use {
+    fun getDataStoreTest() {
+        DBCache.getMainDBPool().getDataStore().connection.use {
             assertEquals(true, it.isValid(3))
         }
     }

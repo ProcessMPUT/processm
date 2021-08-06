@@ -14,13 +14,15 @@ package processm.services.api
 import io.ktor.locations.*
 import java.util.*
 
+@KtorExperimentalLocationsAPI
 object Paths {
+    @Location("/config")
+    class Config
     /**
      * Get or remove the specified group
      *
      * @param groupId Group ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}")
     class Group(val groupId: UUID)
 
@@ -29,7 +31,6 @@ object Paths {
      *
      * @param groupId Group ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/members")
     class GroupMembers(val groupId: UUID)
 
@@ -37,7 +38,6 @@ object Paths {
      * Get groups belonging to the current user&#39;s organization
      *
      */
-    @KtorExperimentalLocationsAPI
     @Location("/groups")
     class Groups
 
@@ -46,7 +46,6 @@ object Paths {
      *
      * @param groupId Group ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/subgroups")
     class Subgroups(val groupId: UUID)
 
@@ -56,7 +55,6 @@ object Paths {
      * @param groupId Group ID
      * @param userId User ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/members/{userId}")
     class GroupMember(val groupId: UUID, val userId: UUID)
 
@@ -66,7 +64,6 @@ object Paths {
      * @param groupId Group ID
      * @param subgroupId Subgroup ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/groups/{groupId}/subgroups/{subgroupId}")
     class Subgroup(val groupId: UUID, val subgroupId: UUID)
 
@@ -75,7 +72,6 @@ object Paths {
      *
      * @param organizationId Organization ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}")
     class Organization(val organizationId: UUID)
 
@@ -84,7 +80,6 @@ object Paths {
      *
      * @param organizationId Organization ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/groups")
     class OrganizationGroups(val organizationId: UUID)
 
@@ -93,7 +88,6 @@ object Paths {
      *
      * @param organizationId Organization ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/members")
     class OrganizationMembers(val organizationId: UUID)
 
@@ -102,7 +96,6 @@ object Paths {
      *
      * @param organizationId Organization ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations")
     class Organizations
 
@@ -112,33 +105,29 @@ object Paths {
      * @param organizationId Organization ID
      * @param userId User ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/members/{userId}")
     class OrganizationMember(val organizationId: UUID, val userId: UUID)
 
     /**
-     * Data sources assigned to [organizationId].
+     * Data stores assigned to [organizationId].
      *
      * @param organizationId Organization ID
      */
-    @KtorExperimentalLocationsAPI
-    @Location("/organizations/{organizationId}/data-sources")
-    class DataSources(val organizationId: UUID)
+    @Location("/organizations/{organizationId}/data-stores")
+    class DataStores(val organizationId: UUID)
 
     /**
-     * Logs stored assigned in [dataSourceId].
+     * Logs stored in [dataStoreId].
      *
-     * @param dataSourceId Data source ID
+     * @param dataStoreId Data store ID
      */
-    @KtorExperimentalLocationsAPI
-    @Location("/data-sources/{dataSourceId}/logs")
-    class Logs(val dataSourceId: UUID)
+    @Location("/data-stores/{dataStoreId}/logs")
+    class Logs(val dataStoreId: UUID)
 
     /**
      * Get details about current user
      *
      */
-    @KtorExperimentalLocationsAPI
     @Location("/users/me")
     class UserAccountDetails
 
@@ -146,7 +135,6 @@ object Paths {
      * Get organizations which the current user is a member of
      *
      */
-    @KtorExperimentalLocationsAPI
     @Location("/users/me/organizations")
     class UserOrganizations
 
@@ -154,7 +142,6 @@ object Paths {
      * Get organizations which the current user is a member of
      *
      */
-    @KtorExperimentalLocationsAPI
     @Location("/users")
     class Users
 
@@ -162,7 +149,6 @@ object Paths {
      * Get users associated with the current user by organization membership
      *
      */
-    @KtorExperimentalLocationsAPI
     @Location("/users/session")
     class UserOut
 
@@ -172,7 +158,6 @@ object Paths {
      * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/workspaces/{workspaceId}")
     class Workspace(val organizationId: UUID, val workspaceId: UUID)
 
@@ -183,7 +168,6 @@ object Paths {
      * @param workspaceId Workspace ID
      * @param componentId Component ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}")
     class WorkspaceComponent(val organizationId: UUID, val workspaceId: UUID, val componentId: UUID)
 
@@ -194,7 +178,6 @@ object Paths {
      * @param workspaceId Workspace ID
      * @param componentId Component ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data")
     class WorkspaceComponentData(val organizationId: UUID, val workspaceId: UUID, val componentId: UUID)
 
@@ -204,7 +187,6 @@ object Paths {
      * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/workspaces/{workspaceId}/components")
     class WorkspaceComponents(val organizationId: UUID, val workspaceId: UUID)
 
@@ -214,7 +196,6 @@ object Paths {
      * @param organizationId Organization ID
      * @param workspaceId Workspace ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/workspaces/{workspaceId}/layout")
     class WorkspaceLayout(val organizationId: UUID, val workspaceId: UUID)
 
@@ -223,7 +204,6 @@ object Paths {
      *
      * @param organizationId Organization ID
      */
-    @KtorExperimentalLocationsAPI
     @Location("/organizations/{organizationId}/workspaces")
     class Workspaces(val organizationId: UUID)
 

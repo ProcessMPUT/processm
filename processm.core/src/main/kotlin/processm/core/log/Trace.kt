@@ -1,5 +1,8 @@
 package processm.core.log
 
+import processm.core.log.attribute.IDAttr
+import processm.core.log.attribute.RealAttr
+import processm.core.log.attribute.StringAttr
 import java.util.*
 
 /**
@@ -29,5 +32,12 @@ open class Trace : TraceOrEventBase() {
         costTotal = attributesInternal[nameMap["cost:total"]]?.getValue() as Double?
         costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue() as String?
         identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
+    }
+
+    override fun setCustomAttributes(nameMap: Map<String, String>) {
+        setCustomAttribute(conceptName, "concept:name", ::StringAttr, nameMap)
+        setCustomAttribute(costTotal, "cost:total", ::RealAttr, nameMap)
+        setCustomAttribute(costCurrency, "cost:currency", ::StringAttr, nameMap)
+        setCustomAttribute(identityId, "identity:id", ::IDAttr, nameMap)
     }
 }

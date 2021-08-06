@@ -5,9 +5,9 @@ import processm.core.log.attribute.value
 import java.util.*
 
 /**
- * XES Element like Log, Trace or Event
+ * XES Element like Log, Trace or Event.
  *
- * Inside element we expect to store attributes.
+ * Elements store attributes.
  */
 abstract class XESComponent {
     /**
@@ -53,5 +53,26 @@ abstract class XESComponent {
      */
     internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 
+    /**
+     * Sets the values of the standard attributes based on the custom attributes and the name map from the standard
+     * attribute name into the custom attribute name.
+     */
     internal abstract fun setStandardAttributes(nameMap: Map<String, String>)
+
+    /**
+     * Sets the values of the custom attributes based on the standard attributes and the name map from the standard
+     * attribute name into the custom attribute name. It does not override the values already set for the custom
+     * attributes.
+     */
+    internal abstract fun setCustomAttributes(nameMap: Map<String, String>)
+
+    protected fun <T> setCustomAttribute(
+        stdVal: T?,
+        stdName: String,
+        ctor: (key: String, value: T) -> Attribute<T>,
+        nameMap: Map<String, String>
+    ) {
+        stdVal ?: return
+        attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { ctor(it, stdVal) }
+    }
 }

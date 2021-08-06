@@ -4,10 +4,11 @@ import { BaseAPI } from "@/openapi/base";
 import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
 import {
   Configuration,
+  ConfigApi,
   UsersApi,
   OrganizationsApi,
   WorkspacesApi,
-  DataSourcesApi,
+  DataStoresApi,
   LogsApi
 } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
@@ -38,6 +39,10 @@ export default abstract class BaseService {
     );
   }
 
+  protected get configApi() {
+    return this.getGenericClient(ConfigApi);
+  }
+
   protected get usersApi() {
     return this.getGenericClient(UsersApi);
   }
@@ -50,8 +55,8 @@ export default abstract class BaseService {
     return this.getGenericClient(WorkspacesApi);
   }
 
-  protected get dataSourcesApi() {
-    return this.getGenericClient(DataSourcesApi);
+  protected get dataStoresApi() {
+    return this.getGenericClient(DataStoresApi);
   }
 
   protected get logsApi() {
@@ -74,7 +79,7 @@ export default abstract class BaseService {
       return;
     }
 
-    throw new Error(response.statusText);
+    throw new Error(response.data?.error ?? response.statusText);
   }
 
   private prolongExistingSession(

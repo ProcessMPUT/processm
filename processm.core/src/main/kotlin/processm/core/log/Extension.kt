@@ -1,6 +1,6 @@
 package processm.core.log
 
-import java.util.*
+import kotlin.collections.HashMap
 import processm.core.log.extension.Extension as LoadedExtension
 
 /**

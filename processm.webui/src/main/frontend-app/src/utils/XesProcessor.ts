@@ -63,35 +63,33 @@ export default class XesProcessor {
 
       Object.keys(extractedLog).forEach((attribute) => headers.add(attribute));
       this.ensureArray(log.trace).reduce((traces: LogItem[], trace: Trace) => {
-        if (trace != null) {
-          const extractedTrace = this.extractElementAttributesValuesFromXesComponent(
-            trace,
-            XesComponentScope.Trace,
-            iterator++
-          );
+        trace = trace ?? {};
+        const extractedTrace = this.extractElementAttributesValuesFromXesComponent(
+          trace,
+          XesComponentScope.Trace,
+          iterator++
+        );
 
-          Object.keys(extractedTrace).forEach((attribute) =>
-            headers.add(attribute)
-          );
-          this.ensureArray(trace.event).reduce(
-            (events: LogItem[], event: XesComponent) => {
-              if (event != null) {
-                const extractedEvent = this.extractElementAttributesValuesFromXesComponent(
-                  event,
-                  XesComponentScope.Event,
-                  iterator++
-                );
-                events.push(extractedEvent);
-                Object.keys(extractedEvent).forEach((attribute) =>
-                  headers.add(attribute)
-                );
-              }
-              return events;
-            },
-            extractedTrace._children
-          );
-          traces.push(extractedTrace);
-        }
+        Object.keys(extractedTrace).forEach((attribute) =>
+          headers.add(attribute)
+        );
+        this.ensureArray(trace.event).reduce(
+          (events: LogItem[], event: XesComponent) => {
+            event = event ?? {};
+            const extractedEvent = this.extractElementAttributesValuesFromXesComponent(
+              event,
+              XesComponentScope.Event,
+              iterator++
+            );
+            events.push(extractedEvent);
+            Object.keys(extractedEvent).forEach((attribute) =>
+              headers.add(attribute)
+            );
+            return events;
+          },
+          extractedTrace._children
+        );
+        traces.push(extractedTrace);
         return traces;
       }, extractedLog._children);
       return extractedLog;

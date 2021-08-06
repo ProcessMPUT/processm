@@ -11,7 +11,6 @@ import processm.core.querylanguage.Query
 import processm.core.querylanguage.Scope
 import java.lang.ref.Cleaner
 import java.lang.ref.SoftReference
-import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Types
 import java.util.*
@@ -69,6 +68,10 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
          */
         private val maxParentIdInCache: Long = 1L shl (63 - maxCachedBatchesPerParentLog2)
 
+        private const val logIdBitsInParentId: Int = 24
+        private val traceIdBitsInParentId: Int = 63 - maxCachedBatchesPerParentLog2 - logIdBitsInParentId
+        private val traceIdInParentIdMask: Long = (1L shl traceIdBitsInParentId) - 1L
+
         private val cacheCleaner: Cleaner = Cleaner.create()
 
         init {
@@ -91,7 +94,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
     /**
      * The key is a bitwise combination of three values:
      * * bit 63: the scope of the referenced object (0 for log or trace, 1 for event),
-     * * bits 62-log2([maxCachedBatchesPerParent]): the primary key of the parent entity (all zeros for log, log id for trace, trace id for event),
+     * * bits 62-log2([maxCachedBatchesPerParent]): the primary key of the parent entity (all zeros for log, log id for trace,
+     * (log id shl [traceIdBitsInParentId] or trace id) for event),
      * * bits (log2([maxCachedBatchesPerParent])-1)-0: the batch number.
      * The value is a [SoftReference] to a batch of the entities of the corresponding scope.
      *
@@ -124,6 +128,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         } else {
             skipAction()
         }
+
+        @Suppress("UNCHECKED_CAST")
         return list as List<T>
     }
 
@@ -188,7 +194,7 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         { batchIndex, initializer, skipAction ->
             getCachedBatch(
                 Scope.Event,
-                traceId,
+                if (traceId <= traceIdInParentIdMask) (logId.toLong() shl traceIdBitsInParentId) or traceId else maxParentIdInCache,
                 batchIndex,
                 initializer,
                 skipAction
@@ -219,6 +225,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             identityId = result.entity.getString("identity:id").toUUID() ?: identityId
             lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
             count = result.entity.getIntOrNull("count") ?: 1
+
+            setCustomAttributes(nameMap)
 
             // getTraces is a sequence, so it will be actually called when one reads it
             traces = getTraces(logId, nameMap)
@@ -338,6 +346,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             isEventStream = result.entity.getBooleanOrNull("event_stream") ?: false
             count = result.entity.getIntOrNull("count") ?: 1
 
+            setCustomAttributes(nameMap)
+
             // getEvents is a sequence, so it will be actually called when one reads it
             events = getEvents(logId, traceId, nameMap)
 
@@ -369,6 +379,8 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
             orgResource = result.entity.getString("org:resource") ?: orgResource
             timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant() ?: timeTimestamp
             count = result.entity.getIntOrNull("count") ?: 1
+
+            setCustomAttributes(nameMap)
 
             logger.exit()
             return this
@@ -462,5 +474,5 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
         }
 }
 
-@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.")
+@Deprecated("Class was renamed. Type alias is provided for backward-compatibility.", level = DeprecationLevel.ERROR)
 typealias DatabaseHierarchicalXESInputStream = DBHierarchicalXESInputStream

@@ -16,7 +16,7 @@ private const val EnvironmentVariablePrefix = "processm_"
 private var configurationLoaded = AtomicBoolean(false)
 
 private object Helpers {
-    internal val logger = logger()
+    val logger = logger()
 }
 
 
@@ -52,6 +52,15 @@ fun loadConfiguration(overwriteIfAlreadyLoaded: Boolean = false) {
         }
     }
 }
+
+/**
+ * Reads the system property ignoring the key case.
+ *
+ * @see [System.getProperty]
+ */
+fun getPropertyIgnoreCase(key: String): String? =
+    System.getProperty(key)
+        ?: System.getProperties().entries.firstOrNull { (k, _) -> (k as String).equals(key, true) }?.value as String?
 
 /**
  * Compares two logs.

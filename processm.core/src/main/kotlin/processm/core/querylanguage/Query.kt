@@ -209,6 +209,24 @@ class Query(val query: String) {
             throw errorListener.error!!
     }
 
+    /**
+     * Sets the limits on the numbers of [log]s, [trace]s, and [event]s returned by this query. For query containing a
+     * limit, this method calculates the minimum of that limit and the passed value. For query not containing a limit,
+     * this method imposes an upper bound of the passed value. Pass null to skip the application of a particular limit.
+     *
+     * @param log The upper bound on the total number of logs returned, or null to not impose the limit.
+     * @param trace The upper bound on the number of traces returned per log, or null to not impose the limit.
+     * @param evemt The upper bound on the number of events returned per trace, or null to not impose the limit.
+     */
+    fun applyLimits(log: Long? = null, trace: Long? = null, event: Long? = null) {
+        log?.let { applyLimit(Scope.Log, it) }
+        trace?.let { applyLimit(Scope.Trace, it) }
+        event?.let { applyLimit(Scope.Event, it) }
+    }
+
+    private fun applyLimit(scope: Scope, value: Long) =
+        _limit.compute(scope) { _, old -> (old ?: Long.MAX_VALUE).coerceAtMost(value) }
+
     private fun validateSelectAll() {
         validateSelectAll(Scope.Log, _selectAll[Scope.Log])
         validateSelectAll(Scope.Trace, _selectAll[Scope.Trace])

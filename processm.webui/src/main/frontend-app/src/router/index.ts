@@ -26,9 +26,9 @@ const routes = [
     component: () => import("@/views/UserProfile.vue")
   },
   {
-    path: "/data-sources",
-    name: "data-sources",
-    component: () => import("@/views/DataSources.vue")
+    path: "/data-stores",
+    name: "data-stores",
+    component: () => import("@/views/DataStores.vue")
   },
   {
     path: "/pql-interpreter",

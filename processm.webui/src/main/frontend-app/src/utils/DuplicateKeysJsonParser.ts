@@ -47,7 +47,7 @@ export default class DuplicateKeysJsonParser {
     this.parser = clarinet.parser();
     this.parser.onerror = (e) => {
       this.firstError = e;
-      console.error(e);
+      console.warn(e);
     };
 
     const parseKey = (key: string) => {

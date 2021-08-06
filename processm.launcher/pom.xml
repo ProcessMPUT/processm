@@ -8,7 +8,7 @@
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
         <version>0.1-SNAPSHOT</version>
-        <relativePath>../</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>launcher</artifactId>
@@ -35,6 +35,8 @@
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
                             <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
@@ -46,6 +48,7 @@
                                 <filter>
                                     <artifact>*:*</artifact>
                                     <excludes>
+                                        <exclude>junit:junit</exclude>
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
@@ -62,34 +65,34 @@
     <dependencies>
         <!-- Dependencies to processm modules are required in order to detect and load services from these modules -->
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>core</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>conformance</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>etl</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>miners</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>performance</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>services</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
 </project>
