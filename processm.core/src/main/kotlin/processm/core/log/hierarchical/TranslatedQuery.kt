@@ -213,11 +213,11 @@ internal class TranslatedQuery(
             if (scope == Scope.Trace)
                 append("event_stream, ")
 
-            var fetchAnyAttr = false
+            //var fetchAnyAttr = false
             for (attribute in pql.selectStandardAttributes[scope]!!) {
                 if (attribute.isClassifier)
                     continue
-                fetchAnyAttr = true
+                //fetchAnyAttr = true
                 append("${scope.alias}.\"${attribute.standardName}\", ")
             }
             setLength(length - 2)
@@ -374,58 +374,7 @@ internal class TranslatedQuery(
         )
 
         it.query.append("SELECT array_agg(id) AS ids FROM (")
-        it.query.append("SELECT ${scope.alias}.id,")
-
-        val groupByAttributes =
-            (pql.groupByStandardAttributes[scope]!! +
-                    pql.groupByOtherAttributes[scope]!!).flatMap { attr ->
-                if (logId !== null && attr.isClassifier)
-                    cache.expandClassifier(logId, attr)
-                else
-                    listOf(attr)
-            }
-
-        val orderByAttributes =
-            pql.orderByExpressions[scope]!!.flatMap { order -> order.base.filter { it is Attribute } }
-                .flatMap { attr ->
-                    attr as Attribute
-                    if (logId !== null && attr.isClassifier)
-                        cache.expandClassifier(logId, attr)
-                    else
-                        listOf(attr)
-                }
-
-        val attributes = (groupByAttributes + orderByAttributes).toSet()
-
-        val attributeInverseMap = HashMap<Attribute, Int>().apply {
-            for ((index, attribute) in attributes.withIndex())
-                put(attribute, index)
-        }
-
-        for (attribute in attributes) {
-            attribute.toSQL(
-                it, logId, Type.Any, 1,
-                prefix = { sql ->
-                    if (attribute.scope != scope) sql.query.append("array_agg(") else ""
-                },
-                suffix = { sql ->
-                    if (attribute.scope != scope) {
-                        pql.orderByExpressions[attribute.scope]!!.toSQL(
-                            it,
-                            logId,
-                            "${attribute.scope!!.alias}.id",
-                            true,
-                            true,
-                            true
-                        )
-                        sql.query.append(")")
-                    } else ""
-                },
-                ignoreHoisting = true
-            )
-            it.query.append(',')
-        }
-        it.query.setLength(it.query.length - 1)
+        val (attributes, groupByAttributes) = selectInnerGroup(it, scope, logId, false)
 
         val desiredFromPosition = it.query.length
 
@@ -434,27 +383,14 @@ internal class TranslatedQuery(
         val from = from(scope, it)
         it.query.insert(desiredFromPosition, from)
 
-        it.query.append(" GROUP BY ${scope.alias}.id")
-        it.query.append(") sub (id")
-        if (attributes.isNotEmpty())
-            it.query.append(',')
-        it.query.append(attributes.indices.joinToString(",") { "a$it" })
-        it.query.append(")")
+        groupById(scope, it)
+        it.query.append(')')
+        innerGroupSignature(it, attributes, groupByAttributes, false)
 
-        if (!pql.isImplicitGroupBy[scope]!!) {
-            it.query.append(" GROUP BY ")
-            for (attribute in groupByAttributes) {
-                val index = attributeInverseMap[attribute]
-                it.query.append("a$index,")
-            }
-            it.query.setLength(it.query.length - 1)
-        }
-
-        pql.orderByExpressions[scope]!!.toSQL(it, logId, "1", true, true, false, attributeInverseMap)
+        outerGroupBy(scope, it, attributes, groupByAttributes, logId, false)
 
         limit(scope, it)
         offset(scope, it)
-
     }
     // endregion
 
@@ -591,14 +527,7 @@ internal class TranslatedQuery(
         )
 
         it.query.append("SELECT array_agg(id) AS ids FROM (")
-
-        it.query.append("SELECT ${scope.alias}.id, row_number() OVER (")
-        if (scope != Scope.Log)
-            it.query.append("PARTITION BY ${scope.alias}.${scope.upper}_id ")
-
-        pql.orderByExpressions[scope]!!.toSQL(it, logId, "${scope.alias}.id", true, true, false)
-        it.query.append(')')
-        it.scopes.add(ScopeWithMetadata(scope, 0))
+        val (attributes, groupByAttributes) = selectInnerGroup(it, scope, logId, true)
 
         val desiredFromPosition = it.query.length
 
@@ -607,38 +536,146 @@ internal class TranslatedQuery(
         val from = from(scope, it)
         it.query.insert(desiredFromPosition, from)
 
-        it.query.append(") sub(id, ord)")
+        groupById(scope, it)
+        it.query.append(')')
+        innerGroupSignature(it, attributes, groupByAttributes, true)
 
-        if (!pql.isImplicitGroupBy[scope]!!) {
-            it.query.append(" GROUP BY ord")
-            it.query.append(" ORDER BY ord")
-        }
+        outerGroupBy(scope, it, attributes, groupByAttributes, logId, true)
 
         limit(scope, it)
         offset(scope, it)
     }
 
-    private fun <T> whereGroup(scope: Scope, sql: MutableSQLQuery, outerScopeGroup: T) {
-        sql.scopes.add(ScopeWithMetadata(scope, 0))
-        with(sql.query) {
+    private fun selectInnerGroup(
+        sql: MutableSQLQuery,
+        scope: Scope,
+        logId: Int?,
+        createOrderAttributeIfUngrouped: Boolean
+    ): Pair<Set<Attribute>, List<Attribute>> = with(sql.query) {
+        append("SELECT ${scope.alias}.id,")
 
-            @Suppress("NON_EXHAUSTIVE_WHEN")
-            when (scope) {
-                Scope.Event -> append(" WHERE e.trace_id=ANY(?)")
-                Scope.Trace -> append(" WHERE t.log_id=ANY(?)")
+        val groupByAttributes =
+            (pql.groupByStandardAttributes[scope]!! +
+                    pql.groupByOtherAttributes[scope]!!).flatMap { attr ->
+                if (logId !== null && attr.isClassifier)
+                    cache.expandClassifier(logId, attr)
+                else
+                    listOf(attr)
             }
+
+        val orderByAttributes =
+            pql.orderByExpressions[scope]!!.flatMap { order -> order.base.filter { it is Attribute } }
+                .flatMap { attr ->
+                    attr as Attribute
+                    if (logId !== null && attr.isClassifier)
+                        cache.expandClassifier(logId, attr)
+                    else
+                        listOf(attr)
+                }
+
+        val attributes = (groupByAttributes + orderByAttributes).toSet()
+        for (attribute in attributes) {
+            attribute.toSQL(
+                sql, logId, Type.Any, 1,
+                prefix = { sql ->
+                    if (attribute.scope != scope) sql.query.append("array_agg(")
+                },
+                suffix = { sql ->
+                    if (attribute.scope != scope) {
+                        pql.orderByExpressions[attribute.scope]!!.toSQL(
+                            sql,
+                            logId,
+                            "${attribute.scope!!.alias}.id",
+                            true,
+                            true,
+                            true
+                        )
+                        sql.query.append(")")
+                    }
+                },
+                ignoreHoisting = true
+            )
+            append(',')
+        }
+
+        if (createOrderAttributeIfUngrouped && groupByAttributes.isEmpty()) {
+            append("row_number() OVER (")
             if (scope != Scope.Log)
-                sql.params.add(outerScopeGroup!!)
+                append("PARTITION BY ${scope.alias}.${scope.upper}_id ")
 
-            if (pql.whereExpression == Expression.empty)
-                return@with
+            pql.orderByExpressions[scope]!!.toSQL(sql, logId, "${scope.alias}.id", true, true, false)
+            append("),")
+            sql.scopes.add(ScopeWithMetadata(scope, 0))
+        }
 
-            val insertPos = length
+        setLength(length - 1)
+        return Pair(attributes, groupByAttributes)
+    }
 
-            pql.whereExpression.toSQL(sql, Type.Any, false)
-            if (length != insertPos) {
-                insert(insertPos, if (scope == Scope.Log) " WHERE (" else " AND (")
-                append(')')
+    private fun <T> whereGroup(scope: Scope, sql: MutableSQLQuery, outerScopeGroup: T) = with(sql.query) {
+        sql.scopes.add(ScopeWithMetadata(scope, 0))
+
+        @Suppress("NON_EXHAUSTIVE_WHEN")
+        when (scope) {
+            Scope.Event -> append(" WHERE e.trace_id=ANY(?)")
+            Scope.Trace -> append(" WHERE t.log_id=ANY(?)")
+        }
+        if (scope != Scope.Log)
+            sql.params.add(outerScopeGroup!!)
+
+        if (pql.whereExpression == Expression.empty)
+            return@with
+
+        val insertPos = length
+
+        pql.whereExpression.toSQL(sql, Type.Any, false)
+        if (length != insertPos) {
+            insert(insertPos, if (scope == Scope.Log) " WHERE (" else " AND (")
+            append(')')
+        }
+    }
+
+    private fun innerGroupSignature(
+        sql: MutableSQLQuery,
+        attributes: Set<Attribute>,
+        groupByAttributes: List<Attribute>,
+        createOrderAttributeIfUngrouped: Boolean
+    ) = with(sql.query) {
+        append(" sub (id")
+        if (attributes.isNotEmpty())
+            append(',')
+        append(attributes.indices.joinToString(",") { "a$it" })
+        if (createOrderAttributeIfUngrouped && groupByAttributes.isEmpty())
+            append(",ord")
+        append(")")
+    }
+
+    private fun outerGroupBy(
+        scope: Scope,
+        sql: MutableSQLQuery,
+        attributes: Set<Attribute>,
+        groupByAttributes: List<Attribute>,
+        logId: Int?,
+        createOrderAttributeIfUngrouped: Boolean
+    ) = with(sql.query) {
+        if (!pql.isImplicitGroupBy[scope]!!) {
+            append(" GROUP BY ")
+            if (createOrderAttributeIfUngrouped && groupByAttributes.isEmpty()) {
+                append("ord")
+                append(" ORDER BY ord")
+            } else {
+                val attributeInverseMap = HashMap<Attribute, Int>().apply {
+                    for ((index, attribute) in attributes.withIndex())
+                        put(attribute, index)
+                }
+
+                for (attribute in groupByAttributes) {
+                    val index = attributeInverseMap[attribute]
+                    append("a$index,")
+                }
+                setLength(sql.query.length - 1)
+
+                pql.orderByExpressions[scope]!!.toSQL(sql, logId, "1", true, true, false, attributeInverseMap)
             }
         }
     }
