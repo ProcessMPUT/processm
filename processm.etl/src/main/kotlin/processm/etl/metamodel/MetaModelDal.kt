@@ -7,7 +7,7 @@ import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.dao.id.LongIdTable
-import org.jetbrains.exposed.sql.jodatime.datetime
+import org.jetbrains.exposed.sql.`java-time`.datetime
 
 object AttributesNames : IntIdTable("attributes_names") {
     val name = text("name")
