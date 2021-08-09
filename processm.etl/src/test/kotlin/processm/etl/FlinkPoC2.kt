@@ -3,35 +3,31 @@ package processm.etl
 import io.debezium.engine.DebeziumEngine
 import io.debezium.engine.format.Json
 import io.debezium.testing.testcontainers.ConnectorResolver
-import org.apache.flink.api.common.eventtime.*
 import org.apache.flink.api.common.typeinfo.TypeHint
-import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.cep.CEP
-import org.apache.flink.cep.functions.PatternProcessFunction
-import org.apache.flink.cep.nfa.aftermatch.AfterMatchSkipStrategy
-import org.apache.flink.cep.pattern.Pattern
-import org.apache.flink.cep.pattern.conditions.IterativeCondition
-import org.apache.flink.formats.json.JsonNodeDeserializationSchema
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment
-import org.apache.flink.util.Collector
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.Artemis
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.logging.logger
 import java.sql.DriverManager
-import java.time.Duration
 import java.util.*
 import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
-import kotlin.collections.ArrayList
 import kotlin.random.Random
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class FlinkPoC2 {
+
+    companion object {
+        private val logger = logger()
+    }
 
     private val artemis = Artemis()
 
@@ -118,7 +114,8 @@ class FlinkPoC2 {
         val tableEnv = StreamTableEnvironment.create(env)
 
         // In theory Flink 1.13 should be able to handle TIMESTAMP WITH TIME ZONE as returned by current_timestamp of PostgreSQL. In practice - it fails on parsing the CREATE TABLE statement.
-        tableEnv.executeSql("""
+        tableEnv.executeSql(
+            """
             CREATE TABLE topic_products (
   `id` BIGINT, `timestamp` BIGINT, 
   `status` string, 
@@ -130,7 +127,8 @@ class FlinkPoC2 {
  'format' = 'debezium-json',
  'debezium-json.schema-include' = 'true'
 )
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         // CEP using MATCH_RECOGNIZE
         val first = "first"
@@ -157,7 +155,8 @@ class FlinkPoC2 {
                 B AS B.status not in ('placed', 'completed'),
                 C AS C.status = 'completed'
             )
-         """)
+         """
+        )
 
         // Extracting events recognized by CEP and transforming them into XES traces
         val traces = FlinkSequence<ArrayList<String>>()
@@ -165,14 +164,18 @@ class FlinkPoC2 {
         tableEnv
             .toDataStream(result)
             .map {
-                val result=ArrayList<String>()
+                val result = ArrayList<String>()
                 result.add(it.getField(first).toString())
                 result.addAll(it.getField(intermediate).toString().split(separator))
                 result.add(it.getField(last).toString())
                 return@map result
             }
+            .returns(object : TypeHint<ArrayList<String>>() {})
             .addSink(traces.sink)
-        val log = Log(traces.map { events -> Trace(events.map { DBEvent(it) }.asSequence()) })
+        val log = Log(traces.map { events ->
+            logger.info("Received trace $events")
+            Trace(events.map { DBEvent(it) }.asSequence())
+        })
 
         // Start Flink
 
@@ -190,6 +193,7 @@ class FlinkPoC2 {
         clients.withIndex().map { (id, client) ->
             threadPool.submit {
                 Thread.sleep(1000L * id)
+                logger.info("Issuing transaction $client")
                 simulateOrderProcessing(id, client, connect)
             }
         }
@@ -200,6 +204,11 @@ class FlinkPoC2 {
             log.traces.take(clients.size).map { trace -> trace.events.map { it.conceptName }.toList() }.toList()
 
         assertEquals(clients.size, actual.size)
+        for ((exp, act) in clients zip actual) {
+            assertEquals(exp.size, act.size)
+            for ((e, a) in exp zip act)
+                assertEquals(e, a)
+        }
     }
 
     private fun simulateOrderProcessing(id: Int, statuses: List<String>, connect: () -> java.sql.Connection) {
@@ -217,7 +226,7 @@ class FlinkPoC2 {
                     }
                 }
             }
-        } catch (e:Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
             throw e
         }

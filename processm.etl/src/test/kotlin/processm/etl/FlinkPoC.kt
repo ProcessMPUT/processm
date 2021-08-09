@@ -101,7 +101,7 @@ class FlinkPoC {
         props.setProperty("database.server.name", "blah")
 
         val topic = UUID.randomUUID().toString()
-        
+
         val engine = DebeziumEngine
             .create(Json::class.java)
             .using(props)
@@ -154,6 +154,7 @@ class FlinkPoC {
         val source = env
             .addSource(artemisToFlink)
             .map { input -> deserializer.deserialize(input.second.encodeToByteArray()) }
+            .returns(object : TypeHint<ObjectNode>() {})
             .assignTimestampsAndWatermarks(strategy)
 
         // CEP - pattern definition
