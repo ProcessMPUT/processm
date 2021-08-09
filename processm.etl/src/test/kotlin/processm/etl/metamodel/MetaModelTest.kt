@@ -1,8 +1,10 @@
 package processm.etl.metamodel
 
-import org.junit.jupiter.api.Test
 import processm.etl.discovery.SchemaCrawlerExplorer
+import kotlin.test.Ignore
+import kotlin.test.Test
 
+@Ignore("Exemplary use cases, not real tests")
 class MetaModelTest {
     val dataStoreDBName = "1c546119-96fb-47e9-a9e7-b57b07c1365e"
     val dataModelId = 3

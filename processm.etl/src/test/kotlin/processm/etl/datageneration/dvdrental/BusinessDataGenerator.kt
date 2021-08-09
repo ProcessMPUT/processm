@@ -3,17 +3,19 @@ package processm.etl.datageneration.dvdrental
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.Test
 import processm.core.logging.loggedScope
 import java.math.BigDecimal
 import java.sql.DriverManager
 import java.time.LocalDateTime
 import kotlin.random.Random
+import kotlin.test.Ignore
+import kotlin.test.Test
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
+@Ignore("Exemplary use cases, not real tests")
 class BusinessDataGenerator {
     // PostgreSQL DvdRental
     val externalDataSourceConnectionString = ""
