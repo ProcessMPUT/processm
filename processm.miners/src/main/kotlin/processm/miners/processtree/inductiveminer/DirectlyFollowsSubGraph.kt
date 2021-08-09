@@ -7,9 +7,6 @@ import processm.core.models.processtree.SilentActivity
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import java.lang.Integer.min
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 import kotlin.properties.Delegates
 
 class DirectlyFollowsSubGraph(
@@ -464,7 +461,7 @@ class DirectlyFollowsSubGraph(
         // Analyze rows of connection matrix and find
         matrix.forEachIndexed { index, group ->
             // 0 and -1 allowed here
-            if (group.max() ?: 1 <= zeroByte) {
+            if (group.maxOrNull() ?: 1 <= zeroByte) {
                 components.last.add(index)
                 closedGroups.add(index)
                 previousGroup.add(index)

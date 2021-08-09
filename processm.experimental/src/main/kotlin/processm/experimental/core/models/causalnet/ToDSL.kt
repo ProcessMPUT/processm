@@ -13,7 +13,7 @@ fun CausalNet.toDSL(): String {
         if (it in ' '..'\u007f' && it != '"')
             return@map it
         else {
-            var hex = it.toInt().toString(16)
+            var hex = it.code.toString(16)
             require(hex.length <= 4)
             while (hex.length < 4)
                 hex = "0$hex"

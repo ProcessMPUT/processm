@@ -3,7 +3,6 @@ package processm.services
 import io.ktor.network.tls.certificates.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.util.*
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.core.logging.enter
@@ -11,8 +10,8 @@ import processm.core.logging.exit
 import processm.core.logging.logger
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
-@OptIn(KtorExperimentalAPI::class)
 class WebServicesHost : Service {
 
     companion object {
@@ -48,11 +47,9 @@ class WebServicesHost : Service {
                 parentFile.mkdirs()
                 deleteOnExit()
             }
-            val keyPassword = (1..100).map { _ ->
-                kotlin.random.Random.nextInt(
-                    Char.MIN_VALUE.toInt(), Char.MAX_VALUE.toInt()
-                )
-            }.map { i -> i.toChar() }.joinToString("")
+            val keyPassword = (1..100).map {
+                Random.nextInt(Char.MIN_VALUE.code, Char.MAX_VALUE.code).toChar()
+            }.joinToString("")
 
             logger().debug("Generating certificate and writing into file ${certFile.canonicalPath}")
             generateCertificate(certFile, keyAlias = "ssl", keyPassword = keyPassword)

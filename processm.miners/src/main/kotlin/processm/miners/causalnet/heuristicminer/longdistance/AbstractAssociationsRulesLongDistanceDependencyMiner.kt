@@ -36,7 +36,7 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
     private fun latestCommonPredecessor(inp: Set<Node>): Node {
         val tmp = ArrayList<List<Node>>()
         for (trace in log) {
-            val start = inp.map { trace.indexOf(it) }.min()
+            val start = inp.map { trace.indexOf(it) }.minOrNull()
             if (start != null && start != -1) {
                 tmp.add(trace.subList(0, start))
             }

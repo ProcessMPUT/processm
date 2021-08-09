@@ -37,7 +37,7 @@ fun CausalNet.toPython(): String {
     val result = StringBuilder()
     fun bindings(bindings: Iterable<Binding>, name: String) {
         result.append(name)
-        result.appendln(" = [")
+        result.appendLine(" = [")
         result.append(bindings.joinToString(separator = ",\n") { b ->
             "    [" + b.dependencies.joinToString(separator = ", ") {
                 "(%s, %s)".format(
@@ -46,12 +46,12 @@ fun CausalNet.toPython(): String {
                 )
             } + "]"
         })
-        result.appendln()
-        result.appendln("]")
+        result.appendLine()
+        result.appendLine("]")
     }
     result.append("nodes = [")
     result.append(this.instances.joinToString(separator = ", ", transform = ::wrap))
-    result.appendln("]")
+    result.appendLine("]")
     bindings(joins.values.flatten(), "joins")
     bindings(splits.values.flatten(), "splits")
     return result.toString()

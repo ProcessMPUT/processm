@@ -5,7 +5,6 @@ import processm.core.helpers.mapToSet
 import processm.core.verifiers.causalnet.ActivityBinding
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import java.util.*
-import kotlin.collections.HashSet
 import kotlin.random.Random
 
 
@@ -71,7 +70,7 @@ class RandomGenerator(
         val used = TreeSet(setOf(0, nNodes - 1))
         val unused = TreeSet(nodes.indices.toSet() - used)
         while (unused.isNotEmpty()) {
-            val start = (used - used.max()!!).random(rnd)
+            val start = (used - used.maxOrNull()!!).random(rnd)
             val end = used.tailSet(start + 1).random(rnd)
             assert(start < end)
             var avail = unused.subSet(start, end)
