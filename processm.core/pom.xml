@@ -86,13 +86,12 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-dbcp2</artifactId>
-            <version>2.7.0</version>
+            <version>${org.apache.commons.commonsDbcp2.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <!-- version 42.2.15 causes strange exceptions: org.postgresql.util.PSQLException: ERROR: invalid input syntax for type bigint: "[J@53ec2968"-->
-            <version>42.2.14</version>
+            <version>${org.postgresql.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>
