@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import javax.jms.*
 import javax.naming.NameNotFoundException

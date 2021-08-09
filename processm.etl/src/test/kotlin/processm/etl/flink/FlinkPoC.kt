@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import io.debezium.engine.DebeziumEngine
 import io.debezium.engine.format.Json

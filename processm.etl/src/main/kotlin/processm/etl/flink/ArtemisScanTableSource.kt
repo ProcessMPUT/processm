@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import org.apache.flink.api.common.serialization.DeserializationSchema
 import org.apache.flink.table.connector.ChangelogMode

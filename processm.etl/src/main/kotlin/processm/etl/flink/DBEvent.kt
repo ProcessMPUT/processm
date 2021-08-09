@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import processm.core.log.Event
 

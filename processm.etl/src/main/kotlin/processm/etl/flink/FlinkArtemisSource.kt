@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable

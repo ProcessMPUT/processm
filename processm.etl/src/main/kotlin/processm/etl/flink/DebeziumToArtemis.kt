@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import io.debezium.engine.ChangeEvent
 import java.util.function.Consumer

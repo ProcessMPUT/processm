@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.streaming.api.functions.sink.SinkFunction

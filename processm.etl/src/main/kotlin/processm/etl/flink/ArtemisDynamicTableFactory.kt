@@ -1,4 +1,4 @@
-package processm.etl
+package processm.etl.flink
 
 import org.apache.flink.configuration.ConfigOption
 import org.apache.flink.configuration.ConfigOptions
