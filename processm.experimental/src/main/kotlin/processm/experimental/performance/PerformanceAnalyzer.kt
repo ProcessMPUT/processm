@@ -2,6 +2,7 @@ package processm.experimental.performance
 import org.apache.commons.collections4.multiset.HashMultiSet
 import org.apache.commons.math3.fraction.BigFraction
 import processm.core.helpers.Counter
+import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.HierarchicalIterable
 import processm.core.helpers.mapToSet
 import processm.core.log.Event
@@ -14,7 +15,6 @@ import processm.core.models.causalnet.*
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.miners.causalnet.onlineminer.HasFeatures
-import processm.core.helpers.HashMapWithDefault
 import processm.miners.causalnet.onlineminer.LazyCausalNetState
 import java.util.*
 import kotlin.math.max
@@ -909,7 +909,7 @@ class PerformanceAnalyzer(
     }
 
     internal val perfectFitRatio: Double by lazy {
-        return@lazy perfectAlignments.sumByDouble { if(it!=null) 1.0 else 0.0 } / perfectAlignments.size.toDouble()
+        return@lazy perfectAlignments.sumOf { if (it != null) 1.0 else 0.0 } / perfectAlignments.size.toDouble()
     }
 
     val optimalAlignment: List<Alignment?> by lazy {
@@ -928,7 +928,7 @@ class PerformanceAnalyzer(
     }
 
     internal val ignoringModelCost: List<Double> by lazy {
-        log.traces.map { trace -> trace.events.sumByDouble { distance(null, it) } }.toList()
+        log.traces.map { trace -> trace.events.sumOf { distance(null, it) } }.toList()
     }
 
     internal val movel: Double by lazy {
@@ -1041,7 +1041,7 @@ class PerformanceAnalyzer(
     }
 
     internal fun replayWithSearch(prefix: List<Node>): Boolean {
-        val minSolutionLength = prefix.indices.map { i -> 1 + i + distanceToEnd[prefix[i]]!! }.max()!!
+        val minSolutionLength = prefix.indices.map { i -> 1 + i + distanceToEnd[prefix[i]]!! }.maxOrNull()!!
 
         data class SearchState(
             val position: Int,
@@ -1067,7 +1067,7 @@ class PerformanceAnalyzer(
                 val targets = state
                     .entrySet()
                     .groupBy { it.element.target }
-                    .mapValues { it.value.map { e -> e.count }.max()!! }
+                    .mapValues { it.value.map { e -> e.count }.maxOrNull()!! }
                 val m = minDistanceToEnd(targets)
                 var ctr = 0
                 if (length < prefix.size) {
@@ -1095,14 +1095,14 @@ class PerformanceAnalyzer(
                 //logger.trace{"targets=$targets"}
                 val a = targets.entries.map { (n, count) ->
                     distanceToEnd[n]!! + (count - 1) * (distanceToSelf[n] ?: Int.MAX_VALUE)
-                }.min() ?: 0
+                }.minOrNull() ?: 0
                 val b = targets.size
                 val c = prefix.size - length
                 val d = minSolutionLength - length
                 val tmp = listOf(a, b, c, d)
                 this.debug = tmp
                 //logger.trace{"possible distances $tmp"}
-                return tmp.max()!!
+                return tmp.maxOrNull()!!
             }
         }
 
@@ -1185,7 +1185,7 @@ class PerformanceAnalyzer(
     }
 
     val gurobiModel: GurobiModel by lazy {
-        val maxLen = 2 * (log.traces.map { it.events.count() }.max() ?: 50)   //as good a default as any?
+        val maxLen = 2 * (log.traces.map { it.events.count() }.maxOrNull() ?: 50)   //as good a default as any?
         //TODO max tokens on dependency could also be derived from log? like max of number of repetitions of any activity?
         GurobiModel(model, maxLen, 1)
     }

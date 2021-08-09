@@ -1,8 +1,9 @@
 package processm.etl.discovery
 
-import org.junit.jupiter.api.Test
+import kotlin.test.Ignore
+import kotlin.test.Test
 
-
+@Ignore("Exemplary use cases, not real tests")
 class SchemaCrawlerExplorerTest {
 
     val externalDataSourceConnectionString = ""

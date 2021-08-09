@@ -1,11 +1,13 @@
 package processm.etl.tracker
 
-import org.junit.jupiter.api.Test
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelAppender
 import processm.etl.metamodel.MetaModelReader
 import java.util.*
+import kotlin.test.Ignore
+import kotlin.test.Test
 
+@Ignore("Exemplary use cases, not real tests")
 class DebeziumChangeTrackerTest {
 
     val dataStoreDBName = "1c546119-96fb-47e9-a9e7-b57b07c1365e"

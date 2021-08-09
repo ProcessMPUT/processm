@@ -7,6 +7,6 @@ import processm.miners.causalnet.onlineminer.replayer.ReplayTrace
  */
 class MostParsimoniousHypothesisSelector : CountingHypothesisSelector() {
     override fun invoke(currentStates: Collection<ReplayTrace>): ReplayTrace {
-        return super.invoke(currentStates) { min() }
+        return super.invoke(currentStates) { minOrNull() }
     }
 }

@@ -25,7 +25,7 @@ class ValidSequenceBasedAvoidabilityChecker :
         val indices = dep.first.map { expected -> indexOfFirst { ab -> ab.a == expected } }
         if (indices.any { it == -1 })
             return true
-        val first = indices.max()!!
+        val first = indices.maxOrNull()!!
         return this.subList(first + 1, this.size).map { it.a }.containsAll(dep.second)
     }
 

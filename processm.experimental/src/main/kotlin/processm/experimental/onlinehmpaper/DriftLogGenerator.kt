@@ -1,13 +1,9 @@
 package processm.experimental.onlinehmpaper
 
 import processm.core.helpers.mapToSet
-import processm.core.log.XMLXESInputStream
-import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import java.io.File
-import java.util.zip.GZIPInputStream
 import kotlin.random.Random
 
 
@@ -37,7 +33,7 @@ private fun <T> ahc(
     sim: (a: T, b: T) -> Double
 ): List<Set<T>> {
     fun dist(ca: Set<Int>, cb: Set<Int>): Double =
-        1.0 - ca.map { a -> cb.map { b -> sim(objects[a], objects[b]) }.min()!! }.min()!!
+        1.0 - ca.map { a -> cb.map { b -> sim(objects[a], objects[b]) }.minOrNull()!! }.minOrNull()!!
 
     val clusters: ArrayList<MutableSet<Int>> = objects.indices.mapTo(ArrayList()) { mutableSetOf(it) }
     val csizes: ArrayList<Int> = ArrayList(sizes)

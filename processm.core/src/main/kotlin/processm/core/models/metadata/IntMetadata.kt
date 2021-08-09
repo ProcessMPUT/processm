@@ -1,7 +1,6 @@
 package processm.core.models.metadata
 
 import java.util.*
-import kotlin.collections.HashMap
 import kotlin.math.max
 import kotlin.math.min
 
@@ -31,11 +30,11 @@ class IntMetadata() : NumericalMetadata<Int, Double> {
         if (!newData.isEmpty()) {
             _sum += newData.sum()
             min =
-                if (_n == 0) newData.min()!!
-                else min(min, newData.min()!!)
+                if (_n == 0) newData.minOrNull()!!
+                else min(min, newData.minOrNull()!!)
             max =
-                if (_n == 0) newData.max()!!
-                else max(max, newData.max()!!)
+                if (_n == 0) newData.maxOrNull()!!
+                else max(max, newData.maxOrNull()!!)
             _n += newData.size
             _histogram.putAll(newData.groupingBy { it }.eachCount()
                 .map { (k, v) -> k to _histogram.getOrDefault(k, 0) + v })

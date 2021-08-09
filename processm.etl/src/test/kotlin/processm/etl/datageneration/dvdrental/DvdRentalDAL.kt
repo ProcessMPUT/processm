@@ -3,8 +3,7 @@ package processm.etl.datageneration.dvdrental
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.jodatime.date
-import org.jetbrains.exposed.sql.jodatime.datetime
+import org.jetbrains.exposed.sql.`java-time`.datetime
 
 class DvdRentalDAL {
 

@@ -1,6 +1,5 @@
 package processm.experimental.performance
 
-import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

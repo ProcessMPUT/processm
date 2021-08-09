@@ -1468,7 +1468,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         var lastTimestamp = begin
         for (trace in log.traces) {
             val minTimestamp =
-                trace.events.map { it.attributes["min(event:time:timestamp)"]!!.value as Instant }.min()!!
+                trace.events.map { it.attributes["min(event:time:timestamp)"]!!.value as Instant }.minOrNull()!!
             assertTrue(!lastTimestamp.isAfter(minTimestamp))
 
             lastTimestamp = minTimestamp

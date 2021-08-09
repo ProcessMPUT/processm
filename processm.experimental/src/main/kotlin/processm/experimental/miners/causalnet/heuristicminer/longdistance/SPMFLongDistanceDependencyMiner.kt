@@ -120,7 +120,7 @@ private class SPMFLongDistanceDependencyMiner(
             .groupBy { it.pred }
             .mapValues { (k, v) -> v.map { it.succ } }
             .mapValues { (k, v) ->
-                val s = v.map { it.size }.max()!!
+                val s = v.maxOf { it.size }
                 val x = v.filter { it.size == s }
                 assert(x.size == 1)
                 x.single()

@@ -3,7 +3,6 @@ package processm.experimental.onlinehmpaper
 import ch.qos.logback.classic.Level
 import kotlinx.serialization.json.Json
 import org.apache.commons.io.FileUtils
-import org.junit.Ignore
 import org.junit.jupiter.api.Disabled
 import org.slf4j.LoggerFactory
 import processm.core.log.XMLXESInputStream

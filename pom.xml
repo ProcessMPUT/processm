@@ -47,18 +47,19 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <kotlin.version>1.4.32</kotlin.version>
-        <kotlinx.coroutines.version>1.4.3</kotlinx.coroutines.version>
-        <kotlinx.serialization.version>1.1.0</kotlinx.serialization.version>
-        <org.jetbrains.exposed.version>0.31.1</org.jetbrains.exposed.version>
+        <kotlin.version>1.5.21</kotlin.version>
+        <kotlinx.coroutines.version>1.5.0</kotlinx.coroutines.version>
+        <kotlinx.serialization.version>1.2.1</kotlinx.serialization.version>
+        <org.jetbrains.exposed.version>0.32.1</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
         <junit.jupiter.version>5.6.0</junit.jupiter.version>
-        <mockk.version>1.10.6</mockk.version>
+        <mockk.version>1.12.0</mockk.version>
         <antlr4.version>4.9.2</antlr4.version>
         <com.github.ben-manes.caffeine.version>2.8.5</com.github.ben-manes.caffeine.version>
-        <org.apache.commons.commonsDbcp2.version>2.7.0</org.apache.commons.commonsDbcp2.version>
+        <org.apache.commons.commonsDbcp2.version>2.9.0</org.apache.commons.commonsDbcp2.version>
         <!-- version 42.2.15 causes strange exceptions: org.postgresql.util.PSQLException: ERROR: invalid input syntax for type bigint: "[J@53ec2968"-->
         <org.postgresql.version>42.2.14</org.postgresql.version>
+        <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>
@@ -240,7 +241,7 @@
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
-                <version>0.36.0</version>
+                <version>0.36.1</version>
                 <configuration>
                     <images>
                         <image>

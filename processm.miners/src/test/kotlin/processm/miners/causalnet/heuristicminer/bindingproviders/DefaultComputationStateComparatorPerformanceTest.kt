@@ -209,7 +209,7 @@ class DefaultComputationStateComparatorPerformanceTest {
         for ((k, v) in history.entries)
             println("$k -> $v")
         val averaged = history.mapValues { (_, v) -> v.average() }
-        val bestValue = averaged.values.min()
+        val bestValue = averaged.values.minOrNull()
         val best = averaged.filterValues { it == bestValue }.keys
         println("Best average: $bestValue")
         best.sortedBy { it.first.size }.forEach { println(it) }
