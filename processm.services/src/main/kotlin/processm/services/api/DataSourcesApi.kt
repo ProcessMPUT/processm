@@ -102,6 +102,8 @@ fun Route.DataStoresApi() {
                 }
             } catch (e: RecognitionException) {
                 throw ApiException(e.message)
+            } catch (e: IllegalArgumentException) {
+                throw ApiException(e.message)
             }
         }
     }
