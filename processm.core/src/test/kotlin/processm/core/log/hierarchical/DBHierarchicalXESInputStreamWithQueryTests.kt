@@ -1661,6 +1661,31 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         }
     }
 
+    /**
+     * Demonstrates the bug #107: the lack of grouping on the lower scope in a multi-scoped group by query.
+     */
+    @Test
+    fun multiScopeGroupBy() {
+        val stream = q(
+            "select l:name, t:name, max(^e:timestamp) - min(^e:timestamp), e:name, count(e:name)\n" +
+                    "where l:id=$uuid1\n" +
+                    "group by t:name, e:name\n"
+        )
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+        assertEquals(101, log.traces.count())
+
+        for (trace in log.traces) {
+            val grouped = trace.events.groupBy { it.conceptName }
+            for ((name, group) in grouped) {
+                assertEquals(1, group.size)
+                assertEquals(name, group.first().conceptName)
+            }
+        }
+    }
+
     @Test
     fun limitSingleTest() {
         val stream = q("where l:name='JournalReview' limit l:1")
