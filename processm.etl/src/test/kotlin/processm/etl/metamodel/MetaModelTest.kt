@@ -1,5 +1,7 @@
 package processm.etl.metamodel
 
+import processm.core.log.DBXESOutputStream
+import processm.core.persistence.connection.DBCache
 import processm.etl.discovery.SchemaCrawlerExplorer
 import kotlin.test.Ignore
 import kotlin.test.Test
@@ -23,13 +25,18 @@ class MetaModelTest {
     }
 
     @Test
-    fun `extracting event logs from meta model`() {
+    fun `extracting event logs from meta model and storing it as xes`() {
         val metaModelReader = MetaModelReader(dataModelId)
         val metaModelAppender = MetaModelAppender(metaModelReader)
         val metaModel = MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)
+        val traceSetToXESConverter = TraceSetToXESConverter(dataStoreDBName, metaModelReader)
         val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer(dataStoreDBName, metaModelReader)
         val businessPerspective = businessPerspectiveExplorer.discoverBusinessPerspectives(true, 0.1).first()
         val traceSet = metaModel.buildTracesForBusinessPerspective(businessPerspective.first)
-        val logs = traceSet.map { metaModel.transformToEventsLogs(it) }
+        DBXESOutputStream(DBCache.get(dataStoreDBName).getConnection()).use { dbStream ->
+            traceSetToXESConverter.convert(businessPerspective.first, traceSet).forEach { xesComponent ->
+                dbStream.write(xesComponent)
+            }
+        }
     }
 }

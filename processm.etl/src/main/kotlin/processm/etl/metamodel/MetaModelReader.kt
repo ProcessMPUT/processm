@@ -2,7 +2,6 @@ package processm.etl.metamodel
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
-import javax.swing.text.html.parser.Entity
 
 /**
  * Reads meta model data from the database.
@@ -123,10 +122,10 @@ class MetaModelReader(private val dataModelId: Int) {
     data class LogEvent(
         val timestamp: Long,
         val changeType: String,
-        val classId: String,
+        val className: String,
         val objectId: String,
         val changes: Map<String, String>?) {
-        override fun toString(): String = "$$changeType $classId($objectId): ${changes?.map { (key, value) -> "$key: $value" }?.joinToString()}"
+        override fun toString(): String = "$$changeType $className($objectId): ${changes?.map { (key, value) -> "$key: $value" }?.joinToString()}"
     }
 
     fun getTraceData(trace: Map<EntityID<Int>, Map<String, List<EntityID<Int>>>>): List<Pair<Long?, LogEvent>> {
