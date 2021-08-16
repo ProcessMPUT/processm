@@ -11,14 +11,6 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <properties>
-        <flink.version>1.13.1</flink.version>
-        <!-- Some Flink dependencies have Scala-dependent version. The variable is for consistency, even though ProcessM does not use Scala -->
-        <scala.binary.version>2.12</scala.binary.version>
-        <debezium.version>1.5.2.Final</debezium.version>
-        <testcontainers.version>1.15.3</testcontainers.version>
-    </properties>
-
     <artifactId>etl</artifactId>
     <packaging>jar</packaging>
 
@@ -26,7 +18,7 @@
 
     <properties>
         <schemacrawler.version>16.9.5</schemacrawler.version>
-        <debezium.version>1.2.5.Final</debezium.version>
+        <debezium.version>1.5.2.Final</debezium.version>
     </properties>
 
     <dependencies>
