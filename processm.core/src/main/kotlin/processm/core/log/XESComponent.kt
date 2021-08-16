@@ -66,11 +66,11 @@ abstract class XESComponent {
      */
     internal abstract fun setCustomAttributes(nameMap: Map<String, String>)
 
-    protected fun <T> setCustomAttribute(
+    fun <T> setCustomAttribute(
         stdVal: T?,
         stdName: String,
         ctor: (key: String, value: T) -> Attribute<T>,
-        nameMap: Map<String, String>
+        nameMap: Map<String, String> = emptyMap()
     ) {
         stdVal ?: return
         attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { ctor(it, stdVal) }

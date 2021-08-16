@@ -180,15 +180,6 @@ internal class MetaModel(
         }
     }
 
-    /**
-     * Transforms a collection of traces into a collection of events.
-     *
-     * @param traceSet A collection of traces.
-     */
-    fun transformToEventsLogs(traceSet: Map<EntityID<Int>, Map<String, List<EntityID<Int>>>>) = transaction(DBCache.get(dataStoreDBName).database) {
-        return@transaction metaModelReader.getTraceData(traceSet)
-    }
-
     companion object {
         fun build(dataStoreDBName: String, metaModelName: String, databaseExplorer: DatabaseExplorer): EntityID<Int> {
             val classes = databaseExplorer.getClasses()

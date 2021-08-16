@@ -2,16 +2,15 @@ package processm.etl.datageneration.dvdrental
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.`java-time`.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import java.math.BigDecimal
 import java.sql.DriverManager
-import java.time.LocalDateTime
+import java.util.*
 import kotlin.random.Random
 import kotlin.test.Ignore
 import kotlin.test.Test
-import kotlin.time.Duration
-import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
@@ -371,29 +370,9 @@ class BusinessDataGenerator {
         return (1..length)
             .map { allowedChars.random() }
             .joinToString("")
-            .toLowerCase()
-            .capitalize()
+            .lowercase()
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     }
 
-    private fun getCurrentTime(): LocalDateTime {
-        return LocalDateTime.now()
-    }
-
-    @ExperimentalTime
-    private fun getRandomTimestampInThePast(after: Long? = null, before: Long? = null): LocalDateTime {
-        val atLeast =
-            before ?: Duration.convert(1.0, sourceUnit = DurationUnit.DAYS, targetUnit = DurationUnit.SECONDS).toLong()
-        val atMost =
-            after ?: Duration.convert(365.0, sourceUnit = DurationUnit.DAYS, targetUnit = DurationUnit.SECONDS).toLong()
-        return getCurrentTime().minusSeconds(Random.nextLong(atLeast, atMost))
-    }
-
-    @ExperimentalTime
-    private fun getRandomTimestampInTheFuture(after: Long? = null, before: Long? = null): LocalDateTime {
-        val atLeast =
-            before ?: Duration.convert(1.0, sourceUnit = DurationUnit.DAYS, targetUnit = DurationUnit.SECONDS).toLong()
-        val atMost =
-            after ?: Duration.convert(365.0, sourceUnit = DurationUnit.DAYS, targetUnit = DurationUnit.SECONDS).toLong()
-        return getCurrentTime().plusSeconds(Random.nextLong(atLeast, atMost))
-    }
+    private fun getCurrentTime() = CurrentDateTime()
 }
