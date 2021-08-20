@@ -8,10 +8,11 @@ package processm.core.log
  */
 interface XESOutputStream : AutoCloseable {
     fun write(component: XESComponent)
+
     /**
      * Writes the given sequence of [XESComponent]s in the given order.
      */
-    fun write(elements: Sequence<XESComponent>): Unit = elements.forEach { write(it) }
+    fun write(elements: Sequence<XESComponent>): Unit = elements.forEach(::write)
 
     fun abort()
 }

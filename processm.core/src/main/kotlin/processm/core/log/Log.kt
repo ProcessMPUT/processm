@@ -1,23 +1,24 @@
 package processm.core.log
 
+import processm.core.helpers.toUUID
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.IDAttr
 import processm.core.log.attribute.StringAttr
 import java.util.*
-import kotlin.collections.HashMap
 
 /**
  * Log element
  *
  * Captures the log component from the XES metadata structure.
  */
-open class Log : XESComponent() {
-    internal val extensionsInternal: MutableMap<String, Extension> = HashMap()
-    internal val traceGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
-    internal val eventGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap()
-    internal val traceClassifiersInternal: MutableMap<String, Classifier> = HashMap()
+open class Log(
+    attributesInternal: MutableMap<String, Attribute<*>> = HashMap(),
+    internal val extensionsInternal: MutableMap<String, Extension> = HashMap(),
+    internal val traceGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap(),
+    internal val eventGlobalsInternal: MutableMap<String, Attribute<*>> = HashMap(),
+    internal val traceClassifiersInternal: MutableMap<String, Classifier> = HashMap(),
     internal val eventClassifiersInternal: MutableMap<String, Classifier> = HashMap()
-
+) : XESComponent(attributesInternal) {
     /**
      * Extensions declared in the log file.
      */
@@ -110,9 +111,10 @@ open class Log : XESComponent() {
     )
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
-        lifecycleModel = attributesInternal[nameMap["lifecycle:model"]]?.getValue() as String?
+        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue()?.toString()
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue()
+            ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
+        lifecycleModel = attributesInternal[nameMap["lifecycle:model"]]?.getValue()?.toString()
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {
