@@ -7,11 +7,6 @@ object DBLogCleaner {
         connection.autoCommit = false
 
         removeLogRecord(connection, logId)
-        removeClassifiers(connection, logId)
-        removeExtensions(connection, logId)
-        removeLogAttributes(connection, logId)
-        removeGlobals(connection, logId)
-
         removeTraces(connection, logId)
 
         connection.commit()
@@ -19,9 +14,9 @@ object DBLogCleaner {
 
     private fun removeTraces(connection: Connection, logId: Int) {
         val tracesIds = HashSet<Long>()
-        with(connection.prepareStatement("""DELETE FROM traces WHERE log_id = ? RETURNING id""")) {
-            setInt(1, logId)
-            executeQuery().use { response ->
+        connection.prepareStatement("""DELETE FROM traces WHERE log_id = ? RETURNING id""").use {
+            it.setInt(1, logId)
+            it.executeQuery().use { response ->
                 while (response.next()) {
                     tracesIds.add(response.getLong("id"))
                 }
@@ -29,17 +24,14 @@ object DBLogCleaner {
         }
 
         removeTracesAttributes(connection, tracesIds)
-
-        for (traceId in tracesIds) {
-            removeEvents(connection, traceId)
-        }
+        removeEvents(connection, tracesIds)
     }
 
-    private fun removeEvents(connection: Connection, traceId: Long) {
+    private fun removeEvents(connection: Connection, traceIds: Collection<Long>) {
         val eventsIds = HashSet<Long>()
-        with(connection.prepareStatement("""DELETE FROM events WHERE trace_id = ? RETURNING id""")) {
-            setLong(1, traceId)
-            executeQuery().use { response ->
+        connection.prepareStatement("""DELETE FROM events WHERE trace_id = ANY(?) RETURNING id""").use {
+            it.setArray(1, connection.createArrayOf("bigint", traceIds.toTypedArray()))
+            it.executeQuery().use { response ->
                 while (response.next()) {
                     eventsIds.add(response.getLong("id"))
                 }
@@ -50,51 +42,33 @@ object DBLogCleaner {
     }
 
     private fun removeEventAttributes(connection: Connection, eventsIds: HashSet<Long>) {
-        with(connection.prepareStatement("""DELETE FROM events_attributes WHERE event_id = ANY (?)""")) {
-            setArray(1, connection.createArrayOf("bigint", eventsIds.toArray()))
-            execute()
+        connection.prepareStatement("""DELETE FROM events_attributes WHERE event_id = ANY (?)""").use {
+            it.setArray(1, connection.createArrayOf("bigint", eventsIds.toArray()))
+            it.execute()
         }
     }
 
     private fun removeTracesAttributes(connection: Connection, tracesIds: HashSet<Long>) {
-        with(connection.prepareStatement("""DELETE FROM traces_attributes WHERE trace_id = ANY (?)""")) {
-            setArray(1, connection.createArrayOf("bigint", tracesIds.toArray()))
-            execute()
-        }
-    }
-
-    private fun removeLogAttributes(connection: Connection, logId: Int) {
-        with(connection.prepareStatement("""DELETE FROM logs_attributes WHERE log_id = ?""")) {
-            setInt(1, logId)
-            execute()
-        }
-    }
-
-    private fun removeExtensions(connection: Connection, logId: Int) {
-        with(connection.prepareStatement("""DELETE FROM extensions WHERE log_id = ?""")) {
-            setInt(1, logId)
-            execute()
-        }
-    }
-
-    private fun removeClassifiers(connection: Connection, logId: Int) {
-        with(connection.prepareStatement("""DELETE FROM classifiers WHERE log_id = ?""")) {
-            setInt(1, logId)
-            execute()
-        }
-    }
-
-    private fun removeGlobals(connection: Connection, logId: Int) {
-        with(connection.prepareStatement("""DELETE FROM globals WHERE log_id = ?""")) {
-            setInt(1, logId)
-            execute()
+        connection.prepareStatement("""DELETE FROM traces_attributes WHERE trace_id = ANY (?)""").use {
+            it.setArray(1, connection.createArrayOf("bigint", tracesIds.toArray()))
+            it.execute()
         }
     }
 
     private fun removeLogRecord(connection: Connection, logId: Int) {
-        with(connection.prepareStatement("""DELETE FROM logs WHERE id = ?""")) {
-            setInt(1, logId)
-            execute()
+        connection.prepareStatement(
+            """DELETE FROM logs WHERE id=?;
+            |DELETE FROM globals WHERE log_id=?; 
+            |DELETE FROM classifiers WHERE log_id=?; 
+            |DELETE FROM extensions WHERE log_id=?; 
+            |DELETE FROM logs_attributes WHERE log_id=?""".trimMargin()
+        ).use {
+            it.setInt(1, logId)
+            it.setInt(2, logId)
+            it.setInt(3, logId)
+            it.setInt(4, logId)
+            it.setInt(5, logId)
+            it.execute()
         }
     }
 }
