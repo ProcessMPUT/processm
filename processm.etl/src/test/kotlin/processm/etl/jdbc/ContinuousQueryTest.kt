@@ -3,6 +3,7 @@ package processm.etl.jdbc
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
 import processm.core.log.*
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -12,32 +13,43 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
-import processm.etl.DBMSEnvironment
-import processm.etl.PostgreSQLEnvironment
+import processm.etl.*
+import java.sql.Connection
 import java.util.*
-import kotlin.test.AfterTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @Suppress("SqlResolve")
-class ContinuousQueryTest {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+abstract class ContinuousQueryTest {
 
-    companion object {
-        // region environment
-        private val logger = logger()
-        private val dataStoreName = UUID.randomUUID().toString()
-        private lateinit var externalDB: DBMSEnvironment<*>
-        // endregion
+    // region environment
+    private val logger = logger()
+    private val dataStoreName = UUID.randomUUID().toString()
+    private lateinit var externalDB: DBMSEnvironment<*>
+    // endregion
 
-        // region user input
-        private val etlConfiguratioName = "Test ETL process for PostgreSQL Sakila DB"
 
-        /**
-         * The SQL query for transforming the data into events. One event per row.
-         */
-        private val getEventSQL = """
-SELECT *, row_number() OVER () AS event_id FROM (
+    // region DB-specific SQL
+
+    protected open val insertNewRentalQuery =
+        "INSERT INTO rental(rental_date,inventory_id,customer_id,return_date,staff_id) VALUES(?,?,?,?,?) RETURNING rental_id"
+
+    protected open val sqlUUID = "uuid"
+    protected open val sqlText = "text"
+    protected open val sqlInt = "int"
+    protected open val sqlLong = "bigint"
+    // endregion
+
+    // region user input
+    protected abstract val etlConfiguratioName: String
+
+    /**
+     * The SQL query for transforming the data into events. One event per row.
+     */
+    protected open val getEventSQL
+        get() = """
+            SELECT * FROM (
+SELECT *, row_number() OVER (ORDER BY "time:timestamp", "concept:instance") AS event_id FROM (
         SELECT 
             'rent' AS "concept:name",
             'start' AS "lifecycle:transition",
@@ -63,60 +75,62 @@ SELECT *, row_number() OVER () AS event_id FROM (
             payment_date AS "time:timestamp",
             inventory_id AS trace_id
         FROM payment p JOIN rental r ON r.rental_id=p.rental_id
-        WHERE payment_date IS NOT NULL
-    ORDER BY "time:timestamp", "concept:instance"
-) sub
+        WHERE payment_date IS NOT NULL    
+) sub ) core
+WHERE event_id > CAST(? AS $sqlLong)
 ORDER BY event_id
-OFFSET ?::bigint
     """.trimIndent()
 
-        private fun createEtlConfiguration() {
-            transaction(DBCache.get(dataStoreName).database) {
-                val config = ETLConfiguration.new {
-                    name = etlConfiguratioName
-                    jdbcUri = externalDB.jdbcUrl
-                    user = externalDB.user
-                    password = externalDB.password
-                    query = getEventSQL
-                    lastEventExternalId = "0"
-                }
+    protected open val expectedNumberOfEvents = 47949L
+    protected open val expectedNumberOfTracesInTheFirstBatch = 1805L
 
-                ETLColumnToAttributeMap.new {
-                    configuration = config
-                    sourceColumn = "event_id"
-                    target = "event_id"
-                    eventId = true
-                }
+    private fun createEtlConfiguration() {
+        transaction(DBCache.get(dataStoreName).database) {
+            val config = ETLConfiguration.new {
+                name = etlConfiguratioName
+                jdbcUri = externalDB.jdbcUrl
+                user = externalDB.user
+                password = externalDB.password
+                query = getEventSQL
+                lastEventExternalId = "0"
+            }
 
-                ETLColumnToAttributeMap.new {
-                    configuration = config
-                    sourceColumn = "trace_id"
-                    target = "trace_id"
-                    traceId = true
-                }
+            ETLColumnToAttributeMap.new {
+                configuration = config
+                sourceColumn = "event_id"
+                target = "event_id"
+                eventId = true
+            }
+
+            ETLColumnToAttributeMap.new {
+                configuration = config
+                sourceColumn = "trace_id"
+                target = "trace_id"
+                traceId = true
             }
         }
-        // endregion
-
-
-        // region lifecycle management
-        @JvmStatic
-        @BeforeAll
-        fun setUp() {
-            externalDB = PostgreSQLEnvironment.getSakila()
-            createEtlConfiguration()
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun tearDown() {
-            externalDB.close()
-            DBCache.getMainDBPool().getConnection().use { conn ->
-                conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
-            }
-        }
-        // endregion
     }
+    // endregion
+
+
+    protected abstract fun initExternalDB(): DBMSEnvironment<*>
+
+    // region lifecycle management
+    @BeforeAll
+    fun setUp() {
+        externalDB = initExternalDB()
+        createEtlConfiguration()
+    }
+
+    @AfterAll
+    fun tearDown() {
+        externalDB.close()
+        DBCache.getMainDBPool().getConnection().use { conn ->
+            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
+        }
+    }
+    // endregion
+
 
     @AfterTest
     fun resetState() {
@@ -146,7 +160,7 @@ OFFSET ?::bigint
             assertEquals(1, list.count { it is Log })
             // traces may be split into parts:
             assertEquals(4580, list.filterIsInstance<Trace>().groupBy { it.identityId }.count())
-            assertEquals(47954, list.count { it is Event })
+            assertEquals(expectedNumberOfEvents.toInt(), list.count { it is Event })
 
             for (event in list.filterIsInstance<Event>()) {
                 assertTrue(event.conceptName == "rent" || event.conceptName == "pay")
@@ -154,7 +168,7 @@ OFFSET ?::bigint
                 assertTrue(event.identityId!!.leastSignificantBits <= Int.MAX_VALUE)
             }
 
-            assertEquals("47954", etl.lastEventExternalId)
+            assertEquals(expectedNumberOfEvents.toString(), etl.lastEventExternalId)
         }
     }
 
@@ -179,7 +193,10 @@ OFFSET ?::bigint
         val log = counts.first()
         assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
         assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(47954L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(
+            expectedNumberOfEvents,
+            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+        )
 
         logger.info("Verifying contents...")
         val invalidContent =
@@ -211,7 +228,7 @@ OFFSET ?::bigint
 
         var log = counts.first()
         assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(1804L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+        assertEquals(expectedNumberOfTracesInTheFirstBatch, log.traces.first().attributes["count(trace:identity:id)"]?.value)
         assertEquals(6214L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
 
         // import the remaining components
@@ -222,7 +239,7 @@ OFFSET ?::bigint
                 out.write(etl.toXESInputStream())
             }
 
-            assertEquals("47954", etl.lastEventExternalId)
+            assertEquals(expectedNumberOfEvents.toString(), etl.lastEventExternalId)
         }
 
         logger.info("Querying...")
@@ -233,7 +250,34 @@ OFFSET ?::bigint
         log = counts.first()
         assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
         assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(47954L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(
+            expectedNumberOfEvents,
+            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+        )
+    }
+
+    // auxiliary to support databases incapable of returning auto-generated ID of the newly inserted row straight from the INSERT
+    protected open fun insertNewRental(
+        conn: Connection,
+        rental_date: java.sql.Timestamp,
+        inventory_id: Int,
+        customer_id: Int,
+        return_date: java.sql.Timestamp?,
+        staff_id: Int
+    ): Int {
+        val rentalId: Int
+        conn.prepareStatement(insertNewRentalQuery).use { stmt ->
+            stmt.setObject(1, rental_date)
+            stmt.setObject(2, inventory_id)
+            stmt.setObject(3, customer_id)
+            stmt.setObject(4, return_date)
+            stmt.setObject(5, staff_id)
+            rentalId = stmt.executeQuery().use {
+                it.next()
+                it.getInt(1)
+            }
+        }
+        return rentalId
     }
 
     @Test
@@ -246,7 +290,7 @@ OFFSET ?::bigint
                 out.write(etl.toXESInputStream())
             }
 
-            assertEquals("47954", etl.lastEventExternalId)
+            assertEquals(expectedNumberOfEvents.toString(), etl.lastEventExternalId)
             logUUID = etl.logIdentityId
         }
 
@@ -254,13 +298,8 @@ OFFSET ?::bigint
         val rentalId: Int
         externalDB.connect().use { conn ->
             conn.autoCommit = true
+            rentalId = insertNewRental(conn, java.sql.Timestamp.valueOf("2021-08-20 09:35:59.987"), 1613, 504, null, 1)
             conn.createStatement().use { stmt ->
-                rentalId = stmt.executeQuery(
-                    "INSERT INTO rental(rental_date,inventory_id,customer_id,return_date,staff_id) VALUES('2021-08-20 09:35:59.987',1613,504,NULL,1) RETURNING rental_id"
-                ).use {
-                    it.next()
-                    it.getInt(1)
-                }
                 stmt.execute("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,$rentalId,3.49,'2021-08-20 09:38:17.123')")
             }
         }
@@ -280,7 +319,7 @@ OFFSET ?::bigint
                 assertEquals("complete", events[1].lifecycleTransition)
             }
 
-            assertEquals("47956", etl.lastEventExternalId)
+            assertEquals((expectedNumberOfEvents + 2).toString(), etl.lastEventExternalId)
             logUUID = etl.logIdentityId
         }
 
@@ -292,7 +331,10 @@ OFFSET ?::bigint
         var log = counts.first()
         assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
         assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(47956L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(
+            expectedNumberOfEvents + 2,
+            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+        )
 
         // simulate new return
         externalDB.connect().use { conn ->
@@ -318,7 +360,7 @@ OFFSET ?::bigint
                 assertEquals("complete", events[1].lifecycleTransition)
             }
 
-            assertEquals("47958", etl.lastEventExternalId)
+            assertEquals((expectedNumberOfEvents + 4).toString(), etl.lastEventExternalId)
             logUUID = etl.logIdentityId
         }
 
@@ -330,7 +372,10 @@ OFFSET ?::bigint
         log = counts.first()
         assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
         assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(47958L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(
+            expectedNumberOfEvents + 4,
+            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+        )
     }
 
     @Test
@@ -341,7 +386,7 @@ OFFSET ?::bigint
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = "SELECT 987654321::int AS event_id, 123::int AS trace_id"
+                query = "SELECT CAST(987654321 AS $sqlInt) AS event_id, CAST(123 AS $sqlInt) AS trace_id"
             }
 
             ETLColumnToAttributeMap.new {
@@ -381,7 +426,7 @@ OFFSET ?::bigint
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = "SELECT 9876543210::bigint AS event_id, 123::bigint AS trace_id"
+                query = "SELECT CAST(9876543210 AS $sqlLong) AS event_id, CAST(123 AS $sqlLong) AS trace_id"
             }
 
             ETLColumnToAttributeMap.new {
@@ -421,7 +466,8 @@ OFFSET ?::bigint
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = "SELECT 9876543210::double precision AS event_id, 123::double precision AS trace_id"
+                query =
+                    "SELECT CAST(9876543210 AS double precision) AS event_id, CAST(123 AS double precision) AS trace_id"
             }
 
             ETLColumnToAttributeMap.new {
@@ -462,7 +508,7 @@ OFFSET ?::bigint
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT 'b4139e40-018d-11ec-9a03-0242ac130003'::uuid AS event_id, 'c17cdfce-018d-11ec-9a03-0242ac130003'::uuid AS trace_id"
+                    "SELECT CAST('b4139e40-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS event_id, CAST('c17cdfce-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS trace_id"
             }
 
             ETLColumnToAttributeMap.new {
@@ -503,7 +549,7 @@ OFFSET ?::bigint
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT 'c8d47033-b1ad-4668-98e3-21993d7d554b'::uuid AS event_id, '9793827d-8c05-4adf-b0df-6df8eab9ab0b'::uuid AS trace_id"
+                    "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlUUID) AS event_id, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlUUID) AS trace_id"
             }
 
             ETLColumnToAttributeMap.new {
@@ -544,7 +590,7 @@ OFFSET ?::bigint
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT 'c8d47033-b1ad-4668-98e3-21993d7d554b'::text AS event_id, '9793827d-8c05-4adf-b0df-6df8eab9ab0b'::text AS trace_id"
+                    "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlText) AS event_id, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlText) AS trace_id"
             }
 
             ETLColumnToAttributeMap.new {
@@ -585,7 +631,7 @@ OFFSET ?::bigint
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT 'Lorem ipsum dolor sit amet, consectetur adipiscing elit,'::text AS event_id, 'sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'::text AS trace_id"
+                    "SELECT CAST('Lorem ipsum dolor sit amet, consectetur adipiscing elit,' AS $sqlText) AS event_id, CAST('sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' AS $sqlText) AS trace_id"
             }
 
             ETLColumnToAttributeMap.new {

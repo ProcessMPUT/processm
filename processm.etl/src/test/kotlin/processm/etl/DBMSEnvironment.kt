@@ -19,7 +19,7 @@ abstract class DBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
 
     protected abstract fun initContainer(): Container
 
-    private fun initAndRun(): Container {
+    protected open fun initAndRun(): Container {
         val container = initContainer()
             .withDatabaseName(dbName)
             .withUsername(user)
