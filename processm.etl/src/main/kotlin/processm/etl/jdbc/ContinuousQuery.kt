@@ -141,7 +141,11 @@ private object EventIdCmp : Comparator<String> {
             try {
                 o1.toUUID()!!.compareTo(o2.toUUID())
             } catch (_: IllegalArgumentException) {
-                o1.compareTo(o2)
+                try {
+                    o1.toDouble().compareTo(o2.toDouble())
+                } catch(_:NumberFormatException) {
+                    o1.compareTo(o2)
+                }
             }
         }
     }
