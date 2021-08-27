@@ -1,7 +1,6 @@
 package processm.etl
 
 import org.testcontainers.containers.JdbcDatabaseContainer
-import org.testcontainers.lifecycle.Startables
 import java.sql.Connection
 
 /**
@@ -15,34 +14,20 @@ abstract class DBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
     val schemaScript: String,
     val insertScript: String
 ) : AutoCloseable {
-    private val container: Container = initAndRun()
+    private val containerDelegate = lazy { initAndRun() }
+    private val container: Container by containerDelegate
 
     protected abstract fun initContainer(): Container
 
-    protected open fun initAndRun(): Container {
-        val container = initContainer()
-            .withDatabaseName(dbName)
-            .withUsername(user)
-            .withPassword(password)
-            .withInitScript(schemaScript)
-        Startables.deepStart(listOf(container)).join()
+    protected abstract fun initAndRun(): Container
 
-        container.createConnection("").use { connection ->
-            connection.autoCommit = false
-            connection.createStatement().use { s ->
-                s.execute(this::class.java.classLoader.getResource(insertScript)!!.readText())
-            }
-            connection.commit()
-        }
-
-        return container as Container
-    }
-
-    val jdbcUrl: String = container.jdbcUrl
+    val jdbcUrl: String
+        get() = container.jdbcUrl
 
     fun connect(): Connection = container.createConnection("")
 
     override fun close() {
-        container.close()
+        if (containerDelegate.isInitialized())
+            container.close()
     }
 }

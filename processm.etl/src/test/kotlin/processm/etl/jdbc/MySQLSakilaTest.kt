@@ -11,41 +11,7 @@ class MySQLSakilaTest : ContinuousQueryTest() {
     override val sqlText = "char"
     override val sqlInt = "unsigned"   // MySQL doesn't seem to differentiate between int and long
     override val sqlLong = "unsigned"
-
-    override val getEventSQL
-        get() = """
-            SELECT * FROM (
-SELECT *, row_number() OVER (ORDER BY `time:timestamp`, `concept:instance`) AS event_id FROM (
-        SELECT 
-            'rent' AS `concept:name`,
-            'start' AS `lifecycle:transition`,
-            rental_id AS `concept:instance`,
-            rental_date AS `time:timestamp`,
-            inventory_id AS trace_id
-        FROM rental
-        WHERE rental_date IS NOT NULL
-    UNION ALL
-        SELECT 
-            'rent' AS `concept:name`,
-            'complete' AS `lifecycle:transition`,
-            rental_id AS `concept:instance`,
-            return_date AS `time:timestamp`,
-            inventory_id AS trace_id
-        FROM rental
-        WHERE return_date IS NOT NULL
-    UNION ALL
-        SELECT
-            'pay' AS `concept:name`,
-            'complete' AS `lifecycle:transition`,
-            payment_id AS `concept:instance`,
-            payment_date AS `time:timestamp`,
-            inventory_id AS trace_id
-        FROM payment p JOIN rental r ON r.rental_id=p.rental_id
-        WHERE payment_date IS NOT NULL    
-) sub ) core
-WHERE event_id > CAST(? AS $sqlLong)
-ORDER BY event_id
-    """.trimIndent()
+    override val columnQuot = '`'
 
     override val etlConfiguratioName: String = "Test ETL process for MySQL Sakila DB"
 

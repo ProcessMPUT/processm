@@ -38,6 +38,8 @@ abstract class ContinuousQueryTest {
     protected open val sqlText = "text"
     protected open val sqlInt = "int"
     protected open val sqlLong = "bigint"
+    protected open val dummyFrom = ""
+    protected open val columnQuot = '"'
     // endregion
 
     // region user input
@@ -49,36 +51,36 @@ abstract class ContinuousQueryTest {
     protected open val getEventSQL
         get() = """
             SELECT * FROM (
-SELECT *, row_number() OVER (ORDER BY "time:timestamp", "concept:instance") AS event_id FROM (
+SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition${columnQuot}, ${columnQuot}concept:instance${columnQuot}, ${columnQuot}time:timestamp${columnQuot}, ${columnQuot}trace_id${columnQuot}, row_number() OVER (ORDER BY ${columnQuot}time:timestamp${columnQuot}, ${columnQuot}concept:instance${columnQuot}) AS ${columnQuot}event_id${columnQuot} FROM (
         SELECT 
-            'rent' AS "concept:name",
-            'start' AS "lifecycle:transition",
-            rental_id AS "concept:instance",
-            rental_date AS "time:timestamp",
-            inventory_id AS trace_id
+            'rent' AS ${columnQuot}concept:name${columnQuot},
+            'start' AS ${columnQuot}lifecycle:transition${columnQuot},
+            rental_id AS ${columnQuot}concept:instance${columnQuot},
+            rental_date AS ${columnQuot}time:timestamp${columnQuot},
+            inventory_id AS ${columnQuot}trace_id${columnQuot}
         FROM rental
         WHERE rental_date IS NOT NULL
     UNION ALL
         SELECT 
-            'rent' AS "concept:name",
-            'complete' AS "lifecycle:transition",
-            rental_id AS "concept:instance",
-            return_date AS "time:timestamp",
-            inventory_id AS trace_id
+            'rent' AS ${columnQuot}concept:name${columnQuot},
+            'complete' AS ${columnQuot}lifecycle:transition${columnQuot},
+            rental_id AS ${columnQuot}concept:instance${columnQuot},
+            return_date AS ${columnQuot}time:timestamp${columnQuot},
+            inventory_id AS ${columnQuot}trace_id${columnQuot}
         FROM rental
         WHERE return_date IS NOT NULL
     UNION ALL
         SELECT
-            'pay' AS "concept:name",
-            'complete' AS "lifecycle:transition",
-            payment_id AS "concept:instance",
-            payment_date AS "time:timestamp",
-            inventory_id AS trace_id
+            'pay' AS ${columnQuot}concept:name${columnQuot},
+            'complete' AS ${columnQuot}lifecycle:transition${columnQuot},
+            payment_id AS ${columnQuot}concept:instance${columnQuot},
+            payment_date AS ${columnQuot}time:timestamp${columnQuot},
+            inventory_id AS ${columnQuot}trace_id${columnQuot}
         FROM payment p JOIN rental r ON r.rental_id=p.rental_id
         WHERE payment_date IS NOT NULL    
 ) sub ) core
-WHERE event_id > CAST(? AS $sqlLong)
-ORDER BY event_id
+WHERE ${columnQuot}event_id${columnQuot} > CAST(? AS $sqlLong)
+ORDER BY ${columnQuot}event_id${columnQuot}
     """.trimIndent()
 
     protected open val expectedNumberOfEvents = 47949L
@@ -228,7 +230,10 @@ ORDER BY event_id
 
         var log = counts.first()
         assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(expectedNumberOfTracesInTheFirstBatch, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+        assertEquals(
+            expectedNumberOfTracesInTheFirstBatch,
+            log.traces.first().attributes["count(trace:identity:id)"]?.value
+        )
         assertEquals(6214L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
 
         // import the remaining components
@@ -386,7 +391,8 @@ ORDER BY event_id
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = "SELECT CAST(987654321 AS $sqlInt) AS event_id, CAST(123 AS $sqlInt) AS trace_id"
+                query =
+                    "SELECT CAST(987654321 AS $sqlInt) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlInt) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
             }
 
             ETLColumnToAttributeMap.new {
@@ -426,7 +432,8 @@ ORDER BY event_id
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = "SELECT CAST(9876543210 AS $sqlLong) AS event_id, CAST(123 AS $sqlLong) AS trace_id"
+                query =
+                    "SELECT CAST(9876543210 AS $sqlLong) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlLong) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
             }
 
             ETLColumnToAttributeMap.new {
@@ -467,7 +474,7 @@ ORDER BY event_id
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT CAST(9876543210 AS double precision) AS event_id, CAST(123 AS double precision) AS trace_id"
+                    "SELECT CAST(9876543210 AS double precision) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS double precision) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
             }
 
             ETLColumnToAttributeMap.new {
@@ -508,7 +515,7 @@ ORDER BY event_id
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT CAST('b4139e40-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS event_id, CAST('c17cdfce-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS trace_id"
+                    "SELECT CAST('b4139e40-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('c17cdfce-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
             }
 
             ETLColumnToAttributeMap.new {
@@ -549,7 +556,7 @@ ORDER BY event_id
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlUUID) AS event_id, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlUUID) AS trace_id"
+                    "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
             }
 
             ETLColumnToAttributeMap.new {
@@ -590,7 +597,7 @@ ORDER BY event_id
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlText) AS event_id, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlText) AS trace_id"
+                    "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
             }
 
             ETLColumnToAttributeMap.new {
@@ -631,7 +638,7 @@ ORDER BY event_id
                 user = externalDB.user
                 password = externalDB.password
                 query =
-                    "SELECT CAST('Lorem ipsum dolor sit amet, consectetur adipiscing elit,' AS $sqlText) AS event_id, CAST('sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' AS $sqlText) AS trace_id"
+                    "SELECT CAST('Lorem ipsum dolor sit amet, consectetur adipiscing elit,' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
             }
 
             ETLColumnToAttributeMap.new {
