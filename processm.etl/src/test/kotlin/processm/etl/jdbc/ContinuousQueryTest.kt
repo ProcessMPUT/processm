@@ -13,10 +13,14 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
-import processm.etl.*
+import processm.etl.DBMSEnvironment
 import java.sql.Connection
+import java.sql.Timestamp
 import java.util.*
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @Suppress("SqlResolve")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -31,15 +35,59 @@ abstract class ContinuousQueryTest {
 
     // region DB-specific SQL
 
+    /**
+     * An SQL query to insert a new row into the "rental" table and return the primary key of the newly inserted row.
+     * If the db is incapable of doing it in a single query executed with [java.sql.Statement.executeQuery], override [insertNewRental] instead
+     */
     protected open val insertNewRentalQuery =
         "INSERT INTO rental(rental_date,inventory_id,customer_id,return_date,staff_id) VALUES(?,?,?,?,?) RETURNING rental_id"
+
+
+    /**
+     * An auxiliary to support databases incapable of returning auto-generated ID of the newly inserted row straight from the INSERT
+     */
+    protected open fun insertNewRental(
+        conn: Connection,
+        rental_date: Timestamp,
+        inventory_id: Int,
+        customer_id: Int,
+        return_date: Timestamp?,
+        staff_id: Int
+    ): Int {
+        val rentalId: Int
+        conn.prepareStatement(insertNewRentalQuery).use { stmt ->
+            stmt.setObject(1, rental_date)
+            stmt.setObject(2, inventory_id)
+            stmt.setObject(3, customer_id)
+            stmt.setObject(4, return_date)
+            stmt.setObject(5, staff_id)
+            rentalId = stmt.executeQuery().use {
+                it.next()
+                it.getInt(1)
+            }
+        }
+        return rentalId
+    }
 
     protected open val sqlUUID = "uuid"
     protected open val sqlText = "text"
     protected open val sqlInt = "int"
     protected open val sqlLong = "bigint"
+
+    /**
+     * Some databases (e.g., Oracle, DB2) does not allow for SELECT without any FROM, even if only constant expressions are projected
+     */
     protected open val dummyFrom = ""
+
+    /**
+     * Character to quot column names in an SQL query to allow for special characters and preserve character case
+     */
     protected open val columnQuot = '"'
+
+    /**
+     * Returns expected last event ID given number of events read so far. Necessary for Oracle which returns row_number as double.
+     */
+    protected open fun lastEventExternalIdFromNumber(numberOfEvents: Long) = numberOfEvents.toString()
     // endregion
 
     // region user input
@@ -85,6 +133,9 @@ ORDER BY ${columnQuot}event_id${columnQuot}
 
     protected open val expectedNumberOfEvents = 47949L
     protected open val expectedNumberOfTracesInTheFirstBatch = 1805L
+    protected open val expectedLastEventExternalIdAfterTheFirstBatch
+        get() = lastEventExternalIdFromNumber(6214)
+
 
     private fun createEtlConfiguration() {
         transaction(DBCache.get(dataStoreName).database) {
@@ -170,7 +221,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 assertTrue(event.identityId!!.leastSignificantBits <= Int.MAX_VALUE)
             }
 
-            assertEquals(expectedNumberOfEvents.toString(), etl.lastEventExternalId)
+            assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents), etl.lastEventExternalId)
         }
     }
 
@@ -218,7 +269,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 out.write(materialized.asSequence())
             }
 
-            assertEquals("6214", etl.lastEventExternalId)
+            assertEquals(expectedLastEventExternalIdAfterTheFirstBatch, etl.lastEventExternalId)
             logUUID = etl.logIdentityId
         }
 
@@ -244,7 +295,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 out.write(etl.toXESInputStream())
             }
 
-            assertEquals(expectedNumberOfEvents.toString(), etl.lastEventExternalId)
+            assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents), etl.lastEventExternalId)
         }
 
         logger.info("Querying...")
@@ -261,29 +312,6 @@ ORDER BY ${columnQuot}event_id${columnQuot}
         )
     }
 
-    // auxiliary to support databases incapable of returning auto-generated ID of the newly inserted row straight from the INSERT
-    protected open fun insertNewRental(
-        conn: Connection,
-        rental_date: java.sql.Timestamp,
-        inventory_id: Int,
-        customer_id: Int,
-        return_date: java.sql.Timestamp?,
-        staff_id: Int
-    ): Int {
-        val rentalId: Int
-        conn.prepareStatement(insertNewRentalQuery).use { stmt ->
-            stmt.setObject(1, rental_date)
-            stmt.setObject(2, inventory_id)
-            stmt.setObject(3, customer_id)
-            stmt.setObject(4, return_date)
-            stmt.setObject(5, staff_id)
-            rentalId = stmt.executeQuery().use {
-                it.next()
-                it.getInt(1)
-            }
-        }
-        return rentalId
-    }
 
     @Test
     fun `read XES from existing data and write it to data store then add new data next read XES and write it to data store`() {
@@ -295,18 +323,22 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 out.write(etl.toXESInputStream())
             }
 
-            assertEquals(expectedNumberOfEvents.toString(), etl.lastEventExternalId)
+            assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents), etl.lastEventExternalId)
             logUUID = etl.logIdentityId
         }
 
         // simulate new rental
         val rentalId: Int
+        logger.info(externalDB.jdbcUrl)
         externalDB.connect().use { conn ->
             conn.autoCommit = true
-            rentalId = insertNewRental(conn, java.sql.Timestamp.valueOf("2021-08-20 09:35:59.987"), 1613, 504, null, 1)
-            conn.createStatement().use { stmt ->
-                stmt.execute("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,$rentalId,3.49,'2021-08-20 09:38:17.123')")
-            }
+            rentalId = insertNewRental(conn, Timestamp.valueOf("2021-08-20 09:35:59.987"), 1613, 504, null, 1)
+            conn.prepareStatement("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,?,3.49,?)")
+                .use { stmt ->
+                    stmt.setObject(1, rentalId)
+                    stmt.setObject(2, Timestamp.valueOf("2021-08-20 09:38:17.123"))
+                    stmt.execute()
+                }
         }
 
         logger.info("Appending XES...")
@@ -324,7 +356,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 assertEquals("complete", events[1].lifecycleTransition)
             }
 
-            assertEquals((expectedNumberOfEvents + 2).toString(), etl.lastEventExternalId)
+            assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents + 2), etl.lastEventExternalId)
             logUUID = etl.logIdentityId
         }
 
@@ -344,10 +376,17 @@ ORDER BY ${columnQuot}event_id${columnQuot}
         // simulate new return
         externalDB.connect().use { conn ->
             conn.autoCommit = true
-            conn.createStatement().use { stmt ->
-                stmt.execute("UPDATE rental SET return_date='2021-08-25 17:28:59.387' WHERE rental_id=$rentalId")
-                stmt.execute("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,$rentalId,2.00,'2021-08-25 17:30:00.544')")
+            conn.prepareStatement("UPDATE rental SET return_date=? WHERE rental_id=?").use { stmt ->
+                stmt.setObject(1, Timestamp.valueOf("2021-08-25 17:28:59.387"))
+                stmt.setObject(2, rentalId)
+                stmt.execute()
             }
+            conn.prepareStatement("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,?,2.00,?)")
+                .use { stmt ->
+                    stmt.setObject(1, rentalId)
+                    stmt.setObject(2, Timestamp.valueOf("2021-08-25 17:30:00.544"))
+                    stmt.execute()
+                }
         }
 
         logger.info("Appending XES...")
@@ -365,7 +404,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 assertEquals("complete", events[1].lifecycleTransition)
             }
 
-            assertEquals((expectedNumberOfEvents + 4).toString(), etl.lastEventExternalId)
+            assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents + 4), etl.lastEventExternalId)
             logUUID = etl.logIdentityId
         }
 
