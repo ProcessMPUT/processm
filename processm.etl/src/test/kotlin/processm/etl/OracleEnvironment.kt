@@ -18,14 +18,12 @@ import processm.core.logging.logger
  * Grouping multiple inserts in a similar way as in [Db2Environment] doesn't seem to help, to the point of being actually slower.
  */
 class OracleEnvironment(
-    schemaScript: String,
-    insertScript: String
+    val schemaScript: String,
+    val insertScript: String
 ) : DBMSEnvironment<OracleContainer>(
     "",
     DEFAULT_USER,
-    DEFAULT_PASSWORD,
-    schemaScript,
-    insertScript
+    DEFAULT_PASSWORD
 ) {
     companion object {
 

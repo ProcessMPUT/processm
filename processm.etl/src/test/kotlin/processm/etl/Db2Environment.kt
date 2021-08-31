@@ -53,9 +53,7 @@ class Db2Environment(
 ) : DBMSEnvironment<Db2Container>(
     dbName,
     user,
-    password,
-    "",
-    ""
+    password
 ) {
 
     companion object {

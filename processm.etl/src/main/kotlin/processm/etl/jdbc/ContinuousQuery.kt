@@ -16,6 +16,39 @@ private const val IDENTITY_ID = "identity:id"
 private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
 
 /**
+ * [SequenceWithConfirmation] provides a sequence with "transmission confirmation" - once an item is retrieved by next it is assumed
+ * to be processed (or, at least - its ownership and responsibility for it were now transferred outside the sequence), and
+ * a callback [itemConsumed] is called. [T] is the type for items in the underlying sequence, while [U] is an arbitrary type
+ * of auxiliary data to be passed to the callback.
+ */
+class SequenceWithConfirmation<T, U>(
+    private val base: Sequence<Pair<T, U>>,
+    private val itemConsumed: (Pair<T, U>) -> Unit
+) :
+    Sequence<T> {
+
+    private class IteratorWithConfirmation<T, U>(
+        private val base: Iterator<Pair<T, U>>,
+        private val itemConsumed: (Pair<T, U>) -> Unit
+    ) :
+        Iterator<T> {
+        override fun hasNext(): Boolean = base.hasNext()
+
+        override fun next(): T = base.next().also(itemConsumed).first
+
+    }
+
+    override fun iterator(): Iterator<T> = IteratorWithConfirmation(base.iterator(), itemConsumed)
+
+}
+
+/**
+ * A special value for [ETLConfiguration.lastEventExternalId] to prevent [toXESInputStream] from binding it to a variable
+ */
+val ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID: String
+    get() = "ce69fe00-2728-4396-b371-f523ce188c#4775d4a312-cfcd-4d92-a38a-71e5ea36bebc"
+
+/**
  * Produces an append-type stream of [XESComponent]s based on this [ETLConfiguration]. The append-type stream consists
  * of a partial event log with (possibly) partial traces. The partial traces are to be appended with previously seen
  * traces of the same id to produce (closer to) complete traces.
@@ -45,11 +78,13 @@ private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
  * ids.
  * @throws UnsupportedOperationException When the retrieved data has unsupported type.
  */
-fun ETLConfiguration.toXESInputStream(): XESInputStream = sequence {
+fun ETLConfiguration.toXESInputStream(): XESInputStream = SequenceWithConfirmation(sequence {
     DriverManager.getConnection(jdbcUri, user, password)
         .use { connection ->
             connection.prepareStatement(query).use { stmt ->
-                if (lastEventExternalId !== null)
+                // In theory it should be possible to retrieve the number of parameters via stmt.parameterMetaData.parameterCount - in practice it doesn't work on MSSQL.
+                // Thus this ugly solution with ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID - I believe this to be only necessary for testing
+                if (lastEventExternalId != ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID)
                     stmt.setObject(1, lastEventExternalId)
 
                 stmt.executeQuery().use { rs ->
@@ -71,28 +106,32 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream = sequence {
                         // yield log if this is the first event
                         if (lastLog === null) {
                             lastLog = Log(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, logIdentityId)))
-                            yield(lastLog)
+                            yield(lastLog to null)
                         }
 
                         // yield trace if changed
                         val traceIdentityId = traceId.forceToUUID()!!
                         if (lastTrace?.identityId != traceIdentityId) {
                             lastTrace = Trace(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, traceIdentityId)))
-                            yield(lastTrace)
+                            yield(lastTrace to null)
                         }
 
                         // yield event
                         attributes.computeIfAbsent(IDENTITY_ID) { IDAttr(IDENTITY_ID, eventId.forceToUUID()!!) }
-                        yield(Event(attributes))
-
-                        // lastEventExternalId must be updated after the event was consumed
-                        lastEventExternalId =
-                            if (EventIdCmp.compare(lastEventExternalId, eventId.toString()) >= 0) lastEventExternalId
-                            else eventId.toString()
+                        yield(Event(attributes) to eventId)
                     }
                 }
             }
         }
+}) {
+    if (it.first is Event) {
+        val eventId = it.second
+        checkNotNull(eventId)
+        // lastEventExternalId must be updated after the event was consumed
+        lastEventExternalId =
+            if (EventIdCmp.compare(lastEventExternalId, eventId.toString()) >= 0) lastEventExternalId
+            else eventId.toString()
+    }
 }
 
 private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttributeMap>) =
@@ -143,7 +182,7 @@ private object EventIdCmp : Comparator<String> {
             } catch (_: IllegalArgumentException) {
                 try {
                     o1.toDouble().compareTo(o2.toDouble())
-                } catch(_:NumberFormatException) {
+                } catch (_: NumberFormatException) {
                     o1.compareTo(o2)
                 }
             }

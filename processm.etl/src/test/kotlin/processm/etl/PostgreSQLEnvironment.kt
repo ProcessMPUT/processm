@@ -8,14 +8,12 @@ class PostgreSQLEnvironment(
     dbName: String,
     user: String,
     password: String,
-    schemaScript: String,
-    insertScript: String
+    val schemaScript: String,
+    val insertScript: String
 ) : DBMSEnvironment<PostgreSQLContainer<*>>(
     dbName,
     user,
-    password,
-    schemaScript,
-    insertScript
+    password
 ) {
     companion object {
         fun getSakila(): PostgreSQLEnvironment =

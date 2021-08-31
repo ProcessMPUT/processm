@@ -10,9 +10,7 @@ import java.sql.Connection
 abstract class DBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
     val dbName: String,
     val user: String,
-    val password: String,
-    val schemaScript: String,
-    val insertScript: String
+    val password: String
 ) : AutoCloseable {
     private val containerDelegate = lazy { initAndRun() }
     private val container: Container by containerDelegate

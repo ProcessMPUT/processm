@@ -329,7 +329,6 @@ ORDER BY ${columnQuot}event_id${columnQuot}
 
         // simulate new rental
         val rentalId: Int
-        logger.info(externalDB.jdbcUrl)
         externalDB.connect().use { conn ->
             conn.autoCommit = true
             rentalId = insertNewRental(conn, Timestamp.valueOf("2021-08-20 09:35:59.987"), 1613, 504, null, 1)
@@ -432,6 +431,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST(987654321 AS $sqlInt) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlInt) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
+                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
             }
 
             ETLColumnToAttributeMap.new {
@@ -473,6 +473,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST(9876543210 AS $sqlLong) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlLong) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
+                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
             }
 
             ETLColumnToAttributeMap.new {
@@ -514,6 +515,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST(9876543210 AS double precision) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS double precision) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
+                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
             }
 
             ETLColumnToAttributeMap.new {
@@ -555,6 +557,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('b4139e40-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('c17cdfce-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
+                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
             }
 
             ETLColumnToAttributeMap.new {
@@ -596,6 +599,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
+                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
             }
 
             ETLColumnToAttributeMap.new {
@@ -637,6 +641,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
+                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
             }
 
             ETLColumnToAttributeMap.new {
@@ -678,6 +683,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('Lorem ipsum dolor sit amet, consectetur adipiscing elit,' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
+                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
             }
 
             ETLColumnToAttributeMap.new {

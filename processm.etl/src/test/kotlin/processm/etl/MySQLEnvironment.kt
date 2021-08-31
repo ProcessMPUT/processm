@@ -9,14 +9,12 @@ class MySQLEnvironment(
     dbName: String,
     user: String,
     password: String,
-    schemaScript: String,
-    insertScript: String
+    val schemaScript: String,
+    val insertScript: String
 ) : DBMSEnvironment<MySQLContainer<*>>(
     dbName,
     user,
-    password,
-    schemaScript,
-    insertScript
+    password
 ) {
     companion object {
         fun getSakila(): MySQLEnvironment =
