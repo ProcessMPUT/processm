@@ -1686,6 +1686,26 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         }
     }
 
+    /**
+     * Demonstrates the bug #116 - seeking for the traces with non-null non-standard attribute causes exception:
+     * PSQLException: ERROR: invalid input value for enum attribute_type: "uuid"
+     * Where: PL/pgSQL function get_trace_attribute(bigint,text,attribute_type,anynonarray) line 31 at IF
+     */
+    @Test
+    fun whereNotNull() {
+        val stream = q("where l:id=$uuid1 and [t:cost:total] is not null")
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+        assertNotEquals(101, log.traces.count())
+
+        for (trace in log.traces) {
+            assertNotNull(trace.costTotal)
+            assertNotNull(trace.attributes["cost:total"]?.value)
+        }
+    }
+
     @Test
     fun limitSingleTest() {
         val stream = q("where l:name='JournalReview' limit l:1")
