@@ -1766,6 +1766,32 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         }
     }
 
+    /**
+     * Demonstrates the bug #116:
+     * PSQLException: ERROR: operator does not exist: timestamp with time zone[] - timestamp with time zone[]
+     */
+    @Test
+    fun orderByAggregationExpression() {
+        val stream = q(
+            "select max(^e:timestamp)-min(^e:timestamp)" +
+                    "where l:name='Hospital log' " +
+                    "group by t:name " +
+                    "order by max(^e:timestamp)-min(^e:timestamp) desc"
+        )
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+        assertTrue(log.traces.count() > 10)
+
+        var lastDuration: Double = Double.MAX_VALUE
+        for (trace in log.traces) {
+            val duration = trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"]!!.value as Double
+            assertTrue(duration <= lastDuration)
+            lastDuration = duration
+        }
+    }
+
     @Test
     fun limitSingleTest() {
         val stream = q("where l:name='JournalReview' limit l:1")

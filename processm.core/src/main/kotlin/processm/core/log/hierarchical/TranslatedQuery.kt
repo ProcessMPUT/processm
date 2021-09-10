@@ -1277,8 +1277,24 @@ internal class TranslatedQuery(
                     }
                     is Function -> {
                         when (expression.name) {
-                            "min", "max", "avg", "count", "sum", "round", "lower", "upper" -> {
+                            "min", "max", "avg", "count", "sum" -> {
                                 assert(expression.children.size == 1)
+                                if (ignoreHoisting ||
+                                    expression.filter { it is Attribute }.all { (it as Attribute).hoistingPrefix == "" }
+                                ) {
+                                    append(expression.name)
+                                    append('(')
+                                    walk(expression.children[0], expression.expectedChildrenTypes[0])
+                                    append(')')
+                                } else {
+                                    append("(SELECT ")
+                                    append(expression.name)
+                                    append("(v) FROM unnest(array_agg(")
+                                    walk(expression.children[0], expression.expectedChildrenTypes[0])
+                                    append(")) s(v))")
+                                }
+                            }
+                            "round", "lower", "upper" -> {
                                 append(expression.name)
                                 append('(')
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
