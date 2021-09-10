@@ -32,6 +32,7 @@ export default class DuplicateKeysJsonParser {
     "float",
     "int",
     "string",
+    "id",
     "classifier",
     "extension"
   ]);
@@ -100,7 +101,7 @@ export default class DuplicateKeysJsonParser {
     };
 
     this.parser.onopenarray = () => {
-      const newObject = new Array<{}>();
+      let newObject = new Array<{}>();
 
       if (this.processedElementsStack.isEmpty) {
         this.rootElement = newObject;
@@ -112,8 +113,11 @@ export default class DuplicateKeysJsonParser {
         } else {
           const lastKey = this.unassignedKeysStack.pop();
           if (this.keysWithArrayValue.has(lastKey)) {
-            if (parentElement[lastKey] == null) {
+            const prevObject = parentElement[lastKey];
+            if (prevObject == null) {
               parentElement[lastKey] = newObject;
+            } else {
+              newObject = prevObject as Array<{}>;
             }
           } else {
             parentElement[lastKey] = newObject;

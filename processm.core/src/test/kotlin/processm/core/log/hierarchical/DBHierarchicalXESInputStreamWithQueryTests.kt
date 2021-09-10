@@ -35,6 +35,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         private val logIds = ArrayList<Int>()
         private val uuid1: UUID = UUID.randomUUID()
         private val uuid2: UUID = UUID.randomUUID()
+        private val uuid3: UUID = UUID.randomUUID()
         private val eventNames = setOf(
             "invite reviewers",
             "time-out 1", "time-out 2", "time-out 3",
@@ -82,6 +83,18 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                                 output.write(XMLXESInputStream(gzip).map {
                                     if (it is processm.core.log.Log) /* The base class for log */
                                         it.identityId = uuid2
+                                    it
+                                })
+                            }
+                        }
+                    }
+
+                    FileInputStream("../xes-logs/Hospital_log.xes.gz").use { file ->
+                        GZIPInputStream(file).use { gzip ->
+                            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
+                                output.write(XMLXESInputStream(gzip).take(2000).map {
+                                    if (it is processm.core.log.Log) /* The base class for log */
+                                        it.identityId = uuid3
                                     it
                                 })
                             }
@@ -1703,6 +1716,53 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         for (trace in log.traces) {
             assertNotNull(trace.costTotal)
             assertNotNull(trace.attributes["cost:total"]?.value)
+        }
+    }
+
+    /**
+     * Demonstrates the bug #116 - seeking for the traces with non-null non-standard attribute retrieves
+     * traces with null attribute
+     * The actual bug was in the presentation layer in the JSON parser.
+     */
+    @Test
+    fun whereNotNull2() {
+        val stream = q("where l:id=$uuid3 and [t:Diagnosis] is not null")
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+
+        for (trace in log.traces) {
+            assertNotNull(trace.attributes["Diagnosis"]?.value)
+            assertFalse(trace.attributes["Diagnosis"]?.valueToString().isNullOrBlank())
+        }
+    }
+
+    /**
+     * Demonstrates the bug #116 - missing attributes when selecting many expressions
+     * The actual bug was in the presentation layer in the JSON parser.
+     */
+    @Test
+    fun missingAttributes() {
+        val stream = q(
+            "select l:name, t:name, min(^e:timestamp), max(^e:timestamp), max(^e:timestamp)-min(^e:timestamp) " +
+                    "where l:id=$uuid3 " +
+                    "group by t:name " +
+                    "limit l:1, t:10"
+        )
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+        assertEquals(10, log.traces.count())
+
+        for (trace in log.traces) {
+            assertNotNull(trace.conceptName)
+            assertNotNull(trace.attributes["concept:name"]?.value)
+            assertEquals(trace.conceptName, trace.attributes["concept:name"]?.value)
+            assertNotNull(trace.attributes["min(^event:time:timestamp)"]?.value)
+            assertNotNull(trace.attributes["max(^event:time:timestamp)"]?.value)
+            assertNotNull(trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"]?.value)
         }
     }
 
