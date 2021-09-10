@@ -8,7 +8,17 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import javax.xml.stream.XMLStreamWriter
 
-class XMLXESOutputStream(private val output: XMLStreamWriter) : XESOutputStream {
+/**
+ * The output stream of XES components that formats a valid XES XML and JSON documents.
+ * @property output The output XML or JSON stream writer. StAX and StAXON writers are supported.
+ * @property sortAttributesByType Determines whether the attributes of log/trace/event are sorted by type. It is
+ * recommended mode for StAXON writer, as it reduces the size of the resulting JSON and simplifies parsing. Setting
+ * this property to true causes a little memory and time overhead when writing the stream.
+ */
+class XMLXESOutputStream(
+    private val output: XMLStreamWriter,
+    private val sortAttributesByType: Boolean = false
+) : XESOutputStream {
     private var alreadyClosed: Boolean = false
     private var seenTag: String? = null
 
@@ -151,9 +161,8 @@ class XMLXESOutputStream(private val output: XMLStreamWriter) : XESOutputStream 
      * Store attributes
      */
     private fun writeAttributes(attributes: Map<String, Attribute<*>>) {
-        for (attribute in attributes.values) {
+        for (attribute in attributes.values.let { if (sortAttributesByType) it.sortedBy(Attribute<*>::xesTag) else it })
             writeAttribute(attribute)
-        }
     }
 
     /**
