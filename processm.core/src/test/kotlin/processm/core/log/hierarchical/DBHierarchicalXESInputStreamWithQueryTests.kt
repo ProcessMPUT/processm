@@ -35,6 +35,7 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         private val logIds = ArrayList<Int>()
         private val uuid1: UUID = UUID.randomUUID()
         private val uuid2: UUID = UUID.randomUUID()
+        private val uuid3: UUID = UUID.randomUUID()
         private val eventNames = setOf(
             "invite reviewers",
             "time-out 1", "time-out 2", "time-out 3",
@@ -82,6 +83,18 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                                 output.write(XMLXESInputStream(gzip).map {
                                     if (it is processm.core.log.Log) /* The base class for log */
                                         it.identityId = uuid2
+                                    it
+                                })
+                            }
+                        }
+                    }
+
+                    FileInputStream("../xes-logs/Hospital_log.xes.gz").use { file ->
+                        GZIPInputStream(file).use { gzip ->
+                            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
+                                output.write(XMLXESInputStream(gzip).take(2000).map {
+                                    if (it is processm.core.log.Log) /* The base class for log */
+                                        it.identityId = uuid3
                                     it
                                 })
                             }
@@ -1607,6 +1620,41 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     }
 
     /**
+     * Demonstrates the bug #116 - aggregate function call on a hoisted attribute changes the values of the other
+     * aggregate functions.
+     */
+    @Test
+    fun aggregationFunctionIndependence() {
+        // see [groupByWithHoistingAndOrderByCountTest]
+        val stream1 = q(
+            "select l:name, count(t:name), e:name\n" +
+                    "where l:id=$uuid1\n" +
+                    "group by ^e:name\n" +
+                    "order by count(t:name) desc\n" +
+                    "limit l:1\n"
+        )
+        val stream2 = q(
+            "select l:name, count(t:name), count(^e:name), e:name\n" +
+                    "where l:id=$uuid1\n" +
+                    "group by ^e:name\n" +
+                    "order by count(t:name) desc\n" +
+                    "limit l:1\n"
+        )
+        assertEquals(stream1.count(), stream2.count())
+
+        val log1 = stream1.first()
+        val log2 = stream2.first()
+
+        assertEquals(log1.traces.count(), log2.traces.count())
+        for ((trace1, trace2) in log1.traces zip log2.traces) {
+            assertEquals(
+                trace1.attributes["count(trace:concept:name)"]!!.value as Long,
+                trace2.attributes["count(trace:concept:name)"]!!.value as Long
+            )
+        }
+    }
+
+    /**
      * Demonstrates the bug from #106: PSQLException: ERROR: aggregate function calls cannot be nested
      */
     @Test
@@ -1683,6 +1731,99 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertEquals(1, group.size)
                 assertEquals(name, group.first().conceptName)
             }
+        }
+    }
+
+    /**
+     * Demonstrates the bug #116 - seeking for the traces with non-null non-standard attribute causes exception:
+     * PSQLException: ERROR: invalid input value for enum attribute_type: "uuid"
+     * Where: PL/pgSQL function get_trace_attribute(bigint,text,attribute_type,anynonarray) line 31 at IF
+     */
+    @Test
+    fun whereNotNull() {
+        val stream = q("where l:id=$uuid1 and [t:cost:total] is not null")
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+        assertNotEquals(101, log.traces.count())
+
+        for (trace in log.traces) {
+            assertNotNull(trace.costTotal)
+            assertNotNull(trace.attributes["cost:total"]?.value)
+        }
+    }
+
+    /**
+     * Demonstrates the bug #116 - seeking for the traces with non-null non-standard attribute retrieves
+     * traces with null attribute
+     * The actual bug was in the presentation layer in the JSON parser.
+     */
+    @Test
+    fun whereNotNull2() {
+        val stream = q("where l:id=$uuid3 and [t:Diagnosis] is not null")
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+
+        for (trace in log.traces) {
+            assertNotNull(trace.attributes["Diagnosis"]?.value)
+            assertFalse(trace.attributes["Diagnosis"]?.valueToString().isNullOrBlank())
+        }
+    }
+
+    /**
+     * Demonstrates the bug #116 - missing attributes when selecting many expressions
+     * The actual bug was in the presentation layer in the JSON parser.
+     */
+    @Test
+    fun missingAttributes() {
+        val stream = q(
+            "select l:name, t:name, min(^e:timestamp), max(^e:timestamp), max(^e:timestamp)-min(^e:timestamp) " +
+                    "where l:id=$uuid3 " +
+                    "group by t:name " +
+                    "limit l:1, t:10"
+        )
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+        assertEquals(10, log.traces.count())
+
+        for (trace in log.traces) {
+            assertNotNull(trace.conceptName)
+            assertNotNull(trace.attributes["concept:name"]?.value)
+            assertEquals(trace.conceptName, trace.attributes["concept:name"]?.value)
+            assertNotNull(trace.attributes["min(^event:time:timestamp)"]?.value)
+            assertNotNull(trace.attributes["max(^event:time:timestamp)"]?.value)
+            assertNotNull(trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"]?.value)
+        }
+    }
+
+    /**
+     * Demonstrates the bug #116:
+     * PSQLException: ERROR: operator does not exist: timestamp with time zone[] - timestamp with time zone[]
+     */
+    @Test
+    fun orderByAggregationExpression() {
+        val stream = q(
+            "select max(^e:timestamp)-min(^e:timestamp)" +
+                    "where l:name='Hospital log' " +
+                    "group by t:name " +
+                    "order by max(^e:timestamp)-min(^e:timestamp) desc"
+        )
+
+        assertEquals(1, stream.count())
+        val log = stream.first()
+
+        assertTrue(log.traces.count() > 10)
+
+        var lastDuration: Double = Double.MAX_VALUE
+        for (trace in log.traces) {
+            val duration = trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"]!!.value as Double
+            assertTrue(duration <= lastDuration)
+            lastDuration = duration
         }
     }
 

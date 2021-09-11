@@ -78,7 +78,7 @@ class LogsService {
                 val writer = factory.createXMLStreamWriter(this)
 
                 try {
-                    XMLXESOutputStream(writer).use {
+                    XMLXESOutputStream(writer, true).use {
                         it.write(resultsFromLog.toFlatSequence())
                     }
                 } finally {
