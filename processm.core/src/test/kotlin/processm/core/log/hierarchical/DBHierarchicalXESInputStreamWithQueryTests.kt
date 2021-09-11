@@ -1620,6 +1620,41 @@ class DBHierarchicalXESInputStreamWithQueryTests {
     }
 
     /**
+     * Demonstrates the bug #116 - aggregate function call on a hoisted attribute changes the values of the other
+     * aggregate functions.
+     */
+    @Test
+    fun aggregationFunctionIndependence() {
+        // see [groupByWithHoistingAndOrderByCountTest]
+        val stream1 = q(
+            "select l:name, count(t:name), e:name\n" +
+                    "where l:id=$uuid1\n" +
+                    "group by ^e:name\n" +
+                    "order by count(t:name) desc\n" +
+                    "limit l:1\n"
+        )
+        val stream2 = q(
+            "select l:name, count(t:name), count(^e:name), e:name\n" +
+                    "where l:id=$uuid1\n" +
+                    "group by ^e:name\n" +
+                    "order by count(t:name) desc\n" +
+                    "limit l:1\n"
+        )
+        assertEquals(stream1.count(), stream2.count())
+
+        val log1 = stream1.first()
+        val log2 = stream2.first()
+
+        assertEquals(log1.traces.count(), log2.traces.count())
+        for ((trace1, trace2) in log1.traces zip log2.traces) {
+            assertEquals(
+                trace1.attributes["count(trace:concept:name)"]!!.value as Long,
+                trace2.attributes["count(trace:concept:name)"]!!.value as Long
+            )
+        }
+    }
+
+    /**
      * Demonstrates the bug from #106: PSQLException: ERROR: aggregate function calls cannot be nested
      */
     @Test

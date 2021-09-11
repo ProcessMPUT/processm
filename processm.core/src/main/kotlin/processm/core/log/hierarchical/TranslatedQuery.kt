@@ -385,7 +385,7 @@ internal class TranslatedQuery(
 
         groupById(scope, it)
         it.query.append(')')
-        innerGroupSignature(it, attributes, groupByAttributes, false)
+        innerGroupSignature(it, attributes, groupByAttributes, false, scope)
 
         outerGroupBy(scope, it, attributes, groupByAttributes, logId, false)
 
@@ -538,7 +538,7 @@ internal class TranslatedQuery(
 
         groupById(scope, it)
         it.query.append(')')
-        innerGroupSignature(it, attributes, groupByAttributes, true)
+        innerGroupSignature(it, attributes, groupByAttributes, true, scope)
 
         outerGroupBy(scope, it, attributes, groupByAttributes, logId, true)
 
@@ -639,9 +639,10 @@ internal class TranslatedQuery(
         sql: MutableSQLQuery,
         attributes: Set<Attribute>,
         groupByAttributes: List<Attribute>,
-        createOrderAttributeIfUngrouped: Boolean
+        createOrderAttributeIfUngrouped: Boolean,
+        scope: Scope
     ) = with(sql.query) {
-        append(" sub (id")
+        append(" ${scope.shortName} (id")
         if (attributes.isNotEmpty())
             append(',')
         append(attributes.indices.joinToString(",") { "a$it" })
@@ -1282,10 +1283,13 @@ internal class TranslatedQuery(
                                 if (ignoreHoisting ||
                                     expression.filter { it is Attribute }.all { (it as Attribute).hoistingPrefix == "" }
                                 ) {
+                                    append("(SELECT ")
                                     append(expression.name)
-                                    append('(')
+                                    append("(a0) FROM (SELECT DISTINCT ON (id) a0 FROM unnest(array_agg(")
+                                    append(expression.effectiveScope.shortName)
+                                    append(".id), array_agg(")
                                     walk(expression.children[0], expression.expectedChildrenTypes[0])
-                                    append(')')
+                                    append(")) s(id, a0)) s)")
                                 } else {
                                     append("(SELECT ")
                                     append(expression.name)
