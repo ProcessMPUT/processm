@@ -1,9 +1,8 @@
 package processm.core.log
 
-import processm.core.log.attribute.DateTimeAttr
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.RealAttr
-import processm.core.log.attribute.StringAttr
+import processm.core.helpers.parseISO8601
+import processm.core.helpers.toUUID
+import processm.core.log.attribute.*
 import java.time.Instant
 import java.util.*
 
@@ -12,7 +11,9 @@ import java.util.*
  *
  * Captures the event component from the XES metadata structure.
  */
-open class Event : TraceOrEventBase() {
+open class Event(
+    attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+) : TraceOrEventBase(attributesInternal) {
     /**
      * Standard attribute based on concept:instance
      * Standard extension: Concept
@@ -76,22 +77,25 @@ open class Event : TraceOrEventBase() {
     override fun hashCode(): Int = attributesInternal.hashCode()
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
-        conceptInstance = attributesInternal[nameMap["concept:instance"]]?.getValue() as String?
+        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue()?.toString()
+        conceptInstance = attributesInternal[nameMap["concept:instance"]]?.getValue()?.toString()
 
-        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue() as Double?
-        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue() as String?
+        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue()
+            ?.let { it as? Double ?: it.toString().toDoubleOrNull() }
+        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue()?.toString()
 
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue()
+            ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
 
-        lifecycleState = attributesInternal[nameMap["lifecycle:state"]]?.getValue() as String?
-        lifecycleTransition = attributesInternal[nameMap["lifecycle:transition"]]?.getValue() as String?
+        lifecycleState = attributesInternal[nameMap["lifecycle:state"]]?.getValue()?.toString()
+        lifecycleTransition = attributesInternal[nameMap["lifecycle:transition"]]?.getValue()?.toString()
 
-        orgRole = attributesInternal[nameMap["org:role"]]?.getValue() as String?
-        orgGroup = attributesInternal[nameMap["org:group"]]?.getValue() as String?
-        orgResource = attributesInternal[nameMap["org:resource"]]?.getValue() as String?
+        orgRole = attributesInternal[nameMap["org:role"]]?.getValue()?.toString()
+        orgGroup = attributesInternal[nameMap["org:group"]]?.getValue()?.toString()
+        orgResource = attributesInternal[nameMap["org:resource"]]?.getValue()?.toString()
 
-        timeTimestamp = attributesInternal[nameMap["time:timestamp"]]?.getValue() as Instant?
+        timeTimestamp = attributesInternal[nameMap["time:timestamp"]]?.getValue()
+            ?.let { it as? Instant ?: runCatching { it.toString().parseISO8601() }.getOrNull() }
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {

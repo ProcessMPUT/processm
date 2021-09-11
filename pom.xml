@@ -60,6 +60,7 @@
         <!-- version 42.2.15 causes strange exceptions: org.postgresql.util.PSQLException: ERROR: invalid input syntax for type bigint: "[J@53ec2968"-->
         <org.postgresql.version>42.2.14</org.postgresql.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
+        <testcontainers.version>1.16.0</testcontainers.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>

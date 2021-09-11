@@ -32,6 +32,7 @@ internal class SQLQuery(lambda: (sql: MutableSQLQuery) -> Unit) {
             .apply {
                 for ((i, p) in params.withIndex())
                     this.setObject(i + 1, p)
+                closeOnCompletion()
             }.executeQuery()
 
         logger.trace {

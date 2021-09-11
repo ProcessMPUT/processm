@@ -3,12 +3,16 @@ package processm.core.log.hierarchical
 import processm.core.log.Event
 import processm.core.log.XESComponent
 import processm.core.log.XESInputStream
+import processm.core.log.attribute.Attribute
 import processm.core.log.Trace as BaseTrace
 
 /**
  * An extension of [processm.core.log.Trace] that supports direct access to underlying events.
  */
-class Trace(events: Sequence<Event> = emptySequence()) : BaseTrace() {
+class Trace(
+    events: Sequence<Event> = emptySequence(),
+    attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+) : BaseTrace(attributesInternal) {
     /**
      * A lazy sequence of events in this trace.
      */

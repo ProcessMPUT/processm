@@ -10,15 +10,15 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.reflect.KClass
 
-class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
+open class DBXESOutputStream(protected val connection: Connection) : XESOutputStream {
     companion object {
-        private const val batchSize = 384
+        internal const val batchSize = 384
 
         /**
          * The limit of the number of parameters in an SQL query. When exceeded, no new trace will be inserted in the
          * current batch. The current trace will be still completed.
          */
-        private const val paramSoftLimit = Short.MAX_VALUE - 8192
+        internal const val paramSoftLimit = Short.MAX_VALUE - 8192
 
         private val ISO8601 = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC)
 
@@ -29,17 +29,17 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     /**
      * Log ID of inserted Log record
      */
-    private var logId: Int? = null
+    protected var logId: Int? = null
 
     /**
      * Did we see trace component in the current log?
      */
-    private var sawTrace: Boolean = false
+    protected var sawTrace: Boolean = false
 
     /**
      * A buffer of traces and events to write to the database together. Must contain complete traces.
      */
-    private var queue = ArrayList<XESComponent>(batchSize)
+    protected var queue = ArrayList<XESComponent>(batchSize)
 
     init {
         assert(connection.metaData.supportsGetGeneratedKeys())
@@ -115,7 +115,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         connection.close()
     }
 
-    private fun flushQueue(force: Boolean) {
+    protected open fun flushQueue(force: Boolean) {
         if (queue.isEmpty())
             return
 
@@ -160,12 +160,12 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
 
         with(traceSql.sql) {
             delete(length - 2, length)
-            append(" RETURNING ID)")
+            append(" RETURNING id)")
         }
 
         with(eventSql.sql) {
             delete(length - 2, length)
-            append(" RETURNING ID)")
+            append(" RETURNING id)")
         }
 
         with(traceSql) {
@@ -195,7 +195,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         }
     }
 
-    private fun writeEventData(event: Event, to: SQL, traceIndex: Int?) {
+    protected fun writeEventData(event: Event, to: SQL, traceIndex: Int?) {
         with(to) {
             sql.append("((SELECT id FROM trace LIMIT 1 OFFSET $traceIndex),")
 
@@ -215,7 +215,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         }
     }
 
-    private fun writeTraceData(trace: Trace, to: SQL) {
+    protected fun writeTraceData(trace: Trace, to: SQL) {
         with(to) {
             sql.append('(')
 
@@ -241,7 +241,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             addAsParamOrInline(element.identityId)
             addAsParamOrInline(element.lifecycleModel, "")
 
-            sql.append(") RETURNING ID)")
+            sql.append(") RETURNING id)")
         }
     }
 
@@ -333,7 +333,7 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
         addAttributes(attributes)
     }
 
-    private fun writeTypedAttribute(attribute: Attribute<*>, type: KClass<*>, to: SQL, writeCast: Boolean) {
+    protected fun writeTypedAttribute(attribute: Attribute<*>, type: KClass<*>, to: SQL, writeCast: Boolean) {
         val cast = if (writeCast) {
             when (type) {
                 StringAttr::class -> ""
@@ -410,14 +410,14 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
     private fun writeGlobals(scope: String, globals: Collection<Attribute<*>>, to: SQL) =
         writeAttributes("GLOBALS", "log", 0, globals, to, mapOf("scope" to scope))
 
-    private fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
+    protected fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
         for (item in this@join) {
             append(", ")
             append(transform(item))
         }
     }
 
-    private inner class SQL {
+    protected inner class SQL {
         var attrSeq: Int = 0
         val sql: StringBuilder = StringBuilder()
         val params: LinkedList<Any> = LinkedList()
@@ -440,7 +440,10 @@ class DBXESOutputStream(private val connection: Connection) : XESOutputStream {
             inlineParamsOverLimit()
             connection.prepareStatement("$sql SELECT 1 LIMIT 0").use {
                 for ((i, obj) in params.withIndex()) {
-                    it.setObject(i + 1, obj)
+                    if (obj is Array<*>)
+                        it.setArray(i + 1, connection.createArrayOf("text", obj))
+                    else
+                        it.setObject(i + 1, obj)
                 }
                 check(it.execute()) { "Write unsuccessful." }
             }
