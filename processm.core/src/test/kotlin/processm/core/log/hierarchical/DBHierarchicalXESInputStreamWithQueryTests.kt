@@ -1878,6 +1878,48 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         }
     }
 
+    /**
+     * #117 - tests whether the nested attributes are read
+     */
+    @Test
+    fun readNestedAttributes() {
+        val stream = q("where l:id=$uuid3 limit l:1, t:1, e:1")
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        val attribute = log.attributes["meta_concept:named_events_total"]!!
+
+        assertEquals(150291L, attribute.value)
+        assertEquals(624, attribute.children.size)
+
+        assertEquals(23L, attribute.children["haptoglobine"]!!.value)
+        assertEquals(24L, attribute.children["ijzer"]!!.value)
+        assertEquals(27L, attribute.children["bekken"]!!.value)
+        assertEquals(2L, attribute.children["cortisol"]!!.value)
+        assertEquals(9L, attribute.children["ammoniak"]!!.value)
+    }
+
+    /**
+     * #117 - tests whether the nested attributes are skipped
+     */
+    @Test
+    fun skipNestedAttributes() {
+        val stream = DBHierarchicalXESInputStream(dbName, Query("where l:id=$uuid3 limit l:1, t:1, e:1"), false)
+        assertEquals(1, stream.count())
+
+        val log = stream.first()
+        val attribute = log.attributes["meta_concept:named_events_total"]!!
+
+        assertEquals(150291L, attribute.value)
+        assertTrue(attribute.children.isEmpty())
+
+        assertFalse("haptoglobine" in attribute.children)
+        assertFalse("ijzer" in attribute.children)
+        assertFalse("bekken" in attribute.children)
+        assertFalse("cortisol" in attribute.children)
+        assertFalse("ammoniak" in attribute.children)
+    }
+
     private fun q(query: String): DBHierarchicalXESInputStream = DBHierarchicalXESInputStream(dbName, Query(query))
 
     private fun standardAndAllAttributesMatch(log: Log, component: XESComponent) {

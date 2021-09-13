@@ -18,7 +18,8 @@ import kotlin.LazyThreadSafetyMode.NONE
 internal class TranslatedQuery(
     private val dbName: String,
     private val pql: Query,
-    private val batchSize: Int = 1
+    private val batchSize: Int = 1,
+    private val readNestedAttributes: Boolean = true
 ) {
     companion object {
         private val logger = logger()
@@ -259,18 +260,23 @@ internal class TranslatedQuery(
 
         val attrTable = table ?: (scope.toString() + "s_attributes")
         with(it.query) {
-            append("WITH RECURSIVE tmp AS (")
+            append("WITH ")
+            if (readNestedAttributes)
+                append("RECURSIVE ")
+            append("tmp AS (")
             selectAttributes(scope, attrTable, extraColumns, it)
             append(", ARRAY[ids.ord, $attrTable.id] AS path")
             append(" FROM $attrTable")
             append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
             it.params.add(idPlaceholder)
             whereAttributes(scope, it, logId)
-            append(" UNION ALL ")
-            selectAttributes(scope, attrTable, extraColumns, it)
-            append(", path || $attrTable.id")
-            append(" FROM $attrTable")
-            append(" JOIN tmp ON $attrTable.parent_id=tmp.id AND $attrTable.parent_id IS NOT NULL")
+            if (readNestedAttributes) {
+                append(" UNION ALL ")
+                selectAttributes(scope, attrTable, extraColumns, it)
+                append(", path || $attrTable.id")
+                append(" FROM $attrTable")
+                append(" JOIN tmp ON $attrTable.parent_id=tmp.id AND $attrTable.parent_id IS NOT NULL")
+            }
             append(") ")
             selectAttributes(scope, "tmp", extraColumns, it)
             append(" FROM tmp")
