@@ -97,10 +97,17 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
     }
 
     /**
+     * Flushes the internal buffers to the underlying database.
+     */
+    fun flush() {
+        flushQueue(true)
+    }
+
+    /**
      * Commit and close connection with the database
      */
     override fun close() {
-        flushQueue(true)
+        flush()
         connection.commit()
         connection.close()
     }
