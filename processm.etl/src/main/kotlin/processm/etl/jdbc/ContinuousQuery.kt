@@ -10,6 +10,7 @@ import processm.dbmodels.etl.jdbc.toMap
 import java.sql.DriverManager
 import java.sql.ResultSet
 import java.sql.Types
+import java.time.Instant
 import java.util.*
 
 private const val IDENTITY_ID = "identity:id"
@@ -52,6 +53,7 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream = sequence {
                 if (lastEventExternalId !== null)
                     stmt.setObject(1, lastEventExternalId)
 
+                lastExecutionTime = Instant.now()
                 stmt.executeQuery().use { rs ->
                     // helper structures
                     val columnMap = columnToAttributeMap.toMap()
