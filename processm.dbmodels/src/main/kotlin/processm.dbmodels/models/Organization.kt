@@ -18,7 +18,7 @@ class Organization(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var name by Organizations.name
     var parentOrganization by Organization optionalReferencedOn Organizations.parentOrganizationId
-    val sharedGroup by UserGroup referencedOn Organizations.sharedGroupId
+    var sharedGroup by UserGroup referencedOn Organizations.sharedGroupId
     var isPrivate by Organizations.isPrivate
     var users by User via UsersRolesInOrganizations
     val userRoles by UserRolesInOrganizations referrersOn UsersRolesInOrganizations.organizationId
