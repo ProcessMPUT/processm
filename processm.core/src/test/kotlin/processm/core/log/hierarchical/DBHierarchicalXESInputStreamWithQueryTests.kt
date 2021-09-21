@@ -117,8 +117,12 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         @AfterAll
         @JvmStatic
         fun tearDown() {
-            for (logId in logIds) {
-                DBLogCleaner.removeLog(DBCache.get(dbName).getConnection(), logId)
+            DBCache.get(dbName).getConnection().use { conn ->
+                conn.autoCommit = false
+                for (logId in logIds) {
+                    DBLogCleaner.removeLog(conn, logId)
+                }
+                conn.commit()
             }
         }
         // endregion

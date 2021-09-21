@@ -111,8 +111,9 @@ OFFSET ?::bigint
         @AfterAll
         fun tearDown() {
             externalDB.close()
+            DBCache.get(dataStoreName).close()
             DBCache.getMainDBPool().getConnection().use { conn ->
-                conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
+                conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
             }
         }
         // endregion

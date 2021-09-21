@@ -50,7 +50,7 @@
         <kotlin.version>1.5.21</kotlin.version>
         <kotlinx.coroutines.version>1.5.0</kotlinx.coroutines.version>
         <kotlinx.serialization.version>1.2.1</kotlinx.serialization.version>
-        <org.jetbrains.exposed.version>0.32.1</org.jetbrains.exposed.version>
+        <org.jetbrains.exposed.version>0.34.2</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
         <junit.jupiter.version>5.6.0</junit.jupiter.version>
         <mockk.version>1.12.0</mockk.version>

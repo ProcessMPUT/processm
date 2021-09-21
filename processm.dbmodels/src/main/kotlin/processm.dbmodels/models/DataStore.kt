@@ -19,7 +19,7 @@ class DataStore(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var name by DataStores.name
     var creationDate by DataStores.creationDate
-    val organization by Organization referencedOn DataStores.organizationId
+    var organization by Organization referencedOn DataStores.organizationId
 
     fun toDto() = DataStoreDto(id.value, name, creationDate)
 }

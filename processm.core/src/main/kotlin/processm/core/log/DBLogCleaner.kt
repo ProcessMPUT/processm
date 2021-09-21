@@ -4,12 +4,8 @@ import java.sql.Connection
 
 object DBLogCleaner {
     fun removeLog(connection: Connection, logId: Int) {
-        connection.autoCommit = false
-
         removeLogRecord(connection, logId)
         removeTraces(connection, logId)
-
-        connection.commit()
     }
 
     private fun removeTraces(connection: Connection, logId: Int) {

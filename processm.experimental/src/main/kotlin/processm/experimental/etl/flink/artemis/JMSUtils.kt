@@ -1,5 +1,6 @@
 package processm.experimental.etl.flink.artemis
 
+import processm.core.esb.getTopicConnectionFactory
 import javax.jms.*
 import javax.naming.NameNotFoundException
 
@@ -11,7 +12,7 @@ object JMSUtils {
     }
 
     fun getDefaultTopicConnectionFactory(context: javax.naming.Context): TopicConnectionFactory =
-        context.lookup("ConnectionFactory") as TopicConnectionFactory
+        context.getTopicConnectionFactory()
 
 
     fun obtainQueue(context: javax.naming.Context, session: QueueSession, name: String): Queue {

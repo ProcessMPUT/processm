@@ -43,7 +43,11 @@ internal class DBLogCleanerTest {
 
         assertTrue(DBXESInputStream(dbName, Query(logId)).iterator().hasNext())
 
-        DBLogCleaner.removeLog(DBCache.get(dbName).getConnection(), logId)
+        DBCache.get(dbName).getConnection().use { conn ->
+            conn.autoCommit = false
+            DBLogCleaner.removeLog(conn, logId)
+            conn.commit()
+        }
 
         assertFalse(DBXESInputStream(dbName, Query(logId)).iterator().hasNext())
 

@@ -4,15 +4,25 @@ import processm.core.helpers.forceToUUID
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.*
+import processm.core.logging.logger
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.toMap
 import java.sql.DriverManager
 import java.sql.ResultSet
+import java.sql.SQLFeatureNotSupportedException
 import java.sql.Types
+import java.time.Instant
 import java.util.*
+import java.util.concurrent.ForkJoinPool
 
 private const val IDENTITY_ID = "identity:id"
+
+/**
+ * The timeout in milliseconds for the communication with the external DB. If no response is retrieved within this
+ * value, an [java.sql.SQLException] will be thrown.
+ */
+private const val NETWORK_TIMEOUT: Int = 3 * 60 * 1000
 private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
 
 /**
@@ -48,10 +58,16 @@ private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
 fun ETLConfiguration.toXESInputStream(): XESInputStream = sequence {
     DriverManager.getConnection(jdbcUri, user, password)
         .use { connection ->
+            try {
+                connection.setNetworkTimeout(ForkJoinPool.commonPool(), NETWORK_TIMEOUT)
+            } catch (e: SQLFeatureNotSupportedException) {
+                logger().error(e.message, e)
+            }
             connection.prepareStatement(query).use { stmt ->
                 if (lastEventExternalId !== null)
                     stmt.setObject(1, lastEventExternalId)
 
+                lastExecutionTime = Instant.now()
                 stmt.executeQuery().use { rs ->
                     // helper structures
                     val columnMap = columnToAttributeMap.toMap()
