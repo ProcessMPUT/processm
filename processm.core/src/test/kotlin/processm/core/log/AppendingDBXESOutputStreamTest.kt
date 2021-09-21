@@ -73,10 +73,12 @@ class AppendingDBXESOutputStreamTest {
     @AfterTest
     fun cleanUp() {
         DBCache.get(dbName).getConnection().use { conn ->
+            conn.autoCommit = false
             conn.prepareStatement("""SELECT id FROM logs WHERE "identity:id"='$logUUID'::uuid""").executeQuery().use {
                 while (it.next())
                     DBLogCleaner.removeLog(conn, it.getInt(1))
             }
+            conn.commit()
         }
     }
 

@@ -178,10 +178,11 @@ ORDER BY ${columnQuot}event_id${columnQuot}
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
+            DBCache.get(dataStoreName).close()
+            DBCache.getMainDBPool().getConnection().use { conn ->
+                conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
+            }
         }
-    }
     // endregion
 
 

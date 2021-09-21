@@ -4,6 +4,19 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
+import javax.jms.TopicConnectionFactory
+import javax.naming.Context
+
+/**
+ * The name of the connection factory for retrieving the [TopicConnectionFactory] for the embedded Artemis instance.
+ */
+private const val TOPIC_CONNECTION_FACTORY_NAME = "ConnectionFactory"
+
+/**
+ * Retrieves the [TopicConnectionFactory] for the embedded Artemis instance.
+ */
+fun Context.getTopicConnectionFactory(): TopicConnectionFactory =
+    this.lookup(TOPIC_CONNECTION_FACTORY_NAME) as TopicConnectionFactory
 
 class Artemis : Service {
     private lateinit var broker: EmbeddedActiveMQ

@@ -76,8 +76,8 @@ class EnterpriseServiceBus : Closeable {
     }
 
     /**
-     * Starts, possibly concurrently, all registered services. If an exception occurs during registration,
-     * the service will not be registered and the exception is rethrown. If many exceptions occur for many
+     * Starts, possibly concurrently, all registered services. If an exception occurs during startup,
+     * the service will not be started and the exception is rethrown. If many exceptions occur for many
      * services, the first one is rethrown and the successive are suppressed.
      * @see java.lang.Throwable.getSuppressed
      */
@@ -89,8 +89,8 @@ class EnterpriseServiceBus : Closeable {
     }
 
     /**
-     * Stops, possibly concurrently, all registered services. If an exception occurs during registration,
-     * the service will not be registered and the exception is rethrown. If many exceptions occur for many
+     * Stops, possibly concurrently, all registered services. If an exception occurs during stopping,
+     * the service may not be stopped and the exception is rethrown. If many exceptions occur for many
      * services, the first one is rethrown and the successive are suppressed.
      * @see java.lang.Throwable.getSuppressed
      */

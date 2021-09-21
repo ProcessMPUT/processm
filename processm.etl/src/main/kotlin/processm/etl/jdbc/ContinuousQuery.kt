@@ -4,15 +4,25 @@ import processm.core.helpers.forceToUUID
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.*
+import processm.core.logging.logger
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.toMap
 import java.sql.DriverManager
 import java.sql.ResultSet
+import java.sql.SQLFeatureNotSupportedException
 import java.sql.Types
+import java.time.Instant
 import java.util.*
+import java.util.concurrent.ForkJoinPool
 
 private const val IDENTITY_ID = "identity:id"
+
+/**
+ * The timeout in milliseconds for the communication with the external DB. If no response is retrieved within this
+ * value, an [java.sql.SQLException] will be thrown.
+ */
+private const val NETWORK_TIMEOUT: Int = 3 * 60 * 1000
 private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
 
 /**
@@ -81,12 +91,18 @@ val ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID: String
 fun ETLConfiguration.toXESInputStream(): XESInputStream = SequenceWithConfirmation(sequence {
     DriverManager.getConnection(jdbcUri, user, password)
         .use { connection ->
+            try {
+                connection.setNetworkTimeout(ForkJoinPool.commonPool(), NETWORK_TIMEOUT)
+            } catch (e: SQLFeatureNotSupportedException) {
+                logger().error(e.message, e)
+            }
             connection.prepareStatement(query).use { stmt ->
                 // In theory it should be possible to retrieve the number of parameters via stmt.parameterMetaData.parameterCount - in practice it doesn't work on MSSQL.
                 // Thus this ugly solution with ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID - I believe this to be only necessary for testing
                 if (lastEventExternalId != ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID)
                     stmt.setObject(1, lastEventExternalId)
 
+                lastExecutionTime = Instant.now()
                 stmt.executeQuery().use { rs ->
                     // helper structures
                     val columnMap = columnToAttributeMap.toMap()
