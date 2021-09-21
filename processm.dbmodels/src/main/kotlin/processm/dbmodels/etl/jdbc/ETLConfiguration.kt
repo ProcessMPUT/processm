@@ -5,10 +5,7 @@ import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.`java-time`.timestamp
-import org.jetbrains.exposed.sql.name
 import java.util.*
-import javax.jms.*
-import javax.naming.InitialContext
 
 const val JDBC_ETL_TOPIC = "jdbc_etl"
 const val DATASTORE = "datastore"
@@ -34,10 +31,7 @@ object ETLConfigurations : UUIDTable("etl_configurations") {
  * A configuration for a JDBC-based ETL process.
  */
 class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<ETLConfiguration>(ETLConfigurations) {
-        private val jmsContext = InitialContext()
-        private val jmsConnFactory = jmsContext.lookup("ConnectionFactory") as TopicConnectionFactory
-    }
+    companion object : UUIDEntityClass<ETLConfiguration>(ETLConfigurations)
 
     /**
      * The human-readable name of the configuration.
@@ -102,34 +96,8 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
     /**
      * A flag indicating that this configuration is to be removed.
      */
-    private var deleted: Boolean = false
-
-    /**
-     * Publishes in the [JDBC_ETL_TOPIC] JMS queue the changes made to this object.
-     */
-    fun notifyUsers() {
-        var jmsConnection: TopicConnection? = null
-        var jmsSession: TopicSession? = null
-        var jmsPublisher: TopicPublisher? = null
-        try {
-            jmsConnection = jmsConnFactory.createTopicConnection()
-            jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
-            val jmsTopic = jmsSession.createTopic(JDBC_ETL_TOPIC)
-            jmsPublisher = jmsSession.createPublisher(jmsTopic)
-            val message = jmsSession.createMapMessage()
-            message.setString(DATASTORE, this.db.name)
-            message.setString(
-                TYPE,
-                if (deleted || !enabled || refresh === null && lastEventExternalId !== null) DEACTIVATE else ACTIVATE
-            )
-            message.setString(ID, id.toString())
-            jmsPublisher.publish(message)
-        } finally {
-            jmsPublisher?.close()
-            jmsSession?.close()
-            jmsConnection?.close()
-        }
-    }
+    var deleted: Boolean = false
+        private set
 
     override fun delete() {
         super.delete()

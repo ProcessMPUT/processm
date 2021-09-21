@@ -1,14 +1,11 @@
 package processm.core.esb
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import processm.core.logging.logger
-import java.util.*
+import java.util.concurrent.CountDownLatch
 import javax.jms.*
 import javax.naming.InitialContext
-import javax.naming.spi.InitialContextFactory
-import kotlin.concurrent.timer
-import kotlinx.coroutines.runBlocking
-import java.util.concurrent.CountDownLatch
 import kotlin.test.*
 
 
@@ -26,7 +23,7 @@ class ArtemisTest {
 
         // Clean up subscriptions remaining from previous (failing) runs of these tests
         val jmsContext = InitialContext()
-        val jmsConnFactory = jmsContext.lookup("ConnectionFactory") as TopicConnectionFactory
+        val jmsConnFactory = jmsContext.getTopicConnectionFactory()
         val jmsConnection = jmsConnFactory.createTopicConnection()
         val jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
         jmsConnection.start()
@@ -135,7 +132,7 @@ class Producer(override val name: String, val topic: String, val messageCount: I
     override fun start() = runBlocking {
 
         val jmsContext = InitialContext()
-        val jmsConnFactory = jmsContext.lookup("ConnectionFactory") as TopicConnectionFactory
+        val jmsConnFactory = jmsContext.getTopicConnectionFactory()
         jmsConnection = jmsConnFactory.createTopicConnection()
         jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
         jmsTopic = jmsSession.createTopic(topic)
@@ -182,7 +179,7 @@ class Consumer(override val name: String, val topic: String, val messageCount: I
 
     override fun start() {
         val jmsContext = InitialContext()
-        val jmsConnFactory = jmsContext.lookup("ConnectionFactory") as TopicConnectionFactory
+        val jmsConnFactory = jmsContext.getTopicConnectionFactory()
         jmsConnection = jmsConnFactory.createTopicConnection()
         jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
         jmsTopic = jmsSession.createTopic(topic)

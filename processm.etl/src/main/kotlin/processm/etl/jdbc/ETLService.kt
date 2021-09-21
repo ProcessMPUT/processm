@@ -9,6 +9,7 @@ import org.quartz.SimpleScheduleBuilder.simpleSchedule
 import org.quartz.impl.StdSchedulerFactory
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
+import processm.core.esb.getTopicConnectionFactory
 import processm.core.helpers.toUUID
 import processm.core.log.AppendingDBXESOutputStream
 import processm.core.logging.logger
@@ -28,7 +29,7 @@ class ETLService : Service {
         private const val QUARTZ_CONFIG = "quartz-jdbc.properties"
         private val logger = logger()
         private val jmsContext = InitialContext()
-        private val jmsConnFactory = jmsContext.lookup("ConnectionFactory") as TopicConnectionFactory
+        private val jmsConnFactory = jmsContext.getTopicConnectionFactory()
     }
 
     private lateinit var scheduler: Scheduler
