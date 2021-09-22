@@ -1,15 +1,9 @@
 package processm.etl
 
-import org.testcontainers.containers.JdbcDatabaseContainer
 import org.testcontainers.containers.MSSQLServerContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
-
-interface DBMSEnvironmentConfigurator<Environment : DBMSEnvironment<Container>, Container : JdbcDatabaseContainer<*>> {
-    fun beforeStart(environment: Environment, container: Container)
-    fun afterStart(environment: Environment, container: Container)
-}
 
 class MSSQLScriptConfigurator(val schemaScript: String, val insertScript: String) :
     DBMSEnvironmentConfigurator<MSSQLEnvironment, MSSQLServerContainer<*>> {
