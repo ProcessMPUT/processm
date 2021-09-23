@@ -24,6 +24,7 @@ object ETLConfigurations : UUIDTable("etl_configurations") {
     val enabled = bool("enabled").default(true)
     val logIdentityId = uuid("log_identity_id").clientDefault { UUID.randomUUID() }
     val lastEventExternalId = text("last_event_external_id").nullable()
+    val lastEventExternalIdType = integer("last_event_external_id_type").nullable()
     val lastExecutionTime = timestamp("last_execution_time").nullable()
 }
 
@@ -77,6 +78,11 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
      * The id of the last fetched event from the external system.
      */
     var lastEventExternalId by ETLConfigurations.lastEventExternalId
+
+    /**
+     * The JDBC data type of [lastEventExternalId].
+     */
+    var lastEventExternalIdType by ETLConfigurations.lastEventExternalIdType
 
     /**
      * The date and time of the last execution of the ETL process associated with this configuration.

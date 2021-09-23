@@ -5,9 +5,6 @@ import processm.etl.DBMSEnvironment
 import processm.etl.OracleEnvironment
 import java.sql.Connection
 import java.sql.Types
-import java.util.*
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 
 class OracleSakilaTest : ContinuousQueryTest() {
 
@@ -50,18 +47,4 @@ class OracleSakilaTest : ContinuousQueryTest() {
             }
         return rentalId
     }
-
-    private lateinit var defaultLocale: Locale
-
-    @BeforeTest
-    fun setLocaleToUS() {
-        defaultLocale = Locale.getDefault()
-        Locale.setDefault(Locale.US)
-    }
-
-    @AfterTest
-    fun restoreLocale() {
-        Locale.setDefault(defaultLocale)
-    }
-
 }

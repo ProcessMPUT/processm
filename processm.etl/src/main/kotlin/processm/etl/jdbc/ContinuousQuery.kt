@@ -1,5 +1,6 @@
 package processm.etl.jdbc
 
+import oracle.jdbc.OracleTypes
 import processm.core.helpers.forceToUUID
 import processm.core.helpers.toUUID
 import processm.core.log.*
@@ -100,7 +101,7 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream = SequenceWithConfirmati
                 // In theory it should be possible to retrieve the number of parameters via stmt.parameterMetaData.parameterCount - in practice it doesn't work on MSSQL.
                 // Thus this ugly solution with ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID - I believe this to be only necessary for testing
                 if (lastEventExternalId != ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID)
-                    stmt.setObject(1, lastEventExternalId)
+                    stmt.setObject(1, castToSQLType(lastEventExternalId, lastEventExternalIdType))
 
                 lastExecutionTime = Instant.now()
                 stmt.executeQuery().use { rs ->
@@ -108,6 +109,9 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream = SequenceWithConfirmati
                     val columnMap = columnToAttributeMap.toMap()
                     val traceIdAttrDesc = columnToAttributeMap.first { it.traceId }
                     val eventIdAttrDesc = columnToAttributeMap.first { it.eventId }
+
+                    if (lastEventExternalIdType === null)
+                        lastEventExternalIdType = getAttributeType(rs, eventIdAttrDesc)
 
                     // process rows
                     var lastLog: Log? = null
@@ -145,9 +149,20 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream = SequenceWithConfirmati
         checkNotNull(eventId)
         // lastEventExternalId must be updated after the event was consumed
         lastEventExternalId =
-            if (EventIdCmp.compare(lastEventExternalId, eventId.toString()) >= 0) lastEventExternalId
-            else eventId.toString()
+            if (EventIdCmp(lastEventExternalIdType).compare(lastEventExternalId, eventId.toString()) >= 0)
+                lastEventExternalId
+            else
+                eventId.toString()
     }
+}
+
+private fun getAttributeType(rs: ResultSet, attributeMap: ETLColumnToAttributeMap): Int? {
+    val metadata = rs.metaData
+    for (colIndex in 1..metadata.columnCount) {
+        if (metadata.getColumnName(colIndex) == attributeMap.sourceColumn)
+            return metadata.getColumnType(colIndex)
+    }
+    return null
 }
 
 private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttributeMap>) =
@@ -163,7 +178,7 @@ private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttrib
                     IntAttr(attrName, rs.getLong(colIndex))
                 Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
                     RealAttr(attrName, rs.getDouble(colIndex))
-                Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE ->
+                Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE, OracleTypes.TIMESTAMPLTZ ->
                     rs.getTimestamp(colIndex, gmtCalendar)?.let { DateTimeAttr(attrName, it.toInstant()) }
                 Types.BIT, Types.BOOLEAN ->
                     BoolAttr(attrName, rs.getBoolean(colIndex))
@@ -178,7 +193,7 @@ private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttrib
         }
     }
 
-private object EventIdCmp : Comparator<String> {
+private class EventIdCmp(private val type: Int?) : Comparator<String> {
     override fun compare(o1: String?, o2: String?): Int {
         if (o1 === null && o2 !== null)
             return -1
@@ -190,19 +205,38 @@ private object EventIdCmp : Comparator<String> {
         o1!!
         o2!!
 
-        return try {
-            o1.toLong().compareTo(o2.toLong())
-        } catch (_: NumberFormatException) {
-            try {
-                o1.toUUID()!!.compareTo(o2.toUUID())
-            } catch (_: IllegalArgumentException) {
+        if (o1 == ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID && o2 != ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID)
+            return -1
+        else if (o1 != ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID && o2 == ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID)
+            return 1
+        else if (o1 == ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID && o2 == ETLConfiguration.Companion.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID)
+            return 0
+
+        return when (type) {
+            Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
+                o1.toLong().compareTo(o2.toLong())
+            Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
+                o1.toDouble().compareTo(o2.toDouble())
+            null, Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
                 try {
-                    o1.toDouble().compareTo(o2.toDouble())
-                } catch (_: NumberFormatException) {
+                    o1.toUUID()!!.compareTo(o2.toUUID())
+                } catch (_: IllegalArgumentException) {
                     o1.compareTo(o2)
                 }
-            }
+            else -> throw UnsupportedOperationException("Unsupported value type $type for expression eventId.")
         }
     }
 
+}
+
+private fun castToSQLType(value: String?, type: Int?): Any? {
+    return when (type) {
+        null, Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
+            value
+        Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
+            value?.toLong()
+        Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
+            value?.toDouble()
+        else -> throw UnsupportedOperationException("Unsupported value type $type for expression eventId.")
+    }
 }
