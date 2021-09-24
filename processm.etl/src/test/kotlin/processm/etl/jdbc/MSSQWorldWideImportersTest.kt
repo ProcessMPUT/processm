@@ -1,10 +1,10 @@
 package processm.etl.jdbc
 
+import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
 import processm.core.log.*
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -16,7 +16,6 @@ import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
-import java.sql.Connection
 import java.sql.Date
 import java.sql.Timestamp
 import java.time.Instant
@@ -28,14 +27,14 @@ class MSSQWorldWideImportersTest {
 
     // region environment
     private val logger = logger()
-    private lateinit var dataStoreName:String
+    private lateinit var dataStoreName: String
     private lateinit var externalDB: DBMSEnvironment<*>
     // endregion
 
     // region user input
     private val etlConfiguratioName = "ETL Configuration for WorldWideImporters"
 
-    private val getEventQuery = """
+    private fun getEventQuery(batch: Boolean) = """
 WITH MainOrderAux(ParentID, ChildID) AS 
 (
 	SELECT o1.OrderID as ParentID, o1.BackorderOrderID as ChildID
@@ -68,10 +67,8 @@ union all
 select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.OrderID, i.ConfirmedDeliveryTime as "time:timestamp" from WideWorldImporters.Sales.Invoices i
 ) sub
 ) sub2
-) sub3
-where "event_id" > coalesce(?, 0)
-order by "event_id"      
-    """.trimIndent()
+) sub3""".trimIndent() +
+            (if (batch) "" else """ where "event_id" > coalesce(?, 0)""") + """ order by "event_id""""
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0") {
         dataStoreName = UUID.randomUUID().toString()
@@ -81,8 +78,9 @@ order by "event_id"
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = getEventQuery
+                query = getEventQuery(lastEventExternalId == null)
                 this.lastEventExternalId = lastEventExternalId
+                batch = lastEventExternalId == null
             }
 
             ETLColumnToAttributeMap.new {
@@ -136,6 +134,9 @@ order by "event_id"
         }
         DBCache.getMainDBPool().getConnection().use { conn ->
             conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
+        }
+        transaction(DBCache.get(dataStoreName).database) {
+            ETLConfigurations.deleteAll()
         }
     }
 
@@ -431,22 +432,28 @@ order by "trace_rank" desc, "event_id" desc
         }
     }
 
-
     @Test
-    fun `read complete XES and then read nothing from null`() {
+    fun `read something then read everything then read nothing from null`() {
         createEtlConfiguration(null)
-        val stream = transaction(DBCache.get(dataStoreName).database) {
+
+        var stream = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            return@transaction etl.toXESInputStream().take(100).toList()
+        }
+        assertFalse { stream.isEmpty() }
+
+        stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
             return@transaction etl.toXESInputStream().toList()
         }
-
         assertEquals(1, stream.filterIsInstance<Log>().size)
         assertEquals(66057, stream.filterIsInstance<Trace>().size)
         assertEquals(519622, stream.filterIsInstance<Event>().size)
 
-        transaction(DBCache.get(dataStoreName).database) {
+        stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
-            assertEquals(0, etl.toXESInputStream().count())
+            return@transaction etl.toXESInputStream().toList()
         }
+        assertTrue { stream.isEmpty() }
     }
 }

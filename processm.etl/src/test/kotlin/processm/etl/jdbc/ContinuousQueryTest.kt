@@ -1,5 +1,6 @@
 package processm.etl.jdbc
 
+import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -17,10 +18,7 @@ import processm.etl.DBMSEnvironment
 import java.sql.Connection
 import java.sql.Timestamp
 import java.util.*
-import kotlin.test.AfterTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @Suppress("SqlResolve")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -96,8 +94,7 @@ abstract class ContinuousQueryTest {
     /**
      * The SQL query for transforming the data into events. One event per row.
      */
-    protected open val getEventSQL
-        get() = """
+    protected open fun getEventSQL(batch: Boolean) = """
             SELECT * FROM (
 SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition${columnQuot}, ${columnQuot}concept:instance${columnQuot}, ${columnQuot}time:timestamp${columnQuot}, ${columnQuot}trace_id${columnQuot}, row_number() OVER (ORDER BY ${columnQuot}time:timestamp${columnQuot}, ${columnQuot}concept:instance${columnQuot}) AS ${columnQuot}event_id${columnQuot} FROM (
         SELECT 
@@ -127,9 +124,9 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         FROM payment p JOIN rental r ON r.rental_id=p.rental_id
         WHERE payment_date IS NOT NULL    
 ) sub ) core
-WHERE ${columnQuot}event_id${columnQuot} > CAST(? AS $sqlLong)
-ORDER BY ${columnQuot}event_id${columnQuot}
-    """.trimIndent()
+    """.trimIndent() +
+            (if (!batch) " WHERE ${columnQuot}event_id${columnQuot} > CAST(? AS $sqlLong)" else "") +
+            " ORDER BY ${columnQuot}event_id${columnQuot}"
 
     protected open val expectedNumberOfEvents = 47949L
     protected open val expectedNumberOfTracesInTheFirstBatch = 1805L
@@ -137,15 +134,16 @@ ORDER BY ${columnQuot}event_id${columnQuot}
         get() = lastEventExternalIdFromNumber(6214)
 
 
-    private fun createEtlConfiguration() {
+    private fun createEtlConfiguration(lastEventExternalId: String? = "0") {
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 name = etlConfiguratioName
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = getEventSQL
-                lastEventExternalId = "0"
+                query = getEventSQL(lastEventExternalId == null)
+                batch = lastEventExternalId == null
+                this.lastEventExternalId = lastEventExternalId
             }
 
             ETLColumnToAttributeMap.new {
@@ -172,17 +170,16 @@ ORDER BY ${columnQuot}event_id${columnQuot}
     @BeforeAll
     fun setUp() {
         externalDB = initExternalDB()
-        createEtlConfiguration()
     }
 
     @AfterAll
     fun tearDown() {
         externalDB.close()
-            DBCache.get(dataStoreName).close()
-            DBCache.getMainDBPool().getConnection().use { conn ->
-                conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-            }
+        DBCache.get(dataStoreName).close()
+        DBCache.getMainDBPool().getConnection().use { conn ->
+            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
         }
+    }
     // endregion
 
 
@@ -202,10 +199,14 @@ ORDER BY ${columnQuot}event_id${columnQuot}
 
             conn.commit()
         }
+        transaction(DBCache.get(dataStoreName).database) {
+            ETLConfigurations.deleteAll()
+        }
     }
 
     @Test
     fun `read XES from existing data`() {
+        createEtlConfiguration()
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
             val stream = etl.toXESInputStream()
@@ -227,7 +228,36 @@ ORDER BY ${columnQuot}event_id${columnQuot}
     }
 
     @Test
+    fun `read something then read everything then read nothing from existing data starting from null`() {
+        createEtlConfiguration(null)
+        transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            assertNull(etl.lastEventExternalId)
+            val list = etl.toXESInputStream().take(1000).toList()
+            assertEquals(1000, list.size)
+        }
+        transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            //lastEventExternalId was not updated, because the previous read was incomplete
+            assertNull(etl.lastEventExternalId)
+
+            val list = etl.toXESInputStream().toList()
+            assertEquals(1, list.count { it is Log })
+            assertEquals(4580, list.filterIsInstance<Trace>().groupBy { it.identityId }.count())
+            assertEquals(expectedNumberOfEvents.toInt(), list.count { it is Event })
+        }
+        transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            //lastEventExternalId was updated, because we read everything
+            assertNotNull(etl.lastEventExternalId)
+            val list = etl.toXESInputStream().toList()
+            assertTrue { list.isEmpty() }
+        }
+    }
+
+    @Test
     fun `read XES from existing data and write it to data store`() {
+        createEtlConfiguration()
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
@@ -260,6 +290,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
 
     @Test
     fun `read partially XES from existing data and write it to data store then read the remaining XES and write it to data store`() {
+        createEtlConfiguration()
         val partSize = 10000
         var logUUID: UUID? = null
         logger.info("Importing the first $partSize XES components...")
@@ -316,6 +347,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
 
     @Test
     fun `read XES from existing data and write it to data store then add new data next read XES and write it to data store`() {
+        createEtlConfiguration()
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
@@ -330,96 +362,110 @@ ORDER BY ${columnQuot}event_id${columnQuot}
 
         // simulate new rental
         val rentalId: Int
-        externalDB.connect().use { conn ->
-            conn.autoCommit = true
-            rentalId = insertNewRental(conn, Timestamp.valueOf("2021-08-20 09:35:59.987"), 1613, 504, null, 1)
-            conn.prepareStatement("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,?,3.49,?)")
-                .use { stmt ->
-                    stmt.setObject(1, rentalId)
-                    stmt.setObject(2, Timestamp.valueOf("2021-08-20 09:38:17.123"))
+        try {
+            externalDB.connect().use { conn ->
+                conn.autoCommit = true
+                rentalId = insertNewRental(conn, Timestamp.valueOf("2021-08-20 09:35:59.987"), 1613, 504, null, 1)
+                conn.prepareStatement("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,?,3.49,?)")
+                    .use { stmt ->
+                        stmt.setObject(1, rentalId)
+                        stmt.setObject(2, Timestamp.valueOf("2021-08-20 09:38:17.123"))
+                        stmt.execute()
+                    }
+            }
+
+            logger.info("Appending XES...")
+            transaction(DBCache.get(dataStoreName).database) {
+                val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+                AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
+                    val materializedStream = etl.toXESInputStream().toList()
+                    out.write(materializedStream.asSequence())
+
+                    val events = materializedStream.filterIsInstance<Event>()
+                    assertEquals(2, events.size)
+                    assertEquals("rent", events[0].conceptName)
+                    assertEquals("start", events[0].lifecycleTransition)
+                    assertEquals("pay", events[1].conceptName)
+                    assertEquals("complete", events[1].lifecycleTransition)
+                }
+
+                assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents + 2), etl.lastEventExternalId)
+                logUUID = etl.logIdentityId
+            }
+
+            logger.info("Querying...")
+            var counts = DBHierarchicalXESInputStream(
+                dataStoreName,
+                Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
+            )
+            var log = counts.first()
+            assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
+            assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+            assertEquals(
+                expectedNumberOfEvents + 2,
+                log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+            )
+
+            // simulate new return
+            externalDB.connect().use { conn ->
+                conn.autoCommit = true
+                conn.prepareStatement("UPDATE rental SET return_date=? WHERE rental_id=?").use { stmt ->
+                    stmt.setObject(1, Timestamp.valueOf("2021-08-25 17:28:59.387"))
+                    stmt.setObject(2, rentalId)
                     stmt.execute()
                 }
-        }
-
-        logger.info("Appending XES...")
-        transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
-            AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
-                val materializedStream = etl.toXESInputStream().toList()
-                out.write(materializedStream.asSequence())
-
-                val events = materializedStream.filterIsInstance<Event>()
-                assertEquals(2, events.size)
-                assertEquals("rent", events[0].conceptName)
-                assertEquals("start", events[0].lifecycleTransition)
-                assertEquals("pay", events[1].conceptName)
-                assertEquals("complete", events[1].lifecycleTransition)
+                conn.prepareStatement("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,?,2.00,?)")
+                    .use { stmt ->
+                        stmt.setObject(1, rentalId)
+                        stmt.setObject(2, Timestamp.valueOf("2021-08-25 17:30:00.544"))
+                        stmt.execute()
+                    }
             }
 
-            assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents + 2), etl.lastEventExternalId)
-            logUUID = etl.logIdentityId
-        }
+            logger.info("Appending XES...")
+            transaction(DBCache.get(dataStoreName).database) {
+                val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+                AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
+                    val materializedStream = etl.toXESInputStream().toList()
+                    out.write(materializedStream.asSequence())
 
-        logger.info("Querying...")
-        var counts = DBHierarchicalXESInputStream(
-            dataStoreName,
-            Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
-        )
-        var log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(
-            expectedNumberOfEvents + 2,
-            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
-        )
+                    val events = materializedStream.filterIsInstance<Event>()
+                    assertEquals(2, events.size)
+                    assertEquals("rent", events[0].conceptName)
+                    assertEquals("complete", events[0].lifecycleTransition)
+                    assertEquals("pay", events[1].conceptName)
+                    assertEquals("complete", events[1].lifecycleTransition)
+                }
 
-        // simulate new return
-        externalDB.connect().use { conn ->
-            conn.autoCommit = true
-            conn.prepareStatement("UPDATE rental SET return_date=? WHERE rental_id=?").use { stmt ->
-                stmt.setObject(1, Timestamp.valueOf("2021-08-25 17:28:59.387"))
-                stmt.setObject(2, rentalId)
-                stmt.execute()
+                assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents + 4), etl.lastEventExternalId)
+                logUUID = etl.logIdentityId
             }
-            conn.prepareStatement("INSERT INTO payment(customer_id,staff_id,rental_id,amount,payment_date) VALUES(504,1,?,2.00,?)")
-                .use { stmt ->
+
+            logger.info("Querying...")
+            counts = DBHierarchicalXESInputStream(
+                dataStoreName,
+                Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
+            )
+            log = counts.first()
+            assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
+            assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+            assertEquals(
+                expectedNumberOfEvents + 4,
+                log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+            )
+        } finally {
+            externalDB.connect().use { conn ->
+                conn.autoCommit = true
+                conn.prepareStatement("delete from payment where rental_id=?").use { stmt ->
                     stmt.setObject(1, rentalId)
-                    stmt.setObject(2, Timestamp.valueOf("2021-08-25 17:30:00.544"))
                     stmt.execute()
                 }
-        }
-
-        logger.info("Appending XES...")
-        transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
-            AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
-                val materializedStream = etl.toXESInputStream().toList()
-                out.write(materializedStream.asSequence())
-
-                val events = materializedStream.filterIsInstance<Event>()
-                assertEquals(2, events.size)
-                assertEquals("rent", events[0].conceptName)
-                assertEquals("complete", events[0].lifecycleTransition)
-                assertEquals("pay", events[1].conceptName)
-                assertEquals("complete", events[1].lifecycleTransition)
+                conn.prepareStatement("delete from rental where rental_id=?").use { stmt ->
+                    stmt.setObject(1, rentalId)
+                    stmt.execute()
+                }
             }
-
-            assertEquals(lastEventExternalIdFromNumber(expectedNumberOfEvents + 4), etl.lastEventExternalId)
-            logUUID = etl.logIdentityId
         }
-
-        logger.info("Querying...")
-        counts = DBHierarchicalXESInputStream(
-            dataStoreName,
-            Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
-        )
-        log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(
-            expectedNumberOfEvents + 4,
-            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
-        )
     }
 
     @Test
@@ -432,7 +478,8 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST(987654321 AS $sqlInt) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlInt) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
-                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
+                lastEventExternalId = null
+                batch = true
             }
 
             ETLColumnToAttributeMap.new {
@@ -474,7 +521,8 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST(9876543210 AS $sqlLong) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlLong) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
-                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
+                lastEventExternalId = null
+                batch = true
             }
 
             ETLColumnToAttributeMap.new {
@@ -516,7 +564,8 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST(9876543210 AS double precision) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS double precision) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
-                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
+                lastEventExternalId = null
+                batch = true
             }
 
             ETLColumnToAttributeMap.new {
@@ -558,7 +607,8 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('b4139e40-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('c17cdfce-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
-                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
+                lastEventExternalId = null
+                batch = true
             }
 
             ETLColumnToAttributeMap.new {
@@ -600,7 +650,8 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
-                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
+                lastEventExternalId = null
+                batch = true
             }
 
             ETLColumnToAttributeMap.new {
@@ -642,7 +693,8 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
-                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
+                lastEventExternalId = null
+                batch = true
             }
 
             ETLColumnToAttributeMap.new {
@@ -684,7 +736,8 @@ ORDER BY ${columnQuot}event_id${columnQuot}
                 password = externalDB.password
                 query =
                     "SELECT CAST('Lorem ipsum dolor sit amet, consectetur adipiscing elit,' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
-                lastEventExternalId = ETLConfiguration.MAGIC_IGNORE_LAST_EVENT_EXTERNAL_ID
+                lastEventExternalId = null
+                batch = true
             }
 
             ETLColumnToAttributeMap.new {

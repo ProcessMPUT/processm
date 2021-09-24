@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import processm.core.helpers.mapToSet
 import processm.core.log.*
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -16,17 +17,14 @@ import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.etl.OracleEnvironment
 import java.util.*
-import kotlin.test.AfterTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OracleOTSampleDbTest {
 
     private lateinit var externalDB: OracleEnvironment
 
-    private val getEventSQL = """
+    private fun getEventSQL(batch: Boolean) = """
         SELECT * FROM (
             SELECT "trace_id", "concept:name", "concept:instance", "time:timestamp", ROW_NUMBER() OVER (ORDER BY "time:timestamp") AS "event_id" FROM (
                     SELECT e.EMPLOYEE_ID AS "trace_id", 'hire' AS "concept:name", NULL AS "concept:instance", e.HIRE_DATE AS "time:timestamp" FROM hr.EMPLOYEES e 
@@ -35,9 +33,8 @@ class OracleOTSampleDbTest {
                 UNION ALL
                     SELECT o.SALES_REP_ID AS "trace_id", 'handle_order' AS "concept:name", o.ORDER_ID AS "concept:instance", o.ORDER_DATE AS "time:timestamp" FROM oe.ORDERS o WHERE o.SALES_REP_ID IS NOT NULL 
             ) sub
-        ) sub2
-        WHERE "event_id" > CAST(? AS NUMBER(*, 0))
-    """.trimIndent()
+        ) sub2        
+    """.trimIndent() + (if (!batch) """WHERE "event_id" > CAST(? AS NUMBER(*, 0))""" else "")
 
     @BeforeAll
     fun setUp() {
@@ -85,8 +82,9 @@ class OracleOTSampleDbTest {
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = getEventSQL
+                query = getEventSQL(lastEventExternalId == null)
                 this.lastEventExternalId = lastEventExternalId
+                batch = lastEventExternalId == null
             }
 
             ETLColumnToAttributeMap.new {
@@ -219,14 +217,27 @@ class OracleOTSampleDbTest {
     }
 
     @Test
-    fun `read XES from existing data starting from null`() {
+    fun `read something then read everything then read nothing from null`() {
         createEtlConfiguration(null)
-        transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
-            val stream = etl.toXESInputStream()
-            val list = stream.toList()
 
-            assertTrue {list.isEmpty()}
+        var stream = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            return@transaction etl.toXESInputStream().take(100).toList()
         }
+        assertFalse { stream.isEmpty() }
+
+        stream = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            return@transaction etl.toXESInputStream().toList()
+        }
+        assertEquals(1, stream.filterIsInstance<Log>().size)
+        assertEquals(expectedNumberOfTraces, stream.filterIsInstance<Trace>().mapToSet { it.identityId }.size)
+        assertEquals(expectedNumberOfEvents, stream.filterIsInstance<Event>().size)
+
+        stream = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            return@transaction etl.toXESInputStream().toList()
+        }
+        assertTrue { stream.isEmpty() }
     }
 }

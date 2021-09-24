@@ -30,7 +30,7 @@ class MySQLEmployeesTest {
 
     private lateinit var externalDB: MySQLEnvironment
 
-    private val getEventSQL = """
+    private fun getEventSQL(batch: Boolean) = """
         select * from (
             select *, row_number() over (order by `time:timestamp`) as `event_id` from (
                     (select 'hire' as `concept:name`, emp_no as `trace_id`, hire_date as `time:timestamp` from employees) 
@@ -41,10 +41,10 @@ class MySQLEmployeesTest {
                 union all 
                     (select 'change_department' as `concept:name`, emp_no as `trace_id`, from_date as `time:timestamp` from dept_emp)
             ) sub
-        ) sub2 
-        where  `event_id` > cast(? as unsigned)
-        order by `event_id`
-    """.trimIndent()
+        ) sub2 """.trimIndent() +
+            (if (!batch) " where  `event_id` > cast(? as unsigned)" else "") +
+            " order by `event_id`"
+
 
     private val dataStoreName = UUID.randomUUID().toString()
     private val etlConfiguratioName = "MySQL Employees ETL Test"
@@ -56,8 +56,9 @@ class MySQLEmployeesTest {
                 jdbcUri = externalDB.jdbcUrl
                 user = externalDB.user
                 password = externalDB.password
-                query = getEventSQL
+                query = getEventSQL(lastEventExternalId == null)
                 this.lastEventExternalId = lastEventExternalId
+                batch = lastEventExternalId == null
             }
 
             ETLColumnToAttributeMap.new {
@@ -215,13 +216,27 @@ class MySQLEmployeesTest {
 
 
     @Test
-    fun `read nothing from null`() {
+    fun `read something then read everything then read nothing from null`() {
         createEtlConfiguration(null)
-        val stream = transaction(DBCache.get(dataStoreName).database) {
+
+        var stream = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            return@transaction etl.toXESInputStream().take(100).toList()
+        }
+        assertFalse { stream.isEmpty() }
+
+        stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
             return@transaction etl.toXESInputStream().toList()
         }
+        assertEquals(1, stream.filterIsInstance<Log>().size)
+        assertEquals(expectedNumberOfTraces, stream.filterIsInstance<Trace>().mapToSet { it.identityId }.size)
+        assertEquals(expectedNumberOfEvents, stream.filterIsInstance<Event>().size)
 
+        stream = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            return@transaction etl.toXESInputStream().toList()
+        }
         assertTrue { stream.isEmpty() }
     }
 
