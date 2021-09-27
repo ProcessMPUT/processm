@@ -2,7 +2,6 @@ package processm.etl
 
 import org.testcontainers.containers.Db2Container
 import org.testcontainers.ext.ScriptUtils
-import org.testcontainers.jdbc.JdbcDatabaseDelegate
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.shaded.org.apache.commons.io.IOUtils
 import org.testcontainers.utility.DockerImageName
@@ -41,6 +40,7 @@ import java.nio.charset.StandardCharsets
  *
  * Connecting to a DB2 instance and issuing SQL commands seems to be an issue in and of itself.
  * IBM Data Studio, while being very large, rather crude, and requiring free registration with IBM to obtain and seems to work.
+ * DBeaver also seems to do the trick using DB2 LUW driver.
  *
  * To alleviate the issue with inserts taking a long time, [groupInserts] was implemented. It is a very crude and naive
  * approach to group multiple consecutive inserts to the same table into a single, long insert with multiple rows.
@@ -65,6 +65,14 @@ class Db2Environment(
                 "postgres",
                 "sakila_password",
                 "sakila/db2-sakila-db/database.tgz"
+            )
+
+        fun getGSDB(): Db2Environment =
+            Db2Environment(
+                "GSDB",
+                "sales",
+                "salespw",
+                "db2/gsdb/database.tgz"
             )
 
         /**
@@ -125,15 +133,17 @@ class Db2Environment(
     /**
      * Never, ever call this function as a part of a normal workflow. For more information see the class documentation
      */
-    fun prepare(schemaScript: String, insertScript: String, persistentDatabaseTargetPath: String) {
+    fun prepare(
+        configurator: DBMSEnvironmentConfigurator<Db2Environment, Db2Container>,
+        persistentDatabaseTargetPath: String
+    ) {
         val container = initContainer()
-            .withInitScript(schemaScript)
 
+        configurator.beforeStart(this, container)
         Startables.deepStart(listOf(container)).join()
-        JdbcDatabaseDelegate(container, "").execute(groupInserts(insertScript), insertScript, false, true)
+        configurator.afterStart(this, container)
 
         container.execInContainer("bash", "/packdb.sh")
-
         container.copyFileFromContainer("/database.tgz", persistentDatabaseTargetPath)
 
         container.stop()
