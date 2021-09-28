@@ -13,7 +13,8 @@ abstract class DBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
     val password: String
 ) : AutoCloseable {
     private val containerDelegate = lazy { initAndRun() }
-    private val container: Container by containerDelegate
+    private val container: Container
+        get() = containerDelegate.value
 
     protected abstract fun initContainer(): Container
 
