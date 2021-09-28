@@ -116,15 +116,6 @@ class Db2SalesTest {
         }
     }
 
-    @Ignore
-    @Test
-    fun test() {
-        val env = Db2Environment.getGSDB()
-        println(env.jdbcUrl)
-        Thread.sleep(Long.MAX_VALUE)
-    }
-
-
     private val expectedNumberOfTraces = 53267
     private val expectedNumberOfEvents = 562806
     private val newOrderId = 9000000

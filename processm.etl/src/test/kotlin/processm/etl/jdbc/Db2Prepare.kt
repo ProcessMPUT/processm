@@ -9,7 +9,7 @@ import processm.etl.Db2Environment
 import java.io.File
 
 fun prepare(db2env: Db2Environment, configurator: DBMSEnvironmentConfigurator<Db2Environment, Db2Container>) {
-    val tmpfile = File.createTempFile("db2", ".tgz")
+    val tmpfile = File.createTempFile("db2", ".tar.xz")
     db2env.prepare(configurator, tmpfile.absolutePath)
     println()
     println()

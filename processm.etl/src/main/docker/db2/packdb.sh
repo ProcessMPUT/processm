@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd /database
-tar czf /database.tgz data config 
+tar c data config | xz --compress -9 >/database.tar.xz

@@ -64,7 +64,7 @@ class Db2Environment(
                 "sakila",
                 "postgres",
                 "sakila_password",
-                "sakila/db2-sakila-db/database.tgz"
+                "sakila/db2-sakila-db/database.tar.xz"
             )
 
         fun getGSDB(): Db2Environment =
@@ -72,7 +72,7 @@ class Db2Environment(
                 "GSDB",
                 "sales",
                 "salespw",
-                "db2/gsdb/database.tgz"
+                "db2/gsdb/database.tar.xz"
             )
 
         /**
@@ -144,7 +144,7 @@ class Db2Environment(
         configurator.afterStart(this, container)
 
         container.execInContainer("bash", "/packdb.sh")
-        container.copyFileFromContainer("/database.tgz", persistentDatabaseTargetPath)
+        container.copyFileFromContainer("/database.tar.xz", persistentDatabaseTargetPath)
 
         container.stop()
     }
@@ -153,7 +153,7 @@ class Db2Environment(
         val container = initContainer()
             .withCopyFileToContainer(
                 MountableFile.forClasspathResource(persistentDatabaseResourcePath),
-                "/database.tgz"
+                "/database.tar.xz"
             )
 
         Startables.deepStart(listOf(container)).join()

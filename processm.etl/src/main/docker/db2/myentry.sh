@@ -1,10 +1,10 @@
 #!/bin/bash
 
-if [ -e /database.tgz ]
+if [ -e /database.tar.xz ]
 then
 	mkdir /database
 	cd /database
-	tar xvf /database.tgz
+	tar xvf /database.tar.xz
 fi
 
 /var/db2_setup/lib/setup_db2_instance.sh
