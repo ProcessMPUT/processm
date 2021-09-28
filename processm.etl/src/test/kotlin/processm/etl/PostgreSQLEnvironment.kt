@@ -10,7 +10,7 @@ class PostgreSQLEnvironment(
     password: String,
     val schemaScript: String,
     val insertScript: String
-) : DBMSEnvironment<PostgreSQLContainer<*>>(
+) : AbstractDBMSEnvironment<PostgreSQLContainer<*>>(
     dbName,
     user,
     password

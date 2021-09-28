@@ -50,7 +50,7 @@ class Db2Environment(
     user: String,
     password: String,
     val persistentDatabaseResourcePath: String
-) : DBMSEnvironment<Db2Container>(
+) : AbstractDBMSEnvironment<Db2Container>(
     dbName,
     user,
     password

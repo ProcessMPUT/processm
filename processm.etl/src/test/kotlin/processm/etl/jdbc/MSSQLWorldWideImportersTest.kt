@@ -23,7 +23,7 @@ import java.util.*
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class MSSQWorldWideImportersTest {
+class MSSQLWorldWideImportersTest {
 
     // region environment
     private val logger = logger()

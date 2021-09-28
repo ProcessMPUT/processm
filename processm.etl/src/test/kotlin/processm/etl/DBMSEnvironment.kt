@@ -4,14 +4,24 @@ import org.testcontainers.containers.JdbcDatabaseContainer
 import java.sql.Connection
 
 /**
+ * A common interface for external databases uses by tests in [processm.etl.jdbc]
+ */
+interface DBMSEnvironment<Container : JdbcDatabaseContainer<*>> : AutoCloseable {
+    val user: String
+    val password: String
+    val jdbcUrl: String
+    fun connect(): Connection
+}
+
+/**
  * The base class for simulating external databases. The derived classes implement the specifics of concrete database
  * management systems.
  */
-abstract class DBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
+abstract class AbstractDBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
     val dbName: String,
-    val user: String,
-    val password: String
-) : AutoCloseable {
+    override val user: String,
+    override val password: String
+) : DBMSEnvironment<Container> {
     private val containerDelegate = lazy { initAndRun() }
     private val container: Container
         get() = containerDelegate.value
@@ -20,10 +30,10 @@ abstract class DBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
 
     protected abstract fun initAndRun(): Container
 
-    val jdbcUrl: String
+    override val jdbcUrl: String
         get() = container.jdbcUrl
 
-    fun connect(): Connection = container.createConnection("")
+    override fun connect(): Connection = container.createConnection("")
 
     override fun close() {
         if (containerDelegate.isInitialized())

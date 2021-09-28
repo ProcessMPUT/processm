@@ -1,11 +1,13 @@
 package processm.etl
 
 import org.testcontainers.containers.OracleContainer
+import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
 import java.io.File
+import java.sql.Connection
 
 
 /**
@@ -15,73 +17,15 @@ class MyOracleContainer(dockerImageName: DockerImageName) : OracleContainer(dock
 
     private var _sid: String = "xe"
 
-    fun withSid(sid: String) {
+    fun withSid(sid: String): MyOracleContainer {
         _sid = sid
+        return this
     }
 
     override fun getSid(): String = _sid
 
     override fun getJdbcUrl(): String = "jdbc:oracle:thin:$username/$password@$host:$oraclePort/$sid"
 }
-
-class OracleScriptConfigurator(private vararg val scripts: String) :
-    DBMSEnvironmentConfigurator<OracleEnvironment, MyOracleContainer> {
-    private val scriptsInContainer = ArrayList<String>()
-    override fun beforeStart(environment: OracleEnvironment, container: MyOracleContainer) {
-        for ((idx, script) in scripts.withIndex()) {
-            val path = "/tmp/$idx.sql"
-            container.withCopyFileToContainer(MountableFile.forClasspathResource(script), path)
-            scriptsInContainer.add(path)
-        }
-    }
-
-    override fun afterStart(environment: OracleEnvironment, container: MyOracleContainer) {
-        for (script in scriptsInContainer) {
-            container.execInContainer(
-                "sqlplus",
-                "${container.username}/${container.password}@localhost:1521/${container.sid}",
-                "@$script"
-            )
-        }
-    }
-}
-
-class OracleSampleConfigurator : DBMSEnvironmentConfigurator<OracleEnvironment, MyOracleContainer> {
-    private val scriptPath = "/tmp/script.sh"
-
-    override fun beforeStart(environment: OracleEnvironment, container: MyOracleContainer) {
-        container.withCopyFileToContainer(
-            MountableFile.forClasspathResource("oracle/db-sample-schemas-18c.tar.gz"),
-            "/tmp/sample.tar.gz"
-        )
-        val f = File.createTempFile("processm", null)
-        f.deleteOnExit()
-        val connectString = "localhost:1521/xepdb1"
-        val sqlplus = "sqlplus 'SYS/${container.password}@$connectString'  AS SYSDBA"
-        f.writeText(
-            """
-#!/bin/sh
-cd /opt/oracle/product/18c/dbhomeXE/md/admin/
-# The following two lines enable Oracle Spatial, necessary for the OE schema
-$sqlplus '@mdprivs.sql'
-$sqlplus '@mdinst.sql'
-cd /tmp
-tar xf sample.tar.gz
-cd db-sample-schemas-18c
-ln -s . __SUB__CWD__
-$sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oepw pmpw ixpw shpw bipw example temp /tmp/logs '$connectString'
-            """.trimIndent()
-        )
-        container.withCopyFileToContainer(MountableFile.forHostPath(f.absolutePath), scriptPath)
-    }
-
-    override fun afterStart(environment: OracleEnvironment, container: MyOracleContainer) {
-        container.execInContainer("sh", scriptPath)
-        container.withSid("xepdb1")
-    }
-
-}
-
 
 /**
  * A test environment with Oracle Express.
@@ -95,12 +39,9 @@ $sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oe
  * Grouping multiple inserts in a similar way as in [Db2Environment] doesn't seem to help, to the point of being actually slower.
  */
 class OracleEnvironment(
-    val configurator: DBMSEnvironmentConfigurator<OracleEnvironment, MyOracleContainer>
-) : DBMSEnvironment<MyOracleContainer>(
-    "",
-    DEFAULT_USER,
-    DEFAULT_PASSWORD
-) {
+    val container: MyOracleContainer,
+    val sid: String = "xe"
+) : DBMSEnvironment<MyOracleContainer> {
     companion object {
 
         private const val DEFAULT_USER = "SYSTEM"
@@ -109,38 +50,114 @@ class OracleEnvironment(
 
         private val logger = logger()
 
-        fun getSakila(): OracleEnvironment =
-            OracleEnvironment(
-                OracleScriptConfigurator(
-                    "sakila/oracle-sakila-db/oracle-sakila-schema.sql",
-                    "sakila/oracle-sakila-db/oracle-sakila-insert-data.sql"
-                )
+        fun createContainer(): MyOracleContainer {
+            val imageName = DockerImageName
+                .parse("processm/oracle:latest")
+                .asCompatibleSubstituteFor("container-registry.oracle.com/database/express:18.4.0-xe")
+            val container = MyOracleContainer(imageName)
+            container
+                .withUsername(DEFAULT_USER)
+                .withPassword(DEFAULT_PASSWORD)
+                .withStartupTimeoutSeconds(500)
+                .withCopyFileToContainer(MountableFile.forClasspathResource(EMPTY_DB_RESOURCE), "/database.tar.lzma")
+                .withLogConsumer { frame ->
+                    logger.info(frame?.utf8String?.trim())
+                }
+            return container
+        }
+
+        private val sharedContainer by lazy {
+            val container = createContainer()
+            Startables.deepStart(listOf(container)).join()
+            return@lazy container
+        }
+
+        private val sakilaEnv by lazy {
+            val env = OracleEnvironment(sharedContainer)
+            env.configureWithScripts(
+                "sakila/oracle-sakila-db/oracle-sakila-schema.sql",
+                "sakila/oracle-sakila-db/oracle-sakila-insert-data.sql"
             )
+            return@lazy env
+        }
 
-        fun getOTSampleDb(): OracleEnvironment = OracleEnvironment(OracleSampleConfigurator())
+        private val OTSampleDBEnv by lazy {
+            val env = OracleEnvironment(sharedContainer, "xepdb1")
+            env.configureSampleDB()
+            return@lazy env
+        }
+
+        fun getSakila(): OracleEnvironment = sakilaEnv
+
+        fun getOTSampleDb(): OracleEnvironment = OTSampleDBEnv
     }
 
-    override fun initAndRun(): MyOracleContainer {
-        val container = initContainer()
-        configurator.beforeStart(this, container)
-        Startables.deepStart(listOf(container)).join()
-        configurator.afterStart(this, container)
-        return container
-    }
 
-    override fun initContainer(): MyOracleContainer {
-        val imageName = DockerImageName
-            .parse("processm/oracle:latest")
-            .asCompatibleSubstituteFor("container-registry.oracle.com/database/express:18.4.0-xe")
-        val container = MyOracleContainer(imageName)
-        container
-            .withUsername(user)
-            .withPassword(password)
-            .withStartupTimeoutSeconds(500)
-            .withCopyFileToContainer(MountableFile.forClasspathResource(EMPTY_DB_RESOURCE), "/database.tar.lzma")
-            .withLogConsumer { frame ->
-                logger.info(frame?.utf8String?.trim())
+    fun configureWithScripts(vararg scripts: String) {
+        for ((idx, script) in scripts.withIndex()) {
+            val path = "/tmp/$idx.sql"
+            container.copyFileToContainer(MountableFile.forClasspathResource(script), path)
+            with(
+                container.execInContainer(
+                    "sqlplus",
+                    "${container.username}/${container.password}@localhost:1521/$sid",
+                    "@$path"
+                )
+            ) {
+                logger.debug(stdout)
+                logger.warn(stderr)
+                check(exitCode == 0)
             }
-        return container
+        }
     }
+
+    fun configureSampleDB() {
+        val scriptPath = "/tmp/script.sh"
+
+        container.copyFileToContainer(
+            MountableFile.forClasspathResource("oracle/db-sample-schemas-18c.tar.gz"),
+            "/tmp/sample.tar.gz"
+        )
+        val f = File.createTempFile("processm", null)
+        f.deleteOnExit()
+        val connectString = "localhost:1521/$sid"
+        val sqlplus = "sqlplus 'SYS/${container.password}@$connectString'  AS SYSDBA"
+        val script =
+            """
+#!/bin/sh
+cd /opt/oracle/product/18c/dbhomeXE/md/admin/
+# The following two lines enable Oracle Spatial, necessary for the OE schema
+$sqlplus '@mdprivs.sql'
+$sqlplus '@mdinst.sql'
+cd /tmp
+tar xf sample.tar.gz
+cd db-sample-schemas-18c
+ln -s . __SUB__CWD__
+$sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oepw pmpw ixpw shpw bipw example temp /tmp/logs '$connectString'
+            """.trimIndent()
+
+        container.copyFileToContainer(Transferable.of(script.toByteArray()), scriptPath)
+
+        with(container.execInContainer("sh", scriptPath)) {
+            logger.debug(stdout)
+            logger.warn(stderr)
+            check(exitCode == 0)
+        }
+    }
+
+    override val user: String
+        get() = container.username
+    override val password: String
+        get() = container.password
+
+    override fun connect(): Connection = container.withSid(sid).createConnection("")
+
+    override val jdbcUrl: String
+        get() = container.withSid(sid).jdbcUrl
+
+    override fun close() {
+        if (container !== sharedContainer)
+            container.close() // otherwise it is testcontainer's responsibility to shutdown the container
+    }
+
 }
