@@ -22,8 +22,10 @@ object ETLConfigurations : UUIDTable("etl_configurations") {
     val query = text("query")
     val refresh = long("refresh").nullable()
     val enabled = bool("enabled").default(true)
+    val batch = bool("batch").default(false)
     val logIdentityId = uuid("log_identity_id").clientDefault { UUID.randomUUID() }
     val lastEventExternalId = text("last_event_external_id").nullable()
+    val lastEventExternalIdType = integer("last_event_external_id_type").nullable()
     val lastExecutionTime = timestamp("last_execution_time").nullable()
 }
 
@@ -55,8 +57,16 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
 
     /**
      * The query retrieving events from the remote database.
+     *
+     * If it uses a binding variable, [lastEventExternalId] must be initialized to a correct value and [batch] must be set to `false`.
+     * Otherwise, [batch] must be set to `true` and [lastEventExternalId] should be set to `null`.
      */
     var query by ETLConfigurations.query
+
+    /**
+     * True if the [query] is a batch query and thus does not require a binding variable.
+     */
+    var batch by ETLConfigurations.batch
 
     /**
      * Refresh time in seconds. null when disabled.
@@ -77,6 +87,11 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
      * The id of the last fetched event from the external system.
      */
     var lastEventExternalId by ETLConfigurations.lastEventExternalId
+
+    /**
+     * The JDBC data type of [lastEventExternalId].
+     */
+    var lastEventExternalIdType by ETLConfigurations.lastEventExternalIdType
 
     /**
      * The date and time of the last execution of the ETL process associated with this configuration.

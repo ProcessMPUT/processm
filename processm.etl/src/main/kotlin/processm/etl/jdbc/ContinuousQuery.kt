@@ -1,5 +1,6 @@
 package processm.etl.jdbc
 
+import oracle.jdbc.OracleTypes
 import processm.core.helpers.forceToUUID
 import processm.core.helpers.toUUID
 import processm.core.log.*
@@ -24,6 +25,62 @@ private const val IDENTITY_ID = "identity:id"
  */
 private const val NETWORK_TIMEOUT: Int = 3 * 60 * 1000
 private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
+
+/**
+ * [SequenceWithItemAcknowledgement] provides a sequence with "transmission confirmation" - once an item is retrieved by next it is assumed
+ * to be processed (or, at least - its ownership and responsibility for it were now transferred outside the sequence), and
+ * a callback [itemConsumed] is called. [T] is the type for items in the underlying sequence, while [U] is an arbitrary type
+ * of auxiliary data to be passed to the callback.
+ */
+class SequenceWithItemAcknowledgement<T, U>(
+    private val base: Sequence<Pair<T, U>>,
+    private val itemConsumed: (Pair<T, U>) -> Unit
+) :
+    Sequence<T> {
+
+    private class IteratorWithAcknowledgment<T, U>(
+        private val base: Iterator<Pair<T, U>>,
+        private val itemConsumed: (Pair<T, U>) -> Unit
+    ) :
+        Iterator<T> {
+        override fun hasNext(): Boolean = base.hasNext()
+
+        override fun next(): T = base.next().also(itemConsumed).first
+    }
+
+    override fun iterator(): Iterator<T> = IteratorWithAcknowledgment(base.iterator(), itemConsumed)
+}
+
+/**
+ * [SequenceWithCompletionAcknowledgement] provides a sequence with "transmission confirmation" - once the whole sequence
+ * is retrieved by next it is assumed to be processed (or, at least - its ownership and responsibility for it were now
+ * transferred outside the sequence), and the callback [sequenceConsumed] is called, with the last item in the sequence
+ * as the argument. [T] is the type for items in the underlying sequence, while [U] is an arbitrary type of auxiliary
+ * data to be passed to the callback.
+ */
+class SequenceWithCompletionAcknowledgement<T, U>(
+    private val base: Sequence<Pair<T, U>>,
+    private val sequenceConsumed: (Pair<T, U>) -> Unit
+) :
+    Sequence<T> {
+
+    private class IteratorWithAcknowledgment<T, U>(
+        private val base: Iterator<Pair<T, U>>,
+        private val sequenceConsumed: (Pair<T, U>) -> Unit
+    ) :
+        Iterator<T> {
+        override fun hasNext(): Boolean = base.hasNext()
+
+        override fun next(): T {
+            val value = base.next()
+            if (!base.hasNext())
+                sequenceConsumed(value)
+            return value.first
+        }
+    }
+
+    override fun iterator(): Iterator<T> = IteratorWithAcknowledgment(base.iterator(), sequenceConsumed)
+}
 
 /**
  * Produces an append-type stream of [XESComponent]s based on this [ETLConfiguration]. The append-type stream consists
@@ -55,60 +112,88 @@ private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
  * ids.
  * @throws UnsupportedOperationException When the retrieved data has unsupported type.
  */
-fun ETLConfiguration.toXESInputStream(): XESInputStream = sequence {
-    DriverManager.getConnection(jdbcUri, user, password)
-        .use { connection ->
-            try {
-                connection.setNetworkTimeout(ForkJoinPool.commonPool(), NETWORK_TIMEOUT)
-            } catch (e: SQLFeatureNotSupportedException) {
-                logger().error(e.message, e)
-            }
-            connection.prepareStatement(query).use { stmt ->
-                if (lastEventExternalId !== null)
-                    stmt.setObject(1, lastEventExternalId)
+fun ETLConfiguration.toXESInputStream(): XESInputStream {
+    if (batch && lastEventExternalId !== null)
+        return emptySequence()
+    val baseSequence = sequence {
+        DriverManager.getConnection(jdbcUri, user, password)
+            .use { connection ->
+                try {
+                    connection.setNetworkTimeout(ForkJoinPool.commonPool(), NETWORK_TIMEOUT)
+                } catch (e: SQLFeatureNotSupportedException) {
+                    logger().error(e.message, e)
+                }
+                connection.prepareStatement(query).use { stmt ->
+                    if (!batch)
+                        stmt.setObject(1, castToSQLType(lastEventExternalId, lastEventExternalIdType))
 
-                lastExecutionTime = Instant.now()
-                stmt.executeQuery().use { rs ->
-                    // helper structures
-                    val columnMap = columnToAttributeMap.toMap()
-                    val traceIdAttrDesc = columnToAttributeMap.first { it.traceId }
-                    val eventIdAttrDesc = columnToAttributeMap.first { it.eventId }
+                    lastExecutionTime = Instant.now()
+                    stmt.executeQuery().use { rs ->
+                        // helper structures
+                        val columnMap = columnToAttributeMap.toMap()
+                        val traceIdAttrDesc = columnToAttributeMap.first { it.traceId }
+                        val eventIdAttrDesc = columnToAttributeMap.first { it.eventId }
 
-                    // process rows
-                    var lastLog: Log? = null
-                    var lastTrace: Trace? = null
-                    while (rs.next()) {
-                        val attributes = toAttributes(rs, columnMap)
-                        val traceId =
-                            requireNotNull(attributes[traceIdAttrDesc.target]?.value) { "Trace id is not set in an event." }
-                        val eventId =
-                            requireNotNull(attributes[eventIdAttrDesc.target]?.value) { "Event id is not set in an event." }
+                        if (lastEventExternalIdType === null)
+                            lastEventExternalIdType = getAttributeType(rs, eventIdAttrDesc)
 
-                        // yield log if this is the first event
-                        if (lastLog === null) {
-                            lastLog = Log(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, logIdentityId)))
-                            yield(lastLog)
+                        // process rows
+                        var lastLog: Log? = null
+                        var lastTrace: Trace? = null
+                        while (rs.next()) {
+                            val attributes = toAttributes(rs, columnMap)
+                            val traceId =
+                                requireNotNull(attributes[traceIdAttrDesc.target]?.value) { "Trace id is not set in an event." }
+                            val eventId =
+                                requireNotNull(attributes[eventIdAttrDesc.target]?.value) { "Event id is not set in an event." }
+
+                            // yield log if this is the first event
+                            if (lastLog === null) {
+                                lastLog = Log(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, logIdentityId)))
+                                yield(lastLog to null)
+                            }
+
+                            // yield trace if changed
+                            val traceIdentityId = traceId.forceToUUID()!!
+                            if (lastTrace?.identityId != traceIdentityId) {
+                                lastTrace = Trace(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, traceIdentityId)))
+                                yield(lastTrace to null)
+                            }
+
+                            // yield event
+                            attributes.computeIfAbsent(IDENTITY_ID) { IDAttr(IDENTITY_ID, eventId.forceToUUID()!!) }
+                            yield(Event(attributes) to eventId)
                         }
-
-                        // yield trace if changed
-                        val traceIdentityId = traceId.forceToUUID()!!
-                        if (lastTrace?.identityId != traceIdentityId) {
-                            lastTrace = Trace(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, traceIdentityId)))
-                            yield(lastTrace)
-                        }
-
-                        // yield event
-                        attributes.computeIfAbsent(IDENTITY_ID) { IDAttr(IDENTITY_ID, eventId.forceToUUID()!!) }
-                        yield(Event(attributes))
-
-                        // lastEventExternalId must be updated after the event was consumed
-                        lastEventExternalId =
-                            if (EventIdCmp.compare(lastEventExternalId, eventId.toString()) >= 0) lastEventExternalId
-                            else eventId.toString()
                     }
                 }
             }
+    }
+
+    fun ack(it: Pair<XESComponent, Any?>) {
+        if (it.first is Event) {
+            val eventId = it.second
+            checkNotNull(eventId)
+            // lastEventExternalId must be updated after the event was consumed
+            lastEventExternalId =
+                if (EventIdCmp(lastEventExternalIdType).compare(lastEventExternalId, eventId.toString()) >= 0)
+                    lastEventExternalId
+                else
+                    eventId.toString()
         }
+    }
+    return if (batch)
+        SequenceWithCompletionAcknowledgement(baseSequence, ::ack)
+    else
+        SequenceWithItemAcknowledgement(baseSequence, ::ack)
+}
+
+private fun getAttributeType(rs: ResultSet, attributeMap: ETLColumnToAttributeMap): Int? {
+    val metadata = rs.metaData
+    for (colIndex in 1..metadata.columnCount) {
+        if (metadata.getColumnName(colIndex) == attributeMap.sourceColumn)
+            return metadata.getColumnType(colIndex)
+    }
+    return null
 }
 
 private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttributeMap>) =
@@ -124,7 +209,7 @@ private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttrib
                     IntAttr(attrName, rs.getLong(colIndex))
                 Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
                     RealAttr(attrName, rs.getDouble(colIndex))
-                Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE ->
+                Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE, OracleTypes.TIMESTAMPLTZ ->
                     rs.getTimestamp(colIndex, gmtCalendar)?.let { DateTimeAttr(attrName, it.toInstant()) }
                 Types.BIT, Types.BOOLEAN ->
                     BoolAttr(attrName, rs.getBoolean(colIndex))
@@ -139,7 +224,7 @@ private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttrib
         }
     }
 
-private object EventIdCmp : Comparator<String> {
+private class EventIdCmp(private val type: Int?) : Comparator<String> {
     override fun compare(o1: String?, o2: String?): Int {
         if (o1 === null && o2 !== null)
             return -1
@@ -151,15 +236,31 @@ private object EventIdCmp : Comparator<String> {
         o1!!
         o2!!
 
-        return try {
-            o1.toLong().compareTo(o2.toLong())
-        } catch (_: NumberFormatException) {
-            try {
-                o1.toUUID()!!.compareTo(o2.toUUID())
-            } catch (_: IllegalArgumentException) {
-                o1.compareTo(o2)
-            }
+        return when (type) {
+            Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
+                o1.toLong().compareTo(o2.toLong())
+            Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
+                o1.toDouble().compareTo(o2.toDouble())
+            null, Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
+                try {
+                    o1.toUUID()!!.compareTo(o2.toUUID())
+                } catch (_: IllegalArgumentException) {
+                    o1.compareTo(o2)
+                }
+            else -> throw UnsupportedOperationException("Unsupported value type $type for expression eventId.")
         }
     }
 
+}
+
+private fun castToSQLType(value: String?, type: Int?): Any? {
+    return when (type) {
+        null, Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
+            value
+        Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
+            value?.toLong()
+        Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
+            value?.toDouble()
+        else -> throw UnsupportedOperationException("Unsupported value type $type for expression eventId.")
+    }
 }

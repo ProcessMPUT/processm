@@ -1,20 +1,19 @@
 package processm.etl
 
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 
 class PostgreSQLEnvironment(
     dbName: String,
     user: String,
     password: String,
-    schemaScript: String,
-    insertScript: String
-) : DBMSEnvironment<PostgreSQLContainer<*>>(
+    val schemaScript: String,
+    val insertScript: String
+) : AbstractDBMSEnvironment<PostgreSQLContainer<*>>(
     dbName,
     user,
-    password,
-    schemaScript,
-    insertScript
+    password
 ) {
     companion object {
         fun getSakila(): PostgreSQLEnvironment =
@@ -25,6 +24,25 @@ class PostgreSQLEnvironment(
                 "sakila/postgres-sakila-db/postgres-sakila-schema.sql",
                 "sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
             )
+    }
+
+    override fun initAndRun(): PostgreSQLContainer<*> {
+        val container = initContainer()
+            .withDatabaseName(dbName)
+            .withUsername(user)
+            .withPassword(password)
+            .withInitScript(schemaScript)
+        Startables.deepStart(listOf(container)).join()
+
+        container.createConnection("").use { connection ->
+            connection.autoCommit = false
+            connection.createStatement().use { s ->
+                s.execute(this::class.java.classLoader.getResource(insertScript)!!.readText())
+            }
+            connection.commit()
+        }
+
+        return container as PostgreSQLContainer<*>
     }
 
     override fun initContainer(): PostgreSQLContainer<*> {

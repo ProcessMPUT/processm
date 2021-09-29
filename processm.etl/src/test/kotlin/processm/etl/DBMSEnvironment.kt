@@ -1,48 +1,42 @@
 package processm.etl
 
 import org.testcontainers.containers.JdbcDatabaseContainer
-import org.testcontainers.lifecycle.Startables
 import java.sql.Connection
+
+/**
+ * A common interface for external databases uses by tests in [processm.etl.jdbc]
+ */
+interface DBMSEnvironment<Container : JdbcDatabaseContainer<*>> : AutoCloseable {
+    val user: String
+    val password: String
+    val jdbcUrl: String
+    fun connect(): Connection
+}
 
 /**
  * The base class for simulating external databases. The derived classes implement the specifics of concrete database
  * management systems.
  */
-abstract class DBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
+abstract class AbstractDBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
     val dbName: String,
-    val user: String,
-    val password: String,
-    val schemaScript: String,
-    val insertScript: String
-) : AutoCloseable {
-    private val container: Container = initAndRun()
+    override val user: String,
+    override val password: String
+) : DBMSEnvironment<Container> {
+    private val containerDelegate = lazy { initAndRun() }
+    private val container: Container
+        get() = containerDelegate.value
 
     protected abstract fun initContainer(): Container
 
-    private fun initAndRun(): Container {
-        val container = initContainer()
-            .withDatabaseName(dbName)
-            .withUsername(user)
-            .withPassword(password)
-            .withInitScript(schemaScript)
-        Startables.deepStart(listOf(container)).join()
+    protected abstract fun initAndRun(): Container
 
-        container.createConnection("").use { connection ->
-            connection.autoCommit = false
-            connection.createStatement().use { s ->
-                s.execute(this::class.java.classLoader.getResource(insertScript)!!.readText())
-            }
-            connection.commit()
-        }
+    override val jdbcUrl: String
+        get() = container.jdbcUrl
 
-        return container as Container
-    }
-
-    val jdbcUrl: String = container.jdbcUrl
-
-    fun connect(): Connection = container.createConnection("")
+    override fun connect(): Connection = container.createConnection("")
 
     override fun close() {
-        container.close()
+        if (containerDelegate.isInitialized())
+            container.close()
     }
 }
