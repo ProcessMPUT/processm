@@ -42,6 +42,7 @@
         <module>processm.webui</module>
         <module>processm.launcher</module>
         <module>processm.experimental</module>
+        <module>processm.tools</module>
     </modules>
 
     <properties>
