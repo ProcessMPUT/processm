@@ -6,7 +6,7 @@ import java.time.Instant
 import kotlin.random.Random
 
 
-class WWIPuchaseOrderBussinessCase(
+class WWIPuchaseOrderBusinessCase(
     val purchaseOrderID: Int,
     val procedures: WWIConnectionPool,
     var now: () -> Instant = Instant::now,

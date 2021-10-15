@@ -36,6 +36,16 @@ object Configuration {
         private set
     var purchaseOrderRandomSeedMultiplier = 0xBEEF600DL
         private set
+    var customerOrderBusinessCaseSuccessfulDeliveryProbabilty = 0.5
+        private set
+    var customerOrderBusinessCasePaymentBeforeDeliveryProbability = 0.5
+        private set
+    var customerOrderBusinessCaseMaxDelay = 10
+        private set
+    var customerOrderBusinessCaseAddLinesProbability = 0.1
+        private set
+    var customerOrderBusinessCaseRemoveLineProbability = 0.0
+        private set
 
     // init must be the last in the class body to ensure all the properties were already initialized
     init {
@@ -58,6 +68,12 @@ object Configuration {
         require(clockSpeedMultiplier >= 1)
         require(customerOrderMinStepLength <= customerOrderMaxStepLength)
         require(purchaseOrderMinStepLength <= purchaseOrderMaxStepLength)
+        require(customerOrderBusinessCaseSuccessfulDeliveryProbabilty in 0.0..1.0)
+        require(customerOrderBusinessCasePaymentBeforeDeliveryProbability in 0.0..1.0)
+        require(customerOrderBusinessCaseMaxDelay >= 1)
+        require(customerOrderBusinessCaseAddLinesProbability in 0.0..1.0)
+        require(customerOrderBusinessCaseRemoveLineProbability in 0.0..1.0)
+        require(customerOrderBusinessCaseAddLinesProbability + customerOrderBusinessCaseRemoveLineProbability < 1.0)
         require(this::dbURL.isInitialized) { "$prefix.dbURL must be set" }
         require(this::dbUser.isInitialized) { "$prefix.dbUser must be set" }
         require(this::dbPassword.isInitialized) { "$prefix.dbPassword must be set" }

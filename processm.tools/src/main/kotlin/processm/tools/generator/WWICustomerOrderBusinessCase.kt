@@ -8,7 +8,7 @@ import kotlin.math.min
 import kotlin.random.Random
 
 
-class WWICustomerOrderBussinessCase(
+class WWICustomerOrderBusinessCase(
     val procedures: WWIConnectionPool,
     var now: () -> Instant = Instant::now,
     var rng: Random = Random.Default
@@ -48,6 +48,20 @@ class WWICustomerOrderBussinessCase(
         inverseGeometricCDF(rng.nextDouble() + eps, 5, 0.9)
     }
 
+    var addLinesProbability: Double = .1
+        set(value) {
+            require(0 <= value)
+            require(value + removeLineProbability < 1)
+            field = value
+        }
+
+    var removeLineProbability: Double = 0.0
+        set(value) {
+            require(0 <= value)
+            require(value + addLinesProbability < 1)
+            field = value
+        }
+
     private suspend fun startOrderProcessing(): BussinessCaseStep {
         check(currentOrderID === null)
         check(ordersToComplete.isNotEmpty())
@@ -62,6 +76,34 @@ class WWICustomerOrderBussinessCase(
         return BussinessCaseStep(::pick)
     }
 
+    private suspend fun pickOrModify(): BussinessCaseStep {
+        val p = rng.nextDouble()
+        if (addLinesProbability > 0 && p <= addLinesProbability)
+            return BussinessCaseStep(::addLines)
+        if (removeLineProbability > 0 && p - addLinesProbability <= removeLineProbability)
+            return BussinessCaseStep(::removeLineIfPossible)
+        val delay = if (nFailedPicks > 0) rng.nextInt(min(nFailedPicks, maxDelay)).toLong() else 1L
+        return BussinessCaseStep(::pick, delay)
+    }
+
+    private suspend fun addLines(): BussinessCaseStep {
+        val orderID = currentOrderID
+        checkNotNull(orderID)
+        val n = orderSize(rng)
+        logger.debug("Adding $n new lines to $orderID")
+        procedures.addOrderLinesToCustomerOrder(Timestamp.from(now()), Timestamp.from(now()), n, orderID)
+        return pickOrModify()
+    }
+
+    private suspend fun removeLineIfPossible(): BussinessCaseStep {
+        val orderID = currentOrderID
+        checkNotNull(orderID)
+        logger.debug("Trying to remove a line from $orderID")
+        val orderLineID = procedures.removeRandomLineFromCustomerOrder(orderID)
+        logger.debug("Removed line ID $orderLineID")
+        return pickOrModify()
+    }
+
     private suspend fun pick(): BussinessCaseStep {
         val orderID = currentOrderID
         checkNotNull(orderID)
@@ -70,11 +112,11 @@ class WWICustomerOrderBussinessCase(
         if (pickedSomething) {
             pickedAnything = true
             nFailedPicks = 0
-            return BussinessCaseStep(::pick)
+            return pickOrModify()
         }
         if (!pickedAnything) {
             nFailedPicks++
-            return BussinessCaseStep(::pick, rng.nextInt(min(nFailedPicks, maxDelay)).toLong())
+            return pickOrModify()
         }
         return BussinessCaseStep(::backorder)
     }

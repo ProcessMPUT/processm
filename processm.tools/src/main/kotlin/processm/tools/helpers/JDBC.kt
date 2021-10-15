@@ -83,6 +83,23 @@ interface CoroutinesConnectionPool {
 
     /**
      * Creates a function that wraps calling the stored procedure named [name] by first acquiring a connection to the DB
+     * using [invoke]. The procedure should expect two parameters:
+     * 1. an input parameter of the type [P1]
+     * 2. an output parameter of the type [R]
+     *
+     * The created function returns the value of the output parameter.
+     */
+    fun <P1, R> wrapStoredProcedure2(type: Int, name: String): suspend (P1) -> R =
+        { p1 ->
+            this { connection ->
+                val out = Out<R>(type)
+                connection.call(name, listOf(p1, out))
+                out.value as R
+            }
+        }
+
+    /**
+     * Creates a function that wraps calling the stored procedure named [name] by first acquiring a connection to the DB
      * using [invoke]. The procedure should expect three parameters:
      * 1. an input parameter of the type [P1]
      * 2. an input parameter of the type [P2]
@@ -114,6 +131,26 @@ interface CoroutinesConnectionPool {
             this { connection ->
                 val out = Out<R>(type)
                 connection.call(name, listOf(p1, p2, p3, out))
+                out.value as R
+            }
+        }
+
+    /**
+     * Creates a function that wraps calling the stored procedure named [name] by first acquiring a connection to the DB
+     * using [invoke]. The procedure should expect four parameters:
+     * 1. an input parameter of the type [P1]
+     * 2. an input parameter of the type [P2]
+     * 3. an input parameter of the type [P3]
+     * 4. an input parameter of the type [P4]
+     * 5. an output parameter of the type [R]
+     *
+     * The created function returns the value of the output parameter.
+     */
+    fun <P1, P2, P3, P4, R> wrapStoredProcedure5(type: Int, name: String): suspend (P1, P2, P3, P4) -> R =
+        { p1, p2, p3, p4 ->
+            this { connection ->
+                val out = Out<R>(type)
+                connection.call(name, listOf(p1, p2, p3, p4, out))
                 out.value as R
             }
         }

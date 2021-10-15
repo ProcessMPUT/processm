@@ -40,11 +40,16 @@ suspend fun main() {
             repeat(nCustomerOrders) { i ->
                 async {
                     val gen =
-                        WWICustomerOrderBussinessCase(
+                        WWICustomerOrderBusinessCase(
                             pool,
                             clock::invoke,
                             Random(i * customerOrderRandomSeedMultiplier)
                         )
+                    gen.addLinesProbability = customerOrderBusinessCaseAddLinesProbability
+                    gen.maxDelay = customerOrderBusinessCaseMaxDelay
+                    gen.paymentBeforeDeliveryProbability = customerOrderBusinessCasePaymentBeforeDeliveryProbability
+                    gen.removeLineProbability = customerOrderBusinessCaseRemoveLineProbability
+                    gen.successfulDeliveryProbabilty = customerOrderBusinessCaseSuccessfulDeliveryProbabilty
                     while (!shouldTerminate.get())
                         gen(rng.nextLong(customerOrderMinStepLength, customerOrderMaxStepLength))
                 }
@@ -53,7 +58,7 @@ suspend fun main() {
                 while (!shouldTerminate.get()) {
                     delay(delayBetweenPlacingPurchaseOrders)
                     for (purchaseOrderID in pool.placePurchaseOrders(Timestamp.from(clock()))) async {
-                        val gen = WWIPuchaseOrderBussinessCase(
+                        val gen = WWIPuchaseOrderBusinessCase(
                             purchaseOrderID,
                             pool,
                             clock::invoke,
