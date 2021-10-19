@@ -58,6 +58,7 @@ export default class LogsService extends BaseService {
         new Array<Log>()
       );
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const blob = new Blob([response.data as any], { type: accept });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -65,6 +66,17 @@ export default class LogsService extends BaseService {
       link.click();
       URL.revokeObjectURL(link.href);
       return new Array<Log>();
+    }
+  }
+
+  public async removeLog(
+    dataStoreId: string,
+    identityId: string
+  ): Promise<void> {
+    const response = await this.logsApi.removeLog(dataStoreId, identityId);
+
+    if (response.status != 204) {
+      throw new Error(response.statusText);
     }
   }
 }

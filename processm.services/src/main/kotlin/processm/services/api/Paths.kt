@@ -124,6 +124,53 @@ object Paths {
     @Location("/data-stores/{dataStoreId}/logs")
     class Logs(val dataStoreId: UUID)
 
+
+    /**
+     * Log stored in [dataStoreId] and specified by [identityId].
+     *
+     * @param dataStoreId Data store ID
+     * @param identityId Log's identity:id attribute value
+     */
+    @Location("/data-stores/{dataStoreId}/logs/{identityId}")
+    class Log(val dataStoreId: UUID, val identityId: UUID)
+
+    /**
+     * Data store assigned to [organizationId] and specified by [dataStoreId].
+     *
+     * @param organizationId Organization ID
+     * @param dataStoreId Data store ID
+     */
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}")
+    class DataStore(val organizationId: UUID, val dataStoreId: UUID)
+
+    /**
+     * Data connectors assigned to [dataStoreId].
+     *
+     * @param organizationId Organization ID
+     * @param dataStoreId Data store ID
+     */
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors")
+    class DataConnectors(val organizationId: UUID, val dataStoreId: UUID)
+
+    /**
+     * Data connector assigned to [dataStoreId] and specified by [dataConnectorId].
+     *
+     * @param organizationId Organization ID
+     * @param dataStoreId Data store ID
+     * @param dataConnectorId Data connector ID
+     */
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}")
+    class DataConnector(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
+
+    /**
+     * Tests connectivity with the specified connection properties.
+     *
+     * @param organizationId Organization ID
+     * @param dataStoreId Data store ID
+     */
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/test")
+    class ConnectionTest(val organizationId: UUID, val dataStoreId: UUID)
+
     /**
      * Get details about current user
      *

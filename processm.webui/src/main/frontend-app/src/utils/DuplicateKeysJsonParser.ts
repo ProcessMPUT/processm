@@ -32,6 +32,7 @@ export default class DuplicateKeysJsonParser {
     "float",
     "int",
     "string",
+    "id",
     "classifier",
     "extension"
   ]);

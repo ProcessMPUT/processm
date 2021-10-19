@@ -1,8 +1,10 @@
 import Vue from "vue";
-import DataStore from "@/models/DataStore";
+import DataStore, { DataConnector } from "@/models/DataStore";
 import BaseService from "./BaseService";
-import { DataStore as ApiDataStore } from "@/openapi";
-import DateTimeFormat = Intl.DateTimeFormat;
+import {
+  DataStore as ApiDataStore,
+  DataConnector as ApiDataConnector
+} from "@/openapi";
 
 export default class DataStoreService extends BaseService {
   private static get currentOrganizationId() {
@@ -22,7 +24,10 @@ export default class DataStoreService extends BaseService {
           dataStores.push({
             id: dataStore.id,
             name: dataStore.name,
-            createdAt: new Date(dataStore.createdAt!).toLocaleString()
+            createdAt:
+              dataStore.createdAt != null
+                ? new Date(dataStore.createdAt).toLocaleString()
+                : undefined
           });
         }
 
@@ -38,6 +43,28 @@ export default class DataStoreService extends BaseService {
     return dataStores;
   }
 
+  public async getDataStore(dataStoreId: string): Promise<DataStore> {
+    const response = await this.dataStoresApi.getDataStore(
+      DataStoreService.currentOrganizationId,
+      dataStoreId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+    const dataStore = response.data.data;
+
+    if (dataStore.id == null) throw new Error("DataStoreId is undefined");
+
+    return {
+      id: dataStore.id,
+      name: dataStore.name,
+      size: dataStore.size,
+      createdAt:
+        dataStore.createdAt != null
+          ? new Date(dataStore.createdAt).toLocaleString()
+          : undefined
+    };
+  }
+
   public async createDataStore(name: string): Promise<DataStore> {
     const response = await this.dataStoresApi.createDataStore(
       DataStoreService.currentOrganizationId,
@@ -51,10 +78,134 @@ export default class DataStoreService extends BaseService {
     this.ensureSuccessfulResponseCode(response);
     const dataStore = response.data.data;
 
+    if (dataStore.id == null) throw new Error("DataStoreId is undefined");
+
     return {
-      id: dataStore.id!,
+      id: dataStore.id,
       name: dataStore.name,
-      createdAt: new Date(dataStore.createdAt!).toLocaleString()
+      createdAt:
+        dataStore.createdAt != null
+          ? new Date(dataStore.createdAt).toLocaleString()
+          : undefined
     };
+  }
+
+  public async updateDataStore(dataStoreId: string, dataStore: DataStore) {
+    const response = await this.dataStoresApi.updateDataStore(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      { data: dataStore }
+    );
+
+    return response.status == 204;
+  }
+
+  public async removeDataStore(dataStoreId: string): Promise<void> {
+    const response = await this.dataStoresApi.deleteDataStore(
+      DataStoreService.currentOrganizationId,
+      dataStoreId
+    );
+
+    this.ensureSuccessfulResponseCode(response, 204, 404);
+  }
+
+  public async getDataConnectors(
+    dataStoreId: string
+  ): Promise<Array<DataConnector>> {
+    const response = await this.dataStoresApi.getDataConnectors(
+      DataStoreService.currentOrganizationId,
+      dataStoreId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+
+    return response.data.data.reduce(
+      (dataConnectors: DataConnector[], dataConnector: ApiDataConnector) => {
+        if (dataConnector.id != null) {
+          dataConnectors.push({
+            id: dataConnector.id,
+            name: dataConnector.name || "",
+            lastConnectionStatus: dataConnector.lastConnectionStatus,
+            properties: dataConnector.properties || {}
+          });
+        }
+
+        return dataConnectors;
+      },
+      []
+    );
+  }
+
+  public async createDataConnector(
+    dataStoreId: string,
+    dataConnectorName: string,
+    dataConnectorConfiguration: Record<string, string>
+  ): Promise<DataConnector> {
+    const response = await this.dataStoresApi.createDataConnector(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      {
+        data: {
+          name: dataConnectorName,
+          properties: dataConnectorConfiguration
+        }
+      }
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+    const dataConnector = response.data.data;
+
+    if (dataConnector.id == null)
+      throw new Error("DataConnectorId is undefined");
+
+    return {
+      id: dataConnector.id,
+      name: dataConnector.name || "",
+      lastConnectionStatus: dataConnector.lastConnectionStatus,
+      properties: dataConnector.properties || {}
+    };
+  }
+
+  public async updateDataConnector(
+    dataStoreId: string,
+    dataConnectorId: string,
+    dataConnector: DataConnector
+  ) {
+    const response = await this.dataStoresApi.updateDataConnector(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      dataConnectorId,
+      { data: dataConnector }
+    );
+
+    return response.status == 204;
+  }
+
+  public async removeDataConnector(
+    dataStoreId: string,
+    dataConnectorId: string
+  ): Promise<void> {
+    const response = await this.dataStoresApi.deleteDataConnector(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      dataConnectorId
+    );
+
+    this.ensureSuccessfulResponseCode(response, 204, 404);
+  }
+
+  public async testDataConnector(
+    dataStoreId: string,
+    dataConnectorConfiguration: Record<string, string>
+  ): Promise<boolean> {
+    const response = await this.dataStoresApi.testDataConnector(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      { data: { properties: dataConnectorConfiguration } }
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+
+    return response.data.data.isValid;
   }
 }

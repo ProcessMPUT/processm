@@ -4,15 +4,17 @@ import de.odysseus.staxon.json.JsonXMLConfig
 import de.odysseus.staxon.json.JsonXMLConfigBuilder
 import de.odysseus.staxon.json.JsonXMLOutputFactory
 import org.apache.commons.io.input.BoundedInputStream
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
-import processm.core.log.DBXESOutputStream
-import processm.core.log.XMLXESInputStream
-import processm.core.log.XMLXESOutputStream
+import processm.core.log.*
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
+import processm.dbmodels.models.DataStores
 import processm.services.api.models.QueryResultCollectionMessageBody
 import java.io.*
 import java.nio.charset.Charset
@@ -117,6 +119,12 @@ class LogsService {
                     zip.closeEntry()
                 }
             }
+        }
+    }
+
+    fun removeLog(dataStoreId: UUID, identityId: UUID): Unit {
+        DBCache.get(dataStoreId.toString()).getConnection().use { connection ->
+            DBLogCleaner.removeLog(connection, identityId)
         }
     }
 

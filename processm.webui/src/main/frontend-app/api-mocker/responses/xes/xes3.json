@@ -70,10 +70,16 @@
                    "@keys":"Activity"
                }
            ],
-           "string":{
+"string":[
+             {
                "@key":"creator",
-               "@value":"Fluxicon Nitro"
-           },
+               "@value":"FluxiconNitro"
+             },
+             {
+               "@key":"identity:id",
+               "@value":"aa0221ca-679e-4e22-923e-a4d33560b37d"
+             }
+         ],
            "trace":[
                {
                    "string":[
@@ -582,6 +588,10 @@
                    "@keys":"concept:name lifecycle:transition"
                }
            ],
+           "string":{
+            "@key":"identity:id",
+            "@value":"42bc9b36-0f13-4ebb-930b-a607acb4c3ee"
+          },
            "float":{
                "@key":"meta_org:different_resources_standard_deviation",
                "@value":"0.0"

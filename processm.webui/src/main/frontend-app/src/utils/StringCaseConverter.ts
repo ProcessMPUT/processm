@@ -4,3 +4,7 @@ export function kebabize(value: string): string {
     .replace(/\B([a-z0-9])([A-Z])/g, "$1-$2")
     .toLowerCase();
 }
+
+export function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}

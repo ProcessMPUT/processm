@@ -12,7 +12,7 @@ const componentsData = readResponseDataFromFile(
   "components/componentsData.json"
 );
 
-const xesQueryResult = readResponseDataFromFile("xes/xes3.json");
+const xesQueryResult = readResponseDataFromFile("xes/xes4.json");
 
 const workspaces = [
   {
@@ -30,15 +30,47 @@ const dataStores = [
     id: "6925b43f-cc6d-4320-8565-8388f2a7f6d7",
     organizationId: "1",
     name: "DataStore #1",
+    size: 10_721_032,
     createdAt: "2020-09-25T06:32:28Z",
   },
   {
     id: "0096ec34-dd2f-47ee-9ccf-c804637df4dc",
     organizationId: "1",
     name: "DataStore #2",
+    size: 102_490_001,
     createdAt: "2020-07-11T07:12:02Z",
   },
 ];
+
+const dataConnectors = {
+  "6925b43f-cc6d-4320-8565-8388f2a7f6d7": [
+    {
+      id: "7d28101b-5ef9-4b20-b57e-aaded99cfb2c",
+      name: "PostgreSQL #1",
+      lastConnectionStatus: false,
+      properties: {
+        "connection-type": "PostgreSql",
+        hostname: "80.10.22.100",
+      },
+    },
+    {
+      id: "aa8f65b4-7f93-44c7-a27c-7fc24cf6d1fb",
+      name: "PostgreSQL #2",
+      lastConnectionStatus: null,
+      properties: {
+        "connection-type": "PostgreSql",
+        hostname: "db.example.com",
+      },
+    },
+    {
+      id: "cdf13443-5449-4981-9755-a83768d9e855",
+      name: "MongoDB connection",
+      lastConnectionStatus: true,
+      properties: {},
+    },
+  ],
+  "0096ec34-dd2f-47ee-9ccf-c804637df4dc": [],
+};
 
 const users = [
   {
@@ -109,6 +141,118 @@ function createUUID() {
 
 const api = {
   "GET /api/organizations/:organizationId/data-stores": { data: dataStores },
+  "GET /api/organizations/:organizationId/data-stores/:dataStoreId": (
+    req,
+    res
+  ) => {
+    const { dataStoreId } = req.params;
+
+    const dataStore = _.find(dataStores, { id: dataStoreId });
+
+    if (!dataStore) {
+      return res.status(404).json();
+    }
+
+    return res.json({ data: dataStore });
+  },
+  "PATCH /api/organizations/:organizationId/data-stores/:dataStoreId": (
+    req,
+    res
+  ) => {
+    const { dataStoreId } = req.params;
+    const dataStore = _.find(dataStores, { id: dataStoreId });
+
+    if (!dataStore) {
+      return res.status(404).json();
+    }
+
+    _.assign(dataStore, _.pick(req.body, _.keys(dataStore)));
+
+    return res.status(204).json();
+  },
+  "DELETE /api/organizations/:organizationId/data-stores/:dataStoreId": (
+    req,
+    res
+  ) => {
+    const { dataStoreId } = req.params;
+    const dataStore = _.find(dataStores, { id: dataStoreId });
+
+    if (!dataStore) {
+      return res.status(404).json();
+    }
+
+    _.remove(dataStores, { id: dataStoreId });
+
+    return res.status(204).json();
+  },
+  "GET /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors": (
+    req,
+    res
+  ) => {
+    const { dataStoreId } = req.params;
+
+    if (!_.has(dataConnectors, dataStoreId)) {
+      return res.status(404).json();
+    }
+
+    return res.json({ data: dataConnectors[dataStoreId] });
+  },
+  "PATCH /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors/:dataConnectorId": (
+    req,
+    res
+  ) => {
+    const { dataStoreId, dataConnectorId } = req.params;
+    const dataConnector = _.find(dataConnectors[dataStoreId], {
+      id: dataConnectorId,
+    });
+
+    if (dataConnector == null) {
+      return res.status(404).json();
+    }
+
+    _.assign(dataConnectors, _.pick(req.body, _.keys(dataConnector)));
+
+    return res.status(204).json();
+  },
+  "DELETE /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors/:dataConnectorId": (
+    req,
+    res
+  ) => {
+    const { dataStoreId, dataConnectorId } = req.params;
+    const dataConnector = _.find(dataConnectors[dataStoreId], {
+      id: dataConnectorId,
+    });
+
+    if (dataConnector == null) {
+      return res.status(404).json();
+    }
+
+    _.remove(dataConnectors[dataStoreId], { id: dataConnector });
+
+    return res.status(204).json();
+  },
+  "POST /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors/test": (
+    req,
+    res
+  ) => {
+    const connectionConfiguration = req.body.data;
+
+    if (_.has(connectionConfiguration, "connection-string")) {
+      return res.json({
+        data: {
+          isValid: connectionConfiguration["connection-string"].length > 3,
+        },
+      });
+    }
+
+    const isValid =
+      _.has(connectionConfiguration, "connector-name") &&
+      _.has(connectionConfiguration, "username") &&
+      _.has(connectionConfiguration, "password") &&
+      _.has(connectionConfiguration, "server");
+
+    return res.json({ data: { isValid } });
+  },
   "POST /api/organizations/:organizationId/data-stores": (req, res) => {
     const dataStore = req.body.data;
 

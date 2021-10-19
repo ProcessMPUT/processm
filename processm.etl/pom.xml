@@ -60,12 +60,12 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.21</version>
+            <version>${mysql.mysql-connector-java.version}</version>
         </dependency>
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>9.2.0.jre11</version>
+            <version>${com.microsoft.sqlserver.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>

@@ -59,6 +59,10 @@
         <org.apache.commons.commonsDbcp2.version>2.9.0</org.apache.commons.commonsDbcp2.version>
         <!-- version 42.2.15 causes strange exceptions: org.postgresql.util.PSQLException: ERROR: invalid input syntax for type bigint: "[J@53ec2968"-->
         <org.postgresql.version>42.2.14</org.postgresql.version>
+        <mysql.mysql-connector-java.version>8.0.21</mysql.mysql-connector-java.version>
+        <com.microsoft.sqlserver.version>9.2.0.jre11</com.microsoft.sqlserver.version>
+        <com.oracle.database.jdbc.version>21.1.0.0</com.oracle.database.jdbc.version>
+        <com.ibm.db2.version>11.5.6.0</com.ibm.db2.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>

@@ -50,6 +50,10 @@ export default class App extends Vue {
     this.snack.visible = true;
   }
 
+  success(text: string, timeout = 10000) {
+    this.message("success", text, timeout);
+  }
+
   info(text: string, timeout = 10000) {
     this.message("info", text, timeout);
   }

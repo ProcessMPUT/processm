@@ -24,6 +24,11 @@
 			"@scope" : "event",
 			"@keys" : "Activity"
 		} ],
+		"string":
+             {
+               "@key":"identity:id",
+               "@value":"7d065417-2fd4-4355-bb73-264b2791a934"
+             },
 		"trace" : [ {
 			"event" : {
 				"int" : {
@@ -110,6 +115,11 @@
 			"@scope" : "event",
 			"@keys" : "concept:name lifecycle:transition"
 		} ],
+		"string":
+             {
+               "@key":"identity:id",
+               "@value":"65a3ea9a-586e-4675-8c77-ebdd9ce2c40d"
+             },
 		"trace" : {
 			"event" : {
 				"int" : {
@@ -181,6 +191,11 @@
 			"@scope" : "event",
 			"@keys" : "org:resource"
 		} ],
+		"string":
+             {
+               "@key":"identity:id",
+               "@value":"aa3908c2-c437-475d-947e-a5d02ba18f94"
+             },
 		"trace" : [ {
 			"event" : {
 				"int" : {

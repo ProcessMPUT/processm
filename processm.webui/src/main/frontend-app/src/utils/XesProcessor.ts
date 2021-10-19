@@ -26,6 +26,7 @@ export default class XesProcessor {
     "float",
     "int",
     "string",
+    "id",
     "classifier",
     "extension"
   ]);
@@ -48,6 +49,27 @@ export default class XesProcessor {
     ]
   ]);
 
+  public extractLogItemsFromLogScope(
+    logs: Log[]
+  ): { headers: string[]; logItems: LogItem[] } {
+    let iterator = 0;
+
+    const headers = new Set<string>();
+    const logItems = this.ensureArray(logs).map((log) => {
+      const extractedLog = this.extractElementAttributesValuesFromXesComponent(
+        log,
+        XesComponentScope.Log,
+        iterator++
+      );
+
+      Object.keys(extractedLog).forEach((attribute) => headers.add(attribute));
+
+      return extractedLog;
+    });
+
+    return { headers: Array.from(headers), logItems };
+  }
+
   public extractHierarchicalLogItemsFromAllScopes(
     logs: Log[]
   ): { headers: string[]; logItems: LogItem[] } {
@@ -64,6 +86,7 @@ export default class XesProcessor {
       Object.keys(extractedLog).forEach((attribute) => headers.add(attribute));
       this.ensureArray(log.trace).reduce((traces: LogItem[], trace: Trace) => {
         trace = trace ?? {};
+
         const extractedTrace = this.extractElementAttributesValuesFromXesComponent(
           trace,
           XesComponentScope.Trace,

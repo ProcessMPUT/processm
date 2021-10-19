@@ -32,7 +32,9 @@
               <v-list-item-title>{{ $t("common.remove") }}</v-list-item-title>
             </v-list-item>
             <v-divider />
-            <v-list-item @click.stop="workspaceRenamingDialog = true">
+            <v-list-item
+              @click.stop="workspaceNameToRename = currentWorkspaceName"
+            >
               <v-list-item-icon
                 ><v-icon>drive_file_rename_outline</v-icon></v-list-item-icon
               >
@@ -48,10 +50,10 @@
         </v-btn>
       </v-tabs>
       <rename-dialog
-        v-model="workspaceRenamingDialog"
-        @cancelled="workspaceRenamingDialog = false"
-        @newNameSubmitted="renameWorkspace"
-        :old-name="currentWorkspaceName"
+        :value="workspaceNameToRename != null"
+        @cancelled="workspaceNameToRename = null"
+        @submitted="renameWorkspace"
+        :old-name="workspaceNameToRename"
       />
     </v-row>
   </v-container>
@@ -100,7 +102,7 @@ import Workspace from "@/models/Workspace";
 })
 export default class Workspaces extends Vue {
   @Inject() workspaceService!: WorkspaceService;
-  workspaceRenamingDialog = false;
+  workspaceNameToRename: string | null = null;
   currentWorkspaceIndex = 0;
   workspaces: Array<Workspace> = [];
 
@@ -134,12 +136,11 @@ export default class Workspaces extends Vue {
   }
 
   async renameWorkspace(newName: string) {
-    this.workspaceRenamingDialog = false;
-
     const currentWorkspace = this.workspaces[this.currentWorkspaceIndex];
 
     currentWorkspace.name = newName;
     await this.workspaceService.updateWorkspace(currentWorkspace);
+    this.workspaceNameToRename = null;
   }
 }
 </script>
