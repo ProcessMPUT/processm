@@ -60,6 +60,9 @@ class DataStoreService {
         }
     }
 
+    /**
+     * Removes the data store specified by the [dataStoreId].
+     */
     fun removeDataStore(dataStoreId: UUID): Boolean {
         return transaction(DBCache.getMainDBPool().database) {
             connection.autoCommit = true
@@ -73,6 +76,9 @@ class DataStoreService {
         }
     }
 
+    /**
+     * Renames the data store specified by [dataStoreId] to [newName].
+     */
     fun renameDataStore(dataStoreId: UUID, newName: String) =
         transaction(DBCache.getMainDBPool().database) {
             DataStores.update ({ DataStores.id eq dataStoreId }) {
@@ -101,6 +107,9 @@ class DataStoreService {
             }
         }
 
+    /**
+     * Creates a data connector attached to the specified [dataStoreId] using data from [connectionString].
+     */
     fun createDataConnector(dataStoreId: UUID, name: String, connectionString: String)
         = transaction(DBCache.getMainDBPool().database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
@@ -112,6 +121,9 @@ class DataStoreService {
             return@transaction dataConnectorId.value
         }
 
+    /**
+     * Creates a data connector attached to the specified [dataStoreId] using data from [connectionProperties].
+     */
     fun createDataConnector(dataStoreId: UUID, name: String, connectionProperties: Map<String, String>)
         = transaction(DBCache.getMainDBPool().database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
@@ -123,18 +135,27 @@ class DataStoreService {
             return@transaction dataConnectorId.value
         }
 
+    /**
+     * Removes the data connector specified by the [dataConnectorId].
+     */
     fun removeDataConnector(dataConnectorId: UUID) = transaction(DBCache.getMainDBPool().database) {
         return@transaction DataConnectors.deleteWhere {
             DataConnectors.id eq dataConnectorId
         } > 0
     }
 
+    /**
+     * Renames the data connector specified by [dataConnectorId] to [newName].
+     */
     fun renameDataConnector(dataConnectorId: UUID, newName: String) = transaction(DBCache.getMainDBPool().database) {
             DataConnectors.update ({ DataConnectors.id eq dataConnectorId }) {
                 it[name] = newName
             } > 0
         }
 
+    /**
+     * Tests connectivity using the provided [connectionString].
+     */
     fun testDatabaseConnection(connectionString: String): Boolean {
         try {
             DriverManager.getConnection(connectionString).use {
@@ -145,6 +166,9 @@ class DataStoreService {
         }
     }
 
+    /**
+     * Tests connectivity using the provided [connectionProperties].
+     */
     fun testDatabaseConnection(connectionProperties: Map<String, String>): Boolean {
         try {
             getDataSource(connectionProperties).connection.use {
@@ -155,12 +179,18 @@ class DataStoreService {
         }
     }
 
-    fun ensureDataStoreBelongsToOrganization(organizationId: UUID, dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
+    /**
+     * Asserts that the specified [dataStoreId] is attached to [organizationId].
+     */
+    fun assertDataStoreBelongsToOrganization(organizationId: UUID, dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
         DataStores.select { DataStores.organizationId eq organizationId }.limit(1).any()
                 || throw ValidationException(ValidationException.Reason.ResourceNotFound, "The specified organization and/or data store does not exist")
     }
 
-    fun ensureUserHasSufficientPermissionToDataStore(userId: UUID, dataStoreId: UUID, requiredOrganizationRole: OrganizationRoleDto = OrganizationRoleDto.Reader)
+    /**
+     * Asserts that the specified [userId] has the specified [requiredOrganizationRole] allowing for access to [dataStoreId].
+     */
+    fun assertUserHasSufficientPermissionToDataStore(userId: UUID, dataStoreId: UUID, requiredOrganizationRole: OrganizationRoleDto = OrganizationRoleDto.Reader)
         = transaction(DBCache.getMainDBPool().database) {
             DataStores
                 .innerJoin(Organizations)

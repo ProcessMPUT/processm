@@ -69,7 +69,7 @@ fun Route.DataStoresApi() {
         delete<Paths.DataStore> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.ensureUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
             dataStoreService.removeDataStore(pathParams.dataStoreId)
 
             call.respond(HttpStatusCode.NoContent)
@@ -78,7 +78,7 @@ fun Route.DataStoresApi() {
         patch<Paths.DataStore> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.ensureUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
             val dataStore = call.receiveOrNull<DataStoreMessageBody>()?.data
                 ?: throw ApiException("The provided data store data cannot be parsed")
             dataStoreService.renameDataStore(pathParams.dataStoreId, dataStore.name)
@@ -143,7 +143,7 @@ fun Route.DataStoresApi() {
 
         delete<Paths.Log> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            dataStoreService.ensureUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
             logsService.removeLog(pathParams.dataStoreId, pathParams.identityId)
 
             call.respond(HttpStatusCode.NoContent)
@@ -152,7 +152,7 @@ fun Route.DataStoresApi() {
         get<Paths.DataConnectors> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.ensureDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             val dataConnectors = dataStoreService.getDataConnectors(pathParams.dataStoreId).mapToArray {
                 DataConnector(it.id, it.name, it.lastConnectionStatus, it.connectionProperties)
             }
@@ -163,7 +163,7 @@ fun Route.DataStoresApi() {
         post<Paths.DataConnectors> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.ensureDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             val dataConnector = call.receiveOrNull<DataConnectorMessageBody>()?.data
                 ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectorProperties = dataConnector.properties ?: throw ApiException("Connector configuration is required")
@@ -180,7 +180,7 @@ fun Route.DataStoresApi() {
         delete<Paths.DataConnector> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.ensureUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
             dataStoreService.removeDataConnector(pathParams.dataConnectorId)
 
             call.respond(HttpStatusCode.NoContent)
@@ -189,7 +189,7 @@ fun Route.DataStoresApi() {
         patch<Paths.DataConnector> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.ensureUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
             val dataConnector = call.receiveOrNull<DataConnectorMessageBody>()?.data
                 ?: throw ApiException("The provided data connector data cannot be parsed")
             dataStoreService.renameDataConnector(pathParams.dataConnectorId, dataConnector.name ?: throw ApiException("A name for data connector is required"))
@@ -200,7 +200,7 @@ fun Route.DataStoresApi() {
         post<Paths.ConnectionTest> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.ensureDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             val connectionProperties = call.receiveOrNull<DataConnectorMessageBody>()?.data?.properties
                 ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectionString = connectionProperties[connectionStringPropertyName]

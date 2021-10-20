@@ -35,7 +35,7 @@ class LogsService {
         BufferedInputStream(BoundedInputStream(this, streamSizeLimit))
 
     /**
-     * Returns all data stores for the specified [organizationId].
+     * Stores the provided XES [logStream] in the specified [dataStoreId].
      */
     fun saveLogFile(dataStoreId: UUID, fileName: String?, logStream: InputStream) {
         loggedScope { logger ->
@@ -56,7 +56,7 @@ class LogsService {
     }
 
     /**
-     * Create new data store named [name] and assigned to the specified [organizationId].
+     * Executes the provided [query] against logs stored in [dataStoreId].
      */
     fun queryDataStoreJSON(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
@@ -94,6 +94,9 @@ class LogsService {
         }
     }
 
+    /**
+     * Executes the provided [query] against logs stored in [dataStoreId] and returns the result as zipped XES file.
+     */
     fun queryDataStoreZIPXES(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
@@ -122,6 +125,9 @@ class LogsService {
         }
     }
 
+    /**
+     * Removes XES log specified by the [identityId] attribute value.
+     */
     fun removeLog(dataStoreId: UUID, identityId: UUID): Unit {
         DBCache.get(dataStoreId.toString()).getConnection().use { connection ->
             DBLogCleaner.removeLog(connection, identityId)
