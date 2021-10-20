@@ -1,0 +1,1 @@
+ALTER TABLE etl_configurations ADD COLUMN last_event_external_id_type INTEGER NULL;

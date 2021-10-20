@@ -31,8 +31,13 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * @property dbName A database's name - target database.
  * @property query An instance of a PQL query.
+ * @property readNestedAttributes Control whether to retrieve the nested attributes.
  */
-class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogInputStream {
+class DBHierarchicalXESInputStream(
+    val dbName: String,
+    val query: Query,
+    val readNestedAttributes: Boolean = true
+) : LogInputStream {
     companion object {
         private val logger = logger()
         private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
@@ -89,7 +94,7 @@ class DBHierarchicalXESInputStream(val dbName: String, val query: Query) : LogIn
     @Deprecated("Use the primary constructor instead.", level = DeprecationLevel.WARNING)
     constructor(dbName: String, logId: Int) : this(dbName, Query(logId))
 
-    private val translator = TranslatedQuery(dbName, query, batchSize)
+    private val translator = TranslatedQuery(dbName, query, batchSize, readNestedAttributes)
 
     /**
      * The key is a bitwise combination of three values:

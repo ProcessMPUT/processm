@@ -62,7 +62,7 @@ class LogsService {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
         // from that stage of processing.
-        val queryStream = createQueryStream(dataStoreId, query)
+        val queryStream = createQueryStream(dataStoreId, query, false)
 
         return {
             val config: JsonXMLConfig =
@@ -80,7 +80,7 @@ class LogsService {
                 val writer = factory.createXMLStreamWriter(this)
 
                 try {
-                    XMLXESOutputStream(writer).use {
+                    XMLXESOutputStream(writer, true).use {
                         it.write(resultsFromLog.toFlatSequence())
                     }
                 } finally {
@@ -101,7 +101,7 @@ class LogsService {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
         // from that stage of processing.
-        val queryStream = createQueryStream(dataStoreId, query, downloadLimitFactor)
+        val queryStream = createQueryStream(dataStoreId, query, true, downloadLimitFactor)
 
         return {
             ZipOutputStream(this, Charset.forName("utf-8")).use { zip ->
@@ -137,7 +137,8 @@ class LogsService {
     private fun createQueryStream(
         dataStoreId: UUID,
         query: String,
-        limitFactor: Long = 1L
+        readNestedAttributes: Boolean,
+        limitFactor: Long = 1L,
     ): DBHierarchicalXESInputStream {
         loggedScope { logger ->
             logger.info("Querying data store: $dataStoreId")
@@ -145,7 +146,7 @@ class LogsService {
 
             val q = Query(query)
             q.applyLimits(logLimit, traceLimit * limitFactor, eventLimit * limitFactor)
-            val queryStream = DBHierarchicalXESInputStream(dataStoreId.toString(), q)
+            val queryStream = DBHierarchicalXESInputStream(dataStoreId.toString(), q, readNestedAttributes)
 
             return queryStream
         }

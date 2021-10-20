@@ -50,7 +50,7 @@
         <kotlin.version>1.5.21</kotlin.version>
         <kotlinx.coroutines.version>1.5.0</kotlinx.coroutines.version>
         <kotlinx.serialization.version>1.2.1</kotlinx.serialization.version>
-        <org.jetbrains.exposed.version>0.32.1</org.jetbrains.exposed.version>
+        <org.jetbrains.exposed.version>0.34.2</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
         <junit.jupiter.version>5.6.0</junit.jupiter.version>
         <mockk.version>1.12.0</mockk.version>
@@ -64,6 +64,7 @@
         <com.oracle.database.jdbc.version>21.1.0.0</com.oracle.database.jdbc.version>
         <com.ibm.db2.version>11.5.6.0</com.ibm.db2.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
+        <testcontainers.version>1.16.0</testcontainers.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>

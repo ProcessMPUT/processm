@@ -1,5 +1,7 @@
 package processm.core.log
 
+import processm.core.helpers.toUUID
+import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.IDAttr
 import processm.core.log.attribute.RealAttr
 import processm.core.log.attribute.StringAttr
@@ -10,7 +12,9 @@ import java.util.*
  *
  * Captures the trace component from the XES metadata structure.
  */
-open class Trace : TraceOrEventBase() {
+open class Trace(
+    attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+) : TraceOrEventBase(attributesInternal) {
     /**
      * Event stream special tag - true if trace is fake and log contains only events (no trace)
      */
@@ -28,10 +32,12 @@ open class Trace : TraceOrEventBase() {
     override fun hashCode(): Int = Objects.hash(isEventStream, attributesInternal)
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue() as String?
-        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue() as Double?
-        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue() as String?
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue() as UUID?
+        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue()?.toString()
+        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue()
+            ?.let { it as? Double ?: it.toString().toDoubleOrNull() }
+        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue()?.toString()
+        identityId = attributesInternal[nameMap["identity:id"]]?.getValue()
+            ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {

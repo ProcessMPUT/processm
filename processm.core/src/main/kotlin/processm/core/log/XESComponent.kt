@@ -8,8 +8,12 @@ import java.util.*
  * XES Element like Log, Trace or Event.
  *
  * Elements store attributes.
+ *
+ * @property attributesInternal A backing mutable field for [attributes].
  */
-abstract class XESComponent {
+abstract class XESComponent(
+    internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+) {
     /**
      * Standard attribute based on concept:name
      * Standard extension: Concept
@@ -40,6 +44,13 @@ abstract class XESComponent {
     val attributes: Map<String, Attribute<*>>
         get() = Collections.unmodifiableMap(attributesInternal)
 
+    init {
+        if (attributesInternal.isNotEmpty())
+            setStandardAttributes(object : HashMap<String, String>() {
+                override fun get(key: String): String? = key
+            })
+    }
+
     /**
      * Shorthand operator for retrieving the value of the attribute of this component.
      * @param attributeName The name of the attribute to retrieve.
@@ -47,11 +58,6 @@ abstract class XESComponent {
      * @throws IllegalArgumentException if the attribute with the given name does not exist.
      */
     operator fun get(attributeName: String): Any? = requireNotNull(attributesInternal[attributeName]).value
-
-    /**
-     * A backing mutable field for [attributes].
-     */
-    internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 
     /**
      * Sets the values of the standard attributes based on the custom attributes and the name map from the standard
@@ -66,11 +72,11 @@ abstract class XESComponent {
      */
     internal abstract fun setCustomAttributes(nameMap: Map<String, String>)
 
-    protected fun <T> setCustomAttribute(
+    fun <T> setCustomAttribute(
         stdVal: T?,
         stdName: String,
         ctor: (key: String, value: T) -> Attribute<T>,
-        nameMap: Map<String, String>
+        nameMap: Map<String, String> = emptyMap()
     ) {
         stdVal ?: return
         attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { ctor(it, stdVal) }

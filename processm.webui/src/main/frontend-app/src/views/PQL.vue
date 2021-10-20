@@ -186,18 +186,85 @@ export default class PQL extends Vue {
   fileUploadDialog = false;
   predefinedQueries = [
     { text: "Custom", value: "" },
-    { text: "Select the first 5 logs", value: "select *\nlimit l:5" },
+    { text: "UC1: Read the entire database", value: "select *" },
     {
-      text: "Group traces into variants",
-      value:
-        "select l:name, count(t:name), e:name\n" +
-        "group by ^e:name\n" +
-        "order by count(t:name) desc\n" +
-        "limit l:5"
+      text: "UC2: Read all event logs named Hospital log",
+      value: "where l:name='Hospital log'"
     },
     {
-      text: "Traces with events at weekends",
-      value: "where dayofweek(^e:timestamp) in (1, 7)"
+      text: "UC3: Filter the Hospital log to the traces with the diagnosis set",
+      value: "where l:name='Hospital log' and [t:Diagnosis] is not null"
+    },
+    {
+      text:
+        "UC4: Filter the Hospital log to the traces with diagnosis maligniteit cervix and events raised in the nursing ward",
+      value:
+        "where l:name='Hospital log' and [t:Diagnosis]='maligniteit cervix' and group='Nursing ward'"
+    },
+    {
+      text:
+        "UC5: Select the events in the Hospital log that occurred on weekends and filter out events on workdays",
+      value: "where l:name='Hospital log' and dayofweek(timestamp) in (1,7)"
+    },
+    {
+      text:
+        "UC6: Select the entire traces with any event that occurred on weekend and filter out the traces without events on weekends",
+      value: "where l:name='Hospital log' and dayofweek(^timestamp) in (1,7)"
+    },
+    {
+      text: "UC7: Select the names of all event logs in the database",
+      value: "select l:name\nlimit t:1, e:1"
+    },
+    {
+      text:
+        "UC8: Select the names of all event logs and all attributes of their traces and events",
+      value: "select l:name, t:*, e:*"
+    },
+    {
+      text: "UC9: Count the traces in the Hospital log",
+      value: "select count(^t:name)\nwhere l:name='Hospital log'"
+    },
+    {
+      text:
+        "UC10: Select the begin and the end timestamps of the trace and calculate its duration",
+      value:
+        "select l:name, min(^timestamp), max(^timestamp), max(^timestamp)-min(^timestamp)\ngroup by t:name"
+    },
+    {
+      text:
+        "UC11: Group the traces into variants, where two traces belong to the same variant if their sequences of events equal on their names",
+      value: "group by ^name"
+    },
+    {
+      text:
+        "UC12: Order events using their timestamps rather than the recorded order",
+      value: "order by e:timestamp"
+    },
+    {
+      text: "UC13: Order traces descending using their duration",
+      value:
+        "group by t:name\norder by max(^e:timestamp)-min(^e:timestamp) desc"
+    },
+    {
+      text:
+        "UC14: Limit the numbers of returned event logs and traces per log to the top 5 and 10, respectively",
+      value: "limit l:5, t:10"
+    },
+    {
+      text: "UC15: Read the next 10 traces in the top 5 event logs",
+      value: "limit l:5, t:10\noffset t:10"
+    },
+    {
+      text:
+        "UC16: Retrieve the top 30 most common trace variants in the Hospital log based on the names of activities, the total number of the traces, the total number of occurrences per trace variant, and the names of the activities",
+      value:
+        "select l:name, count(^t:name), count(t:name), name\nwhere l:name='Hospital log'\ngroup by l:name, ^name\norder by count(t:name) desc\nlimit t:30"
+    },
+    {
+      text:
+        "UC17: Retrieve the top 30 longest traces in the Hospital log, their names and duration, and all attributes of theirs respective events",
+      value:
+        "select l:name, t:name, max(^timestamp)-min(^timestamp), e:*\nwhere l:name='Hospital log'\ngroup by t:name\norder by max(^timestamp)-min(^timestamp) desc\nlimit t:30"
     }
   ];
 
@@ -241,12 +308,21 @@ export default class PQL extends Vue {
       this.isLoadingData = true;
 
       this.app.info("Executing query...", -1);
+      let start = new Date().getTime();
       const queryResults = await this.logsService.submitUserQuery(
         this.dataStoreId,
         this.query
       );
 
-      this.app.info("Formatting results...", -1);
+      const executionTime = new Date().getTime() - start;
+      this.app.info(
+        "Query executed and results retrieved in " +
+          executionTime +
+          "ms. Formatting results...",
+        -1
+      );
+      start = new Date().getTime();
+
       await waitForRepaint(async () => {
         const {
           headers,
@@ -262,7 +338,14 @@ export default class PQL extends Vue {
           });
         }
 
-        this.app.info("Query executed successfully");
+        const formattingTime = new Date().getTime() - start;
+        this.app.info(
+          "Query executed and results retrieved in " +
+            executionTime +
+            "ms. Formatted results in " +
+            formattingTime +
+            "ms."
+        );
       });
     } catch (err) {
       this.app.error(err?.response?.data?.error ?? err);
@@ -279,12 +362,16 @@ export default class PQL extends Vue {
       this.isDownloading = true;
 
       this.app.info("Executing query...", -1);
+      const start = new Date().getTime();
       await this.logsService.submitUserQuery(
         this.dataStoreId,
         this.query,
         "application/zip"
       );
-      this.app.info("Query executed successfully");
+      const executionTime = new Date().getTime() - start;
+      this.app.info(
+        "Query executed and results retrieved in " + executionTime + "ms."
+      );
     } catch (err) {
       this.app.error(err?.response?.data?.error ?? err);
     } finally {

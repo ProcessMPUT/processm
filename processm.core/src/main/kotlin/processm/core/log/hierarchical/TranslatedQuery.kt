@@ -18,7 +18,8 @@ import kotlin.LazyThreadSafetyMode.NONE
 internal class TranslatedQuery(
     private val dbName: String,
     private val pql: Query,
-    private val batchSize: Int = 1
+    private val batchSize: Int = 1,
+    private val readNestedAttributes: Boolean = true
 ) {
     companion object {
         private val logger = logger()
@@ -259,18 +260,23 @@ internal class TranslatedQuery(
 
         val attrTable = table ?: (scope.toString() + "s_attributes")
         with(it.query) {
-            append("WITH RECURSIVE tmp AS (")
+            append("WITH ")
+            if (readNestedAttributes)
+                append("RECURSIVE ")
+            append("tmp AS (")
             selectAttributes(scope, attrTable, extraColumns, it)
             append(", ARRAY[ids.ord, $attrTable.id] AS path")
             append(" FROM $attrTable")
             append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
             it.params.add(idPlaceholder)
             whereAttributes(scope, it, logId)
-            append(" UNION ALL ")
-            selectAttributes(scope, attrTable, extraColumns, it)
-            append(", path || $attrTable.id")
-            append(" FROM $attrTable")
-            append(" JOIN tmp ON $attrTable.parent_id=tmp.id AND $attrTable.parent_id IS NOT NULL")
+            if (readNestedAttributes) {
+                append(" UNION ALL ")
+                selectAttributes(scope, attrTable, extraColumns, it)
+                append(", path || $attrTable.id")
+                append(" FROM $attrTable")
+                append(" JOIN tmp ON $attrTable.parent_id=tmp.id AND $attrTable.parent_id IS NOT NULL")
+            }
             append(") ")
             selectAttributes(scope, "tmp", extraColumns, it)
             append(" FROM tmp")
@@ -385,7 +391,7 @@ internal class TranslatedQuery(
 
         groupById(scope, it)
         it.query.append(')')
-        innerGroupSignature(it, attributes, groupByAttributes, false)
+        innerGroupSignature(it, attributes, groupByAttributes, false, scope)
 
         outerGroupBy(scope, it, attributes, groupByAttributes, logId, false)
 
@@ -538,7 +544,7 @@ internal class TranslatedQuery(
 
         groupById(scope, it)
         it.query.append(')')
-        innerGroupSignature(it, attributes, groupByAttributes, true)
+        innerGroupSignature(it, attributes, groupByAttributes, true, scope)
 
         outerGroupBy(scope, it, attributes, groupByAttributes, logId, true)
 
@@ -639,9 +645,10 @@ internal class TranslatedQuery(
         sql: MutableSQLQuery,
         attributes: Set<Attribute>,
         groupByAttributes: List<Attribute>,
-        createOrderAttributeIfUngrouped: Boolean
+        createOrderAttributeIfUngrouped: Boolean,
+        scope: Scope
     ) = with(sql.query) {
-        append(" sub (id")
+        append(" ${scope.shortName} (id")
         if (attributes.isNotEmpty())
             append(',')
         append(attributes.indices.joinToString(",") { "a$it" })
@@ -1277,8 +1284,27 @@ internal class TranslatedQuery(
                     }
                     is Function -> {
                         when (expression.name) {
-                            "min", "max", "avg", "count", "sum", "round", "lower", "upper" -> {
+                            "min", "max", "avg", "count", "sum" -> {
                                 assert(expression.children.size == 1)
+                                if (ignoreHoisting ||
+                                    expression.filter { it is Attribute }.all { (it as Attribute).hoistingPrefix == "" }
+                                ) {
+                                    append("(SELECT ")
+                                    append(expression.name)
+                                    append("(a0) FROM (SELECT DISTINCT ON (id) a0 FROM unnest(array_agg(")
+                                    append(expression.effectiveScope.shortName)
+                                    append(".id), array_agg(")
+                                    walk(expression.children[0], expression.expectedChildrenTypes[0])
+                                    append(")) s(id, a0)) s)")
+                                } else {
+                                    append("(SELECT ")
+                                    append(expression.name)
+                                    append("(v) FROM unnest(array_agg(")
+                                    walk(expression.children[0], expression.expectedChildrenTypes[0])
+                                    append(")) s(v))")
+                                }
+                            }
+                            "round", "lower", "upper" -> {
                                 append(expression.name)
                                 append('(')
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
