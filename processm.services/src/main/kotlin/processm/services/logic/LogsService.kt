@@ -9,6 +9,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
 import processm.core.log.*
+import processm.core.log.attribute.IDAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.logging.loggedScope
@@ -45,11 +46,25 @@ class LogsService {
             ).use { db ->
                 db.write(
                     XMLXESInputStream(
-                        if (fileName?.endsWith("gz") == true) GZIPInputStream(
-                            logStream.boundStreamSize(xesFileInputSizeLimit)
-                        )
-                        else logStream.boundStreamSize(xesFileInputSizeLimit)
-                    )
+                            if (fileName?.endsWith("gz") == true) GZIPInputStream(
+                                logStream.boundStreamSize(xesFileInputSizeLimit)
+                            )
+                            else logStream.boundStreamSize(xesFileInputSizeLimit))
+                        .map {
+                            val log = it as? Log ?: return@map it
+                            val logAttributes = log.attributes.toMutableMap()
+
+                            logAttributes.computeIfAbsent("identity:id") { IDAttr("identity:id", UUID.randomUUID()) }
+
+                            return@map Log(
+                                logAttributes,
+                                log.extensions.toMutableMap(),
+                                log.traceGlobals.toMutableMap(),
+                                log.eventGlobals.toMutableMap(),
+                                log.traceClassifiers.toMutableMap(),
+                                log.eventClassifiers.toMutableMap())
+
+                        }
                 )
             }
         }
