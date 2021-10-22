@@ -3,10 +3,7 @@ package processm.core.persistence
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
 import processm.core.helpers.isUUID
-import processm.core.logging.enter
-import processm.core.logging.exit
 import processm.core.logging.loggedScope
-import processm.core.logging.logger
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.DatabaseChecker.switchDatabaseURL
 import java.sql.DriverManager
@@ -33,16 +30,16 @@ object Migrator {
      * @link https://flywaydb.org/documentation/migrations
      */
     private fun migrateMainDatabase() {
-        logger().enter()
-        logger().debug("Migrating main database if required")
+        loggedScope { logger ->
+            logger.debug("Migrating the main database if required")
 
-        with(Flyway.configure().dataSource(dbConfig.baseConnectionURL, null, null)) {
-            locations("db/processm_main_migrations")
-            applyDefaultSchema(this, dbConfig.baseConnectionURL)
-            load().migrate()
+            with(Flyway.configure().dataSource(dbConfig.baseConnectionURL, null, null)) {
+                locations("db/processm_main_migrations")
+                applyDefaultSchema(this, dbConfig.baseConnectionURL)
+                load().migrate()
+            }
+
         }
-
-        logger().exit()
     }
 
     /**
@@ -72,15 +69,13 @@ object Migrator {
 
             require(dataStoreDBName.isUUID()) { "Datastore DB should be named with UUID." }
 
-            DriverManager.getConnection(dbConfig.baseConnectionURL).prepareStatement(
-                """
-            SELECT * FROM create_database(?);
-            """.trimIndent()
-            ).use {
-                it.setString(1, dataStoreDBName)
-                it.executeQuery().use { result ->
-                    require(result.next()) { "Database cannot be created" }
-                    require(result.getBoolean("create_database")) { "Database cannot be created" }
+            DriverManager.getConnection(dbConfig.baseConnectionURL).use { connection ->
+                connection.prepareStatement("SELECT * FROM create_database(?);").use {
+                    it.setString(1, dataStoreDBName)
+                    it.executeQuery().use { result ->
+                        require(result.next()) { "Database cannot be created" }
+                        require(result.getBoolean("create_database")) { "Database cannot be created" }
+                    }
                 }
             }
         }
