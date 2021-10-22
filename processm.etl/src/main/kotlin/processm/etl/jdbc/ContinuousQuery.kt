@@ -115,7 +115,7 @@ class SequenceWithCompletionAcknowledgement<T, U>(
 fun ETLConfiguration.toXESInputStream(): XESInputStream {
     if (batch && lastEventExternalId !== null)
         return emptySequence()
-    val baseSequence = sequence {
+    val baseSequence = sequence<Pair<XESComponent, Any?>> {
         DriverManager.getConnection(jdbcUri, user, password)
             .use { connection ->
                 try {
