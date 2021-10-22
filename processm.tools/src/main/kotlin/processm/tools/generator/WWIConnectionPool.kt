@@ -24,7 +24,8 @@ class WWIConnectionPool(basePool: CoroutinesConnectionPool) : CoroutinesConnecti
     val receivePurchaseOrder =
         wrapStoredProcedure3<Timestamp, Int, Boolean>(Types.BOOLEAN, "ProcessM.ReceivePurchaseOrder")
     val paySupplier = wrapStoredProcedure3<Timestamp, Int, Unit>(Types.NULL, "ProcessM.PaySupplier")
-    val removeRandomLineFromCustomerOrder = wrapStoredProcedure2<Int, Int?>(Types.INTEGER, "ProcessM.RemoveRandomLineFromCustomerOrder")
+    val removeRandomLineFromCustomerOrder =
+        wrapStoredProcedure2<Int, Int?>(Types.INTEGER, "ProcessM.RemoveRandomLineFromCustomerOrder")
     val addOrderLinesToCustomerOrder =
         wrapStoredProcedure5<Timestamp, Timestamp, Int, Int, Unit>(Types.NULL, "ProcessM.AddOrderLinesToCustomerOrder")
 }

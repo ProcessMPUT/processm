@@ -1,13 +1,24 @@
+-- Based on Microsoft's Wide World Importers, distributed under the MIT License
+-- https://github.com/microsoft/sql-server-samples
+
 use WideWorldImporters;
 GO
 
+DROP PROCEDURE IF EXISTS ProcessM.RemoveRandomLineFromCustomerOrder;
+DROP PROCEDURE IF EXISTS ProcessM.AddOrderLinesToCustomerOrder;
+DROP PROCEDURE IF EXISTS ProcessM.CreateCustomerOrder;
+DROP PROCEDURE IF EXISTS ProcessM.BackorderIfNecessary;
+DROP PROCEDURE IF EXISTS ProcessM.PickStockForCustomerOrder
+DROP PROCEDURE IF EXISTS ProcessM.InvoicePickedOrder;
+DROP PROCEDURE IF EXISTS ProcessM.Deliver;
+DROP PROCEDURE IF EXISTS ProcessM.ReceivePayment
+DROP PROCEDURE IF EXISTS ProcessM.PlacePurchaseOrders
+DROP PROCEDURE IF EXISTS ProcessM.ReceivePurchaseOrder
+DROP PROCEDURE IF EXISTS ProcessM.PaySupplier;
 DROP SCHEMA IF EXISTS ProcessM;
 GO
 
 CREATE SCHEMA ProcessM;
-GO
-
-DROP PROCEDURE IF EXISTS ProcessM.RemoveRandomLineFromCustomerOrder;
 GO
 
 CREATE PROCEDURE ProcessM.RemoveRandomLineFromCustomerOrder @OrderID int,
@@ -37,8 +48,6 @@ END;
 GO
 
 
-DROP PROCEDURE IF EXISTS ProcessM.AddOrderLinesToCustomerOrder;
-GO
 
 CREATE PROCEDURE ProcessM.AddOrderLinesToCustomerOrder @CurrentDateTime datetime2(7),
                                                        @StartingWhen datetime,
@@ -116,10 +125,6 @@ END;
 
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.CreateCustomerOrder;
-GO
-
-
 CREATE PROCEDURE ProcessM.CreateCustomerOrder @CurrentDateTime datetime2(7),
                                               @StartingWhen datetime,
                                               @NumberOfOrderLines int,
@@ -177,9 +182,6 @@ END;
 
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.PickStockForCustomerOrder
-GO
-
 CREATE PROCEDURE ProcessM.PickStockForCustomerOrder @StartingWhen datetime,
                                                     @OrderID int,
                                                     @PickedSomething bit OUTPUT
@@ -231,10 +233,10 @@ BEGIN
     DECLARE OrderLineList CURSOR FAST_FORWARD READ_ONLY
         FOR
         SELECT ol.OrderLineID, ol.StockItemID, ol.Quantity
-        FROM Sales.OrderLines AS ol
+        FROM Sales.OrderLines AS ol WITH (XLOCK)
         WHERE ol.PickingCompletedWhen IS NULL
           and ol.OrderID = @OrderID
-        ORDER BY ol.OrderID, ol.OrderLineID;
+        ORDER BY ol.OrderID, ol.OrderLineID; -- This XOCK is probably too much, but something seemed to be necessary, otherwise there were deadlocks with PlacePurchaseOrders
 
     DECLARE @OrderLineID int;
     DECLARE @StockItemID int;
@@ -304,8 +306,6 @@ BEGIN
 END;
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.BackorderIfNecessary;
-GO
 
 CREATE PROCEDURE ProcessM.BackorderIfNecessary @StartingWhen datetime,
                                                @OrderID int,
@@ -400,8 +400,6 @@ BEGIN
 END;
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.InvoicePickedOrder;
-GO
 
 CREATE PROCEDURE ProcessM.InvoicePickedOrder @StartingWhen datetime,
                                              @OrderID int,
@@ -592,8 +590,6 @@ END;
 GO
 
 
-DROP PROCEDURE IF EXISTS ProcessM.Deliver;
-GO
 
 CREATE PROCEDURE ProcessM.Deliver @StartingWhen datetime,
                                   @InvoiceID int,
@@ -689,8 +685,6 @@ BEGIN
 END;
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.ReceivePayment
-GO
 
 CREATE PROCEDURE ProcessM.ReceivePayment @StartingWhen datetime,
                                          @InvoiceID int
@@ -752,8 +746,6 @@ BEGIN
 END;
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.PlacePurchaseOrders
-GO
 
 CREATE PROCEDURE ProcessM.PlacePurchaseOrders @StartingWhen datetime
 AS
@@ -903,8 +895,6 @@ BEGIN
 END;
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.ReceivePurchaseOrder
-GO
 
 CREATE PROCEDURE ProcessM.ReceivePurchaseOrder @StartingWhen datetime,
                                                @PurchaseOrderID int,
@@ -929,7 +919,7 @@ BEGIN
         SELECT PurchaseOrderID, SupplierID
         FROM Purchasing.PurchaseOrders AS po
         WHERE po.IsOrderFinalized = 0
-          AND po.ExpectedDeliveryDate <= @StartingWhen -- Interestingly enought the sign is in the other direction in the original procedure in WWI
+          AND po.ExpectedDeliveryDate <= @StartingWhen -- Interestingly enough the sign is in the other direction in the original procedure in WWI
           AND po.PurchaseOrderID = @PurchaseOrderID;
 
     OPEN PurchaseOrderList;
@@ -954,7 +944,8 @@ BEGIN
                      INNER JOIN Purchasing.PurchaseOrderLines AS pol
                                 ON sih.StockItemID = pol.StockItemID
                      INNER JOIN Warehouse.StockItems AS si
-                                ON sih.StockItemID = si.StockItemID;
+                                ON sih.StockItemID = si.StockItemID
+            WHERE PurchaseOrderID = @PurchaseOrderID;
 
             INSERT Warehouse.StockItemTransactions
             (StockItemID, TransactionTypeID, CustomerID, InvoiceID, SupplierID, PurchaseOrderID,
@@ -1014,8 +1005,6 @@ BEGIN
 END;
 GO
 
-DROP PROCEDURE IF EXISTS ProcessM.PaySupplier;
-GO
 
 CREATE PROCEDURE ProcessM.PaySupplier @StartingWhen datetime,
                                       @PurchaseOrderID int

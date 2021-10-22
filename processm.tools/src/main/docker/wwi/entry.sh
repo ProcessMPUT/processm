@@ -17,4 +17,5 @@ done
 $SQLCMD -i /processm/load-wwi.sql || exit 1
 $SQLCMD -i /processm/create-procedures.sql || exit 1
 
+#exec sleep 666d
 exec java -D'processm.tools.generator.dbURL=jdbc:sqlserver://localhost:1433;database=WideWorldImporters' -D'processm.tools.generator.dbUser=SA' -D"processm.tools.generator.dbPassword=$MSSQL_SA_PASSWORD" -jar /processm/processm.tools-0.1-SNAPSHOT-jar-with-dependencies.jar
