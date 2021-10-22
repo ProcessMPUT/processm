@@ -154,7 +154,7 @@ fun Route.DataStoresApi() {
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             val dataConnectors = dataStoreService.getDataConnectors(pathParams.dataStoreId).mapToArray {
-                DataConnector(it.id, it.name, it.lastConnectionStatus, it.connectionProperties)
+                DataConnector(it.id, it.name, it.lastConnectionStatus, it.lastConnectionStatusTimestamp?.toString(), it.connectionProperties)
             }
 
             call.respond(HttpStatusCode.OK, DataConnectorCollectionMessageBody(dataConnectors))
@@ -174,14 +174,14 @@ fun Route.DataStoresApi() {
                 else dataStoreService.createDataConnector(pathParams.dataStoreId, connectorName, connectionString)
 
             call.respond(HttpStatusCode.OK,
-                DataConnectorMessageBody(DataConnector(dataConnectorId, connectorName, lastConnectionStatus = null)))
+                DataConnectorMessageBody(DataConnector(dataConnectorId, connectorName, lastConnectionStatus = null, lastConnectionStatusTimestamp = null)))
         }
 
         delete<Paths.DataConnector> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
-            dataStoreService.removeDataConnector(pathParams.dataConnectorId)
+            dataStoreService.removeDataConnector(pathParams.dataStoreId, pathParams.dataConnectorId)
 
             call.respond(HttpStatusCode.NoContent)
         }
@@ -192,7 +192,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner)
             val dataConnector = call.receiveOrNull<DataConnectorMessageBody>()?.data
                 ?: throw ApiException("The provided data connector data cannot be parsed")
-            dataStoreService.renameDataConnector(pathParams.dataConnectorId, dataConnector.name ?: throw ApiException("A name for data connector is required"))
+            dataStoreService.renameDataConnector(pathParams.dataStoreId, pathParams.dataConnectorId, dataConnector.name ?: throw ApiException("A name for data connector is required"))
 
             call.respond(HttpStatusCode.NoContent)
         }

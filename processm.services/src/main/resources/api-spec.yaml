@@ -1544,6 +1544,8 @@ components:
           type: string
         lastConnectionStatus:
           type: boolean
+        lastConnectionStatusTimestamp:
+          type: string
         properties:
           type: object
           additionalProperties:

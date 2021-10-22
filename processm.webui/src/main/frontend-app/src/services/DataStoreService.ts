@@ -126,6 +126,8 @@ export default class DataStoreService extends BaseService {
             id: dataConnector.id,
             name: dataConnector.name || "",
             lastConnectionStatus: dataConnector.lastConnectionStatus,
+            lastConnectionStatusTimestamp:
+              dataConnector.lastConnectionStatusTimestamp,
             properties: dataConnector.properties || {}
           });
         }

@@ -154,6 +154,10 @@
                   value: 'lastConnectionStatus'
                 },
                 {
+                  text: $t('data-stores.last-connection-status-timestamp'),
+                  value: 'lastConnectionStatusTimestamp'
+                },
+                {
                   text: $t('common.actions'),
                   value: 'actions',
                   align: 'center',
@@ -167,6 +171,12 @@
                   >check_circle_outline</v-icon
                 >
                 <v-icon v-else>error_outline</v-icon>
+              </template>
+              <template v-slot:item.lastConnectionStatusTimestamp="{ item }">
+                <v-icon v-if="item.lastConnectionStatusTimestamp == null"
+                  >all_inclusive</v-icon
+                >
+                <span v-else>{{ item.lastConnectionStatusTimestamp }}</span>
               </template>
               <template v-slot:item.actions="{ item }">
                 <v-tooltip bottom>

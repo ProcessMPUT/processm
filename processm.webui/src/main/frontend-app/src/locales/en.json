@@ -64,6 +64,7 @@
     "removal-confirmation": "Do you want to permanently remove {dataStoreName} data store?",
     "data-connector-removal-confirmation": "Do you want to permanently remove {dataConnectorName} data connector?",
     "last-connection-status": "Last connection status",
+    "last-connection-status-timestamp": "Last connection time",
     "data-connector-no-properties": "No properties to display"
   },
   "add-data-connector-dialog": {

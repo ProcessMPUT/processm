@@ -9,6 +9,7 @@ export interface DataConnector {
   id: string;
   name: string;
   lastConnectionStatus?: boolean;
+  lastConnectionStatusTimestamp?: string;
   properties: { [key: string]: string };
 }
 

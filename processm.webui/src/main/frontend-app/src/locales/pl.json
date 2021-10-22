@@ -64,6 +64,7 @@
     "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięciu magazynu danych {dataStoreName}?",
     "data-connector-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięciu łącza danych {dataConnectorName}?",
     "last-connection-status": "Status ostatniego połączęnia",
+    "last-connection-status-timestamp": "Czas ostatniego połączenia",
     "data-connector-no-properties": "Brak właściwości do wyświetlenia"
   },
   "add-data-connector-dialog": {
@@ -179,7 +180,13 @@
     "created-at": "Utworzono",
     "warning": "Ostrzeżenie",
     "actions": "Akcje",
-    "successfully-removed": "Pomyślnie usunięto",
-    "failed-to-remove": "Usuwanie nie powiodło się"
+    "removal": {
+      "success": "Pomyślnie usunięto",
+      "failure": "Usuwanie nie powiodło się"
+    },
+    "saving": {
+      "success": "Pomyślnie zapisano",
+      "failure": "Zapisywanie nie powiodło się"
+    }
   }
 }

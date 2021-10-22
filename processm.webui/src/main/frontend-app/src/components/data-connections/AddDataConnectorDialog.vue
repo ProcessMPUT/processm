@@ -259,8 +259,8 @@ export default class AddDataConnectorDialog extends Vue {
     this.connectionProperties = {};
     this.connectionString = {};
     this.connectionTestResult = null;
-    (this.$refs.connectionStringForm as HTMLFormElement).reset();
-    (this.$refs.connectionPropertiesForm as HTMLFormElement).reset();
+    (this.$refs.connectionStringForm as HTMLFormElement)?.reset();
+    (this.$refs.connectionPropertiesForm as HTMLFormElement)?.reset();
   }
 }
 </script>

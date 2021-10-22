@@ -90,10 +90,9 @@ class DataStoreService {
      * Returns all data connectors for the specified [dataStoreId].
      */
     fun getDataConnectors(dataStoreId: UUID): List<DataConnectorDto> =
-        transaction(DBCache.getMainDBPool().database) {
-            val query = DataConnectors.select { DataConnectors.dataStoreId eq dataStoreId }
+        transaction(DBCache.get("$dataStoreId").database) {
             val gson = Gson()
-            return@transaction DataConnector.wrapRows(query).map {
+            return@transaction DataConnector.wrapRows(DataConnectors.selectAll()).map {
                 val connectionProperties =
                     try
                     {
@@ -103,7 +102,7 @@ class DataStoreService {
                         emptyMap<String, String>().toMutableMap()
                     }
                 connectionProperties.replace("password", "********")
-                return@map DataConnectorDto(it.id.value, it.name, it.lastConnectionStatus, connectionProperties)
+                return@map DataConnectorDto(it.id.value, it.name, it.lastConnectionStatus, it.lastConnectionStatusTimestamp, connectionProperties)
             }
         }
 
@@ -111,10 +110,9 @@ class DataStoreService {
      * Creates a data connector attached to the specified [dataStoreId] using data from [connectionString].
      */
     fun createDataConnector(dataStoreId: UUID, name: String, connectionString: String)
-        = transaction(DBCache.getMainDBPool().database) {
+        = transaction(DBCache.get("$dataStoreId").database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
                 it[this.name] = name
-                it[this.dataStoreId] = EntityID(dataStoreId, DataStores)
                 it[this.connectionProperties] = connectionString
             }
 
@@ -125,10 +123,9 @@ class DataStoreService {
      * Creates a data connector attached to the specified [dataStoreId] using data from [connectionProperties].
      */
     fun createDataConnector(dataStoreId: UUID, name: String, connectionProperties: Map<String, String>)
-        = transaction(DBCache.getMainDBPool().database) {
+        = transaction(DBCache.get("$dataStoreId").database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
                 it[this.name] = name
-                it[this.dataStoreId] = EntityID(dataStoreId, DataStores)
                 it[this.connectionProperties] = JSONObject(connectionProperties).toString()
             }
 
@@ -138,7 +135,7 @@ class DataStoreService {
     /**
      * Removes the data connector specified by the [dataConnectorId].
      */
-    fun removeDataConnector(dataConnectorId: UUID) = transaction(DBCache.getMainDBPool().database) {
+    fun removeDataConnector(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
         return@transaction DataConnectors.deleteWhere {
             DataConnectors.id eq dataConnectorId
         } > 0
@@ -147,7 +144,7 @@ class DataStoreService {
     /**
      * Renames the data connector specified by [dataConnectorId] to [newName].
      */
-    fun renameDataConnector(dataConnectorId: UUID, newName: String) = transaction(DBCache.getMainDBPool().database) {
+    fun renameDataConnector(dataStoreId: UUID, dataConnectorId: UUID, newName: String) = transaction(DBCache.get("$dataStoreId").database) {
             DataConnectors.update ({ DataConnectors.id eq dataConnectorId }) {
                 it[name] = newName
             } > 0
@@ -183,7 +180,7 @@ class DataStoreService {
      * Asserts that the specified [dataStoreId] is attached to [organizationId].
      */
     fun assertDataStoreBelongsToOrganization(organizationId: UUID, dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
-        DataStores.select { DataStores.organizationId eq organizationId }.limit(1).any()
+        DataStores.select { DataStores.organizationId eq organizationId and(DataStores.id eq dataStoreId) }.limit(1).any()
                 || throw ValidationException(ValidationException.Reason.ResourceNotFound, "The specified organization and/or data store does not exist")
     }
 

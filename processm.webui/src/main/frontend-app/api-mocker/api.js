@@ -48,6 +48,7 @@ const dataConnectors = {
       id: "7d28101b-5ef9-4b20-b57e-aaded99cfb2c",
       name: "PostgreSQL #1",
       lastConnectionStatus: false,
+      lastConnectionStatusTimestamp: "9-12-2021",
       properties: {
         "connection-type": "PostgreSql",
         hostname: "80.10.22.100",
@@ -57,6 +58,7 @@ const dataConnectors = {
       id: "aa8f65b4-7f93-44c7-a27c-7fc24cf6d1fb",
       name: "PostgreSQL #2",
       lastConnectionStatus: null,
+      lastConnectionStatusTimestamp: null,
       properties: {
         "connection-type": "PostgreSql",
         hostname: "db.example.com",
@@ -66,6 +68,7 @@ const dataConnectors = {
       id: "cdf13443-5449-4981-9755-a83768d9e855",
       name: "MongoDB connection",
       lastConnectionStatus: true,
+      lastConnectionStatusTimestamp: "10-10-2020",
       properties: {},
     },
   ],
