@@ -12,6 +12,8 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.management.ManagementFactory
+import java.util.concurrent.ExecutorCompletionService
+import java.util.concurrent.Executors
 import java.util.zip.GZIPInputStream
 import javax.xml.stream.XMLOutputFactory
 import kotlin.random.Random
@@ -23,6 +25,9 @@ fun filterLog(base: Log) = Log(base.traces.map { trace ->
 
 @InMemoryXESProcessing
 class Experiment {
+    private val executor = Executors.newFixedThreadPool(5)
+    private val completionService = ExecutorCompletionService<Any>(executor)
+
     private fun load(logfile: File): Log {
         logfile.inputStream().use { base ->
             return filterLog(HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(base))).first())
@@ -80,7 +85,7 @@ class Experiment {
         return ResourceStats(nanoTime / 1000000, mem)
     }
 
-    private class CSVWriter(file: File, val separator: String = "\t") {
+    private class CSVWriter(file: File, val separator: String = "\t") : AutoCloseable {
         private val stream = file.outputStream().bufferedWriter()
 
         operator fun <T> invoke(values: List<T>, vararg key: String) =
@@ -91,7 +96,10 @@ class Experiment {
         operator fun invoke(line: List<String>) {
             val text = line.joinToString(separator = separator) { if (it.contains(separator)) "\"$it\"" else it }
             stream.appendLine(text)
-            stream.flush()
+        }
+
+        override fun close() {
+            stream.close()
         }
     }
 
@@ -119,11 +127,12 @@ class Experiment {
         from: Int,
         to: Int
     ): Log {
-        return Log(traces = allTraces.asSequence().drop(from).take(to - from))
+        return Log(traces = allTraces.subList(from, to).asSequence())
     }
 
     private fun log2File(log: Log, name: String, mode: String, windowSize: Int, step: Int, current: Int) {
-        FileOutputStream("logFile-$mode-$windowSize-$step-$current-$name.xes").use { out ->
+        File("im_online/logFile").mkdirs()
+        FileOutputStream("im_online/logFile/$mode-$windowSize-$step-$current-$name.xes").use { out ->
             BufferedOutputStream(out).use { received ->
                 XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received)).use { writer ->
                     writer.write(log.toFlatSequence())
@@ -145,99 +154,123 @@ class Experiment {
 
             println("---------------- $name: $allTracesSize traces ---------------- ")
 
-            val onlineExtraStats = CSVWriter(File("${config.iteration}-online-extra-$name"))
-            val offlineStats = CSVWriter(File("${config.iteration}-offlinetrue-$name"))
-            val offlineNoStats = CSVWriter(File("${config.iteration}-offlinefalse-$name"))
-            val onlineStats = CSVWriter(File("${config.iteration}-online-stats-$name"))
+            File("im_online/${config.iteration}/online").mkdirs()
+            File("im_online/${config.iteration}/offline").mkdirs()
+            CSVWriter(File("im_online/${config.iteration}/online/extra-$name")).use { onlineExtraStats ->
+                CSVWriter(File("im_online/${config.iteration}/offline/true-$name")).use { offlineStats ->
+                    CSVWriter(File("im_online/${config.iteration}/offline/false-$name")).use { offlineNoStats ->
+                        CSVWriter(File("im_online/${config.iteration}/online/stats-$name")).use { onlineStats ->
 
-            for (step in config.windowsSteps) {
-                for (windowSize in config.windowsSizes) {
-                    var current = 0
-                    var firstMove = true
-                    val imOnline = OnlineInductiveMiner()
+                            for (step in config.windowsSteps) {
+                                for (windowSize in config.windowsSizes) {
+                                    var current = 0
+                                    var firstMove = true
+                                    val imOnline = OnlineInductiveMiner()
 
-                    do {
-                        println("[FILE=${name}][$current; ${current + windowSize}]")
+                                    do {
+                                        println("[FILE=${name}][$current; ${current + windowSize}]")
 
-                        // Store train log file
-                        log2File(
-                            logToSequence(
-                                allTraces,
-                                from = current,
-                                to = current + windowSize
-                            ),
-                            name = name,
-                            mode = "train",
-                            windowSize = windowSize,
-                            step = step,
-                            current = current
-                        )
+                                        // Store train log file
+                                        completionService.submit {
+                                            log2File(
+                                                logToSequence(
+                                                    allTraces,
+                                                    from = current,
+                                                    to = current + windowSize
+                                                ),
+                                                name = name,
+                                                mode = "train",
+                                                windowSize = windowSize,
+                                                step = step,
+                                                current = current
+                                            )
+                                        }
 
-                        // Store test log file
-                        log2File(
-                            logToSequence(
-                                allTraces,
-                                from = current + windowSize,
-                                to = current + (windowSize * 2)
-                            ),
-                            name = name,
-                            mode = "test",
-                            windowSize = windowSize,
-                            step = step,
-                            current = current
-                        )
+                                        // Store test log file
+                                        completionService.submit {
+                                            log2File(
+                                                logToSequence(
+                                                    allTraces,
+                                                    from = current + windowSize,
+                                                    to = current + (windowSize * 2)
+                                                ),
+                                                name = name,
+                                                mode = "test",
+                                                windowSize = windowSize,
+                                                step = step,
+                                                current = current
+                                            )
+                                        }
 
-                        // Offline without stats
-                        calcOffline(
-                            allTraces,
-                            current,
-                            step,
-                            windowSize,
-                            offlineStats,
-                            name,
-                            useStatsMode = false
-                        )
+                                        // Offline without stats
+                                        completionService.submit {
+                                            calcOffline(
+                                                allTraces,
+                                                current,
+                                                step,
+                                                windowSize,
+                                                offlineStats,
+                                                name,
+                                                useStatsMode = false
+                                            )
+                                        }
 
-                        // Offline with stats
-                        calcOffline(
-                            allTraces,
-                            current,
-                            step,
-                            windowSize,
-                            offlineNoStats,
-                            name,
-                            useStatsMode = true
-                        )
+                                        // Offline with stats
+                                        completionService.submit {
+                                            calcOffline(
+                                                allTraces,
+                                                current,
+                                                step,
+                                                windowSize,
+                                                offlineNoStats,
+                                                name,
+                                                useStatsMode = true
+                                            )
+                                        }
 
-                        // Online
-                        calcOnline(
-                            imOnline,
-                            allTraces,
-                            current,
-                            step,
-                            windowSize,
-                            onlineStats,
-                            name,
-                            firstMove
-                        )
-                        firstMove = false
+                                        // Online
+                                        completionService.submit {
+                                            calcOnline(
+                                                imOnline,
+                                                allTraces,
+                                                current,
+                                                step,
+                                                windowSize,
+                                                onlineStats,
+                                                name,
+                                                firstMove
+                                            )
+                                        }
 
-                        // Step
-                        current += step
-                    } while (current + windowSize - step < allTracesSize)
+                                        for (i in 1..5)
+                                            completionService.take()
 
-                    onlineExtraStats(
-                        windowSize,
-                        step,
-                        imOnline.builtFromZero,
-                        imOnline.rebuild,
-                        imOnline.tracesNoRebuildNeeds
-                    )
+                                        firstMove = false
+
+                                        // Step
+                                        current += step
+                                    } while (current + windowSize - step < allTracesSize)
+
+                                    onlineExtraStats(
+                                        windowSize,
+                                        step,
+                                        imOnline.builtFromZero,
+                                        imOnline.rebuild,
+                                        imOnline.tracesNoRebuildNeeds
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             // Execute python's precision & fitness checker
-            Runtime.getRuntime().exec("/usr/local/anaconda3/bin/python3 -OO tree_stats.py $name ${config.iteration}")
+            ProcessBuilder("/usr/local/anaconda3/bin/python3 -OO tree_stats.py $name ${config.iteration}")
+                .redirectInput(ProcessBuilder.Redirect.DISCARD)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
         }
     }
 
@@ -251,9 +284,6 @@ class Experiment {
         name: String,
         firstMove: Boolean
     ) {
-        // Clean up
-        System.gc()
-
         var modelOnline: ProcessTree? = null
         val timeOnline: ResourceStats
 
@@ -287,14 +317,12 @@ class Experiment {
         csv("memory", "online", windowSize, step, current, timeOnline.peakMemory)
         csv("model", "online", windowSize, step, current, modelOnline.toString())
 
-        FileOutputStream("onlineModel-$windowSize-$step-$current-$name.tree").use { out ->
+        File("im_online/onlineModel").mkdirs()
+        FileOutputStream("im_online/onlineModel/$windowSize-$step-$current-$name.tree").use { out ->
             BufferedOutputStream(out).use { file ->
                 modelOnline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
             }
         }
-
-        // Clean up
-        System.gc()
     }
 
     private fun calcOffline(
@@ -306,9 +334,6 @@ class Experiment {
         name: String,
         useStatsMode: Boolean = true
     ) {
-        // Clean up
-        System.gc()
-
         val imOffline = OfflineInductiveMiner()
         imOffline.useStatistics = useStatsMode
         var modelOffline: ProcessTree? = null
@@ -318,23 +343,25 @@ class Experiment {
             modelOffline = imOffline.processLog(sequenceOf(logInWindow))
         }
 
-        csv("time", "offline$useStatsMode", windowSize, step, current, timeOffline.cpuTimeMillis)
-        csv("memory", "offline$useStatsMode", windowSize, step, current, timeOffline.peakMemory)
-        csv("model", "offline$useStatsMode", windowSize, step, current, modelOffline.toString())
+        csv("time", "offline/$useStatsMode", windowSize, step, current, timeOffline.cpuTimeMillis)
+        csv("memory", "offline/$useStatsMode", windowSize, step, current, timeOffline.peakMemory)
+        csv("model", "offline/$useStatsMode", windowSize, step, current, modelOffline.toString())
 
-        FileOutputStream("offline$useStatsMode-$windowSize-$step-$current-$name.tree").use { out ->
+        File("im_online/offline").mkdirs()
+        FileOutputStream("im_online/offline/$useStatsMode-$windowSize-$step-$current-$name.tree").use { out ->
             BufferedOutputStream(out).use { file ->
                 modelOffline!!.toPTML(XMLOutputFactory.newInstance().createXMLStreamWriter(file))
             }
         }
-
-        // Clean up
-        System.gc()
     }
 
     fun main(args: Array<String>) {
-        val config = Config.load("config.json")
-        compareWindow(config)
+        try {
+            val config = Config.load("config.json")
+            compareWindow(config)
+        } finally {
+            executor.shutdown()
+        }
     }
 }
 

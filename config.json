@@ -1,7 +1,10 @@
 {
   "logs": [
+    "xes-logs/BPIC13_cp.xes.gz",
+    "xes-logs/BPIC13_i.xes.gz",
     "xes-logs/BPIC15_1.xes.gz",
     "xes-logs/BPIC15_1f.xes.gz",
+    "xes-logs/BPIC15_2.xes.gz",
     "xes-logs/BPIC15_2f.xes.gz",
     "xes-logs/BPIC15_3.xes.gz",
     "xes-logs/BPIC15_3f.xes.gz",
@@ -10,14 +13,16 @@
     "xes-logs/BPIC15_5.xes.gz",
     "xes-logs/BPIC15_5f.xes.gz",
     "xes-logs/CoSeLoG_WABO_1.xes.gz",
+    "xes-logs/CoSeLoG_WABO_2.xes.gz",
     "xes-logs/CoSeLoG_WABO_3.xes.gz",
     "xes-logs/CoSeLoG_WABO_4.xes.gz",
     "xes-logs/CoSeLoG_WABO_5.xes.gz",
-    "xes-logs/Sepsis_Cases-Event_Log.xes.gz",
     "xes-logs/Hospital_log.xes.gz",
-    "xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz"
+    "xes-logs/Receipt_phase_of_an_environmental_permit_application_process_WABO_CoSeLoG_project.xes.gz",
+    "xes-logs/Sepsis_Cases-Event_Log.xes.gz",
+    "xes-logs/nasa-cev-complete-splitted.xes.gz"
   ],
-  "maxActivities": 100,
+  "maxActivities": 1000,
   "seed": 127228,
   "windowsSizes": [
     10,
@@ -26,7 +31,9 @@
     40,
     50,
     75,
-    100
+    100,
+    150,
+    200
   ],
   "windowsSteps": [
     1
