@@ -91,7 +91,7 @@ internal class DBXESOutputStreamTest {
      */
     @Test
     fun `PSQLException ERROR index row size 2792 exceeds btree version 4 maximum 2704 for index`() {
-        val LOG_FILE = File("../xes-logs/Hospital_Log.xes.gz")
+        val LOG_FILE = File("../xes-logs/Hospital_log.xes.gz")
         GZIPInputStream(FileInputStream(LOG_FILE)).use { gzip ->
             DBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
                 out.write(XMLXESInputStream(gzip))
@@ -106,7 +106,7 @@ internal class DBXESOutputStreamTest {
      */
     @Test
     fun `PSQLException An I O error occurred while sending to the backend`() {
-        val LOG_FILE = File("../xes-logs/BPI_challenge_2013_incidents.xes.gz")
+        val LOG_FILE = File("../xes-logs/bpi_Challenge_2013_incidents.xes.gz")
         GZIPInputStream(FileInputStream(LOG_FILE)).use { gzip ->
             DBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
                 out.write(XMLXESInputStream(gzip))

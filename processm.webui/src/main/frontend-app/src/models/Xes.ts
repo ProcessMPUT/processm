@@ -9,6 +9,7 @@ export interface XesComponent {
   float?: XesAttribute[];
   int?: XesAttribute[];
   string?: XesAttribute[];
+  id?: XesAttribute[];
 }
 
 export type Event = XesComponent;

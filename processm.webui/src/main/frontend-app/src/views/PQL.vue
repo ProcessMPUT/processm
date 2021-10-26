@@ -15,27 +15,9 @@
         system. The uploaded files will be public available. The system operator
         is not responsible for the content made public in this way.
       </v-alert>
-      <v-col>
-        <v-file-input
-          prepend-icon="file_upload"
-          show-size
-          accept=".gz,.xes"
-          :rules="[
-            (v) =>
-              !v ||
-              v.size < fileSizeLimit ||
-              `Log file size should be less than ${
-                fileSizeLimit / 1024 / 1024
-              } MB!`
-          ]"
-          label="XES file input"
-          dense
-          @change="selectFile"
-        ></v-file-input>
-      </v-col>
-      <v-col>
-        <v-btn small color="primary" @click="submitFile">
-          Upload
+      <v-col align="right">
+        <v-btn class="mx-2" color="primary" @click="fileUploadDialog = true">
+          Upload XES file
           <v-icon right>upload_file</v-icon>
           <v-progress-circular
             v-show="isUploading"
@@ -45,6 +27,14 @@
             color="secondary"
             class="ml-2"
           ></v-progress-circular>
+        </v-btn>
+        <v-btn
+          class="mx-2"
+          color="primary"
+          :to="{ name: 'pql-docs' }"
+          target="_blank"
+        >
+          Documentation
         </v-btn>
       </v-col>
     </v-row>
@@ -68,11 +58,6 @@
           dense
         ></v-select>
       </v-col>
-      <v-col align="right">
-        <v-btn color="primary" :to="{ name: 'pql-docs' }" target="_blank">
-          Documentation
-        </v-btn>
-      </v-col>
     </v-row>
     <v-row no-gutters>
       <v-col>
@@ -91,7 +76,12 @@
     </v-row>
     <v-row no-gutters>
       <v-col>
-        <v-btn color="primary" @click="submitQuery" class="mr-4">
+        <v-btn
+          color="primary"
+          class="mr-4"
+          :disabled="isLoadingData"
+          @click="submitQuery"
+        >
           Execute
           <v-progress-circular
             v-show="isLoadingData"
@@ -122,27 +112,28 @@
           trace. For downloading the limits for the numbers of traces and events
           are 10 times larger.
         </v-alert>
-        <tree-table
-          :data="items"
-          :columns="headers"
-          :selectable="false"
-          :expand-type="false"
+        <xes-data-table
+          :items="items"
+          :headers="headers"
           :is-fold="false"
-          :border="true"
-          :show-index="false"
+          :loading="isLoadingData"
           :is-expanded="false"
           :keep-tree-expand="false"
-          expand-key="scope"
+          :empty-text="$t('common.no-data')"
+          :disable-pagination="false"
+          :items-per-page-options="[1, 5, -1]"
+          :selectable="false"
           children-prop="_children"
           id-prop="_id"
-          empty-text="No data"
-        >
-          <template slot="scope" slot-scope="scope">
-            <v-icon>$xes{{ scope.row.scope }}</v-icon>
-          </template>
-        </tree-table>
+        />
       </v-col>
     </v-row>
+    <file-upload-dialog
+      v-model="fileUploadDialog"
+      :sizeLimit="fileSizeLimit"
+      @cancelled="fileUploadDialog = false"
+      @submitted="submitFile"
+    />
   </v-container>
 </template>
 
@@ -171,27 +162,12 @@ import { Component, Inject } from "vue-property-decorator";
 import LogsService from "@/services/LogsService";
 import DataStoreService from "@/services/DataStoreService";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
-import TreeTable from "tree-table-vue-extend";
+import XesDataTable from "@/components/XesDataTable.vue";
+import FileUploadDialog from "@/components/FileUploadDialog.vue";
 import App from "@/App.vue";
 
-class LogHeader {
-  constructor(
-    readonly key: string,
-    title: string | null = null,
-    width: number | null = null
-  ) {
-    this.title = title ?? key;
-    this.width = width;
-  }
-
-  readonly title: string;
-  type?: string;
-  template?: string;
-  width?: number | null;
-}
-
 @Component({
-  components: { TreeTable }
+  components: { XesDataTable, FileUploadDialog }
 })
 export default class PQL extends Vue {
   @Inject() app!: App;
@@ -203,11 +179,11 @@ export default class PQL extends Vue {
   isLoadingData = false;
   isUploading = false;
   isDownloading = false;
-  selectedFile: File | null = null;
   query = "";
-  headers = new Array<LogHeader>();
+  headers = new Array<string>();
   items = new Array<LogItem>();
   selectedQuery = "";
+  fileUploadDialog = false;
   predefinedQueries = [
     { text: "Custom", value: "" },
     { text: "UC1: Read the entire database", value: "select *" },
@@ -298,25 +274,21 @@ export default class PQL extends Vue {
       (await this.dataStoreService.getAll())?.[0]?.id;
   }
 
-  selectFile(file: File) {
-    this.selectedFile = file;
-  }
-
   queryModified() {
     this.selectedQuery = "";
   }
 
-  async submitFile(): Promise<void> {
+  async submitFile(file: File): Promise<void> {
+    this.fileUploadDialog = false;
     try {
-      if (this.selectedFile == null) return;
-      if (this.selectedFile.size > this.fileSizeLimit)
+      if (file == null) return;
+      if (file.size > this.fileSizeLimit)
         return this.app.error("The selected file exceeds the size limit.");
       if (this.dataStoreId == null)
         return this.app.error("No appropriate data store found to query.");
 
       this.isUploading = true;
-      await this.logsService.uploadLogFile(this.dataStoreId, this.selectedFile);
-      this.selectedFile = null;
+      await this.logsService.uploadLogFile(this.dataStoreId, file);
       this.app.info("File uploaded successfully.");
     } catch (err) {
       this.app.error(err);
@@ -326,6 +298,7 @@ export default class PQL extends Vue {
   }
 
   async submitQuery() {
+    if (this.isLoadingData) return;
     try {
       this.headers = [];
       this.items = [];
@@ -357,22 +330,7 @@ export default class PQL extends Vue {
         } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(
           queryResults
         );
-
-        headers.forEach((headerName: string) => {
-          if (headerName.startsWith("_")) return headers;
-
-          const header = new LogHeader(headerName);
-
-          if (headerName == "scope") {
-            header.type = "template";
-            header.template = headerName;
-            header.width = 112;
-          }
-
-          this.headers.push(header);
-        });
-        if (this.headers.length === 0)
-          this.headers.push(new LogHeader("scope"));
+        this.headers = headers;
 
         for (const item of logItems) {
           await waitForRepaint(() => {

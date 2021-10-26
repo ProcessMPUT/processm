@@ -4,15 +4,18 @@ import de.odysseus.staxon.json.JsonXMLConfig
 import de.odysseus.staxon.json.JsonXMLConfigBuilder
 import de.odysseus.staxon.json.JsonXMLOutputFactory
 import org.apache.commons.io.input.BoundedInputStream
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
-import processm.core.log.DBXESOutputStream
-import processm.core.log.XMLXESInputStream
-import processm.core.log.XMLXESOutputStream
+import processm.core.log.*
+import processm.core.log.attribute.IDAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
+import processm.dbmodels.models.DataStores
 import processm.services.api.models.QueryResultCollectionMessageBody
 import java.io.*
 import java.nio.charset.Charset
@@ -33,7 +36,7 @@ class LogsService {
         BufferedInputStream(BoundedInputStream(this, streamSizeLimit))
 
     /**
-     * Returns all data stores for the specified [organizationId].
+     * Stores the provided XES [logStream] in the specified [dataStoreId].
      */
     fun saveLogFile(dataStoreId: UUID, fileName: String?, logStream: InputStream) {
         loggedScope { logger ->
@@ -43,18 +46,32 @@ class LogsService {
             ).use { db ->
                 db.write(
                     XMLXESInputStream(
-                        if (fileName?.endsWith("gz") == true) GZIPInputStream(
-                            logStream.boundStreamSize(xesFileInputSizeLimit)
-                        )
-                        else logStream.boundStreamSize(xesFileInputSizeLimit)
-                    )
+                            if (fileName?.endsWith("gz") == true) GZIPInputStream(
+                                logStream.boundStreamSize(xesFileInputSizeLimit)
+                            )
+                            else logStream.boundStreamSize(xesFileInputSizeLimit))
+                        .map {
+                            val log = it as? Log ?: return@map it
+                            val logAttributes = log.attributes.toMutableMap()
+
+                            logAttributes.computeIfAbsent("identity:id") { IDAttr("identity:id", UUID.randomUUID()) }
+
+                            return@map Log(
+                                logAttributes,
+                                log.extensions.toMutableMap(),
+                                log.traceGlobals.toMutableMap(),
+                                log.eventGlobals.toMutableMap(),
+                                log.traceClassifiers.toMutableMap(),
+                                log.eventClassifiers.toMutableMap())
+
+                        }
                 )
             }
         }
     }
 
     /**
-     * Create new data store named [name] and assigned to the specified [organizationId].
+     * Executes the provided [query] against logs stored in [dataStoreId].
      */
     fun queryDataStoreJSON(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
@@ -92,6 +109,9 @@ class LogsService {
         }
     }
 
+    /**
+     * Executes the provided [query] against logs stored in [dataStoreId] and returns the result as zipped XES file.
+     */
     fun queryDataStoreZIPXES(dataStoreId: UUID, query: String): OutputStream.() -> Unit {
         // All preparation must be done here rather than in the returned lambda, as the lambda will be invoked
         // when writing output stream and error messages (e.g., parse errors) cannot be returned through HTTP
@@ -117,6 +137,15 @@ class LogsService {
                     zip.closeEntry()
                 }
             }
+        }
+    }
+
+    /**
+     * Removes XES log specified by the [identityId] attribute value.
+     */
+    fun removeLog(dataStoreId: UUID, identityId: UUID): Unit {
+        DBCache.get(dataStoreId.toString()).getConnection().use { connection ->
+            DBLogCleaner.removeLog(connection, identityId)
         }
     }
 

@@ -6,7 +6,7 @@
     "menu": "Menu",
     "workspaces": "Workspaces",
     "users": "@:users.page-title",
-    "data-stores": "Data stores",
+    "data-stores": "@:data-stores.page-title",
     "pql-interpreter": "PQL interpreter",
     "about": "@:about.page-title"
   },
@@ -39,9 +39,56 @@
     }
   },
   "data-stores": {
-    "name": "Name",
-    "created-at": "Created at",
-    "new": "Add new"
+    "page-title": "Data stores",
+    "data-connectors": "Data connectors",
+    "logs": "Logs",
+    "etl-processes": "ETL processes",
+    "add-data-connector": "Add data connector",
+    "data-connector-required": "A data connector is required to add continuous ETL process",
+    "add-automatic-process": {
+      "title": "Add automatic process",
+      "description": "Autiomatically infer a business perspective and start monitoring the data changes"
+    },
+    "add-manual-query": {
+      "title": "Add manual query",
+      "description": "Manually define a query that yields relevant events as result rows"
+    },
+    "upload-xes-file": {
+      "title": "Upload XES file",
+      "description": "Upload XES file that contains recording of business process execution"
+    },
+    "size": "Size",
+    "successful-file-upload": "File uploaded successfully",
+    "data-store-not-found": "No appropriate data store found to query",
+    "file-size-exceeded": "The selected file exceeds the size limit",
+    "removal-confirmation": "Do you want to permanently remove {dataStoreName} data store?",
+    "data-connector-removal-confirmation": "Do you want to permanently remove {dataConnectorName} data connector?",
+    "last-connection-status": "Last connection status",
+    "last-connection-status-timestamp": "Last connection time",
+    "data-connector-no-properties": "No properties to display"
+  },
+  "add-data-connector-dialog": {
+    "dialog-title": "Add data connector",
+    "connection-type": "Connection type",
+    "check-configuration": "Check",
+    "test-connection": "Test connection",
+    "use-connection-string": "Use JDBC connection string",
+    "specify-connection-properties": "Specify connection properties",
+    "connection-string": "Connection string",
+    "connector-name": "Connector name",
+    "advanced": "Advanced",
+    "server": "Server",
+    "port": "Port",
+    "username": "User",
+    "password": "Password",
+    "database-name": "Database name",
+    "database": "Database",
+    "validation": {
+      "non-empty-field": "The value cannot be empty",
+      "connection-string-format": "The value doesn't conform to connection string format",
+      "hostname-field": "The value should be valid hostname or IP address",
+      "port-field": "The value should be integer from 0-65535 range"
+    }
   },
   "about": {
     "page-title": "About ProcessM",
@@ -56,11 +103,22 @@
     "users": "Users",
     "groups": "Groups"
   },
+  "xes-data-table": {
+    "logs-removal-confirmation": "Do you want to permanently remove {count} logs?"
+  },
   "rename-dialog": {
     "dialog-title": "Rename",
     "new-name-placeholder": "New name",
     "validation": {
       "name-empty": "The name cannot be empty"
+    }
+  },
+  "file-upload-dialog": {
+    "title": "File upload",
+    "label": "File input",
+    "upload": "Upload",
+    "validation": {
+      "size-limit": "Log file size should be less than"
     }
   },
   "password-change-dialog": {
@@ -113,6 +171,23 @@
     "submit": "Submit",
     "view": "View",
     "edit": "Edit",
-    "configure": "Configure"
+    "configure": "Configure",
+    "add-new": "Add new",
+    "details": "Details",
+    "summary": "Summary",
+    "no-data": "No data available",
+    "name": "Name",
+    "value": "Value",
+    "created-at": "Created at",
+    "warning": "Warning",
+    "actions": "Actions",
+    "removal": {
+      "success": "Successfully removed",
+      "failure": "Failed to remove"
+    },
+    "saving": {
+      "success": "Successfully saved",
+      "failure": "Failed to save"
+    }
   }
 }

@@ -70,10 +70,16 @@
                 "@keys":"Activity"
              }
           ],
-          "string":{
-             "@key":"creator",
-             "@value":"FluxiconNitro"
-          },
+          "string":[
+             {
+               "@key":"creator",
+               "@value":"FluxiconNitro"
+             },
+             {
+               "@key":"identity:id",
+               "@value":"256ba95b-510d-4ac1-bc76-bd2443df64cf"
+             }
+         ],
           "trace":[
              {
                 "string":[
@@ -457,10 +463,16 @@
                 "@keys":"Activity"
              }
           ],
-          "string":{
-             "@key":"creator",
-             "@value":"FluxiconNitro"
-          },
+         "string":[
+             {
+               "@key":"creator",
+               "@value":"FluxiconNitro"
+             },
+             {
+               "@key":"identity:id",
+               "@value":"21db514f-89a2-46a6-8c4a-234112f8a83f"
+             }
+         ],
           "trace":[
              {
                 "string":[

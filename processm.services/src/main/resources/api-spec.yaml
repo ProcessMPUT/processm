@@ -199,7 +199,7 @@ paths:
     get:
       tags:
         - dataStores
-      summary: Get all data stores assigned to given OrganizationID and to the calling User.
+      summary: Get all data stores assigned to given OrganizationID and to the calling User
       operationId: getDataStores
       responses:
         '200':
@@ -208,6 +208,10 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/DataStoreCollectionMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
     post:
@@ -231,6 +235,233 @@ paths:
                 $ref: '#/components/schemas/DataStoreMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataStores
+      summary: Get the specified data store
+      operationId: getDataStore
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataStoreMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    patch:
+      tags:
+        - dataStores
+      summary: Update the specified data store
+      operationId: updateDataStore
+      requestBody:
+        description: An object containing data store details to be updated
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/DataStoreMessageBody'
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - dataStores
+      summary: Remove the specified data store
+      operationId: deleteDataStore
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataStores
+      summary: Get all data connectors assigned to the given data store
+      operationId: getDataConnectors
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataConnectorCollectionMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - dataStores
+      summary: Create a new data connector assigned to the specified data store
+      operationId: createDataConnector
+      requestBody:
+        description: Data connector details
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/DataConnectorMessageBody'
+        required: true
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataConnectorMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataConnectorId
+        in: path
+        description: Data connector ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags:
+        - dataStores
+      summary: Update the specified data connector
+      operationId: updateDataConnector
+      requestBody:
+        description: An object containing data container details to be updated
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/DataConnectorMessageBody'
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - dataStores
+      summary: Remove the specified data connectorr
+      operationId: deleteDataConnector
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/test:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - dataStores
+      summary: Tests data connector's configuration connectivity.
+      operationId: testDataConnector
+      requestBody:
+        description: Data connector configuration
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/DataConnectorMessageBody'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DataConnectorConnectivityMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
   /organizations/{organizationId}/workspaces:
@@ -1067,6 +1298,37 @@ paths:
           $ref: '#/components/responses/Forbidden'
       security:
         - bearerAuth: []
+  /data-stores/{dataStoreId}/logs/{identityId}:
+    parameters:
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: identityId
+        in: path
+        description: Value of identity:id attribute
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags:
+        - dataStores
+        - logs
+      summary: Remove XES log from the specified data store
+      operationId: removeLog
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
 components:
   schemas:
     Config:
@@ -1253,6 +1515,8 @@ components:
           format: uuid
         name:
           type: string
+        size:
+          type: integer
         createdAt:
           type: string
           format: date-time
@@ -1270,6 +1534,48 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DataStore'
+    DataConnector:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        lastConnectionStatus:
+          type: boolean
+        lastConnectionStatusTimestamp:
+          type: string
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+    DataConnectorMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DataConnector'
+    DataConnectorCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataConnector'
+    DataConnectorConnectivity:
+      type: object
+      required: [isValid]
+      properties:
+        isValid:
+          type: boolean
+    DataConnectorConnectivityMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DataConnectorConnectivity'
     Workspace:
       type: object
       required: [name]

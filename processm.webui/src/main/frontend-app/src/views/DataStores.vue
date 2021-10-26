@@ -1,22 +1,200 @@
 <template>
-  <v-container>
-    <v-row>
-      <v-col cols="12">
-        <data-stores-list />
-      </v-col>
-    </v-row>
+  <v-container :fluid="true">
+    <v-data-table
+      :headers="[
+        {
+          text: $t('common.name'),
+          value: 'name',
+          filterable: true
+        },
+        {
+          text: $t('common.created-at'),
+          value: 'createdAt'
+        },
+        {
+          text: $t('common.actions'),
+          value: 'actions',
+          align: 'center',
+          sortable: false
+        }
+      ]"
+      :items="dataStores"
+      :loading="loading"
+      item-key="id"
+    >
+      <template v-slot:top>
+        <v-toolbar flat>
+          <v-toolbar-title> {{ $t("data-stores.page-title") }}</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-dialog v-model="newDialog" max-width="600px">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn v-bind="attrs" v-on="on" color="primary">
+                {{ $t("common.add-new") }}
+              </v-btn>
+            </template>
+            <v-card>
+              <v-card-title>{{ $t("common.add-new") }}</v-card-title>
+              <v-card-text>
+                <v-form>
+                  <v-text-field
+                    :label="$t('common.name')"
+                    type="text"
+                    v-model="newName"
+                  ></v-text-field>
+                </v-form>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="secondary" text @click="newDialog = false">
+                  {{ $t("common.cancel") }}
+                </v-btn>
+                <v-btn color="primary" text @click="addNew">
+                  {{ $t("common.submit") }}
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+        </v-toolbar>
+      </template>
+      <template v-slot:item.actions="{ item }">
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+              <v-icon small @click="dataStoreIdToRename = item.id">edit</v-icon>
+            </v-btn>
+          </template>
+          <span>{{ $t("common.rename") }}</span>
+        </v-tooltip>
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+              <v-icon small @click="configureDataStore(item.id)"
+                >settings</v-icon
+              >
+            </v-btn>
+          </template>
+          <span>{{ $t("common.configure") }}</span>
+        </v-tooltip>
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+              <v-icon small @click="removeDataStore(item)"
+                >delete_forever</v-icon
+              >
+            </v-btn>
+          </template>
+          <span>{{ $t("common.remove") }}</span>
+        </v-tooltip>
+      </template>
+    </v-data-table>
+    <data-store-configuration
+      :value="dataStoreIdToConfigure != null"
+      :data-store-id="dataStoreIdToConfigure"
+      @closed="closeDataStoreConfiguration"
+    />
+    <rename-dialog
+      :value="dataStoreIdToRename != null"
+      :old-name="dataStoreNameToRename"
+      @cancelled="dataStoreIdToRename = null"
+      @submitted="renameDataStore"
+    />
   </v-container>
 </template>
-
-<style scoped></style>
+<style scoped>
+.data-connectors {
+  text-align: center;
+}
+</style>
 
 <script lang="ts">
 import Vue from "vue";
-import { Component } from "vue-property-decorator";
-import DataStoresList from "@/views/DataStoresList.vue";
+import { Component, Inject } from "vue-property-decorator";
+import DataStoreService from "@/services/DataStoreService";
+import DataStore from "@/models/DataStore";
+import DataStoreConfiguration from "@/views/DataStoreConfiguration.vue";
+import RenameDialog from "@/components/RenameDialog.vue";
+import App from "@/App.vue";
 
 @Component({
-  components: { DataStoresList }
+  components: { DataStoreConfiguration, RenameDialog }
 })
-export default class DataStores extends Vue {}
+export default class DataStores extends Vue {
+  @Inject() app!: App;
+  @Inject() dataStoreService!: DataStoreService;
+  dataStores: Array<DataStore> = [];
+  loading = true;
+  newDialog = false;
+  newName = "";
+  dataStoreIdToConfigure: string | null = null;
+  dataStoreIdToRename: string | null = null;
+
+  get dataStoreNameToRename(): string | null {
+    return (
+      this.dataStores.find(
+        (dataStore) => dataStore.id == this.dataStoreIdToRename
+      )?.name || null
+    );
+  }
+
+  async mounted() {
+    this.loading = true;
+    this.dataStores = await this.dataStoreService.getAll();
+    this.loading = false;
+  }
+
+  async addNew() {
+    this.loading = true;
+    this.newDialog = false;
+    await this.dataStoreService.createDataStore(this.newName);
+    this.dataStores = await this.dataStoreService.getAll();
+    this.loading = false;
+    this.newName = "";
+  }
+
+  async renameDataStore(newName: string) {
+    if (
+      this.dataStoreIdToRename != null &&
+      (await this.dataStoreService.updateDataStore(this.dataStoreIdToRename, {
+        id: this.dataStoreIdToRename,
+        name: newName
+      }))
+    ) {
+      const dataStore = this.dataStores.find(
+        (dataStore) => dataStore.id == this.dataStoreIdToRename
+      );
+
+      if (dataStore != null) dataStore.name = newName;
+      this.dataStoreIdToRename = null;
+    }
+  }
+
+  async removeDataStore(dataStore: DataStore) {
+    const isRemovalConfirmed = await this.$confirm(
+      `${this.$t("data-stores.removal-confirmation", {
+        dataStoreName: dataStore.name
+      })}`,
+      {
+        title: `${this.$t("common.warning")}`
+      }
+    );
+
+    if (!isRemovalConfirmed) return;
+
+    try {
+      await this.dataStoreService.removeDataStore(dataStore.id);
+      this.dataStores.splice(this.dataStores.indexOf(dataStore), 1);
+      this.app.success(`${this.$t("common.removal.success")}`);
+    } catch (error) {
+      this.app.error(`${this.$t("common.removal.failure")}`);
+    }
+  }
+
+  configureDataStore(dataStoreId: string) {
+    this.dataStoreIdToConfigure = dataStoreId;
+  }
+
+  closeDataStoreConfiguration() {
+    this.dataStoreIdToConfigure = null;
+  }
+}
 </script>

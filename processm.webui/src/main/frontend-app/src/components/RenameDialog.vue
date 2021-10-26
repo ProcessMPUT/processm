@@ -45,7 +45,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Prop } from "vue-property-decorator";
+import { Component, Prop, Watch } from "vue-property-decorator";
 
 @Component
 export default class RenameDialog extends Vue {
@@ -57,13 +57,18 @@ export default class RenameDialog extends Vue {
   isNewNameValid = true;
   newName = "";
 
+  @Watch("value")
+  componentVisibilityChanged(isVisible: boolean) {
+    if (isVisible) this.newName = this.oldName;
+  }
+
   cancel() {
     this.$emit("cancelled");
     this.resetForm();
   }
 
   rename() {
-    this.$emit("newNameSubmitted", this.newName);
+    this.$emit("submitted", this.newName);
     this.resetForm();
   }
 

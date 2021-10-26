@@ -6,7 +6,7 @@
     "menu": "Menu",
     "workspaces": "Przestrzenie robocze",
     "users": "Użytkownicy",
-    "data-stores": "Magazyny danych",
+    "data-stores": "@:data-stores.page-title",
     "pql-interpreter": "Interpreter PQL",
     "about": "@:about.page-title"
   },
@@ -39,9 +39,56 @@
     }
   },
   "data-stores": {
-    "name": "Nazwa",
-    "created-at": "Utworzono",
-    "new": "Dodaj nowe"
+    "page-title": "Magazyny danych",
+    "data-connectors": "Łącza danych",
+    "logs": "Logi",
+    "etl-processes": "Procesy ETL",
+    "add-data-connector": "Dodaj łącze danych",
+    "data-connector-required": "Łącze danych jest wymagane, aby dodać ciągły proces ETL",
+    "add-automatic-process": {
+      "title": "Dodaj automatyczny process",
+      "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych"
+  },
+    "add-manual-query": {
+      "title": "Dodaj ręcznie zapytanie",
+      "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
+    },
+    "upload-xes-file": {
+      "title": "Załaduj plik XES",
+      "description": "Załaduj plik XES zawierający zapis wykonania procesu biznesowego"
+    },
+    "size": "Rozmiar",
+    "successful-file-upload": "Plik został załadowany",
+    "data-store-not-found": "Nie znaleziono magazynu danych",
+    "file-size-exceeded": "Dopuszczalny rozmiart pliku przekroczony",
+    "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięciu magazynu danych {dataStoreName}?",
+    "data-connector-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięciu łącza danych {dataConnectorName}?",
+    "last-connection-status": "Status ostatniego połączęnia",
+    "last-connection-status-timestamp": "Czas ostatniego połączenia",
+    "data-connector-no-properties": "Brak właściwości do wyświetlenia"
+  },
+  "add-data-connector-dialog": {
+    "dialog-title": "Dodaj łącze danych",
+    "connection-type": "Typ połączenia",
+    "check-configuration": "Sprawdź",
+    "test-connection": "Testuj połączenie",
+    "use-connection-string": "Użyj JDBC connection string",
+    "specify-connection-properties": "Podaj właściwości połączenia",
+    "connection-string": "Connection string",
+    "connector-name": "Nazwa łącza",
+    "advanced": "Zaawansowane",
+    "server": "Serwer",
+    "port": "Port",
+    "username": "Użytkownik",
+    "password": "Hasło",
+    "database-name": "Nazwa bazy danych",
+    "database": "Baza danych",
+    "validation": {
+      "non-empty-field": "Wartość nie może być pusta",
+      "connection-string-format": "Wartość nie spełnia formatu connection stringa",
+      "hostname-field": "Wartość powinna być nazwą hosta lub adresem IP",
+      "port-field": "Wartość powinna być liczbą całkowitą z zakresu 0-65535"
+    }
   },
   "about": {
     "page-title": "O ProcessM"
@@ -50,11 +97,27 @@
     "language": "Język",
     "change-password": "Zmień hasło"
   },
+  "users": {
+    "page-title": "Użytkownicy",
+    "users": "Użytkownicy",
+    "groups": "Grupy"
+  },
+  "xes-data-table": {
+    "logs-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie {count} logów?"
+  },
   "rename-dialog": {
     "dialog-title": "Zmień nazwę",
     "new-name-placeholder": "Nowa nazwa",
     "validation": {
       "name-empty": "Nazwa nie może być pusta"
+    }
+  },
+  "file-upload-dialog": {
+    "title": "Ładowanie pliku",
+    "label": "Plik wejściowy",
+    "upload": "Załaduj",
+    "validation": {
+      "size-limit": "Rozmiar pliku nie powinien przekraczać"
     }
   },
   "password-change-dialog": {
@@ -107,6 +170,23 @@
     "submit": "Zatwierdź",
     "view": "Podgląd",
     "edit": "Edycja",
-    "configure": "Konfiguruj"
+    "configure": "Konfiguruj",
+    "add-new": "Dodaj nowy",
+    "details": "Szczegóły",
+    "summary": "Podsumowanie",
+    "no-data": "Brak danych",
+    "name": "Nazwa",
+    "value": "Wartość",
+    "created-at": "Utworzono",
+    "warning": "Ostrzeżenie",
+    "actions": "Akcje",
+    "removal": {
+      "success": "Pomyślnie usunięto",
+      "failure": "Usuwanie nie powiodło się"
+    },
+    "saving": {
+      "success": "Pomyślnie zapisano",
+      "failure": "Zapisywanie nie powiodło się"
+    }
   }
 }

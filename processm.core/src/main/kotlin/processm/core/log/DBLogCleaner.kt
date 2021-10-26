@@ -1,11 +1,25 @@
 package processm.core.log
 
 import java.sql.Connection
+import java.util.*
+import kotlin.collections.HashSet
 
 object DBLogCleaner {
     fun removeLog(connection: Connection, logId: Int) {
         removeLogRecord(connection, logId)
         removeTraces(connection, logId)
+    }
+
+    fun removeLog(connection: Connection, identityId: UUID): Boolean {
+        val logId = with(connection.prepareStatement("""SELECT id FROM logs WHERE "identity:id" = ?""")) {
+            setObject(1, identityId)
+            executeQuery().use { response ->
+                return@with if (response.next()) response.getInt("id") else null
+            }
+        } ?: return false
+
+        removeLog(connection, logId)
+        return true
     }
 
     private fun removeTraces(connection: Connection, logId: Int) {
