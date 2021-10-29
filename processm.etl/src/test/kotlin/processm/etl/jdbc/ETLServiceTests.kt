@@ -154,9 +154,7 @@ OFFSET ?::bigint
             val config = transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.new {
                     name = _name
-                    jdbcUri = externalDB.jdbcUrl
-                    user = externalDB.user
-                    password = externalDB.password
+                    dataConnector = externalDB.dataConnector
                     query = sql
                     lastEventExternalId = _lastEventExternalId
                     refresh = _refresh

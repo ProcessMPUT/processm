@@ -56,9 +56,7 @@ class PostgresSakilaWithFloatingPointEventIdsTest {
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 name = etlConfiguratioName
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query = getEventSQL
                 lastEventExternalId = "0"
             }

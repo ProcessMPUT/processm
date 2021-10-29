@@ -138,9 +138,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 name = etlConfiguratioName
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query = getEventSQL(lastEventExternalId == null)
                 batch = lastEventExternalId == null
                 this.lastEventExternalId = lastEventExternalId
@@ -473,9 +471,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
                 name = "Long-based ID test"
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query =
                     "SELECT CAST(987654321 AS $sqlInt) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlInt) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -516,9 +512,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
                 name = "Long-based ID test"
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query =
                     "SELECT CAST(9876543210 AS $sqlLong) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlLong) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -559,9 +553,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
                 name = "Long-based ID test"
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query =
                     "SELECT CAST(9876543210 AS double precision) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS double precision) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -602,9 +594,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
                 name = "Long-based ID test"
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query =
                     "SELECT CAST('b4139e40-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('c17cdfce-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -645,9 +635,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
                 name = "Long-based ID test"
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -688,9 +676,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
                 name = "Long-based ID test"
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -731,9 +717,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
                 name = "Long-based ID test"
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query =
                     "SELECT CAST('Lorem ipsum dolor sit amet, consectetur adipiscing elit,' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null

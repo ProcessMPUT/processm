@@ -75,9 +75,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 name = etlConfiguratioName
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query = getEventQuery(lastEventExternalId == null)
                 this.lastEventExternalId = lastEventExternalId
                 batch = lastEventExternalId == null

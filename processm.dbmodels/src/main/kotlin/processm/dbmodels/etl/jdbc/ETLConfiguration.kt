@@ -5,6 +5,8 @@ import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.`java-time`.timestamp
+import processm.dbmodels.models.DataConnector
+import processm.dbmodels.models.DataConnectors
 import java.util.*
 
 const val JDBC_ETL_TOPIC = "jdbc_etl"
@@ -16,9 +18,7 @@ const val ID = "id"
 
 object ETLConfigurations : UUIDTable("etl_configurations") {
     val name = text("name").uniqueIndex("etl_configurations_name")
-    val jdbcUri = text("jdbc_uri")
-    val user = text("user").nullable()
-    val password = text("password").nullable()
+    val dataConnector = reference("data_connector", DataConnectors)
     val query = text("query")
     val refresh = long("refresh").nullable()
     val enabled = bool("enabled").default(true)
@@ -41,19 +41,9 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
     var name by ETLConfigurations.name
 
     /**
-     * The JDBC URI of the remote database.
+     * A connector to the remote database.
      */
-    var jdbcUri by ETLConfigurations.jdbcUri
-
-    /**
-     * The user of the remote database.
-     */
-    var user by ETLConfigurations.user
-
-    /**
-     * The password to the remote database.
-     */
-    var password by ETLConfigurations.password
+    var dataConnector by DataConnector referencedOn ETLConfigurations.dataConnector
 
     /**
      * The query retrieving events from the remote database.

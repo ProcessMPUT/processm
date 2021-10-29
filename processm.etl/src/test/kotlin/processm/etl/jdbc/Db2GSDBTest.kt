@@ -57,9 +57,7 @@ class Db2SalesTest {
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 name = etlConfiguratioName
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                dataConnector = externalDB.dataConnector
                 query = if (lastEventExternalId == null) batchEventSQL else incrementalEventSQL
                 this.lastEventExternalId = lastEventExternalId
                 batch = lastEventExternalId == null

@@ -16,6 +16,7 @@ import java.sql.Types
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ForkJoinPool
+import processm.etl.getConnection
 
 private const val IDENTITY_ID = "identity:id"
 
@@ -116,7 +117,7 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream {
     if (batch && lastEventExternalId !== null)
         return emptySequence()
     val baseSequence = sequence<Pair<XESComponent, Any?>> {
-        DriverManager.getConnection(jdbcUri, user, password)
+        dataConnector.getConnection()
             .use { connection ->
                 try {
                     connection.setNetworkTimeout(ForkJoinPool.commonPool(), NETWORK_TIMEOUT)
