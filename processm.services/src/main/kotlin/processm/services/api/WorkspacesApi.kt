@@ -12,6 +12,7 @@ import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.dbmodels.models.CausalNetDto
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.WorkspaceDto
 import processm.services.api.models.*
 import processm.services.logic.WorkspaceService
 import java.util.*
@@ -56,10 +57,19 @@ fun Route.WorkspacesApi() {
             call.respond(HttpStatusCode.OK, WorkspaceCollectionMessageBody(workspaces))
         }
 
-        put<Paths.Workspace> {
-            val principal = call.authentication.principal<ApiUser>()
+        put<Paths.Workspace> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
 
-            call.respond(HttpStatusCode.NotImplemented)
+            val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
+                ?: throw ApiException("The provided workspace data cannot be parsed")
+
+            workspaceService.updateWorkspace(
+                principal.userId,
+                path.organizationId,
+                WorkspaceDto(path.workspaceId, workspace.name)
+            )
+
+            call.respond(HttpStatusCode.OK)
         }
 
         get<Paths.WorkspaceComponent> { _ ->

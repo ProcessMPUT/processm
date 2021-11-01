@@ -48,34 +48,51 @@ class WorkspaceService(private val accountService: AccountService) {
             return@transaction workspaceId.value
         }
 
+    fun updateWorkspace(userId: UUID, organizationId: UUID, workspace: WorkspaceDto) =
+        transaction(DBCache.getMainDBPool().database) {
+            hasPermissionToEdit(workspace.id, organizationId, userId)
+
+            with(Workspace[workspace.id]) {
+                name = workspace.name
+            }
+        }
+
     /**
      * Removes the specified [workspaceId].
      * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceId] doesn't exist.
      */
     fun removeWorkspace(workspaceId: UUID, userId: UUID, organizationId: UUID) =
         transaction(DBCache.getMainDBPool().database) {
-            val canBeRemoved = UsersInGroups
-                .innerJoin(UserGroups)
-                .innerJoin(UserGroupWithWorkspaces)
-                .select {
-                    UserGroupWithWorkspaces.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(
-                        GroupRoleDto.Reader
-                    ))
-                }
-                .limit(1)
-                .any()
-
-            if (!canBeRemoved) {
-                throw ValidationException(
-                    ValidationException.Reason.ResourceNotFound,
-                    "The specified workspace does not exist or the user has insufficient permissions to it"
-                )
-            }
+            hasPermissionToEdit(workspaceId, organizationId, userId)
 
             Workspaces.deleteWhere {
                 Workspaces.id eq workspaceId
             } > 0
         }
+
+    private fun hasPermissionToEdit(
+        workspaceId: UUID,
+        organizationId: UUID,
+        userId: UUID
+    ) {
+        val hasPermission = UsersInGroups
+            .innerJoin(UserGroups)
+            .innerJoin(UserGroupWithWorkspaces)
+            .select {
+                UserGroupWithWorkspaces.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(
+                    GroupRoleDto.Reader
+                ))
+            }
+            .limit(1)
+            .any()
+
+        if (!hasPermission) {
+            throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified workspace does not exist or the user has insufficient permissions to use it."
+            )
+        }
+    }
 
     /**
      * Returns all components in the specified [workspaceId].
