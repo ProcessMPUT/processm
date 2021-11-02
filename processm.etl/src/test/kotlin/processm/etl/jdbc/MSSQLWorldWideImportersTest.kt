@@ -416,7 +416,7 @@ order by "trace_rank" desc, "event_id" desc
     }
 
     @Test
-    fun `read complete XES and then read nothing starting from "0"`() {
+    fun `read complete XES and then read nothing starting from 0`() {
         val stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
             return@transaction etl.toXESInputStream().toList()
