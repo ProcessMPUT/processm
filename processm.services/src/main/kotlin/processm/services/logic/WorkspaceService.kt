@@ -5,10 +5,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.helpers.mapToArray
-import processm.core.logging.loggedScope
-import processm.core.models.causalnet.DBSerializer
-import processm.core.models.causalnet.MutableCausalNet
+import processm.core.helpers.toUUID
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.util.*
@@ -79,9 +76,10 @@ class WorkspaceService(private val accountService: AccountService) {
             .innerJoin(UserGroups)
             .innerJoin(UserGroupWithWorkspaces)
             .select {
-                UserGroupWithWorkspaces.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(
-                    GroupRoleDto.Reader
-                ))
+                UserGroupWithWorkspaces.workspaceId eq workspaceId and
+                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
+                        (UsersInGroups.userId eq userId) and
+                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
             }
             .limit(1)
             .any()
@@ -97,7 +95,7 @@ class WorkspaceService(private val accountService: AccountService) {
     /**
      * Returns all components in the specified [workspaceId].
      */
-    fun getWorkspaceComponents(workspaceId: UUID, userId: UUID, organizationId: UUID) = loggedScope { logger ->
+    fun getWorkspaceComponents(workspaceId: UUID, userId: UUID, organizationId: UUID): List<WorkspaceComponent> =
         transaction(DBCache.getMainDBPool().database) {
             WorkspaceComponent.wrapRows(
                 WorkspaceComponents
@@ -106,27 +104,8 @@ class WorkspaceService(private val accountService: AccountService) {
                     .innerJoin(UserGroups)
                     .innerJoin(UsersInGroups)
                     .select(WorkspaceComponents.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId))
-            )
-                .fold(mutableListOf<WorkspaceComponentDto>()) { acc, component ->
-                    val componentDto = component.toDto()
-
-                    if (component.componentType == ComponentTypeDto.CausalNet && component.componentDataStoreId != null) {
-                        try {
-                            componentDto.data =
-                                DBSerializer.fetch(DBCache.get(workspaceId.toString()), component.componentDataStoreId!!)
-                                    .toDto()
-                            acc.add(componentDto)
-                        } catch (ex: NoSuchElementException) {
-                            logger.warn("The data store ${component.componentDataStoreId} of ${component.componentType} workspace component ${component.id} does not exist")
-                        }
-                    } else {
-                        acc.add(componentDto)
-                    }
-
-                    return@fold acc
-                }.toList()
+            ).toList()
         }
-    }
 
     /**
      * Adds or updates the specified [workspaceComponentId]. If particular parameter: [name], [componentType], [customizationData] is not specified, then it's not added/updated.
@@ -139,46 +118,47 @@ class WorkspaceService(private val accountService: AccountService) {
         organizationId: UUID,
         name: String?,
         query: String?,
+        dataStore: String?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null
     ): Unit = transaction(DBCache.getMainDBPool().database) {
-        val canWorkspaceBeModified = UsersInGroups
-            .innerJoin(UserGroups)
-            .innerJoin(UserGroupWithWorkspaces)
-            .innerJoin(Workspaces)
-            .select {
-                UserGroupWithWorkspaces.workspaceId eq workspaceId and
-                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
-                        (UsersInGroups.userId eq userId) and
-                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
-            }
-            .limit(1)
-            .any()
-
-        if (!canWorkspaceBeModified) {
-            throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "The specified workspace/component does not exist or the user has insufficient permissions to it"
-            )
-        }
+        hasPermissionToEdit(workspaceId, organizationId, userId)
 
         val componentAlreadyExists = WorkspaceComponents
-            .select {WorkspaceComponents.id eq workspaceComponentId}
+            .select { WorkspaceComponents.id eq workspaceComponentId }
             .limit(1).any()
 
         if (componentAlreadyExists) {
-            return@transaction updateComponent(workspaceComponentId, workspaceId, name, query, componentType, customizationData, layoutData)
+            return@transaction updateComponent(
+                workspaceComponentId,
+                workspaceId,
+                name,
+                query,
+                dataStore,
+                componentType,
+                customizationData,
+                layoutData
+            )
         }
 
-        if (name == null || query == null || componentType == null) {
+        if (name == null || query == null || dataStore == null || componentType == null) {
             throw ValidationException(
                 ValidationException.Reason.ResourceFormatInvalid,
                 "The specified workspace component does not exists and cannot be created"
             )
         }
 
-        addComponent(workspaceComponentId, workspaceId, name, query, componentType, customizationData, layoutData)
+        addComponent(
+            workspaceComponentId,
+            workspaceId,
+            name,
+            query,
+            dataStore,
+            componentType,
+            customizationData,
+            layoutData
+        )
     }
 
     /**
@@ -191,27 +171,7 @@ class WorkspaceService(private val accountService: AccountService) {
         userId: UUID,
         organizationId: UUID,
     ) = transaction(DBCache.getMainDBPool().database) {
-        val canWorkspaceBeRemoved = UsersInGroups
-            .innerJoin(UserGroups)
-            .innerJoin(UserGroupWithWorkspaces)
-            .innerJoin(Workspaces)
-            .innerJoin(WorkspaceComponents)
-            .select {
-                UserGroupWithWorkspaces.workspaceId eq workspaceId and
-                        (WorkspaceComponents.id eq workspaceComponentId) and
-                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
-                        (UsersInGroups.userId eq userId) and
-                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
-            }
-            .limit(1)
-            .any()
-
-        if (!canWorkspaceBeRemoved) {
-            throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "The specified workspace/component does not exist or the user has insufficient permissions to it"
-            )
-        }
+        hasPermissionToEdit(workspaceId, organizationId, userId)
 
         WorkspaceComponents.deleteWhere {
             WorkspaceComponents.id eq workspaceComponentId
@@ -237,7 +197,8 @@ class WorkspaceService(private val accountService: AccountService) {
                 WorkspaceComponents.id inList layout.keys and
                         (UserGroupWithWorkspaces.workspaceId eq workspaceId) and
                         (UserGroupWithWorkspaces.organizationId eq organizationId) and
-                        (UsersInGroups.userId eq userId) and (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
+                        (UsersInGroups.userId eq userId) and
+                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
             }
             .count() == layout.size.toLong()
 
@@ -261,6 +222,7 @@ class WorkspaceService(private val accountService: AccountService) {
         workspaceId: UUID,
         name: String,
         query: String,
+        dataStore: String,
         componentType: ComponentTypeDto,
         customizationData: String? = null,
         layoutData: String? = null
@@ -269,6 +231,7 @@ class WorkspaceService(private val accountService: AccountService) {
             it[WorkspaceComponents.id] = EntityID(workspaceComponentId, WorkspaceComponents)
             it[WorkspaceComponents.name] = name
             it[WorkspaceComponents.query] = query
+            it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore.toUUID())
             it[WorkspaceComponents.componentType] = componentType.typeName
             it[WorkspaceComponents.customizationData] = customizationData
             it[WorkspaceComponents.layoutData] = layoutData
@@ -281,6 +244,7 @@ class WorkspaceService(private val accountService: AccountService) {
         workspaceId: UUID?,
         name: String?,
         query: String?,
+        dataStore: String?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null
@@ -289,32 +253,10 @@ class WorkspaceService(private val accountService: AccountService) {
             if (workspaceId != null) it[WorkspaceComponents.workspaceId] = EntityID(workspaceId, Workspaces)
             if (name != null) it[WorkspaceComponents.name] = name
             if (query != null) it[WorkspaceComponents.query] = query
+            if (dataStore != null) it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore.toUUID())
             if (componentType != null) it[WorkspaceComponents.componentType] = componentType.typeName
             if (customizationData != null) it[WorkspaceComponents.customizationData] = customizationData
             if (layoutData != null) it[WorkspaceComponents.layoutData] = layoutData
         }
-    }
-
-    private fun MutableCausalNet.toDto(): CausalNetDto {
-        val nodes =
-            (sequenceOf(start) +
-                    activities.filter { it != start && it != end } +
-                    sequenceOf(end))
-                .map {
-                    CausalNetNodeDto(
-                        it.name,
-                        splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
-                        joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
-                    )
-                }
-                .toList()
-        val edges = dependencies.map {
-            CausalNetEdgeDto(
-                it.source.name,
-                it.target.name
-            )
-        }
-
-        return CausalNetDto(nodes, edges)
     }
 }

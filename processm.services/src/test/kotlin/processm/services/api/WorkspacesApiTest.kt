@@ -1,26 +1,25 @@
 package processm.services.api
 
 import com.google.gson.Gson
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import org.junit.Test
+import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
-import processm.dbmodels.models.CausalNetDto
-import processm.dbmodels.models.CausalNetEdgeDto
-import processm.dbmodels.models.CausalNetNodeDto
+import processm.core.models.causalnet.DBSerializer
+import processm.core.models.causalnet.MutableCausalNet
+import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.WorkspaceComponents
 import processm.services.api.models.*
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.util.*
 import java.util.stream.Stream
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -39,7 +38,6 @@ class WorkspacesApiTest : BaseApiTest() {
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
-        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}",
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}",
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
     )
@@ -47,9 +45,11 @@ class WorkspacesApiTest : BaseApiTest() {
     override fun componentsRegistration() {
         super.componentsRegistration()
         workspaceService = declareMock()
+        dbSerializer = declareMock()
     }
 
     lateinit var workspaceService: WorkspaceService
+    lateinit var dbSerializer: DBSerializer
 
     @Test
     fun `responds with 200 and workspace list`() = withConfiguredTestApplication {
@@ -238,6 +238,10 @@ class WorkspacesApiTest : BaseApiTest() {
         val workspaceId = UUID.randomUUID()
         val componentId1 = UUID.randomUUID()
         val componentId2 = UUID.randomUUID()
+        val dataStore = UUID.randomUUID()
+
+        val cnet1 = DBSerializer.insert(DBCache.get(dataStore.toString()).database, MutableCausalNet())
+        val cnet2 = DBSerializer.insert(DBCache.get(dataStore.toString()).database, MutableCausalNet())
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {
@@ -248,40 +252,29 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             } returns listOf(
                 mockk {
-                    every { id } returns componentId1
+                    every { id } returns EntityID(componentId1, WorkspaceComponents)
                     every { name } returns "Component1"
                     every { query } returns "query1"
-                    every { data } returns CausalNetDto(
-                        listOf(
-                            CausalNetNodeDto(
-                                "node_id",
-                                arrayOf(arrayOf()),
-                                arrayOf(arrayOf())
-                            )
-                        ),
-                        listOf(CausalNetEdgeDto("node_id1", "node_id2"))
-                    )
+                    every { dataStoreId } returns dataStore
+                    every { componentType } returns ComponentTypeDto.CausalNet
+                    every { data } returns cnet1.toString()
                     every { customizationData } returns null
                     every { layoutData } returns null
                 },
                 mockk {
-                    every { id } returns componentId2
+                    every { id } returns EntityID(componentId2, WorkspaceComponents)
                     every { name } returns "Component2"
                     every { query } returns "query2"
-                    every { data } returns CausalNetDto(
-                        listOf(
-                            CausalNetNodeDto(
-                                "node_id",
-                                arrayOf(arrayOf()),
-                                arrayOf(arrayOf())
-                            )
-                        ),
-                        listOf(CausalNetEdgeDto("node_id1", "node_id2"))
-                    )
+                    every { dataStoreId } returns dataStore
+                    every { componentType } returns ComponentTypeDto.CausalNet
+                    every { data } returns cnet2.toString()
                     every { customizationData } returns null
                     every { layoutData } returns null
                 }
             )
+            every {
+                dbSerializer.fetch(any(), any())
+            } returns MutableCausalNet()
             with(
                 handleRequest(
                     HttpMethod.Get,
@@ -302,6 +295,9 @@ class WorkspacesApiTest : BaseApiTest() {
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
         val componentId = UUID.randomUUID()
+        val dataStore = UUID.randomUUID()
+
+        val cnet1 = DBSerializer.insert(DBCache.get(dataStore.toString()).database, MutableCausalNet())
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {
@@ -312,23 +308,19 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             } returns listOf(
                 mockk {
-                    every { id } returns componentId
+                    every { id } returns EntityID(componentId, WorkspaceComponents)
                     every { name } returns "Component1"
                     every { query } returns "query1"
-                    every { data } returns CausalNetDto(
-                        listOf(
-                            CausalNetNodeDto(
-                                "node_id",
-                                arrayOf(arrayOf()),
-                                arrayOf(arrayOf())
-                            )
-                        ),
-                        listOf(CausalNetEdgeDto("node_id1", "node_id2"))
-                    )
+                    every { dataStoreId } returns dataStore
+                    every { componentType } returns ComponentTypeDto.CausalNet
+                    every { data } returns cnet1.toString()
                     every { customizationData } returns "{\"layout\":[{\"id\":\"node_id\",\"x\":15,\"y\":30}]}"
                     every { layoutData } returns null
                 }
             )
+            every {
+                dbSerializer.fetch(any(), any())
+            } returns MutableCausalNet()
             with(
                 handleRequest(
                     HttpMethod.Get,
@@ -354,6 +346,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val componentId = UUID.randomUUID()
             val componentName = "Component1"
             val dataQuery = "query"
+            val dataStore = UUID.randomUUID().toString()
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
@@ -364,6 +357,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         organizationId,
                         componentName,
                         dataQuery,
+                        dataStore,
                         ComponentTypeDto.CausalNet,
                         customizationData = null
                     )
@@ -379,6 +373,7 @@ class WorkspacesApiTest : BaseApiTest() {
                                 AbstractComponent(
                                     id = componentId,
                                     query = dataQuery,
+                                    dataStore = dataStore,
                                     name = "Component1",
                                     type = ComponentType.causalNet,
                                     customizationData = null
@@ -398,6 +393,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val componentId = UUID.randomUUID()
         val componentName = "Component1"
         val dataQuery = "query"
+        val dataStore = UUID.randomUUID().toString()
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {
@@ -408,6 +404,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     organizationId,
                     componentName,
                     dataQuery,
+                    dataStore,
                     ComponentTypeDto.CausalNet,
                     customizationData = """{"layout":[{"id":"id1","x":10,"y":10}]}"""
                 )
@@ -423,6 +420,7 @@ class WorkspacesApiTest : BaseApiTest() {
                             AbstractComponent(
                                 id = componentId,
                                 query = dataQuery,
+                                dataStore = dataStore,
                                 name = "Component1",
                                 type = ComponentType.causalNet,
                                 customizationData = CausalNetComponentAllOfCustomizationData(
@@ -449,7 +447,14 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
-            val layoutData = mapOf(componentId to LayoutElement(1.toBigDecimal(), 1.toBigDecimal(), 2.toBigDecimal(), 2.toBigDecimal()))
+            val layoutData = mapOf(
+                componentId to LayoutElement(
+                    1.toBigDecimal(),
+                    1.toBigDecimal(),
+                    2.toBigDecimal(),
+                    2.toBigDecimal()
+                )
+            )
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
@@ -460,10 +465,14 @@ class WorkspacesApiTest : BaseApiTest() {
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } just Runs
-                with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/workspaces/$workspaceId/layout") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
-                }) {
+                with(
+                    handleRequest(
+                        HttpMethod.Patch,
+                        "/api/organizations/$organizationId/workspaces/$workspaceId/layout"
+                    ) {
+                        addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                        withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
+                    }) {
                     assertEquals(HttpStatusCode.NoContent, response.status())
                 }
             }
@@ -475,7 +484,14 @@ class WorkspacesApiTest : BaseApiTest() {
             val organizationId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
-            val layoutData = mapOf(componentId to LayoutElement(1.toBigDecimal(), 1.toBigDecimal(), 2.toBigDecimal(), 2.toBigDecimal()))
+            val layoutData = mapOf(
+                componentId to LayoutElement(
+                    1.toBigDecimal(),
+                    1.toBigDecimal(),
+                    2.toBigDecimal(),
+                    2.toBigDecimal()
+                )
+            )
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
@@ -489,10 +505,14 @@ class WorkspacesApiTest : BaseApiTest() {
                     ValidationException.Reason.ResourceNotFound,
                     "The specified workspace does not exist or the user has insufficient permissions to it"
                 )
-                with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/workspaces/$workspaceId/layout") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
-                }) {
+                with(
+                    handleRequest(
+                        HttpMethod.Patch,
+                        "/api/organizations/$organizationId/workspaces/$workspaceId/layout"
+                    ) {
+                        addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                        withSerializedBody(LayoutCollectionMessageBody(layoutData.mapKeys { it.key.toString() }))
+                    }) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
                 }
             }
@@ -514,7 +534,12 @@ class WorkspacesApiTest : BaseApiTest() {
                         organizationId
                     )
                 } returns true
-                with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId")) {
+                with(
+                    handleRequest(
+                        HttpMethod.Delete,
+                        "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId"
+                    )
+                ) {
                     assertEquals(HttpStatusCode.NoContent, response.status())
                 }
             }
@@ -539,7 +564,12 @@ class WorkspacesApiTest : BaseApiTest() {
                     ValidationException.Reason.ResourceNotFound,
                     "The specified workspace/component does not exist or the user has insufficient permissions to it"
                 )
-                with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId")) {
+                with(
+                    handleRequest(
+                        HttpMethod.Delete,
+                        "/api/organizations/$organizationId/workspaces/$workspaceId/components/$componentId"
+                    )
+                ) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
                 }
             }

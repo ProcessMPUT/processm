@@ -1824,7 +1824,7 @@ components:
             $ref: '#/components/schemas/Workspace'
     Component:
       type: object
-      required: [id, query, type]
+      required: [id, query, dataStore, type]
       properties:
         id:
           type: string
@@ -1832,6 +1832,8 @@ components:
         name:
           type: string
         query:
+          type: string
+        dataStore:
           type: string
         type:
           $ref: '#/components/schemas/ComponentType'

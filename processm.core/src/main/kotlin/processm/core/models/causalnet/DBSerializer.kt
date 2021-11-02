@@ -97,29 +97,29 @@ object DBSerializer {
      *
      * Does not handle metadata nor decision models
      */
-    fun insert(dbConnectionPool: DBConnectionPool, model: CausalNet): Int {
+    fun insert(database: Database, model: CausalNet): Int {
         var result: Int? = null
-        transaction(dbConnectionPool.database) {
+        transaction(database) {
             addLogger(Slf4jSqlDebugLogger)
             val daomodel = DAOModel.new {
             }
-            val node2DAONode = model.instances.map { node ->
-                node to DAONode.new {
+            val node2DAONode = model.instances.associateWith { node ->
+                DAONode.new {
                     activity = node.activity
                     instance = node.instanceId
                     special = node.special
                     this.model = daomodel
                 }
-            }.toMap()
+            }
             daomodel.start = node2DAONode.getValue(model.start).id
             daomodel.end = node2DAONode.getValue(model.end).id
-            val dep2DAODep = model.outgoing.values.flatten().map { dep ->
-                dep to DAODependency.new {
+            val dep2DAODep = model.outgoing.values.flatten().associateWith { dep ->
+                DAODependency.new {
                     source = node2DAONode.getValue(dep.source).id
                     target = node2DAONode.getValue(dep.target).id
                     this.model = daomodel
                 }
-            }.toMap()
+            }
             val tmp = model.joins.values.asSequence().flatten().map { join -> Pair(join, true) } +
                     model.splits.values.asSequence().flatten().map { join -> Pair(join, false) }
             tmp.forEach { (bdg, flag) ->
@@ -142,26 +142,25 @@ object DBSerializer {
      *
      * Decision model and metadata handlers are left default
      */
-    fun fetch(dbConnectionPool: DBConnectionPool, modelId: Int): MutableCausalNet {
+    fun fetch(database: Database, modelId: Int): MutableCausalNet {
         var result: MutableCausalNet? = null
-        transaction(dbConnectionPool.database) {
+        transaction(database) {
             addLogger(Slf4jSqlDebugLogger)
-            val daomodel = DAOModel.findById(modelId) ?: throw NoSuchElementException()
-            val idNode = daomodel.nodes
-                .map { row -> row.id to Node(row.activity, row.instance, row.special) }
-                .toMap()
-            var start = daomodel.start
-            var end = daomodel.end
+            val daomodel = DAOModel.findById(modelId)
+                ?: throw NoSuchElementException("Causal net with id $modelId is not found in database ${database.name}.")
+            val idNode = daomodel.nodes.associate { row -> row.id to Node(row.activity, row.instance, row.special) }
+            val start = daomodel.start
+            val end = daomodel.end
             if (start == null || end == null)
                 throw IllegalStateException("start or end is null") //this means that DB went bonkers
             val mm = MutableCausalNet(start = idNode.getValue(start), end = idNode.getValue(end))
             mm.addInstance(*idNode.values.toTypedArray())
-            val idDep = daomodel.dependencies.map { row ->
-                row to mm.addDependency(
+            val idDep = daomodel.dependencies.associateWith { row ->
+                mm.addDependency(
                     idNode.getValue(row.source),
                     idNode.getValue(row.target)
                 )
-            }.toMap()
+            }
             daomodel.bindings.forEach { row ->
                 val deps = row.dependencies.mapToSet { idDep.getValue(it) }
                 if (row.isJoin)

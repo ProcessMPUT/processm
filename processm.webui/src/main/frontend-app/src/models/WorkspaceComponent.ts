@@ -53,6 +53,7 @@ export class WorkspaceComponent {
     id: string;
     name?: string;
     query: string;
+    dataStore: string;
     type: ComponentType;
     data?: { type: ComponentType };
     layout?: LayoutElement;
@@ -60,6 +61,7 @@ export class WorkspaceComponent {
   }) {
     Object.assign(this, init);
 
+    // FIXME: customizations like this should be implemented using inheritance
     switch (this.type) {
       case ComponentType.CausalNet: {
         this.data = new CausalNetComponentData(init.data ?? {});
@@ -75,6 +77,7 @@ export class WorkspaceComponent {
   id!: string;
   name?: string;
   query!: string;
+  dataStore!: string;
   type!: ComponentType;
   data: ComponentData;
   layout?: LayoutElement;

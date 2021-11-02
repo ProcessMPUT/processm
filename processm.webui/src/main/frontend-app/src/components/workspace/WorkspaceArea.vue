@@ -269,6 +269,7 @@ export default class WorkspaceArea extends Vue {
       new WorkspaceComponentModel({
         id: componentId,
         query: "",
+        dataStore: "",
         type: componentType
       })
     );
