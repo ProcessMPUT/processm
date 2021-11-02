@@ -2,23 +2,16 @@ package processm.services.logic
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.junit.Before
-import org.junit.Test
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
 import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
 import processm.dbmodels.models.UsersInGroups
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class GroupServiceTest : ServiceTestBase() {
 
-    @Before
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         groupService = GroupService()
     }
