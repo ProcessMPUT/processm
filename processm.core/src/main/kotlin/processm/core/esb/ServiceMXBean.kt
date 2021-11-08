@@ -14,14 +14,4 @@ interface ServiceMXBean {
      * Name of a service.
      */
     val name: String
-
-    /**
-     * Starts a service. Upon successful termination it should set the status of the service to ServiceStatus.Started.
-     */
-    fun start()
-
-    /**
-     * Stops the service. Upon successful termination it should set the status of the service to ServiceStatus.Stopped.
-     */
-    fun stop()
 }

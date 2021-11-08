@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.quartz.*
 import org.quartz.SimpleScheduleBuilder.simpleSchedule
 import org.quartz.impl.StdSchedulerFactory
+import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.core.esb.getTopicConnectionFactory
@@ -18,6 +19,7 @@ import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStore
 import javax.jms.*
 import javax.naming.InitialContext
+import kotlin.reflect.KClass
 
 /**
  * A micro-service running the JDBC-based ETL processes. On [start] call it loads the ETL configurations from all
@@ -47,6 +49,7 @@ class ETLService : Service {
         private set
     override val name: String
         get() = "JDBC-based ETL"
+    override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
 
     override fun start() {
         scheduler.start()
