@@ -211,5 +211,28 @@ fun Route.DataStoresApi() {
             call.respond(HttpStatusCode.OK,
                 DataConnectorConnectivityMessageBody(DataConnectorConnectivity(connectionTestResult)))
         }
+
+        get<Paths.CaseNotionSuggestions> { pathParams ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            val caseNotionSuggestions = dataStoreService.getCaseNotionSuggestions(pathParams.dataStoreId, pathParams.dataConnectorId)
+                .mapToArray { (classes, relations) ->
+                    CaseNotion(classes.toMap(), relations.mapToArray { (sourceClass, targetClass) -> CaseNotionEdges("$sourceClass", "$targetClass") })
+                }
+
+
+            call.respond(HttpStatusCode.OK,
+                CaseNotionCollectionMessageBody(caseNotionSuggestions))
+        }
+
+        get<Paths.EtlProcesses> { pathParams ->
+        }
+
+        post<Paths.EtlProcesses> { pathParams ->
+        }
+
+        delete<Paths.EtlProcess> { pathParams ->
+        }
     }
 }

@@ -15,6 +15,11 @@ import org.postgresql.ds.PGSimpleDataSource
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import processm.etl.discovery.SchemaCrawlerExplorer
+import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
+import processm.etl.metamodel.MetaModel
+import processm.etl.metamodel.MetaModelReader
+import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
 import javax.sql.DataSource
@@ -102,7 +107,7 @@ class DataStoreService {
                         emptyMap<String, String>().toMutableMap()
                     }
                 connectionProperties.replace("password", "********")
-                return@map DataConnectorDto(it.id.value, it.name, it.lastConnectionStatus, it.lastConnectionStatusTimestamp, connectionProperties)
+                return@map DataConnectorDto(it.id.value, it.name, it.lastConnectionStatus, it.lastConnectionStatusTimestamp, it.dataModel?.id?.value, connectionProperties)
             }
         }
 
@@ -176,6 +181,19 @@ class DataStoreService {
         }
     }
 
+    fun getCaseNotionSuggestions(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
+        val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
+        val metaModelReader = MetaModelReader(dataModelId.value)
+        val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
+        val classNames = metaModelReader.getClassNames()
+        return@transaction businessPerspectiveExplorer.discoverBusinessPerspectives(true)
+            .sortedBy { (_, score) -> score }
+            .map { (businessPerspective, _) ->
+                val relations = businessPerspective.caseNotionClasses
+                    .flatMap { classId -> businessPerspective.getSuccessors(classId).map { classId.value to it.value } }
+                businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations }
+    }
+
     /**
      * Asserts that the specified [dataStoreId] is attached to [organizationId].
      */
@@ -204,6 +222,27 @@ class DataStoreService {
      */
     private fun getById(dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
         return@transaction DataStore[dataStoreId]
+    }
+
+    private fun ensureDataModelExistenceForDataConnector(dataStoreId: UUID, dataConnectorId: UUID): EntityID<Int> {
+        val dataConnector = DataConnector.findById(dataConnectorId) ?: throw Error()
+
+        if (dataConnector.dataModel?.id != null) return dataConnector.dataModel!!.id
+
+        dataConnector.getConnection().use { connection ->
+            val dataModelId = MetaModel.build("$dataStoreId", metaModelName = "", SchemaCrawlerExplorer(connection))
+
+            DataConnectors.update({ DataConnectors.id eq dataConnectorId }) {
+                it[DataConnectors.dataModelId] = dataModelId
+            }
+
+            return dataModelId
+        }
+    }
+
+    private fun DataConnector.getConnection(): Connection {
+        return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
+        else getDataSource(Gson().fromJson<Map<String, String>>(connectionProperties, Map::class.java)).connection
     }
 
     private fun getDataSource(connectionProperties: Map<String, String>): DataSource {
