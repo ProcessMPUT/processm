@@ -2,15 +2,13 @@ import Vue from "vue";
 import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import { LayoutElement, WorkspaceComponent } from "@/models/WorkspaceComponent";
-import { Workspace as ApiWorkspace, AbstractComponent } from "@/openapi";
+import { AbstractComponent, Workspace as ApiWorkspace } from "@/openapi";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
     const response = await this.workspacesApi.getWorkspaces(
       this.currentOrganizationId
     );
-
-    this.ensureSuccessfulResponseCode(response);
 
     return response.data.data.reduce(
       (workspaces: Workspace[], workspace: ApiWorkspace) => {
@@ -33,8 +31,6 @@ export default class WorkspaceService extends BaseService {
     );
     const workspace = response.data.data;
 
-    this.ensureSuccessfulResponseCode(response);
-
     if (workspace.id == null) {
       throw new Error("The received workspace object should contain id");
     }
@@ -55,10 +51,11 @@ export default class WorkspaceService extends BaseService {
   public async removeWorkspace(workspaceId: string): Promise<void> {
     const response = await this.workspacesApi.deleteWorkspace(
       this.currentOrganizationId,
-      workspaceId
+      workspaceId,
+      {
+        validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
+      }
     );
-
-    this.ensureSuccessfulResponseCode(response, 204, 404);
   }
 
   public async getComponent(
@@ -71,8 +68,6 @@ export default class WorkspaceService extends BaseService {
       componentId
     );
     const apiComponent = response.data.data;
-
-    this.ensureSuccessfulResponseCode(response);
 
     if (apiComponent.id == null) {
       throw new Error("The received component object should contain id");
@@ -120,8 +115,6 @@ export default class WorkspaceService extends BaseService {
       componentId
     );
 
-    this.ensureSuccessfulResponseCode(response);
-
     return response.data.data;
   }
 
@@ -130,8 +123,6 @@ export default class WorkspaceService extends BaseService {
       this.currentOrganizationId,
       workspaceId
     );
-
-    this.ensureSuccessfulResponseCode(response);
 
     return response.data.data.reduce(
       (components: WorkspaceComponent[], apiComponent: AbstractComponent) => {
@@ -167,8 +158,6 @@ export default class WorkspaceService extends BaseService {
       workspaceId,
       componentId
     );
-
-    this.ensureSuccessfulResponseCode(response);
   }
 
   private get currentOrganizationId() {
