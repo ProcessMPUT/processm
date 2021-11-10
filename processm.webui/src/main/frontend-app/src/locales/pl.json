@@ -47,7 +47,10 @@
     "data-connector-required": "Łącze danych jest wymagane, aby dodać ciągły proces ETL",
     "add-automatic-process": {
       "title": "Dodaj automatyczny process",
-      "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych"
+      "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych",
+      "case-notion":"Identyfikator perspektywy biznesowej",
+      "select-data-connector": "Wybierz łącze danych",
+      "case-notion-description": "dla każdego wpisu w {source} powiązanego z wpisem w {target}"
   },
     "add-manual-query": {
       "title": "Dodaj ręcznie zapytanie",
@@ -62,10 +65,15 @@
     "data-store-not-found": "Nie znaleziono magazynu danych",
     "file-size-exceeded": "Dopuszczalny rozmiart pliku przekroczony",
     "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięciu magazynu danych {dataStoreName}?",
-    "data-connector-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięciu łącza danych {dataConnectorName}?",
+    "data-connector-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie łącza danych {dataConnectorName}?",
     "last-connection-status": "Status ostatniego połączęnia",
     "last-connection-status-timestamp": "Czas ostatniego połączenia",
-    "data-connector-no-properties": "Brak właściwości do wyświetlenia"
+    "data-connector-no-properties": "Brak właściwości do wyświetlenia",
+    "etl": {
+      "process-name": "Nazwa procesu",
+      "data-connector": "Łącze danych",
+      "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie procesu ETL {etlProcessName} i powiązanych danych?"
+    }
   },
   "add-data-connector-dialog": {
     "dialog-title": "Dodaj łącze danych",
@@ -179,6 +187,7 @@
     "value": "Wartość",
     "created-at": "Utworzono",
     "warning": "Ostrzeżenie",
+    "type": "Typ",
     "actions": "Akcje",
     "removal": {
       "success": "Pomyślnie usunięto",

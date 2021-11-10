@@ -3,8 +3,13 @@ import DataStore, { DataConnector } from "@/models/DataStore";
 import BaseService from "./BaseService";
 import {
   DataStore as ApiDataStore,
-  DataConnector as ApiDataConnector
+  DataConnector as ApiDataConnector,
+  AbstractEtlProcess,
+  EtlProcessType as ApiEtlProcessType,
+  EtlProcess as ApiEtlProcess
 } from "@/openapi";
+import EtlProcess, { EtlProcessType } from "@/models/EtlProcess";
+import CaseNotion from "@/models/CaseNotion";
 
 export default class DataStoreService extends BaseService {
   private static get currentOrganizationId() {
@@ -209,5 +214,85 @@ export default class DataStoreService extends BaseService {
     this.ensureSuccessfulResponseCode(response);
 
     return response.data.data.isValid;
+  }
+
+  public async getCaseNotionSuggestions(
+    dataStoreId: string,
+    dataConnectorId: string
+  ): Promise<CaseNotion[]> {
+    const response = await this.dataStoresApi.getCaseNotionSuggestions(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      dataConnectorId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+
+    return response.data.data;
+  }
+
+  public async getEtlProcesses(dataStoreId: string): Promise<EtlProcess[]> {
+    const response = await this.dataStoresApi.getEtlProcesses(
+      DataStoreService.currentOrganizationId,
+      dataStoreId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+
+    const etlProcesses = response.data.data.reduce(
+      (etlProcesses: EtlProcess[], etlProcess: ApiEtlProcess) => {
+        if (etlProcess.id != null) {
+          etlProcesses.push({
+            id: etlProcess.id,
+            name: etlProcess.name || "",
+            type: etlProcess.type,
+            dataConnectorId: etlProcess.dataConnectorId
+          });
+        }
+
+        return etlProcesses;
+      },
+      []
+    );
+
+    return etlProcesses;
+  }
+
+  public async createEtlProcess(
+    dataStoreId: string,
+    processName: string,
+    processType: EtlProcessType,
+    dataConnectorId: string,
+    caseNotion: CaseNotion
+  ): Promise<AbstractEtlProcess> {
+    const response = await this.dataStoresApi.createEtlProcess(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      {
+        data: {
+          name: processName,
+          dataConnectorId,
+          type: processType as ApiEtlProcessType,
+          caseNotion
+        }
+      }
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+
+    return response.data.data;
+  }
+
+  public async removeEtlProcess(
+    dataStoreId: string,
+    etlProcessId: string
+  ): Promise<void> {
+    const response = await this.dataStoresApi.deleteEtlProcess(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      etlProcessId
+    );
+
+    this.ensureSuccessfulResponseCode(response, 204, 404);
   }
 }

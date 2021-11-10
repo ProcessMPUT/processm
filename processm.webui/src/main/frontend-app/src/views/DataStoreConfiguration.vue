@@ -232,7 +232,7 @@
                             color="primary"
                             class="mx-2"
                             :disabled="dataConnectors.length == 0"
-                            @click.stop=""
+                            @click.stop="addAutomaticEtlProcessDialog = true"
                             v-bind="attrs"
                           >
                             {{ $t("data-stores.add-automatic-process.title") }}
@@ -288,12 +288,42 @@
                   value: 'name'
                 },
                 {
-                  text: $t('common.details'),
-                  value: 'id'
+                  text: $t('data-stores.etl.data-connector'),
+                  value: 'dataConnectorId'
+                },
+                {
+                  text: $t('common.type'),
+                  value: 'type'
+                },
+                {
+                  text: $t('common.actions'),
+                  value: 'actions',
+                  align: 'center',
+                  sortable: false
                 }
               ]"
               :items="etlProcesses"
-            ></v-data-table>
+            >
+              <template v-slot:item.actions="{ item }">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="removeEtlProcess(item)"
+                        >delete_forever</v-icon
+                      >
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("common.remove") }}</span>
+                </v-tooltip>
+              </template>
+              <template v-slot:item.dataConnectorId="{ item }">
+                {{
+                  dataConnectors.find(
+                    (dataConnector) => dataConnector.id == item.dataConnectorId
+                  ).name
+                }}
+              </template>
+            </v-data-table>
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -303,6 +333,13 @@
       :data-store-id="dataStoreId"
       @cancelled="addDataConnectorDialog = false"
       @submitted="addDataConnector"
+    />
+    <add-automatic-etl-process-dialog
+      v-model="addAutomaticEtlProcessDialog"
+      :data-store-id="dataStoreId"
+      :data-connectors="dataConnectors"
+      @cancelled="addAutomaticEtlProcessDialog = false"
+      @submitted="addAutomaticEtlProcess"
     />
     <file-upload-dialog
       v-model="fileUploadDialog"
@@ -330,6 +367,7 @@ import Vue from "vue";
 import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore, { DataConnector } from "@/models/DataStore";
+import EtlProcess from "@/models/EtlProcess";
 import AddDataConnectorDialog from "@/components/data-connections/AddDataConnectorDialog.vue";
 import XesDataTable from "@/components/XesDataTable.vue";
 import LogsService from "@/services/LogsService";
@@ -337,6 +375,7 @@ import { waitForRepaint } from "@/utils/waitForRepaint";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import FileUploadDialog from "@/components/FileUploadDialog.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
+import AddAutomaticEtlProcessDialog from "@/components/etl/AddAutomaticEtlProcessDialog.vue";
 import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
 
@@ -345,7 +384,8 @@ import App from "@/App.vue";
     AddDataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
-    RenameDialog
+    RenameDialog,
+    AddAutomaticEtlProcessDialog
   }
 })
 export default class DataStoreConfiguration extends Vue {
@@ -354,11 +394,12 @@ export default class DataStoreConfiguration extends Vue {
   @Inject() logsService!: LogsService;
   private readonly xesProcessor = new XesProcessor();
   addDataConnectorDialog = false;
+  addAutomaticEtlProcessDialog = false;
   addEtlProcessDialog = false;
   fileUploadDialog = false;
   isUploading = false;
-  dataConnectors: Array<DataConnector> = [];
-  etlProcesses = [];
+  dataConnectors: DataConnector[] = [];
+  etlProcesses: EtlProcess[] = [];
   dataStore: DataStore | null = null;
   xesLogHeaders: string[] = [];
   xesLogItems: LogItem[] = [];
@@ -421,6 +462,9 @@ export default class DataStoreConfiguration extends Vue {
     if (this.dataStoreId == null) return;
     try {
       this.isLoadingEtlProcesses = true;
+      this.etlProcesses = await this.dataStoreService.getEtlProcesses(
+        this.dataStoreId
+      );
     } finally {
       this.isLoadingEtlProcesses = false;
     }
@@ -551,6 +595,38 @@ export default class DataStoreConfiguration extends Vue {
   async addDataConnector() {
     this.addDataConnectorDialog = false;
     await this.loadDataConnectors();
+  }
+
+  async addAutomaticEtlProcess() {
+    this.addAutomaticEtlProcessDialog = false;
+    await this.loadEtlProcesses();
+  }
+
+  async removeEtlProcess(etlProcess: EtlProcess) {
+    if (this.dataStoreId == null) return;
+
+    const isRemovalConfirmed = await this.$confirm(
+      `${this.$t("data-stores.etl.removal-confirmation", {
+        etlProcessName: etlProcess.name
+      })}`,
+      {
+        title: `${this.$t("common.warning")}`
+      }
+    );
+
+    if (!isRemovalConfirmed) return;
+
+    try {
+      await this.dataStoreService.removeEtlProcess(
+        this.dataStoreId,
+        etlProcess.id
+      );
+      this.displaySuccessfulRemovalMessage();
+
+      this.etlProcesses.splice(this.etlProcesses.indexOf(etlProcess), 1);
+    } catch (error) {
+      this.displayFailedRemovalMessage();
+    }
   }
 
   closeConfiguration() {
