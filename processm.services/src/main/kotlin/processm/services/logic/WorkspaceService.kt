@@ -142,12 +142,17 @@ class WorkspaceService(private val accountService: AccountService) {
             )
         }
 
-        if (name == null || query == null || dataStore == null || componentType == null) {
-            throw ValidationException(
-                ValidationException.Reason.ResourceFormatInvalid,
-                "The specified workspace component does not exists and cannot be created"
-            )
-        }
+        if (name.isNullOrBlank())
+            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing name.")
+
+        if (query.isNullOrBlank())
+            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing query.")
+
+        if (dataStore.isNullOrBlank())
+            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing data store.")
+
+        if (componentType == null)
+            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing component type.")
 
         addComponent(
             workspaceComponentId,
@@ -231,7 +236,7 @@ class WorkspaceService(private val accountService: AccountService) {
             it[WorkspaceComponents.id] = EntityID(workspaceComponentId, WorkspaceComponents)
             it[WorkspaceComponents.name] = name
             it[WorkspaceComponents.query] = query
-            it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore.toUUID())
+            it[WorkspaceComponents.dataStoreId] = dataStore.toUUID()!!
             it[WorkspaceComponents.componentType] = componentType.typeName
             it[WorkspaceComponents.customizationData] = customizationData
             it[WorkspaceComponents.layoutData] = layoutData
