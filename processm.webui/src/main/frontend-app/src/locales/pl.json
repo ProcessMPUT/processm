@@ -30,7 +30,8 @@
       "edit": {
         "name": "Nazwa",
         "type": "Typ",
-        "query": "Zapytanie",
+        "query": "Zapytanie PQL",
+        "datastore": "Magazyn danych",
         "validation": {
           "name-empty": "Nazwa nie może być pusta",
           "query-empty": "Zapytanie nie może być puste"
@@ -97,6 +98,10 @@
       "connection-string-format": "Wartość nie spełnia formatu connection stringa",
       "hostname-field": "Wartość powinna być nazwą hosta lub adresem IP",
       "port-field": "Wartość powinna być liczbą całkowitą z zakresu 0-65535"
+    },
+    "testing": {
+      "success": "Nawiązano połączenie",
+      "failure": "Nie można nawiązać połączenia"
     }
   },
   "about": {

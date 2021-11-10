@@ -204,12 +204,15 @@ fun Route.DataStoresApi() {
             val connectionProperties = call.receiveOrNull<DataConnectorMessageBody>()?.data?.properties
                 ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectionString = connectionProperties[connectionStringPropertyName]
-            val connectionTestResult =
+
+            try {
                 if (connectionString.isNullOrBlank()) dataStoreService.testDatabaseConnection(connectionProperties)
                 else dataStoreService.testDatabaseConnection(connectionString)
+            } catch (e: Exception) {
+                throw ApiException(e.message)
+            }
 
-            call.respond(HttpStatusCode.OK,
-                DataConnectorConnectivityMessageBody(DataConnectorConnectivity(connectionTestResult)))
+            call.respond(HttpStatusCode.NoContent)
         }
 
         get<Paths.CaseNotionSuggestions> { pathParams ->

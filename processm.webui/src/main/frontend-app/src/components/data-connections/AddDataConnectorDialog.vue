@@ -227,14 +227,21 @@ export default class AddDataConnectorDialog extends Vue {
 
     try {
       this.isTestingConnection = true;
-      this.connectionTestResult = await this.dataStoreService.testDataConnector(
+      await this.dataStoreService.testDataConnector(
         this.dataStoreId,
         this.configMode == ConfigurationMode.ConnectionString
           ? this.connectionString
           : this.connectionProperties
       );
-    } catch (error) {
+      this.connectionTestResult = true;
+      this.app.success(
+        `${this.$t("add-data-connector-dialog.testing.success")}`
+      );
+    } catch (e) {
       this.connectionTestResult = null;
+      this.app.error(
+        `${this.$t("add-data-connector-dialog.testing.failure")}: ${e.message}`
+      );
     } finally {
       this.isTestingConnection = false;
     }
