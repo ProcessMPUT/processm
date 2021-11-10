@@ -1,0 +1,809 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--Created by yFiles for HTML 2.4.0.3-->
+<graphml xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml.html/2.0/ygraphml.xsd " xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:demostyle2="http://www.yworks.com/yFilesHTML/demos/FlatDemoStyle/2.0" xmlns:demostyle="http://www.yworks.com/yFilesHTML/demos/FlatDemoStyle/1.0" xmlns:icon-style="http://www.yworks.com/yed-live/icon-style/1.0" xmlns:bpmn="http://www.yworks.com/xml/yfiles-bpmn/2.0" xmlns:demotablestyle="http://www.yworks.com/yFilesHTML/demos/FlatDemoTableStyle/1.0" xmlns:uml="http://www.yworks.com/yFilesHTML/demos/UMLDemoStyle/1.0" xmlns:GraphvizNodeStyle="http://www.yworks.com/yFilesHTML/graphviz-node-style/1.0" xmlns:VuejsNodeStyle="http://www.yworks.com/demos/yfiles-vuejs-node-style/1.0" xmlns:explorer-style="http://www.yworks.com/data-explorer/1.0" xmlns:y="http://www.yworks.com/xml/yfiles-common/3.0" xmlns:x="http://www.yworks.com/xml/yfiles-common/markup/3.0" xmlns:yjs="http://www.yworks.com/xml/yfiles-for-html/2.0/xaml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<key id="d0" for="node" attr.type="int" attr.name="zOrder" y:attr.uri="http://www.yworks.com/xml/yfiles-z-order/1.0/zOrder"/>
+	<key id="d1" for="node" attr.type="boolean" attr.name="Expanded" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/folding/Expanded">
+		<default>true</default>
+	</key>
+	<key id="d2" for="node" attr.type="string" attr.name="url"/>
+	<key id="d3" for="node" attr.type="string" attr.name="description"/>
+	<key id="d4" for="node" attr.name="NodeLabels" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/NodeLabels"/>
+	<key id="d5" for="node" attr.name="NodeGeometry" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/NodeGeometry"/>
+	<key id="d6" for="all" attr.name="UserTags" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/UserTags"/>
+	<key id="d7" for="node" attr.name="NodeStyle" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/NodeStyle"/>
+	<key id="d8" for="node" attr.name="NodeViewState" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/folding/1.1/NodeViewState"/>
+	<key id="d9" for="edge" attr.type="string" attr.name="url"/>
+	<key id="d10" for="edge" attr.type="string" attr.name="description"/>
+	<key id="d11" for="edge" attr.name="EdgeLabels" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/EdgeLabels"/>
+	<key id="d12" for="edge" attr.name="EdgeGeometry" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/EdgeGeometry"/>
+	<key id="d13" for="edge" attr.name="EdgeStyle" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/EdgeStyle"/>
+	<key id="d14" for="edge" attr.name="EdgeViewState" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/folding/1.1/EdgeViewState"/>
+	<key id="d15" for="port" attr.name="PortLabels" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/PortLabels"/>
+	<key id="d16" for="port" attr.name="PortLocationParameter" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/PortLocationParameter">
+		<default>
+			<x:Static Member="y:FreeNodePortLocationModel.NodeCenterAnchored"/>
+		</default>
+	</key>
+	<key id="d17" for="port" attr.name="PortStyle" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/PortStyle">
+		<default>
+			<x:Static Member="y:VoidPortStyle.Instance"/>
+		</default>
+	</key>
+	<key id="d18" for="port" attr.name="PortViewState" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/folding/1.1/PortViewState"/>
+	<key id="d19" attr.name="SharedData" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/SharedData"/>
+	<data key="d19">
+		<y:SharedData>
+			<y:ExteriorLabelModel x:Key="1" Insets="5"/>
+			<y:CompositeLabelModelParameter x:Key="2" Model="{y:GraphMLReference 7}">
+				<y:CompositeLabelModelParameter.Parameter>
+					<y:ExteriorLabelModelParameter Position="South" Model="{y:GraphMLReference 1}"/>
+				</y:CompositeLabelModelParameter.Parameter>
+			</y:CompositeLabelModelParameter>
+			<yjs:DefaultLabelStyle x:Key="3" verticalTextAlignment="BOTTOM" horizontalTextAlignment="CENTER" font="{y:GraphMLReference 8}" textFill="BLACK"/>
+			<yjs:Stroke x:Key="4" fill="{y:GraphMLReference 5}"/>
+			<yjs:SolidColorFill x:Key="5" color="DarkOrange"/>
+			<y:InteriorLabelModel x:Key="6"/>
+			<y:CompositeLabelModel x:Key="7">
+				<y:CompositeLabelModel.LabelModels>
+					<y:GraphMLReference ResourceKey="1"/>
+					<y:GraphMLReference ResourceKey="6"/>
+					<y:FreeNodeLabelModel/>
+				</y:CompositeLabelModel.LabelModels>
+			</y:CompositeLabelModel>
+			<yjs:Font x:Key="8" fontSize="12" fontFamily="'Arial'"/>
+			<yjs:Stroke x:Key="9" fill="{y:GraphMLReference 13}"/>
+			<yjs:PolylineEdgeStyle x:Key="10" stroke="{y:GraphMLReference 9}" targetArrow="{y:GraphMLReference 12}"/>
+			<y:FreeEdgeLabelModel x:Key="11"/>
+			<yjs:Arrow x:Key="12" type="TRIANGLE" scale="0.75" stroke="{y:GraphMLReference 9}" fill="{y:GraphMLReference 13}" cropLength="1"/>
+			<yjs:SolidColorFill x:Key="13" color="#FF336699"/>
+		</y:SharedData>
+	</data>
+	<graph id="G" edgedefault="directed">
+		<data key="d6">
+			<y:Json>{"version":"2.0.0","theme":{"name":"light","version":"1.0.0"},"layout":"layout-hierarchic","config":{"noObf_useDrawingAsSketch":false,"noObf_selectedElementsIncrementally":false,"noObf_nodeToNodeDistance":30,"noObf_automaticEdgeGroupingEnabled":false,"noObf_considerNodeLabels":true,"noObf_edgeLabeling":1,"noObf_orientation":1,"noObf_edgeRouting":0}}</y:Json>
+		</data>
+		<node id="n0">
+			<data key="d0">1</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text>createCustomerOrder</y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="0" Y="-133.5" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="1,0.5"/>
+				</data>
+			</port>
+		</node>
+		<node id="n1">
+			<data key="d0">2</data>
+			<data key="d5">
+				<y:RectD X="89" Y="-133.5" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="DARK_ORANGE" fill="#FFF8F8F8" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0,0.5"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9330127018922193,0.25"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9330127018922193,0.75"/>
+				</data>
+			</port>
+		</node>
+		<node id="n2">
+			<data key="d0">3</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text>pickStockForCustomerOrder</y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="211" Y="-209.5" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0,0.5"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9841229182759273,0.375"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.8307189138830741,0.875"/>
+				</data>
+			</port>
+			<port name="p3">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.8307189138830741,0.125"/>
+				</data>
+			</port>
+			<port name="p4">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9841229182759273,0.625"/>
+				</data>
+			</port>
+		</node>
+		<node id="n3">
+			<data key="d0">4</data>
+			<data key="d5">
+				<y:RectD X="624" Y="-288" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.75"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.8307189138830722,0.875"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.8307189138830722,0.125"/>
+				</data>
+			</port>
+			<port name="p3">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.25"/>
+				</data>
+			</port>
+			<port name="p4">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9841229182759282,0.625"/>
+				</data>
+			</port>
+			<port name="p5">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9841229182759282,0.375"/>
+				</data>
+			</port>
+		</node>
+		<node id="n4">
+			<data key="d0">5</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text>backorderIfNecessary</y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="624" Y="-153.25" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0,0.5"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="1,0.5"/>
+				</data>
+			</port>
+		</node>
+		<node id="n5">
+			<data key="d0">6</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[addOrderLinesToCustomerOrder
+(Leaves the order unchanged if the order 
+already contains everything there is to order)]]></y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="940" Y="-276.75" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.75"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.25"/>
+				</data>
+			</port>
+		</node>
+		<node id="n6">
+			<data key="d0">7</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[removeRandomLineFromCustomerOrder
+(Leaves the order unchanged if there is at most 
+one unfulfiled position in the order)]]></y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="940" Y="-392.75" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.25"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.75"/>
+				</data>
+			</port>
+		</node>
+		<node id="n7">
+			<data key="d0">8</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text>invoicePickedOrder</y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="940" Y="-160.75" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.75"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9330127018922212,0.75"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9330127018922212,0.25"/>
+				</data>
+			</port>
+			<port name="p3">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.25"/>
+				</data>
+			</port>
+		</node>
+		<node id="n8">
+			<data key="d0">10</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text>deliver</y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="1189.5" Y="-144" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.5,1"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.75"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="1,0.5"/>
+				</data>
+			</port>
+			<port name="p3">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810777877,0.25"/>
+				</data>
+			</port>
+		</node>
+		<node id="n9">
+			<data key="d0">11</data>
+			<data key="d4">
+				<x:List>
+					<y:Label LayoutParameter="{y:GraphMLReference 2}" Style="{y:GraphMLReference 3}">
+						<y:Label.Text>receivePayment</y:Label.Text>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="1282" Y="-192.5" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="{y:GraphMLReference 5}" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="1,0.5"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0,0.5"/>
+				</data>
+			</port>
+		</node>
+		<node id="n10">
+			<data key="d0">12</data>
+			<data key="d5">
+				<y:RectD X="1371" Y="-111" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="#FFF8F8F8" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.1273220037500323,0.16666666666666666"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0,0.5"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="1,0.5"/>
+				</data>
+			</port>
+			<port name="p3">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.1273220037500323,0.8333333333333334"/>
+				</data>
+			</port>
+		</node>
+		<node id="n11">
+			<data key="d0">13</data>
+			<data key="d5">
+				<y:RectD X="1580" Y="-111" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="{y:GraphMLReference 4}" fill="#FFF8F8F8" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0,0.5"/>
+				</data>
+			</port>
+		</node>
+		<node id="n12">
+			<data key="d0">14</data>
+			<data key="d5">
+				<y:RectD X="1094" Y="-141.75" Width="7" Height="7"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="#FF336699" fill="#FF336699" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9330127018922342,0.75"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.9330127018922342,0.25"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0,0.5"/>
+				</data>
+			</port>
+		</node>
+		<node id="n13">
+			<data key="d0">15</data>
+			<data key="d5">
+				<y:RectD X="1201" Y="-181" Width="7" Height="7"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="#FF336699" fill="#FF336699" shape="ELLIPSE"/>
+			</data>
+			<port name="p0">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="1,0.5"/>
+				</data>
+			</port>
+			<port name="p1">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810776578,0.75"/>
+				</data>
+			</port>
+			<port name="p2">
+				<data key="d16">
+					<y:FreeNodePortLocationModelParameter Ratio="0.06698729810776578,0.25"/>
+				</data>
+			</port>
+		</node>
+		<node id="n14">
+			<data key="d0">16</data>
+			<data key="d4">
+				<x:List>
+					<y:Label>
+						<y:Label.Text><![CDATA[Each filled, orange node represents an activity recorded in the DB, 
+and its label is the name of the corresponding stored procedure. 
+Each empty, orange node is a silent activity.
+If there are multiple outgoing arcs, an exclusive choice is made 
+according to the description on the arcs except for the arcs connected by a dashed line,
+which are followed jointly.]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:CompositeLabelModelParameter Model="{y:GraphMLReference 7}">
+								<y:CompositeLabelModelParameter.Parameter>
+									<y:InteriorLabelModelParameter Position="Center" Model="{y:GraphMLReference 6}"/>
+								</y:CompositeLabelModelParameter.Parameter>
+							</y:CompositeLabelModelParameter>
+						</y:Label.LayoutParameter>
+						<y:Label.Style>
+							<yjs:DefaultLabelStyle verticalTextAlignment="BOTTOM" wrapping="WORD" font="{y:GraphMLReference 8}" textFill="BLACK"/>
+						</y:Label.Style>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d5">
+				<y:RectD X="129.5" Y="-635.25" Width="30" Height="30"/>
+			</data>
+			<data key="d7">
+				<yjs:ShapeNodeStyle stroke="#FFF8F8F8" fill="#FFF8F8F8"/>
+			</data>
+		</node>
+		<edge id="e0" source="n0" target="n1" sourceport="p0" targetport="p0">
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e1" source="n1" target="n2" sourceport="p1" targetport="p0">
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="134,-126"/>
+					<y:Bend Location="134,-194.5"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e2" source="n2" target="n3" sourceport="p1" targetport="p0">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[If picked something or 
+didn't pick anything in this order yet]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.5194374126308952" Distance="-16.056734591184043" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="271,-198.25"/>
+					<y:Bend Location="271,-249"/>
+					<y:Bend Location="548,-249"/>
+					<y:Bend Location="548,-265.5"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e3" source="n2" target="n4" sourceport="p2" targetport="p0">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[If picked anything in this order,
+there are some more things to pick,
+but they are not available right now]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.5270742972010068" Distance="21.42425313639205" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="318,-183.25"/>
+					<y:Bend Location="318,-138.25"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e4" source="n3" target="n5" sourceport="p1" targetport="p0">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[At random]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.4578231267740284" Distance="4.067657700665507" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="669,-261.75"/>
+					<y:Bend Location="669,-254.25"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e5" source="n3" target="n6" sourceport="p2" targetport="p0">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[At random]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.5150568096081125" Distance="-51.805926852037544" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="669,-284.25"/>
+					<y:Bend Location="669,-385.25"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e6" source="n3" target="n2" sourceport="p3" targetport="p3">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text>Otherwise</y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.46489635570996274" Distance="35.38327098301535" Angle="-1.2246467991473532e-16" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="256,-280.5"/>
+					<y:Bend Location="256,-205.75"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e7" source="n5" target="n3" sourceport="p1" targetport="p4">
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e8" source="n6" target="n3" sourceport="p1" targetport="p5">
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="684,-370.25"/>
+					<y:Bend Location="684,-276.75"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<yjs:PolylineEdgeStyle stroke="{y:GraphMLReference 9}" targetArrow="{y:GraphMLReference 12}"/>
+			</data>
+		</edge>
+		<edge id="e9" source="n4" target="n7" sourceport="p1" targetport="p0">
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e10" source="n8" target="n8" sourceport="p0" targetport="p1">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[failure
+(at random)]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="3.0069219381652976" Distance="-65.87787643056309" Angle="1.5707963267948963" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="1204.5,-38"/>
+					<y:Bend Location="1132.5,-38"/>
+					<y:Bend Location="1132.5,-121.5"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e11" source="n9" target="n10" sourceport="p0" targetport="p0">
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="1356,-177.5"/>
+					<y:Bend Location="1356,-106"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e12" source="n8" target="n10" sourceport="p2" targetport="p1">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[success
+(at random)]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.5651848385587268" Distance="14.685356988294645" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="1238,-129"/>
+					<y:Bend Location="1238,-96"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e13" source="n10" target="n11" sourceport="p2" targetport="p0">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[No backorders to process]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.5279329608938548" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e14" source="n10" target="n1" sourceport="p3" targetport="p2">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[Backorder from the original order to process]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.32841996246270505" Distance="-86.72762425256197" Angle="-1.2246467991473532e-16" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="1348.5,-86"/>
+					<y:Bend Location="1348.5,-7.5"/>
+					<y:Bend Location="134,-7.5"/>
+					<y:Bend Location="134,-111"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e15" source="n12" target="n8" sourceport="p0" targetport="p3">
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e16" source="n13" target="n9" sourceport="p0" targetport="p1">
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+		<edge id="e17" source="n12" target="n13" sourceport="p1" targetport="p1">
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="1127.5,-140"/>
+					<y:Bend Location="1127.5,-175.75"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<yjs:PolylineEdgeStyle>
+					<yjs:PolylineEdgeStyle.stroke>
+						<yjs:Stroke fill="{y:GraphMLReference 13}" lineCap="SQUARE" dashStyle="Dash"/>
+					</yjs:PolylineEdgeStyle.stroke>
+					<yjs:PolylineEdgeStyle.targetArrow>
+						<yjs:Arrow type="NONE" scale="0.75" stroke="#FF336699" fill="{y:GraphMLReference 13}"/>
+					</yjs:PolylineEdgeStyle.targetArrow>
+				</yjs:PolylineEdgeStyle>
+			</data>
+		</edge>
+		<edge id="e18" source="n7" target="n12" sourceport="p1" targetport="p2">
+			<data key="d13">
+				<yjs:PolylineEdgeStyle stroke="{y:GraphMLReference 9}">
+					<yjs:PolylineEdgeStyle.targetArrow>
+						<yjs:Arrow type="NONE" scale="0.75" stroke="#FF336699" fill="{y:GraphMLReference 13}"/>
+					</yjs:PolylineEdgeStyle.targetArrow>
+				</yjs:PolylineEdgeStyle>
+			</data>
+		</edge>
+		<edge id="e19" source="n7" target="n13" sourceport="p2" targetport="p2">
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="985,-153.25"/>
+					<y:Bend Location="985,-175.5"/>
+					<y:Bend Location="1112.5,-175.5"/>
+					<y:Bend Location="1112.5,-179.25"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<yjs:PolylineEdgeStyle stroke="{y:GraphMLReference 9}">
+					<yjs:PolylineEdgeStyle.targetArrow>
+						<yjs:Arrow type="NONE" scale="0.75" stroke="#FF336699" fill="{y:GraphMLReference 13}"/>
+					</yjs:PolylineEdgeStyle.targetArrow>
+				</yjs:PolylineEdgeStyle>
+			</data>
+		</edge>
+		<edge id="e20" source="n2" target="n7" sourceport="p4" targetport="p3">
+			<data key="d11">
+				<x:List>
+					<y:Label Style="{y:GraphMLReference 3}">
+						<y:Label.Text><![CDATA[If picked everything in this order]]></y:Label.Text>
+						<y:Label.LayoutParameter>
+							<y:FreeEdgeLabelModelParameter Ratio="0.5735347563345629" Distance="-21.538263069581365" Model="{y:GraphMLReference 11}"/>
+						</y:Label.LayoutParameter>
+					</y:Label>
+				</x:List>
+			</data>
+			<data key="d12">
+				<x:List>
+					<y:Bend Location="793,-190.75"/>
+					<y:Bend Location="793,-153.25"/>
+				</x:List>
+			</data>
+			<data key="d13">
+				<y:GraphMLReference ResourceKey="10"/>
+			</data>
+		</edge>
+	</graph>
+</graphml>
