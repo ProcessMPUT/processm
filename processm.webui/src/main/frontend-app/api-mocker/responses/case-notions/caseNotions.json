@@ -1,0 +1,4320 @@
+[
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "96": "user_groups_with_workspaces",
+            "112": "data_stores",
+            "79": "organizations"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "96",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "112",
+                "targetClassId": "79"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "111": "users_in_groups",
+            "109": "users"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "109"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "109"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "112": "data_stores",
+            "79": "organizations"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "112",
+                "targetClassId": "79"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "112": "data_stores",
+            "79": "organizations"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "112",
+                "targetClassId": "79"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "82": "data_connectors",
+            "112": "data_stores",
+            "79": "organizations",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "82",
+                "targetClassId": "112"
+            },
+            {
+                "sourceClassId": "112",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "79": "organizations",
+            "109": "users"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "117",
+                "targetClassId": "109"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "111": "users_in_groups",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "79": "organizations",
+            "111": "users_in_groups",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "109": "users",
+            "111": "users_in_groups",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "109",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "109": "users",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "109"
+            },
+            {
+                "sourceClassId": "109",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "101": "user_groups",
+            "79": "organizations"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "96",
+                "targetClassId": "79"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "79": "organizations",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "100": "chunk_constraint",
+            "107": "chunk",
+            "99": "dimension_slice"
+        },
+        "edges": [
+            {
+                "sourceClassId": "100",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "100",
+                "targetClassId": "99"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "112": "data_stores",
+            "79": "organizations",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "112",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "111": "users_in_groups",
+            "101": "user_groups",
+            "109": "users"
+        },
+        "edges": [
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "109"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "111": "users_in_groups",
+            "109": "users",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "111",
+                "targetClassId": "109"
+            },
+            {
+                "sourceClassId": "109",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "79": "organizations",
+            "111": "users_in_groups",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "100": "chunk_constraint",
+            "99": "dimension_slice",
+            "114": "dimension"
+        },
+        "edges": [
+            {
+                "sourceClassId": "100",
+                "targetClassId": "99"
+            },
+            {
+                "sourceClassId": "99",
+                "targetClassId": "114"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "100": "chunk_constraint",
+            "110": "bgw_policy_chunk_stats",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "100",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "79": "organizations",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "109": "users",
+            "111": "users_in_groups",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "109",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "109": "users",
+            "79": "organizations",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "109",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "100": "chunk_constraint",
+            "102": "chunk_index",
+            "110": "bgw_policy_chunk_stats",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "100",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "109": "users",
+            "79": "organizations",
+            "111": "users_in_groups",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "109",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "104": "compression_chunk_size",
+            "100": "chunk_constraint",
+            "110": "bgw_policy_chunk_stats",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "104",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "100",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "104": "compression_chunk_size",
+            "100": "chunk_constraint",
+            "102": "chunk_index",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "104",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "100",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "79": "organizations",
+            "89": "organization_roles",
+            "109": "users"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "117",
+                "targetClassId": "89"
+            },
+            {
+                "sourceClassId": "117",
+                "targetClassId": "109"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "104": "compression_chunk_size",
+            "102": "chunk_index",
+            "110": "bgw_policy_chunk_stats",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "104",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "97": "continuous_aggs_materialization_invalidation_log",
+            "108": "continuous_aggs_completed_threshold",
+            "88": "continuous_agg"
+        },
+        "edges": [
+            {
+                "sourceClassId": "97",
+                "targetClassId": "88"
+            },
+            {
+                "sourceClassId": "108",
+                "targetClassId": "88"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "117": "users_roles_in_organizations",
+            "79": "organizations",
+            "89": "organization_roles"
+        },
+        "edges": [
+            {
+                "sourceClassId": "117",
+                "targetClassId": "79"
+            },
+            {
+                "sourceClassId": "117",
+                "targetClassId": "89"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "110": "bgw_policy_chunk_stats",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "104": "compression_chunk_size",
+            "110": "bgw_policy_chunk_stats",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "104",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "95": "workspaces",
+            "101": "user_groups",
+            "79": "organizations"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "95"
+            },
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "96",
+                "targetClassId": "79"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "100": "chunk_constraint",
+            "99": "dimension_slice",
+            "114": "dimension",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "100",
+                "targetClassId": "99"
+            },
+            {
+                "sourceClassId": "99",
+                "targetClassId": "114"
+            },
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "100": "chunk_constraint",
+            "107": "chunk",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "100",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "116": "workspace_components",
+            "95": "workspaces"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "95"
+            },
+            {
+                "sourceClassId": "116",
+                "targetClassId": "95"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "95": "workspaces",
+            "101": "user_groups"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "95"
+            },
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "96": "user_groups_with_workspaces",
+            "101": "user_groups",
+            "105": "group_roles"
+        },
+        "edges": [
+            {
+                "sourceClassId": "96",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "101",
+                "targetClassId": "105"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "111": "users_in_groups",
+            "101": "user_groups",
+            "105": "group_roles"
+        },
+        "edges": [
+            {
+                "sourceClassId": "111",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "101",
+                "targetClassId": "105"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "108": "continuous_aggs_completed_threshold",
+            "88": "continuous_agg",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "108",
+                "targetClassId": "88"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "110": "bgw_policy_chunk_stats",
+            "107": "chunk",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "107": "chunk",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "104": "compression_chunk_size",
+            "107": "chunk",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "104",
+                "targetClassId": "107"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "97": "continuous_aggs_materialization_invalidation_log",
+            "88": "continuous_agg",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "97",
+                "targetClassId": "88"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "108": "continuous_aggs_completed_threshold",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "108",
+                "targetClassId": "88"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "97": "continuous_aggs_materialization_invalidation_log",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "97",
+                "targetClassId": "88"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "79": "organizations",
+            "101": "user_groups",
+            "105": "group_roles"
+        },
+        "edges": [
+            {
+                "sourceClassId": "79",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "101",
+                "targetClassId": "105"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "109": "users",
+            "101": "user_groups",
+            "105": "group_roles"
+        },
+        "edges": [
+            {
+                "sourceClassId": "109",
+                "targetClassId": "101"
+            },
+            {
+                "sourceClassId": "101",
+                "targetClassId": "105"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "110": "bgw_policy_chunk_stats",
+            "86": "bgw_job",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "110": "bgw_policy_chunk_stats",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "106": "hypertable",
+            "107": "chunk"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "107"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "102": "chunk_index",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "102": "chunk_index",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "102": "chunk_index",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "107": "chunk",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "102": "chunk_index",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "102": "chunk_index",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "102": "chunk_index",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "107": "chunk",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "102": "chunk_index",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "102": "chunk_index",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "102": "chunk_index",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "110": "bgw_policy_chunk_stats",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "110": "bgw_policy_chunk_stats",
+            "94": "bgw_policy_reorder",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "115": "bgw_policy_compress_chunks",
+            "110": "bgw_policy_chunk_stats",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "88": "continuous_agg",
+            "110": "bgw_policy_chunk_stats",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "110": "bgw_policy_chunk_stats",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "110": "bgw_policy_chunk_stats",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "110": "bgw_policy_chunk_stats",
+            "94": "bgw_policy_reorder",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "110": "bgw_policy_chunk_stats",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "110": "bgw_policy_chunk_stats",
+            "94": "bgw_policy_reorder",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "115": "bgw_policy_compress_chunks",
+            "110": "bgw_policy_chunk_stats",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "110",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "107": "chunk",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "81": "tablespace",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "102": "chunk_index",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "102": "chunk_index",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "102": "chunk_index",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "102": "chunk_index",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "94": "bgw_policy_reorder",
+            "102": "chunk_index",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "102",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "115": "bgw_policy_compress_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "115": "bgw_policy_compress_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "107": "chunk",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "107": "chunk",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "107": "chunk",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "107": "chunk",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "115": "bgw_policy_compress_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "115": "bgw_policy_compress_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "94": "bgw_policy_reorder",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "94": "bgw_policy_reorder",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "94": "bgw_policy_reorder",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "107": "chunk",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "107": "chunk",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "107": "chunk",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "107": "chunk",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "107": "chunk",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "94": "bgw_policy_reorder",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "115": "bgw_policy_compress_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "115": "bgw_policy_compress_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "94": "bgw_policy_reorder",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "94": "bgw_policy_reorder",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "94": "bgw_policy_reorder",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "115": "bgw_policy_compress_chunks",
+            "94": "bgw_policy_reorder",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "88": "continuous_agg",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "88": "continuous_agg",
+            "94": "bgw_policy_reorder",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "88": "continuous_agg",
+            "115": "bgw_policy_compress_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "115": "bgw_policy_compress_chunks",
+            "94": "bgw_policy_reorder",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "115": "bgw_policy_compress_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "115": "bgw_policy_compress_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "107": "chunk",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "107": "chunk",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "107": "chunk",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "107": "chunk",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "107": "chunk",
+            "94": "bgw_policy_reorder",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "81": "tablespace",
+            "107": "chunk",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "81": "tablespace",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "81": "tablespace",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "81": "tablespace",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "81": "tablespace",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "81": "tablespace",
+            "94": "bgw_policy_reorder",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "107": "chunk",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "81": "tablespace",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "113": "continuous_aggs_invalidation_threshold",
+            "94": "bgw_policy_reorder",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "90": "bgw_policy_drop_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "115": "bgw_policy_compress_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "115": "bgw_policy_compress_chunks",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "94": "bgw_policy_reorder",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "94": "bgw_policy_reorder",
+            "91": "hypertable_compression",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "94": "bgw_policy_reorder",
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "107": "chunk",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "107",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "81": "tablespace",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "81",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "113": "continuous_aggs_invalidation_threshold",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "113",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "91": "hypertable_compression",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "90": "bgw_policy_drop_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "103": "bgw_job_stat",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "103",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "90": "bgw_policy_drop_chunks",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "114": "dimension",
+            "88": "continuous_agg",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "114",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "88": "continuous_agg",
+            "86": "bgw_job",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "88",
+                "targetClassId": "86"
+            },
+            {
+                "sourceClassId": "88",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "91": "hypertable_compression",
+            "92": "compression_algorithm",
+            "106": "hypertable"
+        },
+        "edges": [
+            {
+                "sourceClassId": "91",
+                "targetClassId": "92"
+            },
+            {
+                "sourceClassId": "91",
+                "targetClassId": "106"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "90": "bgw_policy_drop_chunks",
+            "106": "hypertable",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "90",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "90",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "115": "bgw_policy_compress_chunks",
+            "106": "hypertable",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "115",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "115",
+                "targetClassId": "86"
+            }
+        ]
+    },
+    {
+        "classes": {
+            "94": "bgw_policy_reorder",
+            "106": "hypertable",
+            "86": "bgw_job"
+        },
+        "edges": [
+            {
+                "sourceClassId": "94",
+                "targetClassId": "106"
+            },
+            {
+                "sourceClassId": "94",
+                "targetClassId": "86"
+            }
+        ]
+    }
+]
