@@ -70,7 +70,7 @@ private fun WorkspaceComponent.getData(): CausalNetComponentData? = when (compon
     ComponentTypeDto.CausalNet -> {
         val cnet = DBSerializer.fetch(
             DBCache.get(dataStoreId.toString()).database,
-            data!!.toInt()
+            requireNotNull(data) { "Missing C-net id" }.toInt()
         )
         val nodes = ArrayList<Node>().apply {
             add(cnet.start)

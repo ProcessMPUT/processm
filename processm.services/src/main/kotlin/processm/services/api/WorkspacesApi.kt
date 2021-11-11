@@ -137,7 +137,7 @@ fun Route.WorkspacesApi() {
                 ).mapNotNull {
                     try {
                         it.toAbstractComponent()
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         logger.warn("Failed to fetch component ${it.id.value}.", e)
                         null
                     }
