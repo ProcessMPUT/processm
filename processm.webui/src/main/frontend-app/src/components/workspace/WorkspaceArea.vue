@@ -141,8 +141,8 @@
 <script lang="ts">
 import Vue from "vue";
 import Component from "vue-class-component";
-import { Prop, Inject } from "vue-property-decorator";
-import { GridLayout, GridItem } from "vue-grid-layout";
+import { Inject, Prop } from "vue-property-decorator";
+import { GridItem, GridLayout } from "vue-grid-layout";
 import { v4 as uuidv4 } from "uuid";
 import SingleComponentView from "./SingleComponentView.vue";
 import EditComponentView from "./EditComponentView.vue";
@@ -150,9 +150,9 @@ import EmptyComponent from "./EmptyComponent.vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import {
-  WorkspaceComponent as WorkspaceComponentModel,
+  ComponentType,
   LayoutElement,
-  ComponentType
+  WorkspaceComponent as WorkspaceComponentModel
 } from "@/models/WorkspaceComponent";
 
 @Component({
@@ -248,6 +248,10 @@ export default class WorkspaceArea extends Vue {
 
   updateComponent(componentData: WorkspaceComponentModel) {
     this.componentsDetails.set(componentData.id, componentData);
+    this.closeModals();
+    this.$children
+      .find((v, _) => v.$data?.component?.id == componentData.id)
+      ?.$forceUpdate();
   }
 
   closeModals() {
@@ -281,7 +285,7 @@ export default class WorkspaceArea extends Vue {
     this.componentsWithLayoutsToBeUpdated.forEach((componentId) => {
       const component = this.componentsDetails.get(componentId);
 
-      if (component?.layout != null)
+      if (component?.layout !== undefined)
         updatedLayoutElements[componentId] = component.layout;
     });
 
@@ -297,7 +301,7 @@ export default class WorkspaceArea extends Vue {
   private updateComponentLayout(id: string, layout: Partial<LayoutElement>) {
     const component = this.componentsDetails.get(id);
 
-    if (component == null) return;
+    if (component === undefined) return;
 
     const componentLayout = component.layout ?? new LayoutElement({});
 
