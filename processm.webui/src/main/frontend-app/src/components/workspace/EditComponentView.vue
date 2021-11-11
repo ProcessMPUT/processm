@@ -22,11 +22,9 @@
         <v-list subheader>
           <v-list-item>
             <v-list-item-content>
-              <v-list-item-title>{{
-                $t("workspace.component.edit.name")
-              }}</v-list-item-title>
               <v-text-field
-                v-model="componentName"
+                v-model="component.name"
+                :label="$t('workspace.component.edit.name')"
                 :rules="[
                   (v) =>
                     !!v || $t('workspace.component.edit.validation.name-empty')
@@ -37,11 +35,9 @@
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-list-item-title>{{
-                $t("workspace.component.edit.type")
-              }}</v-list-item-title>
               <v-select
-                v-model="componentType"
+                v-model="component.type"
+                :label="$t('workspace.component.edit.type')"
                 :items="[
                   {
                     text: $t('workspace.component.causal-net'),
@@ -57,15 +53,25 @@
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-list-item-title>{{
-                $t("workspace.component.edit.query")
-              }}</v-list-item-title>
               <v-text-field
-                v-model="componentQuery"
+                v-model="component.query"
+                :label="$t('workspace.component.edit.query')"
                 :rules="[
                   (v) =>
                     !!v || $t('workspace.component.edit.validation.query-empty')
                 ]"
+                required
+              />
+            </v-list-item-content>
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-content>
+              <v-select
+                v-model="component.dataStore"
+                :label="$t('workspace.component.edit.datastore')"
+                :items="dataStores"
+                item-text="name"
+                item-value="id"
                 required
               />
             </v-list-item-content>
@@ -86,17 +92,19 @@
 <script lang="ts">
 import Vue from "vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
-import { Component, Prop, Inject } from "vue-property-decorator";
-import {
-  WorkspaceComponent as WorkspaceComponentModel,
-  ComponentType
-} from "@/models/WorkspaceComponent";
+import { Component, Inject, Prop } from "vue-property-decorator";
+import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import WorkspaceService from "@/services/WorkspaceService";
+import App from "@/App.vue";
+import DataStoreService from "@/services/DataStoreService";
+import DataStore from "@/models/DataStore";
 
 @Component({
   components: { WorkspaceComponent }
 })
 export default class EditComponentView extends Vue {
+  @Inject() app!: App;
+
   ComponentMode = ComponentMode;
 
   @Prop({ default: {} })
@@ -106,41 +114,37 @@ export default class EditComponentView extends Vue {
   @Prop()
   readonly workspaceId!: string;
   @Inject() workspaceService!: WorkspaceService;
+  @Inject() dataStoreService!: DataStoreService;
 
   isMounted = false;
-  componentType?: ComponentType;
-  componentName?: string;
-  componentQuery?: string;
 
-  created() {
-    this.componentType = this.componentDetails.type;
-    this.componentName = this.componentDetails.name ?? "";
-    this.componentQuery = this.componentDetails.query;
-  }
+  /**
+   * A shallow copy of [componentDetails]. This object replaces the [componentDetails] when saved or is discarded.
+   */
+  component: WorkspaceComponentModel = Object.assign({}, this.componentDetails);
+  dataStores: Array<DataStore> = [];
 
-  mounted() {
+  async mounted() {
+    this.dataStores = await this.dataStoreService.getAll();
+    if ((this.component.dataStore ?? "") == "" && this.dataStores.length > 0)
+      this.component.dataStore = this.dataStores[0].id;
     this.isMounted = true;
   }
 
-  saveChanges() {
-    if (this.componentType == null) return;
+  async saveChanges() {
+    try {
+      await this.workspaceService.updateComponent(
+        this.workspaceId,
+        this.componentDetails.id,
+        this.component
+      );
 
-    const componentModel = new WorkspaceComponentModel({
-      id: this.componentDetails.id,
-      type: this.componentType,
-      name: this.componentName,
-      query: this.componentQuery ?? "",
-      data: this.componentDetails.data,
-      customizationData: this.componentDetails.customizationData
-    });
-
-    this.workspaceService.updateComponent(
-      this.workspaceId,
-      this.componentDetails.id,
-      componentModel
-    );
-
-    this.$emit("component-updated", componentModel);
+      this.$emit("component-updated", this.component);
+      this.app.success(`${this.$t("common.saving.success")}`);
+    } catch (e) {
+      console.error(e);
+      this.app.error(`${this.$t("common.saving.failure")}: ${e.message}`);
+    }
   }
 }
 </script>
