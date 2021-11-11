@@ -9,8 +9,10 @@ import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.Route
 import org.koin.ktor.ext.inject
+import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.WorkspaceDto
 import processm.services.api.models.*
 import processm.services.logic.WorkspaceService
@@ -85,7 +87,7 @@ fun Route.WorkspacesApi() {
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
-            workspaceComponent.apply {
+            with(workspaceComponent) {
                 workspaceService.addOrUpdateWorkspaceComponent(
                     component.componentId,
                     component.workspaceId,
@@ -96,8 +98,8 @@ fun Route.WorkspacesApi() {
                     dataStore,
                     ComponentTypeDto.byTypeNameInDatabase(type.toString()),
                     // TODO: replace the dependency on Gson with kotlinx/serialization
-                    workspaceComponent.customizationData?.let { Gson().toJson(it) },
-                    workspaceComponent.layout?.let { Gson().toJson(it) }
+                    customizationData?.let { Gson().toJson(it) },
+                    layout?.let { Gson().toJson(it) }
                 )
             }
 
@@ -125,7 +127,7 @@ fun Route.WorkspacesApi() {
         }
 
         get<Paths.WorkspaceComponents> { workspace ->
-            loggedScope { logger ->
+            loggedScope {
                 val principal = call.authentication.principal<ApiUser>()!!
 
                 principal.ensureUserBelongsToOrganization(workspace.organizationId)
@@ -134,14 +136,7 @@ fun Route.WorkspacesApi() {
                     workspace.workspaceId,
                     principal.userId,
                     workspace.organizationId
-                ).mapNotNull {
-                    try {
-                        it.toAbstractComponent()
-                    } catch (e: Throwable) {
-                        logger.warn("Failed to fetch component ${it.id.value}.", e)
-                        null
-                    }
-                }.toTypedArray()
+                ).mapToArray(WorkspaceComponent::toAbstractComponent)
 
                 call.respond(HttpStatusCode.OK, ComponentCollectionMessageBody(components))
             }

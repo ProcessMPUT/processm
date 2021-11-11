@@ -2,6 +2,7 @@ package processm.services.api
 
 import com.google.gson.Gson
 import processm.core.helpers.mapToArray
+import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.persistence.connection.DBCache
@@ -66,36 +67,43 @@ private fun WorkspaceComponent.getCustomizationData(): CausalNetComponentAllOfCu
 /**
  * Deserializes the component data for the component.
  */
-private fun WorkspaceComponent.getData(): CausalNetComponentData? = when (componentType) {
-    ComponentTypeDto.CausalNet -> {
-        val cnet = DBSerializer.fetch(
-            DBCache.get(dataStoreId.toString()).database,
-            requireNotNull(data) { "Missing C-net id" }.toInt()
-        )
-        val nodes = ArrayList<Node>().apply {
-            add(cnet.start)
-            cnet.activities.filterTo(this) { it != cnet.start && it != cnet.end }
-            add(cnet.end)
-        }.mapToArray {
-            CausalNetComponentDataAllOfNodes(
-                it.name,
-                cnet.splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
-                cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
-            )
-        }
-        val edges = cnet.dependencies.mapToArray {
-            CausalNetComponentDataAllOfEdges(
-                it.source.name,
-                it.target.name
-            )
-        }
+private fun WorkspaceComponent.getData(): CausalNetComponentData? = loggedScope { logger ->
+    try {
+        when (componentType) {
+            ComponentTypeDto.CausalNet -> {
+                val cnet = DBSerializer.fetch(
+                    DBCache.get(dataStoreId.toString()).database,
+                    requireNotNull(data) { "Missing C-net id" }.toInt()
+                )
+                val nodes = ArrayList<Node>().apply {
+                    add(cnet.start)
+                    cnet.activities.filterTo(this) { it != cnet.start && it != cnet.end }
+                    add(cnet.end)
+                }.mapToArray {
+                    CausalNetComponentDataAllOfNodes(
+                        it.name,
+                        cnet.splits[it].orEmpty().mapToArray { split -> split.targets.mapToArray { t -> t.name } },
+                        cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
+                    )
+                }
+                val edges = cnet.dependencies.mapToArray {
+                    CausalNetComponentDataAllOfEdges(
+                        it.source.name,
+                        it.target.name
+                    )
+                }
 
-        CausalNetComponentData(
-            type = ComponentType.causalNet,
-            nodes = nodes,
-            edges = edges
-        )
+                CausalNetComponentData(
+                    type = ComponentType.causalNet,
+                    nodes = nodes,
+                    edges = edges
+                )
+            }
+            else -> TODO("Data conversion is not implemented for type $componentType.")
+        }
+    } catch (e: Throwable) {
+        logger.warn(e.message, e)
+        null
     }
-    else -> TODO("Data conversion is not implemented for type $componentType.")
 }
 

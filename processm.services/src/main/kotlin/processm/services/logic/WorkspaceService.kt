@@ -236,7 +236,7 @@ class WorkspaceService(private val accountService: AccountService) {
             it[WorkspaceComponents.id] = EntityID(workspaceComponentId, WorkspaceComponents)
             it[WorkspaceComponents.name] = name
             it[WorkspaceComponents.query] = query
-            it[WorkspaceComponents.dataStoreId] = dataStore.toUUID()!!
+            it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore.toUUID())
             it[WorkspaceComponents.componentType] = componentType.typeName
             it[WorkspaceComponents.customizationData] = customizationData
             it[WorkspaceComponents.layoutData] = layoutData
