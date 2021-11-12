@@ -5,7 +5,6 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.helpers.toUUID
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.util.*
@@ -118,7 +117,7 @@ class WorkspaceService(private val accountService: AccountService) {
         organizationId: UUID,
         name: String?,
         query: String?,
-        dataStore: String?,
+        dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null
@@ -148,7 +147,7 @@ class WorkspaceService(private val accountService: AccountService) {
         if (query.isNullOrBlank())
             throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing query.")
 
-        if (dataStore.isNullOrBlank())
+        if (dataStore == null)
             throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing data store.")
 
         if (componentType == null)
@@ -227,7 +226,7 @@ class WorkspaceService(private val accountService: AccountService) {
         workspaceId: UUID,
         name: String,
         query: String,
-        dataStore: String,
+        dataStore: UUID,
         componentType: ComponentTypeDto,
         customizationData: String? = null,
         layoutData: String? = null
@@ -236,7 +235,7 @@ class WorkspaceService(private val accountService: AccountService) {
             it[WorkspaceComponents.id] = EntityID(workspaceComponentId, WorkspaceComponents)
             it[WorkspaceComponents.name] = name
             it[WorkspaceComponents.query] = query
-            it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore.toUUID())
+            it[WorkspaceComponents.dataStoreId] = dataStore
             it[WorkspaceComponents.componentType] = componentType.typeName
             it[WorkspaceComponents.customizationData] = customizationData
             it[WorkspaceComponents.layoutData] = layoutData
@@ -249,7 +248,7 @@ class WorkspaceService(private val accountService: AccountService) {
         workspaceId: UUID?,
         name: String?,
         query: String?,
-        dataStore: String?,
+        dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null
@@ -258,7 +257,7 @@ class WorkspaceService(private val accountService: AccountService) {
             if (workspaceId != null) it[WorkspaceComponents.workspaceId] = EntityID(workspaceId, Workspaces)
             if (name != null) it[WorkspaceComponents.name] = name
             if (query != null) it[WorkspaceComponents.query] = query
-            if (dataStore != null) it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore.toUUID())
+            if (dataStore != null) it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore)
             if (componentType != null) it[WorkspaceComponents.componentType] = componentType.typeName
             if (customizationData != null) it[WorkspaceComponents.customizationData] = customizationData
             if (layoutData != null) it[WorkspaceComponents.layoutData] = layoutData

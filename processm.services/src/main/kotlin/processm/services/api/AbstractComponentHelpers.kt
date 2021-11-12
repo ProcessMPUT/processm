@@ -17,7 +17,7 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
     AbstractComponent(
         id = id.value,
         query = query,
-        dataStore = dataStoreId.toString(),
+        dataStore = dataStoreId,
         type = componentType.toComponentType(),
         name = name,
         layout = getLayout(),

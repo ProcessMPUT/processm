@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: Processm
-  description: Description of api methods used in processm.
+  title: ProcessM
+  description: Description of API methods used in processm.
   version: 1.0.0
 servers:
   - url: /api
@@ -1831,10 +1831,19 @@ components:
           type: string
         dataStore:
           type: string
+          format: uuid
         type:
           $ref: '#/components/schemas/ComponentType'
         layout:
           $ref: '#/components/schemas/LayoutElement'
+        userLastModified:
+          type: string
+          format: date-time
+        dataLastModified:
+          type: string
+          format: date-time
+        lastError:
+          type: string
     LayoutElement:
       type: object
       properties:
@@ -1884,7 +1893,7 @@ components:
         - type: object
           properties:
             value:
-              type: number
+              type: string
     KpiComponent:
       allOf:
         - $ref: '#/components/schemas/Component'

@@ -346,7 +346,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val componentId = UUID.randomUUID()
             val componentName = "Component1"
             val dataQuery = "query"
-            val dataStore = UUID.randomUUID().toString()
+            val dataStore = UUID.randomUUID()
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
@@ -393,7 +393,7 @@ class WorkspacesApiTest : BaseApiTest() {
         val componentId = UUID.randomUUID()
         val componentName = "Component1"
         val dataQuery = "query"
-        val dataStore = UUID.randomUUID().toString()
+        val dataStore = UUID.randomUUID()
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {

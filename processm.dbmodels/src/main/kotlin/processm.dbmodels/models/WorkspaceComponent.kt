@@ -4,7 +4,30 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.sql.`java-time`.timestamp
+import java.time.Instant
 import java.util.*
+
+/**
+ * The JMS topic in which the changes to the components are announced.
+ */
+const val WORKSPACE_COMPONENTS_TOPIC = "workspace_components"
+
+/**
+ * The body key of the JMS message containing the id of the component as string.
+ */
+const val WORKSPACE_COMPONENT_ID = "id"
+
+/**
+ * The property of the JMS message containing the type of the component as string.
+ */
+const val WORKSPACE_COMPONENT_TYPE = "componentType"
+
+const val WORKSPACE_COMPONENT_EVENT = "event"
+
+const val CREATE_OR_UPDATE = "create_or_update"
+
+const val DELETE = "delete"
 
 object WorkspaceComponents : UUIDTable("workspace_components") {
     /**
@@ -47,6 +70,18 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
      * The position and size of the component.
      */
     val layoutData = text("layout_data").nullable()
+
+    /**
+     * The timestamp of the last modification made by a user.
+     */
+    val userLastModified = timestamp("user_last_modified").clientDefault (Instant::now)
+
+    /**
+     * The timestamp of the last modification made by the system.
+     */
+    val dataLastModified = timestamp("data_last_modified").nullable()
+
+    val lastError = text("last_error").nullable()
 }
 
 class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -64,6 +99,9 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var data by WorkspaceComponents.data
     var customizationData by WorkspaceComponents.customizationData
     var layoutData by WorkspaceComponents.layoutData
+    var userLastModified by WorkspaceComponents.userLastModified
+    var dataLastModified by WorkspaceComponents.dataLastModified
+    var lastError by WorkspaceComponents.lastError
 
     fun toDto() = WorkspaceComponentDto(
         id.value,
@@ -85,6 +123,8 @@ enum class ComponentTypeDto(val typeName: String) {
     companion object {
         fun byTypeNameInDatabase(typeNameInDatabase: String) = values().first { it.typeName == typeNameInDatabase }
     }
+
+    override fun toString(): String = typeName
 }
 
 data class WorkspaceComponentDto(

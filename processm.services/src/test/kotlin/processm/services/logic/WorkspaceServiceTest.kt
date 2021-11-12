@@ -199,7 +199,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val newComponentType = ComponentTypeDto.Kpi
         val newComponentCustomizationData = """{"data":"new"}"""
         val newDataQuery = "new query"
-        val newDataStore = UUID.randomUUID().toString()
+        val newDataStore = UUID.randomUUID()
 
         workspaceService.addOrUpdateWorkspaceComponent(
             componentId.value,
@@ -321,7 +321,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val componentType = ComponentTypeDto.Kpi
         val componentCustomizationData = """{"data":"new"}"""
         val dataQuery = "query"
-        val dataStore = UUID.randomUUID().toString()
+        val dataStore = UUID.randomUUID()
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = groupId.value)

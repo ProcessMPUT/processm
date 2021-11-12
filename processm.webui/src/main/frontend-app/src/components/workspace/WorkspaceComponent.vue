@@ -41,13 +41,18 @@
         <v-icon>close</v-icon>
       </v-btn>
     </div>
-    <component
-      :is="componentType"
-      :data="componentDetails"
-      :component-mode="componentMode"
-      v-if="isDisplayable"
-      class="workspace-component-content"
-    />
+    <div v-if="isDisplayable">
+      <component
+        :is="componentType"
+        :data="componentDetails"
+        :component-mode="componentMode"
+        class="workspace-component-content"
+      />
+      <div class="last-updated">
+        {{ $t("workspace.component.last-updated") }}:
+        {{ componentDetails.dataLastModified }}
+      </div>
+    </div>
     <p class="no-data" v-else>{{ $t("workspace.component.no-data") }}</p>
   </div>
 </template>
@@ -85,6 +90,10 @@ button.v-btn.v-btn.component-name[type="button"] {
 
 .no-data {
   text-align: center;
+}
+
+.last-updated {
+  font-size: 0.8em;
 }
 </style>
 

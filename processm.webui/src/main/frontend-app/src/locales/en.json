@@ -27,6 +27,7 @@
       "kpi": "KPI",
       "select": "Select type",
       "no-data": "No data to be displayed",
+      "last-updated": "Last updated",
       "edit": {
         "name": "Name",
         "type": "Type",

@@ -11,7 +11,7 @@
   justify-content: center;
   align-items: center;
   color: var(--v-primary-darken2);
-  font-size: 80px;
+  font-size: 4em;
   overflow: hidden;
 }
 </style>
@@ -23,9 +23,9 @@ import { Component, Prop } from "vue-property-decorator";
 @Component
 export default class KpiComponent extends Vue {
   @Prop({ default: {} })
-  readonly data!: { data: { value: number } };
+  readonly data!: { data: { value: string } };
 
-  value?: number;
+  value?: string;
 
   created() {
     this.value = this.data.data?.value;
