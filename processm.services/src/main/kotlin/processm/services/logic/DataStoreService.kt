@@ -181,6 +181,9 @@ class DataStoreService {
         }
     }
 
+    /**
+     * Returns case notion suggestions for the data accessed using [dataConnectorId].
+     */
     fun getCaseNotionSuggestions(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
         val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
         val metaModelReader = MetaModelReader(dataModelId.value)
@@ -192,6 +195,45 @@ class DataStoreService {
                 val relations = businessPerspective.caseNotionClasses
                     .flatMap { classId -> businessPerspective.getSuccessors(classId).map { classId.value to it.value } }
                 businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations }
+    }
+
+    /**
+     * Creates an automatic ETL process in the specified [dataStoreId] using case notion described by [relations].
+     */
+    fun createAutomaticEtlProcess(dataStoreId: UUID, dataConnectorId: UUID, name: String, relations: List<Pair<String, String>>)
+            = transaction(DBCache.get("$dataStoreId").database) {
+        val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
+            it[this.name] = name
+            it[this.processType] = ProcessTypeDto.Automatic.processTypeName
+            it[this.dataConnectorId] = dataConnectorId
+        }
+        AutomaticEtlProcesses.insert {
+            it[this.id] = etlProcessMetadataId
+        }
+        AutomaticEtlProcessRelations.batchInsert(relations) { (sourceClassId, targetClassId) ->
+            this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
+            this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
+            this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
+        }
+
+        return@transaction etlProcessMetadataId.value
+    }
+
+    /**
+     * Returns all ETL processes stored in the specified [dataStoreId].
+     */
+    fun getEtlProcesses(dataStoreId: UUID) =
+        transaction(DBCache.get("$dataStoreId").database) {
+            return@transaction EtlProcessMetadata.wrapRows(EtlProcessesMetadata.selectAll()).map { it.toDto() }
+        }
+
+    /**
+     * Removes the ETL process specified by the [etlProcessId].
+     */
+    fun removeEtlProcess(dataStoreId: UUID, etlProcessId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
+        return@transaction EtlProcessesMetadata.deleteWhere {
+            EtlProcessesMetadata.id eq etlProcessId
+        } > 0
     }
 
     /**
