@@ -67,6 +67,9 @@
     "last-connection-status-timestamp": "Czas ostatniego połączenia",
     "data-connector-no-properties": "Brak właściwości do wyświetlenia"
   },
+  "add-manual-query-dialog": {
+    "dialog-title": "Dodaj ręczne zapytanie"
+  },
   "add-data-connector-dialog": {
     "dialog-title": "Dodaj łącze danych",
     "connection-type": "Typ połączenia",

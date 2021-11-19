@@ -67,6 +67,9 @@
     "last-connection-status-timestamp": "Last connection time",
     "data-connector-no-properties": "No properties to display"
   },
+  "add-manual-query-dialog": {
+    "dialog-title": "Add manual query"
+  },
   "add-data-connector-dialog": {
     "dialog-title": "Add data connector",
     "connection-type": "Connection type",

@@ -252,7 +252,7 @@
                             color="primary"
                             class="mx-2"
                             :disabled="dataConnectors.length == 0"
-                            @click.stop="addEtlProcessDialog = true"
+                            @click.stop="addManualQueryDialog = true"
                             v-bind="attrs"
                           >
                             {{ $t("data-stores.add-manual-query.title") }}
@@ -316,6 +316,12 @@
       @cancelled="dataConnectorIdToRename = null"
       @submitted="renameDataConnector"
     />
+    <add-manual-query-dialog
+      v-model="addManualQueryDialog"
+      :dataConnectors="dataConnectors"
+      @cancelled="addManualQueryDialog = false"
+      @submitted="addManualQuery"
+    />
   </v-dialog>
 </template>
 
@@ -339,9 +345,11 @@ import FileUploadDialog from "@/components/FileUploadDialog.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
 import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
+import AddManualQueryDialog from "@/components/data-connections/AddManualQueryDialog.vue";
 
 @Component({
   components: {
+    AddManualQueryDialog,
     AddDataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
@@ -354,7 +362,7 @@ export default class DataStoreConfiguration extends Vue {
   @Inject() logsService!: LogsService;
   private readonly xesProcessor = new XesProcessor();
   addDataConnectorDialog = false;
-  addEtlProcessDialog = false;
+  addManualQueryDialog = false;
   fileUploadDialog = false;
   isUploading = false;
   dataConnectors: Array<DataConnector> = [];
@@ -602,6 +610,10 @@ export default class DataStoreConfiguration extends Vue {
         (dataStore) => dataStore.id == this.dataConnectorIdToRename
       )?.name || null
     );
+  }
+
+  async addManualQuery() {
+    // TODO
   }
 }
 </script>
