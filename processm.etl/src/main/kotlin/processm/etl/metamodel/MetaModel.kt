@@ -7,12 +7,16 @@ import org.jetbrains.exposed.sql.statements.BatchInsertStatement
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.models.AttributesNames
+import processm.dbmodels.models.Classes
+import processm.dbmodels.models.DataModels
+import processm.dbmodels.models.Relationships
 import processm.etl.discovery.DatabaseExplorer
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
 import java.time.Instant
 
-internal class MetaModel(
+class MetaModel(
     private val dataStoreDBName: String,
     private val metaModelReader: MetaModelReader,
     private val metaModelAppender: MetaModelAppender): DatabaseChangeApplier {

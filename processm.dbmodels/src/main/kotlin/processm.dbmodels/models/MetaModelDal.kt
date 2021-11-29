@@ -1,4 +1,4 @@
-package processm.etl.metamodel
+package processm.dbmodels.models
 
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass

@@ -412,7 +412,7 @@ paths:
     delete:
       tags:
         - dataStores
-      summary: Remove the specified data connectorr
+      summary: Remove the specified data connector
       operationId: deleteDataConnector
       responses:
         '204':
@@ -458,6 +458,143 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/DataConnectorConnectivityMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataConnectorId
+        in: path
+        description: Data connector ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataStores
+      summary: Get suggested case notions for the specified data store
+      operationId: getCaseNotionSuggestions
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/CaseNotionCollectionMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataStores
+      summary: Get all ETL processes assigned to the given data store
+      operationId: getEtlProcesses
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/EtlProcessCollectionMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - dataStores
+      summary: Create a new ETL process assigned to the specified data store
+      operationId: createEtlProcess
+      requestBody:
+        description: ETL process details
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/EtlProcessMessageBody'
+        required: true
+      responses:
+        '201':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/EtlProcessMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: etlProcessId
+        in: path
+        description: ETL process ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags:
+        - dataStores
+      summary: Remove the specified ETL process
+      operationId: deleteEtlProcess
+      responses:
+        '204':
+          description: Successful operation
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1564,6 +1701,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DataConnector'
+    EtlProcessType:
+      type: string
+      enum: [automatic]
+    AbstractEtlProcess:
+      oneOf:
+        - $ref: '#/components/schemas/AutomaticEtlProcess'
+      discriminator:
+        propertyName: type
+        mapping:
+          automatic: '#/components/schemas/AutomaticEtlProcess'
+    AutomaticEtlProcess:
+      allOf:
+        - $ref: '#/components/schemas/EtlProcess'
+        - type: object
+          properties:
+            caseNotion:
+              $ref: '#/components/schemas/CaseNotion'
+    EtlProcess:
+      type: object
+      required: [name, type, dataConnectorId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        dataConnectorId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/EtlProcessType'
+    EtlProcessMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AbstractEtlProcess'
+    EtlProcessCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AbstractEtlProcess'
     DataConnectorConnectivity:
       type: object
       required: [isValid]
@@ -1819,6 +2001,32 @@ components:
           type: array
           items:
             type: object
+    CaseNotion:
+      type: object
+      required: [classes, edges]
+      properties:
+        classes:
+          type: object
+          additionalProperties:
+            type: string
+        edges:
+          type: array
+          items:
+            type: object
+            required: [sourceClassId, targetClassId]
+            properties:
+              sourceClassId:
+                type: string
+              targetClassId:
+                type: string
+    CaseNotionCollectionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseNotion'
   responses:
     BadRequest:
       description: Invalid request body

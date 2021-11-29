@@ -13,6 +13,8 @@ object DataConnectors : UUIDTable("data_connectors") {
     val lastConnectionStatus = bool("last_connection_status").nullable()
     val lastConnectionStatusTimestamp = datetime("last_connection_status_timestamp").nullable()
     val connectionProperties = text("connection_properties")
+    val dataModelId = reference("data_model_id", DataModels).nullable()
+
 }
 
 class DataConnector(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -22,8 +24,9 @@ class DataConnector(id: EntityID<UUID>) : UUIDEntity(id) {
     var lastConnectionStatus by DataConnectors.lastConnectionStatus
     var lastConnectionStatusTimestamp by DataConnectors.lastConnectionStatusTimestamp
     var connectionProperties by DataConnectors.connectionProperties
+    var dataModel by DataModel optionalReferencedOn DataConnectors.dataModelId
 
-    fun toDto() = DataConnectorDto(id.value, name, lastConnectionStatus, lastConnectionStatusTimestamp)
+    fun toDto() = DataConnectorDto(id.value, name, lastConnectionStatus, lastConnectionStatusTimestamp, dataModel?.id?.value)
 }
 
-data class DataConnectorDto(val id: UUID, val name: String, val lastConnectionStatus: Boolean?, val lastConnectionStatusTimestamp: LocalDateTime?, var connectionProperties: Map<String, String>? = null)
+data class DataConnectorDto(val id: UUID, val name: String, val lastConnectionStatus: Boolean?, val lastConnectionStatusTimestamp: LocalDateTime?, val dataModelId: Int?, var connectionProperties: Map<String, String>? = null)

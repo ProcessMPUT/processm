@@ -3,16 +3,14 @@ package processm.etl.discovery
 import processm.core.helpers.mapToSet
 import schemacrawler.inclusionrule.RegularExpressionInclusionRule
 import schemacrawler.schema.Table
-import schemacrawler.schema.TableRelationshipType
 import schemacrawler.schema.View
 import schemacrawler.schemacrawler.*
 import schemacrawler.utility.SchemaCrawlerUtility
-import java.sql.DriverManager
+import java.sql.Connection
 
-internal class SchemaCrawlerExplorer(connectionString: String, schema: String? = null) : DatabaseExplorer {
+class SchemaCrawlerExplorer(private val connection: Connection, schema: String? = null) : DatabaseExplorer {
 
     private val options: SchemaCrawlerOptions
-    private val connection = DriverManager.getConnection(connectionString)
 
     init {
         val limitOptionsBuilder: LimitOptionsBuilder = LimitOptionsBuilder.builder()

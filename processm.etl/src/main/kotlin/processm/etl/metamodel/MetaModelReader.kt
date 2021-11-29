@@ -2,6 +2,7 @@ package processm.etl.metamodel
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
+import processm.dbmodels.models.*
 
 /**
  * Reads meta model data from the database.
@@ -158,7 +159,7 @@ class MetaModelReader(private val dataModelId: Int) {
         Classes.slice(Classes.id, Classes.name)
             .selectBatched { relatedToDataModel() }
             .flatten()
-            .map { it[Classes.id] to Classes.name }
+            .map { it[Classes.id] to it[Classes.name] }
             .toMap()
 
     private fun getRelationshipsBetweenClasses(firstClassId: EntityID<Int>, secondClassId: EntityID<Int>) =
