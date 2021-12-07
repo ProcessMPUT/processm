@@ -1,12 +1,17 @@
 package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
+import processm.miners.triggerEvent
 import java.util.*
 
 class WorkspaceService(private val accountService: AccountService) {
@@ -231,15 +236,18 @@ class WorkspaceService(private val accountService: AccountService) {
         customizationData: String? = null,
         layoutData: String? = null
     ) {
-        WorkspaceComponents.insert {
-            it[WorkspaceComponents.id] = EntityID(workspaceComponentId, WorkspaceComponents)
-            it[WorkspaceComponents.name] = name
-            it[WorkspaceComponents.query] = query
-            it[WorkspaceComponents.dataStoreId] = dataStore
-            it[WorkspaceComponents.componentType] = componentType.typeName
-            it[WorkspaceComponents.customizationData] = customizationData
-            it[WorkspaceComponents.layoutData] = layoutData
-            it[WorkspaceComponents.workspaceId] = EntityID(workspaceId, Workspaces)
+        WorkspaceComponent.new(workspaceComponentId) {
+            this.name = name
+            this.query = query
+            this.dataStoreId = dataStore
+            this.componentType = ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)
+            this.customizationData = customizationData
+            this.layoutData = layoutData
+            this.workspace = Workspace[workspaceId]
+
+            afterCommit {
+                triggerEvent()
+            }
         }
     }
 
@@ -253,14 +261,19 @@ class WorkspaceService(private val accountService: AccountService) {
         customizationData: String? = null,
         layoutData: String? = null
     ) {
-        WorkspaceComponents.update({ WorkspaceComponents.id eq workspaceComponentId }) {
-            if (workspaceId != null) it[WorkspaceComponents.workspaceId] = EntityID(workspaceId, Workspaces)
-            if (name != null) it[WorkspaceComponents.name] = name
-            if (query != null) it[WorkspaceComponents.query] = query
-            if (dataStore != null) it[WorkspaceComponents.dataStoreId] = requireNotNull(dataStore)
-            if (componentType != null) it[WorkspaceComponents.componentType] = componentType.typeName
-            if (customizationData != null) it[WorkspaceComponents.customizationData] = customizationData
-            if (layoutData != null) it[WorkspaceComponents.layoutData] = layoutData
+        WorkspaceComponent[workspaceComponentId].apply {
+            if (workspaceId != null) this.workspace = Workspace[workspaceId]
+            if (name != null) this.name = name
+            if (query != null) this.query = query
+            if (dataStore != null) this.dataStoreId = dataStore
+            if (componentType != null) this.componentType =
+                ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)
+            if (customizationData != null) this.customizationData = customizationData
+            if (layoutData != null) this.layoutData = layoutData
+
+            afterCommit {
+                triggerEvent()
+            }
         }
     }
 }

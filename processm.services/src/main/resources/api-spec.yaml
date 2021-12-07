@@ -1872,6 +1872,10 @@ components:
         mapping:
           kpi: '#/components/schemas/KpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
+      type: object
+      properties:
+        data:
+          type: object
     ComponentData:
       type: object
       required: [type]

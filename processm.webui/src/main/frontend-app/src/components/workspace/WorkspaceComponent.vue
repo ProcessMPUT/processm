@@ -41,7 +41,7 @@
         <v-icon>close</v-icon>
       </v-btn>
     </div>
-    <div v-if="isDisplayable">
+    <div v-if="isDisplayable" class="workspace-component-content-parent">
       <component
         :is="componentType"
         :data="componentDetails"
@@ -62,6 +62,11 @@
   display: flex;
   flex-flow: column;
   height: 100%;
+}
+
+.workspace-component-content-parent {
+  height: 100%;
+  position: relative;
 }
 
 button.v-btn.v-btn.component-name[type="button"] {
@@ -94,6 +99,11 @@ button.v-btn.v-btn.component-name[type="button"] {
 
 .last-updated {
   font-size: 0.8em;
+  color: var(--v-secondary-base);
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  overflow: hidden;
 }
 </style>
 

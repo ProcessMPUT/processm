@@ -9,6 +9,8 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.*
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].
@@ -22,7 +24,10 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
         name = name,
         layout = getLayout(),
         customizationData = getCustomizationData(),
-        data = getData()
+        data = getData(),
+        dataLastModified = dataLastModified?.let { LocalDateTime.ofInstant(it, ZoneId.of("Z")).withNano(0) },
+        userLastModified = LocalDateTime.ofInstant(userLastModified, ZoneId.of("Z")).withNano(0),
+        lastError = lastError
     )
 
 /**
@@ -67,7 +72,7 @@ private fun WorkspaceComponent.getCustomizationData(): CausalNetComponentAllOfCu
 /**
  * Deserializes the component data for the component.
  */
-private fun WorkspaceComponent.getData(): CausalNetComponentData? = loggedScope { logger ->
+private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     try {
         when (componentType) {
             ComponentTypeDto.CausalNet -> {
@@ -97,6 +102,12 @@ private fun WorkspaceComponent.getData(): CausalNetComponentData? = loggedScope 
                     type = ComponentType.causalNet,
                     nodes = nodes,
                     edges = edges
+                )
+            }
+            ComponentTypeDto.Kpi -> {
+                KpiComponentData(
+                    type = ComponentType.kpi,
+                    value = data
                 )
             }
             else -> TODO("Data conversion is not implemented for type $componentType.")

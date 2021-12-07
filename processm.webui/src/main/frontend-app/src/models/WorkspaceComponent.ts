@@ -1,6 +1,6 @@
 import {
-  DataNode,
-  DataLink
+  DataLink,
+  DataNode
 } from "@/components/workspace/causal-net/CausalNet";
 
 export enum ComponentType {
@@ -18,13 +18,16 @@ export abstract class ComponentData {
   constructor(init: Partial<ComponentData>) {
     Object.assign(this, init);
   }
+
   type!: ComponentType;
+
   abstract get isDisplayable(): boolean | undefined;
 }
 
 export class CausalNetComponentData extends ComponentData {
   nodes?: Array<DataNode>;
   edges?: Array<DataLink>;
+
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;
   }
@@ -32,6 +35,7 @@ export class CausalNetComponentData extends ComponentData {
 
 export class KpiComponentData extends ComponentData {
   value?: number;
+
   get isDisplayable() {
     return this.value != null;
   }
@@ -82,4 +86,7 @@ export class WorkspaceComponent {
   data: ComponentData;
   layout?: LayoutElement;
   customizationData?: CustomizationData;
+  dataLastModified?: string;
+  userLastModified?: string;
+  lastError?: string;
 }

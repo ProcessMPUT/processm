@@ -19,6 +19,9 @@
           @edit="$emit('edit', componentDetails.id)"
           @remove="$emit('remove', componentDetails.id)"
         />
+        <v-alert v-if="componentDetails.lastError !== undefined" type="error"
+          >{{ componentDetails.lastError }}
+        </v-alert>
         <v-list subheader>
           <v-list-item>
             <v-list-item-content>

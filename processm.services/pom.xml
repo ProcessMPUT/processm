@@ -177,6 +177,11 @@
         </dependency>
         <dependency>
             <groupId>processm</groupId>
+            <artifactId>miners</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
             <artifactId>webui</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
