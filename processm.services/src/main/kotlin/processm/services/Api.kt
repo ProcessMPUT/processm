@@ -30,7 +30,7 @@ fun Application.apiModule() {
                 // Correctly serialize/deserialize LocalDateTime
                 registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
                     override fun write(out: JsonWriter, value: LocalDateTime?) {
-                        out.value(value.toString())
+                        out.value(value?.toString())
                     }
 
                     override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
