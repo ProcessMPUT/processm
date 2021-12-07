@@ -96,7 +96,7 @@ class KPIService : AbstractJobService(
                     component.lastError = null
                 } catch (e: Exception) {
                     component.lastError = e.message
-                    logger.warn("Cannot calculate KPI.", e)
+                    logger.warn("Cannot calculate KPI for component with id $id.", e)
                 }
             }
         }
