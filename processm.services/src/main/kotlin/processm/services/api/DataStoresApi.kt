@@ -46,7 +46,7 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             val dataStores = dataStoreService.allByOrganizationId(organizationId = pathParams.organizationId).map {
-                DataStore(it.name, it.id, size = null, it.creationDate)
+                DataStore(it.name, it.id, null, it.creationDate)
             }.toTypedArray()
 
             call.respond(HttpStatusCode.OK, DataStoreCollectionMessageBody(dataStores))
