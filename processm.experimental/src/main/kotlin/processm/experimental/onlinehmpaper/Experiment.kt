@@ -119,6 +119,7 @@ class Experiment {
     private data class ResourceStats(val cpuTimeMillis: Long, val peakMemory: Long)
 
     private fun measureResources(block: () -> Unit): ResourceStats {
+        System.gc()
         for (pool in ManagementFactory.getMemoryPoolMXBeans())
             pool.resetPeakUsage()
         val osBean = ManagementFactory.getOperatingSystemMXBean() as com.sun.management.OperatingSystemMXBean
@@ -564,6 +565,45 @@ class Experiment {
         }
     }
 
+    internal fun driftPerformance(config: Config) {
+        val csv = CSVWriter(File(config.csv))
+        for (windowSize in config.batchSizes.map { it.toInt() }) {
+            for (logfile in config.logs.map { File(it) }) {
+                val filename = logfile.name
+                val partialLogs = try {
+                    createDriftLogs(
+                        load(logfile),
+                        config.sampleSeed,
+                        config.splitSeed,
+                        config.keval,
+                        config.knownNamesThreshold,
+                        config.missThreshold
+                    )
+                } catch (e: IllegalStateException) {
+                    logger().warn(filename, e)
+                    continue
+                }
+                println("Sublog sizes: ${partialLogs.map { it.size }}")
+                val online = OnlineMiner()
+                val log = partialLogs.mapIndexed { logidx, log ->
+                    log.mapIndexed { traceidx, trace ->
+                        Triple(logidx, traceidx, trace)
+                    }
+                }.flatten()
+                println("window size=$windowSize")
+                for (i in log.indices) {
+                    println("i=$i")
+                    val (logidx, traceidx, trace) = log[i]
+                    val key = Key(filename, windowSize, logidx, traceidx)
+                    val addLog = Log(sequenceOf(trace))
+                    val removeLog = Log(if (i >= windowSize) sequenceOf(log[i - windowSize].third) else emptySequence())
+                    val res = measureResources { online.processDiff(addLog, removeLog) }
+                    csv(listOf(res.cpuTimeMillis, res.peakMemory), key)
+                }
+            }
+        }
+    }
+
     fun main(args: Array<String>) {
         val config = Config.load(if (args.isNotEmpty()) args[0] else "config.json")
         println(config)
@@ -571,7 +611,8 @@ class Experiment {
             compareBatch(config)
         else if (config.mode == Mode.DRIFT)
             drift(config)
-        else if(config.mode == Mode.PERFORMANCE)
+        else if (config.mode == Mode.PERFORMANCE)
+            driftPerformance(config)
         else
             compareWindow(config)
     }

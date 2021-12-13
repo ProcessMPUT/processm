@@ -263,7 +263,7 @@ class ExperimentTest {
                     "missThreshold": 10,
                     "maxQueueSize": 100,
                     "mode": "PERFORMANCE",
-                    "batchSizes": [100],
+                    "batchSizes": [5],
                     "minDependency": [0], 
                     "measures": []
             }
@@ -271,6 +271,7 @@ class ExperimentTest {
         """.trimIndent()
         val config = Json.Default.decodeFromString(Experiment.Config.serializer(), configText)
         println(config)
-        Experiment().performance(config)
+        Experiment().driftPerformance(config)
     }
+
 }
