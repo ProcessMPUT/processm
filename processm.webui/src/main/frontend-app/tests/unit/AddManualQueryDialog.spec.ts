@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import Vue from "vue";
-import {render, fireEvent, RenderResult} from "@testing-library/vue";
+import {render, fireEvent, RenderResult, prettyDOM} from "@testing-library/vue";
 import Vuetify from "vuetify";
 import AddManualQueryDialog from "@/components/data-connections/AddManualQueryDialog.vue";
 import {describe, beforeEach, it} from '@jest/globals';
@@ -71,18 +71,49 @@ describe("AddManualQueryDialog.vue", () => {
 
     it("Cancel", async () => {
         //TODO dunno czemu w testach nic nie przestaje byc visible tutaj
-        expect(dialog.container.firstChild).toBeVisible()
+        //https://testing-library.com/docs/guide-disappearance
+        expect(dialog.queryByTestId("cancel")).toBeInTheDocument()
         await fireEvent.click(dialog.getByTestId("cancel"))
-        expect(dialog.container.firstChild).not.toBeVisible()
+        expect(dialog.queryByTestId("cancel")).not.toBeInTheDocument()
+    });
+
+    async function fillForm(data: { [s: string]: string; }) {
+        for (const [key, value] of Object.entries(data)) {
+            await fireEvent.update(dialog.getByTestId(key), value);
+        }
+    }
+
+    it("Cancel resets the form", async () => {
+        // let data = {
+        //     "etlConfigurationName": "onion",
+        //     "dataConnector": "dc1id",
+        //     "query": "curry",
+        //     "refresh": "120",
+        //     "traceIdColumn": "carrot",
+        //     "eventIdColumn": "potato"
+        // };
+        await fireEvent.click(dialog.getByTestId("dataConnector"))
+        console.log(prettyDOM(dialog.getByTestId("dataConnector").parentElement?.parentElement?.parentElement?.parentElement?.parentElement??undefined))
+        // await fillForm(data);
+        // for (const [key, value] of Object.entries(data)) {
+        //     expect(dialog.getByTestId(key)).not.toHaveValue("");
+        // }
+        await fireEvent.click(dialog.getByTestId("cancel"))
+        // for (const [key, value] of Object.entries(data)) {
+        //     expect(dialog.getByTestId(key)).toHaveValue("");
+        // }
     });
 
     it("Submit completed dialog", async () => {
-        await fireEvent.update(dialog.getByTestId("etlConfigurationName"), "onion");
-        await fireEvent.update(dialog.getByTestId("dataConnector"), "dc1");
-        await fireEvent.update(dialog.getByTestId("query"), "curry");
-        await fireEvent.update(dialog.getByTestId("refresh"), "120");
-        await fireEvent.update(dialog.getByTestId("traceIdColumn"), "carrot");
-        await fireEvent.update(dialog.getByTestId("eventIdColumn"), "potato");
+        let data = {
+            "etlConfigurationName": "onion",
+            "dataConnector": "dc1",
+            "query": "curry",
+            "refresh": "120",
+            "traceIdColumn": "carrot",
+            "eventIdColumn": "potato"
+        };
+        await fillForm(data);
         expect(dialog.getByTestId("etlConfigurationName")).toHaveValue("onion");
         await fireEvent.click(dialog.getByTestId("submit"));
         expect(mockApp.success).toBeCalled();

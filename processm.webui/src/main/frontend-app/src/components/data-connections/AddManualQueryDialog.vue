@@ -110,6 +110,8 @@ export default class AddManualQueryDialog extends Vue {
   })
   readonly dataConnectors!: Array<DataConnector>;
 
+  //TODO dataConnectors musi byc niepuste, w przeciwnym razie dialog w ogóle nie powinien się wyświetlić
+
   private notEmpty(v: string): string | boolean {
     return notEmptyRule(
       v,
@@ -154,12 +156,7 @@ export default class AddManualQueryDialog extends Vue {
   isSubmitting = false;
 
   etlConfigurationName = "";
-  @Prop({
-    default() {
-      return undefined;
-    }
-  })
-  dataConnector: DataConnector | undefined;
+  dataConnector: DataConnector = this.dataConnectors[0];
   query = "";
   batch = false;
   refresh = 60;
@@ -194,6 +191,7 @@ export default class AddManualQueryDialog extends Vue {
   }
 
   cancel() {
+    console.log(this.dataConnectors);
     this.$emit("cancelled");
     this.resetForms();
   }
