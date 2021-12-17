@@ -1,0 +1,201 @@
+{
+    "classes": {
+        "79": "organizations",
+        "80": "cache_inval_extension",
+        "81": "tablespace",
+        "82": "data_connectors",
+        "83": "cache_inval_hypertable",
+        "84": "continuous_aggs_hypertable_invalidation_log",
+        "85": "flyway_schema_history",
+        "86": "bgw_job",
+        "87": "durable_storage",
+        "88": "continuous_agg",
+        "89": "organization_roles",
+        "90": "bgw_policy_drop_chunks",
+        "91": "hypertable_compression",
+        "92": "compression_algorithm",
+        "93": "cache_inval_bgw_job",
+        "94": "bgw_policy_reorder",
+        "95": "workspaces",
+        "96": "user_groups_with_workspaces",
+        "97": "continuous_aggs_materialization_invalidation_log",
+        "98": "metadata",
+        "99": "dimension_slice",
+        "100": "chunk_constraint",
+        "101": "user_groups",
+        "102": "chunk_index",
+        "103": "bgw_job_stat",
+        "104": "compression_chunk_size",
+        "105": "group_roles",
+        "106": "hypertable",
+        "107": "chunk",
+        "108": "continuous_aggs_completed_threshold",
+        "109": "users",
+        "110": "bgw_policy_chunk_stats",
+        "111": "users_in_groups",
+        "112": "data_stores",
+        "113": "continuous_aggs_invalidation_threshold",
+        "114": "dimension",
+        "115": "bgw_policy_compress_chunks",
+        "116": "workspace_components",
+        "117": "users_roles_in_organizations"
+    },
+    "edges": [
+        {
+            "sourceClassId": "114",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "104",
+            "targetClassId": "107"
+        },
+        {
+            "sourceClassId": "94",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "109",
+            "targetClassId": "101"
+        },
+        {
+            "sourceClassId": "111",
+            "targetClassId": "101"
+        },
+        {
+            "sourceClassId": "88",
+            "targetClassId": "86"
+        },
+        {
+            "sourceClassId": "117",
+            "targetClassId": "79"
+        },
+        {
+            "sourceClassId": "100",
+            "targetClassId": "107"
+        },
+        {
+            "sourceClassId": "99",
+            "targetClassId": "114"
+        },
+        {
+            "sourceClassId": "102",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "115",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "115",
+            "targetClassId": "86"
+        },
+        {
+            "sourceClassId": "79",
+            "targetClassId": "101"
+        },
+        {
+            "sourceClassId": "102",
+            "targetClassId": "107"
+        },
+        {
+            "sourceClassId": "111",
+            "targetClassId": "109"
+        },
+        {
+            "sourceClassId": "110",
+            "targetClassId": "86"
+        },
+        {
+            "sourceClassId": "91",
+            "targetClassId": "92"
+        },
+        {
+            "sourceClassId": "103",
+            "targetClassId": "86"
+        },
+        {
+            "sourceClassId": "90",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "94",
+            "targetClassId": "86"
+        },
+        {
+            "sourceClassId": "91",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "90",
+            "targetClassId": "86"
+        },
+        {
+            "sourceClassId": "117",
+            "targetClassId": "89"
+        },
+        {
+            "sourceClassId": "101",
+            "targetClassId": "105"
+        },
+        {
+            "sourceClassId": "113",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "112",
+            "targetClassId": "79"
+        },
+        {
+            "sourceClassId": "81",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "88",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "96",
+            "targetClassId": "95"
+        },
+        {
+            "sourceClassId": "96",
+            "targetClassId": "101"
+        },
+        {
+            "sourceClassId": "82",
+            "targetClassId": "112"
+        },
+        {
+            "sourceClassId": "116",
+            "targetClassId": "95"
+        },
+        {
+            "sourceClassId": "97",
+            "targetClassId": "88"
+        },
+        {
+            "sourceClassId": "107",
+            "targetClassId": "106"
+        },
+        {
+            "sourceClassId": "100",
+            "targetClassId": "99"
+        },
+        {
+            "sourceClassId": "108",
+            "targetClassId": "88"
+        },
+        {
+            "sourceClassId": "110",
+            "targetClassId": "107"
+        },
+        {
+            "sourceClassId": "104",
+            "targetClassId": "79"
+        },
+        {
+            "sourceClassId": "117",
+            "targetClassId": "109"
+        }
+    ]
+}

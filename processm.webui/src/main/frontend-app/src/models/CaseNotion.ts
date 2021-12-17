@@ -1,5 +1,5 @@
 export default interface CaseNotion {
-  classes: { [key: string]: string };
+  classes: Map<string, string>;
   edges: Relation[];
 }
 
