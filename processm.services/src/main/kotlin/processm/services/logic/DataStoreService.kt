@@ -197,6 +197,17 @@ class DataStoreService {
                 businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations }
     }
 
+    fun getRelationshipGraph(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
+        val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
+        val metaModelReader = MetaModelReader(dataModelId.value)
+        val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
+        val classNames = metaModelReader.getClassNames()
+        val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
+        val relations = relationshipGraph.edgeSet().map { edgeName -> "${relationshipGraph.getEdgeSource(edgeName)}" to "${relationshipGraph.getEdgeTarget(edgeName)}" }
+
+        return@transaction classNames.mapKeys { "${it.key}" } to relations
+    }
+
     /**
      * Creates an automatic ETL process in the specified [dataStoreId] using case notion described by [relations].
      */

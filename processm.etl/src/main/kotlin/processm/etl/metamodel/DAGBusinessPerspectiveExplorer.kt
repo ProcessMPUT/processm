@@ -35,9 +35,19 @@ class DAGBusinessPerspectiveExplorer(private val dataStoreDBName: String, privat
      */
     fun discoverBusinessPerspectives(performFullSearch: Boolean = false, goodEnoughScore: Double = 0.0): List<Pair<DAGBusinessPerspectiveDefinition<EntityID<Int>>, Double>>
             = transaction(DBCache.get(dataStoreDBName).database) {
+        val relationshipGraph: Graph<EntityID<Int>, String> = getRelationshipGraph()
+        val weights = relationshipGraph.calculateVertexWeights()
+
+        return@transaction setOf(relationshipGraph)
+            .flatMap {
+                it.searchForOptimumBottomUp(weights, performFullSearch, goodEnoughScore)
+                    .map { DAGBusinessPerspectiveDefinition(it.first) to it.second }
+            }
+    }
+
+    fun getRelationshipGraph(): Graph<EntityID<Int>, String>
+            = transaction(DBCache.get(dataStoreDBName).database) {
         val relationshipGraph: Graph<EntityID<Int>, String> = DefaultDirectedGraph(String::class.java)
-        val successors = mutableMapOf<EntityID<Int>, MutableSet<EntityID<Int>>>()
-        val predecessors = mutableMapOf<EntityID<Int>, MutableSet<EntityID<Int>>>()
 
         metaModelReader.getRelationships()
             .forEach { (relationshipName, relationship) ->
@@ -49,18 +59,10 @@ class DAGBusinessPerspectiveExplorer(private val dataStoreDBName: String, privat
                 // self-loop, not supported at the moment
                 if (referencingClassId != referencedClassId) {
                     relationshipGraph.addEdge(referencingClassId, referencedClassId, relationshipName)
-                    successors.getOrPut(referencingClassId, ::mutableSetOf).add(referencedClassId)
-                    predecessors.getOrPut(referencedClassId, ::mutableSetOf).add(referencingClassId)
                 }
             }
 
-        val weights = relationshipGraph.calculateVertexWeights()
-
-        return@transaction setOf(relationshipGraph)
-            .flatMap {
-                it.searchForOptimumBottomUp(weights, performFullSearch, goodEnoughScore)
-                    .map { DAGBusinessPerspectiveDefinition(it.first) to it.second }
-            }
+        return@transaction relationshipGraph
     }
 
     private fun Graph<EntityID<Int>, String>.splitByEdge(splittingEdge: String): Set<Graph<EntityID<Int>, String>> {

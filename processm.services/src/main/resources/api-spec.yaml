@@ -490,7 +490,7 @@ paths:
     get:
       tags:
         - dataStores
-      summary: Get suggested case notions for the specified data store
+      summary: Get suggested case notions for the specified data connector
       operationId: getCaseNotionSuggestions
       responses:
         '200':
@@ -499,6 +499,47 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/CaseNotionCollectionMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataConnectorId
+        in: path
+        description: Data connector ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - dataStores
+      summary: Get relationship graph for the specified data connector
+      operationId: getRelationshipGraph
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/CaseNotionMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -2027,6 +2068,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CaseNotion'
+    CaseNotionMessageBody:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CaseNotion'
   responses:
     BadRequest:
       description: Invalid request body

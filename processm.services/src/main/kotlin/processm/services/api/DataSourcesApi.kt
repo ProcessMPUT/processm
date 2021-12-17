@@ -225,6 +225,17 @@ fun Route.DataStoresApi() {
                 CaseNotionCollectionMessageBody(caseNotionSuggestions))
         }
 
+        get<Paths.RelationshipGraph> { pathParams ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            val (classes, relations) = dataStoreService.getRelationshipGraph(pathParams.dataStoreId, pathParams.dataConnectorId)
+            val caseNotionWithAllClasses = CaseNotion(classes.toMap(), relations.mapToArray { (sourceClass, targetClass) -> CaseNotionEdges("$sourceClass", "$targetClass") })
+
+            call.respond(HttpStatusCode.OK,
+                CaseNotionMessageBody(caseNotionWithAllClasses))
+        }
+
         get<Paths.EtlProcesses> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
