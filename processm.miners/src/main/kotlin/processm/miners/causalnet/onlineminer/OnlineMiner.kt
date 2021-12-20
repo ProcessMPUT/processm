@@ -9,13 +9,23 @@ import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.onlineminer.replayer.Replayer
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
 
+interface AbstractOnlineMiner : CausalNetMiner {
+    fun processDiff(addLog: Log, removeLog: Log)
+
+    /**
+     * Add [log] to the current window and update the underlying model in [result]
+     */
+    override fun processLog(log: Log) =
+        processDiff(log, Log(emptySequence()))
+}
+
 /**
  * Online miner, generates a valid causal net perfectly fitting the current window, as given by either [processLog] or [processDiff]
  */
 class OnlineMiner(
     val replayer: Replayer = SingleReplayer(),
     val traceToNodeTrace: TraceToNodeTrace = BasicTraceToNodeTrace()
-) : CausalNetMiner {
+) : AbstractOnlineMiner {
 
     companion object {
         private val logger = logger()
@@ -58,7 +68,7 @@ class OnlineMiner(
      * Modifies the underlying window by adding traces in [addLog] and removing traces from [removeLog].
      * The model in [result] is updated so that it perfectly fits the current window.
      */
-    fun processDiff(addLog: Log, removeLog: Log) {
+    override fun processDiff(addLog: Log, removeLog: Log) {
         val addTraces = aggregateLog(addLog)
         val removeTraces = aggregateLog(removeLog)
         val newlyAdded = HashSet<NodeTrace>()
@@ -127,10 +137,5 @@ class OnlineMiner(
             model.addJoin(join)
     }
 
-    /**
-     * Add [log] to the current window and update the underlying model in [result]
-     */
-    override fun processLog(log: Log) =
-        processDiff(log, Log(emptySequence()))
 
 }

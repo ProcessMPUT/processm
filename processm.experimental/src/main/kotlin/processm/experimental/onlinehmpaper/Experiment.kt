@@ -10,6 +10,7 @@ import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.experimental.core.models.causalnet.toDSL
 import processm.experimental.miners.causalnet.heuristicminer.OnlineHeuristicMiner
+import processm.experimental.onlinehmpaper.prom.ShinuMiner
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
@@ -196,7 +197,8 @@ class Experiment {
         val measures: List<Measure> = listOf(Measure.TEST_FITNESS, Measure.TEST_PRECISION),
         val maxVisitedCoefficient: Int = 100,
         val artifacts: String? = null,
-        val rangeFitnessTimeout: Long = -1
+        val rangeFitnessTimeout: Long = -1,
+        val useShinu: Boolean = false
     ) {
         companion object {
             val json = Json.Default
@@ -417,7 +419,7 @@ class Experiment {
                     val addLog = Log(sequenceOf(trace))
                     val removeLog = Log(if (i >= windowSize) sequenceOf(log[i - windowSize].third) else emptySequence())
                     val trainingTraces = log.subList((i - windowSize + 1).coerceAtLeast(0), i + 1).map { it.third }
-                    assert((i+1 < windowSize && trainingTraces.size == i+1) || (trainingTraces.size == windowSize)) {"i=$i #trainingTraces=${trainingTraces.size}"}
+                    assert((i + 1 < windowSize && trainingTraces.size == i + 1) || (trainingTraces.size == windowSize)) { "i=$i #trainingTraces=${trainingTraces.size}" }
                     val trainingLog = Log(trainingTraces.asSequence())
 
                     var onlineTime = threadMXBean.currentThreadCpuTime
@@ -463,7 +465,7 @@ class Experiment {
                     continue
                 }
                 println("Sublog sizes: ${partialLogs.map { it.size }}")
-                val online = OnlineMiner()
+                val online = if(config.useShinu) ShinuMiner() else OnlineMiner()
                 val log = partialLogs.mapIndexed { logidx, log ->
                     log.mapIndexed { traceidx, trace ->
                         Triple(logidx, traceidx, trace)
