@@ -54,12 +54,15 @@ fun CausalNet.toPM4PY(out: OutputStream) {
     gen.start("net1")
     val node2id = HashMap<Node, String>()
     for (node in this.instances) {
-        gen.transition(node.name, node.name)
-        node2id[node] = node.name
+        val id =
+            node.name //not using anything other than name to ensure that anything depending on names can use the resulting model as well
+        gen.transition(id, id)
+        node2id[node] = id
     }
+    check(node2id.values.toSet().size == node2id.values.size) { "There are duplicate activity names in the model." }
     val dep2id = HashMap<Dependency, String>()
     for (dep in this.dependencies) {
-        val id = "${dep.source.name}->${dep.target.name}"
+        val id = "${node2id[dep.source]!!}->${node2id[dep.target]!!}"
         gen.place(id)
         dep2id[dep] = id
     }
@@ -68,7 +71,13 @@ fun CausalNet.toPM4PY(out: OutputStream) {
         gen.place(aux)
         gen.arc(node2id[src]!!, aux)
         for (split in splits) {
-            val splitId = "$split"
+            val splitId = "{${node2id[split.source]!!} -> ${
+                split.targets.joinToString(
+                    separator = ", ",
+                    prefix = "[",
+                    postfix = "]"
+                ) { node2id[it]!! }
+            }}"
             gen.transition(splitId, null)
             gen.arc(aux, splitId)
             for (dep in split.dependencies)
@@ -80,7 +89,13 @@ fun CausalNet.toPM4PY(out: OutputStream) {
         gen.place(aux)
         gen.arc(aux, node2id[dst]!!)
         for (join in joins) {
-            val joinId = "$join"
+            val joinId = "{${
+                join.sources.joinToString(
+                    separator = ", ",
+                    prefix = "[",
+                    postfix = "]"
+                ) { node2id[it]!! }
+            } -> ${node2id[join.target]}}"
             gen.transition(joinId, null)
             gen.arc(joinId, aux)
             for (dep in join.dependencies)

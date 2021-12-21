@@ -143,7 +143,7 @@ import javax.xml.stream.XMLOutputFactory
 
 fun CNet.toProcessMCausalNet(): MutableCausalNet {
     fun n2n(node: CNetNode): Node =
-        Node(node.label, special = node.label in setOf("ARTIFICIAL_START", "ARTIFICIAL_START"))
+        Node(node.label, special = node.label in setOf("ARTIFICIAL_START", "ARTIFICIAL_END"))
 
     val cnet = MutableCausalNet(start = n2n(startNode), end = n2n(endNode))
     nodes.forEach { cnet.addInstance(n2n(it)) }
