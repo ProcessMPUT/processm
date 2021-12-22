@@ -5,41 +5,34 @@
 
 package processm.experimental.onlinehmpaper.prom
 
-import org.deckfour.xes.`in`.XesXmlGZIPParser
 import org.deckfour.xes.classification.XEventNameClassifier
 import org.deckfour.xes.id.XID
 import org.deckfour.xes.model.XAttribute
 import org.deckfour.xes.model.XAttributeMap
-import org.deckfour.xes.model.XEvent
 import org.deckfour.xes.model.impl.*
 import org.processmining.models.cnet.CNet
 import org.processmining.models.cnet.CNetNode
-import org.processmining.operationalsupport.xml.OSXMLConverter
 import org.processmining.plugins.heuristicsnet.miner.heuristics.miner.settings.HeuristicsMinerSettings
-import org.processmining.stream.algorithms.LossyCountingHM
-import org.processmining.stream.algorithms.OnlineMiningAlgorithm
+import org.processmining.stream.algorithms.*
+import org.processmining.stream.config.algorithms.BudgetLossyCountingMinerConfiguration
 import org.processmining.stream.config.algorithms.LossyCountingMinerConfiguration
-import org.processmining.stream.config.fragments.FileInputConfiguration
-import org.processmining.stream.config.fragments.HeuristicsMinerConfiguration
-import org.processmining.stream.config.fragments.LossyCountingConfiguration
-import org.processmining.stream.config.fragments.ModelMetricsConfiguration
+import org.processmining.stream.config.algorithms.SpaceSavingMinerConfiguration
+import org.processmining.stream.config.fragments.*
 import org.processmining.stream.config.interfaces.MinerConfiguration
-import org.processmining.stream.exceptions.OnlineException
 import org.processmining.stream.plugins.OnlineMinerPlugin
 import processm.core.helpers.mapToSet
-import processm.core.log.*
+import processm.core.log.XMLXESInputStream
 import processm.core.log.attribute.*
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.models.causalnet.*
 import processm.experimental.onlinehmpaper.filterLog
-import processm.experimental.onlinehmpaper.toPM4PY
 import processm.miners.causalnet.onlineminer.AbstractOnlineMiner
 import processm.miners.causalnet.onlineminer.OnlineMiner
-import java.io.*
+import java.io.File
 import java.util.*
 import java.util.zip.GZIPInputStream
-import javax.xml.stream.XMLOutputFactory
+
 //
 //////OnlineFileMinerPlugin expects that each line is a separate XML document, thus this class
 ////class Shinu: CLIOnlineFileMinerPlugin() {
@@ -229,23 +222,50 @@ private fun <T> Attribute<T>.toXAttribute(): XAttribute =
 private fun Map<String, Attribute<*>>.toXAttributeMap(): XAttributeMap =
     mapValuesTo(XAttributeMapImpl()) { it.value.toXAttribute() }
 
+enum class ShinuVariant {
+    LOSSY_COUNTING,
+    BUDGET_LOSSY_COUNTING,
+    SPACE_SAVING
+}
+
 /**
  * [ShinuMiner] is a drop-in replacement for [OnlineMiner]
  */
-class ShinuMiner : AbstractOnlineMiner, OnlineMinerPlugin() {
+class ShinuMiner(private val variant: ShinuVariant) : AbstractOnlineMiner, OnlineMinerPlugin() {
 
     private lateinit var model: MutableCausalNet
     private var traceCtr = 0
-    private val alg: OnlineMiningAlgorithm = LossyCountingHM(this)
+    private val alg: CNetBasedOnlineMiningAlgorithm
 
     init {
-        val cfg = LossyCountingMinerConfiguration()
+        val cfg: MinerConfiguration
+
+        when (variant) {
+            ShinuVariant.LOSSY_COUNTING -> {
+                alg = LossyCountingHM(this)
+                cfg = LossyCountingMinerConfiguration()
+                with(LossyCountingConfiguration()) {
+                    cfg.addConfiguration(this)
+                }
+            }
+            ShinuVariant.BUDGET_LOSSY_COUNTING -> {
+                alg = BudgetLossyCountingHM(this)
+                cfg = BudgetLossyCountingMinerConfiguration()
+                with(BudgetConfiguration()) {
+                    cfg.addConfiguration(this)
+                }
+            }
+            ShinuVariant.SPACE_SAVING -> {
+                alg = SpaceSavingHM(this)
+                cfg = SpaceSavingMinerConfiguration()
+                with(BudgetConfiguration()) {
+                    cfg.addConfiguration(this)
+                }
+            }
+        }
         with(HeuristicsMinerConfiguration()) {
             settings = HeuristicsMinerSettings()
             settings.classifier = XEventNameClassifier()
-            cfg.addConfiguration(this)
-        }
-        with(LossyCountingConfiguration()) {
             cfg.addConfiguration(this)
         }
 
@@ -315,48 +335,4 @@ private fun load(logfile: File): processm.core.log.hierarchical.Log {
     logfile.inputStream().use { base ->
         return filterLog(HoneyBadgerHierarchicalXESInputStream(XMLXESInputStream(GZIPInputStream(base))).first())
     }
-}
-
-fun main() {
-    val cfg = LossyCountingMinerConfiguration()
-    with(HeuristicsMinerConfiguration()) {
-        settings = HeuristicsMinerSettings()
-        settings.classifier = XEventNameClassifier()
-        cfg.addConfiguration(this)
-    }
-    with(LossyCountingConfiguration()) {
-        cfg.addConfiguration(this)
-    }
-
-    with(ModelMetricsConfiguration()) {
-        modelUpdateFrequency = 1
-        cfg.addConfiguration(this)
-    }
-    cfg.addConfiguration(FileInputConfiguration())
-    val miner = ShinuMiner()
-    miner.processLog(load(File("xes-logs/BPIC15_5f.xes.gz")))
-
-//    val cfg = LossyCountingMinerConfiguration()
-//    with(HeuristicsMinerConfiguration()) {
-//        settings = HeuristicsMinerSettings()
-//        settings.classifier = XEventNameClassifier()
-//        cfg.addConfiguration(this)
-//    }
-//    with(LossyCountingConfiguration()) {
-//        cfg.addConfiguration(this)
-//    }
-//
-//    with(ModelMetricsConfiguration()) {
-//        modelUpdateFrequency = 1
-//        cfg.addConfiguration(this)
-//    }
-//    cfg.addConfiguration(FileInputConfiguration())
-//    with(FileInputConfiguration()) {
-//        filename = "xes-logs/BPIC15_5f.xes.gz"
-//        cfg.addConfiguration(this)
-//    }
-    //    val minerPlugin = MyOnlineMinerPlugin()
-//    val algorithm = LossyCountingHM(minerPlugin)
-//    minerPlugin.mine(algorithm, cfg)
-
 }

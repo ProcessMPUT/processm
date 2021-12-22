@@ -11,6 +11,7 @@ import processm.core.models.causalnet.CausalNet
 import processm.experimental.core.models.causalnet.toDSL
 import processm.experimental.miners.causalnet.heuristicminer.OnlineHeuristicMiner
 import processm.experimental.onlinehmpaper.prom.ShinuMiner
+import processm.experimental.onlinehmpaper.prom.ShinuVariant
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
@@ -198,7 +199,8 @@ class Experiment {
         val maxVisitedCoefficient: Int = 100,
         val artifacts: String? = null,
         val rangeFitnessTimeout: Long = -1,
-        val useShinu: Boolean = false
+        val useShinu: Boolean = false,
+        val shinuVariant: String? = null
     ) {
         companion object {
             val json = Json.Default
@@ -465,7 +467,10 @@ class Experiment {
                     continue
                 }
                 println("Sublog sizes: ${partialLogs.map { it.size }}")
-                val online = if(config.useShinu) ShinuMiner() else OnlineMiner()
+                val online = if (config.useShinu) {
+                    checkNotNull(config.shinuVariant)
+                    ShinuMiner(ShinuVariant.valueOf(config.shinuVariant))
+                } else OnlineMiner()
                 val log = partialLogs.mapIndexed { logidx, log ->
                     log.mapIndexed { traceidx, trace ->
                         Triple(logidx, traceidx, trace)
