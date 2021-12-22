@@ -13,6 +13,9 @@ const componentsData = readResponseDataFromFile(
 );
 const xesQueryResult = readResponseDataFromFile("xes/xes4.json");
 const caseNotions = readResponseDataFromFile("case-notions/caseNotions.json");
+const relationshipGraph = readResponseDataFromFile(
+  "case-notions/relationshipGraph.json"
+);
 
 const workspaces = [
   {
@@ -298,6 +301,9 @@ const api = {
   },
   "GET /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors/:dataConnectorId/case-notions": {
     data: caseNotions,
+  },
+  "GET /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors/:dataConnectorId/relationship-graph": {
+    data: relationshipGraph,
   },
   "GET /api/organizations/:organizationId/data-stores/:dataStoreId/etl-processes": (
     req,

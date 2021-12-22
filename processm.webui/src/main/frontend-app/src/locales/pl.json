@@ -72,7 +72,8 @@
     "etl": {
       "process-name": "Nazwa procesu",
       "data-connector": "Łącze danych",
-      "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie procesu ETL {etlProcessName} i powiązanych danych?"
+      "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie procesu ETL {etlProcessName} i powiązanych danych?",
+      "custom-case-notion": "Własny wybór"
     }
   },
   "add-data-connector-dialog": {

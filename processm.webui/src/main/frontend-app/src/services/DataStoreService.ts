@@ -6,7 +6,8 @@ import {
   DataConnector as ApiDataConnector,
   AbstractEtlProcess,
   EtlProcessType as ApiEtlProcessType,
-  EtlProcess as ApiEtlProcess
+  EtlProcess as ApiEtlProcess,
+  CaseNotion as ApiCaseNotion
 } from "@/openapi";
 import EtlProcess, { EtlProcessType } from "@/models/EtlProcess";
 import CaseNotion from "@/models/CaseNotion";
@@ -228,7 +229,39 @@ export default class DataStoreService extends BaseService {
 
     this.ensureSuccessfulResponseCode(response);
 
-    return response.data.data;
+    return response.data.data.reduce(
+      (caseNotions: CaseNotion[], caseNotion: ApiCaseNotion) => {
+        if (caseNotion != null) {
+          caseNotions.push({
+            classes: new Map(Object.entries(caseNotion.classes)),
+            edges: caseNotion.edges
+          });
+        }
+
+        return caseNotions;
+      },
+      []
+    );
+  }
+
+  public async getRelationshipGraph(
+    dataStoreId: string,
+    dataConnectorId: string
+  ): Promise<CaseNotion> {
+    const response = await this.dataStoresApi.getRelationshipGraph(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      dataConnectorId
+    );
+
+    this.ensureSuccessfulResponseCode(response);
+
+    const caseNotion = response.data.data;
+
+    return {
+      classes: new Map(Object.entries(caseNotion.classes)),
+      edges: caseNotion.edges
+    };
   }
 
   public async getEtlProcesses(dataStoreId: string): Promise<EtlProcess[]> {
@@ -273,7 +306,10 @@ export default class DataStoreService extends BaseService {
           name: processName,
           dataConnectorId,
           type: processType as ApiEtlProcessType,
-          caseNotion
+          caseNotion: {
+            classes: Object.fromEntries(caseNotion.classes),
+            edges: caseNotion.edges
+          }
         }
       }
     );

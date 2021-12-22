@@ -181,6 +181,10 @@ object Paths {
     @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions")
     class CaseNotionSuggestions(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
 
+
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph")
+    class RelationshipGraph(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
+
     /**
      * ETL processes assigned to [dataStoreId].
      *

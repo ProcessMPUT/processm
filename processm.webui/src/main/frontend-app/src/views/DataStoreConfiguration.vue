@@ -166,19 +166,21 @@
               ]"
               :items="dataConnectors"
             >
-              <template v-slot:item.lastConnectionStatus="{ item }">
+              <template v-slot:[`item.lastConnectionStatus`]="{ item }">
                 <v-icon v-if="item.lastConnectionStatus"
                   >check_circle_outline</v-icon
                 >
                 <v-icon v-else>error_outline</v-icon>
               </template>
-              <template v-slot:item.lastConnectionStatusTimestamp="{ item }">
+              <template
+                v-slot:[`item.lastConnectionStatusTimestamp`]="{ item }"
+              >
                 <v-icon v-if="item.lastConnectionStatusTimestamp == null"
                   >all_inclusive</v-icon
                 >
                 <span v-else>{{ item.lastConnectionStatusTimestamp }}</span>
               </template>
-              <template v-slot:item.actions="{ item }">
+              <template v-slot:[`item.actions`]="{ item }">
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
@@ -304,7 +306,7 @@
               ]"
               :items="etlProcesses"
             >
-              <template v-slot:item.actions="{ item }">
+              <template v-slot:[`item.actions`]="{ item }">
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
@@ -316,12 +318,8 @@
                   <span>{{ $t("common.remove") }}</span>
                 </v-tooltip>
               </template>
-              <template v-slot:item.dataConnectorId="{ item }">
-                {{
-                  dataConnectors.find(
-                    (dataConnector) => dataConnector.id == item.dataConnectorId
-                  ).name
-                }}
+              <template v-slot:[`item.dataConnectorId`]="{ item }">
+                {{ getDataConnectorName(item.dataConnectorId) }}
               </template>
             </v-data-table>
           </v-expansion-panel-content>
@@ -414,7 +412,7 @@ export default class DataStoreConfiguration extends Vue {
   readonly value!: boolean;
 
   @Prop({ default: null })
-  readonly dataStoreId: string | null = null;
+  readonly dataStoreId!: string | null;
 
   private readonly getLogsQuery =
     "select log:concept:name, log:identity:id, log:lifecycle:model";
@@ -585,7 +583,6 @@ export default class DataStoreConfiguration extends Vue {
         dataConnector.id
       );
       this.displaySuccessfulRemovalMessage();
-
       this.dataConnectors.splice(this.dataConnectors.indexOf(dataConnector), 1);
     } catch (error) {
       this.displayFailedRemovalMessage();
@@ -639,6 +636,14 @@ export default class DataStoreConfiguration extends Vue {
 
   displayFailedRemovalMessage() {
     this.app.error(`${this.$t("common.removal.failure")}`);
+  }
+
+  getDataConnectorName(dataConnectorId: string) {
+    return (
+      this.dataConnectors.find(
+        (dataConnector) => dataConnector.id == dataConnectorId
+      )?.name || ""
+    );
   }
 
   get dataStoreName() {
