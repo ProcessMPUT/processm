@@ -12,7 +12,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.helpers.mapToSet
 import processm.core.persistence.DBConnectionPool
 import java.util.*
-import kotlin.NoSuchElementException
 
 internal class DAOModel(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<DAOModel>(CausalNetModel)
@@ -179,8 +178,12 @@ object DBSerializer {
     /**
      * Deletes a model with specified modelId
      */
-    fun delete(dbConnectionPool: DBConnectionPool, modelId: Int) {
-        transaction(dbConnectionPool.database) {
+    @Deprecated("Inconsistent API; use the other delete method", replaceWith = ReplaceWith("delete"))
+    fun delete(dbConnectionPool: DBConnectionPool, modelId: Int) =
+        delete(dbConnectionPool.database, modelId)
+
+    fun delete(database: Database, modelId: Int) {
+        transaction(database) {
             addLogger(Slf4jSqlDebugLogger)
             val model = DAOModel.findById(modelId) ?: throw NoSuchElementException()
             model.delete()
