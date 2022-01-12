@@ -49,7 +49,7 @@
         class="workspace-component-content"
       />
       <div class="last-updated">
-        {{ $t("workspace.component.last-updated") }}:
+        {{ $t("common.last-updated") }}:
         {{ componentDetails.dataLastModified }}
       </div>
     </div>

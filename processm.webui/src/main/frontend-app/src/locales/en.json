@@ -27,7 +27,6 @@
       "kpi": "KPI",
       "select": "Select type",
       "no-data": "No data to be displayed",
-      "last-updated": "Last updated",
       "edit": {
         "name": "Name",
         "type": "Type",
@@ -194,6 +193,7 @@
     "name": "Name",
     "value": "Value",
     "created-at": "Created at",
+    "last-updated": "Last updated",
     "warning": "Warning",
     "type": "Type",
     "actions": "Actions",
