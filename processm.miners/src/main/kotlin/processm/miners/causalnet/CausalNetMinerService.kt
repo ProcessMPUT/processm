@@ -56,7 +56,7 @@ class CausalNetMinerService : AbstractJobService(
         }
     }
 
-    private fun createJob(id: UUID, klass: Class<out Job>): Pair<JobDetail, Trigger> = loggedScope {
+    private fun createJob(id: UUID, klass: java.lang.Class<out Job>): Pair<JobDetail, Trigger> = loggedScope {
         val job = JobBuilder
             .newJob(klass)
             .withIdentity(id.toString())
