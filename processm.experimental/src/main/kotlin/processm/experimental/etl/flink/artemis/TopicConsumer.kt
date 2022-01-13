@@ -1,5 +1,6 @@
 package processm.experimental.etl.flink.artemis
 
+import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.core.logging.enter
@@ -10,6 +11,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.jms.*
 import javax.naming.InitialContext
+import kotlin.reflect.KClass
 
 open class TopicConsumer<T : java.io.Serializable>(val topic: String) : Service, Iterator<T>, MessageListener {
 
@@ -31,6 +33,7 @@ open class TopicConsumer<T : java.io.Serializable>(val topic: String) : Service,
 
     override var status: ServiceStatus = ServiceStatus.Unknown
     override val name: String = "$topic: Consumer"
+    override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
 
     override fun start() {
         val logger = logger()

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: Processm
-  description: Description of api methods used in processm.
+  title: ProcessM
+  description: Description of API methods used in processm.
   version: 1.0.0
 servers:
   - url: /api
@@ -452,12 +452,8 @@ paths:
               $ref: '#/components/schemas/DataConnectorMessageBody'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful operation
-          content:
-            'application/json':
-              schema:
-                $ref: '#/components/schemas/DataConnectorConnectivityMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1824,7 +1820,7 @@ components:
             $ref: '#/components/schemas/Workspace'
     Component:
       type: object
-      required: [id, query, type]
+      required: [id, query, dataStore, type]
       properties:
         id:
           type: string
@@ -1833,10 +1829,21 @@ components:
           type: string
         query:
           type: string
+        dataStore:
+          type: string
+          format: uuid
         type:
           $ref: '#/components/schemas/ComponentType'
         layout:
           $ref: '#/components/schemas/LayoutElement'
+        userLastModified:
+          type: string
+          format: date-time
+        dataLastModified:
+          type: string
+          format: date-time
+        lastError:
+          type: string
     LayoutElement:
       type: object
       properties:
@@ -1865,6 +1872,10 @@ components:
         mapping:
           kpi: '#/components/schemas/KpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
+      type: object
+      properties:
+        data:
+          type: object
     ComponentData:
       type: object
       required: [type]
@@ -1886,7 +1897,7 @@ components:
         - type: object
           properties:
             value:
-              type: number
+              type: string
     KpiComponent:
       allOf:
         - $ref: '#/components/schemas/Component'

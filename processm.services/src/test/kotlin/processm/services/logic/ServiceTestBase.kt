@@ -114,8 +114,9 @@ abstract class ServiceTestBase {
         name: String = "Component1",
         componentWorkspaceId: UUID? = null,
         query: String = "SELECT ...",
+        dataStore: UUID = UUID.randomUUID(),
         componentType: ComponentTypeDto = ComponentTypeDto.CausalNet,
-        dataStoreId: Int = 0,
+        data: String? = null,
         customizationData: String = "{}"
     ): EntityID<UUID> {
         val workspaceId = componentWorkspaceId ?: createWorkspace().value
@@ -124,8 +125,9 @@ abstract class ServiceTestBase {
             it[this.name] = name
             it[this.workspaceId] = EntityID(workspaceId, Workspaces)
             it[this.query] = query
+            it[this.dataStoreId] = dataStore
             it[this.componentType] = componentType.typeName
-            it[componentDataStoreId] = dataStoreId
+            it[this.data] = data
             it[this.customizationData] = customizationData
         }
     }

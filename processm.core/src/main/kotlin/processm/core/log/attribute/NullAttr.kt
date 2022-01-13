@@ -8,7 +8,7 @@ class NullAttr(key: String) : Attribute<Any?>(key) {
     override fun getValue(): Any? = null
 
     override val xesTag: String
-        get() = throw UnsupportedOperationException("Null attributes are not supported by the IEEE 1849-2016 standard and cannot be serialized.")
+        get() = "string" // An arbitrary assigned type to make this attribute serializable
 
     override fun hashCode(): Int = key.hashCode()
 

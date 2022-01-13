@@ -2,8 +2,6 @@ package processm.core.logging
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
-import java.lang.Exception
-import kotlin.math.log
 import kotlin.reflect.full.companionObject
 
 /**
@@ -31,7 +29,7 @@ inline fun <reified T : Any, TResult> T.loggedScope(logExceptions: Boolean = fal
         return scopeLogic(logger)
     }
     catch (e :Exception) {
-        if (logExceptions) logger.error("$e")
+        if (logExceptions) logger.error("${e.message}", e)
         throw e
     }
     finally {

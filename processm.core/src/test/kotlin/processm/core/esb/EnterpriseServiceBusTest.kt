@@ -1,7 +1,9 @@
 package processm.core.esb
 
 import java.lang.management.ManagementFactory
+import javax.management.MXBean
 import javax.management.ObjectName
+import kotlin.reflect.KClass
 import kotlin.test.*
 
 class EnterpriseServiceBusTest {
@@ -52,6 +54,46 @@ class EnterpriseServiceBusTest {
         for (s in ts) {
             assertEquals(ServiceStatus.Stopped, s.status)
         }
+    }
+
+    @Test
+    fun startAndStopDependenciesFirst() {
+        val ts1 = CustomService("1")
+        val ts2 = CustomService2("2", dependencies = listOf(CustomService::class))
+        val ts3 = TestService("3", dependencies = listOf(CustomService2::class))
+        val ts4 = FailingService("4", ServiceStatus.Stopped)
+
+        esb.register(ts1, ts2, ts3, ts4)
+
+        esb.start(ts1)
+        assertEquals(ServiceStatus.Started, ts1.status)
+        assertEquals(ServiceStatus.Stopped, ts2.status)
+        assertEquals(ServiceStatus.Stopped, ts3.status)
+        assertEquals(ServiceStatus.Stopped, ts4.status)
+
+        esb.stop(ts1)
+        assertEquals(ServiceStatus.Stopped, ts1.status)
+        assertEquals(ServiceStatus.Stopped, ts2.status)
+        assertEquals(ServiceStatus.Stopped, ts3.status)
+        assertEquals(ServiceStatus.Stopped, ts4.status)
+
+        esb.start(ts3)
+        assertEquals(ServiceStatus.Started, ts1.status)
+        assertEquals(ServiceStatus.Started, ts2.status)
+        assertEquals(ServiceStatus.Started, ts3.status)
+        assertEquals(ServiceStatus.Stopped, ts4.status)
+
+        esb.stop(ts3)
+        assertEquals(ServiceStatus.Started, ts1.status)
+        assertEquals(ServiceStatus.Started, ts2.status)
+        assertEquals(ServiceStatus.Stopped, ts3.status)
+        assertEquals(ServiceStatus.Stopped, ts4.status)
+
+        esb.stop(ts1)
+        assertEquals(ServiceStatus.Stopped, ts1.status)
+        assertEquals(ServiceStatus.Stopped, ts2.status)
+        assertEquals(ServiceStatus.Stopped, ts3.status)
+        assertEquals(ServiceStatus.Stopped, ts4.status)
     }
 
     @Test
@@ -140,7 +182,11 @@ class EnterpriseServiceBusTest {
     }
 }
 
-open class TestService(override val name: String, val delay: Long = 0) : Service {
+open class TestService(
+    override val name: String,
+    val delay: Long = 0,
+    override val dependencies: List<KClass<out Service>> = emptyList()
+) : Service {
     override var status = ServiceStatus.Unknown
         protected set
 
@@ -160,13 +206,21 @@ open class TestService(override val name: String, val delay: Long = 0) : Service
     }
 }
 
-interface CustomMXBean : Service {
+@MXBean
+interface CustomMXBean : ServiceMXBean {
     val myCustomField: Int
 }
 
-class CustomService(name: String) : TestService(name), CustomMXBean {
+class CustomService(name: String, dependencies: List<KClass<out Service>> = emptyList()) :
+    TestService(name, dependencies = dependencies), CustomMXBean {
     override val myCustomField: Int
         get() = 1
+}
+
+class CustomService2(name: String, dependencies: List<KClass<out Service>> = emptyList()) :
+    TestService(name, dependencies = dependencies), CustomMXBean {
+    override val myCustomField: Int
+        get() = 2
 }
 
 class FailingService(name: String, var _when: ServiceStatus, val failDelay: Long = 0) : TestService(name) {

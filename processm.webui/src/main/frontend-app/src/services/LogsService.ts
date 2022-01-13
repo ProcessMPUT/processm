@@ -43,7 +43,6 @@ export default class LogsService extends BaseService {
       query,
       options
     );
-    this.ensureSuccessfulResponseCode(response);
 
     if (accept == "application/json") {
       return response.data.data.reduce(

@@ -22,8 +22,6 @@ export default class DataStoreService extends BaseService {
       DataStoreService.currentOrganizationId
     );
 
-    this.ensureSuccessfulResponseCode(response);
-
     const dataStores = response.data.data.reduce(
       (dataStores: DataStore[], dataStore: ApiDataStore) => {
         if (dataStore.id != null) {
@@ -55,7 +53,6 @@ export default class DataStoreService extends BaseService {
       dataStoreId
     );
 
-    this.ensureSuccessfulResponseCode(response);
     const dataStore = response.data.data;
 
     if (dataStore.id == null) throw new Error("DataStoreId is undefined");
@@ -81,7 +78,6 @@ export default class DataStoreService extends BaseService {
       }
     );
 
-    this.ensureSuccessfulResponseCode(response);
     const dataStore = response.data.data;
 
     if (dataStore.id == null) throw new Error("DataStoreId is undefined");
@@ -109,10 +105,11 @@ export default class DataStoreService extends BaseService {
   public async removeDataStore(dataStoreId: string): Promise<void> {
     const response = await this.dataStoresApi.deleteDataStore(
       DataStoreService.currentOrganizationId,
-      dataStoreId
+      dataStoreId,
+      {
+        validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
+      }
     );
-
-    this.ensureSuccessfulResponseCode(response, 204, 404);
   }
 
   public async getDataConnectors(
@@ -122,8 +119,6 @@ export default class DataStoreService extends BaseService {
       DataStoreService.currentOrganizationId,
       dataStoreId
     );
-
-    this.ensureSuccessfulResponseCode(response);
 
     return response.data.data.reduce(
       (dataConnectors: DataConnector[], dataConnector: ApiDataConnector) => {
@@ -160,7 +155,6 @@ export default class DataStoreService extends BaseService {
       }
     );
 
-    this.ensureSuccessfulResponseCode(response);
     const dataConnector = response.data.data;
 
     if (dataConnector.id == null)
@@ -196,25 +190,22 @@ export default class DataStoreService extends BaseService {
     const response = await this.dataStoresApi.deleteDataConnector(
       DataStoreService.currentOrganizationId,
       dataStoreId,
-      dataConnectorId
+      dataConnectorId,
+      {
+        validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
+      }
     );
-
-    this.ensureSuccessfulResponseCode(response, 204, 404);
   }
 
   public async testDataConnector(
     dataStoreId: string,
     dataConnectorConfiguration: Record<string, string>
-  ): Promise<boolean> {
+  ): Promise<void> {
     const response = await this.dataStoresApi.testDataConnector(
       DataStoreService.currentOrganizationId,
       dataStoreId,
       { data: { properties: dataConnectorConfiguration } }
     );
-
-    this.ensureSuccessfulResponseCode(response);
-
-    return response.data.data.isValid;
   }
 
   public async getCaseNotionSuggestions(
@@ -226,8 +217,6 @@ export default class DataStoreService extends BaseService {
       dataStoreId,
       dataConnectorId
     );
-
-    this.ensureSuccessfulResponseCode(response);
 
     return response.data.data.reduce(
       (caseNotions: CaseNotion[], caseNotion: ApiCaseNotion) => {
@@ -254,8 +243,6 @@ export default class DataStoreService extends BaseService {
       dataConnectorId
     );
 
-    this.ensureSuccessfulResponseCode(response);
-
     const caseNotion = response.data.data;
 
     return {
@@ -269,8 +256,6 @@ export default class DataStoreService extends BaseService {
       DataStoreService.currentOrganizationId,
       dataStoreId
     );
-
-    this.ensureSuccessfulResponseCode(response);
 
     const etlProcesses = response.data.data.reduce(
       (etlProcesses: EtlProcess[], etlProcess: ApiEtlProcess) => {
@@ -314,8 +299,6 @@ export default class DataStoreService extends BaseService {
       }
     );
 
-    this.ensureSuccessfulResponseCode(response);
-
     return response.data.data;
   }
 
@@ -326,9 +309,10 @@ export default class DataStoreService extends BaseService {
     const response = await this.dataStoresApi.deleteEtlProcess(
       DataStoreService.currentOrganizationId,
       dataStoreId,
-      etlProcessId
+      etlProcessId,
+      {
+        validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
+      }
     );
-
-    this.ensureSuccessfulResponseCode(response, 204, 404);
   }
 }

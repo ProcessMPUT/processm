@@ -1,9 +1,6 @@
 package processm.services.logic
 
 import io.mockk.*
-import org.junit.Before
-import org.junit.Test
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,8 +14,7 @@ class AccountServiceTest : ServiceTestBase() {
     private val correctPassword = "pass"
     private val correctPasswordHash = "\$argon2d\$v=19\$m=65536,t=3,p=1\$P0P1NSt1aP8ONWirWMbAWQ\$bDvD/v5/M7T3gRq8BXqbQA"
 
-    @Before
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         groupServiceMock = mockk()
         accountService = AccountService(groupServiceMock)

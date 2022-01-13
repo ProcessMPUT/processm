@@ -158,27 +158,15 @@ class DataStoreService {
     /**
      * Tests connectivity using the provided [connectionString].
      */
-    fun testDatabaseConnection(connectionString: String): Boolean {
-        try {
-            DriverManager.getConnection(connectionString).use {
-                return true
-            }
-        } catch (e: Exception) {
-            return false
-        }
+    fun testDatabaseConnection(connectionString: String) {
+        DriverManager.getConnection(connectionString).close()
     }
 
     /**
      * Tests connectivity using the provided [connectionProperties].
      */
-    fun testDatabaseConnection(connectionProperties: Map<String, String>): Boolean {
-        try {
-            getDataSource(connectionProperties).connection.use {
-                return true
-            }
-        } catch (e: Exception) {
-            return false
-        }
+    fun testDatabaseConnection(connectionProperties: Map<String, String>) {
+        getDataSource(connectionProperties).connection.close()
     }
 
     /**

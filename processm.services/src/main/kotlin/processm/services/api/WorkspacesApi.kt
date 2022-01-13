@@ -10,12 +10,15 @@ import io.ktor.response.*
 import io.ktor.routing.Route
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
-import processm.dbmodels.models.CausalNetDto
+import processm.core.logging.loggedScope
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.WorkspaceComponent
+import processm.dbmodels.models.WorkspaceDto
 import processm.services.api.models.*
 import processm.services.logic.WorkspaceService
 import java.util.*
 
+@Suppress("FunctionName")
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
@@ -56,14 +59,24 @@ fun Route.WorkspacesApi() {
             call.respond(HttpStatusCode.OK, WorkspaceCollectionMessageBody(workspaces))
         }
 
-        put<Paths.Workspace> {
-            val principal = call.authentication.principal<ApiUser>()
+        put<Paths.Workspace> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId)
 
-            call.respond(HttpStatusCode.NotImplemented)
+            val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
+                ?: throw ApiException("The provided workspace data cannot be parsed")
+
+            workspaceService.updateWorkspace(
+                principal.userId,
+                path.organizationId,
+                WorkspaceDto(path.workspaceId, workspace.name)
+            )
+
+            call.respond(HttpStatusCode.OK)
         }
 
-        get<Paths.WorkspaceComponent> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
+        get<Paths.WorkspaceComponent> { component ->
+            val principal = call.authentication.principal<ApiUser>()!!
 
             call.respond(HttpStatusCode.NotImplemented)
         }
@@ -74,7 +87,7 @@ fun Route.WorkspacesApi() {
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
-            workspaceComponent.apply {
+            with(workspaceComponent) {
                 workspaceService.addOrUpdateWorkspaceComponent(
                     component.componentId,
                     component.workspaceId,
@@ -82,13 +95,11 @@ fun Route.WorkspacesApi() {
                     component.organizationId,
                     name,
                     query,
+                    dataStore,
                     ComponentTypeDto.byTypeNameInDatabase(type.toString()),
-                    if (workspaceComponent.customizationData != null) Gson().toJson(
-                        workspaceComponent.customizationData
-                    ) else null,
-                    if (workspaceComponent.layout != null) Gson().toJson(
-                        workspaceComponent.layout
-                    ) else null
+                    // TODO: replace the dependency on Gson with kotlinx/serialization
+                    customizationData?.let { Gson().toJson(it) },
+                    layout?.let { Gson().toJson(it) }
                 )
             }
 
@@ -103,43 +114,32 @@ fun Route.WorkspacesApi() {
                 component.componentId,
                 component.workspaceId,
                 principal.userId,
-                component.organizationId)
+                component.organizationId
+            )
 
             call.respond(HttpStatusCode.NoContent)
         }
 
-        get<Paths.WorkspaceComponentData> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
+        get<Paths.WorkspaceComponentData> { component ->
+            val principal = call.authentication.principal<ApiUser>()!!
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
         get<Paths.WorkspaceComponents> { workspace ->
-            val principal = call.authentication.principal<ApiUser>()!!
+            loggedScope {
+                val principal = call.authentication.principal<ApiUser>()!!
 
-            principal.ensureUserBelongsToOrganization(workspace.organizationId)
+                principal.ensureUserBelongsToOrganization(workspace.organizationId)
 
-            val components = workspaceService.getWorkspaceComponents(
-                workspace.workspaceId,
-                principal.userId,
-                workspace.organizationId
-            )
-                .mapToArray {
-                    val customizationData = if (!it.customizationData.isNullOrEmpty())
-                        Gson().fromJson(it.customizationData, CausalNetComponentAllOfCustomizationData::class.java)
-                    else null
-                    val layoutData = if (!it.layoutData.isNullOrEmpty())
-                        Gson().fromJson(it.layoutData, LayoutElement::class.java)
-                    else null
-                    val data = it.data as CausalNetDto?
-                    AbstractComponent(it.id, it.query, ComponentType.causalNet, it.name, layoutData, CausalNetComponentData(
-                        ComponentType.causalNet,
-                        data?.nodes?.mapToArray { CausalNetComponentDataAllOfNodes(it.id, it.splits, it.joins) } ?: emptyArray(),
-                        data?.edges?.mapToArray { CausalNetComponentDataAllOfEdges(it.sourceNodeId, it.targetNodeId) } ?: emptyArray()
-                    ), customizationData)
-                }
+                val components = workspaceService.getWorkspaceComponents(
+                    workspace.workspaceId,
+                    principal.userId,
+                    workspace.organizationId
+                ).mapToArray(WorkspaceComponent::toAbstractComponent)
 
-            call.respond(HttpStatusCode.OK, ComponentCollectionMessageBody(components))
+                call.respond(HttpStatusCode.OK, ComponentCollectionMessageBody(components))
+            }
         }
 
         patch<Paths.WorkspaceLayout> { workspace ->
@@ -153,7 +153,12 @@ fun Route.WorkspacesApi() {
                 .mapKeys { UUID.fromString(it.key) }
                 .mapValues { Gson().toJson(it.value) }
 
-            workspaceService.updateWorkspaceLayout(workspace.workspaceId, principal.userId, workspace.organizationId, layoutData)
+            workspaceService.updateWorkspaceLayout(
+                workspace.workspaceId,
+                principal.userId,
+                workspace.organizationId,
+                layoutData
+            )
 
             call.respond(HttpStatusCode.NoContent)
         }
