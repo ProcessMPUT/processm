@@ -221,10 +221,16 @@ class DataStoreService {
         AutomaticEtlProcesses.insert {
             it[this.id] = etlProcessMetadataId
         }
-        AutomaticEtlProcessRelations.batchInsert(relations) { (sourceClassId, targetClassId) ->
-            this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
-            this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
-            this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
+        AutomaticEtlProcessRelations.batchInsert(relations) { relation ->
+            try {
+                val sourceClassId = relation.first.toInt()
+                val targetClassId = relation.second.toInt()
+
+                this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
+                this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
+                this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
+            }
+            catch (e: NumberFormatException) { }
         }
 
         return@transaction etlProcessMetadataId.value
