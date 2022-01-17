@@ -42,6 +42,10 @@ export default class App extends Vue {
     timeout: 10000
   };
 
+  // Defining the empty _data fixes the TypeError: Cannot convert undefined or null to object in processState() (in Vue)
+  // when rendering some view the second time.
+  _data = {};
+
   private message(color: string, text: string, timeout = 10000) {
     if (text == "") return;
     this.snack.color = color;

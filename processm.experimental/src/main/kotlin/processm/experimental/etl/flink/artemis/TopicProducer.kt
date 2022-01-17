@@ -1,5 +1,6 @@
 package processm.experimental.etl.flink.artemis
 
+import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.core.logging.enter
@@ -10,6 +11,7 @@ import javax.jms.TopicConnection
 import javax.jms.TopicPublisher
 import javax.jms.TopicSession
 import javax.naming.InitialContext
+import kotlin.reflect.KClass
 
 open class TopicProducer<T : java.io.Serializable>(val topic: String) : Service {
 
@@ -19,6 +21,7 @@ open class TopicProducer<T : java.io.Serializable>(val topic: String) : Service 
     override var status: ServiceStatus = ServiceStatus.Unknown
         protected set
     override val name: String = "$topic: Producer"
+    override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
 
 
     private lateinit var jmsConnection: TopicConnection

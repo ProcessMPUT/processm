@@ -709,3 +709,31 @@ inline infix fun Boolean.implies(consequence: Boolean) = !this || consequence
  * @see [https://en.wikipedia.org/wiki/Material_conditional]
  */
 inline infix fun (() -> Boolean).implies(consequence: () -> Boolean) = !(this() && !consequence())
+
+/**
+ * Like [forEach] but catches exceptions thrown by successive invocations of [action] and rethrows the first encountered
+ * exception with the successive exceptions suppressed (if any).
+ */
+inline fun <T> Iterable<T>.forEachCatching(action: (T) -> Unit) {
+    var exception: Throwable? = null
+    for (item in this) {
+        try {
+            action(item)
+        } catch (e: Throwable) {
+            if (exception === null)
+                exception = e
+            else
+                exception.addSuppressed(e)
+        }
+    }
+    if (exception !== null)
+        throw exception
+}
+
+/**
+ * Like [forEach] but catches exceptions thrown by successive invocations of [action] and rethrows the first encountered
+ * exception with the successive exceptions suppressed (if any).
+ */
+inline fun <T> Array<T>.forEachCatching(action: (T) -> Unit) =
+    Arrays.asList(*this).forEachCatching(action)
+

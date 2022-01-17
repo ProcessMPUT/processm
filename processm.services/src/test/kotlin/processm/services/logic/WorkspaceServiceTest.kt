@@ -4,20 +4,18 @@ import io.mockk.every
 import io.mockk.mockk
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.junit.Before
-import org.junit.Test
 import org.junit.jupiter.api.BeforeEach
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.util.*
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class WorkspaceServiceTest : ServiceTestBase() {
-    @Before
     @BeforeEach
     fun setUp() {
         accountServiceMock = mockk()
@@ -151,12 +149,12 @@ class WorkspaceServiceTest : ServiceTestBase() {
             workspaceService.getWorkspaceComponents(workspaceId1.value, userId.value, organizationId.value)
 
         assertEquals(2, workspaceComponents.size)
-        assertTrue { workspaceComponents.any { it.id == componentId1.value } }
-        assertTrue { workspaceComponents.any { it.id == componentId3.value } }
+        assertTrue { workspaceComponents.any { it.id.value == componentId1.value } }
+        assertTrue { workspaceComponents.any { it.id.value == componentId3.value } }
     }
 
     @Test
-    fun `returns only user workspace components with existing data store`(): Unit = withCleanTables(
+    fun `returns all user workspace components including invalid`(): Unit = withCleanTables(
         Organizations, Users, UserGroups, UsersInGroups,
         WorkspaceComponents,
         Workspaces
@@ -164,23 +162,24 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = groupId.value)
+        val dataStoreId = createDataStore(organizationId.value)
         val workspaceId = createWorkspace("Workspace1")
-        val componentDataStoreId = DBSerializer.insert(DBCache.get(workspaceId.toString()), MutableCausalNet())
+        val componentId = DBSerializer.insert(DBCache.get(dataStoreId.value.toString()).database, MutableCausalNet())
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
-        val componentWithNotExistingDataStore =
-            createWorkspaceComponent("Component1", workspaceId.value, componentType = ComponentTypeDto.CausalNet)
-        val componentWithExistingDataStore = createWorkspaceComponent(
+        val componentWithInvalidData =
+            createWorkspaceComponent("Cmp1", workspaceId.value, componentType = ComponentTypeDto.CausalNet, data = "-1")
+        val componentWithExistingId = createWorkspaceComponent(
             "Component2",
             workspaceId.value,
             componentType = ComponentTypeDto.CausalNet,
-            dataStoreId = componentDataStoreId
+            data = componentId.toString()
         )
 
         val workspaceComponents =
             workspaceService.getWorkspaceComponents(workspaceId.value, userId.value, organizationId.value)
 
-        assertEquals(1, workspaceComponents.size)
-        assertTrue { workspaceComponents.any { it.id == componentWithExistingDataStore.value } }
+        assertEquals(2, workspaceComponents.size)
+        assertTrue { workspaceComponents.any { it.id.value == componentWithExistingId.value } }
     }
 
     @Test
@@ -200,6 +199,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val newComponentType = ComponentTypeDto.Kpi
         val newComponentCustomizationData = """{"data":"new"}"""
         val newDataQuery = "new query"
+        val newDataStore = UUID.randomUUID()
 
         workspaceService.addOrUpdateWorkspaceComponent(
             componentId.value,
@@ -208,6 +208,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId.value,
             newComponentName,
             newDataQuery,
+            newDataStore,
             newComponentType,
             newComponentCustomizationData
         )
@@ -253,6 +254,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId.value,
             name = null,
             query = null,
+            dataStore = null,
             componentType = null,
             customizationData = null
         )
@@ -300,6 +302,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
                     organizationId.value,
                     name = null,
                     query = null,
+                    dataStore = null,
                     componentType = null,
                     customizationData = null
                 )
@@ -318,6 +321,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val componentType = ComponentTypeDto.Kpi
         val componentCustomizationData = """{"data":"new"}"""
         val dataQuery = "query"
+        val dataStore = UUID.randomUUID()
         val organizationId = createOrganization()
         val groupId = createGroup(groupRole = GroupRoleDto.Writer)
         val userId = createUser(privateGroupId = groupId.value)
@@ -331,6 +335,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId.value,
             name = componentName,
             query = dataQuery,
+            dataStore = dataStore,
             componentType = componentType,
             customizationData = componentCustomizationData
         )

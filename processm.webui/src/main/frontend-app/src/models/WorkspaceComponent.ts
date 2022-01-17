@@ -1,6 +1,6 @@
 import {
-  DataNode,
-  DataLink
+  DataLink,
+  DataNode
 } from "@/components/workspace/causal-net/CausalNet";
 
 export enum ComponentType {
@@ -18,13 +18,16 @@ export abstract class ComponentData {
   constructor(init: Partial<ComponentData>) {
     Object.assign(this, init);
   }
+
   type!: ComponentType;
+
   abstract get isDisplayable(): boolean | undefined;
 }
 
 export class CausalNetComponentData extends ComponentData {
   nodes?: Array<DataNode>;
   edges?: Array<DataLink>;
+
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;
   }
@@ -32,6 +35,7 @@ export class CausalNetComponentData extends ComponentData {
 
 export class KpiComponentData extends ComponentData {
   value?: number;
+
   get isDisplayable() {
     return this.value != null;
   }
@@ -53,6 +57,7 @@ export class WorkspaceComponent {
     id: string;
     name?: string;
     query: string;
+    dataStore: string;
     type: ComponentType;
     data?: { type: ComponentType };
     layout?: LayoutElement;
@@ -60,6 +65,7 @@ export class WorkspaceComponent {
   }) {
     Object.assign(this, init);
 
+    // FIXME: customizations like this should be implemented using inheritance
     switch (this.type) {
       case ComponentType.CausalNet: {
         this.data = new CausalNetComponentData(init.data ?? {});
@@ -75,8 +81,12 @@ export class WorkspaceComponent {
   id!: string;
   name?: string;
   query!: string;
+  dataStore!: string;
   type!: ComponentType;
   data: ComponentData;
   layout?: LayoutElement;
   customizationData?: CustomizationData;
+  dataLastModified?: string;
+  userLastModified?: string;
+  lastError?: string;
 }
