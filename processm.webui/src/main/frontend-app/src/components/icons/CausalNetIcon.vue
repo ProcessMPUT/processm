@@ -1,6 +1,6 @@
 <template>
   <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" version="1.1">
-    <title>kpi</title>
+    <title>causal net</title>
     <g id="Layer_1">
       <title>Layer 1</title>
       <line
