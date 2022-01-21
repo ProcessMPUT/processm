@@ -15,6 +15,7 @@ import processm.experimental.onlinehmpaper.prom.ShinuVariant
 import processm.experimental.performance.PerformanceAnalyzer
 import processm.experimental.performance.SkipSpecialForFree
 import processm.experimental.performance.StandardDistance
+import processm.experimental.performance.perfectaligner.PerfectAligner
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.BasicDependencyGraphProvider
@@ -528,7 +529,7 @@ class Experiment {
                             }
                     }
 
-                    val values = List(4) { Double.NaN }.toMutableList()
+//                    val values = List(4) { Double.NaN }.toMutableList()
 //                    val aligner = DecompositionAligner(online.result.toPetriNet(), alignerFactory= astarFactory, pool=pool)
 //                    val rf = RangeFitness(aligner, 100, TimeUnit.MILLISECONDS)
 //                    if(trainLog != null) {
@@ -543,29 +544,29 @@ class Experiment {
 //                        values[3] = rfvalue.endInclusive
 //                    }
 
-//                    val fa = PerfectAligner(online.result)
-//                    val values = List(6) { Double.NaN }.toMutableList()
-//                    if (trainLog != null) {
-//                        if (Measure.TRAIN_PFR in config.measures)
-//                            values[0] =
-//                                fa.perfectFitRatio(trainLog)    // train pfr doesn't use maxVisitedCoefficient to always generate accurate results
-//                        if (Measure.TRAIN_FITNESS in config.measures || Measure.TRAIN_PRECISION in config.measures) {
-//                            val pa =
-//                                PerformanceAnalyzer(trainLog, online.result, SkipSpecialForFree(StandardDistance()))
-//                            values[1] = if (Measure.TRAIN_FITNESS in config.measures) pa.fitness else Double.NaN
-//                            values[2] = if (Measure.TRAIN_PRECISION in config.measures) pa.precision else Double.NaN
-//                        }
-//                    }
-//                    if (testLog != null) {
-//                        if (Measure.TEST_PFR in config.measures)
-//                            values[3] =
-//                                fa.perfectFitRatio(testLog, config.maxVisitedCoefficient)
-//                        if (Measure.TEST_FITNESS in config.measures || Measure.TEST_PRECISION in config.measures) {
-//                            val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
-//                            values[4] = if (Measure.TEST_FITNESS in config.measures) pa.fitness else Double.NaN
-//                            values[5] = if (Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN
-//                        }
-//                    }
+                    val fa = PerfectAligner(online.result)
+                    val values = List(6) { Double.NaN }.toMutableList()
+                    if (trainLog != null) {
+                        if (Measure.TRAIN_PFR in config.measures)
+                            values[0] =
+                                fa.perfectFitRatio(trainLog)    // train pfr doesn't use maxVisitedCoefficient to always generate accurate results
+                        if (Measure.TRAIN_FITNESS in config.measures || Measure.TRAIN_PRECISION in config.measures) {
+                            val pa =
+                                PerformanceAnalyzer(trainLog, online.result, SkipSpecialForFree(StandardDistance()))
+                            values[1] = if (Measure.TRAIN_FITNESS in config.measures) pa.fitness else Double.NaN
+                            values[2] = if (Measure.TRAIN_PRECISION in config.measures) pa.precision else Double.NaN
+                        }
+                    }
+                    if (testLog != null) {
+                        if (Measure.TEST_PFR in config.measures)
+                            values[3] =
+                                fa.perfectFitRatio(testLog, config.maxVisitedCoefficient)
+                        if (Measure.TEST_FITNESS in config.measures || Measure.TEST_PRECISION in config.measures) {
+                            val pa = PerformanceAnalyzer(testLog, online.result, SkipSpecialForFree(StandardDistance()))
+                            values[4] = if (Measure.TEST_FITNESS in config.measures) pa.fitness else Double.NaN
+                            values[5] = if (Measure.TEST_PRECISION in config.measures) pa.precision else Double.NaN
+                        }
+                    }
                     csv(values, key)
                 }
             }
