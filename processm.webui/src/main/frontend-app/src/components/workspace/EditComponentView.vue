@@ -41,17 +41,21 @@
               <v-select
                 v-model="component.type"
                 :label="$t('workspace.component.edit.type')"
-                :items="[
-                  {
-                    text: $t('workspace.component.causal-net'),
-                    value: 'causalNet'
-                  },
-                  {
-                    text: $t('workspace.component.kpi'),
-                    value: 'kpi'
-                  }
-                ]"
-              ></v-select>
+                :items="availableComponents"
+              >
+                <template slot="item" slot-scope="componentType">
+                  <v-icon>${{ componentType.item }}Component </v-icon>
+                  {{
+                    $t(`workspace.component.${kebabize(componentType.item)}`)
+                  }}
+                </template>
+                <template slot="selection" slot-scope="componentType">
+                  <v-icon>${{ componentType.item }}Component </v-icon>
+                  {{
+                    $t(`workspace.component.${kebabize(componentType.item)}`)
+                  }}
+                </template>
+              </v-select>
             </v-list-item-content>
           </v-list-item>
           <v-list-item>
@@ -101,12 +105,16 @@ import WorkspaceService from "@/services/WorkspaceService";
 import App from "@/App.vue";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore from "@/models/DataStore";
+import { ComponentType } from "@/openapi";
+import { kebabize } from "@/utils/StringCaseConverter";
 
 @Component({
   components: { WorkspaceComponent }
 })
 export default class EditComponentView extends Vue {
   @Inject() app!: App;
+  readonly availableComponents = Object.values(ComponentType);
+  kebabize = kebabize;
 
   ComponentMode = ComponentMode;
 

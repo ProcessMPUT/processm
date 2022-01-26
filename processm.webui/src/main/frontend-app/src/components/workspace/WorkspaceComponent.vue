@@ -50,7 +50,7 @@
       />
       <div class="last-updated">
         {{ $t("common.last-updated") }}:
-        {{ componentDetails.dataLastModified }}
+        {{ lastModified }}
       </div>
     </div>
     <p class="no-data" v-else>{{ $t("workspace.component.no-data") }}</p>
@@ -65,15 +65,16 @@
 }
 
 .workspace-component-content-parent {
-  height: 100%;
   position: relative;
+  flex: 1 1 100%;
+  overflow: auto;
 }
 
 button.v-btn.v-btn.component-name[type="button"] {
   overflow: hidden;
   background-color: inherit;
   max-width: 100%;
-  justify-content: left;
+  flex: auto;
 }
 
 .component-name {
@@ -81,6 +82,7 @@ button.v-btn.v-btn.component-name[type="button"] {
   display: flex;
   justify-content: center;
   background-color: var(--v-primary-base);
+  flex: 0 0 1.5em;
 }
 
 .component-name:hover {
@@ -113,6 +115,7 @@ import Component from "vue-class-component";
 import { Prop } from "vue-property-decorator";
 import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
 import KpiComponent from "./KpiComponent.vue";
+import BPMNComponent from "./bpmn/BPMNComponent.vue";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 
 export enum ComponentMode {
@@ -122,7 +125,11 @@ export enum ComponentMode {
 }
 
 @Component({
-  components: { CausalNetComponent, KpiComponent }
+  components: {
+    causalNetComponent: CausalNetComponent,
+    kpiComponent: KpiComponent,
+    bpmnComponent: BPMNComponent // https://stackoverflow.com/a/58875919
+  }
 })
 export default class WorkspaceComponent extends Vue {
   ComponentMode = ComponentMode;
@@ -135,6 +142,10 @@ export default class WorkspaceComponent extends Vue {
   readonly editable!: boolean;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
+
+  private readonly lastModified =
+    this.componentDetails?.dataLastModified ??
+    this.componentDetails?.userLastModified;
 
   get isDisplayable(): boolean {
     return this.componentDetails?.data?.isDisplayable ?? false;

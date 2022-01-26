@@ -1532,7 +1532,7 @@ components:
       enum: [owner, writer, reader]
     ComponentType:
       type: string
-      enum: [kpi, causalNet]
+      enum: [ kpi, causalNet, bpmn ]
     AccountRegistrationInfo:
       type: object
       required: [userEmail, organizationName]
@@ -1867,11 +1867,13 @@ components:
       oneOf:
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
+        - $ref: '#/components/schemas/BPMNComponent'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
+          bpmn: '#/components/schemas/BPMNComponent'
       type: object
       properties:
         data:
@@ -1886,11 +1888,13 @@ components:
       oneOf:
         - $ref: '#/components/schemas/KpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
+        - $ref: '#/components/schemas/BPMNComponentData'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponentData'
           causalNet: '#/components/schemas/CausalNetComponentData'
+          bpmn: '#/components/schemas/BPMNComponentData'
     KpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -1957,7 +1961,7 @@ components:
                   type: array
                   items:
                     type: object
-                    required: [id, x, y]
+                    required: [ id, x, y ]
                     properties:
                       id:
                         type: string
@@ -1965,15 +1969,31 @@ components:
                         type: number
                       y:
                         type: number
+    BPMNComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          properties:
+            xml:
+              type: string
+    BPMNComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BPMNComponentData'
+            customizationData:
+              type: object
     ComponentMessageBody:
       type: object
-      required: [data]
+      required: [ data ]
       properties:
         data:
           $ref: '#/components/schemas/AbstractComponent'
     ComponentDataMessageBody:
       type: object
-      required: [data]
+      required: [ data ]
       properties:
         data:
           $ref: '#/components/schemas/AbstractComponentData'

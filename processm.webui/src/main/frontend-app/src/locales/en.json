@@ -25,6 +25,7 @@
     "component": {
       "causal-net": "Causal net",
       "kpi": "KPI",
+      "bpmn": "BPMN",
       "select": "Select type",
       "no-data": "No data to be displayed",
       "edit": {
