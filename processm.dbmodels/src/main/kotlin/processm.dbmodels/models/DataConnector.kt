@@ -8,6 +8,14 @@ import org.jetbrains.exposed.sql.`java-time`.datetime
 import java.time.LocalDateTime
 import java.util.*
 
+const val DATA_CONNECTOR_TOPIC = "data_connector"
+const val TYPE = "type"
+const val ACTIVATE = "activate"
+const val DEACTIVATE = "deactivate"
+const val RELOAD = "reload"
+const val DATA_CONNECTOR_ID = "data_connector_id"
+const val DATA_STORE_ID = "data_store_id"
+
 object DataConnectors : UUIDTable("data_connectors") {
     val name = text("name")
     val lastConnectionStatus = bool("last_connection_status").nullable()

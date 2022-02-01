@@ -1,23 +1,32 @@
 package processm.etl.metamodel
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.innerJoin
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.esb.AbstractJMSListener
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.core.helpers.mapToSet
+import processm.core.helpers.toUUID
+import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import processm.etl.tracker.DebeziumChangeTracker
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import javax.jms.MapMessage
+import javax.jms.Message
+import kotlin.concurrent.schedule
 
 /**
- * Manages tracking data changes in data sources (defined as [DataConnector]).
+ * Tracks data changes in data sources (defined as [DataConnector]).
  */
 class MetaModelService : Service {
     companion object {
@@ -30,23 +39,37 @@ class MetaModelService : Service {
     private val passwordProperty = "password"
     private val databaseNameProperty = "database"
     private val connectionTypeProperty = "connection-type"
+    private val connectionRefreshingPeriod = 30_000L
 
-    private val dataConnectorsByDataStore = mutableMapOf<UUID, Set<UUID>>()
-    private val debeziumTrackers = mutableMapOf<UUID, DebeziumChangeTracker>()
-    private val trackedEntities = mutableMapOf<UUID, Set<String>>()
+    private val debeziumTrackers = ConcurrentHashMap<UUID, DebeziumChangeTracker>()
+    private val trackerConnectionWatcher = Timer(true)
+    private lateinit var jmsListener: JMSListener
+    override var status: ServiceStatus = ServiceStatus.Unknown
+
     override fun register() {
         status = ServiceStatus.Stopped
         logger.debug("MetaModel ETL service registered")
+        jmsListener = JMSListener()
     }
 
-    override var status: ServiceStatus = ServiceStatus.Unknown
-        private set
     override val name: String
         get() = "MetaModel ETL"
 
     override fun start() {
-        reloadDataConnectors()
-//        ensureDataConnectionsAreAlive()
+        initializeDataTrackers()
+        jmsListener.activated = ::activate
+        jmsListener.deactivated = ::deactivate
+        jmsListener.modified = ::reload
+        jmsListener.listen()
+        trackerConnectionWatcher.schedule(connectionRefreshingPeriod, connectionRefreshingPeriod) {
+            debeziumTrackers.forEach { (dataConnectorId, tracker) ->
+                try {
+                    if (!tracker.isAlive) tracker.reconnect()
+                } catch (e: Exception) {
+                    logger.warn("An issue occurred while trying to reconnect data connector $dataConnectorId", e)
+                }
+            }
+        }
 
         status = ServiceStatus.Started
         logger.info("MetaModel ETL service started")
@@ -54,6 +77,9 @@ class MetaModelService : Service {
 
     override fun stop() {
         try {
+            jmsListener.close()
+            trackerConnectionWatcher. cancel()
+            trackerConnectionWatcher.purge()
             debeziumTrackers.forEach { (_, tracker) ->
                 tracker.close()
             }
@@ -63,7 +89,7 @@ class MetaModelService : Service {
         }
     }
 
-    private fun reloadDataConnectors() {
+    private fun initializeDataTrackers() {
         val dataStores = transaction(DBCache.getMainDBPool().database) {
             return@transaction DataStores.selectAll().mapToSet {
                 it[DataStores.id].value
@@ -72,120 +98,104 @@ class MetaModelService : Service {
 
         dataStores.forEach { dataStoreId ->
             transaction(DBCache.get("$dataStoreId").database) {
-                val dataConnectorsToDisconnect = mutableSetOf<UUID>()
-                val dataConnectorsToConnect = mutableSetOf<UUID>()
-                val trackedDataConnectors = dataConnectorsByDataStore[dataStoreId].orEmpty()
-                val dataConnectorsToBeTracked = DataConnectors
+                DataConnectors
                     .selectAll()
-                    .fold(mutableMapOf<UUID, DataConnectorDto>()) { dataConnectors, dataConnectorResultRow ->
-                        val dataConnector =
-                            DataConnector.wrapRow(dataConnectorResultRow)
+                    .forEach { dataConnectorResultRow ->
+                        val dataConnectorId = dataConnectorResultRow[DataConnectors.id].value
+
                         try {
-                            // the below logic misses extracting connection properties from connection string so connectors defined that way are not supported at the moment
-                            // the limitations is caused by the fact that Debezium requires connection configuration in the form of Properties instance
-                            val connectionProperties = kotlinx.serialization.json.Json.decodeFromString<MutableMap<String, String>>(
-                                dataConnector.connectionProperties
-                            )
-                            dataConnectors[dataConnector.id.value] = DataConnectorDto(
-                                dataConnector.id.value,
-                                dataConnector.name,
-                                dataConnector.lastConnectionStatus,
-                                dataConnector.lastConnectionStatusTimestamp,
-                                dataConnector.dataModel?.id?.value,
-                                connectionProperties
-                            )
-                        } catch (e: SerializationException) {
-                            logger.warn("Failed to load configuration for data connector ${dataConnector.id.value}. Connection string based configurations are not yet supported.")
+                            val dataConnector = getDataConnector(dataConnectorId)
+                            val trackedEntities = getEntitiesToBeTracked(dataConnectorId)
+                            val tracker = createDebeziumTracker(dataStoreId, dataConnector, trackedEntities)
+                            debeziumTrackers[dataConnectorId] = tracker
+                            tracker.start()
+                        } catch (e: IllegalArgumentException) {
+                            logger.warn("Failed to create a connection for data connector $dataConnectorId due to invalid configuration", e)
+                        } catch (e: Exception) {
+                            logger.warn("An unknown exception occurred while creating connection for data connector $dataConnectorId", e)
                         }
-
-                        return@fold dataConnectors
                     }
-
-                if (trackedDataConnectors != dataConnectorsToBeTracked.keys) {
-                    dataConnectorsToDisconnect.addAll(trackedDataConnectors.minus(dataConnectorsToBeTracked.keys))
-                    dataConnectorsToConnect.addAll(dataConnectorsToBeTracked.keys.minus(trackedDataConnectors))
-                }
-
-                dataConnectorsToBeTracked.keys.forEach it@ { dataConnectorId ->
-                    if (dataConnectorsToDisconnect.contains(dataConnectorId)) return@it
-                    val sourceClassAlias = Classes.alias("c1")
-                    val targetClassAlias = Classes.alias("c2")
-                    val entitiesToBeTracked = EtlProcessesMetadata
-                        .innerJoin(AutomaticEtlProcesses)
-                        .innerJoin(AutomaticEtlProcessRelations)
-                        .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
-                        .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
-                        .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
-                        .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId }
-                        .fold(mutableSetOf<String>()) { entities, relation ->
-                                    entities.add(relation[sourceClassAlias[Classes.name]])
-                                    entities.add(relation[targetClassAlias[Classes.name]])
-
-                                return@fold entities
-                            }
-                    val trackedDataConnectorEntities = trackedEntities[dataConnectorId].orEmpty()
-
-                    if (entitiesToBeTracked != trackedDataConnectorEntities) {
-                        dataConnectorsToDisconnect.add(dataConnectorId)
-                        dataConnectorsToConnect.add(dataConnectorId)
-                        trackedEntities[dataConnectorId] = entitiesToBeTracked
-                    }
-                }
-
-                dataConnectorsByDataStore[dataStoreId] = dataConnectorsToBeTracked.keys
-
-                dataConnectorsToDisconnect.forEach { dataConnectorId ->
-                    debeziumTrackers.remove(dataConnectorId)?.close()
-                }
-                dataConnectorsToConnect.forEach it@ { dataConnectorId ->
-                    try {
-                        val dataConnector = dataConnectorsToBeTracked[dataConnectorId]!!
-
-                        if (dataConnector.dataModelId == null) {
-                            throw IllegalArgumentException(
-                                "The data connector $dataConnectorId for automatic ETL process has no data model assigned and will not be used")
-                        }
-                        val connectionProperties = dataConnector.connectionProperties ?: throw IllegalArgumentException(
-                            "Unknown connection properties"
-                        )
-                        val connectorType = dataConnector.connectionProperties?.get(connectionTypeProperty)
-                            ?: throw IllegalArgumentException("Unknown connection type")
-                        val properties = Properties()
-                            .setDefaults()
-                            .setConnectorSpecificDefaults(connectorType)
-                            .setConnectionProperties(dataConnector.id, connectionProperties)
-                            .setTemporaryFiles(dataConnector.id)
-                            .setTrackedEntities(trackedEntities[dataConnectorId].orEmpty())
-
-                        val metaModelReader = MetaModelReader(dataConnector.dataModelId!!)
-                        val metaModelAppender = MetaModelAppender(metaModelReader)
-                        val tracker = DebeziumChangeTracker(
-                            properties,
-                            MetaModel("$dataStoreId", metaModelReader, metaModelAppender)
-                        )
-
-                        tracker.start()
-                        debeziumTrackers[dataConnectorId] = tracker
-                    } catch (e: IllegalArgumentException) {
-                        logger.warn("The data connector $dataConnectorId for automatic ETL process has no data model assigned and will not be used")
-                    }
-                }
             }
         }
     }
 
-//    private fun ensureDataConnectionsAreAlive() {
-//        dataConnectorsByDataStore.forEach { dataStoreId, dataConnectors ->
-//            transaction(DBCache.get("$dataStoreId").database) {
-//                dataConnectors.forEach {
-//                    val dataConnector = dataConnectorsTo
-//                }
-//            }
-//        }
-//    }
+    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String> {
+        val sourceClassAlias = Classes.alias("c1")
+        val targetClassAlias = Classes.alias("c2")
+        return EtlProcessesMetadata
+            .innerJoin(AutomaticEtlProcesses)
+            .innerJoin(AutomaticEtlProcessRelations)
+            .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
+            .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
+            .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
+            .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId }
+            .fold(mutableSetOf()) { entities, relation ->
+                entities.add(relation[sourceClassAlias[Classes.name]])
+                entities.add(relation[targetClassAlias[Classes.name]])
+
+                return@fold entities
+            }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun getDataConnector(dataConnectorId: UUID): DataConnectorDto {
+        return requireNotNull(DataConnectors.select { DataConnectors.id eq dataConnectorId }.firstOrNull()?.let {
+            try {
+                val dataConnector = DataConnector.wrapRow(it)
+                val dataConnectorDto = dataConnector.toDto()
+                // the below logic misses extracting connection properties from connection string so connectors defined that way are not supported at the moment
+                // the limitations is due to Debezium requiring connection configuration in the form of Properties instance
+                dataConnectorDto.connectionProperties = Json.decodeFromString<MutableMap<String, String>>(
+                    dataConnector.connectionProperties
+                )
+                return@let dataConnectorDto
+            } catch (e: SerializationException) {
+                throw IllegalArgumentException("Failed to load connection properties. Connection string based configuration is not yet supported.")
+            }
+        }) { "No data connector found with the provided ID" }
+    }
+
+    private fun activate(dataStoreId: UUID, dataConnectorId: UUID) {
+        debeziumTrackers[dataConnectorId]?.close()
+
+        val tracker = transaction(DBCache.get("$dataStoreId").database) {
+            val dataConnector = getDataConnector(dataConnectorId) ?: throw Exception("")
+            val trackedEntities = getEntitiesToBeTracked(dataConnectorId)
+            return@transaction createDebeziumTracker(dataStoreId, dataConnector, trackedEntities)
+        }
+
+        debeziumTrackers[dataConnectorId] = tracker
+        tracker.start()
+    }
+
+    private fun deactivate(dataStoreId: UUID, dataConnectorId: UUID) {
+        debeziumTrackers.remove(dataConnectorId)?.close()
+    }
+
+    private fun reload(dataStoreId: UUID, dataConnectorId: UUID) {
+        deactivate(dataStoreId, dataConnectorId)
+        activate(dataStoreId, dataConnectorId)
+    }
+
+    private fun createDebeziumTracker(dataStoreId: UUID, dataConnector: DataConnectorDto, trackedEntities: Set<String>): DebeziumChangeTracker {
+        val dataModelId = requireNotNull(dataConnector.dataModelId) { "Automatic ETL process has no data model assigned and cannot be tracked" }
+        val connectionProperties = requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
+        val connectorType = requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" }
+        val properties = Properties()
+            .setDefaults()
+            .setConnectorSpecificDefaults(connectorType)
+            .setConnectionProperties(dataConnector.id, connectionProperties)
+            .setTemporaryFiles(dataConnector.id)
+            .setTrackedEntities(trackedEntities)
+        val metaModelReader = MetaModelReader(dataModelId)
+        return DebeziumChangeTracker(
+            properties,
+            MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader))
+        )
+    }
 
     private fun Properties.setConnectionProperties(dataConnectorId: UUID, connectionProperties: Map<String, String>): Properties {
-        if (connectionProperties.isNullOrEmpty()) throw IllegalArgumentException("Unknown connection properties")
+        if (connectionProperties.isEmpty()) throw IllegalArgumentException("Unknown connection properties")
 
         setProperty("database.server.name", "$dataConnectorId")
         setProperty("database.hostname", connectionProperties[serverProperty])
@@ -250,9 +260,29 @@ class MetaModelService : Service {
     }
 
     private fun Properties.setTrackedEntities(entities: Set<String>): Properties {
-//        setProperty("table.include.list", entities.joinToString(",", transform = { "(\\w+\\.)?$it" }))
-        setProperty("table.include.list", "public.language")
+        setProperty("table.include.list", entities.joinToString(",", transform = { "(\\w+\\.)?$it" }))
 
         return this
+    }
+
+    inner class JMSListener : AbstractJMSListener(DATA_CONNECTOR_TOPIC, null, name) {
+        override fun onMessage(message: Message?): Unit = loggedScope {
+            require(message is MapMessage) { "Unrecognized message $message." }
+
+            val type = message.getString(TYPE)
+            val dataStoreId = message.getString(DATA_STORE_ID)?.toUUID() ?: throw IllegalArgumentException("Missing field: $DATA_STORE_ID.")
+            val dataConnectorId = message.getString(DATA_CONNECTOR_ID)?.toUUID() ?: throw IllegalArgumentException("Missing field: $DATA_CONNECTOR_ID.")
+
+            when (type) {
+                ACTIVATE -> activated(dataStoreId, dataConnectorId)
+                DEACTIVATE -> deactivated(dataStoreId, dataConnectorId)
+                RELOAD -> modified(dataStoreId, dataConnectorId)
+                else -> throw IllegalArgumentException("Unrecognized type: $type.")
+            }
+        }
+
+        var activated: (UUID, UUID) -> Unit = { _, _ -> }
+        var deactivated: (UUID, UUID) -> Unit = { _, _ -> }
+        var modified: (UUID, UUID) -> Unit = { _, _ -> }
     }
 }

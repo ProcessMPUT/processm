@@ -5,6 +5,7 @@ import com.google.gson.JsonSyntaxException
 import com.ibm.db2.jcc.DB2SimpleDataSource
 import com.microsoft.sqlserver.jdbc.SQLServerDataSource
 import com.mysql.cj.jdbc.MysqlDataSource
+import io.ktor.utils.io.core.*
 import oracle.jdbc.datasource.impl.OracleDataSource
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
@@ -12,6 +13,8 @@ import org.jetbrains.exposed.sql.`java-time`.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
 import org.postgresql.ds.PGSimpleDataSource
+import processm.core.esb.getTopicConnectionFactory
+import processm.core.logging.loggedScope
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
@@ -22,9 +25,17 @@ import processm.etl.metamodel.MetaModelReader
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
+import javax.jms.Session
+import javax.jms.TopicConnection
+import javax.jms.TopicPublisher
+import javax.jms.TopicSession
+import javax.naming.InitialContext
 import javax.sql.DataSource
 
-class DataStoreService {
+class DataStoreService : Closeable {
+    private val jmsContext = InitialContext()
+    private val jmsConnFactory = jmsContext.getTopicConnectionFactory()
+
     /**
      * Returns all data stores for the specified [organizationId].
      */
@@ -141,9 +152,12 @@ class DataStoreService {
      * Removes the data connector specified by the [dataConnectorId].
      */
     fun removeDataConnector(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
-        return@transaction DataConnectors.deleteWhere {
+        (DataConnectors.deleteWhere {
             DataConnectors.id eq dataConnectorId
-        } > 0
+         } > 0).let { removalStatus ->
+            if (removalStatus) notifyDeactivated(dataStoreId, dataConnectorId)
+            return@transaction removalStatus
+        }
     }
 
     /**
@@ -201,27 +215,31 @@ class DataStoreService {
      */
     fun createAutomaticEtlProcess(dataStoreId: UUID, dataConnectorId: UUID, name: String, relations: List<Pair<String, String>>)
             = transaction(DBCache.get("$dataStoreId").database) {
-        val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
-            it[this.name] = name
-            it[this.processType] = ProcessTypeDto.Automatic.processTypeName
-            it[this.dataConnectorId] = dataConnectorId
-        }
-        AutomaticEtlProcesses.insert {
-            it[this.id] = etlProcessMetadataId
-        }
-        AutomaticEtlProcessRelations.batchInsert(relations) { relation ->
-            try {
-                val sourceClassId = relation.first.toInt()
-                val targetClassId = relation.second.toInt()
-
-                this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
-                this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
-                this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
+        loggedScope { logger ->
+            val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
+                it[this.name] = name
+                it[this.processType] = ProcessTypeDto.Automatic.processTypeName
+                it[this.dataConnectorId] = dataConnectorId
             }
-            catch (e: NumberFormatException) { }
-        }
+            AutomaticEtlProcesses.insert {
+                it[this.id] = etlProcessMetadataId
+            }
+            AutomaticEtlProcessRelations.batchInsert(relations) { relation ->
+                try {
+                    val sourceClassId = relation.first.toInt()
+                    val targetClassId = relation.second.toInt()
 
-        return@transaction etlProcessMetadataId.value
+                    this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
+                    this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
+                    this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
+                } catch (e: NumberFormatException) {
+                    logger.info("Incorrect data format detected while ")
+                }
+            }
+            notifyActivated(dataStoreId, dataConnectorId)
+
+            return@transaction etlProcessMetadataId.value
+        }
     }
 
     /**
@@ -236,9 +254,19 @@ class DataStoreService {
      * Removes the ETL process specified by the [etlProcessId].
      */
     fun removeEtlProcess(dataStoreId: UUID, etlProcessId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
-        return@transaction EtlProcessesMetadata.deleteWhere {
+        val dataConnectorId = EtlProcessesMetadata
+            .slice(EtlProcessesMetadata.dataConnectorId)
+            .select { EtlProcessesMetadata.id eq etlProcessId }
+            .firstOrNull()
+            ?.get(EtlProcessesMetadata.dataConnectorId)
+            ?.value
+
+        (EtlProcessesMetadata.deleteWhere {
             EtlProcessesMetadata.id eq etlProcessId
-        } > 0
+        } > 0).let { removalStatus ->
+            if (removalStatus && dataConnectorId != null) notifyModified(dataStoreId, dataConnectorId)
+            return@transaction removalStatus
+        }
     }
 
     /**
@@ -331,5 +359,42 @@ class DataStoreService {
             }
             else -> throw Error("Unsupported connection type")
         }
+    }
+
+    fun notifyActivated(dataStoreId: UUID, dataConnectorId: UUID) {
+        notifyStateChanged(dataStoreId, dataConnectorId, ACTIVATE)
+    }
+
+    fun notifyDeactivated(dataStoreId: UUID, dataConnectorId: UUID) {
+        notifyStateChanged(dataStoreId, dataConnectorId, DEACTIVATE)
+    }
+
+    fun notifyModified(dataStoreId: UUID, dataConnectorId: UUID) {
+        notifyStateChanged(dataStoreId, dataConnectorId, RELOAD)
+    }
+
+    private fun notifyStateChanged(dataStoreId: UUID, dataConnectorId: UUID, type: String) {
+        var jmsConnection: TopicConnection? = null
+        var jmsSession: TopicSession? = null
+        var jmsPublisher: TopicPublisher? = null
+        try {
+            jmsConnection = jmsConnFactory.createTopicConnection()
+            jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
+            val jmsTopic = jmsSession.createTopic(DATA_CONNECTOR_TOPIC)
+            jmsPublisher = jmsSession.createPublisher(jmsTopic)
+            val message = jmsSession.createMapMessage()
+            message.setString(TYPE, type)
+            message.setString(DATA_STORE_ID, dataStoreId.toString())
+            message.setString(DATA_CONNECTOR_ID, dataConnectorId.toString())
+            jmsPublisher.publish(message)
+        } finally {
+            jmsPublisher?.close()
+            jmsSession?.close()
+            jmsConnection?.close()
+        }
+    }
+
+    override fun close() {
+        jmsContext.close()
     }
 }
