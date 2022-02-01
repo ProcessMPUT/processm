@@ -9,10 +9,11 @@ import kotlin.reflect.jvm.isAccessible
  * A base class for configurations enabling automatic configuration from system properties (e.g., from environment)
  */
 abstract class AbstractConfiguration {
-    protected fun initFromEnvironment(prefix: String) {
+    protected fun initFromEnvironment(prefix: String, environment:Map<String,String>?=null) {
+        val env = environment?:System.getenv()
         this::class.memberProperties.filterIsInstance<KMutableProperty<*>>().forEach { property ->
             val configurationPropertyName = "$prefix.${property.name}"
-            val value = System.getProperty(configurationPropertyName)
+            val value = System.getProperty(configurationPropertyName) ?: env[configurationPropertyName]
             if (value !== null) {
                 property.setter.isAccessible = true
                 when (property.returnType) {
