@@ -1,5 +1,7 @@
 package processm.conformance.measures.precision.causalnet
 
+import processm.core.log.Helpers.event
+import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*

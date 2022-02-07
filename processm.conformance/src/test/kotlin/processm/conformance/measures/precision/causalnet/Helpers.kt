@@ -1,14 +1,10 @@
 package processm.conformance.measures.precision.causalnet
 
 import processm.core.helpers.HashMapWithDefault
-import processm.core.helpers.mapToSet
-import processm.core.log.Event
-import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
-import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import kotlin.math.abs
 import kotlin.math.max
@@ -29,20 +25,6 @@ fun assertDoubleEquals(expected: Double, actual: Double, prec: Double = 1e-3) =
         abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
         "Expected: $expected, actual: $actual, prec: $prec"
     )
-
-
-fun event(name: String): Event =
-    Event(mutableMapOf("concept:name" to StringAttr("concept:name", name)))
-
-fun trace(vararg nodes: Node): Trace =
-    Trace(nodes.asList().map { event(it.name) }.asSequence())
-
-fun logFromModel(model: CausalNet): Log = Log(CausalNetVerifier()
-    .verify(model)
-    .validLoopFreeSequences
-    .mapToSet { seq -> seq.map { it.a } }
-    .map { seq -> Trace(seq.asSequence().map { event(it.name) }) }
-    .asSequence())
 
 fun testPossible(model: CausalNet, maxSeqLen: Int = Int.MAX_VALUE, maxPrefixLen: Int = Int.MAX_VALUE) {
     val validSequences = CausalNetVerifierImpl(model)
