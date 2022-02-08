@@ -54,8 +54,8 @@ class CNetPerfectPrecisionTest {
             e1 + e2 join f
         }
         val log = logFromModel(dodReference)
-        val pa = CNetPerfectPrecisionAux(log, dodReference)
-        assertDoubleEquals(1.0, pa.precision)
+        val pa = CNetPerfectPrecision(dodReference)(log)
+        assertDoubleEquals(1.0, pa)
     }
 
 
@@ -98,13 +98,13 @@ class CNetPerfectPrecisionTest {
         }
         println(model)
         val s = model.start
-        val pa = CNetPerfectPrecisionAux(Log(emptySequence()), model)
-        assertEquals(setOf(a), pa.possibleNext(listOf(listOf(s))).values.single())
-        assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(s, a))).values.single())
-        assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(s, a, a))).values.single())
-        assertEquals(setOf(b), pa.possibleNext(listOf(listOf(s, a, a, c))).values.single())
-        assertEquals(setOf(b), pa.possibleNext(listOf(listOf(s, a, a, c, b))).values.single())
-        assertEquals(setOf(model.end), pa.possibleNext(listOf(listOf(s, a, a, c, b, b))).values.single())
+        val pa = CNetPerfectPrecision(model)
+        assertEquals(setOf(a), pa.availableActivities(listOf(s)))
+        assertEquals(setOf(a, c), pa.availableActivities(listOf(s, a)))
+        assertEquals(setOf(a, c), pa.availableActivities(listOf(s, a, a)))
+        assertEquals(setOf(b), pa.availableActivities(listOf(s, a, a, c)))
+        assertEquals(setOf(b), pa.availableActivities(listOf(s, a, a, c, b)))
+        assertEquals(setOf(model.end), pa.availableActivities(listOf(s, a, a, c, b, b)))
     }
 
     @Test
@@ -119,13 +119,13 @@ class CNetPerfectPrecisionTest {
             a joins c
             b joins end
         }
-        val pa = CNetPerfectPrecisionAux(Log(emptySequence()), model)
-        assertEquals(setOf(a), pa.possibleNext(listOf(emptyList())).values.single())
-        assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(a))).values.single())
-        assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(a, a))).values.single())
-        assertEquals(setOf(b), pa.possibleNext(listOf(listOf(a, a, c))).values.single())
-        assertEquals(setOf(b), pa.possibleNext(listOf(listOf(a, a, c, b))).values.single())
-        assertTrue { pa.possibleNext(listOf(listOf(a, a, c, b, b))).values.single().isEmpty() }
+        val pa = CNetPerfectPrecision(model)
+        assertEquals(setOf(a), pa.availableActivities(emptyList()))
+        assertEquals(setOf(a, c), pa.availableActivities(listOf(a)))
+        assertEquals(setOf(a, c), pa.availableActivities(listOf(a, a)))
+        assertEquals(setOf(b), pa.availableActivities(listOf(a, a, c)))
+        assertEquals(setOf(b), pa.availableActivities(listOf(a, a, c, b)))
+        assertTrue { pa.availableActivities(listOf(a, a, c, b, b)).isEmpty() }
     }
 
     private val diamond1 = causalnet {
@@ -142,22 +142,22 @@ class CNetPerfectPrecisionTest {
     @Test
     fun diamond1FirstTrace() {
         val traces = sequenceOf(trace(a, b, c, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond1)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond1)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond1SecondTrace() {
         val traces = sequenceOf(trace(a, c, b, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond1)
-        assertDoubleEquals((1.0 + 1.0 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond1)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond1BothTraces() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, b, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond1)
-        assertDoubleEquals(1.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond1)(Log(traces))
+        assertDoubleEquals(1.0, pa, 0.001)
     }
 
     private val diamond2 = causalnet {
@@ -177,22 +177,22 @@ class CNetPerfectPrecisionTest {
     @Test
     fun diamond2FirstTrace() {
         val traces = sequenceOf(trace(a, b, c, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond2)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond2)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond2SecondTrace() {
         val traces = sequenceOf(trace(a, c, b, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond2)
-        assertDoubleEquals((1.0 + 1.0 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond2)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond2BothTraces() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, b, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond2)
-        assertDoubleEquals(1.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond2)(Log(traces))
+        assertDoubleEquals(1.0, pa, 0.001)
     }
 
     private val diamond3 = causalnet {
@@ -209,56 +209,56 @@ class CNetPerfectPrecisionTest {
     @Test
     fun diamond3abcd() {
         val traces = sequenceOf(trace(a, b, c, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond3acbd() {
         val traces = sequenceOf(trace(a, c, b, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond3ab() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, b, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3ac() {
         val traces = sequenceOf(trace(a, c, b, d), trace(a, c, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3bd() {
         val traces = sequenceOf(trace(a, c, b, d), trace(a, b, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3cd() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3a_d() {
         val traces = sequenceOf(trace(a, b, d), trace(a, c, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2) * 2) / 6, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2) * 2) / 6, pa, 0.001)
     }
 
     @Test
     fun diamond3AllTraces() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, b, d), trace(a, b, d), trace(a, c, d))
-        val pa = CNetPerfectPrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(1.0, pa.precision, 0.001)
+        val pa = CNetPerfectPrecision(diamond3)(Log(traces))
+        assertDoubleEquals(1.0, pa, 0.001)
     }
 }

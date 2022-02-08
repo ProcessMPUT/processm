@@ -1,7 +1,6 @@
 package processm.conformance.measures.precision.causalnet
 
 import processm.core.helpers.HashMapWithDefault
-import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
@@ -35,9 +34,9 @@ fun testPossible(model: CausalNet, maxSeqLen: Int = Int.MAX_VALUE, maxPrefixLen:
         for (i in 0 until min(seq.size, maxPrefixLen))
             prefix2possible[seq.subList(0, i)].add(seq[i])
     }
-    val pa = CNetPerfectPrecisionAux(Log(emptySequence()), model)
+    val pa = CNetPerfectPrecision(model)
     for ((prefix, expected) in prefix2possible.entries) {
-        val actual = pa.possibleNext(listOf(prefix)).values.single()
+        val actual = pa.availableActivities(prefix)
         assertEquals(expected, actual, "prefix=$prefix expected=$expected actual=$actual")
     }
 }

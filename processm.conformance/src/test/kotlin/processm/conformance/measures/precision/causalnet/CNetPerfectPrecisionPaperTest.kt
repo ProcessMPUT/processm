@@ -163,23 +163,23 @@ class CNetPerfectPrecisionPaperTest {
 
     @Test
     fun `model1 precision`() {
-        assertDoubleEquals(0.970, CNetPerfectPrecisionAux(log, model1).precision)
+        assertDoubleEquals(0.970, CNetPerfectPrecision(model1)(log))
     }
 
     @Test
     fun `model2 precision`() {
-        assertDoubleEquals(1.0, CNetPerfectPrecisionAux(log, model2).precision)
+        assertDoubleEquals(1.0, CNetPerfectPrecision(model2)(log))
     }
 
     @Test
     fun `model3 precision`() {
         // The paper gives 0.41 here, but both model representation and precision definition are different
-        assertDoubleEquals(0.471, CNetPerfectPrecisionAux(log, model3).precision)
+        assertDoubleEquals(0.471, CNetPerfectPrecision(model3)(log))
     }
 
     @Test
     fun `model4 precision`() {
-        assertDoubleEquals(1.0, CNetPerfectPrecisionAux(log, model4).precision)
+        assertDoubleEquals(1.0, CNetPerfectPrecision(model4)(log))
     }
 
 

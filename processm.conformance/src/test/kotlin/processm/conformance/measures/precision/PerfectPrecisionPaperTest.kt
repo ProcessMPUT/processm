@@ -69,6 +69,7 @@ class PerfectPrecisionPaperTest {
             P tin "c" tout "d"
             P tin "d" tout "e"
             P tin "e" tout "h"
+            P tin "h"
         }
         val prec = PerfectPrecision(model)(log)
         assertDoubleEquals(1.0, prec, 0.005)

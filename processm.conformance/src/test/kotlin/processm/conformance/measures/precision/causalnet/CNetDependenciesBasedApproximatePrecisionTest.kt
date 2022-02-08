@@ -53,9 +53,9 @@ class CNetDependenciesBasedApproximatePrecisionTest {
             e1 + e2 join f
         }
         val log = logFromModel(dodReference)
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(log, dodReference)
+        val pa = CNetDependenciesBasedApproximatePrecision(dodReference)(log)
         //the expected value was computed by CNetDependenciesBasedApproximatePrecisionAux itself and is intended only as a regression test
-        assertDoubleEquals(0.735, pa.precision)
+        assertDoubleEquals(0.735, pa)
     }
 
 
@@ -98,18 +98,18 @@ class CNetDependenciesBasedApproximatePrecisionTest {
         }
         println(model)
         val s = model.start
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(emptySequence()), model)
-        assertEquals(setOf(a), pa.possibleNext(listOf(listOf(s))).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(s, a))).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(s, a, a))).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(s, a, a, c))).values.single())
+        val pa = CNetDependenciesBasedApproximatePrecision(model)
+        assertEquals(setOf(a), pa.availableActivities(listOf(s)))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(s, a)))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(s, a, a)))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(s, a, a, c)))
         assertEquals(
             setOf(a, b, c, nend),
-            pa.possibleNext(listOf(listOf(s, a, a, c, b))).values.single()
+            pa.availableActivities(listOf(s, a, a, c, b))
         ) // a; a,b,c; a,b,c; b; b, end - a,a,c,b -> a,b,c,end
         assertEquals(
             setOf(a, b, c, nend),
-            pa.possibleNext(listOf(listOf(s, a, a, c, b, b))).values.single()
+            pa.availableActivities(listOf(s, a, a, c, b, b))
         )// a; a,b,c; a,b,c; b; b, end; b, end - a,a,c,b,b -> a,b,c,end
     }
 
@@ -125,13 +125,13 @@ class CNetDependenciesBasedApproximatePrecisionTest {
             a joins c
             b joins end
         }
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(emptySequence()), model)
-        assertEquals(setOf(a), pa.possibleNext(listOf(emptyList())).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(a))).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(a, a))).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(a, a, c))).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(a, a, c, b))).values.single())
-        assertEquals(setOf(a, b, c), pa.possibleNext(listOf(listOf(a, a, c, b, b))).values.single())
+        val pa = CNetDependenciesBasedApproximatePrecision(model)
+        assertEquals(setOf(a), pa.availableActivities(emptyList()))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(a)))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(a, a)))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(a, a, c)))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(a, a, c, b)))
+        assertEquals(setOf(a, b, c), pa.availableActivities(listOf(a, a, c, b, b)))
     }
 
     private val diamond1 = causalnet {
@@ -148,22 +148,22 @@ class CNetDependenciesBasedApproximatePrecisionTest {
     @Test
     fun diamond1FirstTrace() {
         val traces = sequenceOf(trace(a, b, c, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond1)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond1)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond1SecondTrace() {
         val traces = sequenceOf(trace(a, c, b, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond1)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond1)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond1BothTraces() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, b, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond1)
-        assertDoubleEquals(2 * (1.0 + 1.0 + 1.0 / 2 + 1.0) / 8.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond1)(Log(traces))
+        assertDoubleEquals(2 * (1.0 + 1.0 + 1.0 / 2 + 1.0) / 8.0, pa, 0.001)
     }
 
     private val diamond2 = causalnet {
@@ -183,22 +183,22 @@ class CNetDependenciesBasedApproximatePrecisionTest {
     @Test
     fun diamond2FirstTrace() {
         val traces = sequenceOf(trace(a, b, c, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond2)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond2)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond2SecondTrace() {
         val traces = sequenceOf(trace(a, c, b, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond2)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond2)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond2BothTraces() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, b, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond2)
-        assertDoubleEquals(2 * (1.0 + 1.0 + 1.0 / 2 + 1.0) / 8.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond2)(Log(traces))
+        assertDoubleEquals(2 * (1.0 + 1.0 + 1.0 / 2 + 1.0) / 8.0, pa, 0.001)
     }
 
     private val diamond3 = causalnet {
@@ -215,56 +215,56 @@ class CNetDependenciesBasedApproximatePrecisionTest {
     @Test
     fun diamond3abcd() {
         val traces = sequenceOf(trace(a, b, c, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond3acbd() {
         val traces = sequenceOf(trace(a, c, b, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals((1.0 + 1.0 / 2 + 1.0 / 2 + 1.0) / 4.0, pa, 0.001)
     }
 
     @Test
     fun diamond3ab() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, b, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3ac() {
         val traces = sequenceOf(trace(a, c, b, d), trace(a, c, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 / 2 + 1.0 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3bd() {
         val traces = sequenceOf(trace(a, c, b, d), trace(a, b, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3cd() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2 + 1.0) + (1.0 + 1.0 / 2 + 1.0)) / 7, pa, 0.001)
     }
 
     @Test
     fun diamond3a_d() {
         val traces = sequenceOf(trace(a, b, d), trace(a, c, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2) * 2) / 6, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals(((1.0 + 1.0 + 1.0 / 2) * 2) / 6, pa, 0.001)
     }
 
     @Test
     fun diamond3AllTraces() {
         val traces = sequenceOf(trace(a, b, c, d), trace(a, c, b, d), trace(a, b, d), trace(a, c, d))
-        val pa = CNetDependenciesBasedApproximatePrecisionAux(Log(traces), diamond3)
-        assertDoubleEquals(1.0, pa.precision, 0.001)
+        val pa = CNetDependenciesBasedApproximatePrecision(diamond3)(Log(traces))
+        assertDoubleEquals(1.0, pa, 0.001)
     }
 }

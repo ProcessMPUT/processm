@@ -164,23 +164,23 @@ class CNetDependenciesBasedApproximatePrecisionPaperTest {
 
     @Test
     fun `model1 precision`() {
-        assertTrue { 0.970 >= CNetDependenciesBasedApproximatePrecisionAux(log, model1).precision }
+        assertTrue { 0.970 >= CNetDependenciesBasedApproximatePrecision(model1)(log) }
     }
 
     @Test
     fun `model2 precision`() {
-        assertTrue { 1.0 >= CNetDependenciesBasedApproximatePrecisionAux(log, model2).precision }
+        assertTrue { 1.0 >= CNetDependenciesBasedApproximatePrecision(model2)(log) }
     }
 
     @Test
     fun `model3 precision`() {
         // 0.471 is the result computed by CNetPerfectPrecisionAux
-        assertTrue { 0.471 >= CNetDependenciesBasedApproximatePrecisionAux(log, model3).precision }
+        assertTrue { 0.471 >= CNetDependenciesBasedApproximatePrecision(model3)(log) }
     }
 
     @Test
     fun `model4 precision`() {
-        assertTrue { 1.0 >= CNetDependenciesBasedApproximatePrecisionAux(log, model4).precision }
+        assertTrue { 1.0 >= CNetDependenciesBasedApproximatePrecision(model4)(log) }
     }
 
 

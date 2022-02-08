@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 class PerfectPrecisionTest {
 
     @Test
-    fun `∧(a,×(b,c),⟲(d,e,f))`() {
+    fun `∧(a,×(b,c),⟲(d,e,f)) - available activities`() {
         val a = ProcessTreeActivity("a")
         val b = ProcessTreeActivity("b")
         val c = ProcessTreeActivity("c")
@@ -37,28 +37,28 @@ class PerfectPrecisionTest {
     }
 
     @Test
-    fun blah() {
+    fun `∧(a,×(b,c),⟲(d,e,f)) - precision`() {
         val model = ProcessTree.parse("∧(a,×(b,c),⟲(d,e,f))")
         val prec = PerfectPrecision(model)
         val log = logFromString(
             """
             a b d
-            a b d e
-            a b d f
+            a b d e d
+            a b d f d
         """.trimIndent()
         )
         /**
-         * #occurrences | prefix  | possible | observed
+         * #occurrences | prefix    | possible | observed
          * --------------------------------------------
-         * 3            | (empty) | a b c d  | a
-         * 3            | a       | b c d    | b
-         * 3            | a b     | d        | d
-         * 3            | a b d   | e f      | e f
-         * 1            | a b d e | d        | (empty)
-         * 1            | a b d f | d        | (empty)
+         * 3            | (empty)   | a b c d  | a
+         * 3            | a         | b c d    | b
+         * 3            | a b       | d        | d
+         * 2            | a b d     | e f      | e f
+         * 1            | a b d e   | d        | d
+         * 1            | a b d f   | d        | d
          */
         assertDoubleEquals(
-            (3 * 1.0 / 4 + 3 * 1.0 / 3 + 3 * 1.0 + 3 * 1.0 + 1 * 0.0 + 1 * 0.0) / (3 + 3 + 3 + 3 + 1 + 1),
+            (3 * 1.0 / 4 + 3 * 1.0 / 3 + 3 * 1.0 + 2 * 1.0 + 1 * 1.0 + 1 * 1.0) / (3 + 3 + 3 + 2 + 1 + 1),
             prec(log),
             0.001
         )
