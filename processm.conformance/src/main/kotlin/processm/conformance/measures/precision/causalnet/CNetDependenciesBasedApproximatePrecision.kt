@@ -9,19 +9,6 @@ import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
 
 
-private fun <T> intersect(sets: Collection<Set<T>>): Set<T> =
-    when (sets.size) {
-        0 -> emptySet()
-        1 -> sets.single()
-        else -> {
-            val i = sets.iterator()
-            val result = HashSet<T>(i.next())
-            while (i.hasNext() && result.isNotEmpty())
-                result.retainAll(i.next())
-            result
-        }
-    }
-
 /**
  * This will never exceed the real precision, as it overestimates the set of possible activities taking only splits into account,
  * not simulating what is actually possible
