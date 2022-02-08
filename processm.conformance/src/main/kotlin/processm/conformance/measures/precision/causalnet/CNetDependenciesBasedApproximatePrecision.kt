@@ -13,20 +13,10 @@ import processm.core.models.commons.Activity
  * This will never exceed the real precision, as it overestimates the set of possible activities taking only splits into account,
  * not simulating what is actually possible
  */
-class CNetDependenciesBasedApproximatePrecision(model: CausalNet) : CNetAbstractPrecision(model) {
-
-
+class CNetDependenciesBasedApproximatePrecision(model: CausalNet) : CNetApproximatePrecision(model) {
+    
     companion object {
         private val logger = logger()
-    }
-
-    private fun followSilents(nodes: Iterable<Node>, result: HashSet<Node>): Set<Node> {
-        for (node in nodes)
-            if (node.isSilent)
-                followSilents(model.outgoing[node]?.map { it.target }.orEmpty(), result)
-            else
-                result.add(node)
-        return result
     }
 
     override fun availableActivities(prefix: List<Activity>): Set<Node> {
