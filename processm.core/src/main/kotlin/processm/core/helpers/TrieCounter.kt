@@ -50,4 +50,9 @@ class TrieCounter<K, V>(private val initializer: () -> V) : Sequence<TrieCounter
     }
 
     override fun iterator(): Iterator<Entry<K, V>> = flatten(ArrayList()).iterator()
+
+    fun clear() {
+        value = initializer()
+        children = null
+    }
 }
