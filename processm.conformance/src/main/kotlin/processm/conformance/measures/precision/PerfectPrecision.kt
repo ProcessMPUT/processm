@@ -6,6 +6,11 @@ import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
 
 
+/**
+ * An implementation of precision which is guaranteed to return an exact value, but suitable only for models with local semantics.
+ *
+ * If your model is a [CausalNet], use [processm.conformance.measures.precision.causalnet.CNetPerfectPrecision] instead
+ */
 class PerfectPrecision(model: ProcessModel) : AbstractPrecision(model) {
 
     init {

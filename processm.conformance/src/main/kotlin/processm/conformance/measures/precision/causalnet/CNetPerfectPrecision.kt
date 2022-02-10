@@ -1,13 +1,15 @@
 package processm.conformance.measures.precision.causalnet
 
-import processm.core.helpers.TrieCounter
+import processm.core.helpers.Trie
 import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 
-
+/**
+ * An exact implementation of precision for [CausalNet]s, possibly computationally very expensive
+ */
 class CNetPerfectPrecision(model: CausalNet) : CNetAbstractPrecision(model) {
 
     companion object {
@@ -22,7 +24,7 @@ class CNetPerfectPrecision(model: CausalNet) : CNetAbstractPrecision(model) {
      * 1. Is a prefix present in [prefixes]
      * 2. Starts with a prefix present in [prefixes] and the first position after the prefix is not registered as available for the prefix
      */
-    override fun availableActivities(prefixes: TrieCounter<Activity, Aux>) {
+    override fun availableActivities(prefixes: Trie<Activity, PrecisionData>) {
         val verifier = CausalNetVerifierImpl(model)
         // valid sequences runs BFS and there is only a finite number of possible successors, so I think this terminates
         val seqs = verifier.computeSetOfValidSequences(false) { seq, _ ->
@@ -42,10 +44,8 @@ class CNetPerfectPrecision(model: CausalNet) : CNetAbstractPrecision(model) {
             logger.debug { "seq=$activities" }
             var current = prefixes
             for (activity in activities) {
-                current.update {
-                    it.available = ((it.available ?: HashSet()) as HashSet).also { set -> set.add(activity) }
-                    return@update it
-                }
+                current.value.available =
+                    ((current.value.available ?: HashSet()) as HashSet).also { set -> set.add(activity) }
                 current = current.getOrNull(activity) ?: break
             }
         }

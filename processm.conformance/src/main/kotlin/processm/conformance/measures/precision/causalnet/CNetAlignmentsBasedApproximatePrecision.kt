@@ -1,7 +1,7 @@
 package processm.conformance.measures.precision.causalnet
 
 import processm.conformance.models.alignments.Alignment
-import processm.core.helpers.TrieCounter
+import processm.core.helpers.Trie
 import processm.core.helpers.mapToSet
 import processm.core.logging.debug
 import processm.core.logging.logger
@@ -22,7 +22,7 @@ class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetApproximat
         private val logger = logger()
     }
 
-    private val availableActivities = TrieCounter<Activity, HashSet<Node>> { HashSet() }
+    private val availableActivities = Trie<Activity, HashSet<Node>> { HashSet() }
 
     override fun availableActivities(prefix: List<Activity>): Set<Activity> {
         var current = availableActivities
@@ -37,11 +37,10 @@ class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetApproximat
     override fun translate(alignments: Sequence<Alignment>): Sequence<List<Activity>> = sequence {
         val instance = model.createInstance()
         availableActivities.clear()
-        availableActivities.update { dest ->
-            val tmp = instance.availableActivities.mapToSet { (it as DecoupledNodeExecution).activity }
-            followSilents(tmp, dest)
-            return@update dest
-        }
+        followSilents(
+            instance.availableActivities.mapToSet { (it as DecoupledNodeExecution).activity },
+            availableActivities.value
+        )
         for (alignment in alignments) {
             logger.debug { alignment.toString() }
             val prefix = ArrayList<Activity>()
@@ -50,13 +49,9 @@ class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetApproximat
                 if (step.modelMove != null) {
                     val activity = (step.modelMove as DecoupledNodeExecution).activity
                     prefix.add(activity)
-                    val next = current[activity]
-                    next.update { dest ->
-                        instance.setState(step.modelState)
-                        instance.availableActivities.mapTo(dest) { (it as DecoupledNodeExecution).activity }
-                        return@update dest
-                    }
-                    current = next
+                    current = current[activity]
+                    instance.setState(step.modelState)
+                    instance.availableActivities.mapTo(current.value) { (it as DecoupledNodeExecution).activity }
                 }
             }
             yield(prefix)

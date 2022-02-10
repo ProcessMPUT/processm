@@ -20,42 +20,38 @@ package processm.core.helpers
  * shared by all elements returned by an iterator, and thus must be copied manually if it is to be accessed after
  * generating the next element.
  */
-class TrieCounter<K, V>(private val initializer: () -> V) : Sequence<TrieCounter.Entry<K, TrieCounter<K, V>>> {
+class Trie<K, V>(private val initializer: () -> V) : Sequence<Trie.Entry<K, Trie<K, V>>> {
 
-    //TODO expose children as a read-only map, get rid of the third argument of Entry, rename value to trie or sth
-    data class Entry<K, V>(val prefix: List<K>, val value: V, val children: Set<K>)
+    data class Entry<K, T>(val prefix: List<K>, val trie: T)
 
     var value: V = initializer()
-        private set
-    private var children: HashMap<K, TrieCounter<K, V>>? = null
+    private var childrenInternal: HashMap<K, Trie<K, V>>? = null
+    val children: Map<K, Trie<K, V>>
+        get() = childrenInternal.orEmpty()
 
-    fun getOrNull(key: K): TrieCounter<K, V>? = children?.get(key)
+    fun getOrNull(key: K): Trie<K, V>? = childrenInternal?.get(key)
 
     /**
-     * Returns a [TrieCounter] corresponding to the child [key], creating and storing a new instance of [TrieCounter] if necessary
+     * Returns a [Trie] corresponding to the child [key], creating and storing a new instance of [Trie] if necessary
      */
-    operator fun get(key: K): TrieCounter<K, V> {
-        if (children == null)
-            children = HashMap()
-        return children!!.computeIfAbsent(key) { TrieCounter(initializer) }
+    operator fun get(key: K): Trie<K, V> {
+        if (childrenInternal == null)
+            childrenInternal = HashMap()
+        return childrenInternal!!.computeIfAbsent(key) { Trie(initializer) }
     }
 
     /**
-     * A shorthand for retrieving a [TrieCounter] corresponding to the final element of [prefix], by traversing the trie according to the [prefix]
+     * A shorthand for retrieving a [Trie] corresponding to the final element of [prefix], by traversing the trie according to the [prefix]
      */
-    operator fun get(prefix: Iterable<K>): TrieCounter<K, V> {
+    operator fun get(prefix: Iterable<K>): Trie<K, V> {
         var node = this
         prefix.forEach { node = node[it] }
         return node
     }
 
-    fun update(updateFunction: (V) -> V) {
-        value = updateFunction(value)
-    }
-
-    private fun flatten(prefix: ArrayList<K>): Sequence<Entry<K, TrieCounter<K, V>>> = sequence {
-        val children = this@TrieCounter.children
-        yield(Entry(prefix, this@TrieCounter, children?.keys.orEmpty()))
+    private fun flatten(prefix: ArrayList<K>): Sequence<Entry<K, Trie<K, V>>> = sequence {
+        val children = this@Trie.childrenInternal
+        yield(Entry(prefix, this@Trie))
         if (children !== null) {
             for ((child, subtrie) in children) {
                 prefix.add(child)
@@ -65,18 +61,18 @@ class TrieCounter<K, V>(private val initializer: () -> V) : Sequence<TrieCounter
         }
     }
 
-    override fun iterator(): Iterator<Entry<K, TrieCounter<K, V>>> = flatten(ArrayList()).iterator()
+    override fun iterator(): Iterator<Entry<K, Trie<K, V>>> = flatten(ArrayList()).iterator()
 
     fun clear() {
         value = initializer()
-        children = null
+        childrenInternal = null
     }
 
     /**
      * Returns true if, and only if, [prefix] is empty or if there is a path starting in this node labeled with the values given in [prefix]
      */
     operator fun contains(prefix: List<K>): Boolean {
-        val c = children
+        val c = childrenInternal
         if (prefix.isEmpty())
             return true
         if (c !== null) {
@@ -90,7 +86,7 @@ class TrieCounter<K, V>(private val initializer: () -> V) : Sequence<TrieCounter
      * Returns true if the current node contains an edge labeled [key]
      */
     operator fun contains(key: K): Boolean {
-        val c = children
+        val c = childrenInternal
         return c !== null && key in c
     }
 }

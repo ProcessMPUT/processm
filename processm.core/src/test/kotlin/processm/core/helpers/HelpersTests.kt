@@ -298,7 +298,7 @@ class HelpersTests {
         assertEquals(list.allSubsets(true), list.allSubsetsUpToSize(4).toSet())
     }
 
-    private fun testCount(n:Int) {
+    private fun testCount(n: Int) {
         val input = (0 until n).toList()
         assertEquals(n, input.size)
         val expected = 0 + //ignored empty subsets

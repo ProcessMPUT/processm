@@ -2,7 +2,7 @@ package processm.conformance.measures.precision.causalnet
 
 import processm.conformance.measures.precision.AbstractPrecision
 import processm.core.helpers.HashMapWithDefault
-import processm.core.helpers.TrieCounter
+import processm.core.helpers.Trie
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log
@@ -70,7 +70,7 @@ class CNetPerfectPrecisionTest {
             .computeSetOfValidSequences(false) { it, _ -> it.size < maxSeqLen }
             .map { it.mapNotNull { if (!it.a.isSilent) it.a else null } }.toList()
         val prefix2possible = HashMapWithDefault<List<Node>, HashSet<Node>>() { HashSet() }
-        val trie = TrieCounter<Activity, AbstractPrecision.Aux> { AbstractPrecision.Aux(0, null) }
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
         for (seq in validSequences) {
             var current = trie
             for (i in 0 until min(seq.size, maxPrefixLen)) {
@@ -125,7 +125,7 @@ class CNetPerfectPrecisionTest {
         }
         println(model)
         val s = model.start
-        val trie = TrieCounter<Activity, AbstractPrecision.Aux> { AbstractPrecision.Aux(0, null) }
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
         trie[listOf(s, a, a, c, b, b)]
         val pa = CNetPerfectPrecision(model)
         pa.availableActivities(trie)
@@ -150,7 +150,7 @@ class CNetPerfectPrecisionTest {
             b joins end
         }
 
-        val trie = TrieCounter<Activity, AbstractPrecision.Aux> { AbstractPrecision.Aux(0, null) }
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
         trie[listOf(a, a, c, b, b)]
         val pa = CNetPerfectPrecision(model)
         pa.availableActivities(trie)
