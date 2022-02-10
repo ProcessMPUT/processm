@@ -1,9 +1,10 @@
 package processm.conformance.measures.precision
 
+import processm.core.helpers.Trie
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
-import processm.core.models.commons.ProcessModelInstance
+import processm.core.models.commons.ProcessModelState
 
 
 /**
@@ -17,30 +18,31 @@ class PerfectPrecision(model: ProcessModel) : AbstractPrecision(model) {
         require(model !is CausalNet) { "PerfectPrecision cannot handle causal nets. Use processm.conformance.measures.precision.causalnet.CNetPerfectPrecision instead." }
     }
 
-    override fun availableActivities(prefix: List<Activity>): Set<Activity> =
-        availableActivities(prefix, model.createInstance()).toSet()
-
-    private fun availableActivities(prefix: List<Activity>, instance: ProcessModelInstance): Sequence<Activity> =
-        sequence {
-            if (prefix.isEmpty())
-                yieldAll(instance.availableActivities.filter { !it.isSilent }.toSet())
-            else {
-                val first = prefix[0]
-                val rest = prefix.subList(1, prefix.size)
-                val originalState = instance.currentState.copy()
-                for (activity in instance.availableActivities) {
-                    if (activity.isSilent) {
-                        instance.setState(originalState.copy())
-                        instance.getExecutionFor(activity).execute()
-                        yieldAll(availableActivities(prefix, instance))
-                    } else if (first == activity) {
-                        instance.setState(originalState.copy())
-                        instance.getExecutionFor(activity).execute()
-                        yieldAll(availableActivities(rest, instance))
-                    }
+    override fun availableActivities(prefixes: Trie<Activity, PrecisionData>) {
+        val stack = ArrayDeque<Pair<Trie<Activity, PrecisionData>, ProcessModelState>>()
+        val instance = model.createInstance()
+        stack.add(prefixes to instance.currentState)
+        while (stack.isNotEmpty()) {
+            val (trie, state) = stack.removeLast()
+            instance.setState(state)
+            for (activity in instance.availableActivities) {
+                if (activity.isSilent) {
+                    instance.setState(state.copy())
+                    instance.getExecutionFor(activity).execute()
+                    stack.addLast(trie to instance.currentState)
+                } else {
+                    trie.value.available = ((trie.value.available ?: HashSet()) as HashSet).also { it.add(activity) }
+                    val child = trie.getOrNull(activity)
+                    instance.setState(state.copy())
+                    instance.getExecutionFor(activity).execute()
+                    if (child !== null)
+                        stack.addLast(child to instance.currentState)
                 }
             }
         }
+    }
 
-
+    override fun availableActivities(prefix: List<Activity>): Set<Activity> {
+        throw NotImplementedError("This function is not implemented on purpose, as PerfectPrecision reimplements availableActivities working directly on a trie")
+    }
 }

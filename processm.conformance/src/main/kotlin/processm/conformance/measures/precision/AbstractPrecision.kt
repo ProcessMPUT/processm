@@ -21,8 +21,20 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
         private val logger = logger()
     }
 
+    /**
+     * An auxiliary class to be used as values in a trie
+     *
+     * [total] Number of occurrences of the prefix represented by a given trie node
+     * [available] The set of activities available for execution in the prefix represented by the node
+     */
     data class PrecisionData(var total: Int, var available: Set<Activity>? = null)
 
+    /**
+     * Complete [PrecisionData.available] for [prefixes] and each of its descendants
+     *
+     * It is implemented in terms of [availableActivities] for a single prefix, but whenever it makes sense this function
+     * should be overriden, and then the other [availableActivities] may be left unimplemented
+     */
     open fun availableActivities(prefixes: Trie<Activity, PrecisionData>) {
         prefixes.forEach { (prefix, trie) ->
             trie.value.available = availableActivities(prefix)
@@ -31,9 +43,17 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
 
     abstract fun availableActivities(prefix: List<Activity>): Set<Activity>
 
+    /**
+     * Extract model moves for each alignment
+     */
     open fun translate(alignments: Sequence<Alignment>): Sequence<List<Activity>> =
         alignments.map { alignment -> alignment.steps.mapNotNull { it.modelMove } }
 
+    /**
+     * For [artifact] being a sequence of [Alignment]s, compute and return precision.
+     * For [artifact] being a [Log], compute the [Alignment]s, and then compute and return precision.
+     * Otherwise, throw [IllegalArgumentException]
+     */
     override fun invoke(artifact: Any): Double =
         when (artifact) {
             is Sequence<*> -> this(artifact)
@@ -41,9 +61,20 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
             else -> throw IllegalArgumentException("Artifact must be either Sequence<Alignment> or Log")
         }
 
+    /**
+     * Compute the [Alignment]s for the given log, and then compute and return precision.
+     */
     open operator fun invoke(artifact: Log): Double =
         this(AStar(model).align(artifact)) //TODO replace AStar with CompositeAligner once #134 is fixed
 
+    /**
+     * Compute and return precision, as described in [1]. Whether the returned value is exact depends on both the quality of [Alignment]s, and the quality of [availableActivities]
+     *
+     * [1] van der Aalst, W., Adriansyah, A. and van Dongen, B. (2012), Replaying history on process models for conformance
+     * checking and performance analysis. WIREs Data Mining Knowl Discov, 2: 182-192. https://doi.org/10.1002/widm.1045
+     *
+     * In the default implementation [artifact] is traversed exactly once and an overriding function should comply
+     */
     open operator fun invoke(artifact: Sequence<Alignment>): Double {
         val observed = Trie<Activity, PrecisionData> { PrecisionData(0) }
         for (trace in translate(artifact)) {

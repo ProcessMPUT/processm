@@ -16,7 +16,7 @@ import processm.core.models.commons.Activity
  * It never underestimates: all activities available according to the alignments are possible for a given prefix,
  * but there may be some other executions of the prefix yielding different available activities.
  */
-class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetApproximatePrecision(model) {
+class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetAbstractPrecision(model) {
 
     companion object {
         private val logger = logger()

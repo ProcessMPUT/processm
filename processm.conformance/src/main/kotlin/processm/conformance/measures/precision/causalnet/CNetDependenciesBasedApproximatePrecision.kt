@@ -13,8 +13,8 @@ import processm.core.models.commons.Activity
  * This will never exceed the real precision, as it overestimates the set of possible activities taking only splits into account,
  * not simulating what is actually possible
  */
-class CNetDependenciesBasedApproximatePrecision(model: CausalNet) : CNetApproximatePrecision(model) {
-    
+class CNetDependenciesBasedApproximatePrecision(model: CausalNet) : CNetAbstractPrecision(model) {
+
     companion object {
         private val logger = logger()
     }

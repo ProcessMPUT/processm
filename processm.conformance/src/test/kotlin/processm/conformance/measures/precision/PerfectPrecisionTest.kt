@@ -2,9 +2,11 @@ package processm.conformance.measures.precision
 
 import org.junit.jupiter.api.assertThrows
 import processm.conformance.measures.precision.causalnet.assertDoubleEquals
+import processm.core.helpers.Trie
 import processm.core.log.Helpers.logFromString
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.core.models.commons.Activity
 import processm.core.models.processtree.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,13 +29,16 @@ class PerfectPrecisionTest {
                 loop
             )
         }
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
+        trie[listOf(d, c, e, a, d)]
         val prec = PerfectPrecision(tree)
-        assertEquals(setOf(a, b, c, d), prec.availableActivities(emptyList()))
-        assertEquals(setOf(a, b, c, e, f), prec.availableActivities(listOf(d)))
-        assertEquals(setOf(a, e, f), prec.availableActivities(listOf(d, c)))
-        assertEquals(setOf(a, d), prec.availableActivities(listOf(d, c, e)))
-        assertEquals(setOf(d), prec.availableActivities(listOf(d, c, e, a)))
-        assertEquals(setOf(e, f), prec.availableActivities(listOf(d, c, e, a, d)))
+        prec.availableActivities(trie)
+        assertEquals(setOf(a, b, c, d), trie[emptyList()].value.available)
+        assertEquals(setOf(a, b, c, e, f), trie[listOf(d)].value.available)
+        assertEquals(setOf(a, e, f), trie[listOf(d, c)].value.available)
+        assertEquals(setOf(a, d), trie[listOf(d, c, e)].value.available)
+        assertEquals(setOf(d), trie[listOf(d, c, e, a)].value.available)
+        assertEquals(setOf(e, f), trie[listOf(d, c, e, a, d)].value.available)
     }
 
     @Test
