@@ -1,10 +1,9 @@
 package processm.conformance.measures.precision.causalnet
 
+import processm.core.helpers.TrieCounter
 import processm.core.logging.debug
 import processm.core.logging.logger
-import processm.core.logging.trace
 import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.Node
 import processm.core.models.commons.Activity
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 
@@ -15,26 +14,45 @@ class CNetPerfectPrecision(model: CausalNet) : CNetAbstractPrecision(model) {
         private val logger = logger()
     }
 
-    override fun availableActivities(prefix: List<Activity>): Set<Activity> {
-        logger.debug { "possibleNext($prefix)" }
-        val result = HashSet<Node>()
+    /**
+     * Instead of generating all the valid sequences (possibly infinitely many), we generate only such valid sequences that can provide some new information in the context of [prefixes]
+     * In particular this means that calling [availableActivities] second time on the same object will lead to generating no valid sequences whatsoever
+     *
+     * An incomplete valid sequence (i.e., a prefix which potentially may be extended to a valid sequence) can provide new information if either:
+     * 1. Is a prefix present in [prefixes]
+     * 2. Starts with a prefix present in [prefixes] and the first position after the prefix is not registered as available for the prefix
+     */
+    override fun availableActivities(prefixes: TrieCounter<Activity, Aux>) {
         val verifier = CausalNetVerifierImpl(model)
         // valid sequences runs BFS and there is only a finite number of possible successors, so I think this terminates
         val seqs = verifier.computeSetOfValidSequences(false) { seq, _ ->
             val activities = seq.mapNotNull { if (!it.a.isSilent) it.a else null }
-            if (activities.size <= prefix.size)
-                return@computeSetOfValidSequences activities == prefix.subList(0, activities.size)
-            return@computeSetOfValidSequences activities[prefix.size] !in result
+            // Either activities as a whole is in the prefix trie or the first position not present in the prefix trie is still not registered as a possible continuation of the prefix
+            // Keep in mind this function is executed not immediately, but during the iteration over the returned sequence, i.e, in the for loop below
+            logger.debug { "intermediate seq=$activities" }
+            var current = prefixes
+            for (activity in activities) {
+                current = current.getOrNull(activity)
+                    ?: return@computeSetOfValidSequences activity !in current.value.available.orEmpty()
+            }
+            return@computeSetOfValidSequences true
         }
         for (seq in seqs) {
             val activities = seq.mapNotNull { if (!it.a.isSilent) it.a else null }
-            if (activities.size > prefix.size) {
-                logger.trace { "$activities" }
-                assert(activities.subList(0, prefix.size) == prefix)
-                result.add(activities[prefix.size])
+            logger.debug { "seq=$activities" }
+            var current = prefixes
+            for (activity in activities) {
+                current.update {
+                    it.available = ((it.available ?: HashSet()) as HashSet).also { set -> set.add(activity) }
+                    return@update it
+                }
+                current = current.getOrNull(activity) ?: break
             }
         }
-        return result
+    }
+
+    override fun availableActivities(prefix: List<Activity>): Set<Activity> {
+        throw NotImplementedError("This function is not implemented on purpose, as CNetPerfectPrecision reimplements availableActivities working directly on a trie")
     }
 
 

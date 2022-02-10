@@ -1,14 +1,8 @@
 package processm.conformance.measures.precision.causalnet
 
-import processm.core.helpers.HashMapWithDefault
 import processm.core.log.hierarchical.Trace
-import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.Node
-import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 
@@ -24,19 +18,3 @@ fun assertDoubleEquals(expected: Double, actual: Double, prec: Double = 1e-3) =
         abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
         "Expected: $expected, actual: $actual, prec: $prec"
     )
-
-fun testPossible(model: CausalNet, maxSeqLen: Int = Int.MAX_VALUE, maxPrefixLen: Int = Int.MAX_VALUE) {
-    val validSequences = CausalNetVerifierImpl(model)
-        .computeSetOfValidSequences(false) { it, _ -> it.size < maxSeqLen }
-        .map { it.mapNotNull { if (!it.a.isSilent) it.a else null } }.toList()
-    val prefix2possible = HashMapWithDefault<List<Node>, HashSet<Node>>() { HashSet() }
-    for (seq in validSequences) {
-        for (i in 0 until min(seq.size, maxPrefixLen))
-            prefix2possible[seq.subList(0, i)].add(seq[i])
-    }
-    val pa = CNetPerfectPrecision(model)
-    for ((prefix, expected) in prefix2possible.entries) {
-        val actual = pa.availableActivities(prefix)
-        assertEquals(expected, actual, "prefix=$prefix expected=$expected actual=$actual")
-    }
-}

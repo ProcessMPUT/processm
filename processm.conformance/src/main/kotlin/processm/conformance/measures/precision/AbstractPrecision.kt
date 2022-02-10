@@ -16,6 +16,17 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
         private val logger = logger()
     }
 
+    internal data class Aux(var total: Int, var available: Set<Activity>? = null)
+
+    internal open fun availableActivities(prefixes: TrieCounter<Activity, Aux>) {
+        prefixes.forEach { (prefix, trie) ->
+            trie.update {
+                it.available = availableActivities(prefix)
+                return@update it
+            }
+        }
+    }
+
     abstract fun availableActivities(prefix: List<Activity>): Set<Activity>
 
     open fun translate(alignments: Sequence<Alignment>): Sequence<List<Activity>> =
@@ -32,25 +43,30 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
         this(AStar(model).align(artifact)) //TODO replace AStar with CompositeAligner once #134 is fixed
 
     open operator fun invoke(artifact: Sequence<Alignment>): Double {
-        val observed = TrieCounter<Activity, Int> { 0 }
+        val observed = TrieCounter<Activity, Aux> { Aux(0) }
         for (trace in translate(artifact)) {
             var current = observed
             for (activity in trace) {
                 // update is on purpose first - we update the counter for an empty prefix, but we don't update the counter for the prefix = trace
-                current.update { it + 1 }
+                current.update {
+                    it.total += 1
+                    return@update it
+                }
                 current = current[activity]
             }
         }
+        availableActivities(observed)
         var nom = 0.0
         var den = 0
-        for ((prefix, total, children) in observed) {
-            val availableActivities = availableActivities(prefix)
+        for ((prefix, trie, children) in observed) {
+            val (total, availableActivities) = trie.value
             logger.debug { "$total $prefix $children/$availableActivities" }
-            if (total > 0 && availableActivities.isNotEmpty()) {
+            if (total > 0 && availableActivities !== null && availableActivities.isNotEmpty()) {
                 nom += total * children.intersect(availableActivities).size.toDouble() / availableActivities.size
                 den += total
             }
         }
+        logger.debug { "nom=$nom den=$den" }
         return nom / den
     }
 }

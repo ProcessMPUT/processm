@@ -36,43 +36,43 @@ class TrieCounterTest {
         assertTrue { i.hasNext() }
         with(i.next()) {
             assertEquals(emptyList(), prefix)
-            assertEquals(0, value)
+            assertEquals(0, value.value)
             assertEquals(setOf(1), children)
         }
         assertTrue { i.hasNext() }
         with(i.next()) {
             assertEquals(listOf(1), prefix)
-            assertEquals(0, value)
+            assertEquals(0, value.value)
             assertEquals(setOf(2, 3), children)
         }
         assertTrue { i.hasNext() }
         with(i.next()) {
             assertEquals(listOf(1, 2), prefix)
-            assertEquals(0, value)
+            assertEquals(0, value.value)
             assertEquals(setOf(3, 4), children)
         }
         assertTrue { i.hasNext() }
         with(i.next()) {
             assertEquals(listOf(1, 2, 3), prefix)
-            assertEquals(123, value)
+            assertEquals(123, value.value)
             assertEquals(emptySet(), children)
         }
         assertTrue { i.hasNext() }
         with(i.next()) {
             assertEquals(listOf(1, 2, 4), prefix)
-            assertEquals(124, value)
+            assertEquals(124, value.value)
             assertEquals(emptySet(), children)
         }
         assertTrue { i.hasNext() }
         with(i.next()) {
             assertEquals(listOf(1, 3), prefix)
-            assertEquals(0, value)
+            assertEquals(0, value.value)
             assertEquals(setOf(2), children)
         }
         assertTrue { i.hasNext() }
         with(i.next()) {
             assertEquals(listOf(1, 3, 2), prefix)
-            assertEquals(132, value)
+            assertEquals(132, value.value)
             assertEquals(emptySet(), children)
         }
         assertFalse { i.hasNext() }

@@ -60,27 +60,6 @@ class CNetDependenciesBasedApproximatePrecisionTest {
 
 
     @Test
-    fun possible1() {
-        val model = causalnet {
-            start splits a + b or a + c or b + c
-            a splits d or e
-            b splits d or f
-            c splits e or f
-            d splits end
-            e splits end
-            f splits end
-            start joins a
-            start joins b
-            start joins c
-            a + b join d
-            a + c join e
-            b + c join f
-            d or e or f join end
-        }
-        testPossible(model)
-    }
-
-    @Test
     fun possible2a() {
         val nstart = Node("start")
         val nend = Node("end")
