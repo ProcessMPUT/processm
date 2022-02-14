@@ -1,7 +1,6 @@
 package processm.conformance.models.alignments.petrinet
 
 import processm.conformance.models.alignments.AStar
-import processm.conformance.models.alignments.PenaltyFunction
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
 import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.core.helpers.allPermutations
@@ -1100,25 +1099,15 @@ class DecompositionAlignerTests {
             b1 + c1 or b2 + c2 join d
         }
 
-        println(model)
-
-        val log = Helpers.logFromString(
+        val trace = Helpers.logFromString(
             """                
                 a b c b1 c1 d
             """
-        )
+        ).traces.single()
 
         val petri = model.toPetriNet()
-
-
-        println(petri.toMultilineString())
-        println(petri.toPetriNetDSL())
-
-        val aligner = DecompositionAligner(petri)
-        val astar = AStar(petri)
-        val trace = log.traces.single()
-        val alignmentDecomposed = aligner.align(trace)
-        val alignmentAStar = astar.align(trace)
+        val alignmentDecomposed = DecompositionAligner(petri).align(trace)
+        val alignmentAStar = AStar(petri).align(trace)
 
         println(alignmentDecomposed.toStringMultiline())
         println(alignmentAStar.toStringMultiline())
