@@ -65,6 +65,11 @@ class DecompositionAligner(
         Decomposition.createInitialDecomposition(this.model)
     }
 
+    private fun returnToOriginalModel(alignment: Alignment): Alignment = Alignment(
+        alignment.steps.map { step -> if (step.modelMove === null) step else step.copy(modelMove = renaming[step.modelMove.name]) },
+        alignment.cost
+    )
+
     /**
      * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
      *
@@ -93,7 +98,7 @@ class DecompositionAligner(
         val time = System.currentTimeMillis() - start
         logger.debug { "Calculated alignment in ${time}ms using decomposition into ${alignments.size} nets." }
 
-        return output
+        return returnToOriginalModel(output)
     }
 
     /**

@@ -2,12 +2,15 @@ package processm.conformance.models.alignments
 
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
+import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.core.models.petrinet.converters.CausalNet2PetriNet
 import processm.core.models.petrinet.converters.toPetriNet
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class AStarCausalNetAsPetriNetTests {
     @Test
@@ -446,8 +449,9 @@ class AStarCausalNetAsPetriNetTests {
             3,
         )
 
-        val petri = model.toPetriNet()
-        val astar = AStar(petri)
+        val converter = CausalNet2PetriNet(model)
+        val petri = converter.toPetriNet()
+        val astar = CausalNetAsPetriNetAligner(AStar(petri), converter)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -456,6 +460,8 @@ class AStarCausalNetAsPetriNetTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCost[i], alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove === null || step.modelMove is DecoupledNodeExecution } }
         }
     }
 
@@ -528,8 +534,9 @@ class AStarCausalNetAsPetriNetTests {
             1,
         )
 
-        val petri = model.toPetriNet()
-        val astar = AStar(petri)
+        val converter = CausalNet2PetriNet(model)
+        val petri = converter.toPetriNet()
+        val astar = CausalNetAsPetriNetAligner(AStar(petri), converter)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -538,6 +545,8 @@ class AStarCausalNetAsPetriNetTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCost[i], alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove === null || step.modelMove is DecoupledNodeExecution } }
         }
     }
 }

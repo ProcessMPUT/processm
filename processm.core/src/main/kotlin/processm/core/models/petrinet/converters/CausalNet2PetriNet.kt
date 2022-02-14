@@ -1,9 +1,13 @@
 package processm.core.models.petrinet.converters
 
+import org.apache.commons.collections4.BidiMap
+import org.apache.commons.collections4.bidimap.DualHashBidiMap
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.optimize
 import processm.core.models.causalnet.CausalNet
+import processm.core.models.causalnet.Join
 import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.Split
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
@@ -12,12 +16,41 @@ import processm.core.models.petrinet.Transition
 /**
  * A converter for [CausalNet] into [PetriNet].
  */
-private class CausalNet2PetriNet(val cnet: CausalNet) {
+class CausalNet2PetriNet(val cnet: CausalNet) {
     private val places = ArrayList<Place>()
-    private val transitions = ArrayList<Transition>()
+
     private val startPlace: Place = addPlace()
     private val endPlace: Place = addPlace()
     private val placesOnArcs = DoublingMap2D<Node, Node, Place>()
+
+    /**
+     * A bidirectional map from splits of [cnet] to the corresponding [Transition]s of the resulting PetriNet
+     *
+     * If, for a given activity, there exists exactly one split, and it consists of a single dependency, then
+     * the corresponding transition is not created, and [split2SilentTransition] will not contain such a split
+     */
+    val split2SilentTransition: BidiMap<Split, Transition>
+        get() = split2SilentTransitionInternal
+    private val split2SilentTransitionInternal = DualHashBidiMap<Split, Transition>()
+
+    /**
+     * A bidirectional map from joins of [cnet] to the corresponding [Transition]s of the resulting PetriNet
+     *
+     * If, for a given activity, there exists exactly one join, and it consists of a single dependency, then
+     * the corresponding transition is not created, and [join2SilentTransition] will not contain such a split
+     */
+    val join2SilentTransition: BidiMap<Join, Transition>
+        get() = join2SilentTransitionInternal
+    private val join2SilentTransitionInternal = DualHashBidiMap<Join, Transition>()
+
+    /**
+     * A bidirectional map from nodes of [cnet] to the [Transition]s corresponding to them
+     *
+     * Every node of [cnet] should be present there
+     */
+    val node2Transition: BidiMap<Node, Transition>
+        get() = node2TransitionInternal
+    private val node2TransitionInternal = DualHashBidiMap<Node, Transition>()
 
     private fun addPlace(): Place {
         val place = Place()
@@ -49,7 +82,7 @@ private class CausalNet2PetriNet(val cnet: CausalNet) {
                 outPlaces = beforeNodePlace,
                 isSilent = true
             )
-            transitions.add(silentTransition)
+            join2SilentTransitionInternal[join] = silentTransition
         }
         return beforeNodePlace
     }
@@ -73,7 +106,7 @@ private class CausalNet2PetriNet(val cnet: CausalNet) {
                 outPlaces = split.targets.map { placesOnArcs[node, it]!! }.optimize(),
                 isSilent = true
             )
-            transitions.add(silentTransition)
+            split2SilentTransitionInternal[split] = silentTransition
         }
         return afterNodePlace
     }
@@ -87,7 +120,8 @@ private class CausalNet2PetriNet(val cnet: CausalNet) {
             outPlaces = afterNodePlace,
             isSilent = node.isSilent
         )
-        transitions.add(transition)
+        assert(node !in node2Transition)
+        node2TransitionInternal[node] = transition
     }
 
     init {
@@ -97,7 +131,7 @@ private class CausalNet2PetriNet(val cnet: CausalNet) {
 
     fun toPetriNet(): PetriNet = PetriNet(
         places = places,
-        transitions = transitions,
+        transitions = (split2SilentTransitionInternal.values + join2SilentTransitionInternal.values + node2TransitionInternal.values).toList(),
         initialMarking = Marking(startPlace),
         finalMarking = Marking(endPlace)
     )
