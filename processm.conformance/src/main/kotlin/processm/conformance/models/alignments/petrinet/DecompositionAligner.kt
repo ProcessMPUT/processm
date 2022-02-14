@@ -29,7 +29,7 @@ import java.util.concurrent.*
  * the parts of the decomposed [model].
  */
 class DecompositionAligner(
-    override val model: PetriNet,
+    model: PetriNet,
     override val penalty: PenaltyFunction = PenaltyFunction(),
     val alignerFactory: AlignerFactory = CachingAlignerFactory(DefaultAlignmentCache()) { m, p, _ -> AStar(m, p) },
     val pool: ExecutorService = SameThreadExecutorService
@@ -41,8 +41,28 @@ class DecompositionAligner(
         private val ZERO_LB = CostApproximation(0.0, false)
     }
 
+    override val model: PetriNet
+    private val renaming = HashMap<String, Transition>()
+
+    init {
+        var ctr = 0
+        val newTransitions = ArrayList<Transition>()
+        for (t in model.transitions) {
+            val new = if (t.isSilent) t.copy(name = "${t.name}#${ctr++}") else t
+            newTransitions.add(new)
+            check(new.name !in renaming) { "PetriNets with duplicated activities are not supported. Offending activity: ${t.name}" }
+            renaming[new.name] = t
+        }
+        this.model = PetriNet(
+            model.places,
+            newTransitions,
+            model.initialMarking,
+            model.finalMarking
+        )
+    }
+
     private val initialDecomposition: List<PetriNet> by lazy {
-        Decomposition.createInitialDecomposition(model)
+        Decomposition.createInitialDecomposition(this.model)
     }
 
     /**

@@ -1,5 +1,7 @@
 package processm.conformance.models.alignments.petrinet
 
+import processm.conformance.models.alignments.AStar
+import processm.conformance.models.alignments.PenaltyFunction
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
 import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.core.helpers.allPermutations
@@ -1014,6 +1016,142 @@ class DecompositionAlignerTests {
 
             assertEquals(0, alignment.cost)
         }
+    }
+
+    @Test
+    fun `Small parallel decisions - compare with AStar`() {
+        val activities1 = "AB".map { Node(it.toString()) }
+
+        val dec1 = Node("d1")
+        val dec2 = Node("d2")
+        val A = Node("A")
+        val B = Node("B")
+        val N = Node("N")
+        val O = Node("O")
+
+        val model = causalnet {
+
+
+            start splits dec1 + dec2
+
+            start joins dec1
+            for (act1 in activities1) {
+                dec1 splits act1
+                dec1 joins act1
+                act1 splits end
+                act1 + N join end
+                act1 + O join end
+            }
+
+            start joins dec2
+            dec2 splits N
+            dec2 joins N
+            N splits end
+            dec2 splits O
+            dec2 joins O
+            O splits end
+
+        }
+
+        val log = Helpers.logFromString(
+            """
+                d1 d2 A N
+            """
+        )
+
+        val petri = model.toPetriNet()
+        val aligner = DecompositionAligner(petri)
+        val astar = AStar(petri)
+        for ((i, trace) in log.traces.withIndex()) {
+            val alignmentDecomposed = aligner.align(trace)
+            val alignmentAStar = astar.align(trace)
+
+            assertEquals(alignmentAStar.cost, alignmentDecomposed.cost)
+            assertEquals(alignmentAStar.steps.size, alignmentDecomposed.steps.size)
+        }
+    }
+
+    @Test
+    fun `Parallel decisions in cnet - compare with AStar`() {
+        val a = Node("a")
+        val b = Node("b")
+        val b1 = Node("b1")
+        val b2 = Node("b2")
+        val c = Node("c")
+        val c1 = Node("c1")
+        val c2 = Node("c2")
+        val d = Node("d")
+        val model = causalnet {
+            start = a
+            end = d
+            a splits b + c
+            b splits b1 or b2
+            c splits c1 or c2
+            b1 splits d
+            b2 splits d
+            c1 splits d
+            c2 splits d
+            a joins b
+            a joins c
+            b joins b1
+            b joins b2
+            c joins c1
+            c joins c2
+            b1 + c1 or b2 + c2 join d
+        }
+
+        println(model)
+
+        val log = Helpers.logFromString(
+            """                
+                a b c b1 c1 d
+            """
+        )
+
+        val petri = model.toPetriNet()
+
+
+        println(petri.toMultilineString())
+        println(petri.toPetriNetDSL())
+
+        val aligner = DecompositionAligner(petri)
+        val astar = AStar(petri)
+        val trace = log.traces.single()
+        val alignmentDecomposed = aligner.align(trace)
+        val alignmentAStar = astar.align(trace)
+
+        println(alignmentDecomposed.toStringMultiline())
+        println(alignmentAStar.toStringMultiline())
+
+        assertEquals(alignmentAStar.cost, alignmentDecomposed.cost)
+        assertEquals(alignmentAStar.steps.size, alignmentDecomposed.steps.size)
+    }
+
+    @Test
+    fun `parallel parts with silent activities`() {
+        val petri = petrinet {
+            P tout "a"
+            P tin "a" tout "b"
+            P tin "a" tout "c"
+            P tin "_τ1" tout "c1"
+            P tin "_τ2" tout "b1"
+            P tin "c" tout "_τ1"
+            P tin "b" tout "_τ2"
+            P tin "c1" tout "d"
+            P tin "b1" tout "d"
+            P tin "d"
+        }
+
+        val trace = Helpers.logFromString("a b c b1 c1 d").traces.single()
+
+        val alignmentDecomposed = DecompositionAligner(petri).align(trace)
+        val alignmentAStar = AStar(petri).align(trace)
+
+        println(alignmentDecomposed.toStringMultiline())
+        println(alignmentAStar.toStringMultiline())
+
+        assertEquals(alignmentAStar.cost, alignmentDecomposed.cost)
+        assertEquals(alignmentAStar.steps.size, alignmentDecomposed.steps.size)
     }
 
     @Test
