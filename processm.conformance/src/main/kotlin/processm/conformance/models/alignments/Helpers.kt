@@ -111,15 +111,7 @@ private fun List<Step>.matchingSteps(start: Int, other: Iterable<Step>): Int {
     val it1 = this.listIterator(start)
     val it2 = other.iterator()
     while (it1.hasNext() && it2.hasNext()) {
-        var one: Step = it1.next()
-        while (one.modelMove?.isSilent == true && it1.hasNext())
-            one = it1.next()
-
-        var two = it2.next()
-        while (two.modelMove?.isSilent == true && it2.hasNext())
-            two = it2.next()
-
-        if (one != two)
+        if (it1.next() != it2.next())
             break
     }
     return maxOf(it1.previousIndex(), start)
