@@ -1,8 +1,36 @@
 package processm.conformance.measures.precision.causalnet
 
+import processm.conformance.models.alignments.AStar
+import processm.conformance.models.alignments.CausalNetAsPetriNetAligner
+import processm.conformance.models.alignments.CausalNetAsPetriNetAlignerFactory
+import processm.conformance.models.alignments.petrinet.DecompositionAligner
+import processm.core.models.petrinet.converters.CausalNet2PetriNet
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CNetPerfectPrecisionPaperTest : PaperTest() {
+
+    @Test
+    fun `model1 precision - AStar for CausalNet`() {
+        val aligner = AStar(model1)
+        assertDoubleEquals(model1Precision, CNetPerfectPrecision(model1)(aligner.align(log)))
+    }
+
+    @Test
+    fun `model1 precision - AStar for PetriNet`() {
+        val converter = CausalNet2PetriNet(model1)
+        val aligner = CausalNetAsPetriNetAligner(AStar(converter.toPetriNet()), converter)
+        assertDoubleEquals(model1Precision, CNetPerfectPrecision(model1)(aligner.align(log)))
+    }
+
+    @Test
+    fun `model1 precision - DecompositionAligner`() {
+        val converter = CausalNet2PetriNet(model1)
+        val aligner = CausalNetAsPetriNetAligner(DecompositionAligner(converter.toPetriNet()), converter)
+        assertDoubleEquals(model1Precision, CNetPerfectPrecision(model1)(aligner.align(log)))
+    }
 
     @Test
     fun `model1 precision`() {
