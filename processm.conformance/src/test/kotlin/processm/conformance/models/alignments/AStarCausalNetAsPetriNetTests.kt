@@ -2,6 +2,7 @@ package processm.conformance.models.alignments
 
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
+import processm.core.log.Helpers.trace
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
@@ -548,5 +549,61 @@ class AStarCausalNetAsPetriNetTests {
 
             assertTrue { alignment.steps.all { step -> step.modelMove === null || step.modelMove is DecoupledNodeExecution } }
         }
+    }
+
+    @Test
+    fun `multiple instances with the same name with singular bindings`() {
+        val a1 = Node("a", "1")
+        val a2 = Node("a", "2")
+        val a3 = Node("a", "3")
+        val model = causalnet {
+            start splits a1 or a2 or a3
+            a1 splits end
+            a2 splits end
+            a3 splits end
+            start joins a1
+            start joins a2
+            start joins a3
+            a1 or a2 or a3 join end
+        }
+        val converter = CausalNet2PetriNet(model)
+        val petri = converter.toPetriNet()
+        val astar = CausalNetAsPetriNetAligner(AStar(petri), converter)
+        val alignment = astar.align(trace(a1))
+        assertEquals(0, alignment.cost)
+        assertEquals(3, alignment.steps.size)
+    }
+
+    @Test
+    fun `instanceId uniquely determined by surrounding activities`() {
+        val a1=Node("a1")
+        val a2=Node("a2")
+        val b1=Node("b","1")
+        val b2=Node("b", "2")
+        val c1=Node("c1")
+        val c2=Node("c2")
+        val model = causalnet {
+            start splits a1 or a2
+            a1 splits b1
+            a2 splits b2
+            b1 splits c1
+            b2 splits c2
+            c1 splits end
+            c2 splits end
+            start joins a1
+            start joins a2
+            a1 joins b1
+            a2 joins b2
+            b1 joins c1
+            b2 joins c2
+            c1 or c2 join end
+        }
+        val converter = CausalNet2PetriNet(model)
+        val petri = converter.toPetriNet()
+        println(petri.toMultilineString())
+        val astar = CausalNetAsPetriNetAligner(AStar(petri), converter)
+        val alignment = astar.align(trace(a1, b1, c1))
+        assertEquals(0, alignment.cost)
+        assertEquals(5, alignment.steps.size)
     }
 }

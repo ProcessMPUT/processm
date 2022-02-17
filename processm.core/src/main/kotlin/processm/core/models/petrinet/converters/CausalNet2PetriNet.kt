@@ -15,6 +15,14 @@ import processm.core.models.petrinet.Transition
 
 /**
  * A converter for [CausalNet] into [PetriNet].
+ *
+ * If there are multiple instances of the same activity (i.e., sharing the same name and differing only in [Node.instanceId])
+ * in the [CausalNet], they are represented in the [PetriNet] such that there is a single, non-silent [Transition] shared
+ * by all these activities and named according to their shared name, registered in [mainTransitions] and two silent [Transition]s
+ * for each instance, one executed before the main transition and registered in [node2InboundSilentTransition], and the other
+ * after the main transition, registered in [node2OutboundSilentTransition]. Their purpose is to keep track which
+ * particular instance is executed without intruding into names of non-silent transitions (e.g., by creating a separate
+ * [Transition] for each instance and suffixing their names with instance IDs)
  */
 class CausalNet2PetriNet(val cnet: CausalNet) {
     private val places = ArrayList<Place>()
@@ -44,13 +52,39 @@ class CausalNet2PetriNet(val cnet: CausalNet) {
     private val join2SilentTransitionInternal = DualHashBidiMap<Join, Transition>()
 
     /**
-     * A bidirectional map from nodes of [cnet] to the [Transition]s corresponding to them
+     * A bidirectional map from nodes of [cnet] to the [Transition]s corresponding to them.
+     * Contains only nodes not present in [mainTransitions]
      *
      * Every node of [cnet] should be present there
      */
     val node2Transition: BidiMap<Node, Transition>
         get() = node2TransitionInternal
     private val node2TransitionInternal = DualHashBidiMap<Node, Transition>()
+
+
+    /**
+     * Mapping from node name to [Transition], valid only for nodes with multiple instances.
+     * See class description for more details.
+     */
+    val mainTransitions: Map<String, Transition>
+        get() = mainTransitionsInternal
+    private val mainTransitionsInternal = HashMap<String, Transition>()
+
+    /**
+     * Bidirectional mapping from node to silent [Transition], valid only for nodes with multiple instances.
+     * See class description for more details.
+     */
+    val node2InboundSilentTransition: BidiMap<Node, Transition>
+        get() = node2InboundSilentTransitionInternal
+    private val node2InboundSilentTransitionInternal = DualHashBidiMap<Node, Transition>()
+
+    /**
+     * Bidirectional mapping from node to silent [Transition], valid only for nodes with multiple instances.
+     * See class description for more details.
+     */
+    val node2OutboundSilentTransition: BidiMap<Node, Transition>
+        get() = node2OutboundSilentTransitionInternal
+    private val node2OutboundSilentTransitionInternal = DualHashBidiMap<Node, Transition>()
 
     private fun addPlace(): Place {
         val place = Place()
@@ -111,27 +145,60 @@ class CausalNet2PetriNet(val cnet: CausalNet) {
         return afterNodePlace
     }
 
+    /**
+     * True if there are at least 2 non-silent nodes sharing the same name (key), false otherwise
+     */
+    private val isMultiInstance: Map<String, Boolean> =
+        cnet.instances.groupBy { it.name }.mapValues { it.value.count { !it.isSilent } > 1 }
+
     private fun mapNode(node: Node) {
         val beforeNodePlace = mapJoins(node)
         val afterNodePlace = mapSplits(node)
-        val transition = Transition(
-            name = node.name,
-            inPlaces = beforeNodePlace,
-            outPlaces = afterNodePlace,
-            isSilent = node.isSilent
-        )
-        assert(node !in node2Transition)
-        node2TransitionInternal[node] = transition
+        if (isMultiInstance[node.name] != true) {
+            val transition = Transition(
+                name = node.name,
+                inPlaces = beforeNodePlace,
+                outPlaces = afterNodePlace,
+                isSilent = node.isSilent
+            )
+            assert(node !in node2TransitionInternal)
+            node2TransitionInternal[node] = transition
+        } else {
+            val mainTransition = mainTransitionsInternal.computeIfAbsent(node.name) {
+                Transition(
+                    name = node.name,
+                    inPlaces = listOf(Place()),
+                    outPlaces = listOf(Place()),
+                    isSilent = node.isSilent
+                )
+            }
+            val auxPlace = Place()
+            assert(node !in node2InboundSilentTransitionInternal)
+            node2InboundSilentTransitionInternal[node] = Transition(
+                name = "in ${node.name}/${node.instanceId}",
+                inPlaces = beforeNodePlace,
+                outPlaces = mainTransition.inPlaces + listOf(auxPlace),
+                isSilent = true
+            )
+            assert(node !in node2OutboundSilentTransitionInternal)
+            node2OutboundSilentTransitionInternal[node] = Transition(
+                name = "out ${node.name}/${node.instanceId}",
+                inPlaces = mainTransition.outPlaces + listOf(auxPlace),
+                outPlaces = afterNodePlace,
+                isSilent = true
+            )
+        }
     }
 
     init {
         createPlacesOnArcs()
         cnet.instances.forEach(::mapNode)
+        assert(cnet.instances.all { node -> node in node2OutboundSilentTransition || node in node2InboundSilentTransition || node in node2Transition })
     }
 
     fun toPetriNet(): PetriNet = PetriNet(
         places = places,
-        transitions = (split2SilentTransitionInternal.values + join2SilentTransitionInternal.values + node2TransitionInternal.values).toList(),
+        transitions = (split2SilentTransitionInternal.values + join2SilentTransitionInternal.values + node2TransitionInternal.values + mainTransitionsInternal.values + node2OutboundSilentTransitionInternal.values + node2InboundSilentTransitionInternal.values).toList(),
         initialMarking = Marking(startPlace),
         finalMarking = Marking(endPlace)
     )

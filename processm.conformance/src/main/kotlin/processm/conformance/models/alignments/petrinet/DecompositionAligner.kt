@@ -27,9 +27,14 @@ import java.util.concurrent.*
  * @property penalty The penalty function.
  * @property alignerFactory The factory for base aligners. The base aligner is used to produce partial aligners for
  * the parts of the decomposed [model].
+ *
+ * To ensure that resulting [Alignment]s are valid in the context of [model], internally [DecompositionAligner] rewrites
+ * [PetriNet] ensuring that every silent activity is uniquely named and maintains these names during decomposition.
+ * This ensures that they can be properly matched when returning from decompositions. This renaming is not visible
+ * in the resulting [Alignment]s.
  */
 class DecompositionAligner(
-    model: PetriNet,
+    override val model: PetriNet,
     override val penalty: PenaltyFunction = PenaltyFunction(),
     val alignerFactory: AlignerFactory = CachingAlignerFactory(DefaultAlignmentCache()) { m, p, _ -> AStar(m, p) },
     val pool: ExecutorService = SameThreadExecutorService
@@ -41,7 +46,7 @@ class DecompositionAligner(
         private val ZERO_LB = CostApproximation(0.0, false)
     }
 
-    override val model: PetriNet
+    private val translatedModel: PetriNet
     private val renaming = HashMap<String, Transition>()
 
     init {
@@ -53,7 +58,7 @@ class DecompositionAligner(
             check(new.name !in renaming) { "PetriNets with duplicated activities are not supported. Offending activity: ${t.name}" }
             renaming[new.name] = t
         }
-        this.model = PetriNet(
+        translatedModel = PetriNet(
             model.places,
             newTransitions,
             model.initialMarking,
@@ -62,7 +67,7 @@ class DecompositionAligner(
     }
 
     private val initialDecomposition: List<PetriNet> by lazy {
-        Decomposition.createInitialDecomposition(this.model)
+        Decomposition.createInitialDecomposition(translatedModel)
     }
 
     private fun returnToOriginalModel(alignment: Alignment): Alignment = Alignment(
@@ -84,7 +89,7 @@ class DecompositionAligner(
         logger.trace { "Aligning Petri net and trace [${events.joinToString { it.conceptName ?: "" }}]" }
 
         val eventsWithExistingActivities =
-            events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
+            events.filter { e -> translatedModel.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
 
         val alignments = decomposedAlign(eventsWithExistingActivities)
         val alignment =
@@ -137,7 +142,7 @@ class DecompositionAligner(
      */
     fun alignmentCostLowerBound(events: List<Event>, timeout: Long, unit: TimeUnit): CostApproximation {
         val eventsWithExistingActivities =
-            events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
+            events.filter { e -> translatedModel.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
         var lastResult: AlignmentStepResult? = null
         val f = pool.submit {
             var decomposition = Decomposition.create(initialDecomposition, eventsWithExistingActivities)
