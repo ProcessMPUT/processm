@@ -18,7 +18,7 @@
 
     <properties>
         <ktor.version>1.6.1</ktor.version>
-        <openapi-tools.version>4.3.1</openapi-tools.version>
+        <openapi-tools.version>5.3.0</openapi-tools.version>
         <swagger-ui.version>3.51.2</swagger-ui.version>
         <koin.version>2.2.3</koin.version>
         <jargon2.version>1.1.1</jargon2.version>
@@ -47,6 +47,10 @@
                             <generateApis>false</generateApis>
                             <generateSupportingFiles>false</generateSupportingFiles>
                             <packageName>processm.services.api</packageName>
+                            <typeMappings>
+                                array=kotlin.Array,date-time=java.time.LocalDateTime,DateTime=java.time.LocalDateTime
+                            </typeMappings>
+                            <instantiationTypes>array=kotlin.Array</instantiationTypes>
                             <output>${project.build.directory}/generated-sources/openapi</output>
                         </configuration>
                     </execution>
@@ -173,8 +177,19 @@
         </dependency>
         <dependency>
             <groupId>processm</groupId>
+            <artifactId>miners</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
             <artifactId>webui</artifactId>
             <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>processm</groupId>
+            <artifactId>etl</artifactId>
+            <version>0.1-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>

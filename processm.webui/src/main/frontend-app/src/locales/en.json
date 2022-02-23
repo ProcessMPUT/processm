@@ -30,7 +30,8 @@
       "edit": {
         "name": "Name",
         "type": "Type",
-        "query": "Query",
+        "query": "PQL Query",
+        "datastore": "Data store",
         "validation": {
           "name-empty": "The name cannot be empty",
           "query-empty": "The query cannot be empty"
@@ -47,7 +48,10 @@
     "data-connector-required": "A data connector is required to add continuous ETL process",
     "add-automatic-process": {
       "title": "Add automatic process",
-      "description": "Autiomatically infer a business perspective and start monitoring the data changes"
+      "description": "Automatically infer a business perspective and start monitoring the data changes",
+      "case-notion": "Business perspective identifier",
+      "select-data-connector": "Select a data connector first",
+      "case-notion-description": "for each entry in {source} related to an entry in {target}"
     },
     "add-manual-query": {
       "title": "Add manual query",
@@ -65,7 +69,13 @@
     "data-connector-removal-confirmation": "Do you want to permanently remove {dataConnectorName} data connector?",
     "last-connection-status": "Last connection status",
     "last-connection-status-timestamp": "Last connection time",
-    "data-connector-no-properties": "No properties to display"
+    "data-connector-no-properties": "No properties to display",
+    "etl": {
+      "process-name": "Process name",
+      "data-connector": "Data connector",
+      "removal-confirmation": "Do you want to permanently remove {etlProcessName} ETL process with all associated data?",
+      "custom-case-notion": "Custom selection"
+    }
   },
   "add-manual-query-dialog": {
     "dialog-title": "Add manual query"
@@ -91,6 +101,10 @@
       "connection-string-format": "The value doesn't conform to connection string format",
       "hostname-field": "The value should be valid hostname or IP address",
       "port-field": "The value should be integer from 0-65535 range"
+    },
+    "testing": {
+      "success": "Connected successfully",
+      "failure": "Cannot connect"
     }
   },
   "about": {
@@ -182,7 +196,9 @@
     "name": "Name",
     "value": "Value",
     "created-at": "Created at",
+    "last-updated": "Last updated",
     "warning": "Warning",
+    "type": "Type",
     "actions": "Actions",
     "removal": {
       "success": "Successfully removed",

@@ -11,8 +11,11 @@ function readResponseDataFromFile(path) {
 const componentsData = readResponseDataFromFile(
   "components/componentsData.json"
 );
-
 const xesQueryResult = readResponseDataFromFile("xes/xes4.json");
+const caseNotions = readResponseDataFromFile("case-notions/caseNotions.json");
+const relationshipGraph = readResponseDataFromFile(
+  "case-notions/relationshipGraph.json"
+);
 
 const workspaces = [
   {
@@ -132,6 +135,46 @@ const users = [
   },
 ];
 
+const etlProcesses = {
+  "6925b43f-cc6d-4320-8565-8388f2a7f6d7": [
+    {
+      id: "776e6df0-f222-4bae-bb8a-0b36852cca38",
+      name: "users management",
+      dataConnectorId: "aa8f65b4-7f93-44c7-a27c-7fc24cf6d1fb",
+      type: "automatic",
+      caseNotion: {
+        classes: {
+          109: "users",
+          111: "users_in_groups",
+          117: "users_roles_in_organizations",
+        },
+        edges: [
+          { sourceClassId: "111", targetClassId: "109" },
+          { sourceClassId: "117", targetClassId: "109" },
+        ],
+      },
+    },
+    {
+      id: "57dac9aa-f1b9-40a3-b22c-a685248aef32",
+      name: "data stores in organizations",
+      dataConnectorId: "7d28101b-5ef9-4b20-b57e-aaded99cfb2c",
+      type: "automatic",
+      caseNotion: {
+        classes: {
+          79: "organizations",
+          112: "data_stores",
+          117: "users_roles_in_organizations",
+        },
+        edges: [
+          { sourceClassId: "112", targetClassId: "79" },
+          { sourceClassId: "117", targetClassId: "79" },
+        ],
+      },
+    },
+  ],
+  "0096ec34-dd2f-47ee-9ccf-c804637df4dc": [],
+};
+
 const userSessions = [];
 
 function createUUID() {
@@ -230,7 +273,7 @@ const api = {
       return res.status(404).json();
     }
 
-    _.remove(dataConnectors[dataStoreId], { id: dataConnector });
+    _.remove(dataConnectors[dataStoreId], { id: dataConnectorId });
 
     return res.status(204).json();
   },
@@ -255,6 +298,58 @@ const api = {
       _.has(connectionConfiguration, "server");
 
     return res.json({ data: { isValid } });
+  },
+  "GET /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors/:dataConnectorId/case-notions": {
+    data: caseNotions,
+  },
+  "GET /api/organizations/:organizationId/data-stores/:dataStoreId/data-connectors/:dataConnectorId/relationship-graph": {
+    data: relationshipGraph,
+  },
+  "GET /api/organizations/:organizationId/data-stores/:dataStoreId/etl-processes": (
+    req,
+    res
+  ) => {
+    const { dataStoreId } = req.params;
+    const etlProcess = etlProcesses[dataStoreId];
+
+    if (!etlProcess) {
+      return res.status(400).json();
+    }
+
+    return res.status(201).json({ data: etlProcess });
+  },
+  "POST /api/organizations/:organizationId/data-stores/:dataStoreId/etl-processes": (
+    req,
+    res
+  ) => {
+    const etlProcess = req.body.data;
+    const { dataStoreId } = req.params;
+
+    if (!etlProcess) {
+      return res.status(400).json();
+    }
+
+    etlProcess.id = createUUID();
+    etlProcesses[dataStoreId].push(etlProcess);
+
+    return res.status(201).json({ data: etlProcess });
+  },
+  "DELETE /api/organizations/:organizationId/data-stores/:dataStoreId/etl-processes/:etlProcessId": (
+    req,
+    res
+  ) => {
+    const { dataStoreId, etlProcessId } = req.params;
+    const etlProcess = _.find(etlProcesses[dataStoreId], {
+      id: etlProcessId,
+    });
+
+    if (etlProcess == null) {
+      return res.status(404).json();
+    }
+
+    _.remove(etlProcesses[dataStoreId], { id: etlProcessId });
+
+    return res.status(204).json();
   },
   "POST /api/organizations/:organizationId/data-stores": (req, res) => {
     const dataStore = req.body.data;

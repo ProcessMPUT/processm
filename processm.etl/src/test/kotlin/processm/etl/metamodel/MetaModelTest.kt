@@ -3,6 +3,7 @@ package processm.etl.metamodel
 import processm.core.log.DBXESOutputStream
 import processm.core.persistence.connection.DBCache
 import processm.etl.discovery.SchemaCrawlerExplorer
+import java.sql.DriverManager
 import kotlin.test.Ignore
 import kotlin.test.Test
 
@@ -14,7 +15,13 @@ class MetaModelTest {
     @Test
     fun `building meta model`() {
         val externalDataSourceConnectionString = ""
-        val metaModel = MetaModel.build(dataStoreDBName, "meta-model", SchemaCrawlerExplorer(externalDataSourceConnectionString, "public"))
+        DriverManager.getConnection(externalDataSourceConnectionString).use { connection ->
+            val metaModel = MetaModel.build(
+                dataStoreDBName,
+                "meta-model",
+                SchemaCrawlerExplorer(connection, "public")
+            )
+        }
     }
 
     @Test

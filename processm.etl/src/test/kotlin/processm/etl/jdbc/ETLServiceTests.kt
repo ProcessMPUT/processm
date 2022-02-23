@@ -159,6 +159,7 @@ OFFSET ?::bigint
                     lastEventExternalId = _lastEventExternalId
                     refresh = _refresh
                     enabled = _enabled
+                    batch = _refresh === null
                 }
 
                 ETLColumnToAttributeMap.new {

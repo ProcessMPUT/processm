@@ -172,6 +172,39 @@ object Paths {
     class ConnectionTest(val organizationId: UUID, val dataStoreId: UUID)
 
     /**
+     * Case notions related to the specified [dataConnectorId].
+     *
+     * @param organizationId Organization ID
+     * @param dataStoreId Data store ID
+     * @param dataConnectorId Data connector ID
+     */
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions")
+    class CaseNotionSuggestions(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
+
+
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph")
+    class RelationshipGraph(val organizationId: UUID, val dataStoreId: UUID, val dataConnectorId: UUID)
+
+    /**
+     * ETL processes assigned to [dataStoreId].
+     *
+     * @param organizationId Organization ID
+     * @param dataStoreId Data store ID
+     */
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes")
+    class EtlProcesses(val organizationId: UUID, val dataStoreId: UUID)
+
+    /**
+     * ETL process assigned to [dataStoreId] and specified by [etlProcessId].
+     *
+     * @param organizationId Organization ID
+     * @param dataStoreId Data store ID
+     * @param etlProcessId Data connector ID
+     */
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}")
+    class EtlProcess(val organizationId: UUID, val dataStoreId: UUID, val etlProcessId: UUID)
+
+    /**
      * Get details about current user
      *
      */

@@ -195,7 +195,7 @@ class MySQLEmployeesTest {
 
 
     @Test
-    fun `read complete XES and then read nothing starting from "0"`() {
+    fun `read complete XES and then read nothing starting from 0`() {
         createEtlConfiguration()
         val stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()

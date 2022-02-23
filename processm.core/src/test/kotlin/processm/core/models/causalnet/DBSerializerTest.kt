@@ -61,8 +61,8 @@ class DBSerializerTest {
             setOf(h to z)
         ).map { join -> join.mapToSet { Dependency(it.first, it.second) } }
             .forEach { mm.addJoin(Join(it)) }
-        val id = DBSerializer.insert(DBCache.get(dbName), mm)
-        val fetched = DBSerializer.fetch(DBCache.get(dbName), id)
+        val id = DBSerializer.insert(DBCache.get(dbName).database, mm)
+        val fetched = DBSerializer.fetch(DBCache.get(dbName).database, id)
         assertEquals(mm.start, fetched.start)
         assertEquals(mm.end, fetched.end)
         assertEquals(mm.instances, fetched.instances)
@@ -75,8 +75,8 @@ class DBSerializerTest {
     @Test
     fun `special nodes handling`() {
         val orig = MutableCausalNet()
-        val id = DBSerializer.insert(DBCache.get(dbName), orig)
-        val copy = DBSerializer.fetch(DBCache.get(dbName), id)
+        val id = DBSerializer.insert(DBCache.get(dbName).database, orig)
+        val copy = DBSerializer.fetch(DBCache.get(dbName).database, id)
         assertEquals(orig.instances, copy.instances)
         assertEquals(orig.start, copy.start)
         assertEquals(orig.start, copy.start)
@@ -87,15 +87,15 @@ class DBSerializerTest {
     @Test
     fun `insert fetch delete fetch`() {
         val mm = MutableCausalNet()
-        val id = DBSerializer.insert(DBCache.get(dbName), mm)
-        DBSerializer.fetch(DBCache.get(dbName), id)
+        val id = DBSerializer.insert(DBCache.get(dbName).database, mm)
+        DBSerializer.fetch(DBCache.get(dbName).database, id)
         DBSerializer.delete(DBCache.get(dbName), id)
-        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(DBCache.get(dbName), id) }
+        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(DBCache.get(dbName).database, id) }
     }
 
     @Test
     fun `fetch nonexisting model`() {
-        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(DBCache.get(dbName), -1) }
+        assertFailsWith<NoSuchElementException> { DBSerializer.fetch(DBCache.get(dbName).database, -1) }
     }
 
     @Test

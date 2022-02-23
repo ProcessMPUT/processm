@@ -1,5 +1,6 @@
 package processm.etl.discovery
 
+import java.sql.DriverManager
 import kotlin.test.Ignore
 import kotlin.test.Test
 
@@ -10,8 +11,10 @@ class SchemaCrawlerExplorerTest {
 
     @Test
     fun `getting schema info`() {
-        val explorer = SchemaCrawlerExplorer(externalDataSourceConnectionString, "public")
-        val classes = explorer.getClasses()
-        val relationships = explorer.getRelationships()
+        DriverManager.getConnection(externalDataSourceConnectionString).use { connection ->
+            val explorer = SchemaCrawlerExplorer(connection, "public")
+            val classes = explorer.getClasses()
+            val relationships = explorer.getRelationships()
+        }
     }
 }

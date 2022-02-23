@@ -8,9 +8,36 @@ import processm.core.models.commons.Activity
  * @property inPlaces The collection of the preceding places.
  * @property outPlaces The collection of the succeeding places.
  */
-data class Transition(
+open class Transition(
     override val name: String,
     val inPlaces: Collection<Place> = emptyList(),
     val outPlaces: Collection<Place> = emptyList(),
     override val isSilent: Boolean = false
-) : Activity
+) : Activity {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Transition) return false
+
+        if (name != other.name) return false
+        if (inPlaces != other.inPlaces) return false
+        if (outPlaces != other.outPlaces) return false
+        if (isSilent != other.isSilent) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + inPlaces.hashCode()
+        result = 31 * result + outPlaces.hashCode()
+        result = 31 * result + isSilent.hashCode()
+        return result
+    }
+
+    fun copy(
+        name: String = this.name,
+        inPlaces: Collection<Place> = this.inPlaces,
+        outPlaces: Collection<Place> = this.outPlaces,
+        isSilent: Boolean = this.isSilent
+    ): Transition = Transition(name, inPlaces, outPlaces, isSilent)
+}

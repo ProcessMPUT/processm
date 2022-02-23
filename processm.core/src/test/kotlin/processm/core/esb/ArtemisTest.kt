@@ -6,6 +6,7 @@ import processm.core.logging.logger
 import java.util.concurrent.CountDownLatch
 import javax.jms.*
 import javax.naming.InitialContext
+import kotlin.reflect.KClass
 import kotlin.test.*
 
 
@@ -122,8 +123,9 @@ class Producer(override val name: String, val topic: String, val messageCount: I
     override var status = ServiceStatus.Unknown
         private set
 
-    val messages = mutableListOf<String>()
+    override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
 
+    val messages = mutableListOf<String>()
 
     override fun register() {
         status = ServiceStatus.Stopped
@@ -160,8 +162,8 @@ class Producer(override val name: String, val topic: String, val messageCount: I
     }
 }
 
-class Consumer(override val name: String, val topic: String, val messageCount: Int) : Service, MessageListener,
-    ExceptionListener {
+class Consumer(override val name: String, val topic: String, val messageCount: Int) :
+    Service, MessageListener, ExceptionListener {
     private lateinit var jmsConnection: TopicConnection
     private lateinit var jmsSession: TopicSession
     private lateinit var jmsTopic: Topic
@@ -172,6 +174,8 @@ class Consumer(override val name: String, val topic: String, val messageCount: I
 
     override var status = ServiceStatus.Unknown
         private set
+
+    override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
 
     override fun register() {
         status = ServiceStatus.Stopped

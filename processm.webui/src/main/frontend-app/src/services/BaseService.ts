@@ -1,15 +1,15 @@
 import Vue from "vue";
 import Router from "@/router";
 import { BaseAPI } from "@/openapi/base";
-import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosInstance } from "axios";
 import {
-  Configuration,
   ConfigApi,
-  UsersApi,
-  OrganizationsApi,
-  WorkspacesApi,
+  Configuration,
   DataStoresApi,
-  LogsApi
+  LogsApi,
+  OrganizationsApi,
+  UsersApi,
+  WorkspacesApi
 } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
@@ -21,6 +21,13 @@ export default abstract class BaseService {
     this.axiosInstance = axios.create();
     createAuthRefreshInterceptor(this.axiosInstance, (error) =>
       this.prolongExistingSession(error, this.usersApi)
+    );
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const response = error.response;
+        throw new Error(response?.data?.error ?? response?.statusText);
+      }
     );
   }
 
@@ -61,25 +68,6 @@ export default abstract class BaseService {
 
   protected get logsApi() {
     return this.getGenericClient(LogsApi);
-  }
-
-  protected ensureSuccessfulResponseCode(
-    response: AxiosResponse,
-    ...successfulStatusCodes: Array<number>
-  ) {
-    const responseStatusCode = response.status;
-
-    if (
-      successfulStatusCodes.length == 0 &&
-      responseStatusCode >= 200 &&
-      responseStatusCode < 300
-    ) {
-      return;
-    } else if (successfulStatusCodes.includes(responseStatusCode)) {
-      return;
-    }
-
-    throw new Error(response.data?.error ?? response.statusText);
   }
 
   private prolongExistingSession(

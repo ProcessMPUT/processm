@@ -2,6 +2,10 @@ package processm.etl.metamodel
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
+import processm.dbmodels.models.AttributesValues
+import processm.dbmodels.models.ObjectVersions
+import processm.dbmodels.models.Relations
+import processm.dbmodels.models.Relationships
 import processm.etl.tracker.DatabaseChangeApplier
 
 /**
