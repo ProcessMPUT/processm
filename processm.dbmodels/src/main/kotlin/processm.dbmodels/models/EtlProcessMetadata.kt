@@ -31,7 +31,7 @@ class EtlProcessMetadata(id: EntityID<UUID>) : UUIDEntity(id) {
 data class EtlProcessMetadataDto(val id: UUID, val name: String, val processType: ProcessTypeDto, val creationDate: LocalDateTime, val lastUpdateDate: LocalDateTime?, val dataConnectorId: UUID)
 
 enum class ProcessTypeDto(val processTypeName: String) {
-    Automatic("automatic");
+    Automatic("automatic"), JDBC("jdbc");
 
     companion object {
         fun byNameInDatabase(nameInDatabase: String) = values().first { it.processTypeName == nameInDatabase }

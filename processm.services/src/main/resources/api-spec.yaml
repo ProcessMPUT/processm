@@ -1740,14 +1740,16 @@ components:
             $ref: '#/components/schemas/DataConnector'
     EtlProcessType:
       type: string
-      enum: [automatic]
+      enum: [automatic, jdbc]
     AbstractEtlProcess:
       oneOf:
         - $ref: '#/components/schemas/AutomaticEtlProcess'
+        - $ref: '#/components/schemas/JdbcEtlProcess'
       discriminator:
         propertyName: type
         mapping:
           automatic: '#/components/schemas/AutomaticEtlProcess'
+          jdbc: '#/components/schemas/JdbcEtlProcess'
     AutomaticEtlProcess:
       allOf:
         - $ref: '#/components/schemas/EtlProcess'
@@ -1755,6 +1757,13 @@ components:
           properties:
             caseNotion:
               $ref: '#/components/schemas/CaseNotion'
+    JdbcEtlProcess:
+      allOf:
+        - $ref: '#/components/schemas/EtlProcess'
+        - type: object
+          properties:
+            configuration:
+              $ref: '#/components/schemas/JdbcEtlProcessConfiguration'
     EtlProcess:
       type: object
       required: [name, type, dataConnectorId]
@@ -2071,6 +2080,36 @@ components:
                 type: string
               targetClassId:
                 type: string
+    JdbcEtlProcessConfiguration:
+      type: object
+      required: [query, enabled, batch, traceId, eventId, aux]
+      properties:
+        query:
+          type: string
+        refresh:
+          type: number
+        enabled:
+          type: boolean
+        batch:
+          type: boolean
+        traceId:
+          type: object
+          $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
+        eventId:
+          type: object
+          $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
+        aux:
+          type: array
+          items:
+            $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
+    JdbcEtlColumnConfiguration:
+      type: object
+      required: [source, target]
+      properties:
+        source:
+          type: string
+        target:
+          type: string
     CaseNotionCollectionMessageBody:
       type: object
       required: [data]

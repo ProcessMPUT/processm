@@ -11,6 +11,7 @@ import {
 } from "@/openapi";
 import EtlProcess, { EtlProcessType } from "@/models/EtlProcess";
 import CaseNotion from "@/models/CaseNotion";
+import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
 
 export default class DataStoreService extends BaseService {
   private static get currentOrganizationId() {
@@ -281,21 +282,32 @@ export default class DataStoreService extends BaseService {
     processName: string,
     processType: EtlProcessType,
     dataConnectorId: string,
-    caseNotion: CaseNotion
+    configuration: CaseNotion|JdbcEtlProcessConfiguration
   ): Promise<AbstractEtlProcess> {
+    let data: AbstractEtlProcess;
+    if(processType == EtlProcessType.Automatic) {
+      data = {
+        name: processName,
+        dataConnectorId,
+        type: processType as ApiEtlProcessType,
+        caseNotion: {
+          classes: Object.fromEntries((configuration as CaseNotion).classes),
+          edges: (configuration as CaseNotion).edges
+        }
+      }
+    } else {
+      data = {
+        name: processName,
+        dataConnectorId,
+        type: processType as ApiEtlProcessType,
+        configuration: configuration as JdbcEtlProcessConfiguration
+      }
+    }
     const response = await this.dataStoresApi.createEtlProcess(
       DataStoreService.currentOrganizationId,
       dataStoreId,
       {
-        data: {
-          name: processName,
-          dataConnectorId,
-          type: processType as ApiEtlProcessType,
-          caseNotion: {
-            classes: Object.fromEntries(caseNotion.classes),
-            edges: caseNotion.edges
-          }
-        }
+        data: data
       }
     );
 

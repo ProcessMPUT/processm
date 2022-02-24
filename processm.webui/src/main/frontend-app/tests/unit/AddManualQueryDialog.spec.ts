@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import Vue from "vue";
 import {render, fireEvent, RenderResult, prettyDOM} from "@testing-library/vue";
 import Vuetify from "vuetify";
-import AddManualQueryDialog from "@/components/data-connections/AddManualQueryDialog.vue";
+import AddJdbcEtlProcessDialog from "@/components/etl/AddJdbcEtlProcessDialog.vue";
 import {describe, beforeEach, it} from '@jest/globals';
 import DataConnector from "@/models/DataStore";
 import {createLocalVue} from "@vue/test-utils";
@@ -16,7 +16,7 @@ import {createLocalVue} from "@vue/test-utils";
 Vue.use(Vuetify);
 
 
-describe("AddManualQueryDialog.vue", () => {
+describe("AddJdbcEtlProcessDialog.vue", () => {
 
     const localVue = createLocalVue();
     let vuetify: Vuetify;
@@ -43,7 +43,7 @@ describe("AddManualQueryDialog.vue", () => {
             error: jest.fn()
         }
 
-        dialog = render(AddManualQueryDialog, {
+        dialog = render(AddJdbcEtlProcessDialog, {
             localVue,
             vuetify,
             container: app,

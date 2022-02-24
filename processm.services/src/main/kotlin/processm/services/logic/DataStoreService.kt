@@ -14,11 +14,14 @@ import org.json.simple.JSONObject
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMaps
+import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.*
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
+import processm.services.api.models.JdbcEtlProcessConfiguration
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.*
@@ -215,6 +218,53 @@ class DataStoreService {
             this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
         }
 
+        return@transaction etlProcessMetadataId.value
+    }
+
+    /**
+     * Creates a JDBC-based ETL process in the specified [dataStoreId]
+     */
+    fun createJdbcEtlProcess(
+        dataStoreId: UUID,
+        dataConnectorId: UUID,
+        name: String,
+        configuration: JdbcEtlProcessConfiguration
+    ) = transaction(DBCache.get("$dataStoreId").database) {
+        val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
+            it[this.name] = name
+            it[this.processType] = ProcessTypeDto.JDBC.processTypeName
+            it[this.dataConnectorId] = dataConnectorId
+        }
+        val cfg = ETLConfigurations.insertAndGetId {
+            it[this.id] = etlProcessMetadataId
+            it[this.name] = name
+            it[this.dataConnector] = dataConnectorId
+            it[this.query] = configuration.query
+            it[this.refresh] = configuration.refresh?.toLong()
+            it[this.enabled] = configuration.enabled
+            it[this.batch] = configuration.batch
+        }
+        ETLColumnToAttributeMaps.insert {
+            it[this.configuration] = cfg
+            it[this.sourceColumn] = configuration.eventId.source
+            it[this.target] = configuration.eventId.target
+            it[this.traceId] = false
+            it[this.eventId] = true
+        }
+        ETLColumnToAttributeMaps.insert {
+            it[this.configuration] = cfg
+            it[this.sourceColumn] = configuration.traceId.source
+            it[this.target] = configuration.traceId.target
+            it[this.traceId] = true
+            it[this.eventId] = false
+        }
+        ETLColumnToAttributeMaps.batchInsert(configuration.aux.asIterable()) { columnCfg ->
+            this[ETLColumnToAttributeMaps.configuration] = cfg
+            this[ETLColumnToAttributeMaps.sourceColumn] = columnCfg.source
+            this[ETLColumnToAttributeMaps.target] = columnCfg.target
+            this[ETLColumnToAttributeMaps.traceId] = false
+            this[ETLColumnToAttributeMaps.eventId] = false
+        }
         return@transaction etlProcessMetadataId.value
     }
 

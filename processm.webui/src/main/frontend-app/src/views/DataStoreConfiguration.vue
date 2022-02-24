@@ -254,17 +254,17 @@
                             color="primary"
                             class="mx-2"
                             :disabled="dataConnectors.length == 0"
-                            @click.stop="addManualQueryDialog = true"
+                            @click.stop="addJdbcEtlProcessDialog = true"
                             v-bind="attrs"
                           >
-                            {{ $t("data-stores.add-manual-query.title") }}
+                            {{ $t("data-stores.add-jdbc-etl-process.title") }}
                           </v-btn>
                         </div>
                       </template>
                       <span>{{
                         dataConnectors.length == 0
                           ? $t("data-stores.data-connector-required")
-                          : $t("data-stores.add-manual-query.description")
+                          : $t("data-stores.add-jdbc-etl-process.description")
                       }}</span>
                     </v-tooltip>
                   </div>
@@ -351,11 +351,12 @@
       @cancelled="dataConnectorIdToRename = null"
       @submitted="renameDataConnector"
     />
-    <add-manual-query-dialog
-      v-model="addManualQueryDialog"
+    <add-jdbc-etl-process-dialog
+      v-model="addJdbcEtlProcessDialog"
+      :data-store-id="dataStoreId"
       :dataConnectors="dataConnectors"
-      @cancelled="addManualQueryDialog = false"
-      @submitted="addManualQuery"
+      @cancelled="addJdbcEtlProcessDialog = false"
+      @submitted="addJdbcEtlProcess"
     />
   </v-dialog>
 </template>
@@ -382,11 +383,11 @@ import RenameDialog from "@/components/RenameDialog.vue";
 import AddAutomaticEtlProcessDialog from "@/components/etl/AddAutomaticEtlProcessDialog.vue";
 import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
-import AddManualQueryDialog from "@/components/data-connections/AddManualQueryDialog.vue";
+import AddJdbcEtlProcessDialog from "@/components/etl/AddJdbcEtlProcessDialog.vue";
 
 @Component({
   components: {
-    AddManualQueryDialog,
+    AddJdbcEtlProcessDialog,
     AddDataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
@@ -401,7 +402,7 @@ export default class DataStoreConfiguration extends Vue {
   private readonly xesProcessor = new XesProcessor();
   addDataConnectorDialog = false;
   addAutomaticEtlProcessDialog = false;
-  addEtlProcessDialog = false;
+  addJdbcEtlProcessDialog = false;
   fileUploadDialog = false;
   isUploading = false;
   dataConnectors: DataConnector[] = [];
@@ -693,8 +694,9 @@ export default class DataStoreConfiguration extends Vue {
     );
   }
 
-  async addManualQuery() {
-    // TODO
+  async addJdbcEtlProcess() {
+    this.addJdbcEtlProcessDialog = false;
+    await this.loadEtlProcesses();
   }
 }
 </script>

@@ -6,5 +6,6 @@ export default interface EtlProcess {
 }
 
 export enum EtlProcessType {
-  Automatic = "automatic"
+  Automatic = "automatic",
+  Jdbc = "jdbc"
 }

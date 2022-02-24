@@ -313,6 +313,10 @@ fun Route.DataStoresApi() {
                     }
                     dataStoreService.createAutomaticEtlProcess(pathParams.dataStoreId, etlProcessData.dataConnectorId, etlProcessData.name, relations)
                 }
+                EtlProcessType.jdbc -> {
+                    val configuration = etlProcessData.configuration?:throw ApiException("Empty ETL configuration is not supported")
+                    dataStoreService.createJdbcEtlProcess(pathParams.dataStoreId, etlProcessData.dataConnectorId, etlProcessData.name, configuration)
+                }
                 else -> throw ApiException("The provided ETL process type is not supported")
             }
 

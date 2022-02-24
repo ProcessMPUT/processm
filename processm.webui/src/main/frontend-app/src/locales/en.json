@@ -53,8 +53,8 @@
       "select-data-connector": "Select a data connector first",
       "case-notion-description": "for each entry in {source} related to an entry in {target}"
     },
-    "add-manual-query": {
-      "title": "Add manual query",
+    "add-jdbc-etl-process": {
+      "title": "Add JDBC ETL process",
       "description": "Manually define a query that yields relevant events as result rows"
     },
     "upload-xes-file": {
@@ -77,8 +77,24 @@
       "custom-case-notion": "Custom selection"
     }
   },
-  "add-manual-query-dialog": {
-    "dialog-title": "Add manual query"
+  "add-jdbc-etl-process-dialog": {
+    "dialog-title": "Add JDBC ETL process",
+    "query": "SQL query",
+    "batch": "Batch query",
+    "refresh": "Refresh rate",
+    "enabled": "Enabled",
+    "traceIdSource": "Trace ID column",
+    "traceIdTarget": "Trace ID attribute",
+    "eventIdSource": "Event ID column",
+    "eventIdTarget": "Event ID attribute",
+    "source": "Column",
+    "target": "Attribute",
+    "mappings": "Column to attribute mappings",
+    "new-mapping": "Add mapping",
+    "validation": {
+      "non-empty-field": "The value cannot be empty",
+      "not-a-positive-integer": "The value is not a positive integer"
+    }
   },
   "add-data-connector-dialog": {
     "dialog-title": "Add data connector",
