@@ -7,5 +7,7 @@ export default interface JdbcEtlProcessConfiguration {
     batch: boolean;
     traceId: JdbcEtlColumnConfiguration;
     eventId: JdbcEtlColumnConfiguration;
-    aux: JdbcEtlColumnConfiguration[];
+    attributes: JdbcEtlColumnConfiguration[];
+    lastEventExternalId: string | undefined;
+    lastEventExternalIdType: number | undefined;
 }

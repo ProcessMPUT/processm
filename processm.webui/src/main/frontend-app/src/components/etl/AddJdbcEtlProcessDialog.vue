@@ -51,6 +51,12 @@
                 <v-row>
                   <v-col>
                     <v-text-field
+                        v-model="lastEventExternalId"
+                        :label="$t('add-jdbc-etl-process-dialog.lastEventExternalId')"
+                        :rules="lastEventExternalIdRules"
+                        :disabled="batch"
+                    ></v-text-field>
+                    <v-text-field
                         v-model="traceIdSource"
                         :label="$t('add-jdbc-etl-process-dialog.traceIdSource')"
                         :rules="[notEmpty]"
@@ -62,6 +68,15 @@
                     ></v-text-field>
                   </v-col>
                   <v-col>
+                    <v-select
+                        v-model="lastEventExternalIdType"
+                        item-text="name"
+                        item-value="id"
+                        :items="jdbcTypes"
+                        :label="$t('add-jdbc-etl-process-dialog.lastEventExternalIdType')"
+                        :rules="lastEventExternalIdRules"
+                        :disabled="batch"
+                    ></v-select>
                     <v-text-field
                         v-model="traceIdTarget"
                         :label="$t('add-jdbc-etl-process-dialog.traceIdTarget')"
@@ -100,14 +115,14 @@
                     >
                       <v-toolbar-title>{{ $t("add-jdbc-etl-process-dialog.mappings")}}</v-toolbar-title>
                       <v-spacer></v-spacer>
-                    <v-btn
-                        color="primary"
-                        dark
-                        class="mb-2"
-                        @click="addAttribute"
-                    >
-                      {{ $t("add-jdbc-etl-process-dialog.new-mapping")}}
-                    </v-btn>
+                      <v-btn
+                          color="primary"
+                          dark
+                          class="mb-2"
+                          @click="addAttribute"
+                      >
+                        {{ $t("add-jdbc-etl-process-dialog.new-mapping")}}
+                      </v-btn>
                     </v-toolbar>
                   </template>
                   <template v-slot:[`item.actions`]="{ item }">
@@ -176,7 +191,7 @@ import Vue from "vue";
 import {Component, Inject, Prop} from "vue-property-decorator";
 import App from "@/App.vue";
 import DataStoreService from "../../services/DataStoreService";
-import {isDefinedRule, isPositiveIntegerRule, notEmptyRule} from "@/utils/FormValidationRules";
+import {isPositiveIntegerRule, notEmptyRule} from "@/utils/FormValidationRules";
 import {EtlProcessType} from "@/models/EtlProcess";
 import {JdbcEtlColumnConfiguration} from "@/openapi";
 
@@ -191,6 +206,12 @@ export default class AddJdbcEtlProcessDialog extends Vue {
   @Prop()
   readonly dataConnectors?: DataConnector[];
 
+  readonly jdbcTypes = [
+      //numeric values for the corresponding types from java.sql.Types
+    {name: "VARCHAR", id: 12},
+    {name: "BIGINT", id: -5},
+    {name: "NUMERIC", id: 2}
+  ]
 
   selectedDataConnectorId: string | null = null;
 
@@ -201,16 +222,6 @@ export default class AddJdbcEtlProcessDialog extends Vue {
     );
   }
 
-  dataConnectorRules = [
-    (v: DataConnector | undefined): string | boolean => {
-      return isDefinedRule(
-          v,
-          this.$t(
-              "add-jdbc-etl-process-dialog.validation.data-connector-not-specified"
-          ).toString()
-      );
-    }
-  ];
   refreshRules = [
     (v: string): string | boolean =>
         this.batch ||
@@ -221,6 +232,10 @@ export default class AddJdbcEtlProcessDialog extends Vue {
             ).toString()
         )
   ];
+
+  lastEventExternalIdRules = [
+    (v: string): string | boolean => this.batch || this.notEmpty(v)
+  ]
 
   isSubmitting = false;
 
@@ -234,19 +249,17 @@ export default class AddJdbcEtlProcessDialog extends Vue {
   eventIdSource = "";
   eventIdTarget = "";
   attributes: Array<JdbcEtlColumnConfiguration> = [];
+  lastEventExternalId: string|undefined = undefined;
+  lastEventExternalIdType: number|undefined = undefined;
 
   async createEtlProcess() {
     //TODO ensure the column definitions are at least non-empty
-    console.log("createEtlProcess 1")
     if (!(this.$refs.queryForm as HTMLFormElement).validate())
       throw new Error("The provided data is invalid");
-    console.log("createEtlProcess 2")
     if (this.dataStoreId == null || this.selectedDataConnectorId == null)
       return;
-    console.log("createEtlProcess 3")
     try {
       this.isSubmitting = true;
-      console.log("createEtlProcess 4")
       const etlProcess = await this.dataStoreService.createEtlProcess(
           this.dataStoreId,
           this.processName,
@@ -259,16 +272,14 @@ export default class AddJdbcEtlProcessDialog extends Vue {
             batch: this.batch,
             traceId: {source: this.traceIdSource, target: this.traceIdTarget},
             eventId: {source: this.eventIdSource, target: this.traceIdTarget},
-            aux: this.attributes
+            attributes: this.attributes,
+            lastEventExternalId: this.lastEventExternalId,
+            lastEventExternalIdType: this.lastEventExternalIdType
           }
       );
-      console.log("createEtlProcess 5")
       this.app.success(`${this.$t("common.saving.success")}`);
-      console.log("createEtlProcess 6")
       this.$emit("submitted", etlProcess);
-      console.log("createEtlProcess 7")
       this.resetForm();
-      console.log("createEtlProcess 8")
     } catch (error) {
       console.log(error)
       this.app.error(`${this.$t("common.saving.failure")}`);
@@ -290,9 +301,9 @@ export default class AddJdbcEtlProcessDialog extends Vue {
     this.attributes.push({"source": "", "target": ""})
   }
 
-  removeAttribute(attr:JdbcEtlColumnConfiguration) {
+  removeAttribute(attr: JdbcEtlColumnConfiguration) {
     const idx = this.attributes.indexOf(attr, 0)
-    if(idx >= 0) {
+    if (idx >= 0) {
       this.attributes.splice(idx, 1)
     }
   }

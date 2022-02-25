@@ -243,6 +243,8 @@ class DataStoreService {
             it[this.refresh] = configuration.refresh?.toLong()
             it[this.enabled] = configuration.enabled
             it[this.batch] = configuration.batch
+            it[this.lastEventExternalId] = if(!configuration.batch) configuration.lastEventExternalId else null
+            it[this.lastEventExternalIdType] = if(!configuration.batch) configuration.lastEventExternalIdType else null
         }
         ETLColumnToAttributeMaps.insert {
             it[this.configuration] = cfg
@@ -258,7 +260,7 @@ class DataStoreService {
             it[this.traceId] = true
             it[this.eventId] = false
         }
-        ETLColumnToAttributeMaps.batchInsert(configuration.aux.asIterable()) { columnCfg ->
+        ETLColumnToAttributeMaps.batchInsert(configuration.attributes.asIterable()) { columnCfg ->
             this[ETLColumnToAttributeMaps.configuration] = cfg
             this[ETLColumnToAttributeMaps.sourceColumn] = columnCfg.source
             this[ETLColumnToAttributeMaps.target] = columnCfg.target

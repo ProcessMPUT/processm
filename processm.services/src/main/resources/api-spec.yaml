@@ -2082,7 +2082,7 @@ components:
                 type: string
     JdbcEtlProcessConfiguration:
       type: object
-      required: [query, enabled, batch, traceId, eventId, aux]
+      required: [query, enabled, batch, traceId, eventId, attributes]
       properties:
         query:
           type: string
@@ -2092,13 +2092,17 @@ components:
           type: boolean
         batch:
           type: boolean
+        lastEventExternalId:
+          type: string
+        lastEventExternalIdType:
+          type: integer
         traceId:
           type: object
           $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
         eventId:
           type: object
           $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
-        aux:
+        attributes:
           type: array
           items:
             $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
