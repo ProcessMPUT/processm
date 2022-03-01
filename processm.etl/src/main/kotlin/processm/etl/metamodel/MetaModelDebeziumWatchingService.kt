@@ -4,35 +4,31 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.sql.alias
-import org.jetbrains.exposed.sql.innerJoin
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.esb.AbstractJMSListener
+import processm.core.communication.Consumer
+import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.core.helpers.mapToSet
 import processm.core.helpers.toUUID
-import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import processm.etl.tracker.DebeziumChangeTracker
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import javax.jms.MapMessage
-import javax.jms.Message
 import kotlin.concurrent.schedule
+import kotlin.reflect.KClass
 
 /**
  * Tracks data changes in data sources (defined as [DataConnector]).
  */
-class MetaModelService : Service {
+class MetaModelDebeziumWatchingService : Service {
     companion object {
         private val logger = logger()
     }
-    private val defaultSlotName = "debezium"
+    private val defaultSlotName = "processm"
     private val serverProperty = "server"
     private val portProperty = "port"
     private val usernameProperty = "username"
@@ -43,13 +39,14 @@ class MetaModelService : Service {
 
     private val debeziumTrackers = ConcurrentHashMap<UUID, DebeziumChangeTracker>()
     private val trackerConnectionWatcher = Timer(true)
-    private lateinit var jmsListener: JMSListener
+    private lateinit var consumer: Consumer
     override var status: ServiceStatus = ServiceStatus.Unknown
+    override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
 
     override fun register() {
         status = ServiceStatus.Stopped
-        logger.debug("MetaModel ETL service registered")
-        jmsListener = JMSListener()
+        logger.debug("$name service registered")
+        consumer = Consumer()
     }
 
     override val name: String
@@ -57,10 +54,7 @@ class MetaModelService : Service {
 
     override fun start() {
         initializeDataTrackers()
-        jmsListener.activated = ::activate
-        jmsListener.deactivated = ::deactivate
-        jmsListener.modified = ::reload
-        jmsListener.listen()
+        consumer.listen(DATA_CONNECTOR_TOPIC, name, ::updateDebeziumConnectionState)
         trackerConnectionWatcher.schedule(connectionRefreshingPeriod, connectionRefreshingPeriod) {
             debeziumTrackers.forEach { (dataConnectorId, tracker) ->
                 try {
@@ -72,12 +66,12 @@ class MetaModelService : Service {
         }
 
         status = ServiceStatus.Started
-        logger.info("MetaModel ETL service started")
+        logger.info("$name service started")
     }
 
     override fun stop() {
         try {
-            jmsListener.close()
+            consumer.close()
             trackerConnectionWatcher. cancel()
             trackerConnectionWatcher.purge()
             debeziumTrackers.forEach { (_, tracker) ->
@@ -85,8 +79,31 @@ class MetaModelService : Service {
             }
         } finally {
             status = ServiceStatus.Stopped
-            logger.info("MetaModel ETL service stopped")
+            logger.info("$name service stopped")
         }
+    }
+
+    private fun updateDebeziumConnectionState(message: Map<String, String>, messageHeaders: Map<String, String>): Boolean {
+        try {
+            val type = message[TYPE]
+            val dataStoreId = requireNotNull(message[DATA_STORE_ID]?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+            val dataConnectorId =
+                requireNotNull(message[DATA_CONNECTOR_ID]?.toUUID()) { "Missing field: $DATA_CONNECTOR_ID." }
+
+            when (type) {
+                ACTIVATE -> activate(dataStoreId, dataConnectorId)
+                DEACTIVATE -> deactivate(dataStoreId, dataConnectorId)
+                RELOAD -> reload(dataStoreId, dataConnectorId)
+                else -> throw IllegalArgumentException("Unrecognized type: $type.")
+            }
+        } catch (e: IllegalArgumentException) {
+            logger.warn("A message with incorrect format was received and it will be discarded", e)
+        } catch (e: Exception) {
+            logger.warn("An error occurred while handling message", e)
+            return false
+        }
+
+        return true
     }
 
     private fun initializeDataTrackers() {
@@ -100,12 +117,18 @@ class MetaModelService : Service {
             transaction(DBCache.get("$dataStoreId").database) {
                 DataConnectors
                     .selectAll()
-                    .forEach { dataConnectorResultRow ->
+                    .forEach dataConnectorsLoop@ { dataConnectorResultRow ->
                         val dataConnectorId = dataConnectorResultRow[DataConnectors.id].value
 
                         try {
                             val dataConnector = getDataConnector(dataConnectorId)
                             val trackedEntities = getEntitiesToBeTracked(dataConnectorId)
+
+                            if (trackedEntities.isEmpty()) {
+                                logger.debug("No connection attempt will be made for the data connector $dataConnectorId due to no entities to be tracked")
+                                return@dataConnectorsLoop
+                            }
+
                             val tracker = createDebeziumTracker(dataStoreId, dataConnector, trackedEntities)
                             debeziumTrackers[dataConnectorId] = tracker
                             tracker.start()
@@ -119,7 +142,7 @@ class MetaModelService : Service {
         }
     }
 
-    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String> {
+    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String>  {
         val sourceClassAlias = Classes.alias("c1")
         val targetClassAlias = Classes.alias("c2")
         return EtlProcessesMetadata
@@ -128,7 +151,7 @@ class MetaModelService : Service {
             .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
             .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
             .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
-            .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId }
+            .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }
             .fold(mutableSetOf()) { entities, relation ->
                 entities.add(relation[sourceClassAlias[Classes.name]])
                 entities.add(relation[targetClassAlias[Classes.name]])
@@ -158,14 +181,19 @@ class MetaModelService : Service {
     private fun activate(dataStoreId: UUID, dataConnectorId: UUID) {
         debeziumTrackers[dataConnectorId]?.close()
 
-        val tracker = transaction(DBCache.get("$dataStoreId").database) {
-            val dataConnector = getDataConnector(dataConnectorId) ?: throw Exception("")
+        transaction(DBCache.get("$dataStoreId").database) {
+            val dataConnector = getDataConnector(dataConnectorId)
             val trackedEntities = getEntitiesToBeTracked(dataConnectorId)
-            return@transaction createDebeziumTracker(dataStoreId, dataConnector, trackedEntities)
-        }
 
-        debeziumTrackers[dataConnectorId] = tracker
-        tracker.start()
+            if (trackedEntities.isEmpty()) {
+                logger.debug("No connection attempt will be made for the data connector $dataConnectorId due to no entities to be tracked")
+                return@transaction
+            }
+
+            val tracker = createDebeziumTracker(dataStoreId, dataConnector, trackedEntities)
+            debeziumTrackers[dataConnectorId] = tracker
+            tracker.start()
+        }
     }
 
     private fun deactivate(dataStoreId: UUID, dataConnectorId: UUID) {
@@ -263,26 +291,5 @@ class MetaModelService : Service {
         setProperty("table.include.list", entities.joinToString(",", transform = { "(\\w+\\.)?$it" }))
 
         return this
-    }
-
-    inner class JMSListener : AbstractJMSListener(DATA_CONNECTOR_TOPIC, null, name) {
-        override fun onMessage(message: Message?): Unit = loggedScope {
-            require(message is MapMessage) { "Unrecognized message $message." }
-
-            val type = message.getString(TYPE)
-            val dataStoreId = message.getString(DATA_STORE_ID)?.toUUID() ?: throw IllegalArgumentException("Missing field: $DATA_STORE_ID.")
-            val dataConnectorId = message.getString(DATA_CONNECTOR_ID)?.toUUID() ?: throw IllegalArgumentException("Missing field: $DATA_CONNECTOR_ID.")
-
-            when (type) {
-                ACTIVATE -> activated(dataStoreId, dataConnectorId)
-                DEACTIVATE -> deactivated(dataStoreId, dataConnectorId)
-                RELOAD -> modified(dataStoreId, dataConnectorId)
-                else -> throw IllegalArgumentException("Unrecognized type: $type.")
-            }
-        }
-
-        var activated: (UUID, UUID) -> Unit = { _, _ -> }
-        var deactivated: (UUID, UUID) -> Unit = { _, _ -> }
-        var modified: (UUID, UUID) -> Unit = { _, _ -> }
     }
 }

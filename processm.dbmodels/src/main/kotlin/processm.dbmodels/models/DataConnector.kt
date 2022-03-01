@@ -15,6 +15,7 @@ const val DEACTIVATE = "deactivate"
 const val RELOAD = "reload"
 const val DATA_CONNECTOR_ID = "data_connector_id"
 const val DATA_STORE_ID = "data_store_id"
+const val DATA_MODEL_ID = "data_model_id"
 
 object DataConnectors : UUIDTable("data_connectors") {
     val name = text("name")
@@ -22,7 +23,6 @@ object DataConnectors : UUIDTable("data_connectors") {
     val lastConnectionStatusTimestamp = datetime("last_connection_status_timestamp").nullable()
     val connectionProperties = text("connection_properties")
     val dataModelId = reference("data_model_id", DataModels).nullable()
-
 }
 
 class DataConnector(id: EntityID<UUID>) : UUIDEntity(id) {
