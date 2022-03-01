@@ -1,7 +1,7 @@
 package processm.services.logic
 
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
+import org.koin.core.component.inject
+import org.koin.dsl.module
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
@@ -13,13 +13,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class OrganizationServiceTest : ServiceTestBase() {
-    @Before
-    @BeforeEach
-    fun setUp() {
-        organizationService = OrganizationService()
-    }
+    override val dependencyModule = module { single { OrganizationService() } }
 
-    lateinit var organizationService: OrganizationService
+    private val organizationService by inject<OrganizationService>()
 
     @Test
     fun `getting organization members throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {

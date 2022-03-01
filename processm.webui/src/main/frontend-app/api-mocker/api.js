@@ -142,6 +142,7 @@ const etlProcesses = {
       name: "users management",
       dataConnectorId: "aa8f65b4-7f93-44c7-a27c-7fc24cf6d1fb",
       type: "automatic",
+      isActive: true,
       caseNotion: {
         classes: {
           109: "users",
@@ -159,6 +160,7 @@ const etlProcesses = {
       name: "data stores in organizations",
       dataConnectorId: "7d28101b-5ef9-4b20-b57e-aaded99cfb2c",
       type: "automatic",
+      isActive: false,
       caseNotion: {
         classes: {
           79: "organizations",
@@ -333,6 +335,24 @@ const api = {
     etlProcesses[dataStoreId].push(etlProcess);
 
     return res.status(201).json({ data: etlProcess });
+  },
+  "PATCH /api/organizations/:organizationId/data-stores/:dataStoreId/etl-processes/:etlProcessId": (
+    req,
+    res
+  ) => {
+    const { dataStoreId, etlProcessId } = req.params;
+    const newStatus = req.body.data.isActive;
+    const etlProcess = _.find(etlProcesses[dataStoreId], {
+      id: etlProcessId,
+    });
+
+    if (etlProcess == null) {
+      return res.status(404).json();
+    }
+
+    etlProcess.isActive = newStatus;
+
+    return res.status(204).json();
   },
   "DELETE /api/organizations/:organizationId/data-stores/:dataStoreId/etl-processes/:etlProcessId": (
     req,

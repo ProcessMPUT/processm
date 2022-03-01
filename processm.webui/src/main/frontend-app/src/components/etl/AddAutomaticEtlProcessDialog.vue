@@ -27,7 +27,35 @@
             :rules="notEmptyRule"
             @change="reloadSuggestedBusinessPerspectives"
             required
-          ></v-select>
+          >
+            <template v-slot:item="{ item, on, attrs }">
+              <v-list-item
+                v-if="Object.keys(item.properties).length > 0"
+                v-bind="attrs"
+                v-on="on"
+              >
+                <v-list-item-content>
+                  <v-list-item-title>{{ item.name }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+              <v-tooltip v-else bottom v-bind="attrs" v-on="on">
+                <template v-slot:activator="{ on, attrs }">
+                  <div v-bind="attrs" v-on="on">
+                    <v-list-item :disabled="true" class="px-0">
+                      <v-list-item-content>
+                        <v-list-item-title>{{ item.name }}</v-list-item-title>
+                      </v-list-item-content>
+                    </v-list-item>
+                  </div>
+                </template>
+                <span>{{
+                  $t(
+                    "data-stores.add-automatic-process.connector-not-supported"
+                  )
+                }}</span>
+              </v-tooltip>
+            </template>
+          </v-select>
 
           <v-tooltip bottom :disabled="selectedDataConnectorId != null">
             <template v-slot:activator="{ on, attrs }">

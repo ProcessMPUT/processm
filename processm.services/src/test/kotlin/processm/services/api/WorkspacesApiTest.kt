@@ -8,6 +8,8 @@ import io.mockk.just
 import io.mockk.mockk
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
+import org.koin.core.component.inject
+import org.koin.dsl.module
 import org.koin.test.mock.declareMock
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
@@ -15,8 +17,12 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponents
 import processm.services.api.models.*
+import processm.services.logic.GroupService
+import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
+import java.time.Instant
+import java.time.temporal.TemporalUnit
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.Test
@@ -42,17 +48,9 @@ class WorkspacesApiTest : BaseApiTest() {
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces/${UUID.randomUUID()}/components/${UUID.randomUUID()}/data"
     )
 
-    override fun componentsRegistration() {
-        super.componentsRegistration()
-        workspaceService = declareMock()
-        dbSerializer = declareMock()
-    }
-
-    lateinit var workspaceService: WorkspaceService
-    lateinit var dbSerializer: DBSerializer
-
     @Test
     fun `responds with 200 and workspace list`() = withConfiguredTestApplication {
+        val workspaceService = declareMock<WorkspaceService>()
         val userId = UUID.randomUUID()
         val organizationId = UUID.randomUUID()
         val workspaceId1 = UUID.randomUUID()
@@ -81,6 +79,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     fun `responds to existing workspace removal request with 204`() = withConfiguredTestApplication {
+        val workspaceService = declareMock<WorkspaceService>()
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
 
@@ -100,6 +99,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     fun `responds to unknown workspace removal request with 404`() = withConfiguredTestApplication {
+        val workspaceService = declareMock<WorkspaceService>()
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
 
@@ -160,6 +160,7 @@ class WorkspacesApiTest : BaseApiTest() {
     @Test
     fun `responds to successful workspace creation request with 201 and workspace data`() =
         withConfiguredTestApplication {
+            val workspaceService = declareMock<WorkspaceService>()
             val organizationId = UUID.randomUUID()
             val userId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
@@ -234,6 +235,8 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     fun `responds to workspace components request with 200 and components list`() = withConfiguredTestApplication {
+        val workspaceService = declareMock<WorkspaceService>()
+        val dbSerializer = declareMock<DBSerializer>()
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
         val componentId1 = UUID.randomUUID()
@@ -260,6 +263,9 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { data } returns cnet1.toString()
                     every { customizationData } returns null
                     every { layoutData } returns null
+                    every { dataLastModified } returns null
+                    every { userLastModified } returns Instant.now()
+                    every { lastError } returns null
                 },
                 mockk {
                     every { id } returns EntityID(componentId2, WorkspaceComponents)
@@ -270,6 +276,9 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { data } returns cnet2.toString()
                     every { customizationData } returns null
                     every { layoutData } returns null
+                    every { dataLastModified } returns null
+                    every { userLastModified } returns Instant.now()
+                    every { lastError } returns null
                 }
             )
             every {
@@ -292,6 +301,8 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     fun `responds to workspace components request with 200 and component details`() = withConfiguredTestApplication {
+        val workspaceService = declareMock<WorkspaceService>()
+        val dbSerializer = declareMock<DBSerializer>()
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
         val componentId = UUID.randomUUID()
@@ -316,6 +327,9 @@ class WorkspacesApiTest : BaseApiTest() {
                     every { data } returns cnet1.toString()
                     every { customizationData } returns "{\"layout\":[{\"id\":\"node_id\",\"x\":15,\"y\":30}]}"
                     every { layoutData } returns null
+                    every { dataLastModified } returns null
+                    every { userLastModified } returns Instant.now()
+                    every { lastError } returns null
                 }
             )
             every {
@@ -341,6 +355,7 @@ class WorkspacesApiTest : BaseApiTest() {
     @Test
     fun `responds to workspace component update without component customization data request with 204`() =
         withConfiguredTestApplication {
+            val workspaceService = declareMock<WorkspaceService>()
             val organizationId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
@@ -388,6 +403,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     fun `responds to workspace component update request with 204`() = withConfiguredTestApplication {
+        val workspaceService = declareMock<WorkspaceService>()
         val organizationId = UUID.randomUUID()
         val workspaceId = UUID.randomUUID()
         val componentId = UUID.randomUUID()
@@ -444,6 +460,7 @@ class WorkspacesApiTest : BaseApiTest() {
     @Test
     fun `responds to workspace layout update request with 204`() =
         withConfiguredTestApplication {
+            val workspaceService = declareMock<WorkspaceService>()
             val organizationId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
@@ -481,6 +498,7 @@ class WorkspacesApiTest : BaseApiTest() {
     @Test
     fun `responds to workspace layout update request with unknown resource with 404 and error message`() =
         withConfiguredTestApplication {
+            val workspaceService = declareMock<WorkspaceService>()
             val organizationId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
@@ -521,6 +539,7 @@ class WorkspacesApiTest : BaseApiTest() {
     @Test
     fun `responds to component removal request with 204`() =
         withConfiguredTestApplication {
+            val workspaceService = declareMock<WorkspaceService>()
             val organizationId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()
@@ -548,6 +567,7 @@ class WorkspacesApiTest : BaseApiTest() {
     @Test
     fun `responds to component removal request with unknown resource with 404 and error message`() =
         withConfiguredTestApplication {
+            val workspaceService = declareMock<WorkspaceService>()
             val organizationId = UUID.randomUUID()
             val workspaceId = UUID.randomUUID()
             val componentId = UUID.randomUUID()

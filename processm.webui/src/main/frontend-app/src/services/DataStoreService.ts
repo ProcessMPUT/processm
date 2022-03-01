@@ -103,7 +103,7 @@ export default class DataStoreService extends BaseService {
   }
 
   public async removeDataStore(dataStoreId: string): Promise<void> {
-    const response = await this.dataStoresApi.deleteDataStore(
+    await this.dataStoresApi.deleteDataStore(
       DataStoreService.currentOrganizationId,
       dataStoreId,
       {
@@ -187,7 +187,7 @@ export default class DataStoreService extends BaseService {
     dataStoreId: string,
     dataConnectorId: string
   ): Promise<void> {
-    const response = await this.dataStoresApi.deleteDataConnector(
+    await this.dataStoresApi.deleteDataConnector(
       DataStoreService.currentOrganizationId,
       dataStoreId,
       dataConnectorId,
@@ -201,7 +201,7 @@ export default class DataStoreService extends BaseService {
     dataStoreId: string,
     dataConnectorConfiguration: Record<string, string>
   ): Promise<void> {
-    const response = await this.dataStoresApi.testDataConnector(
+    await this.dataStoresApi.testDataConnector(
       DataStoreService.currentOrganizationId,
       dataStoreId,
       { data: { properties: dataConnectorConfiguration } }
@@ -259,12 +259,19 @@ export default class DataStoreService extends BaseService {
 
     const etlProcesses = response.data.data.reduce(
       (etlProcesses: EtlProcess[], etlProcess: ApiEtlProcess) => {
+        if (etlProcess.dataConnectorId == null || etlProcess.type == null) {
+          console.error(
+            "Received an ETL process object without required values"
+          );
+          return etlProcesses;
+        }
         if (etlProcess.id != null) {
           etlProcesses.push({
             id: etlProcess.id,
             name: etlProcess.name || "",
             type: etlProcess.type,
-            dataConnectorId: etlProcess.dataConnectorId
+            dataConnectorId: etlProcess.dataConnectorId,
+            isActive: etlProcess.isActive || false
           });
         }
 
@@ -302,17 +309,43 @@ export default class DataStoreService extends BaseService {
     return response.data.data;
   }
 
+  public async changeEtlProcessActivationState(
+    dataStoreId: string,
+    etlProcessId: string,
+    isActive: boolean
+  ) {
+    const response = await this.dataStoresApi.updateEtlProcess(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      etlProcessId,
+      { data: { isActive } }
+    );
+
+    return response.status == 204;
+  }
+
   public async removeEtlProcess(
     dataStoreId: string,
     etlProcessId: string
   ): Promise<void> {
-    const response = await this.dataStoresApi.deleteEtlProcess(
+    await this.dataStoresApi.deleteEtlProcess(
       DataStoreService.currentOrganizationId,
       dataStoreId,
       etlProcessId,
       {
         validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
       }
+    );
+  }
+
+  public async recreateXesLogFromEtlProcess(
+    dataStoreId: string,
+    etlProcessId: string
+  ): Promise<void> {
+    await this.dataStoresApi.recreateLogFromEtlProcess(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      etlProcessId
     );
   }
 }

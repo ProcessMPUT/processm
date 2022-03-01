@@ -3,6 +3,10 @@ package processm.services.logic
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.koin.core.component.inject
+import org.koin.dsl.module
+import org.koin.test.mock.declareMock
+import processm.core.communication.Producer
 import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
 import processm.dbmodels.models.UsersInGroups
@@ -10,13 +14,9 @@ import java.util.*
 import kotlin.test.*
 
 class GroupServiceTest : ServiceTestBase() {
+    override val dependencyModule = module { single { GroupService() } }
 
-    @BeforeTest
-    fun setUp() {
-        groupService = GroupService()
-    }
-
-    lateinit var groupService: GroupService
+    private val groupService by inject<GroupService>()
 
     @Test
     fun `attachment of user to group throws if nonexistent user`(): Unit = withCleanTables(UserGroups, Users) {
