@@ -4,9 +4,8 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
-import org.jetbrains.exposed.sql.`java-time`.timestamp
-import processm.dbmodels.models.DataConnector
-import processm.dbmodels.models.DataConnectors
+import processm.dbmodels.models.EtlProcessMetadata
+import processm.dbmodels.models.EtlProcessesMetadata
 import java.util.*
 
 const val JDBC_ETL_TOPIC = "jdbc_etl"
@@ -17,8 +16,7 @@ const val DEACTIVATE = "deactivate"
 const val ID = "id"
 
 object ETLConfigurations : UUIDTable("etl_configurations") {
-    val name = text("name").uniqueIndex("etl_configurations_name")
-    val dataConnector = reference("data_connector", DataConnectors)
+    val metadata = reference("metadata", EtlProcessesMetadata)
     val query = text("query")
     val refresh = long("refresh").nullable()
     val enabled = bool("enabled").default(true)
@@ -26,7 +24,6 @@ object ETLConfigurations : UUIDTable("etl_configurations") {
     val logIdentityId = uuid("log_identity_id").clientDefault { UUID.randomUUID() }
     val lastEventExternalId = text("last_event_external_id").nullable()
     val lastEventExternalIdType = integer("last_event_external_id_type").nullable()
-    val lastExecutionTime = timestamp("last_execution_time").nullable()
 }
 
 /**
@@ -35,15 +32,7 @@ object ETLConfigurations : UUIDTable("etl_configurations") {
 class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<ETLConfiguration>(ETLConfigurations)
 
-    /**
-     * The human-readable name of the configuration.
-     */
-    var name by ETLConfigurations.name
-
-    /**
-     * A connector to the remote database.
-     */
-    var dataConnector by DataConnector referencedOn ETLConfigurations.dataConnector
+    var metadata by EtlProcessMetadata referencedOn ETLConfigurations.metadata
 
     /**
      * The query retrieving events from the remote database.
@@ -82,11 +71,6 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
      * The JDBC data type of [lastEventExternalId].
      */
     var lastEventExternalIdType by ETLConfigurations.lastEventExternalIdType
-
-    /**
-     * The date and time of the last execution of the ETL process associated with this configuration.
-     */
-    var lastExecutionTime by ETLConfigurations.lastExecutionTime
 
     /**
      * The mapping of columns in the remote database into the attributes.

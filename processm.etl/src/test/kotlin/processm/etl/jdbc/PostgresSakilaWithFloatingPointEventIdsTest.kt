@@ -13,6 +13,8 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.models.EtlProcessMetadata
+import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.DBMSEnvironment
 import processm.etl.PostgreSQLEnvironment
 import java.util.*
@@ -55,8 +57,11 @@ class PostgresSakilaWithFloatingPointEventIdsTest {
     private fun createEtlConfiguration() {
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
-                name = etlConfiguratioName
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    processType = "Jdbc"
+                    name = etlConfiguratioName
+                    dataConnector = externalDB.dataConnector
+                }
                 query = getEventSQL
                 lastEventExternalId = "0"
             }
@@ -136,7 +141,7 @@ ORDER BY ${columnQuot}event_id${columnQuot}
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.find { ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq etlConfiguratioName }.first().id }.first()
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }

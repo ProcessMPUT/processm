@@ -117,7 +117,7 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream {
     if (batch && lastEventExternalId !== null)
         return emptySequence()
     val baseSequence = sequence<Pair<XESComponent, Any?>> {
-        dataConnector.getConnection()
+        metadata.dataConnector.getConnection()
             .use { connection ->
                 try {
                     connection.setNetworkTimeout(ForkJoinPool.commonPool(), NETWORK_TIMEOUT)
@@ -128,7 +128,7 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream {
                     if (!batch)
                         stmt.setObject(1, castToSQLType(lastEventExternalId, lastEventExternalIdType))
 
-                    lastExecutionTime = Instant.now()
+                    metadata.lastExecutionTime = Instant.now()
                     stmt.executeQuery().use { rs ->
                         // helper structures
                         val columnMap = columnToAttributeMap.toMap()

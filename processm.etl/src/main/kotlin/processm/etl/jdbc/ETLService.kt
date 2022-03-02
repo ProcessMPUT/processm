@@ -104,7 +104,7 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
             try {
                 transaction(DBCache.get(datastore).database) {
                     config = ETLConfiguration[id.toUUID()!!]
-                    logger.info("Running the JDBC-based ETL process ${config!!.name} in datastore $datastore")
+                    logger.info("Running the JDBC-based ETL process ${config!!.metadata.name} in datastore $datastore")
 
                     // DO NOT call output.close(), as it would commit transaction and close connection. Instead, we are
                     // just attaching extra data to the exposed-managed database connection.
@@ -124,7 +124,7 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                     }
                 }
             } finally {
-                logger.info("The JDBC-based ETL process ${config?.name ?: "unknown"} finished")
+                logger.info("The JDBC-based ETL process ${config?.metadata?.name ?: "unknown"} finished")
             }
         }
     }

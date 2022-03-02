@@ -1,5 +1,6 @@
 package processm.etl.jdbc
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.statements.jdbc.JdbcConnectionImpl
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -150,11 +151,14 @@ OFFSET ?::bigint
             _lastEventExternalId: String?,
             sql: String,
             notify: Boolean = false
-        ) {
+        ): EntityID<UUID> {
             val config = transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.new {
-                    name = _name
-                    dataConnector = externalDB.dataConnector
+                    metadata = EtlProcessMetadata.new {
+                        processType = "Jdbc"
+                        name = _name
+                        dataConnector = externalDB.dataConnector
+                    }
                     query = sql
                     lastEventExternalId = _lastEventExternalId
                     refresh = _refresh
@@ -181,6 +185,8 @@ OFFSET ?::bigint
 
             if (notify)
                 config.notifyUsers()
+
+            return config.id
         }
 
         private fun setUpArtemis() {
@@ -215,6 +221,7 @@ OFFSET ?::bigint
         @BeforeAll
         fun setUp() {
             externalDB = PostgreSQLEnvironment.getSakila()
+            println(externalDB.jdbcUrl)
             createDateStore()
             setUpArtemis()
         }
@@ -287,7 +294,7 @@ OFFSET ?::bigint
         transaction(DBCache.get(dataStoreId).database) {
             for (config in ETLConfiguration.all()) {
                 val stream = q(config.logIdentityId)
-                when (config.name) {
+                when (config.metadata.name) {
                     "never run", "never run 2" -> assertEquals(0, stream.count())
                     "run once" -> {
                         assertEquals(1, stream.count())
@@ -326,7 +333,7 @@ OFFSET ?::bigint
         // verify what was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.name.eq("new batch ETL")
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("new batch ETL") }.first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -359,7 +366,7 @@ OFFSET ?::bigint
         // verify what was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.name.eq("new continuous ETL")
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("new continuous ETL") }.first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -383,7 +390,7 @@ OFFSET ?::bigint
 
             transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
-                    ETLConfigurations.name.eq("repeat")
+                    ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("repeat") }.first().id
                 }.first()
                 config.enabled = false
                 config
@@ -399,7 +406,7 @@ OFFSET ?::bigint
         // verify what was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.name.eq("repeat")
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("repeat") }.first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -423,7 +430,8 @@ OFFSET ?::bigint
 
             transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
-                    ETLConfigurations.name.eq("repeat")
+                    ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }
+                        .first().id
                 }.first()
                 config.enabled = false
                 config
@@ -434,7 +442,8 @@ OFFSET ?::bigint
 
             transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
-                    ETLConfigurations.name.eq("repeat")
+                    ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }
+                        .first().id
                 }.first()
                 config.enabled = true
                 config
@@ -451,7 +460,8 @@ OFFSET ?::bigint
         // verify what was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.name.eq("repeat")
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }
+                    .first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -478,7 +488,8 @@ OFFSET ?::bigint
             // verify that nothing was imported yet
             transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
-                    ETLConfigurations.name.eq("long-running ETL")
+                    ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("long-running ETL") }
+                        .first().id
                 }.first()
                 val stream = q(config.logIdentityId)
 
@@ -492,7 +503,8 @@ OFFSET ?::bigint
         // verify that only a single event was imported
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.name.eq("long-running ETL")
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("long-running ETL") }
+                    .first().id
             }.first()
             val stream = q(config.logIdentityId)
 
@@ -523,7 +535,8 @@ OFFSET ?::bigint
 
         transaction(DBCache.get(dataStoreId).database) {
             val config = ETLConfiguration.find {
-                ETLConfigurations.name.eq("invalid")
+                ETLConfigurations.metadata eq
+                        EtlProcessMetadata.find { EtlProcessesMetadata.name.eq("invalid") }.first().id
             }.first()
 
             // verify that nothing was imported yet

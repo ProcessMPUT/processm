@@ -14,6 +14,7 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.models.EtlProcessMetadata
 import processm.etl.DBMSEnvironment
 import java.sql.Connection
 import java.sql.Timestamp
@@ -134,11 +135,14 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         get() = lastEventExternalIdFromNumber(6214)
 
 
-    private fun createEtlConfiguration(lastEventExternalId: String? = "0") {
+    private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
-                name = etlConfiguratioName
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    name = etlConfiguratioName
+                    dataConnector = externalDB.dataConnector
+                    processType = "jdbc"
+                }
                 query = getEventSQL(lastEventExternalId == null)
                 batch = lastEventExternalId == null
                 this.lastEventExternalId = lastEventExternalId
@@ -157,8 +161,8 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
                 target = "trace_id"
                 traceId = true
             }
+            return@transaction config.id
         }
-    }
     // endregion
 
 
@@ -204,9 +208,9 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
     @Test
     fun `read XES from existing data`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             val stream = etl.toXESInputStream()
             val list = stream.toList()
 
@@ -227,15 +231,15 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
     @Test
     fun `read something then read everything then read nothing from existing data starting from null`() {
-        createEtlConfiguration(null)
+        val id = createEtlConfiguration(null)
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             assertNull(etl.lastEventExternalId)
             val list = etl.toXESInputStream().take(1000).toList()
             assertEquals(1000, list.size)
         }
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             //lastEventExternalId was not updated, because the previous read was incomplete
             assertNull(etl.lastEventExternalId)
 
@@ -245,7 +249,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             assertEquals(expectedNumberOfEvents.toInt(), list.count { it is Event })
         }
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             //lastEventExternalId was updated, because we read everything
             assertNotNull(etl.lastEventExternalId)
             val list = etl.toXESInputStream().toList()
@@ -255,11 +259,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
     @Test
     fun `read XES from existing data and write it to data store`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }
@@ -288,12 +292,12 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
     @Test
     fun `read partially XES from existing data and write it to data store then read the remaining XES and write it to data store`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         val partSize = 10000
         var logUUID: UUID? = null
         logger.info("Importing the first $partSize XES components...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 val materialized = etl.toXESInputStream().take(partSize).toList()
                 out.write(materialized.asSequence())
@@ -320,7 +324,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         // import the remaining components
         logger.info("Importing the remaining XES components...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }
@@ -345,11 +349,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
     @Test
     fun `read XES from existing data and write it to data store then add new data next read XES and write it to data store`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }
@@ -374,7 +378,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
             logger.info("Appending XES...")
             transaction(DBCache.get(dataStoreName).database) {
-                val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+                val etl = ETLConfiguration.findById(id)!!
                 AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                     val materializedStream = etl.toXESInputStream().toList()
                     out.write(materializedStream.asSequence())
@@ -422,7 +426,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
             logger.info("Appending XES...")
             transaction(DBCache.get(dataStoreName).database) {
-                val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+                val etl = ETLConfiguration.findById(id)!!
                 AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                     val materializedStream = etl.toXESInputStream().toList()
                     out.write(materializedStream.asSequence())
@@ -470,8 +474,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     fun `read id as Int`() {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
-                name = "Long-based ID test"
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    name = "Long-based ID test"
+                    dataConnector = externalDB.dataConnector
+                    processType = "jdbc"
+                }
                 query =
                     "SELECT CAST(987654321 AS $sqlInt) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlInt) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -511,8 +518,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     fun `read id as Long`() {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
-                name = "Long-based ID test"
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    name = "Long-based ID test"
+                    dataConnector = externalDB.dataConnector
+                    processType = "jdbc"
+                }
                 query =
                     "SELECT CAST(9876543210 AS $sqlLong) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS $sqlLong) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -552,8 +562,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     fun `read id as Double`() {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
-                name = "Long-based ID test"
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    processType = "jdbc"
+                    name = "Long-based ID test"
+                    dataConnector = externalDB.dataConnector
+                }
                 query =
                     "SELECT CAST(9876543210 AS double precision) AS ${columnQuot}event_id${columnQuot}, CAST(123 AS double precision) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -593,8 +606,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     fun `read id as UUIDv1`() {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
-                name = "Long-based ID test"
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    processType = "jdbc"
+                    name = "Long-based ID test"
+                    dataConnector = externalDB.dataConnector
+                }
                 query =
                     "SELECT CAST('b4139e40-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('c17cdfce-018d-11ec-9a03-0242ac130003' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -634,8 +650,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     fun `read id as UUIDv4`() {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
-                name = "Long-based ID test"
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    processType = "jdbc"
+                    name = "Long-based ID test"
+                    dataConnector = externalDB.dataConnector
+                }
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlUUID) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlUUID) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -675,8 +694,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     fun `read id as Text UUID`() {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
-                name = "Long-based ID test"
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    processType = "jdbc"
+                    name = "Long-based ID test"
+                    dataConnector = externalDB.dataConnector
+                }
                 query =
                     "SELECT CAST('c8d47033-b1ad-4668-98e3-21993d7d554b' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('9793827d-8c05-4adf-b0df-6df8eab9ab0b' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null
@@ -716,8 +738,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     fun `read id as arbitrary text`() {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.new {
-                name = "Long-based ID test"
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    processType = "jdbc"
+                    name = "Long-based ID test"
+                    dataConnector = externalDB.dataConnector
+                }
                 query =
                     "SELECT CAST('Lorem ipsum dolor sit amet, consectetur adipiscing elit,' AS $sqlText) AS ${columnQuot}event_id${columnQuot}, CAST('sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.' AS $sqlText) AS ${columnQuot}trace_id${columnQuot} $dummyFrom"
                 lastEventExternalId = null

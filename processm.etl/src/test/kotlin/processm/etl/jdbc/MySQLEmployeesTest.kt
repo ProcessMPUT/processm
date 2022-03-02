@@ -1,5 +1,6 @@
 package processm.etl.jdbc
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
@@ -15,6 +16,7 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.models.EtlProcessMetadata
 import processm.etl.MySQLEnvironment
 import java.time.Instant
 import java.util.*
@@ -49,11 +51,14 @@ class MySQLEmployeesTest {
     private val dataStoreName = UUID.randomUUID().toString()
     private val etlConfiguratioName = "MySQL Employees ETL Test"
 
-    private fun createEtlConfiguration(lastEventExternalId: String? = "0") {
+    private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
-                name = etlConfiguratioName
-                dataConnector = externalDB.dataConnector
+                metadata = EtlProcessMetadata.new {
+                    processType = "jdbc"
+                    name = etlConfiguratioName
+                    dataConnector = externalDB.dataConnector
+                }
                 query = getEventSQL(lastEventExternalId == null)
                 this.lastEventExternalId = lastEventExternalId
                 batch = lastEventExternalId == null
@@ -72,8 +77,8 @@ class MySQLEmployeesTest {
                 target = "trace_id"
                 traceId = true
             }
+            return@transaction config.id
         }
-    }
 
     // region lifecycle management
     @BeforeAll
@@ -119,9 +124,9 @@ class MySQLEmployeesTest {
 
     @Test
     fun `read XES from existing data`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             val stream = etl.toXESInputStream()
             val list = stream.toList()
 
@@ -142,12 +147,12 @@ class MySQLEmployeesTest {
 
     @Test
     fun `read the first two events one at a time`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         val partSize = 3
         var logUUID: UUID? = null
         logger.info("Importing the first event")
         val part1 = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             val materialized = etl.toXESInputStream().take(partSize).toList()
 
             assertEquals("1", etl.lastEventExternalId)
@@ -167,7 +172,7 @@ class MySQLEmployeesTest {
 
         logger.info("Importing one more event")
         val part2 = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             val part2 = etl.toXESInputStream().take(3).toList()
 
             for ((i, x) in part2.withIndex())
@@ -196,9 +201,9 @@ class MySQLEmployeesTest {
 
     @Test
     fun `read complete XES and then read nothing starting from 0`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         val stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().toList()
         }
 
@@ -207,7 +212,7 @@ class MySQLEmployeesTest {
         assertEquals(expectedNumberOfEvents, stream.filterIsInstance<Event>().size)
 
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             assertEquals(0, etl.toXESInputStream().count())
         }
     }
@@ -215,16 +220,16 @@ class MySQLEmployeesTest {
 
     @Test
     fun `read something then read everything then read nothing from null`() {
-        createEtlConfiguration(null)
+        val id = createEtlConfiguration(null)
 
         var stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().take(100).toList()
         }
         assertFalse { stream.isEmpty() }
 
         stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().toList()
         }
         assertEquals(1, stream.filterIsInstance<Log>().size)
@@ -232,13 +237,13 @@ class MySQLEmployeesTest {
         assertEquals(expectedNumberOfEvents, stream.filterIsInstance<Event>().size)
 
         stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().toList()
         }
         assertTrue { stream.isEmpty() }
     }
 
-    private fun `insert and verify new`() {
+    private fun `insert and verify new`(id: EntityID<UUID>) {
         try {
             externalDB.connect().use { conn ->
                 conn.autoCommit = false
@@ -271,7 +276,7 @@ class MySQLEmployeesTest {
                 conn.commit()
             }
             val list = transaction(DBCache.get(dataStoreName).database) {
-                val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+                val etl = ETLConfiguration.findById(id)!!
                 return@transaction etl.toXESInputStream().toList()
             }
             for (x in list)
@@ -369,31 +374,29 @@ class MySQLEmployeesTest {
 
     @Test
     fun `read all read nothing add new read new`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         var list = transaction(DBCache.get(dataStoreName).database) {
-            return@transaction ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
-                .toXESInputStream().toList()
+            return@transaction ETLConfiguration.findById(id)!!.toXESInputStream().toList()
         }
         assertEquals(1, list.count { it is Log })
         assertEquals(expectedNumberOfTraces, list.filterIsInstance<Trace>().groupBy { it.identityId }.count())
         assertEquals(expectedNumberOfEvents, list.count { it is Event })
         list = transaction(DBCache.get(dataStoreName).database) {
-            ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first().toXESInputStream().toList()
+            ETLConfiguration.findById(id)!!.toXESInputStream().toList()
         }
         assertTrue { list.isEmpty() }
-        `insert and verify new`()
+        `insert and verify new`(id)
     }
 
     @Test
     fun `skip read nothing add new read new`() {
-        createEtlConfiguration(expectedNumberOfEvents.toString())
+        val id = createEtlConfiguration(expectedNumberOfEvents.toString())
         val list = transaction(DBCache.get(dataStoreName).database) {
-            return@transaction ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
-                .toXESInputStream().toList()
+            return@transaction ETLConfiguration.findById(id)!!.toXESInputStream().toList()
         }
         for (x in list)
             logger.debug("${x::class} ${x.identityId} ${x.conceptName}")
         assertTrue { list.isEmpty() }
-        `insert and verify new`()
+        `insert and verify new`(id)
     }
 }
