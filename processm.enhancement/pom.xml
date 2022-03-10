@@ -7,10 +7,10 @@
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
         <version>0.1-SNAPSHOT</version>
-        <relativePath>../</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>performance</artifactId>
+    <artifactId>enhancement</artifactId>
     <packaging>jar</packaging>
 
     <name>ProcessM Performance Analysis</name>

@@ -38,7 +38,7 @@
         <module>processm.services</module>
         <module>processm.miners</module>
         <module>processm.conformance</module>
-        <module>processm.performance</module>
+        <module>processm.enhancement</module>
         <module>processm.webui</module>
         <module>processm.launcher</module>
         <module>processm.experimental</module>
