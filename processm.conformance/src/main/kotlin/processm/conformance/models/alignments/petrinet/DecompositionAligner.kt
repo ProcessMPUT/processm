@@ -11,10 +11,7 @@ import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.logging.trace
 import processm.core.models.commons.Activity
-import processm.core.models.petrinet.Marking
-import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.Place
-import processm.core.models.petrinet.Transition
+import processm.core.models.petrinet.*
 import java.util.concurrent.*
 
 /**
@@ -50,8 +47,9 @@ class DecompositionAligner(
         for (t in model.transitions) {
             val new = if (t.isSilent) t.copy(name = "${t.name}#${ctr++}") else t
             newTransitions.add(new)
-            check(new.name !in renaming) { "PetriNets with duplicated activities are not supported. Offending activity: ${t.name}" }
-            renaming[new.name] = t
+            check(
+                renaming.put(new.name, t) == null
+            ) { "PetriNets with duplicated activities are not supported. Offending activity: ${t.name}" }
         }
         this.model = PetriNet(
             model.places,
@@ -93,7 +91,10 @@ class DecompositionAligner(
         val time = System.currentTimeMillis() - start
         logger.debug { "Calculated alignment in ${time}ms using decomposition into ${alignments.size} nets." }
 
-        return output
+        return Alignment(output.steps.map {
+            //Model state doesn't refer transition, only places, and those are preserved while renaming
+            Step(renaming[it.modelMove?.name], it.modelState, it.logMove, it.logState, it.type)
+        }, output.cost)
     }
 
     /**
