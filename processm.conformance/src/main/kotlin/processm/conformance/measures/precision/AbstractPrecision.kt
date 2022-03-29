@@ -27,7 +27,7 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
      * [total] Number of occurrences of the prefix represented by a given trie node
      * [available] The set of activities available for execution in the prefix represented by the node
      */
-    data class PrecisionData(var total: Int, var available: Set<Activity>? = null)
+    data class PrecisionData(var total: Int, var available: Int, var availableAndChild: Int)
 
     /**
      * Complete [PrecisionData.available] for [prefixes] and each of its descendants
@@ -37,7 +37,9 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
      */
     open fun availableActivities(prefixes: Trie<Activity, PrecisionData>) {
         prefixes.forEach { (prefix, trie) ->
-            trie.value.available = availableActivities(prefix)
+            val available = availableActivities(prefix)
+            trie.value.available = available.size
+            trie.value.availableAndChild = trie.children.keys.count(available::contains)
         }
     }
 
@@ -76,7 +78,7 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
      * In the default implementation [artifact] is traversed exactly once and an overriding function should comply
      */
     open operator fun invoke(artifact: Sequence<Alignment>): Double {
-        val observed = Trie<Activity, PrecisionData> { PrecisionData(0) }
+        val observed = Trie<Activity, PrecisionData> { PrecisionData(0, 0, 0) }
         for (trace in translate(artifact)) {
             var current = observed
             for (activity in trace) {
@@ -89,11 +91,10 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
         var nom = 0.0
         var den = 0
         for ((prefix, trie) in observed) {
-            val (total, availableActivities) = trie.value
-            val children = trie.children.keys
-            logger.debug { "$total $prefix $children/$availableActivities" }
-            if (total > 0 && availableActivities !== null && availableActivities.isNotEmpty()) {
-                nom += total * children.count(availableActivities::contains).toDouble() / availableActivities.size
+            val (total, available, availableAndChild) = trie.value
+            logger.debug { "$total $prefix $availableAndChild/$available" }
+            if (total > 0 && available > 0) {
+                nom += total * availableAndChild.toDouble() / available
                 den += total
             }
         }

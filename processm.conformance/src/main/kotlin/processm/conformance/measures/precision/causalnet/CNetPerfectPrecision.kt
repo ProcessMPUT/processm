@@ -25,6 +25,9 @@ class CNetPerfectPrecision(model: CausalNet) : CNetAbstractPrecision(model) {
      * 2. Starts with a prefix present in [prefixes] and the first position after the prefix is not registered as available for the prefix
      */
     override fun availableActivities(prefixes: Trie<Activity, PrecisionData>) {
+        val observed = Trie<Activity, HashSet<Activity>> { HashSet() }
+        for (entry in prefixes)
+            observed.getOrPut(entry.prefix)
         val verifier = CausalNetVerifierImpl(model)
         // valid sequences runs BFS and there is only a finite number of possible successors, so I think this terminates
         val seqs = verifier.computeSetOfValidSequences(false) { seq, _ ->
@@ -32,22 +35,27 @@ class CNetPerfectPrecision(model: CausalNet) : CNetAbstractPrecision(model) {
             // Either activities as a whole is in the prefix trie or the first position not present in the prefix trie is still not registered as a possible continuation of the prefix
             // Keep in mind this function is executed not immediately, but during the iteration over the returned sequence, i.e, in the for loop below
             logger.debug { "intermediate seq=$activities" }
-            var current = prefixes
+            var current = observed
             for (activity in activities) {
                 current = current.getOrNull(activity)
-                    ?: return@computeSetOfValidSequences activity !in current.value.available.orEmpty()
+                    ?: return@computeSetOfValidSequences activity !in current.value
             }
             return@computeSetOfValidSequences true
         }
         for (seq in seqs) {
             val activities = seq.mapNotNull { if (!it.a.isSilent) it.a else null }
             logger.debug { "seq=$activities" }
-            var current = prefixes
+            var current = observed
             for (activity in activities) {
-                current.value.available =
-                    ((current.value.available ?: HashSet()) as HashSet).also { set -> set.add(activity) }
+                current.value.add(activity)
                 current = current.getOrNull(activity) ?: break
             }
+        }
+        for (entry in prefixes) {
+            val o = observed.getOrNull(entry.prefix)?.value
+            checkNotNull(o)
+            entry.trie.value.available = o.size
+            entry.trie.value.availableAndChild = o.count(entry.trie.children::containsKey)
         }
     }
 

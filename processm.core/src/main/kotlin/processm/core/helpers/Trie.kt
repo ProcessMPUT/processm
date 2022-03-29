@@ -32,6 +32,18 @@ class Trie<K, V>(private val initializer: () -> V) : Sequence<Trie.Entry<K, Trie
     fun getOrNull(key: K): Trie<K, V>? = childrenInternal?.get(key)
 
     /**
+     * A shorthand for retrieving a [Trie] corresponding to the given [prefix] by consecutive calls [getOrNull].
+     *
+     * @returns `null` if any of the calls to [getOrNull] returns `null`
+     */
+    fun getOrNull(prefix: Iterable<K>): Trie<K, V>? {
+        var node = this
+        for (key in prefix)
+            node = node.getOrNull(key) ?: return null
+        return node
+    }
+
+    /**
      * Returns a [Trie] corresponding to the child [key], creating and storing a new instance of [Trie] if necessary
      */
     fun getOrPut(key: K): Trie<K, V> {
