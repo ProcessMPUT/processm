@@ -93,7 +93,7 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
             val children = trie.children.keys
             logger.debug { "$total $prefix $children/$availableActivities" }
             if (total > 0 && availableActivities !== null && availableActivities.isNotEmpty()) {
-                nom += total * children.intersect(availableActivities).size.toDouble() / availableActivities.size
+                nom += total * children.count(availableActivities::contains).toDouble() / availableActivities.size
                 den += total
             }
         }

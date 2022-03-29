@@ -33,10 +33,11 @@ class PerfectPrecision(model: ProcessModel) : AbstractPrecision(model) {
                 } else {
                     trie.value.available = ((trie.value.available ?: HashSet()) as HashSet).also { it.add(activity) }
                     val child = trie.getOrNull(activity)
-                    instance.setState(state.copy())
-                    instance.getExecutionFor(activity).execute()
-                    if (child !== null)
+                    if (child !== null) {
+                        instance.setState(state.copy())
+                        instance.getExecutionFor(activity).execute()
                         stack.addLast(child to instance.currentState)
+                    }
                 }
             }
         }
