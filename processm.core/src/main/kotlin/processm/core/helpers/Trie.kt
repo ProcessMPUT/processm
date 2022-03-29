@@ -6,12 +6,12 @@ package processm.core.helpers
  * The values are stored in nodes.
  *
  * The default value for each prefix is given by the [initializer] function.
- * To retrieve a node corresponding to a given prefix, one must call [get] for each element of the prefix in order, e.g.,
+ * To retrieve a node corresponding to a given prefix, one must call [getOrPut] for each element of the prefix in order, e.g.,
  * ```
  * var node = root
- * prefix.forEach { node = node[it] }
+ * prefix.forEach { node = node.getOrPut(it) }
  * ```
- * (Or use a short-hand [get] for [Iterable])
+ * (Or use a short-hand [getOrPut] for [Iterable])
  *
  * Use [update] to change the value associated with the current node
  *
@@ -34,7 +34,7 @@ class Trie<K, V>(private val initializer: () -> V) : Sequence<Trie.Entry<K, Trie
     /**
      * Returns a [Trie] corresponding to the child [key], creating and storing a new instance of [Trie] if necessary
      */
-    operator fun get(key: K): Trie<K, V> {
+    fun getOrPut(key: K): Trie<K, V> {
         if (childrenInternal == null)
             childrenInternal = HashMap()
         return childrenInternal!!.computeIfAbsent(key) { Trie(initializer) }
@@ -43,9 +43,9 @@ class Trie<K, V>(private val initializer: () -> V) : Sequence<Trie.Entry<K, Trie
     /**
      * A shorthand for retrieving a [Trie] corresponding to the final element of [prefix], by traversing the trie according to the [prefix]
      */
-    operator fun get(prefix: Iterable<K>): Trie<K, V> {
+    fun getOrPut(prefix: Iterable<K>): Trie<K, V> {
         var node = this
-        prefix.forEach { node = node[it] }
+        prefix.forEach { node = node.getOrPut(it) }
         return node
     }
 

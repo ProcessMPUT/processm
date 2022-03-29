@@ -27,7 +27,7 @@ class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetAbstractPr
     override fun availableActivities(prefix: List<Activity>): Set<Activity> {
         var current = availableActivities
         for (activity in prefix)
-            current = current[activity]
+            current = current.getOrPut(activity)
         return current.value
     }
 
@@ -49,7 +49,7 @@ class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetAbstractPr
                 if (step.modelMove != null) {
                     val activity = (step.modelMove as DecoupledNodeExecution).activity
                     prefix.add(activity)
-                    current = current[activity]
+                    current = current.getOrPut(activity)
                     instance.setState(step.modelState)
                     instance.availableActivities.mapTo(current.value) { (it as DecoupledNodeExecution).activity }
                 }

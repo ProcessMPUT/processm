@@ -82,7 +82,7 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
             for (activity in trace) {
                 // incrementing total is first on purpose - we update the counter for an empty prefix, but we don't update the counter for the prefix = trace
                 current.value.total += 1
-                current = current[activity]
+                current = current.getOrPut(activity)
             }
         }
         availableActivities(observed)

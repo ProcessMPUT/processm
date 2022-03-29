@@ -11,27 +11,27 @@ class TrieTest {
     fun `build a trie`() {
         val trie = Trie<Int, Int> { 1 }
         assertEquals(1, trie.value)
-        assertEquals(1, trie[1].value)
-        assertEquals(1, trie[1][2].value)
-        assertEquals(1, trie[1][2][3].value)
-        trie[1][2].value = 12
+        assertEquals(1, trie.getOrPut(1).value)
+        assertEquals(1, trie.getOrPut(1).getOrPut(2).value)
+        assertEquals(1, trie.getOrPut(1).getOrPut(2).getOrPut(3).value)
+        trie.getOrPut(1).getOrPut(2).value = 12
         assertEquals(1, trie.value)
-        assertEquals(1, trie[1].value)
-        assertEquals(12, trie[1][2].value)
-        assertEquals(1, trie[1][2][3].value)
-        trie[1][2][3].value = 123
+        assertEquals(1, trie.getOrPut(1).value)
+        assertEquals(12, trie.getOrPut(1).getOrPut(2).value)
+        assertEquals(1, trie.getOrPut(1).getOrPut(2).getOrPut(3).value)
+        trie.getOrPut(1).getOrPut(2).getOrPut(3).value = 123
         assertEquals(1, trie.value)
-        assertEquals(1, trie[1].value)
-        assertEquals(12, trie[1][2].value)
-        assertEquals(123, trie[1][2][3].value)
+        assertEquals(1, trie.getOrPut(1).value)
+        assertEquals(12, trie.getOrPut(1).getOrPut(2).value)
+        assertEquals(123, trie.getOrPut(1).getOrPut(2).getOrPut(3).value)
     }
 
     @Test
     fun `iterate a trie`() {
         val root = Trie<Int, Int> { 0 }
-        root[1][2][3].value = 123
-        root[1][3][2].value = 132
-        root[1][2][4].value = 124
+        root.getOrPut(1).getOrPut(2).getOrPut(3).value = 123
+        root.getOrPut(1).getOrPut(3).getOrPut(2).value = 132
+        root.getOrPut(1).getOrPut(2).getOrPut(4).value = 124
         val i = root.iterator()
         assertTrue { i.hasNext() }
         with(i.next()) {
