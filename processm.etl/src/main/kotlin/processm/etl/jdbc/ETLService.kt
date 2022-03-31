@@ -101,15 +101,17 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
             val key = context.jobDetail.key
             val id = key.name
             val datastore = key.group
+            var name:String = "unknown"
             try {
                 transaction(DBCache.get(datastore).database) {
                     config = ETLConfiguration[id.toUUID()!!]
+                    name = config?.metadata?.name ?: name
                     logger.info("Running the JDBC-based ETL process ${config!!.metadata.name} in datastore $datastore")
 
                     // DO NOT call output.close(), as it would commit transaction and close connection. Instead, we are
                     // just attaching extra data to the exposed-managed database connection.
                     val output = AppendingDBXESOutputStream((connection as JdbcConnectionImpl).connection)
-                    output.write(config!!.toXESInputStream())
+                    output.write(config!!.toXESInputStream().let { stream -> config!!.sampleSize?.let { stream.take(it) } ?: stream })
                     output.flush()
                 }
             } catch (e: Exception) {
@@ -124,7 +126,7 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                     }
                 }
             } finally {
-                logger.info("The JDBC-based ETL process ${config?.metadata?.name ?: "unknown"} finished")
+                logger.info("The JDBC-based ETL process $name finished")
             }
         }
     }

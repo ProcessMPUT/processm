@@ -24,6 +24,7 @@ object ETLConfigurations : UUIDTable("etl_configurations") {
     val logIdentityId = uuid("log_identity_id").clientDefault { UUID.randomUUID() }
     val lastEventExternalId = text("last_event_external_id").nullable()
     val lastEventExternalIdType = integer("last_event_external_id_type").nullable()
+    val sampleSize = integer("sample_size").nullable()
 }
 
 /**
@@ -81,6 +82,11 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
      * The log of errors that occurred during executing the ETL process associated with this configuration.
      */
     val errors by ETLError referrersOn ETLErrors.configuration
+
+    /**
+     * The maximal size of the final log, as the number of components. Used while testing an ETL process configuration.
+     */
+    var sampleSize by ETLConfigurations.sampleSize
 
     /**
      * A flag indicating that this configuration is to be removed.

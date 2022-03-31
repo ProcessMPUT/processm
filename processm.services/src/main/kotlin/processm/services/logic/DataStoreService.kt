@@ -14,10 +14,14 @@ import org.json.simple.JSONObject
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.afterCommit
+import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMaps
+import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.*
 import processm.etl.discovery.SchemaCrawlerExplorer
+import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
@@ -221,6 +225,52 @@ class DataStoreService {
         return@transaction etlProcessMetadataId.value
     }
 
+    private fun Transaction.saveJdbcEtl(
+        dataConnectorId: UUID,
+        name: String, configuration: JdbcEtlProcessConfiguration, nComponents: Int? = null
+    ): UUID {
+        val etlProcessMetadata = EtlProcessMetadata.new {
+            this.name = name
+            this.processType = ProcessTypeDto.JDBC.processTypeName
+            this.dataConnector = DataConnector[dataConnectorId]
+        }
+        val cfg = ETLConfiguration.new {
+            this.metadata = etlProcessMetadata
+            this.query = configuration.query
+            this.refresh = if (nComponents == null) configuration.refresh?.toLong() else null
+            this.enabled = configuration.enabled || nComponents != null
+            this.batch = configuration.batch
+            this.lastEventExternalId = if (!configuration.batch) configuration.lastEventExternalId else null
+            this.lastEventExternalIdType = if (!configuration.batch) configuration.lastEventExternalIdType else null
+            this.sampleSize = nComponents
+            afterCommit {
+                notifyUsers()
+            }
+        }
+        ETLColumnToAttributeMap.new {
+            this.configuration = cfg
+            this.sourceColumn = configuration.eventId.source
+            this.target = configuration.eventId.target
+            this.traceId = false
+            this.eventId = true
+        }
+        ETLColumnToAttributeMap.new {
+            this.configuration = cfg
+            this.sourceColumn = configuration.traceId.source
+            this.target = configuration.traceId.target
+            this.traceId = true
+            this.eventId = false
+        }
+        ETLColumnToAttributeMaps.batchInsert(configuration.attributes.asIterable()) { columnCfg ->
+            this[ETLColumnToAttributeMaps.configuration] = cfg.id
+            this[ETLColumnToAttributeMaps.sourceColumn] = columnCfg.source
+            this[ETLColumnToAttributeMaps.target] = columnCfg.target
+            this[ETLColumnToAttributeMaps.traceId] = false
+            this[ETLColumnToAttributeMaps.eventId] = false
+        }
+        return etlProcessMetadata.id.value
+    }
+
     /**
      * Creates a JDBC-based ETL process in the specified [dataStoreId]
      */
@@ -230,44 +280,7 @@ class DataStoreService {
         name: String,
         configuration: JdbcEtlProcessConfiguration
     ) = transaction(DBCache.get("$dataStoreId").database) {
-        val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
-            it[this.name] = name
-            it[this.processType] = ProcessTypeDto.JDBC.processTypeName
-            it[this.dataConnectorId] = dataConnectorId
-        }
-        val cfg = ETLConfigurations.insertAndGetId {
-            it[this.id] = etlProcessMetadataId
-            it[this.name] = name
-            it[this.dataConnector] = dataConnectorId
-            it[this.query] = configuration.query
-            it[this.refresh] = configuration.refresh?.toLong()
-            it[this.enabled] = configuration.enabled
-            it[this.batch] = configuration.batch
-            it[this.lastEventExternalId] = if(!configuration.batch) configuration.lastEventExternalId else null
-            it[this.lastEventExternalIdType] = if(!configuration.batch) configuration.lastEventExternalIdType else null
-        }
-        ETLColumnToAttributeMaps.insert {
-            it[this.configuration] = cfg
-            it[this.sourceColumn] = configuration.eventId.source
-            it[this.target] = configuration.eventId.target
-            it[this.traceId] = false
-            it[this.eventId] = true
-        }
-        ETLColumnToAttributeMaps.insert {
-            it[this.configuration] = cfg
-            it[this.sourceColumn] = configuration.traceId.source
-            it[this.target] = configuration.traceId.target
-            it[this.traceId] = true
-            it[this.eventId] = false
-        }
-        ETLColumnToAttributeMaps.batchInsert(configuration.attributes.asIterable()) { columnCfg ->
-            this[ETLColumnToAttributeMaps.configuration] = cfg
-            this[ETLColumnToAttributeMaps.sourceColumn] = columnCfg.source
-            this[ETLColumnToAttributeMaps.target] = columnCfg.target
-            this[ETLColumnToAttributeMaps.traceId] = false
-            this[ETLColumnToAttributeMaps.eventId] = false
-        }
-        return@transaction etlProcessMetadataId.value
+        return@transaction saveJdbcEtl(dataConnectorId, name, configuration)
     }
 
     /**
@@ -276,6 +289,12 @@ class DataStoreService {
     fun getEtlProcesses(dataStoreId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
             return@transaction EtlProcessMetadata.wrapRows(EtlProcessesMetadata.selectAll()).map { it.toDto() }
+        }
+
+    fun getEtlProcessLogIdentityId(dataStoreId: UUID, etlProcessId: UUID) =
+        transaction(DBCache.get("$dataStoreId").database) {
+            return@transaction ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }
+                .first().logIdentityId
         }
 
     /**
@@ -377,5 +396,15 @@ class DataStoreService {
             }
             else -> throw Error("Unsupported connection type")
         }
+    }
+
+    fun createSamplingJdbcEtlProcess(
+        dataStoreId: UUID,
+        dataConnectorId: UUID,
+        name: String,
+        configuration: JdbcEtlProcessConfiguration,
+        nComponents: Int
+    ) = transaction(DBCache.get("$dataStoreId").database) {
+        return@transaction saveJdbcEtl(dataConnectorId, name, configuration, nComponents)
     }
 }

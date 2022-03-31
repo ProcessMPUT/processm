@@ -204,6 +204,9 @@ object Paths {
     @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}")
     class EtlProcess(val organizationId: UUID, val dataStoreId: UUID, val etlProcessId: UUID)
 
+    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/sampling-etl-processes/")
+    class SamplingEtlProcess(val organizationId: UUID, val dataStoreId: UUID, val nComponents: Int?=null)
+
     /**
      * Get details about current user
      *

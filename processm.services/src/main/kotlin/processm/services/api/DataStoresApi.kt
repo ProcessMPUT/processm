@@ -22,6 +22,11 @@ import java.util.*
 import java.util.zip.ZipException
 import javax.xml.stream.XMLStreamException
 
+
+//TODO refactor as a user-exposed configuration
+const val defaultSampleSize = 100
+const val maxSampleSize = 200
+
 @KtorExperimentalLocationsAPI
 fun Route.DataStoresApi() {
     val connectionStringPropertyName = "connection-string"
@@ -324,6 +329,28 @@ fun Route.DataStoresApi() {
                 EtlProcessMessageBody(AbstractEtlProcess(etlProcessData.name, etlProcessData.dataConnectorId, etlProcessData.type, etlProcessData.id)))
         }
 
+        get<Paths.EtlProcess> { pathParams ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                pathParams.dataStoreId,
+                OrganizationRoleDto.Owner
+            )
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            try {
+                val logIdentityId =
+                    dataStoreService.getEtlProcessLogIdentityId(pathParams.dataStoreId, pathParams.etlProcessId)
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    logIdentityId
+                )
+            } catch (_: NoSuchElementException) {
+                throw ApiException("Not found", HttpStatusCode.NotFound)
+            }
+        }
+
         delete<Paths.EtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
@@ -332,6 +359,41 @@ fun Route.DataStoresApi() {
             dataStoreService.removeEtlProcess(pathParams.dataStoreId, pathParams.etlProcessId)
 
             call.respond(HttpStatusCode.NoContent)
+        }
+
+        post<Paths.SamplingEtlProcess> { pathParams ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                pathParams.dataStoreId,
+                OrganizationRoleDto.Owner
+            )
+            val nComponents = (pathParams.nComponents ?: defaultSampleSize).coerceAtMost(maxSampleSize)
+            val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
+                ?: throw ApiException("The provided ETL process definition cannot be parsed")
+            val id = when (etlProcessData.type) {
+                EtlProcessType.jdbc -> {
+                    val configuration =
+                        etlProcessData.configuration ?: throw ApiException("Empty ETL configuration is not supported")
+                    dataStoreService.createSamplingJdbcEtlProcess(
+                        pathParams.dataStoreId,
+                        etlProcessData.dataConnectorId,
+                        etlProcessData.name,
+                        configuration,
+                        nComponents
+                    )
+                }
+                else -> throw ApiException("The provided ETL process type is not supported")
+            }
+
+            call.respond(
+                HttpStatusCode.Created,
+                EtlProcessMessageBody(
+                    AbstractEtlProcess(etlProcessData.name, etlProcessData.dataConnectorId, etlProcessData.type, id)
+                )
+            )
         }
     }
 }
