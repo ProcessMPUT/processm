@@ -16,6 +16,7 @@ import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
+import processm.core.persistence.Migrator
 import processm.etl.PostgreSQLEnvironment
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
@@ -54,7 +55,8 @@ suspend inline fun <reified T> HttpResponse.deserialize(): T {
 @OptIn(KtorExperimentalLocationsAPI::class)
 class ProcessMTestingEnvironment {
 
-    private var jdbcUrl: String? = null
+    var jdbcUrl: String? = null
+        private set
     private var dbContainer: PostgreSQLContainer<*>? = null
     private var token: String? = null
     var currentOrganizationId: UUID? = null
@@ -79,24 +81,26 @@ class ProcessMTestingEnvironment {
             .withDatabaseName(dbName)
             .withUsername(user)
             .withPassword(password)
+            .withReuse(false)
         return this
     }
 
     fun <T> run(block: ProcessMTestingEnvironment.() -> T) {
         try {
-            loadConfiguration()
+            loadConfiguration(true)
             dbContainer?.let { dbContainer ->
                 Startables.deepStart(listOf(dbContainer)).join()
                 jdbcUrl = "${dbContainer.jdbcUrl}&user=${dbContainer.username}&password=${dbContainer.password}"
             }
             jdbcUrl?.let { jdbcUrl ->
                 System.setProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL", jdbcUrl)
+                Migrator.reloadConfiguration()
             }
-            EnterpriseServiceBus().apply {
-                autoRegister()
-                startAll()
+            EnterpriseServiceBus().use { esb ->
+                esb.autoRegister()
+                esb.startAll()
+                block()
             }
-            this.block()
         } finally {
             ForkJoinPool.commonPool().shutdownNow()
             dbContainer?.stop()
