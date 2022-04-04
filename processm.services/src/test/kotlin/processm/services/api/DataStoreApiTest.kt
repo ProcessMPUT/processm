@@ -1,14 +1,11 @@
 package processm.services.api
 
 import io.ktor.http.*
-import io.ktor.server.testing.*
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.*
@@ -59,8 +56,8 @@ class DataStoreApiTest : BaseApiTest() {
                     dataStoreService.createSamplingJdbcEtlProcess(dataStoreId, dataConnectorId, any(), cfg, any())
                 } returns etlProcessId andThenThrows IllegalStateException()
                 every {
-                    dataStoreService.getEtlProcessLogIdentityId(dataStoreId, etlProcessId)
-                } returns logIdentityId
+                    dataStoreService.getEtlProcessInfo(dataStoreId, etlProcessId)
+                } returns DataStoreService.EtlProcessInfo(logIdentityId, emptyList())
                 every {
                     logsService.queryDataStoreJSON(dataStoreId, "where log:identity:id=$logIdentityId")
                 } returns {

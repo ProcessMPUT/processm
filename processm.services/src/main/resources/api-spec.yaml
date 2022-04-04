@@ -624,6 +624,24 @@ paths:
         schema:
           type: string
           format: uuid
+    get:
+      tags:
+        - dataStores
+      summary: Retrieves the information about execution of the specified ETL process
+      operationId: getEtlProcess
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/EtlProcessInfo'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
     delete:
       tags:
         - dataStores
@@ -1833,6 +1851,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AbstractEtlProcess'
+    EtlProcessInfo:
+      type: object
+      required: [logIdentityId]
+      properties:
+        logIdentityId:
+          type: string
+          format: uuid
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/EtlError'
+    EtlError:
+      type: object
+      required: [message, time]
+      properties:
+        message:
+          type: string
+        exception:
+          type: string
+        time:
+          type: string
+          format: date-time
     DataConnectorConnectivity:
       type: object
       required: [isValid]

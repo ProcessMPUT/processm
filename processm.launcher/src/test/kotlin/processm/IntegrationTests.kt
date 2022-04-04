@@ -1,6 +1,10 @@
 package processm
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -21,6 +25,8 @@ import processm.etl.PostgreSQLEnvironment
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
 import processm.services.api.models.*
+import processm.services.logic.DataStoreService
+import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
 import kotlin.reflect.full.findAnnotation
@@ -49,7 +55,17 @@ fun <R> duck(block: Duck.() -> R): R = Duck.block()
 
 suspend inline fun <reified T> HttpResponse.deserialize(): T {
     assertContentType(ContentType.Application.Json)
-    return Gson().fromJson(receive<String>(), T::class.java)
+    // TODO: replace GSON with kotlinx/serialization
+    val gsonBuilder = GsonBuilder()
+    // Correctly serialize/deserialize LocalDateTime
+    gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
+        override fun write(out: JsonWriter, value: LocalDateTime?) {
+            out.value(value?.toString())
+        }
+
+        override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
+    })
+    return gsonBuilder.create().fromJson(receive<String>(), T::class.java)
 }
 
 @OptIn(KtorExperimentalLocationsAPI::class)
@@ -251,6 +267,65 @@ class ProcessMTestingEnvironment {
 class IntegrationTests {
 
     @Test
+    fun `complete workflow for testing an incorrect ETL process`() {
+        val samplingEtlProcessName = "blah"
+        val query = "An incorrect query"
+        ProcessMTestingEnvironment().withFreshDatabase().run {
+            registerUser("test@example.com", "some organization")
+            login("test@example.com", "pass")
+            currentOrganizationId = organizations.single().id
+            currentDataStore = createDataStore("datastore")
+            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
+            val initialDefinition = AbstractEtlProcess(
+                samplingEtlProcessName,
+                currentDataConnector?.id!!,
+                EtlProcessType.jdbc,
+                configuration = JdbcEtlProcessConfiguration(
+                    query,
+                    true,
+                    false,
+                    JdbcEtlColumnConfiguration("trace_id", "trace_id"),
+                    JdbcEtlColumnConfiguration("event_id", "event_id"),
+                    emptyArray(),
+                    lastEventExternalId = "0"
+                )
+            )
+            val samplingEtlProcess = post<Paths.SamplingEtlProcess, EtlProcessMessageBody, AbstractEtlProcess>(
+                EtlProcessMessageBody(initialDefinition)
+            ) {
+                return@post deserialize<EtlProcessMessageBody>().data
+            }
+            assertEquals(samplingEtlProcessName, samplingEtlProcess.name)
+            assertEquals(currentDataConnector?.id, samplingEtlProcess.dataConnectorId)
+            assertNotNull(samplingEtlProcess.id)
+
+            currentEtlProcess = samplingEtlProcess
+
+            val info = runBlocking {
+                for (i in 0..10) {
+                    Thread.sleep(1000)
+                    val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                        return@get deserialize<EtlProcessInfo>()
+                    }
+                    if (!info.errors.isNullOrEmpty())
+                        return@runBlocking info
+                }
+                error("Process did not fail in the prescribed amount of time")
+            }
+            assertFalse { info.errors.isNullOrEmpty() }
+            val logIdentityId = info.logIdentityId
+
+            deleteLog(logIdentityId)
+            with(pqlQuery("where log:identity:id=$logIdentityId")) {
+                assertTrue { isEmpty() }
+            }
+
+            deleteCurrentEtlProcess()
+            assertThrows<ClientRequestException> { get<Paths.EtlProcess, Unit> {} }
+        }
+    }
+
+    @Test
     fun `complete workflow for testing ETL process`() {
         val samplingEtlProcessName = "blah"
 
@@ -322,10 +397,11 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertNotNull(samplingEtlProcess.id)
 
                 currentEtlProcess = samplingEtlProcess
-                val logIdentityId = get<Paths.EtlProcess, UUID> {
-                    return@get deserialize<UUID>()
+                val info = get<Paths.EtlProcess, DataStoreService.EtlProcessInfo> {
+                    return@get deserialize<DataStoreService.EtlProcessInfo>()
                 }
-                assertNotNull(logIdentityId)
+                assertTrue { info.errors.isEmpty() }
+                val logIdentityId = info.logIdentityId
 
                 val logs: Array<Any> = runBlocking {
                     for (i in 0..10) {

@@ -339,13 +339,9 @@ fun Route.DataStoresApi() {
             )
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             try {
-                val logIdentityId =
-                    dataStoreService.getEtlProcessLogIdentityId(pathParams.dataStoreId, pathParams.etlProcessId)
-
-                call.respond(
-                    HttpStatusCode.OK,
-                    logIdentityId
-                )
+                val info = dataStoreService.getEtlProcessInfo(pathParams.dataStoreId, pathParams.etlProcessId)
+                val message = EtlProcessInfo(info.logIdentityId, info.errors.mapToArray { EtlError(it.message, it.time.toLocalDateTime(), it.exception) })
+                call.respond(HttpStatusCode.OK, message)
             } catch (_: NoSuchElementException) {
                 throw ApiException("Not found", HttpStatusCode.NotFound)
             }

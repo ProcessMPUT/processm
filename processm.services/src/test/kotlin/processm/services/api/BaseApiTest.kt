@@ -2,11 +2,8 @@ package processm.services.api
 
 import com.google.common.reflect.TypeToken
 import com.google.gson.Gson
-import io.ktor.config.MapApplicationConfig
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
+import io.ktor.config.*
+import io.ktor.http.*
 import io.ktor.server.testing.*
 import io.mockk.MockKAnnotations
 import io.mockk.every
@@ -152,6 +149,7 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     }
 
     protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
+        addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
         setBody(Gson().toJson(requestBody))
     }
 

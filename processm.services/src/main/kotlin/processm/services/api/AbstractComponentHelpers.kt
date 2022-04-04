@@ -9,8 +9,14 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.*
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+
+/**
+ * Converts an [Instant] to [LocalDateTime] in a uniform way.
+ */
+fun Instant.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(this, ZoneId.of("Z")).withNano(0)
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].
@@ -25,8 +31,8 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
         layout = getLayout(),
         customizationData = getCustomizationData(),
         data = getData(),
-        dataLastModified = dataLastModified?.let { LocalDateTime.ofInstant(it, ZoneId.of("Z")).withNano(0) },
-        userLastModified = LocalDateTime.ofInstant(userLastModified, ZoneId.of("Z")).withNano(0),
+        dataLastModified = dataLastModified?.toLocalDateTime(),
+        userLastModified = userLastModified.toLocalDateTime(),
         lastError = lastError
     )
 

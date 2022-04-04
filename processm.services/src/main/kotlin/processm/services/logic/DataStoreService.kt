@@ -15,10 +15,7 @@ import org.postgresql.ds.PGSimpleDataSource
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.afterCommit
-import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
-import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMaps
-import processm.dbmodels.etl.jdbc.ETLConfiguration
-import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.*
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.jdbc.notifyUsers
@@ -291,10 +288,12 @@ class DataStoreService {
             return@transaction EtlProcessMetadata.wrapRows(EtlProcessesMetadata.selectAll()).map { it.toDto() }
         }
 
-    fun getEtlProcessLogIdentityId(dataStoreId: UUID, etlProcessId: UUID) =
+    data class EtlProcessInfo(val logIdentityId:UUID, val errors:List<ETLErrorDto>)
+
+    fun getEtlProcessInfo(dataStoreId: UUID, etlProcessId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
-            return@transaction ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }
-                .first().logIdentityId
+            val etlProcess = ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.first()
+            return@transaction EtlProcessInfo(etlProcess.logIdentityId, etlProcess.errors.map(ETLError::toDto))
         }
 
     /**

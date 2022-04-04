@@ -37,7 +37,7 @@
                 <executions>
                     <execution>
                         <id>generate code</id>
-                        <phase>generate-resources</phase>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>generate</goal>
                         </goals>
