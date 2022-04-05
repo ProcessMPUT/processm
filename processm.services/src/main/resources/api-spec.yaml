@@ -690,7 +690,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/EtlProcessCollectionMessageBody'
+                $ref: '#/components/schemas/EtlProcessMessageBody'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1862,6 +1862,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EtlError'
+        lastExecutionTime:
+          type: string
+          format: date-time
     EtlError:
       type: object
       required: [message, time]

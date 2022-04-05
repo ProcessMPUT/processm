@@ -25,6 +25,7 @@ import processm.etl.metamodel.MetaModelReader
 import processm.services.api.models.JdbcEtlProcessConfiguration
 import java.sql.Connection
 import java.sql.DriverManager
+import java.time.Instant
 import java.util.*
 import javax.sql.DataSource
 
@@ -288,12 +289,12 @@ class DataStoreService {
             return@transaction EtlProcessMetadata.wrapRows(EtlProcessesMetadata.selectAll()).map { it.toDto() }
         }
 
-    data class EtlProcessInfo(val logIdentityId:UUID, val errors:List<ETLErrorDto>)
+    data class EtlProcessInfo(val logIdentityId:UUID, val errors:List<ETLErrorDto>, val lastExecutionTime: Instant?)
 
     fun getEtlProcessInfo(dataStoreId: UUID, etlProcessId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
             val etlProcess = ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.first()
-            return@transaction EtlProcessInfo(etlProcess.logIdentityId, etlProcess.errors.map(ETLError::toDto))
+            return@transaction EtlProcessInfo(etlProcess.logIdentityId, etlProcess.errors.map(ETLError::toDto), etlProcess.metadata.lastExecutionTime)
         }
 
     /**

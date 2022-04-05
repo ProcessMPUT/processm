@@ -1,4 +1,4 @@
 export default interface JdbcEtlColumnConfiguration {
-    source: string;
-    target: string;
+  source: string;
+  target: string;
 }

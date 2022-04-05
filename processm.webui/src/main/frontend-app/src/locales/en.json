@@ -83,10 +83,10 @@
     "batch": "Batch query",
     "refresh": "Refresh rate",
     "enabled": "Enabled",
-    "traceIdSource": "Trace ID column",
-    "traceIdTarget": "Trace ID attribute",
-    "eventIdSource": "Event ID column",
-    "eventIdTarget": "Event ID attribute",
+    "trace-id-source": "Trace ID column",
+    "trace-id-target": "Trace ID attribute",
+    "event-id-source": "Event ID column",
+    "event-id-target": "Event ID attribute",
     "source": "Column",
     "target": "Attribute",
     "mappings": "Column to attribute mappings",
@@ -94,7 +94,9 @@
     "validation": {
       "non-empty-field": "The value cannot be empty",
       "not-a-positive-integer": "The value is not a positive integer"
-    }
+    },
+    "last-event-external-id": "Initial last event ID",
+    "last-event-external-id-type": "Last event ID datatype"
   },
   "add-data-connector-dialog": {
     "dialog-title": "Add data connector",
@@ -195,9 +197,17 @@
       "registered": "The account registration was successful"
     }
   },
+  "xes-preview-dialog": {
+    "title": "Log viewer",
+    "no-data-store": "No appropriate data store found to query.",
+    "executing-query": "Executing query...",
+    "query-executed": "Query executed and results retrieved in {executionTime} ms. Formatting results...",
+    "results-retrieved": "Query executed and results retrieved in {executionTime} ms. Formatted results in {formattingTime} ms."
+  },
   "common": {
     "cancel": "Cancel",
     "save": "Save",
+    "test": "Test",
     "rename": "Rename",
     "remove": "Remove",
     "close": "Close",
@@ -223,6 +233,10 @@
     "saving": {
       "success": "Successfully saved",
       "failure": "Failed to save"
+    },
+    "testing": {
+      "success": "Test succeeded",
+      "failure": "Test failed"
     }
   }
 }

@@ -25,7 +25,6 @@ import processm.etl.PostgreSQLEnvironment
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
 import processm.services.api.models.*
-import processm.services.logic.DataStoreService
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
@@ -397,21 +396,21 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 assertNotNull(samplingEtlProcess.id)
 
                 currentEtlProcess = samplingEtlProcess
-                val info = get<Paths.EtlProcess, DataStoreService.EtlProcessInfo> {
-                    return@get deserialize<DataStoreService.EtlProcessInfo>()
+                val info = runBlocking {
+                    for (i in 0..10) {
+                        val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                            return@get deserialize<EtlProcessInfo>()
+                        }
+                        if (info.lastExecutionTime !== null)
+                            return@runBlocking info
+                        Thread.sleep(1000)
+                    }
+                    error("The ETL process was not executed in the prescribed amount of time")
                 }
-                assertTrue { info.errors.isEmpty() }
+                assertTrue { info.errors.isNullOrEmpty() }
                 val logIdentityId = info.logIdentityId
 
-                val logs: Array<Any> = runBlocking {
-                    for (i in 0..10) {
-                        Thread.sleep(1000)
-                        val log = pqlQuery("where log:identity:id=$logIdentityId")
-                        if (log.isNotEmpty())
-                            return@runBlocking log
-                    }
-                    error("Failed to retrieve a non-empty collection of logs")
-                }
+                val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
 
                 assertEquals(1, logs.size)
                 val log = logs[0]

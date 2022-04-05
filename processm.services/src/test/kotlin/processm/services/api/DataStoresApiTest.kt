@@ -12,6 +12,7 @@ import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
 import processm.services.logic.OrganizationService
+import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.Test
@@ -20,7 +21,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DataStoreApiTest : BaseApiTest() {
+class DataStoresApiTest : BaseApiTest() {
 
     override fun componentsRegistration() {
         super.componentsRegistration()
@@ -33,7 +34,7 @@ class DataStoreApiTest : BaseApiTest() {
     lateinit var dataStoreService: DataStoreService
     lateinit var logsService: LogsService
 
-    override fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?> = Stream.of(null    )
+    override fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?> = Stream.of(null)
 
     override fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?> = Stream.of(null)
 
@@ -50,6 +51,7 @@ class DataStoreApiTest : BaseApiTest() {
             val process = AbstractEtlProcess("name", dataConnectorId, EtlProcessType.jdbc, configuration = cfg)
 
             val text = """{"data":[{"foo": "bar"}]}"""
+            val lastExecutionTime = Instant.now()
 
             withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
                 every {
@@ -57,7 +59,7 @@ class DataStoreApiTest : BaseApiTest() {
                 } returns etlProcessId andThenThrows IllegalStateException()
                 every {
                     dataStoreService.getEtlProcessInfo(dataStoreId, etlProcessId)
-                } returns DataStoreService.EtlProcessInfo(logIdentityId, emptyList())
+                } returns DataStoreService.EtlProcessInfo(logIdentityId, emptyList(), lastExecutionTime)
                 every {
                     logsService.queryDataStoreJSON(dataStoreId, "where log:identity:id=$logIdentityId")
                 } returns {
@@ -105,8 +107,9 @@ class DataStoreApiTest : BaseApiTest() {
                     )
                 ) {
                     assertEquals(HttpStatusCode.OK, response.status())
-                    val cadaver = assertNotNull(response.deserializeContent<UUID>())
-                    assertEquals(logIdentityId, cadaver)
+                    val cadaver = assertNotNull(response.deserializeContent<EtlProcessInfo>())
+                    assertEquals(logIdentityId, cadaver.logIdentityId)
+                    assertEquals(lastExecutionTime.toLocalDateTime(), cadaver.lastExecutionTime)
                 }
                 with(
                     handleRequest(

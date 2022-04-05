@@ -2,6 +2,10 @@ package processm.services.api
 
 import com.google.common.reflect.TypeToken
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import io.ktor.config.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
@@ -21,6 +25,7 @@ import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
+import java.time.LocalDateTime
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -145,7 +150,17 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
     }
 
     protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T {
-        return Gson().fromJson(content, object : TypeToken<T>() {}.type)
+        // TODO: replace GSON with kotlinx/serialization
+        val gsonBuilder = GsonBuilder()
+        // Correctly serialize/deserialize LocalDateTime
+        gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
+            override fun write(out: JsonWriter, value: LocalDateTime?) {
+                out.value(value?.toString())
+            }
+
+            override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
+        })
+        return gsonBuilder.create().fromJson(content, object : TypeToken<T>() {}.type)
     }
 
     protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
