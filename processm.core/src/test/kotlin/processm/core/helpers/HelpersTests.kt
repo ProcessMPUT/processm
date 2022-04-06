@@ -298,7 +298,7 @@ class HelpersTests {
         assertEquals(list.allSubsets(true), list.allSubsetsUpToSize(4).toSet())
     }
 
-    private fun testCount(n:Int) {
+    private fun testCount(n: Int) {
         val input = (0 until n).toList()
         assertEquals(n, input.size)
         val expected = 0 + //ignored empty subsets
@@ -320,5 +320,32 @@ class HelpersTests {
     @Test
     fun `count subsets up to size 2 of list of 300`() {
         testCount(300)
+    }
+
+    @Test
+    fun `intersect - empty`() {
+        assertTrue { intersect(emptyList<Set<Int>>()).isEmpty() }
+    }
+
+    @Test
+    fun `intersect - one set`() {
+        val set = setOf(1, 2, 3)
+        assertSame(set, intersect(listOf(set)))
+    }
+
+    @Test
+    fun `intersect - three sets with common elements`() {
+        val set1 = setOf(1, 2, 3)
+        val set2 = setOf(1, 2, 4)
+        val set3 = setOf(2, 3, 4)
+        assertEquals(setOf(2), intersect(listOf(set1, set2, set3)))
+    }
+
+    @Test
+    fun `intersect - three disjoint sets`() {
+        val set1 = setOf(1, 2, 3)
+        val set2 = setOf(2, 3, 4)
+        val set3 = setOf(4, 5, 6)
+        assertEquals(emptySet(), intersect(listOf(set1, set2, set3)))
     }
 }

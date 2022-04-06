@@ -40,4 +40,8 @@ open class Transition(
         outPlaces: Collection<Place> = this.outPlaces,
         isSilent: Boolean = this.isSilent
     ): Transition = Transition(name, inPlaces, outPlaces, isSilent)
+
+    override fun toString(): String {
+        return if(isSilent) return "τ" else name
+    }
 }
