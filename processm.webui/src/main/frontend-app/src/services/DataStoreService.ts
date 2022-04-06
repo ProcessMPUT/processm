@@ -266,7 +266,10 @@ export default class DataStoreService extends BaseService {
             id: etlProcess.id,
             name: etlProcess.name || "",
             type: etlProcess.type,
-            dataConnectorId: etlProcess.dataConnectorId
+            dataConnectorId: etlProcess.dataConnectorId,
+            lastExecutionTime: etlProcess.lastExecutionTime
+              ? new Date(etlProcess.lastExecutionTime)
+              : undefined
           });
         }
 

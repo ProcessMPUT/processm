@@ -298,6 +298,10 @@
                   value: 'type'
                 },
                 {
+                  text: $t('data-stores.etl.last-execution-time'),
+                  value: 'lastExecutionTime'
+                },
+                {
                   text: $t('common.actions'),
                   value: 'actions',
                   align: 'center',

@@ -1835,6 +1835,9 @@ components:
         dataConnectorId:
           type: string
           format: uuid
+        lastExecutionTime:
+          type: string
+          format: date-time
         type:
           $ref: '#/components/schemas/EtlProcessType'
     EtlProcessMessageBody:

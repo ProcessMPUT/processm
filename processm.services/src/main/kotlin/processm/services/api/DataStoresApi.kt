@@ -320,7 +320,8 @@ fun Route.DataStoresApi() {
                         it.name,
                         it.dataConnectorId,
                         EtlProcessType.valueOf(it.processType.processTypeName),
-                        it.id
+                        it.id,
+                        it.lastExecutionTime?.toLocalDateTime()
                     )
                 }
 
