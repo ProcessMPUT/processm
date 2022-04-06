@@ -321,6 +321,16 @@
                   </template>
                   <span>{{ $t("common.remove") }}</span>
                 </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="showEtlProcessDetails(item)"
+                      >info</v-icon
+                      >
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("common.details") }}</span>
+                </v-tooltip>
               </template>
               <template v-slot:[`item.dataConnectorId`]="{ item }">
                 {{ getDataConnectorName(item.dataConnectorId) }}
@@ -362,6 +372,12 @@
       @cancelled="addJdbcEtlProcessDialog = false"
       @submitted="addJdbcEtlProcess"
     />
+    <process-details-dialog
+      :value="processDetailsDialogEtlProcess !== null"
+      :data-store-id="dataStoreId"
+      :etl-process="processDetailsDialogEtlProcess"
+      @cancelled="processDetailsDialogEtlProcess = null"
+      ></process-details-dialog>
   </v-dialog>
 </template>
 
@@ -388,9 +404,11 @@ import AddAutomaticEtlProcessDialog from "@/components/etl/AddAutomaticEtlProces
 import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
 import AddJdbcEtlProcessDialog from "@/components/etl/AddJdbcEtlProcessDialog.vue";
+import ProcessDetailsDialog from "@/components/etl/ProcessDetailsDialog.vue";
 
 @Component({
   components: {
+    ProcessDetailsDialog,
     AddJdbcEtlProcessDialog,
     AddDataConnectorDialog,
     XesDataTable,
@@ -420,6 +438,7 @@ export default class DataStoreConfiguration extends Vue {
   isLoadingEtlProcesses = false;
   dataConnectorIdToRename: string | null = null;
   capitalize = capitalize;
+  processDetailsDialogEtlProcess: EtlProcess|null = null;
 
   @Prop({ default: false })
   readonly value!: boolean;
@@ -701,6 +720,10 @@ export default class DataStoreConfiguration extends Vue {
   async addJdbcEtlProcess() {
     this.addJdbcEtlProcessDialog = false;
     await this.loadEtlProcesses();
+  }
+
+  showEtlProcessDetails(etlProcess: EtlProcess) {
+    this.processDetailsDialogEtlProcess = etlProcess
   }
 }
 </script>

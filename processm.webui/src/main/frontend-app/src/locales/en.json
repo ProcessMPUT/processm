@@ -74,7 +74,8 @@
       "process-name": "Process name",
       "data-connector": "Data connector",
       "removal-confirmation": "Do you want to permanently remove {etlProcessName} ETL process with all associated data?",
-      "custom-case-notion": "Custom selection"
+      "custom-case-notion": "Custom selection",
+      "last-execution-time": "Last execution time"
     }
   },
   "add-jdbc-etl-process-dialog": {
@@ -203,6 +204,14 @@
     "executing-query": "Executing query...",
     "query-executed": "Query executed and results retrieved in {executionTime} ms. Formatting results...",
     "results-retrieved": "Query executed and results retrieved in {executionTime} ms. Formatted results in {formattingTime} ms."
+  },
+  "process-details-dialog": {
+    "title": "Process details: {name}",
+    "message": "Error message",
+    "exception": "Stack trace",
+    "time": "Time",
+    "log-identity-id": "Log identity:id",
+    "errors": "Errors"
   },
   "common": {
     "cancel": "Cancel",
