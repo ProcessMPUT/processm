@@ -13,7 +13,7 @@ class PetriNetInstance(
     override val model: PetriNet
 ) : ProcessModelInstance {
 
-    override var currentState: Marking = model.initialMarking
+    override var currentState: Marking = model.initialMarking.copy()
         private set
 
     override val availableActivities: Sequence<Activity>
@@ -29,7 +29,7 @@ class PetriNetInstance(
         get() = currentState == model.finalMarking
 
     override fun setState(state: ProcessModelState?) {
-        currentState = if (state === null) model.initialMarking else state as Marking
+        currentState = if (state === null) model.initialMarking.copy() else state as Marking
     }
 
     override fun getExecutionFor(activity: Activity): ActivityExecution {

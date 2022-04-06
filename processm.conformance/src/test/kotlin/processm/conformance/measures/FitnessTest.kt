@@ -3,6 +3,7 @@ package processm.conformance.measures
 import org.junit.jupiter.api.Disabled
 import processm.conformance.models.alignments.CompositeAligner
 import processm.core.log.Helpers.event
+import processm.core.log.Helpers.times
 import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
@@ -56,8 +57,6 @@ class FitnessTest {
         P tin "g" * "h"
     }
 
-
-    private operator fun Trace.times(n: Int): Sequence<Trace> = (0 until n).asSequence().map { this@times }
 
     private val log = Log(
         sequence {
