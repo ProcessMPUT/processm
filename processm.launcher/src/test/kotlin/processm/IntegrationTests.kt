@@ -14,6 +14,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.locations.*
 import kotlinx.coroutines.runBlocking
+import org.apache.commons.dbcp2.DriverManagerConnectionFactory
 import org.junit.jupiter.api.assertThrows
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
@@ -21,7 +22,6 @@ import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
-import processm.etl.PostgreSQLEnvironment
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
 import processm.services.api.models.*
@@ -37,7 +37,16 @@ fun HttpResponse.assertContentType(expected: ContentType) =
         "Unexpected content type: `${contentType()}'. Expected: `$expected'"
     )
 
-object Duck {
+/**
+ * Ducktyping for raw results of JSON deserialization. Anything indexed with a string is assumed to be a map, and anything
+ * indexed with an integer - to be a list.
+ *
+ * Intended usage:
+ * ```
+ * with(ducktyping) { ... }
+ * ```
+ */
+object ducktyping {
 
     operator fun Any?.get(key: String): Any? {
         assertIs<Map<String, *>>(this)
@@ -49,8 +58,6 @@ object Duck {
         return this[key]
     }
 }
-
-fun <R> duck(block: Duck.() -> R): R = Duck.block()
 
 suspend inline fun <reified T> HttpResponse.deserialize(): T {
     assertContentType(ContentType.Application.Json)
@@ -72,7 +79,6 @@ class ProcessMTestingEnvironment {
 
     var jdbcUrl: String? = null
         private set
-    private var dbContainer: PostgreSQLContainer<*>? = null
     private var token: String? = null
     var currentOrganizationId: UUID? = null
     var currentDataStore: DataStore? = null
@@ -81,32 +87,76 @@ class ProcessMTestingEnvironment {
 
     // region Environment
 
+    companion object {
+        private fun randomMainDbName() = "processm-${UUID.randomUUID()}"
+
+        private val sharedDbContainer: PostgreSQLContainer<*> by lazy {
+            val image = DockerImageName.parse("timescale/timescaledb:latest-pg12").asCompatibleSubstituteFor("postgres")
+            //TODO investigate - it seems that if user != "postgres" processm.core.persistence.Migrator.ensureDatabaseExists fails while creating a new datastore
+            val user = "postgres"
+            val password = "postgres"
+            val container = PostgreSQLContainer<PostgreSQLContainer<*>>(image)
+                .withDatabaseName("postgres")
+                .withUsername(user)
+                .withPassword(password)
+                .withReuse(false)
+            Startables.deepStart(listOf(container)).join()
+            return@lazy container
+        }
+
+
+        private fun ddlQuery(query: String) =
+            sharedDbContainer.createConnection("").use {
+                it.prepareStatement(query).execute()
+            }
+
+        private fun createDatabase(dbName: String) = ddlQuery("create database \"$dbName\"")
+
+        private fun jdbcUrlForDb(dbName: String): String {
+            val ip = sharedDbContainer.containerIpAddress
+            val port = sharedDbContainer.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
+            val user = sharedDbContainer.username
+            val password = sharedDbContainer.password
+            return "jdbc:postgresql://$ip:$port/$dbName?loggerLevel=OFF&user=$user&password=$password"
+        }
+
+        private val sakilaJdbcUrl: String by lazy {
+            val dbName = "sakila"
+            val schemaScript = "sakila/postgres-sakila-db/postgres-sakila-schema.sql"
+            val insertScript = "sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
+            createDatabase(dbName)
+            val url = jdbcUrlForDb(dbName)
+
+            DriverManagerConnectionFactory(url).createConnection().use { connection ->
+                connection.autoCommit = false
+                connection.createStatement().use { s ->
+                    s.execute(this::class.java.classLoader.getResource(schemaScript)!!.readText())
+                    s.execute(this::class.java.classLoader.getResource(insertScript)!!.readText())
+                }
+                connection.commit()
+            }
+            return@lazy url
+        }
+    }
+
+    val sakilaJdbcUrl: String
+        get() = Companion.sakilaJdbcUrl
+
     fun withPreexistingDatabase(jdbcUrl: String): ProcessMTestingEnvironment {
         this.jdbcUrl = jdbcUrl
         return this
     }
 
     fun withFreshDatabase(): ProcessMTestingEnvironment {
-        val image = DockerImageName.parse("timescale/timescaledb:latest-pg12").asCompatibleSubstituteFor("postgres")
-        val dbName = "processm"
-        //TODO investigate - it seems that if user != "postgres" processm.core.persistence.Migrator.ensureDatabaseExists fails while creating a new datastore
-        val user = "postgres"
-        val password = "postgres"
-        dbContainer = PostgreSQLContainer<PostgreSQLContainer<*>>(image)
-            .withDatabaseName(dbName)
-            .withUsername(user)
-            .withPassword(password)
-            .withReuse(false)
+        val freshDbName = randomMainDbName()
+        createDatabase(freshDbName)
+        this.jdbcUrl = jdbcUrlForDb(freshDbName)
         return this
     }
 
     fun <T> run(block: ProcessMTestingEnvironment.() -> T) {
         try {
             loadConfiguration(true)
-            dbContainer?.let { dbContainer ->
-                Startables.deepStart(listOf(dbContainer)).join()
-                jdbcUrl = "${dbContainer.jdbcUrl}&user=${dbContainer.username}&password=${dbContainer.password}"
-            }
             jdbcUrl?.let { jdbcUrl ->
                 System.setProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL", jdbcUrl)
                 Migrator.reloadConfiguration()
@@ -118,7 +168,6 @@ class ProcessMTestingEnvironment {
             }
         } finally {
             ForkJoinPool.commonPool().shutdownNow()
-            dbContainer?.stop()
         }
     }
 
@@ -192,16 +241,21 @@ class ProcessMTestingEnvironment {
         }
 
 
-    inline fun <reified Endpoint, T, R> post(data: T, noinline block: suspend HttpResponse.() -> R): R =
+    inline fun <reified Endpoint, T, R> post(data: T?, noinline block: suspend HttpResponse.() -> R): R =
         post(format<Endpoint>(), data, block)
 
-    fun <T, R> post(endpoint: String, data: T, block: suspend HttpResponse.() -> R): R =
+    inline fun <reified Endpoint, R> post(noinline block: suspend HttpResponse.() -> R): R =
+        post(format<Endpoint>(), null, block)
+
+    fun <T, R> post(endpoint: String, data: T?, block: suspend HttpResponse.() -> R): R =
         runBlocking {
             HttpClient(CIO).use { client ->
                 val response = client.post<HttpResponse>(apiUrl(endpoint)) {
-                    contentType(ContentType.Application.Json)
                     token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
-                    body = Gson().toJson(data)
+                    if (data !== null) {
+                        contentType(ContentType.Application.Json)
+                        body = Gson().toJson(data)
+                    }
                 }
                 return@runBlocking response.block()
             }
@@ -367,68 +421,66 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             login("test@example.com", "pass")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
-            PostgreSQLEnvironment.getSakila().use { sakila ->
-                val sakilaJdbcUrl = "${sakila.jdbcUrl}&user=${sakila.user}&password=${sakila.password}"
-                currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to sakilaJdbcUrl))
+            currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to sakilaJdbcUrl))
 
-                val initialDefinition = AbstractEtlProcess(
-                    samplingEtlProcessName,
-                    currentDataConnector?.id!!,
-                    EtlProcessType.jdbc,
-                    configuration = JdbcEtlProcessConfiguration(
-                        query,
-                        true,
-                        false,
-                        JdbcEtlColumnConfiguration("trace_id", "trace_id"),
-                        JdbcEtlColumnConfiguration("event_id", "event_id"),
-                        emptyArray(),
-                        lastEventExternalId = "0"
-                    )
+            val initialDefinition = AbstractEtlProcess(
+                samplingEtlProcessName,
+                currentDataConnector?.id!!,
+                EtlProcessType.jdbc,
+                configuration = JdbcEtlProcessConfiguration(
+                    query,
+                    true,
+                    false,
+                    JdbcEtlColumnConfiguration("trace_id", "trace_id"),
+                    JdbcEtlColumnConfiguration("event_id", "event_id"),
+                    emptyArray(),
+                    lastEventExternalId = "0"
                 )
+            )
 
-                val samplingEtlProcess = post<Paths.SamplingEtlProcess, EtlProcessMessageBody, AbstractEtlProcess>(
-                    EtlProcessMessageBody(initialDefinition)
-                ) {
-                    return@post deserialize<EtlProcessMessageBody>().data
-                }
-                assertEquals(samplingEtlProcessName, samplingEtlProcess.name)
-                assertEquals(currentDataConnector?.id, samplingEtlProcess.dataConnectorId)
-                assertNotNull(samplingEtlProcess.id)
-
-                currentEtlProcess = samplingEtlProcess
-                val info = runBlocking {
-                    for (i in 0..10) {
-                        val info = get<Paths.EtlProcess, EtlProcessInfo> {
-                            return@get deserialize<EtlProcessInfo>()
-                        }
-                        if (info.lastExecutionTime !== null)
-                            return@runBlocking info
-                        Thread.sleep(1000)
-                    }
-                    error("The ETL process was not executed in the prescribed amount of time")
-                }
-                assertTrue { info.errors.isNullOrEmpty() }
-                val logIdentityId = info.logIdentityId
-
-                val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
-
-                assertEquals(1, logs.size)
-                val log = logs[0]
-                duck {
-                    assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
-                    val traces = log["log"]["trace"] as List<*>
-                    val nItems = 1 + traces.size + traces.sumOf { trace -> (trace["event"] as List<*>).size }
-                    assertTrue { nItems <= defaultSampleSize }
-                }
-
-                deleteLog(logIdentityId)
-                with(pqlQuery("where log:identity:id=$logIdentityId")) {
-                    assertTrue { isEmpty() }
-                }
-
-                deleteCurrentEtlProcess()
-                assertThrows<ClientRequestException> { get<Paths.EtlProcess, Unit> {} }
+            val samplingEtlProcess = post<Paths.SamplingEtlProcess, EtlProcessMessageBody, AbstractEtlProcess>(
+                EtlProcessMessageBody(initialDefinition)
+            ) {
+                return@post deserialize<EtlProcessMessageBody>().data
             }
+            assertEquals(samplingEtlProcessName, samplingEtlProcess.name)
+            assertEquals(currentDataConnector?.id, samplingEtlProcess.dataConnectorId)
+            assertNotNull(samplingEtlProcess.id)
+
+            currentEtlProcess = samplingEtlProcess
+            val info = runBlocking {
+                for (i in 0..10) {
+                    val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                        return@get deserialize<EtlProcessInfo>()
+                    }
+                    if (info.lastExecutionTime !== null)
+                        return@runBlocking info
+                    Thread.sleep(1000)
+                }
+                error("The ETL process was not executed in the prescribed amount of time")
+            }
+            assertTrue { info.errors.isNullOrEmpty() }
+            val logIdentityId = info.logIdentityId
+
+            val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
+
+            assertEquals(1, logs.size)
+            val log = logs[0]
+            with(ducktyping) {
+                assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
+                val traces = log["log"]["trace"] as List<*>
+                val nItems = 1 + traces.size + traces.sumOf { trace -> (trace["event"] as List<*>).size }
+                assertTrue { nItems <= defaultSampleSize }
+            }
+
+            deleteLog(logIdentityId)
+            with(pqlQuery("where log:identity:id=$logIdentityId")) {
+                assertTrue { isEmpty() }
+            }
+
+            deleteCurrentEtlProcess()
+            assertThrows<ClientRequestException> { get<Paths.EtlProcess, Unit> {} }
         }
     }
+
 }
