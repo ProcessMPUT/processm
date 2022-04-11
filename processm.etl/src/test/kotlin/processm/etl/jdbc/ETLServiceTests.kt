@@ -221,7 +221,6 @@ OFFSET ?::bigint
         @BeforeAll
         fun setUp() {
             externalDB = PostgreSQLEnvironment.getSakila()
-            println(externalDB.jdbcUrl)
             createDateStore()
             setUpArtemis()
         }
@@ -262,6 +261,7 @@ OFFSET ?::bigint
             }
 
             ETLConfigurations.deleteAll()
+            EtlProcessesMetadata.deleteAll()
         }
     }
 
