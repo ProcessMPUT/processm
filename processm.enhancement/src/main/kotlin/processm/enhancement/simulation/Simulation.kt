@@ -10,33 +10,36 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.random.Random
 
-class Simulation(private val processModelInstance: ProcessModelInstance, private val nextActivityCumulativeDistributionFunction: Map<Activity, Set<Map<Activity, Double>>> = emptyMap(), private val processInstanceStartTime: RealDistribution) {
+class Simulation(private val processModelInstance: ProcessModelInstance, private val nextActivityCumulativeDistributionFunction: Map<Activity, Set<Map<Activity, Double>>> = emptyMap()) {
     private val random = Random.Default
-    private val normalDistribution = NormalDistribution(5.0, 1.0)
-    private var lastProcessInstanceStart = Instant.now()
+//    private val normalDistribution = NormalDistribution(5.0, 1.0)
+//    private var lastProcessInstanceStart = Instant.now()
 
     fun runSingleTrace() = sequence {
         while (true) {
-            lastProcessInstanceStart += Duration.ofMinutes(processInstanceStartTime.sample().toLong())
-            var activitiesAvailableSince = emptyMap<Activity, Instant>()
-//            val processModelInstance = processModel.createInstance()
+//            lastProcessInstanceStart += Duration.ofMinutes(processInstanceStartTime.sample().toLong())
+//            var activitiesAvailableSince = emptyMap<Activity, Instant>()
+            var predecessingActivities = emptyMap<Activity, ActivityInstance?>()
+//            val processModelInstance =  processModel.createInstance()
             with(processModelInstance) { // setting the state to 'null' restarts the model
-//                setState(null)
-                val trace = mutableListOf<Pair<Activity, Instant>>()
-                var lastExecutedActivityDuration: Duration? = null
+                setState(null)
+                val trace = mutableListOf<ActivityInstance>()
+                var lastExecutedActivityInstance: ActivityInstance? = null
 
                 while (!isFinalState) {
                     run nextActivity@ {
                         val possibleActivities = availableActivities.toList()
-                        val lastActivityCompletionTime = (trace.lastOrNull()?.second ?: lastProcessInstanceStart) + (lastExecutedActivityDuration ?: Duration.ZERO)
+//                        val lastActivityCompletionTime = (trace.lastOrNull()?.second ?: lastProcessInstanceStart) + (lastExecutedActivityDuration ?: Duration.ZERO)
+//                        val lastActivityInstance = trace.lastOrNull() ?: lastExecutedActivityInstance
+                        predecessingActivities = possibleActivities.map { activity -> activity to (predecessingActivities[activity] ?: lastExecutedActivityInstance) }.toMap()
 
-                        activitiesAvailableSince = possibleActivities.map { activity -> activity to (activitiesAvailableSince[activity] ?: lastActivityCompletionTime) }.toMap()
-
-                        lastExecutedActivityDuration = Duration.ofMinutes(normalDistribution.sample().toLong())
+//                        lastExecutedActivityDuration = Duration.ofMinutes(normalDistribution.sample().toLong())
 
                         if (possibleActivities.size == 1) {
-                            getExecutionFor(possibleActivities[0]).execute()
-                            trace.add(possibleActivities[0] to activitiesAvailableSince[possibleActivities[0]]!!.plus(lastExecutedActivityDuration))
+                            val activity = possibleActivities[0]
+                            getExecutionFor(activity).execute()
+                            lastExecutedActivityInstance = ActivityInstance(activity, predecessingActivities[activity])
+                            trace.add(lastExecutedActivityInstance!!)
                         } else {
                             trace.reversed().forEach { (traceActivity, _) ->
                                 nextActivityCumulativeDistributionFunction[traceActivity]?.forEach { successingActivitiesCdf ->
@@ -49,7 +52,8 @@ class Simulation(private val processModelInstance: ProcessModelInstance, private
 
                                         if (nextActivity != null) {
                                             getExecutionFor(nextActivity).execute()
-                                            trace.add(nextActivity to activitiesAvailableSince[nextActivity]!!.plus(lastExecutedActivityDuration))
+                                            lastExecutedActivityInstance = ActivityInstance(nextActivity, predecessingActivities[nextActivity])
+                                            trace.add(lastExecutedActivityInstance!!)
                                             return@nextActivity
                                         }
                                     }
@@ -58,7 +62,8 @@ class Simulation(private val processModelInstance: ProcessModelInstance, private
 //
                             val randomNextActivity = possibleActivities[random.nextInt(possibleActivities.size)]
                             getExecutionFor(randomNextActivity).execute()
-                            trace.add(randomNextActivity to activitiesAvailableSince[randomNextActivity]!!.plus(lastExecutedActivityDuration))
+                            lastExecutedActivityInstance = ActivityInstance(randomNextActivity, predecessingActivities[randomNextActivity])
+                            trace.add(lastExecutedActivityInstance!!)
                         }
                     }
                 }
