@@ -737,3 +737,19 @@ inline fun <T> Iterable<T>.forEachCatching(action: (T) -> Unit) {
 inline fun <T> Array<T>.forEachCatching(action: (T) -> Unit) =
     Arrays.asList(*this).forEachCatching(action)
 
+
+/**
+ * Returns the set of elements shared by all the sets in [sets]
+ */
+fun <T> intersect(sets: Collection<Set<T>>): Set<T> =
+    when (sets.size) {
+        0 -> emptySet()
+        1 -> sets.single()
+        else -> {
+            val i = sets.iterator()
+            val result = HashSet<T>(i.next())
+            while (i.hasNext() && result.isNotEmpty())
+                result.retainAll(i.next())
+            result
+        }
+    }
