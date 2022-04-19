@@ -1,5 +1,5 @@
-declare module "bpmn-js" {
-  export default class BpmnJS {
+declare module "bpmn-js/lib/Modeler" {
+  export default class Modeler {
     constructor(param?: {
       container: object;
       diagramXML: string;

@@ -46,6 +46,7 @@
         :is="componentType"
         :data="componentDetails"
         :component-mode="componentMode"
+        :update-data="updateData"
         class="workspace-component-content"
       />
       <div class="last-updated">
@@ -142,6 +143,11 @@ export default class WorkspaceComponent extends Vue {
   readonly editable!: boolean;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
+  /**
+   * Set to true to let children update the data model (usually before sending it to the server).
+   */
+  @Prop({ default: false })
+  readonly updateData = false;
 
   private readonly lastModified =
     this.componentDetails?.dataLastModified ??
