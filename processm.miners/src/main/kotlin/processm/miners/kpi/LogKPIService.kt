@@ -21,17 +21,17 @@ import javax.jms.Message
 /**
  * A service that calculates KPIs using PQL for [WorkspaceComponent]s.
  */
-class KPIService : AbstractJobService(
+class LogKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
     "$WORKSPACE_COMPONENT_TYPE = '${ComponentTypeDto.Kpi}'"
 ) {
     companion object {
-        private const val QUARTZ_CONFIG = "quartz-kpi.properties"
+        private const val QUARTZ_CONFIG = "quartz-logkpi.properties"
     }
 
     override val name: String
-        get() = "KPI"
+        get() = "Log-based KPI"
 
     override fun loadJobs(): List<Pair<JobDetail, Trigger>> = loggedScope {
         val components = transaction(DBCache.getMainDBPool().database) {
