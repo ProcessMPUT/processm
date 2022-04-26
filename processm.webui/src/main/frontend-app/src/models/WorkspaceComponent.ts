@@ -2,11 +2,7 @@ import {
   DataLink,
   DataNode
 } from "@/components/workspace/causal-net/CausalNet";
-
-export enum ComponentType {
-  Kpi = "kpi",
-  CausalNet = "causalNet"
-}
+import { ComponentType } from "@/openapi";
 
 type CustomizationData = {};
 
@@ -38,6 +34,12 @@ export class KpiComponentData extends ComponentData {
 
   get isDisplayable() {
     return this.value != null;
+  }
+}
+
+export class BPMNComponentData extends ComponentData {
+  get isDisplayable(): boolean {
+    return true; // TODO
   }
 }
 
@@ -74,6 +76,9 @@ export class WorkspaceComponent {
       case ComponentType.Kpi: {
         this.data = new KpiComponentData(init.data ?? {});
         break;
+      }
+      case ComponentType.Bpmn: {
+        this.data = new BPMNComponentData(init.data ?? {});
       }
     }
   }

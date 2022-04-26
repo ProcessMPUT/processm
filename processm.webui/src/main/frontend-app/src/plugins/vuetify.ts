@@ -5,6 +5,7 @@ import XesTraceIcon from "@/components/icons/XesTraceIcon.vue";
 import XesLogIcon from "@/components/icons/XesLogIcon.vue";
 import KpiIcon from "@/components/icons/KpiIcon.vue";
 import CausalNetIcon from "@/components/icons/CausalNetIcon.vue";
+import BPMNIcon from "@/components/icons/BPMNIcon.vue";
 
 Vue.use(Vuetify);
 
@@ -31,6 +32,9 @@ export default new Vuetify({
       },
       causalNetComponent: {
         component: CausalNetIcon
+      },
+      bpmnComponent: {
+        component: BPMNIcon
       }
     }
   }
