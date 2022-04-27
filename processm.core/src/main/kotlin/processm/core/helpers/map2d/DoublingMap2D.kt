@@ -48,19 +48,8 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
     /**
      * Initializes a shallow copy of another [Map2D].
      */
-    constructor(other: Map2D<Row, Column, Value>) : this() {
-        if (other is DoublingMap2D) {
-            for ((otherRow, otherCV) in other.rcv)
-                rcv[otherRow] = HashMap(otherCV)
-
-            for ((otherCol, otherRV) in other.crv)
-                crv[otherCol] = HashMap(otherRV)
-        } else {
-            for (row in other.rows) {
-                for ((col, v) in other.getRow(row))
-                    set(row, col, v)
-            }
-        }
+    constructor(other: Map2D<Row, out Column, out Value>) : this() {
+        putAll(other)
     }
 
     override val size: Int
@@ -80,6 +69,18 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
     override fun set(row: Row, column: Column, value: Value) {
         rcv.computeIfAbsent(row) { HashMap() }[column] = value
         crv.computeIfAbsent(column) { HashMap() }[row] = value
+    }
+
+    override fun putAll(other: Map2D<Row, out Column, out Value>) {
+        if (other is DoublingMap2D) {
+            for ((otherRow, otherCV) in other.rcv)
+                rcv[otherRow] = HashMap(otherCV)
+
+            for ((otherCol, otherRV) in other.crv)
+                crv[otherCol] = HashMap(otherRV)
+        } else {
+            super.putAll(other)
+        }
     }
 
     override fun removeColumn(column: Column) {

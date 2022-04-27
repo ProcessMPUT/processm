@@ -48,6 +48,16 @@ interface Map2D<Row, Column, Value> {
     operator fun set(row: Row, column: Column, value: Value)
 
     /**
+     * Inserts all items of the given [other] map into this map, possibly overwriting the current values.
+     */
+    fun putAll(other: Map2D<Row, out Column, out Value>) {
+        for (row in other.rows) {
+            for ((col, v) in other.getRow(row))
+                set(row, col, v)
+        }
+    }
+
+    /**
      * Removes the entry for the specified column.
      *
      * Contract:
