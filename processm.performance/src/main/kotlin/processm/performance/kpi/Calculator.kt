@@ -27,50 +27,60 @@ class Calculator(
     val eventsSummarizer: EventsSummarizer<*> = DefaultEventsSummarizer()
 ) {
     /**
-     * Calculates KPI report from all numeric attributes spotted in the log.
+     * Calculates KPI report from all numeric attributes spotted in the [logs].
      */
-    fun calculate(log: Log): Report {
-        val logKPI = log.attributes
-            .filterValues { it.isNumeric() }
-            .mapValues { (_, attribute) -> attribute.toDouble() }
-
+    fun calculate(logs: Sequence<Log>): Report {
+        val logKPI = HashMap<String, Distribution>()
         val traceKPIraw = HashMap<String, ArrayList<Double>>()
-        for (trace in log.traces) {
-            for ((key, attribute) in trace.attributes) {
-                if (!attribute.isNumeric())
-                    continue
-
-                traceKPIraw.compute(key) { _, old ->
-                    (old ?: ArrayList()).apply { add(attribute.toDouble()) }
-                }
-            }
-        }
-        val traceKPI = traceKPIraw.mapValues { (_, v) -> Distribution(v) }
-
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
-        val alignments = aligner.align(log, eventsSummarizer)
-        for (alignment in alignments) {
-            for (step in alignment.steps) {
-                val activity = when (step.type) {
-                    DeviationType.None -> step.modelMove!!
-                    DeviationType.LogDeviation -> null
-                    DeviationType.ModelDeviation -> continue // no-way to get values for the model-only moves
-                }
 
-                for ((key, attribute) in step.logMove!!.attributes) {
+        for (log in logs) {
+            log.attributes
+                .filterValues { it.isNumeric() }
+                .mapValues { (_, attribute) -> Distribution(doubleArrayOf(attribute.toDouble())) }
+
+            for (trace in log.traces) {
+                for ((key, attribute) in trace.attributes) {
                     if (!attribute.isNumeric())
                         continue
 
-                    eventKPIraw.compute(key, activity) { _, _, old ->
+                    traceKPIraw.compute(key) { _, old ->
                         (old ?: ArrayList()).apply { add(attribute.toDouble()) }
                     }
                 }
             }
-        }
-        val eventKPI = eventKPIraw.mapValues { _, _, v -> Distribution(v) }
 
-        return Report(log, model, logKPI, traceKPI, eventKPI)
+            val alignments = aligner.align(log, eventsSummarizer)
+            for (alignment in alignments) {
+                for (step in alignment.steps) {
+                    val activity = when (step.type) {
+                        DeviationType.None -> step.modelMove!!
+                        DeviationType.LogDeviation -> null
+                        DeviationType.ModelDeviation -> continue // no-way to get values for the model-only moves
+                    }
+
+                    for ((key, attribute) in step.logMove!!.attributes) {
+                        if (!attribute.isNumeric())
+                            continue
+
+                        eventKPIraw.compute(key, activity) { _, _, old ->
+                            (old ?: ArrayList()).apply { add(attribute.toDouble()) }
+                        }
+                    }
+                }
+            }
+
+        }
+
+        val traceKPI = traceKPIraw.mapValues { (_, v) -> Distribution(v) }
+        val eventKPI = eventKPIraw.mapValues { _, _, v -> Distribution(v) }
+        return Report(logKPI, traceKPI, eventKPI)
     }
+
+    /**
+     * Calculates KPI report from all numeric attributes spotted in the [log].
+     */
+    fun calculate(log: Log): Report = calculate(sequenceOf(log))
 
     private fun Attribute<*>.isNumeric(): Boolean = this is IntAttr || this is RealAttr
     private fun Attribute<*>.toDouble(): Double = (this.value as Number).toDouble()

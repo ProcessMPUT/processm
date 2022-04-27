@@ -1,5 +1,6 @@
 package processm.performance.kpi
 
+import kotlinx.serialization.Serializable
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
@@ -8,16 +9,16 @@ import kotlin.math.sqrt
  *
  * @property raw The raw data points (sorted ascending).
  */
+@Serializable
 class Distribution private constructor(
-    val raw: DoubleArray,
-    dummy: Any?
+    val raw: DoubleArray
 ) {
     companion object {
         private const val ONE_THIRD = 1.0 / 3.0
     }
 
     constructor(raw: Collection<Double>) : this(raw.toDoubleArray().apply(DoubleArray::sort), null)
-    constructor(raw: DoubleArray) : this(raw.sortedArray(), null)
+    constructor(raw: DoubleArray, dummy: Any? = null) : this(raw.sortedArray())
 
     init {
         require(raw.isNotEmpty()) { "Empty array of data points is not allowed." }

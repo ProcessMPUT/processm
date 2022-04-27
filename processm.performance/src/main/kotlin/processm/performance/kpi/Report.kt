@@ -1,28 +1,19 @@
 package processm.performance.kpi
 
+import kotlinx.serialization.Serializable
 import processm.core.helpers.map2d.Map2D
-import processm.core.log.hierarchical.Log
 import processm.core.models.commons.Activity
-import processm.core.models.commons.ProcessModel
 
 /**
- * KPI report. For the given [log], possibly produces using a PQL query, and process [model] consists KPIs at the log,
- * trace, and event scopes.
+ * KPI report consisting of KPIs at the log, trace, and event scopes.
  */
+@Serializable
 data class Report(
-    /**
-     * The input log, for which the report corresponds to.
-     */
-    val log: Log,
-    /**
-     * The input model, for which the report corresponds to.
-     */
-    val model: ProcessModel,
     /**
      * The log-scope KPIs retrieved form raw numeric attributes of the log.
      * Keys correspond to the attribute/KPI names; values to the KPI values.
      */
-    val logKPI: Map<String, Double>,
+    val logKPI: Map<String, Distribution>,
     /**
      * The trace-scope KPIs retrieved from raw numeric attributes of the traces.
      * Keys correspond to the attribute/KPI names; values to the distributions of KPI values among traces.
