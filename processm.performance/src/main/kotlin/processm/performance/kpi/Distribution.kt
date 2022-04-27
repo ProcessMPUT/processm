@@ -1,0 +1,121 @@
+package processm.performance.kpi
+
+import kotlin.math.ceil
+import kotlin.math.sqrt
+
+/**
+ * An empirical distribution based on the given data points.
+ *
+ * @property raw The raw data points (sorted ascending).
+ */
+class Distribution private constructor(
+    val raw: DoubleArray,
+    dummy: Any?
+) {
+    companion object {
+        private const val ONE_THIRD = 1.0 / 3.0
+    }
+
+    constructor(raw: Collection<Double>) : this(raw.toDoubleArray().apply(DoubleArray::sort), null)
+    constructor(raw: DoubleArray) : this(raw.sortedArray(), null)
+
+    init {
+        require(raw.isNotEmpty()) { "Empty array of data points is not allowed." }
+    }
+
+    /**
+     * Minimum (Q0).
+     */
+    val min: Double
+        get() = raw.first()
+
+    /**
+     * First quantile (Q1).
+     */
+    val Q1: Double = quantile(0.25)
+
+    /**
+     * The median (Q2)
+     */
+    val median: Double = quantile(0.5)
+
+    /**
+     * Third quantile (Q3).
+     */
+    val Q3: Double = quantile(0.75)
+
+    /**
+     * Maximum (Q4)
+     */
+    val max: Double
+        get() = raw.last()
+
+    /**
+     * The average of the distribution.
+     */
+    val average: Double by lazy(LazyThreadSafetyMode.NONE) { raw.average() }
+
+    /**
+     * The unbiased estimator of standard deviation of the distribution.
+     */
+    val standardDeviation by lazy(LazyThreadSafetyMode.NONE) {
+        var mu1 = 0.0 // the first raw moment (mean)
+        var mu2 = 0.0 // the second raw moment
+        for (v in raw) {
+            mu1 += v
+            mu2 += v * v
+        }
+        mu1 /= raw.size
+        mu2 /= raw.size
+        sqrt(mu2 - mu1 * mu1)
+    }
+
+    /**
+     * Calculates the [p]th quantile of the dataset using the R-8 method as described in
+     * https://en.wikipedia.org/wiki/Quantile#Estimating_quantiles_from_a_sample
+     * The R-8 method is recommended according to Hyndman, Fan, Sample Quantiles in Statistical Packages,
+     * American Statistician. American Statistical Association. 50 (4): 361–365. doi:10.2307/2684934.
+     * Quantiles beyond the minimum and maximum in the sample are calculated as minimum and maximum, respectively.
+     */
+    fun quantile(p: Double): Double {
+        require(p in 0.0..1.0) { "p must be in the range [0; 1], $p given." }
+        val N = raw.size
+        val h = (N + ONE_THIRD) * p + ONE_THIRD - 1.0 // -1 due to 0-based indexing of [raw]
+        val hFloor = h.toInt().coerceAtLeast(0)
+        val hCeil = ceil(h).toInt().coerceAtMost(N - 1)
+        return raw[hFloor] + (h - hFloor) * (raw[hCeil] - raw[hFloor]) // Qp
+    }
+
+    /**
+     * Calculates the unbiased estimator of the cumulative distribution function for data point [v].
+     * See https://en.wikipedia.org/wiki/Empirical_distribution_function#Definition
+     */
+    fun cdf(v: Double): Double {
+        val hRaw = raw.binarySearch(v)
+        val h = if (hRaw >= 0) hRaw + 1 else -hRaw - 1
+        return h / raw.size.toDouble()
+    }
+
+    /**
+     * Calculates the unbiased estimator of the complementary cumulative distribution function for data point [v].
+     * When [v] is an actual data point, [cdf] and [ccdf] do not sum up to 1, since [v] is included in both ranges.
+     */
+    fun ccdf(v: Double): Double {
+        val hRaw = raw.binarySearch(v)
+        val h = if (hRaw >= 0) hRaw else -hRaw - 1
+        return (raw.size - h) / raw.size.toDouble()
+    }
+
+    /**
+     * Calculates service level for threshold [t]: the fraction of data points that are smaller or equal to [t].
+     */
+    fun serviceLevelAtMost(t: Double): Double = cdf(t)
+
+    /**
+     * Calculates service level for threshold [t]: the fraction of data points that are greater or equal to [t].
+     */
+    fun serviceLevelAtLeast(t: Double): Double = ccdf(t)
+
+    override fun toString(): String =
+        "min: $min; Q1: $Q1; median: $median; Q3: $Q3; max: $max; avg: $average; stddev: $standardDeviation; count: ${raw.size}"
+}

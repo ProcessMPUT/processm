@@ -1,0 +1,230 @@
+package processm.performance.kpi
+
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import processm.core.log.DBLogCleaner
+import processm.core.log.DBXESOutputStream
+import processm.core.log.InferConceptInstanceFromStandardLifecycle
+import processm.core.log.XMLXESInputStream
+import processm.core.log.attribute.IDAttr
+import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.log.hierarchical.Log
+import processm.core.logging.logger
+import processm.core.models.petrinet.petrinet
+import processm.core.persistence.connection.DBCache
+import processm.core.querylanguage.Query
+import java.util.*
+import kotlin.system.measureTimeMillis
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class CalculatorTests {
+    companion object {
+        private val logger = logger()
+
+        private val logIds = ArrayList<Int>()
+        private val dbName = UUID.randomUUID().toString()
+        private val logUUID: UUID = UUID.randomUUID()
+        private val perfectModel = petrinet {
+            P tout "invite reviewers"
+            P tin "invite reviewers" tout "get review 1" * "time-out 1"
+            P tin "invite reviewers" tout "get review 2" * "time-out 2"
+            P tin "invite reviewers" tout "get review 3" * "time-out 3"
+            P tin "get review 1" * "time-out 1" tout "collect reviews"
+            P tin "get review 2" * "time-out 2" tout "collect reviews"
+            P tin "get review 3" * "time-out 3" tout "collect reviews"
+            P tin "collect reviews" tout "decide"
+            P tin "decide" * "get review X" * "time-out X" tout "accept" * "reject" * "invite additional reviewer"
+            P tin "invite additional reviewer" tout "get review X" * "time-out X"
+            P tin "accept" * "reject"
+        }
+        private val mainstreamModel = petrinet {
+            P tout "invite reviewers"
+            P tin "invite reviewers" tout "get review 1" * "time-out 1"
+            P tin "invite reviewers" tout "get review 2" * "time-out 2"
+            P tin "invite reviewers" tout "get review 3" * "time-out 3"
+            P tin "get review 1" * "time-out 1" tout "collect reviews"
+            P tin "get review 2" * "time-out 2" tout "collect reviews"
+            P tin "get review 3" * "time-out 3" tout "collect reviews"
+            P tin "collect reviews" tout "decide"
+            P tin "decide" tout "accept" * "reject"
+            P tin "accept" * "reject"
+        }
+
+        @BeforeAll
+        @JvmStatic
+        fun setUp() {
+            try {
+                logger.info("Loading data")
+                measureTimeMillis {
+                    DBXESOutputStream::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes")
+                        .use { stream ->
+                            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
+                                output.write(InferConceptInstanceFromStandardLifecycle(XMLXESInputStream(stream)).map {
+                                    if (it is processm.core.log.Log)
+                                        processm.core.log.Log(
+                                            HashMap(it.attributes).apply {
+                                                put(
+                                                    "identity:id",
+                                                    IDAttr("identity:id", logUUID)
+                                                )
+                                            },
+                                            HashMap(it.extensions),
+                                            HashMap(it.traceGlobals),
+                                            HashMap(it.eventGlobals),
+                                            HashMap(it.traceClassifiers),
+                                            HashMap(it.eventClassifiers)
+                                        )
+                                    else
+                                        it
+                                })
+                            }
+                        }
+                }.also { logger.info("Data loaded in ${it}ms.") }
+
+                DBCache.get(dbName).getConnection().use {
+                    val response = it.prepareStatement("SELECT id FROM logs ORDER BY id DESC LIMIT 2").executeQuery()
+                    while (response.next()) {
+                        logIds.add(response.getInt("id"))
+                    }
+                }
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                throw e
+            }
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun tearDown() {
+            DBCache.get(dbName).getConnection().use { conn ->
+                conn.autoCommit = false
+                for (logId in logIds) {
+                    DBLogCleaner.removeLog(conn, logId)
+                }
+                conn.commit()
+            }
+        }
+    }
+
+    @Test
+    fun `time per activity on the mainstream model`() {
+        val log = q(
+            "select t:*, e:name, e:instance, sum(e:total), max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance"
+        )
+        val calculator = Calculator(mainstreamModel)
+        val report = calculator.calculate(log)
+
+        val traceCostTotal = report.traceKPI["cost:total"]!!
+        println("trace cost:total: $traceCostTotal")
+        assertEquals(50, traceCostTotal.raw.size)
+        assertEquals(11.0, traceCostTotal.min)
+        assertEquals(20.0, traceCostTotal.median)
+        assertEquals(47.0, traceCostTotal.max)
+
+        val eventServiceTime = report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")
+        assertEquals(11 + 1 /*null*/, eventServiceTime.size)
+        println("Service times for activities:")
+        for ((activity, kpi) in eventServiceTime) {
+            println("$activity: $kpi")
+        }
+
+        with(mainstreamModel.activities) {
+            // missing activities
+            assertTrue(eventServiceTime.keys.none { it?.name == "invite additional reviewer" })
+            assertTrue(eventServiceTime.keys.none { it?.name == "get review X" })
+            assertTrue(eventServiceTime.keys.none { it?.name == "time-out X" })
+            assertEquals(0.0, eventServiceTime[null]!!.min)
+            assertEquals(0.0, eventServiceTime[null]!!.median)
+            assertEquals(11.0, eventServiceTime[null]!!.max)
+            assertEquals(798, eventServiceTime[null]!!.raw.size)
+
+            // instant activities
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 3" }]!!.max)
+
+            // longer activities [times in days]
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.max)
+            assertEquals(101, eventServiceTime[first { it.name == "invite reviewers" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "decide" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "decide" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "decide" }]!!.max)
+            assertEquals(100, eventServiceTime[first { it.name == "decide" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "accept" }]!!.min)
+            assertEquals(1.0, eventServiceTime[first { it.name == "accept" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "accept" }]!!.max)
+            assertEquals(45, eventServiceTime[first { it.name == "accept" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "reject" }]!!.min)
+            assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
+            assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
+            assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+        }
+    }
+
+    @Test
+    fun `time per activity on the perfect model`() {
+        val log = q(
+            "select t:*, e:name, e:instance, sum(e:total), max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance"
+        )
+        val calculator = Calculator(perfectModel)
+        val report = calculator.calculate(log)
+
+        val traceCostTotal = report.traceKPI["cost:total"]!!
+        println("trace cost:total: $traceCostTotal")
+        assertEquals(50, traceCostTotal.raw.size)
+        assertEquals(11.0, traceCostTotal.min)
+        assertEquals(20.0, traceCostTotal.median)
+        assertEquals(47.0, traceCostTotal.max)
+
+        val eventServiceTime = report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")
+        assertEquals(14, eventServiceTime.size)
+        println("Service times for activities:")
+        for ((activity, kpi) in eventServiceTime) {
+            println("$activity: $kpi")
+        }
+
+        with(perfectModel.activities) {
+            // instant activities
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review X" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out X" }]!!.max)
+
+            // longer activities [times in days]
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.max)
+            assertEquals(101, eventServiceTime[first { it.name == "invite reviewers" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "decide" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "decide" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "decide" }]!!.max)
+            assertEquals(100, eventServiceTime[first { it.name == "decide" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.min)
+            assertEquals(2.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.median)
+            assertEquals(11.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.max)
+            assertEquals(399, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "accept" }]!!.min)
+            assertEquals(1.0, eventServiceTime[first { it.name == "accept" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "accept" }]!!.max)
+            assertEquals(45, eventServiceTime[first { it.name == "accept" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "reject" }]!!.min)
+            assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
+            assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
+            assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+        }
+    }
+
+    private fun q(pql: String): Log =
+        DBHierarchicalXESInputStream(dbName, Query(pql), false).first()
+}
