@@ -84,6 +84,12 @@ interface Map2D<Row, Column, Value> {
     fun compute(row: Row, column: Column, callback: (row: Row, col: Column, old: Value?) -> Value?): Value?
 
     /**
+     * Maps the values in this map 2D using the given [func] function into a new map 2D.
+     * @return The new map 2D with the values mapped.
+     */
+    fun <R> mapValues(func: (row: Row, col: Column, old: Value) -> R): Map2D<in Row, in Column, in R> = TODO()
+
+    /**
      * The set of all non-empty rows.
      */
     val rows: Set<Row>
