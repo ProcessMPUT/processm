@@ -1532,7 +1532,7 @@ components:
       enum: [owner, writer, reader]
     ComponentType:
       type: string
-      enum: [ kpi, causalNet, bpmn ]
+      enum: [ kpi, alignerKpi, causalNet, bpmn ]
     AccountRegistrationInfo:
       type: object
       required: [userEmail, organizationName]
@@ -1866,14 +1866,14 @@ components:
     AbstractComponent:
       oneOf:
         - $ref: '#/components/schemas/KpiComponent'
+        - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
-        - $ref: '#/components/schemas/BPMNComponent'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
+          alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
-          bpmn: '#/components/schemas/BPMNComponent'
       type: object
       properties:
         data:
@@ -1887,14 +1887,14 @@ components:
     AbstractComponentData:
       oneOf:
         - $ref: '#/components/schemas/KpiComponentData'
+        - $ref: '#/components/schemas/AlignerKpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
-        - $ref: '#/components/schemas/BPMNComponentData'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponentData'
+          alignerKpi: '#/components/schemas/AlignerKpiComponentData'
           causalNet: '#/components/schemas/CausalNetComponentData'
-          bpmn: '#/components/schemas/BPMNComponentData'
     KpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -1911,11 +1911,66 @@ components:
               $ref: '#/components/schemas/KpiComponentData'
             customizationData:
               type: object
+    AlignerKpiComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          properties:
+            report:
+              $ref: '#/components/schemas/AlignerKpiReport'
+    AlignerKpiReport:
+      properties:
+        logKPI:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Distribution'
+        traceKPI:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Distribution'
+        eventKPI:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              $ref: '#/components/schemas/Distribution'
+    Distribution:
+      properties:
+        min:
+          type: number
+          format: double
+        Q1:
+          type: number
+          format: double
+        median:
+          type: number
+          format: double
+        Q3:
+          type: number
+          format: double
+        max:
+          type: number
+          format: double
+        average:
+          type: number
+          format: double
+        stddev:
+          type: number
+          format: double
+    AlignerKpiComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AlignerKpiComponentData'
+            customizationData:
+              type: object
     CausalNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
         - type: object
-          required: [nodes, edges]
+          required: [ nodes, edges ]
           properties:
             nodes:
               type: array
@@ -1969,22 +2024,6 @@ components:
                         type: number
                       y:
                         type: number
-    BPMNComponentData:
-      allOf:
-        - $ref: '#/components/schemas/ComponentData'
-        - type: object
-          properties:
-            xml:
-              type: string
-    BPMNComponent:
-      allOf:
-        - $ref: '#/components/schemas/Component'
-        - type: object
-          properties:
-            data:
-              $ref: '#/components/schemas/BPMNComponentData'
-            customizationData:
-              type: object
     ComponentMessageBody:
       type: object
       required: [ data ]
