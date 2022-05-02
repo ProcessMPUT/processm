@@ -33,6 +33,7 @@ internal class DAONode(id: EntityID<Int>) : IntEntity(id) {
 
     var activity by CausalNetNode.activity
     var instance by CausalNetNode.instance
+    var silent by CausalNetNode.silent
     var special by CausalNetNode.special
     var model by DAOModel referencedOn CausalNetNode.model
 }
@@ -40,6 +41,7 @@ internal class DAONode(id: EntityID<Int>) : IntEntity(id) {
 internal object CausalNetNode : IntIdTable() {
     val activity = varchar("activity", 100)
     val instance = varchar("instance", 100)
+    val silent = bool("silent").default(false)
     val special = bool("special")
     val model = reference("model", CausalNetModel, onDelete = ReferenceOption.CASCADE)
 
@@ -106,6 +108,7 @@ object DBSerializer {
                 DAONode.new {
                     activity = node.activity
                     instance = node.instanceId
+                    silent = node.isSilent
                     special = node.special
                     this.model = daomodel
                 }
@@ -147,7 +150,8 @@ object DBSerializer {
             addLogger(Slf4jSqlDebugLogger)
             val daomodel = DAOModel.findById(modelId)
                 ?: throw NoSuchElementException("Causal net with id $modelId is not found in database ${database.name}.")
-            val idNode = daomodel.nodes.associate { row -> row.id to Node(row.activity, row.instance, row.special) }
+            val idNode =
+                daomodel.nodes.associate { row -> row.id to Node(row.activity, row.instance, row.special, row.silent) }
             val start = daomodel.start
             val end = daomodel.end
             if (start == null || end == null)
