@@ -1,7 +1,5 @@
 package processm.performance.kpi
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -95,7 +93,7 @@ class AlignerKPIService : AbstractJobService(
                     val report = calculator.calculate(log)
 
 
-                    component.data = Json.encodeToString(serializer(), report)
+                    component.data = report.toJson()
                     component.dataLastModified = Instant.now()
                     component.lastError = null
                 } catch (e: Exception) {

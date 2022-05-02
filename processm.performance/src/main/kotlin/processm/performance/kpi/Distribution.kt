@@ -10,7 +10,7 @@ import kotlin.math.sqrt
  * @property raw The raw data points (sorted ascending).
  */
 @Serializable
-class Distribution private constructor(
+data class Distribution private constructor(
     val raw: DoubleArray
 ) {
     companion object {
@@ -119,4 +119,17 @@ class Distribution private constructor(
 
     override fun toString(): String =
         "min: $min; Q1: $Q1; median: $median; Q3: $Q3; max: $max; avg: $average; stddev: $standardDeviation; count: ${raw.size}"
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Distribution) return false
+
+        if (!raw.contentEquals(other.raw)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return raw.contentHashCode()
+    }
 }
