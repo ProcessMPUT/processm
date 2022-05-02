@@ -1,5 +1,6 @@
 package processm.core.models.causalnet
 
+import kotlinx.serialization.Serializable
 import processm.core.models.commons.Activity
 import processm.core.models.metadata.MetadataSubject
 import java.util.*
@@ -10,6 +11,7 @@ import java.util.*
  * By default [instanceId] is empty, in order to allow easy ignoring the possibility of having multiple instances of
  * a single activity and allowing only for a single instance of each activity.
  */
+@Serializable
 data class Node(
     val activity: String, val instanceId: String = "", val special: Boolean = false,
     override val isSilent: Boolean = special
