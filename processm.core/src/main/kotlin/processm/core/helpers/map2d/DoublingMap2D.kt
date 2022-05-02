@@ -1,8 +1,11 @@
 package processm.core.helpers.map2d
 
+import kotlinx.serialization.Serializable
+
 /**
  * The default implementation of [Map2D], backed by two hashmaps of hashmaps: one from rows, to columns, to values, and the other from columns, to rows, to values.
  */
+@Serializable
 class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
 
     private class View<K, V>(private val get: () -> MutableMap<K, V>?, private val update: (K, V) -> Unit) :
@@ -141,4 +144,16 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
         get() = rcv.keys
     override val columns: Set<Column>
         get() = crv.keys
+
+    override fun toString(): String = buildString {
+        append('{')
+        for ((row, cv) in rcv) {
+            for ((col, v) in cv) {
+                append("($row, $col)=$v,")
+            }
+        }
+        if (size > 0)
+            setLength(length - 1)
+        append('}')
+    }
 }
