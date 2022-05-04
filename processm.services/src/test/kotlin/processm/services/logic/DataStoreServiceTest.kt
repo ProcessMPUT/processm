@@ -2,23 +2,26 @@ package processm.services.logic
 
 import io.mockk.*
 import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.select
-import org.koin.core.component.inject
-import org.koin.dsl.module
-import org.koin.test.mock.declareMock
+import org.junit.Before
+import org.junit.jupiter.api.BeforeEach
 import processm.core.communication.Producer
 import processm.dbmodels.models.DataStores
 import processm.dbmodels.models.Organizations
-import processm.dbmodels.models.UserGroups
-import processm.dbmodels.models.WorkspaceComponents
 import java.util.*
 import kotlin.test.*
 
 internal class DataStoreServiceTest : ServiceTestBase() {
-    override val dependencyModule = module { single { DataStoreService() } }
+    private lateinit var producer: Producer
+    private lateinit var dataStoreService: DataStoreService
 
-    private val dataStoreService by inject<DataStoreService>()
+    @Before
+    @BeforeEach
+    override fun setUp() {
+        super.setUp()
+        producer = mockk()
+        dataStoreService = DataStoreService(producer)
+    }
 
     @Test
     fun `Read all data stores assigned to organization`(): Unit = withCleanTables(DataStores, Organizations) {

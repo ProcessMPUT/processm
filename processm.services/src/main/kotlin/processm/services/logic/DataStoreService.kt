@@ -13,8 +13,6 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.`java-time`.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import org.postgresql.ds.PGSimpleDataSource
 import processm.core.communication.Producer
 import processm.core.logging.loggedScope
@@ -30,9 +28,7 @@ import java.sql.DriverManager
 import java.util.*
 import javax.sql.DataSource
 
-class DataStoreService : KoinComponent {
-    private val producer: Producer by inject()
-
+class DataStoreService(private val producer: Producer) {
     /**
      * Returns all data stores for the specified [organizationId].
      */
@@ -433,10 +429,10 @@ class DataStoreService : KoinComponent {
     }
 
     private fun notifyStateChanged(dataStoreId: UUID, dataConnectorId: UUID, type: String) {
-        producer.produce(DATA_CONNECTOR_TOPIC, mapOf(
-            TYPE to type,
-            DATA_STORE_ID to "$dataStoreId",
-            DATA_CONNECTOR_ID to "$dataConnectorId"
-        ))
+        producer.produce(DATA_CONNECTOR_TOPIC) {
+            setString(TYPE, type)
+            setString(DATA_STORE_ID, "$dataStoreId")
+            setString(DATA_CONNECTOR_ID, "$dataConnectorId")
+        }
     }
 }

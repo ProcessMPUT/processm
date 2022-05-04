@@ -1,32 +1,49 @@
 package processm.core.communication
 
+import org.messaginghub.pooled.jms.JmsPoolConnectionFactory
 import processm.core.esb.getTopicConnectionFactory
-import java.io.Closeable
+import javax.jms.MapMessage
 import javax.jms.Session
 import javax.naming.InitialContext
 
-class Producer : Closeable {
+/**
+ * JMS message producer. It produces and publishes messages to the specified topic.
+ */
+class Producer {
     companion object {
+        // check https://github.com/messaginghub/pooled-jms/blob/main/pooled-jms-docs/Configuration.md for detailed description
+        private const val maxConnections = 1
+        private const val connectionIdleTimeout = 30
+        private const val connectionCheckInterval: Long =  0 // no check
+        private const val useProviderJMSContext  = false // no check
+
+        private val jmsPoolingFactory = JmsPoolConnectionFactory()
         private val jmsContext = InitialContext()
         private val jmsConnFactory = jmsContext.getTopicConnectionFactory()
-    }
 
-    private val jmsConnection = jmsConnFactory.createTopicConnection()
-    private val jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
-
-    fun produce(topic: String, messageContent: Map<String, String>, messageHeaders: Map<String, String> = emptyMap()) {
-        val jmsTopic = jmsSession.createTopic(topic)
-        jmsSession.createPublisher(jmsTopic).use {
-            val message = jmsSession.createMapMessage()
-
-            messageHeaders.forEach { (key, value) -> message.setStringProperty(key, value) }
-            messageContent.forEach { (key, value) -> message.setString(key, value) }
-            it.publish(message)
+        init {
+            jmsPoolingFactory.maxConnections = maxConnections
+            jmsPoolingFactory.connectionIdleTimeout = connectionIdleTimeout
+            jmsPoolingFactory.connectionCheckInterval = connectionCheckInterval
+            jmsPoolingFactory.isUseProviderJMSContext = useProviderJMSContext
+            jmsPoolingFactory.connectionFactory = jmsConnFactory
         }
     }
 
-    override fun close() {
-        jmsSession.close()
-        jmsConnection.close()
+    /**
+     * Publishes message to the [topic].
+     * @param prepareMessage Message preparation method.
+     * @property topic The JMS topic to publish messages to.
+     */
+    fun produce(topic: String, prepareMessage: MapMessage.() -> Unit) {
+        jmsPoolingFactory.createTopicConnection().let { jmsConnection ->
+            val jmsSession = jmsConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE)
+            val jmsTopic = jmsSession.createTopic(topic)
+            jmsSession.createPublisher(jmsTopic).use {
+                val message = jmsSession.createMapMessage()
+                prepareMessage(message)
+                it.publish(message)
+            }
+        }
     }
 }

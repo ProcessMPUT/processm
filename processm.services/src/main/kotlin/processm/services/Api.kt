@@ -50,9 +50,9 @@ fun Application.apiModule() {
                 single { AccountService(get()) }
                 single { OrganizationService() }
                 single { GroupService() }
-                single { WorkspaceService(get()) }
-                single { DataStoreService() }
-                single { LogsService() }
+                single { WorkspaceService(get(), get()) }
+                single { DataStoreService(get()) }
+                single { LogsService(get()) }
                 single { Producer() }
             })
         }

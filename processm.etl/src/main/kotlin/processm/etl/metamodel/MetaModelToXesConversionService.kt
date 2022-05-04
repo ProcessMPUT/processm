@@ -23,6 +23,7 @@ import processm.dbmodels.models.*
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import javax.jms.MapMessage
 import kotlin.reflect.KClass
 
 /**
@@ -69,11 +70,11 @@ class MetaModelToXesConversionService : Service {
         }
     }
 
-    private fun enqueueLogGeneration(message: Map<String, String>, messageHeaders: Map<String, String>): Boolean {
-        val dataStoreId = requireNotNull(message[DATA_STORE_ID]?.toUUID()) { "Missing field: $DATA_STORE_ID." }
-        val etlProcessId = requireNotNull(message[ETL_PROCESS_ID]?.toUUID()) { "Missing field: $ETL_PROCESS_ID." }
-        val dataModelId = requireNotNull(message[DATA_MODEL_ID]?.toInt()) { "Missing field: $DATA_MODEL_ID." }
-        val logName = requireNotNull(message[ETL_PROCESS_NAME]) { "Missing field: $ETL_PROCESS_NAME." }
+    private fun enqueueLogGeneration(message: MapMessage): Boolean {
+        val dataStoreId = requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+        val etlProcessId = requireNotNull(message.getString(ETL_PROCESS_ID)?.toUUID()) { "Missing field: $ETL_PROCESS_ID." }
+        val dataModelId = requireNotNull(message.getInt(DATA_MODEL_ID)) { "Missing field: $DATA_MODEL_ID." }
+        val logName = requireNotNull(message.getString(ETL_PROCESS_NAME)) { "Missing field: $ETL_PROCESS_NAME." }
 
         return conversionWorker.enqueueConversionTask(dataStoreId, etlProcessId, dataModelId, logName)
     }

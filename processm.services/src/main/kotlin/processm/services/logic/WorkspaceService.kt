@@ -8,9 +8,6 @@ import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
-import org.koin.java.KoinJavaComponent.inject
 import processm.core.communication.Producer
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.afterCommit
@@ -18,9 +15,7 @@ import processm.dbmodels.models.*
 import processm.miners.triggerEvent
 import java.util.*
 
-class WorkspaceService(private val accountService: AccountService): KoinComponent {
-    private val producer: Producer by inject()
-
+class WorkspaceService(private val accountService: AccountService, private val producer: Producer) {
     /**
      * Returns all user workspaces for the specified [userId] in the context of the specified [organizationId].
      */
@@ -251,10 +246,7 @@ class WorkspaceService(private val accountService: AccountService): KoinComponen
             this.workspace = Workspace[workspaceId]
 
             afterCommit {
-                producer.produce(WORKSPACE_COMPONENTS_TOPIC, mapOf(
-                    WORKSPACE_COMPONENT_EVENT to CREATE_OR_UPDATE,
-                    WORKSPACE_COMPONENT_ID to workspaceComponentId.toString()
-                ), mapOf(WORKSPACE_COMPONENT_TYPE to componentType.toString()))
+                triggerEvent(producer)
             }
         }
     }
@@ -280,10 +272,7 @@ class WorkspaceService(private val accountService: AccountService): KoinComponen
             if (layoutData != null) this.layoutData = layoutData
 
             afterCommit {
-                producer.produce(WORKSPACE_COMPONENTS_TOPIC, mapOf(
-                    WORKSPACE_COMPONENT_EVENT to CREATE_OR_UPDATE,
-                    WORKSPACE_COMPONENT_ID to workspaceComponentId.toString()
-                ), mapOf(WORKSPACE_COMPONENT_TYPE to componentType.toString()))
+                triggerEvent(producer)
             }
         }
     }

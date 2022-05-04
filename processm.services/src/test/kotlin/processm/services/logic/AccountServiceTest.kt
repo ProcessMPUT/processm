@@ -1,9 +1,8 @@
 package processm.services.logic
 
-import io.mockk.every
-import io.mockk.just
-import io.mockk.runs
-import io.mockk.verify
+import io.mockk.*
+import org.junit.Before
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,15 +16,18 @@ import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AccountServiceTest : ServiceTestBase() {
-    override val dependencyModule = module {
-        single<GroupService> { declareMock() }
-        single { AccountService(get()) }
-    }
-
     private val correctPassword = "pass"
     private val correctPasswordHash = "\$argon2d\$v=19\$m=65536,t=3,p=1\$P0P1NSt1aP8ONWirWMbAWQ\$bDvD/v5/M7T3gRq8BXqbQA"
-    private val accountService by inject<AccountService>()
-    private val groupServiceMock by inject<GroupService>()
+    private lateinit var accountService: AccountService
+    private lateinit var groupServiceMock: GroupService
+
+    @Before
+    @BeforeEach
+    override fun setUp() {
+        super.setUp()
+        groupServiceMock = mockk()
+        accountService = AccountService(groupServiceMock)
+    }
 
     @Test
     fun `password verification returns user object if password is correct`() = withCleanTables(Users) {

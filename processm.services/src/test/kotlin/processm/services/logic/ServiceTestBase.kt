@@ -19,23 +19,13 @@ import processm.dbmodels.models.*
 import java.time.LocalDateTime
 import java.util.*
 
-abstract class ServiceTestBase : KoinTest {
-    protected open val dependencyModule = module {}
-
+abstract class ServiceTestBase {
     // @Before causes the setUp() method to be called when running tests individually
     // @BeforeEach causes the setUp() method to be called before @ParameterizedTest tests
     @Before
     @BeforeEach
-    fun setUp() {
+    open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
-        MockProvider.register { mockedClass -> mockkClass(mockedClass) }
-        startKoin { modules(dependencyModule) }
-    }
-
-    @After
-    @AfterEach
-    fun tearDown() {
-        stopKoin()
     }
 
     protected fun <R> withCleanTables(vararg tables: Table, testLogic: Transaction.() -> R) =

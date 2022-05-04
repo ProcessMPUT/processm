@@ -1,5 +1,6 @@
 package processm.miners.kpi
 
+import io.mockk.mockk
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -67,7 +68,7 @@ class KPIServiceTests {
                 query = _query
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
-        }.triggerEvent()
+        }.triggerEvent(mockk())
     }
 
     @AfterTest
@@ -175,7 +176,7 @@ class KPIServiceTests {
                 }.first()
                 component.query = "select count(^t:name)"
                 component
-            }.triggerEvent()
+            }.triggerEvent(mockk())
 
 
             Thread.sleep(1000L) // wait for calculation

@@ -18,6 +18,7 @@ import processm.dbmodels.models.*
 import processm.etl.tracker.DebeziumChangeTracker
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import javax.jms.MapMessage
 import kotlin.concurrent.schedule
 import kotlin.reflect.KClass
 
@@ -64,6 +65,7 @@ class MetaModelDebeziumWatchingService : Service {
                 }
             }
         }
+        consumer.start()
 
         status = ServiceStatus.Started
         logger.info("$name service started")
@@ -72,7 +74,7 @@ class MetaModelDebeziumWatchingService : Service {
     override fun stop() {
         try {
             consumer.close()
-            trackerConnectionWatcher. cancel()
+            trackerConnectionWatcher.cancel()
             trackerConnectionWatcher.purge()
             debeziumTrackers.forEach { (_, tracker) ->
                 tracker.close()
@@ -83,12 +85,12 @@ class MetaModelDebeziumWatchingService : Service {
         }
     }
 
-    private fun updateDebeziumConnectionState(message: Map<String, String>, messageHeaders: Map<String, String>): Boolean {
+    private fun updateDebeziumConnectionState(message: MapMessage): Boolean {
         try {
-            val type = message[TYPE]
-            val dataStoreId = requireNotNull(message[DATA_STORE_ID]?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+            val type = message.getString(TYPE)
+            val dataStoreId = requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
             val dataConnectorId =
-                requireNotNull(message[DATA_CONNECTOR_ID]?.toUUID()) { "Missing field: $DATA_CONNECTOR_ID." }
+                requireNotNull(message.getString(DATA_CONNECTOR_ID)?.toUUID()) { "Missing field: $DATA_CONNECTOR_ID." }
 
             when (type) {
                 ACTIVATE -> activate(dataStoreId, dataConnectorId)

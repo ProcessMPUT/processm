@@ -6,8 +6,6 @@ import de.odysseus.staxon.json.JsonXMLOutputFactory
 import org.apache.commons.io.input.BoundedInputStream
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import processm.core.Brand
 import processm.core.communication.Producer
 import processm.core.log.*
@@ -30,7 +28,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.xml.stream.XMLOutputFactory
 
-class LogsService : KoinComponent {
+class LogsService(private val producer: Producer) {
     companion object {
         private const val xesFileInputSizeLimit = 5_000_000L
         private const val logLimit = 10L
@@ -39,8 +37,6 @@ class LogsService : KoinComponent {
         private const val downloadLimitFactor = 10L
         private const val identityIdAttributeName = "identity:id"
     }
-
-    private val producer: Producer by inject()
 
     private fun InputStream.boundStreamSize(streamSizeLimit: Long) =
         BufferedInputStream(BoundedInputStream(this, streamSizeLimit))
@@ -167,12 +163,12 @@ class LogsService : KoinComponent {
                 "The specified ETL process and/or data store has no data model")
             val etlProcessName = etlProcessDetails[EtlProcessesMetadata.name]
 
-            producer.produce(ETL_PROCESS_CONVERSION_TOPIC, mapOf(
-                DATA_STORE_ID to "$dataStoreId",
-                ETL_PROCESS_ID to "$etlProcessId",
-                DATA_MODEL_ID to "$dataModelId",
-                ETL_PROCESS_NAME to etlProcessName
-            ))
+            producer.produce(ETL_PROCESS_CONVERSION_TOPIC) {
+                setString(DATA_STORE_ID, "$dataStoreId")
+                setString(ETL_PROCESS_ID, "$etlProcessId")
+                setString(DATA_MODEL_ID, "$dataModelId")
+                setString(ETL_PROCESS_NAME, etlProcessName)
+            }
         }
     }
 

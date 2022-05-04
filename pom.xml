@@ -66,6 +66,7 @@
         <com.ibm.db2.version>11.5.6.0</com.ibm.db2.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
         <testcontainers.version>1.16.0</testcontainers.version>
+        <pooled-jms.version>2.0.5</pooled-jms.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>
