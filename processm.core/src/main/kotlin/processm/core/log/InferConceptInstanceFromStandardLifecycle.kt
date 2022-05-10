@@ -94,7 +94,7 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
     }.iterator()
 
     /**
-     * Looks for the way to execute [transition] given the state of [lifecycleModel] using A*.
+     * Looks for the way to execute [transition] given the state of [lifecycleModel] using Breadth First Search.
      */
     private fun findPath(lifecycleModel: PetriNetInstance, transition: Transition): Marking? {
         val initialMarking = lifecycleModel.currentState
