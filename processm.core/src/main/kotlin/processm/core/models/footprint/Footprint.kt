@@ -1,6 +1,7 @@
 package processm.core.models.footprint
 
 import processm.core.helpers.map2d.Map2D
+import processm.core.models.commons.ControlStructureType
 import processm.core.models.commons.ProcessModel
 
 /**
@@ -28,6 +29,15 @@ class Footprint(
             if (outcomes.size <= 1) null
             else FootprintDecisionPoint(act, outcomes)
         }
+
+    override val controlStructures: Sequence<ControlStructure> = sequence {
+        for (row in matrix.rows) {
+            for ((col, value) in matrix.getRow(row)) {
+                if (value == Order.FollowedBy || value == Order.Parallel)
+                    yield(ControlStructure(ControlStructureType.OtherSplit, row, col))
+            }
+        }
+    }
 
     override fun createInstance(): FootprintInstance = FootprintInstance(this)
 

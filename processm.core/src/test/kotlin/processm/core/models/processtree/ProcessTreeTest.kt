@@ -1,5 +1,6 @@
 package processm.core.models.processtree
 
+import processm.core.models.commons.ControlStructureType.*
 import kotlin.test.*
 
 class ProcessTreeTest {
@@ -763,5 +764,32 @@ class ProcessTreeTest {
 
         val tree = ProcessTree.parse(groundTruth.toString())
         assertTrue(tree.languageEqual(groundTruth))
+    }
+
+    @Test
+    fun controlStructures() {
+        // PM book Fig. 3.17
+        val model = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
+
+        val andSplits = model.controlStructures.filter { it.type == AndSplit }.toList()
+        assertEquals(1, andSplits.size)
+        assertEquals("∧(×(B,C),D)", andSplits.first().toString())
+        assertEquals(1, andSplits.first().controlFlowComplexity)
+
+        val xorSplits = model.controlStructures.filter { it.type == XorSplit }.toList().sortedBy { it.toString() }
+        assertEquals(2, xorSplits.size)
+        assertEquals("×(B,C)", xorSplits[0].toString())
+        assertEquals("×(G,H)", xorSplits[1].toString())
+        assertEquals(2, xorSplits[0].controlFlowComplexity)
+        assertEquals(2, xorSplits[1].controlFlowComplexity)
+
+        val otherSplits = model.controlStructures.filter { it.type == OtherSplit }.toList()
+        assertEquals(1, otherSplits.size)
+        assertEquals("⟲(→(∧(×(B,C),D),E),F)", otherSplits.first().toString())
+        assertEquals(2, otherSplits.first().controlFlowComplexity)
+
+        assertEquals(0, model.controlStructures.count {
+            it.type == OrSplit || it.type == AndJoin || it.type == XorJoin || it.type == OrJoin || it.type == OtherJoin
+        })
     }
 }
