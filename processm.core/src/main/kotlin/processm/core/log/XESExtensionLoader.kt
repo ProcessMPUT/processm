@@ -7,6 +7,7 @@ import processm.core.log.extension.XesExtensionAttribute
 import processm.core.logging.logger
 import java.io.File
 import java.io.InputStream
+import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import javax.xml.parsers.DocumentBuilderFactory
@@ -110,14 +111,23 @@ object XESExtensionLoader {
             val extension = xmlToObject(stream)
             return loadedExtensions.putIfAbsent(uri, extension) ?: extension
         } catch (e: Exception) {
-            logger().warn("Cannot load XES Extension", e)
+            logger().warn("Cannot load XES extension $uri", e)
         }
 
         return null
     }
 
     private fun openExternalStream(url: String): InputStream? {
-        return URL(url).openStream()
+        var conn = URL(url).openConnection()
+        var limit = 3
+        while (limit-- > 0
+            && conn is HttpURLConnection
+            && conn.responseCode in setOf(301, 302, 303, 307, 308)
+            && !conn.getHeaderField("Location").isNullOrBlank()
+        ) {
+            conn = URL(conn.getHeaderField("Location")).openConnection()
+        }
+        return conn.getInputStream()
     }
 
     private fun xmlToObject(stream: InputStream?): Extension {
