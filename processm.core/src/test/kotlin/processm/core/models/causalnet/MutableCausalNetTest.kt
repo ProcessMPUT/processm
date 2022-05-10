@@ -6,7 +6,7 @@ import kotlin.test.*
 
 class MutableCausalNetTest {
 
-    //activities inspired by Fig 3.12 in "Process Mining" by Van van der Alst
+    //activities inspired by Fig 3.12 in "Process Mining" by Wil van der Aalst
     private val a = Node("register request")
     private val b = Node("examine thoroughly")
     private val c = Node("examine casually")
