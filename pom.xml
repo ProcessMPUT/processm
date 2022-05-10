@@ -222,6 +222,7 @@
                         <include>**/*.java</include>
                         <include>**/*.kt</include>
                     </includes>
+                    <argLine>@../processm.launcher/src/launcher.arguments</argLine>
                 </configuration>
             </plugin>
             <plugin>
