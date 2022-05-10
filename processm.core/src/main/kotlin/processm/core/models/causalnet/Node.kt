@@ -13,23 +13,22 @@ import java.util.*
  */
 @Serializable
 data class Node(
-    val activity: String, val instanceId: String = "", val special: Boolean = false,
-    override val isSilent: Boolean = special
+    val activity: String,
+    val instanceId: String = "",
+    override val isArtificial: Boolean = false,
+    override val isSilent: Boolean = isArtificial
 ) : MetadataSubject,
     Activity {
 
     private val hash: Int by lazy {
-        Objects.hash(activity, instanceId, special)
+        Objects.hash(activity, instanceId, isArtificial)
     }
 
     override val name: String
         get() = activity
 
-    override val isArtificial: Boolean
-        get() = special
-
     override fun toString(): String {
-        return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (special) "*" else "")
+        return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (isArtificial) "*" else "")
     }
 
     override fun hashCode(): Int = hash
