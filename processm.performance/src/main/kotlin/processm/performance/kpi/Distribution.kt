@@ -57,18 +57,21 @@ data class Distribution private constructor(
     val average: Double by lazy(LazyThreadSafetyMode.NONE) { raw.average() }
 
     /**
-     * The unbiased estimator of standard deviation of the distribution.
+     * The corrected estimator of standard deviation of the distribution. This estimator is still biased.
+     * See https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation
+     * and https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
      */
     val standardDeviation by lazy(LazyThreadSafetyMode.NONE) {
-        var mu1 = 0.0 // the first raw moment (mean)
-        var mu2 = 0.0 // the second raw moment
+        if (raw.size <= 1)
+            return@lazy 0.0
+
+        var s1 = 0.0 // the first raw moment (mean)
+        var s2 = 0.0 // the second raw moment
         for (v in raw) {
-            mu1 += v
-            mu2 += v * v
+            s1 += v
+            s2 += v * v
         }
-        mu1 /= raw.size
-        mu2 /= raw.size
-        sqrt(mu2 - mu1 * mu1)
+        sqrt(s2 / (raw.size - 1) - s1 / raw.size * s1 / (raw.size - 1))
     }
 
     /**

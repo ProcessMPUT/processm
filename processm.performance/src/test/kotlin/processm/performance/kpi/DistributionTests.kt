@@ -29,6 +29,7 @@ class DistributionTests {
         assertEquals(raw[0], distribution.median)
         assertEquals(raw[0], distribution.Q3)
         assertEquals(raw[0], distribution.max)
+        assertEquals(0.0, distribution.standardDeviation)
         assertEquals(raw[0], distribution.quantile(0.0))
         assertEquals(raw[0], distribution.quantile(0.01))
         assertEquals(raw[0], distribution.quantile(0.33))
@@ -58,6 +59,7 @@ class DistributionTests {
         assertEquals(distribution.quantile(0.5), distribution.median)
         assertEquals(distribution.quantile(0.75), distribution.Q3)
         assertEquals(distribution.quantile(1.0), distribution.max)
+        assertEquals(0.707106781, distribution.standardDeviation, 1e-6)
         assertEquals(1.0, distribution.quantile(0.0))
         assertEquals(1.5, distribution.quantile(0.5))
         assertEquals(2.0, distribution.quantile(1.0))
@@ -85,6 +87,7 @@ class DistributionTests {
         assertEquals(distribution.quantile(0.5), distribution.median)
         assertEquals(distribution.quantile(0.75), distribution.Q3)
         assertEquals(distribution.quantile(1.0), distribution.max)
+        assertEquals(3.646916506, distribution.standardDeviation, 1e-6)
 
         assertThrows<IllegalArgumentException> { distribution.quantile(-0.1) }
         assertEquals(-5.0, distribution.quantile(0.0))
@@ -127,6 +130,7 @@ class DistributionTests {
         assertEquals(distribution.quantile(0.5), distribution.median)
         assertEquals(distribution.quantile(0.75), distribution.Q3)
         assertEquals(distribution.quantile(1.0), distribution.max)
+        assertEquals(4.23083916, distribution.standardDeviation, 1e-6)
 
         assertThrows<IllegalArgumentException> { distribution.quantile(-0.1) }
         assertEquals(-5.0, distribution.quantile(0.0))
