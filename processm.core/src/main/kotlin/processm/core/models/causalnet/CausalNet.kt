@@ -127,6 +127,7 @@ abstract class CausalNet(
     }
 
 
+    @Deprecated("Use available() instead")
     fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
         if (state.isNotEmpty()) {
             val relevant = state.uniqueSet().filterTo(HashSet()) { it.target == node }
