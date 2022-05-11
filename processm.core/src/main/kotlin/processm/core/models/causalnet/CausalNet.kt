@@ -100,8 +100,11 @@ abstract class CausalNet(
      * Some of them may be not real decisions, i.e., at most one possible outcome.
      */
     override val decisionPoints: Sequence<DecisionPoint>
-        get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
-                joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
+        get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value, true) } +
+                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, false) }
+
+    override val controlStructures: Sequence<DecisionPoint>
+        get() = decisionPoints
 
     private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
         if (state.isNotEmpty()) {
@@ -124,6 +127,7 @@ abstract class CausalNet(
     }
 
 
+    @Deprecated("Use available() instead")
     fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
         if (state.isNotEmpty()) {
             val relevant = state.uniqueSet().filterTo(HashSet()) { it.target == node }
