@@ -18,9 +18,14 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     companion object {
         private val exitTags = setOf("trace", "event")
         private val attributeTags = setOf("string", "date", "boolean", "int", "float", "list", "id")
-        private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
-        private var lastSeenElement: String? = null
     }
+
+    /**
+     * Number formatter for parsing numeric attributes. This object changes its state during parsing and cannot be
+     * shared by the [XMLXESInputStream] instances.
+     */
+    private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
+    private var lastSeenElement: String? = null
 
     /**
      * Maps standard names of attributes into custom names in the XES document being read.
@@ -87,7 +92,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         }
                     }
                     else -> {
-                        throw Exception("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                        throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
                 }
             }
