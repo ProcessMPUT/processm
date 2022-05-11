@@ -19,6 +19,7 @@ interface Activity {
      * Marks the silent activity that does not exist in the model but was added on the fly during execution to simplify
      * workflow.
      */
+    @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
     val isArtificial: Boolean
         get() = false
 }

@@ -8,13 +8,13 @@ import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.*
 import processm.core.verifiers.CausalNetVerifier
-import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
-import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
-import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.CompleteTraceRegister
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.DifferentAdfixTraceRegister
 import processm.experimental.miners.causalnet.heuristicminer.traceregisters.TraceRegister
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
+import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
+import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
+import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import kotlin.random.Random
 import kotlin.test.Test
@@ -26,7 +26,7 @@ class CompareOfflineWithOnline {
     private fun seqs(model: CausalNet) =
         CausalNetVerifier().verify(model)
             .validLoopFreeSequences
-            .map { seq -> seq.map { ab -> ab.a }.filter { !it.special } }
+            .map { seq -> seq.map { ab -> ab.a }.filter { !it.isArtificial } }
             .toSet()
 
     private fun online(log: Log, traceRegister: TraceRegister): Set<List<Node>> {

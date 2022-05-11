@@ -27,7 +27,7 @@ object XESExtensionLoader {
      * xes-standard website regex - If URI match it, we can use resources as first (reduce HTTP transfers).
      */
     private val xesWebsiteRegex: Regex =
-        "^https?://(www.)?xes-standard.org/(?<ext>[a-z_]+).xesext\$".toRegex(RegexOption.IGNORE_CASE)
+        "^https?://(www.)?xes-standard.org/(?<ext>[a-z_0-9]+).xesext\$".toRegex(RegexOption.IGNORE_CASE)
 
     /**
      * Extension with 'org' namespace: Organizational extension
@@ -96,7 +96,7 @@ object XESExtensionLoader {
             val extensionName = xesWebsiteRegex.matchEntire(uri)?.groups?.get("ext")?.value?.toLowerCase()
             if (!extensionName.isNullOrEmpty()) {
                 // The path traversal attack should not be possible here, as xesWebsiteRegex does not allow for
-                // slashes and backslashes in the extension name but for security reasons we do the check below.
+                // slashes and backslashes in the extension name but for the security reasons we do the check below.
                 require(File.separatorChar !in extensionName) { "Path traversal attack detected." }
                 stream = javaClass.classLoader.getResourceAsStream("xes-extensions/$extensionName.xesext")
             }

@@ -2,7 +2,7 @@ import {
   DataLink,
   DataNode
 } from "@/components/workspace/causal-net/CausalNet";
-import { ComponentType } from "@/openapi";
+import { AlignerKpiReport, ComponentType } from "@/openapi";
 
 type CustomizationData = {};
 
@@ -31,6 +31,14 @@ export class CausalNetComponentData extends ComponentData {
 
 export class KpiComponentData extends ComponentData {
   value?: number;
+
+  get isDisplayable() {
+    return this.value != null;
+  }
+}
+
+export class AlignerKpiComponentData extends ComponentData {
+  value?: AlignerKpiReport;
 
   get isDisplayable() {
     return this.value != null;
@@ -77,8 +85,13 @@ export class WorkspaceComponent {
         this.data = new KpiComponentData(init.data ?? {});
         break;
       }
+      case ComponentType.AlignerKpi: {
+        this.data = new AlignerKpiComponentData(init.data ?? {});
+        break;
+      }
       case ComponentType.Bpmn: {
         this.data = new BPMNComponentData(init.data ?? {});
+        break;
       }
     }
   }

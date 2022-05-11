@@ -26,19 +26,20 @@ fun CausalNet.toDSL(): String {
             return "start"
         if (n == end)
             return "end"
-        return if (n.instanceId.isBlank() && !n.special)
+        return if (n.instanceId.isBlank() && !n.isArtificial)
             "Node(${str(n.activity)})"
         else
-            "Node(${str(n.activity)}, ${str(n.instanceId)}, ${n.special})"
+            "Node(${str(n.activity)}, ${str(n.instanceId)}, ${n.isArtificial})"
     }
 
     var result = ""
-    result += "start = Node(${str(start.activity)}, ${str(start.instanceId)}, ${start.special})\n"
-    result += "end = Node(${str(end.activity)}, ${str(end.instanceId)}, ${end.special})\n"
+    result += "start = Node(${str(start.activity)}, ${str(start.instanceId)}, ${start.isArtificial})\n"
+    result += "end = Node(${str(end.activity)}, ${str(end.instanceId)}, ${end.isArtificial})\n"
     for (node in instances.sortedBy { it.activity }) {
         val njoins = this.joins[node].orEmpty().flatMap { it.dependencies }.size
         if (njoins > 0) {
-            val joins = joins[node].orEmpty().joinToString(separator = " or ") { join -> join.sources.joinToString(separator = "+") { node(it) } }
+            val joins = joins[node].orEmpty()
+                .joinToString(separator = " or ") { join -> join.sources.joinToString(separator = "+") { node(it) } }
             if (njoins > 1)
                 result += "$joins join ${node(node)}\n"
             else

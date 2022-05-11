@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xesextension name="MetaData_Completeness" prefix="meta_completeness" uri="http://www.xes-standard.org/meta_completeness.xesext">
+		<log>
+		<string key="completeness"><!--value="MULTIPLE"-->
+			<alias mapping="EN" name="Completeness"/>
+		</string>
+	</log>
+	<meta>
+		<string key="type_doi">
+			<alias mapping="EN" name="DOI reference to completeness description"/>
+		</string>
+		<string key="type_bibtex">
+			<alias mapping="EN" name="BIBTeX reference to completeness description"/>
+		</string>
+		<string key="type_reference">
+			<alias mapping="EN" name="General reference to completeness description"/>
+		</string>
+	</meta>
+</xesextension>

@@ -7,8 +7,8 @@ import processm.core.models.metadata.*
  * The default implementation of a causal net model
  */
 class MutableCausalNet(
-    start: Node = Node("start", special = true),
-    end: Node = Node("end", special = true),
+    start: Node = Node("start", isArtificial = true),
+    end: Node = Node("end", isArtificial = true),
     private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler()
 ) : CausalNet(start, end, metadataHandler),
     MutableMetadataHandler by metadataHandler {

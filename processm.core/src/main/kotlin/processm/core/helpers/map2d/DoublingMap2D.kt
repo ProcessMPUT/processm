@@ -1,8 +1,11 @@
 package processm.core.helpers.map2d
 
+import kotlinx.serialization.Serializable
+
 /**
  * The default implementation of [Map2D], backed by two hashmaps of hashmaps: one from rows, to columns, to values, and the other from columns, to rows, to values.
  */
+@Serializable
 class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
 
     private class View<K, V>(private val get: () -> MutableMap<K, V>?, private val update: (K, V) -> Unit) :
@@ -48,19 +51,8 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
     /**
      * Initializes a shallow copy of another [Map2D].
      */
-    constructor(other: Map2D<Row, Column, Value>) : this() {
-        if (other is DoublingMap2D) {
-            for ((otherRow, otherCV) in other.rcv)
-                rcv[otherRow] = HashMap(otherCV)
-
-            for ((otherCol, otherRV) in other.crv)
-                crv[otherCol] = HashMap(otherRV)
-        } else {
-            for (row in other.rows) {
-                for ((col, v) in other.getRow(row))
-                    set(row, col, v)
-            }
-        }
+    constructor(other: Map2D<Row, out Column, out Value>) : this() {
+        putAll(other)
     }
 
     override val size: Int
@@ -80,6 +72,18 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
     override fun set(row: Row, column: Column, value: Value) {
         rcv.computeIfAbsent(row) { HashMap() }[column] = value
         crv.computeIfAbsent(column) { HashMap() }[row] = value
+    }
+
+    override fun putAll(other: Map2D<Row, out Column, out Value>) {
+        if (other is DoublingMap2D) {
+            for ((otherRow, otherCV) in other.rcv)
+                rcv[otherRow] = HashMap(otherCV)
+
+            for ((otherCol, otherRV) in other.crv)
+                crv[otherCol] = HashMap(otherRV)
+        } else {
+            super.putAll(other)
+        }
     }
 
     override fun removeColumn(column: Column) {
@@ -112,6 +116,16 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
         return newVal
     }
 
+    override fun <R> mapValues(func: (row: Row, col: Column, old: Value) -> R): Map2D<Row, Column, R> {
+        val map2D = DoublingMap2D<Row, Column, R>()
+        for ((row, cv) in rcv) {
+            for ((col, value) in cv) {
+                map2D[row, col] = func(row, col, value)
+            }
+        }
+        return map2D
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DoublingMap2D<*, *, *>) return false
@@ -130,4 +144,16 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
         get() = rcv.keys
     override val columns: Set<Column>
         get() = crv.keys
+
+    override fun toString(): String = buildString {
+        append('{')
+        for ((row, cv) in rcv) {
+            for ((col, v) in cv) {
+                append("($row, $col)=$v,")
+            }
+        }
+        if (size > 0)
+            setLength(length - 1)
+        append('}')
+    }
 }
