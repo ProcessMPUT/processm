@@ -198,7 +198,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                     }
                 } else {
                     with(parseAttributeTags(reader, reader.localName)) {
-                        attribute.childrenInternal[this.key] = this
+                        attribute[this.key] = this
                     }
                 }
             }
