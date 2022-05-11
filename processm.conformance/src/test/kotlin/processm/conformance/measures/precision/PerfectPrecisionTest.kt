@@ -29,16 +29,16 @@ class PerfectPrecisionTest {
                 loop
             )
         }
-        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
-        trie[listOf(d, c, e, a, d)]
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, 0, 0) }
+        trie.getOrPut(listOf(d, c, e, a, d))
         val prec = PerfectPrecision(tree)
         prec.availableActivities(trie)
-        assertEquals(setOf(a, b, c, d), trie[emptyList()].value.available)
-        assertEquals(setOf(a, b, c, e, f), trie[listOf(d)].value.available)
-        assertEquals(setOf(a, e, f), trie[listOf(d, c)].value.available)
-        assertEquals(setOf(a, d), trie[listOf(d, c, e)].value.available)
-        assertEquals(setOf(d), trie[listOf(d, c, e, a)].value.available)
-        assertEquals(setOf(e, f), trie[listOf(d, c, e, a, d)].value.available)
+        assertEquals(4, trie.getOrPut(emptyList()).value.available)
+        assertEquals(5, trie.getOrPut(listOf(d)).value.available)
+        assertEquals(3, trie.getOrPut(listOf(d, c)).value.available)
+        assertEquals(2, trie.getOrPut(listOf(d, c, e)).value.available)
+        assertEquals(1, trie.getOrPut(listOf(d, c, e, a)).value.available)
+        assertEquals(2, trie.getOrPut(listOf(d, c, e, a, d)).value.available)
     }
 
     @Test

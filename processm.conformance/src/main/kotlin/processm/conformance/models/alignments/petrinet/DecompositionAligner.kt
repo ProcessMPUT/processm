@@ -11,10 +11,7 @@ import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.logging.trace
 import processm.core.models.commons.Activity
-import processm.core.models.petrinet.Marking
-import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.Place
-import processm.core.models.petrinet.Transition
+import processm.core.models.petrinet.*
 import java.util.concurrent.*
 
 /**
@@ -55,8 +52,9 @@ class DecompositionAligner(
         for (t in model.transitions) {
             val new = if (t.isSilent) t.copy(name = "${t.name}#${ctr++}") else t
             newTransitions.add(new)
-            check(new.name !in renaming) { "PetriNets with duplicated activities are not supported. Offending activity: ${t.name}" }
-            renaming[new.name] = t
+            check(
+                renaming.put(new.name, t) == null
+            ) { "PetriNets with duplicated activities are not supported. Offending activity: ${t.name}" }
         }
         translatedModel = PetriNet(
             model.places,

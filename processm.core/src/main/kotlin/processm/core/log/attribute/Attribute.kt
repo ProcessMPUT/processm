@@ -1,13 +1,27 @@
 package processm.core.log.attribute
 
 import java.util.*
-import kotlin.collections.HashMap
 
 /**
  * The base class for the attribute compliant with the XES standard.
  */
 abstract class Attribute<T>(key: String) {
-    internal val childrenInternal: MutableMap<String, Attribute<*>> = HashMap()
+    private var childrenInternal: MutableMap<String, Attribute<*>>? = null
+
+    /**
+     * Gets the child attribute. This is a shortcut call equivalent to `children.get(key)`.
+     */
+    operator fun get(key: String): Attribute<*>? = childrenInternal?.get(key)
+
+
+    /**
+     * Sets the child attribute
+     */
+    internal operator fun set(key: String, child: Attribute<*>) {
+        if (childrenInternal === null)
+            childrenInternal = HashMap()
+        childrenInternal!![key] = child
+    }
 
     /**
      * Attribute's key from XES file
@@ -29,7 +43,7 @@ abstract class Attribute<T>(key: String) {
      * Used as getter based on the internal representation of children
      */
     val children: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(childrenInternal)
+        get() = Collections.unmodifiableMap(childrenInternal ?: emptyMap())
 
     /**
      * Tag in XES standard
@@ -52,9 +66,9 @@ abstract class Attribute<T>(key: String) {
      * Deep equals - should be equals AND each attribute in children also the same
      */
     fun deepEquals(other: Attribute<*>?): Boolean {
-        return this == other && this.childrenInternal.size == other.childrenInternal.size && this.childrenInternal.all {
-            it.value.deepEquals(other.childrenInternal[it.key])
-        }
+        return this == other && this.childrenInternal?.size == other.childrenInternal?.size && this.childrenInternal?.all {
+            it.value.deepEquals(other.childrenInternal?.get(it.key))
+        } ?: true
     }
 
     override fun hashCode(): Int {

@@ -1532,7 +1532,7 @@ components:
       enum: [owner, writer, reader]
     ComponentType:
       type: string
-      enum: [kpi, causalNet]
+      enum: [ kpi, alignerKpi, causalNet, bpmn ]
     AccountRegistrationInfo:
       type: object
       required: [userEmail, organizationName]
@@ -1866,11 +1866,13 @@ components:
     AbstractComponent:
       oneOf:
         - $ref: '#/components/schemas/KpiComponent'
+        - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
+          alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
       type: object
       properties:
@@ -1885,11 +1887,13 @@ components:
     AbstractComponentData:
       oneOf:
         - $ref: '#/components/schemas/KpiComponentData'
+        - $ref: '#/components/schemas/AlignerKpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponentData'
+          alignerKpi: '#/components/schemas/AlignerKpiComponentData'
           causalNet: '#/components/schemas/CausalNetComponentData'
     KpiComponentData:
       allOf:
@@ -1907,11 +1911,66 @@ components:
               $ref: '#/components/schemas/KpiComponentData'
             customizationData:
               type: object
+    AlignerKpiComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          properties:
+            report:
+              $ref: '#/components/schemas/AlignerKpiReport'
+    AlignerKpiReport:
+      properties:
+        logKPI:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Distribution'
+        traceKPI:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Distribution'
+        eventKPI:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              $ref: '#/components/schemas/Distribution'
+    Distribution:
+      properties:
+        min:
+          type: number
+          format: double
+        Q1:
+          type: number
+          format: double
+        median:
+          type: number
+          format: double
+        Q3:
+          type: number
+          format: double
+        max:
+          type: number
+          format: double
+        average:
+          type: number
+          format: double
+        stddev:
+          type: number
+          format: double
+    AlignerKpiComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AlignerKpiComponentData'
+            customizationData:
+              type: object
     CausalNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
         - type: object
-          required: [nodes, edges]
+          required: [ nodes, edges ]
           properties:
             nodes:
               type: array
@@ -1957,7 +2016,7 @@ components:
                   type: array
                   items:
                     type: object
-                    required: [id, x, y]
+                    required: [ id, x, y ]
                     properties:
                       id:
                         type: string
@@ -1967,13 +2026,13 @@ components:
                         type: number
     ComponentMessageBody:
       type: object
-      required: [data]
+      required: [ data ]
       properties:
         data:
           $ref: '#/components/schemas/AbstractComponent'
     ComponentDataMessageBody:
       type: object
-      required: [data]
+      required: [ data ]
       properties:
         data:
           $ref: '#/components/schemas/AbstractComponentData'

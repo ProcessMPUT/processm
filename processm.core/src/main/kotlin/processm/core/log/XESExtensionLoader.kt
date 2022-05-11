@@ -7,6 +7,7 @@ import processm.core.log.extension.XesExtensionAttribute
 import processm.core.logging.logger
 import java.io.File
 import java.io.InputStream
+import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import javax.xml.parsers.DocumentBuilderFactory
@@ -27,7 +28,7 @@ object XESExtensionLoader {
      * xes-standard website regex - If URI match it, we can use resources as first (reduce HTTP transfers).
      */
     private val xesWebsiteRegex: Regex =
-        "^https?://(www.)?xes-standard.org/(?<ext>[a-z_]+).xesext\$".toRegex(RegexOption.IGNORE_CASE)
+        "^https?://(www.)?xes-standard.org/(?<ext>[a-z_0-9]+).xesext\$".toRegex(RegexOption.IGNORE_CASE)
 
     /**
      * Extension with 'org' namespace: Organizational extension
@@ -96,7 +97,7 @@ object XESExtensionLoader {
             val extensionName = xesWebsiteRegex.matchEntire(uri)?.groups?.get("ext")?.value?.toLowerCase()
             if (!extensionName.isNullOrEmpty()) {
                 // The path traversal attack should not be possible here, as xesWebsiteRegex does not allow for
-                // slashes and backslashes in the extension name but for security reasons we do the check below.
+                // slashes and backslashes in the extension name but for the security reasons we do the check below.
                 require(File.separatorChar !in extensionName) { "Path traversal attack detected." }
                 stream = javaClass.classLoader.getResourceAsStream("xes-extensions/$extensionName.xesext")
             }
@@ -110,14 +111,23 @@ object XESExtensionLoader {
             val extension = xmlToObject(stream)
             return loadedExtensions.putIfAbsent(uri, extension) ?: extension
         } catch (e: Exception) {
-            logger().warn("Cannot load XES Extension", e)
+            logger().warn("Cannot load XES extension $uri", e)
         }
 
         return null
     }
 
     private fun openExternalStream(url: String): InputStream? {
-        return URL(url).openStream()
+        var conn = URL(url).openConnection()
+        var limit = 3
+        while (limit-- > 0
+            && conn is HttpURLConnection
+            && conn.responseCode in setOf(301, 302, 303, 307, 308)
+            && !conn.getHeaderField("Location").isNullOrBlank()
+        ) {
+            conn = URL(conn.getHeaderField("Location")).openConnection()
+        }
+        return conn.getInputStream()
     }
 
     private fun xmlToObject(stream: InputStream?): Extension {

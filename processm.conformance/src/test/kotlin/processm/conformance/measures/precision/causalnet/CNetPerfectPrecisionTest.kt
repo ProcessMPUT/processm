@@ -14,7 +14,6 @@ import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import kotlin.math.min
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 
 class CNetPerfectPrecisionTest {
@@ -70,19 +69,19 @@ class CNetPerfectPrecisionTest {
             .computeSetOfValidSequences(false) { it, _ -> it.size < maxSeqLen }
             .map { it.mapNotNull { if (!it.a.isSilent) it.a else null } }.toList()
         val prefix2possible = HashMapWithDefault<List<Node>, HashSet<Node>>() { HashSet() }
-        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, 0, 0) }
         for (seq in validSequences) {
             var current = trie
             for (i in 0 until min(seq.size, maxPrefixLen)) {
                 prefix2possible[seq.subList(0, i)].add(seq[i])
-                current = current[seq[i]]
+                current = current.getOrPut(seq[i])
             }
         }
         val pa = CNetPerfectPrecision(model)
         pa.availableActivities(trie)
         for ((prefix, expected) in prefix2possible.entries) {
-            val actual = trie[prefix].value.available
-            assertEquals(expected, actual, "prefix=$prefix expected=$expected actual=$actual")
+            val actual = trie.getOrPut(prefix).value.available
+            assertEquals(expected.size, actual, "prefix=$prefix expected=$expected actual=$actual")
         }
     }
 
@@ -125,16 +124,16 @@ class CNetPerfectPrecisionTest {
         }
         println(model)
         val s = model.start
-        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
-        trie[listOf(s, a, a, c, b, b)]
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, 0, 0) }
+        trie.getOrPut(listOf(s, a, a, c, b, b))
         val pa = CNetPerfectPrecision(model)
         pa.availableActivities(trie)
-        assertEquals(setOf(a), trie[listOf(s)].value.available)
-        assertEquals(setOf(a, c), trie[listOf(s, a)].value.available)
-        assertEquals(setOf(a, c), trie[listOf(s, a, a)].value.available)
-        assertEquals(setOf(b), trie[listOf(s, a, a, c)].value.available)
-        assertEquals(setOf(b), trie[listOf(s, a, a, c, b)].value.available)
-        assertEquals(setOf(model.end), trie[listOf(s, a, a, c, b, b)].value.available)
+        assertEquals(1, trie.getOrPut(listOf(s)).value.available)
+        assertEquals(2, trie.getOrPut(listOf(s, a)).value.available)
+        assertEquals(2, trie.getOrPut(listOf(s, a, a)).value.available)
+        assertEquals(1, trie.getOrPut(listOf(s, a, a, c)).value.available)
+        assertEquals(1, trie.getOrPut(listOf(s, a, a, c, b)).value.available)
+        assertEquals(1, trie.getOrPut(listOf(s, a, a, c, b, b)).value.available)
     }
 
     @Test
@@ -150,16 +149,16 @@ class CNetPerfectPrecisionTest {
             b joins end
         }
 
-        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, null) }
-        trie[listOf(a, a, c, b, b)]
+        val trie = Trie<Activity, AbstractPrecision.PrecisionData> { AbstractPrecision.PrecisionData(0, 0, 0) }
+        trie.getOrPut(listOf(a, a, c, b, b))
         val pa = CNetPerfectPrecision(model)
         pa.availableActivities(trie)
-        assertEquals(setOf(a), trie.value.available)
-        assertEquals(setOf(a, c), trie[listOf(a)].value.available)
-        assertEquals(setOf(a, c), trie[listOf(a, a)].value.available)
-        assertEquals(setOf(b), trie[listOf(a, a, c)].value.available)
-        assertEquals(setOf(b), trie[listOf(a, a, c, b)].value.available)
-        assertTrue { trie[listOf(a, a, c, b, b)].value.available.isNullOrEmpty() }
+        assertEquals(1, trie.value.available)
+        assertEquals(2, trie.getOrPut(listOf(a)).value.available)
+        assertEquals(2, trie.getOrPut(listOf(a, a)).value.available)
+        assertEquals(1, trie.getOrPut(listOf(a, a, c)).value.available)
+        assertEquals(1, trie.getOrPut(listOf(a, a, c, b)).value.available)
+        assertEquals(0, trie.getOrPut(listOf(a, a, c, b, b)).value.available)
     }
 
     private val diamond1 = causalnet {

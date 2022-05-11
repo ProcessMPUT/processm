@@ -1,7 +1,9 @@
 package processm.core.models.bpmn.converters
 
 import processm.core.models.bpmn.BPMNModel
-import processm.core.models.causalnet.*
+import processm.core.models.causalnet.MutableCausalNet
+import processm.core.models.causalnet.Node
+import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import java.io.File
 import kotlin.test.Test
@@ -224,7 +226,7 @@ class BPMNModel2CausalNetTest {
         // Apparently, names in A.4.1 contain trailing spaces. The sole purpose of the code below is to rewrite the obtained cnet renaming nodes
         val tmp = bpmnModel.toCausalNet()
         val converted = MutableCausalNet()
-        converted.copyFrom(tmp) { node -> Node(node.activity.trim(), node.instanceId.trim(), node.special) }
+        converted.copyFrom(tmp) { node -> Node(node.activity.trim(), node.instanceId.trim(), node.isArtificial) }
 
         assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
         assertTrue { expected.structurallyEquals(converted) }

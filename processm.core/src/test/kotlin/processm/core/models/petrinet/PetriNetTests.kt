@@ -1,5 +1,7 @@
 package processm.core.models.petrinet
 
+import processm.core.helpers.mapToSet
+import processm.core.models.commons.ControlStructureType.*
 import kotlin.test.*
 
 class PetriNetTests {
@@ -146,5 +148,51 @@ class PetriNetTests {
             setOf("d", "e")
         )
         assertEquals(expected, names)
+    }
+
+    @Test
+    fun controlStructures() {
+        // PM book Fig. 3.2
+        val model = petrinet {
+            P tout "a"
+            P tin "a" * "f" tout "b" * "c"
+            P tin "a" * "f" tout "d"
+            P tin "b" * "c" tout "e"
+            P tin "d" tout "e"
+            P tin "e" tout "g" * "h" * "f"
+            P tin "g" * "h"
+        }
+
+        val andSplits = (model.controlStructures.filter { it.type == AndSplit }.toList() as List<AND>)
+            .sortedBy { it.transition.name }
+        assertEquals(2, andSplits.size)
+        assertEquals("a", andSplits.first().transition.name)
+        assertEquals("f", andSplits.last().transition.name)
+        assertTrue(andSplits.all { it.controlFlowComplexity == 1 })
+
+        val andJoins = (model.controlStructures.filter { it.type == AndJoin }.toList() as List<AND>)
+            .sortedBy { it.transition.name }
+        assertEquals(1, andJoins.size)
+        assertEquals("e", andJoins.first().transition.name)
+        assertTrue(andJoins.all { it.controlFlowComplexity == 1 })
+
+        val xorSplits = (model.controlStructures.filter { it.type == XorSplit }.toList() as List<XOR>)
+            .sortedBy { it.transitions.first().name }
+        assertEquals(2, xorSplits.size)
+        assertEquals(setOf("b", "c"), xorSplits.first().transitions.mapToSet { it.name })
+        assertEquals(2, xorSplits.first().controlFlowComplexity)
+        assertEquals(setOf("f", "g", "h"), xorSplits.last().transitions.mapToSet { it.name })
+        assertEquals(3, xorSplits.last().controlFlowComplexity)
+
+        val xorJoins = (model.controlStructures.filter { it.type == XorJoin }.toList() as List<XOR>)
+            .sortedBy { it.transitions.first().name }
+        assertEquals(4, xorJoins.size)
+        assertEquals(setOf("a", "f"), xorJoins[0].transitions.mapToSet { it.name })
+        assertEquals(setOf("a", "f"), xorJoins[1].transitions.mapToSet { it.name })
+        assertEquals(setOf("b", "c"), xorJoins[2].transitions.mapToSet { it.name })
+        assertEquals(setOf("g", "h"), xorJoins[3].transitions.mapToSet { it.name })
+        assertTrue(xorJoins.all { it.controlFlowComplexity == 2 })
+
+        assertEquals(0, model.controlStructures.count { it.type == OrSplit || it.type == OrJoin })
     }
 }

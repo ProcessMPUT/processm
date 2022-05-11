@@ -47,8 +47,8 @@ class CausalNetAsPetriNetAlignerTest {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", special = true)
-        val en = Node("end", special = true)
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")
@@ -121,8 +121,8 @@ class CausalNetAsPetriNetAlignerTest {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", special = true)
-        val en = Node("end", special = true)
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")
@@ -190,8 +190,8 @@ class CausalNetAsPetriNetAlignerTest {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", special = true)
-        val en = Node("end", special = true)
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")

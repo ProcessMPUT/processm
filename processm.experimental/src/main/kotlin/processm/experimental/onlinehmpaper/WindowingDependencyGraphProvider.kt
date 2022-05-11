@@ -8,8 +8,8 @@ import processm.miners.causalnet.onlineminer.NodeTrace
 
 class WindowingDependencyGraphProvider(val windowSize: Int) : DependencyGraphProvider {
 
-    override val start = Node("start", special = true)
-    override val end = Node("end", special = true)
+    override val start = Node("start", isArtificial = true)
+    override val end = Node("end", isArtificial = true)
     private var epoch = 0
     private val directlyFollows = HashMap<Dependency, Int>()
 

@@ -19,9 +19,12 @@ class PerfectPrecision(model: ProcessModel) : AbstractPrecision(model) {
     }
 
     override fun availableActivities(prefixes: Trie<Activity, PrecisionData>) {
-        val stack = ArrayDeque<Pair<Trie<Activity, PrecisionData>, ProcessModelState>>()
+        val tmp = Trie<Activity, HashSet<Activity>> { HashSet() }
+        for (entry in prefixes)
+            tmp.getOrPut(entry.prefix)
+        val stack = ArrayDeque<Pair<Trie<Activity, HashSet<Activity>>, ProcessModelState>>()
         val instance = model.createInstance()
-        stack.add(prefixes to instance.currentState)
+        stack.add(tmp to instance.currentState)
         while (stack.isNotEmpty()) {
             val (trie, state) = stack.removeLast()
             instance.setState(state)
@@ -31,14 +34,21 @@ class PerfectPrecision(model: ProcessModel) : AbstractPrecision(model) {
                     instance.getExecutionFor(activity).execute()
                     stack.addLast(trie to instance.currentState)
                 } else {
-                    trie.value.available = ((trie.value.available ?: HashSet()) as HashSet).also { it.add(activity) }
+                    trie.value.add(activity)
                     val child = trie.getOrNull(activity)
-                    instance.setState(state.copy())
-                    instance.getExecutionFor(activity).execute()
-                    if (child !== null)
+                    if (child !== null) {
+                        instance.setState(state.copy())
+                        instance.getExecutionFor(activity).execute()
                         stack.addLast(child to instance.currentState)
+                    }
                 }
             }
+        }
+        for (entry in prefixes) {
+            val o = tmp.getOrNull(entry.prefix)?.value
+            checkNotNull(o)
+            entry.trie.value.available = o.size
+            entry.trie.value.availableAndChild = o.count(entry.trie.children::containsKey)
         }
     }
 
