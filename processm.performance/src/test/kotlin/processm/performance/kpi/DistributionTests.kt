@@ -160,4 +160,29 @@ class DistributionTests {
         assertEquals(1.0, distribution.cdf(rawS[5]))
         assertEquals(1.0, distribution.cdf(rawS[5] + 0.1))
     }
+
+    @Test
+    fun `statistics of distribution with duplicates`() {
+        val raw = doubleArrayOf(1.0, 2.0, 2.0, 2.0, 3.0)
+        val distribution = Distribution(raw)
+
+        assertContentEquals(raw, distribution.raw)
+        assertEquals(distribution.quantile(0.0), distribution.min)
+        assertEquals(distribution.quantile(0.25), distribution.Q1)
+        assertEquals(distribution.quantile(0.5), distribution.median)
+        assertEquals(distribution.quantile(0.75), distribution.Q3)
+        assertEquals(distribution.quantile(1.0), distribution.max)
+        assertEquals(0.707106781, distribution.standardDeviation, 1e-6)
+
+        assertEquals(1.0 / 5.0, distribution.cdf(raw[1] - 0.1))
+        assertEquals(4.0 / 5.0, distribution.cdf(raw[1]))
+        assertEquals(4.0 / 5.0, distribution.cdf(raw[1] + 0.1))
+        assertEquals(1.0, distribution.cdf(raw[4]))
+
+        assertEquals(4.0 / 5.0, distribution.ccdf(raw[1] - 0.1))
+        assertEquals(4.0 / 5.0, distribution.ccdf(raw[1]))
+        assertEquals(1.0 / 5.0, distribution.ccdf(raw[1] + 0.1))
+        assertEquals(1.0 / 5.0, distribution.ccdf(raw[4]))
+
+    }
 }

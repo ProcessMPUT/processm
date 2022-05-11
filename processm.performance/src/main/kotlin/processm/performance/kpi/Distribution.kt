@@ -95,7 +95,7 @@ data class Distribution private constructor(
      * See https://en.wikipedia.org/wiki/Empirical_distribution_function#Definition
      */
     fun cdf(v: Double): Double {
-        val hRaw = raw.binarySearch(v)
+        val hRaw = raw.deterministicBinarySearch(v, true)
         val h = if (hRaw >= 0) hRaw + 1 else -hRaw - 1
         return h / raw.size.toDouble()
     }
@@ -105,7 +105,7 @@ data class Distribution private constructor(
      * When [v] is an actual data point, [cdf] and [ccdf] do not sum up to 1, since [v] is included in both ranges.
      */
     fun ccdf(v: Double): Double {
-        val hRaw = raw.binarySearch(v)
+        val hRaw = raw.deterministicBinarySearch(v, false)
         val h = if (hRaw >= 0) hRaw else -hRaw - 1
         return (raw.size - h) / raw.size.toDouble()
     }
@@ -134,5 +134,16 @@ data class Distribution private constructor(
 
     override fun hashCode(): Int {
         return raw.contentHashCode()
+    }
+
+    private fun DoubleArray.deterministicBinarySearch(element: Double, largest: Boolean = true): Int {
+        var i = binarySearch(element)
+        if (i < 0)
+            return i
+
+        val shift = if (largest) 1 else -1
+        while (i + shift in indices && this[i + shift] == element)
+            i += shift
+        return i
     }
 }
