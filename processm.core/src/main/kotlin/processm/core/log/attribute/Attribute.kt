@@ -1,7 +1,8 @@
 package processm.core.log.attribute
 
+import java.time.Instant
 import java.util.*
-import kotlin.collections.HashMap
+import kotlin.reflect.KClass
 
 /**
  * The base class for the attribute compliant with the XES standard.
@@ -71,3 +72,19 @@ val Attribute<*>.value: Any?
 
 fun Map<String, Attribute<*>>.deepEquals(other: Map<String, Attribute<*>>): Boolean =
     this == other && this.all { it.value.deepEquals(other[it.key]) }
+
+/**
+ * Returns `KClass` corresponding to the value of the attribute
+ */
+val Attribute<*>.valueType: KClass<*>
+    get() = when (this) {
+        is BoolAttr -> Boolean::class
+        is DateTimeAttr -> Instant::class
+        is IDAttr -> UUID::class
+        is IntAttr -> Long::class
+        is ListAttr -> List::class
+        is NullAttr -> Nothing::class
+        is RealAttr -> Double::class
+        is StringAttr -> String::class
+        else -> TODO("Type ${this::class} is not supported")
+    }
