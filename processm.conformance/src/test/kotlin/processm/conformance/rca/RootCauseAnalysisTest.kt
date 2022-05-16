@@ -47,10 +47,6 @@ class RootCauseAnalysisTest {
         with(trees[1]) {
             assertEquals(1, depth)
         }
-        for (tree in trees) {
-            println(tree.toMultilineString())
-            println("==================")
-        }
     }
 
     @Test
@@ -138,9 +134,47 @@ class RootCauseAnalysisTest {
         with(trees[1]) {
             assertEquals(1, depth)
         }
-        for (tree in trees) {
-            println(tree.toMultilineString())
-            println("==================")
+    }
+
+    @Test
+    fun `if no bool then problem`() {
+        val neg = listOf(
+            alignment {
+                "a" with ("bool" to true) executing "a"
+                "b" with ("bool" to true) executing "b"
+                "c" executing "c"
+                "d" executing "d"
+            },
+            alignment {
+                "a" with ("bool" to true) executing "a"
+                "b" with ("bool" to true) executing "b"
+                "c" executing "c"
+                "d" executing "d"
+            }
+        )
+        val pos = listOf(
+            alignment {
+                "a" executing "a"
+                null executing "c"
+                "b" with ("bool" to true) executing "b"
+                "d" executing "d"
+                "c" executing null
+            },
+            alignment {
+                "a" with ("bool" to true) executing "a"
+                null executing "c"
+                "b" executing "b"
+                "d" executing "d"
+                "c" executing null
+            }
+        )
+        val trees = RootCauseAnalysisDataSet(pos, neg).explain().toList()
+        assertEquals(2, trees.size)
+        with(trees[0]) {
+            assertEquals(2, depth)
+        }
+        with(trees[1]) {
+            assertEquals(1, depth)
         }
     }
 }

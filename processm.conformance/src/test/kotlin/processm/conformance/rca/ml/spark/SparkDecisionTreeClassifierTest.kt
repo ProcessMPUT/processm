@@ -96,7 +96,7 @@ class SparkDecisionTreeClassifierTest {
         val f1 = Feature("f1", String::class)
         val f2 = Feature("f2", Long::class)
         val dataset = PropositionalSparseDataset((0..17).map {
-            if(it <= 5)
+            if (it <= 5)
                 mapOf(f1 to it.toString(), f2 to 10L, Label to (it <= 10))
             else
                 mapOf(f1 to it.toString(), Label to (it <= 10))
@@ -283,7 +283,6 @@ Sunny,Mild,High,TRUE,No"""
                 mapOf(f1 to "10", Label to (it <= 10))
         })
         val cls = SparkDecisionTreeClassifier().fit(dataset)
-        println(cls.toMultilineString())
         with(cls.root) {
             assertIs<DecisionTreeModel.InternalNode>(this)
             assertEquals(f2, split.feature)
@@ -291,6 +290,36 @@ Sunny,Mild,High,TRUE,No"""
                 assertIs<DecisionTreeModel.CategoricalSplit<String>>(this)
                 assertEquals(setOf<String?>(null), left)
                 assertEquals((0..10).mapToSet(Int::toString), right)
+            }
+            with(left) {
+                assertIs<DecisionTreeModel.Leaf>(this)
+                assertFalse { decision }
+            }
+            with(right) {
+                assertIs<DecisionTreeModel.Leaf>(this)
+                assertTrue { decision }
+            }
+        }
+    }
+
+    @Test
+    fun `two boolean features one missing`() {
+        val f1 = Feature("f1", Boolean::class)
+        val f2 = Feature("f2", Boolean::class)
+        val dataset = PropositionalSparseDataset((0..17).map {
+            if (it <= 10)
+                mapOf(f1 to true, f2 to (it <= 10), Label to (it <= 10))
+            else
+                mapOf(f1 to true, Label to (it <= 10))
+        })
+        val cls = SparkDecisionTreeClassifier().fit(dataset)
+        with(cls.root) {
+            assertIs<DecisionTreeModel.InternalNode>(this)
+            assertEquals(f2, split.feature)
+            with(split) {
+                assertIs<DecisionTreeModel.CategoricalSplit<Boolean>>(this)
+                assertEquals(setOf(false), left)
+                assertEquals(setOf(true), right)
             }
             with(left) {
                 assertIs<DecisionTreeModel.Leaf>(this)

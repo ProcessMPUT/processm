@@ -9,7 +9,7 @@ import kotlin.reflect.KClass
  * @param datatype Tye column datatype
  * @param default The default value to be used in case of a missing value
  */
-open class Feature(open val name: String, open val datatype: KClass<*>, open val default: Any? = null)
+open class Feature(open val name: String, open val datatype: KClass<*>, open val default: Any? = if(datatype == Boolean::class) false else null)
 
 /**
  * A distinguished feature denoting the classification label
