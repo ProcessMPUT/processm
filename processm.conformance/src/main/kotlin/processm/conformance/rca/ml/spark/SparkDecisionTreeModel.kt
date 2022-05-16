@@ -19,6 +19,7 @@ import processm.conformance.rca.PropositionalSparseDataset
 import processm.conformance.rca.ml.DecisionTreeModel
 import processm.core.logging.debug
 import processm.core.logging.logger
+import java.time.Instant
 import kotlin.math.absoluteValue
 
 /**
@@ -47,7 +48,7 @@ class SparkDecisionTreeModel internal constructor(
     private data class GenericCategoricalSplit(override val feature: Any, val left: List<Any?>, val right: List<Any?>) :
         GenericSplit
 
-    private data class GenericContinuousSplit(override val feature: Any, val threshold: Double) : GenericSplit
+    private data class GenericContinuousSplit(override val feature: Any, val threshold: Any) : GenericSplit
 
     private fun featureByName(name: String): Feature {
         logger.debug { "featureByName($name) ${originalDataset.features.map { it.name }}" }
@@ -120,6 +121,14 @@ class SparkDecisionTreeModel internal constructor(
         return DecisionTreeModel.CategoricalSplit(featureByName(f), split.left.toSet(), split.right.toSet())
     }
 
+    private fun translate(split: GenericContinuousSplit, stage: Timestamp2Epoch): GenericContinuousSplit {
+        val name = split.feature as String
+        val inName = revertColumn(name, stage) ?: return split
+        val th = split.threshold
+        check(th is Double)
+        return GenericContinuousSplit(inName, Instant.ofEpochSecond(th.toLong()))
+    }
+
     private fun translate(split: ContinuousSplit): DecisionTreeModel.Split {
         var split = GenericContinuousSplit(split.featureIndex(), split.threshold())
         for (stage in model.stages().reversed()) {
@@ -128,6 +137,7 @@ class SparkDecisionTreeModel internal constructor(
                 is VectorAssembler -> translate(split, stage)
                 is StringIndexerModel -> continue
                 is ImputerModel -> translate(split, stage)
+                is Timestamp2Epoch -> translate(split, stage)
                 else -> TODO("${stage::class} not implemented")
             }
         }
@@ -135,7 +145,9 @@ class SparkDecisionTreeModel internal constructor(
         check(fname is String)
         val f = featureByName(fname)
         return if (f.datatype == Boolean::class) {
-            assert((split.threshold - 0.5).absoluteValue < 0.001)
+            val th = split.threshold
+            check(th is Double)
+            check((th - 0.5).absoluteValue < 0.001)
             DecisionTreeModel.CategoricalSplit(f, setOf(false), setOf(true))
         } else {
             DecisionTreeModel.ContinuousSplit(f, split.threshold)

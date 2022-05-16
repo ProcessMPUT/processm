@@ -6,6 +6,7 @@ import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.types.DataTypes
 import org.apache.spark.sql.types.NumericType
 import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.types.TimestampType
 import processm.conformance.rca.PropositionalSparseDataset
 import processm.conformance.rca.ml.DecisionTreeClassifier
 import processm.conformance.rca.ml.spark.SparkHelpers.hasMissingValues
@@ -32,6 +33,9 @@ class SparkDecisionTreeClassifier : DecisionTreeClassifier {
         val dataset = sparseDataset.toSpark()
         val pipelineBuilder = PipelineBuilder(dataset.schema())
 
+        pipelineBuilder.addIfRelevant(
+            Timestamp2Epoch(),
+            pipelineBuilder.relevant.filter { it.dataType() is TimestampType })
         pipelineBuilder.addIfRelevant(Imputer(), pipelineBuilder.relevant.filter { it.dataType() is NumericType })
 
         pipelineBuilder.relevant.filter { it.dataType() == DataTypes.StringType }.let { stringFields ->

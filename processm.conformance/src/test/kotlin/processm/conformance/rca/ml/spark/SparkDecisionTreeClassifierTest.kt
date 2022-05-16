@@ -6,6 +6,7 @@ import processm.conformance.rca.Label
 import processm.conformance.rca.PropositionalSparseDataset
 import processm.conformance.rca.ml.DecisionTreeModel
 import processm.core.helpers.mapToSet
+import java.time.Instant
 import kotlin.test.*
 
 class SparkDecisionTreeClassifierTest {
@@ -320,6 +321,37 @@ Sunny,Mild,High,TRUE,No"""
                 assertIs<DecisionTreeModel.CategoricalSplit<Boolean>>(this)
                 assertEquals(setOf(false), left)
                 assertEquals(setOf(true), right)
+            }
+            with(left) {
+                assertIs<DecisionTreeModel.Leaf>(this)
+                assertFalse { decision }
+            }
+            with(right) {
+                assertIs<DecisionTreeModel.Leaf>(this)
+                assertTrue { decision }
+            }
+        }
+    }
+
+    @Test
+    fun `two instant features`() {
+        val f1 = Feature("f1", Instant::class)
+        val f2 = Feature("f2", Instant::class)
+        val dataset = PropositionalSparseDataset((0..17).map {
+            mapOf(
+                f1 to Instant.parse("2022-05-16T${it.toString().padStart(2, '0')}:00:00.00Z"),
+                f2 to Instant.ofEpochMilli(0L),
+                Label to (it >= 9)
+            )
+        })
+        val cls = SparkDecisionTreeClassifier().fit(dataset)
+        with(cls.root) {
+            assertIs<DecisionTreeModel.InternalNode>(this)
+            assertEquals(f1, split.feature)
+            with(split) {
+                assertIs<DecisionTreeModel.ContinuousSplit<Instant>>(this)
+                assertTrue { threshold > Instant.parse("2022-05-16T08:00:00.00Z") }
+                assertTrue { threshold < Instant.parse("2022-05-16T09:00:00.00Z") }
             }
             with(left) {
                 assertIs<DecisionTreeModel.Leaf>(this)

@@ -17,7 +17,13 @@ object SparkHelpers {
     fun PropositionalSparseDataset.toSpark(): Dataset<Row> {
         val spark = SparkSession.builder().master("local").appName(Brand.name).orCreate
         val rows = map { row ->
-            val values = features.map { row[it] ?: it.default }
+            val values = features.map {
+                val v = row[it] ?: it.default
+                return@map if (v !== null && it.datatype == Instant::class)
+                    java.sql.Timestamp.from(v as Instant)
+                else
+                    v
+            }
             RowFactory.create(*values.toTypedArray())
         }
         val fields = features.map {
