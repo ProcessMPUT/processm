@@ -2,6 +2,7 @@ package processm.services.api
 
 import com.google.gson.Gson
 import processm.core.helpers.mapToArray
+import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
@@ -9,14 +10,6 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.*
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-
-/**
- * Converts an [Instant] to [LocalDateTime] in a uniform way.
- */
-fun Instant.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(this, ZoneId.of("Z")).withNano(0)
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].

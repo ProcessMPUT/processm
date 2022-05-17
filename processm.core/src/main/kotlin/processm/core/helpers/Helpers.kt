@@ -4,9 +4,7 @@ import processm.core.log.attribute.deepEquals
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import java.math.BigInteger
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
+import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoField
 import java.util.*
@@ -578,6 +576,11 @@ inline fun String.fastParseISO8601(): Instant =
     }
 
 inline fun Instant.toDateTime(): OffsetDateTime = this.atOffset(ZoneOffset.UTC)
+
+/**
+ * Converts an [Instant] to [LocalDateTime] in a uniform way.
+ */
+fun Instant.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(this, ZoneId.of("Z"))
 
 /**
  * Returns a set containing the results of applying the given [transform] function
