@@ -11,7 +11,7 @@ import processm.core.models.causalnet.CausalNet
 import processm.experimental.core.models.causalnet.toDSL
 import processm.experimental.miners.causalnet.heuristicminer.OnlineHeuristicMiner
 import processm.experimental.performance.PerformanceAnalyzer
-import processm.experimental.performance.SkipSpecialForFree
+import processm.experimental.performance.SkipSilentForFree
 import processm.experimental.performance.StandardDistance
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
@@ -144,7 +144,7 @@ class Experiment {
         val time = measureResources { model = computeModel(trainLog) }
         System.gc()
 //        val trainPA = PerformanceAnalyzer(trainLog, model!!, SkipSpecialForFree(StandardDistance()))
-        val testPA = PerformanceAnalyzer(testLog, model!!, SkipSpecialForFree(StandardDistance()))
+        val testPA = PerformanceAnalyzer(testLog, model!!, SkipSilentForFree(StandardDistance()))
         System.gc()
         //return Stats(trainPA.fitness, trainPA.precision, testPA.fitness, testPA.precision, time)
         return Stats(Double.NaN, Double.NaN, testPA.fitness, testPA.precision, time)
@@ -239,7 +239,7 @@ class Experiment {
                     minDependency to cvLog(fitLog, config.kfit, Random(config.cvSeed), start, end).map { logpair ->
                         try {
                             val model = computeOfflineModel(logpair.first, config.maxQueueSize, minDependency)
-                            val pa = PerformanceAnalyzer(logpair.second, model, SkipSpecialForFree(StandardDistance()))
+                            val pa = PerformanceAnalyzer(logpair.second, model, SkipSilentForFree(StandardDistance()))
                             return@map 2.0 / (1.0 / pa.precision + 1.0 / pa.fitness)
                         } catch (e: IllegalStateException) {
                             return@map Double.NaN

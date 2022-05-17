@@ -50,7 +50,7 @@
               ${displayPreferences.edgeArrowHeight} ${
               displayPreferences.edgeArrowWidth / 2
             }
-              0 ${displayPreferences.edgeArrowWidth} 
+              0 ${displayPreferences.edgeArrowWidth}
               ${displayPreferences.edgeArrowWidth / 2} ${
               displayPreferences.edgeArrowWidth / 2
             }`"
@@ -162,25 +162,25 @@
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
 import * as d3 from "d3";
-import resize from "vue-resize-directive";
 import {
-  ForceLink,
-  Simulation,
   BaseType,
-  Selection,
-  EnterElement,
+  ContainerElement,
   drag,
-  ContainerElement
+  EnterElement,
+  ForceLink,
+  Selection,
+  Simulation
 } from "d3";
+import resize from "vue-resize-directive";
 import { v4 as uuidv4 } from "uuid";
 import { ComponentMode } from "../WorkspaceComponent.vue";
-import CausalNet, { Point, Node, Link, ElementType } from "./CausalNet";
+import CausalNet, { ElementType, Link, Node, Point } from "./CausalNet";
 import {
-  UserInputSource,
-  UserInputHandler,
   AdditionModeInputHandler,
   DeletionModeInputHandler,
-  InteractiveModeInputHandler
+  InteractiveModeInputHandler,
+  UserInputHandler,
+  UserInputSource
 } from "./UserInputHandlers";
 import {
   CausalNetComponentData,
@@ -206,6 +206,9 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   readonly data!: WorkspaceComponentModel;
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
+
+  private readonly alphaTarget = 0.3;
+  private readonly alphaMinDelta = 0.01;
 
   private readonly arrowMarkerId = uuidv4();
   private editMode: EditMode | null = null;
@@ -313,7 +316,10 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
     this.simulation
       ?.force<ForceLink<Node, Link>>("link")
       ?.links(this.causalNet.links);
-    this.simulation?.alphaTarget(0.3).restart();
+    this.simulation
+      ?.alphaTarget(this.alphaTarget)
+      .alphaMin(this.alphaTarget + this.alphaMinDelta)
+      .restart();
   }
 
   public nodes(filterExpression: ((link: Node) => boolean) | null = null) {
@@ -428,13 +434,21 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             })
             .call(
               drag<SVGGElement, Node, SVGGElement>()
-                .on("start", (d) => this.userInputHandler?.nodeDragstarted(d))
+                .on("start", (d) => {
+                  this.simulation?.alphaMin(this.alphaTarget).restart();
+                  this.userInputHandler?.nodeDragstarted(d);
+                  this.userInputHandler?.nodeDragged(d, d3.event);
+                })
                 .on("drag", (d) =>
                   this.userInputHandler?.nodeDragged(d, d3.event)
                 )
-                .on("end", (d) =>
-                  this.userInputHandler?.nodeDragended(d, d3.event)
-                )
+                .on("end", (d) => {
+                  this.simulation
+                    ?.alphaMin(this.alphaTarget + this.alphaMinDelta)
+                    .alpha((this.alphaTarget + 0.5) / 2.0)
+                    .restart();
+                  this.userInputHandler?.nodeDragended(d, d3.event);
+                })
             );
 
           enteredItems

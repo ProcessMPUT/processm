@@ -102,7 +102,7 @@ class PM_chapter_72 {
         hm.processLog(log)
         println(hm.result)
         with(hm.result) {
-            assertEquals(nodes.toSet(), instances.filter { !it.special }.toSet())
+            assertEquals(nodes.toSet(), instances.filter { !it.isArtificial }.toSet())
             with(outgoing) {
                 assertEquals(setOf(b, c, d, e), getValue(a).mapToSet { d -> d.target })
                 assertEquals(setOf(e), getValue(b).mapToSet { d -> d.target })

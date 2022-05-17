@@ -7,10 +7,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import processm.core.helpers.mapToSet
-import processm.core.log.DBLogCleaner
-import processm.core.log.Event
-import processm.core.log.Log
-import processm.core.log.Trace
+import processm.core.log.*
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
@@ -128,7 +125,10 @@ class MySQLEmployeesTest {
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(id)!!
             val stream = etl.toXESInputStream()
-            val list = stream.toList()
+            // this list consumes roughly 2GB if compressed oops are on and 3GB otherwise, so we avoid dynamic expansion to reduce memory footprint
+            val list = ArrayList<XESComponent>(7837736)
+            list.addAll(stream)
+            assertEquals(7837736, list.size)
 
 
             assertEquals(1, list.count { it is Log })
@@ -375,9 +375,15 @@ class MySQLEmployeesTest {
     @Test
     fun `read all read nothing add new read new`() {
         val id = createEtlConfiguration()
-        var list = transaction(DBCache.get(dataStoreName).database) {
-            return@transaction ETLConfiguration.findById(id)!!.toXESInputStream().toList()
+        var list: List<XESComponent> = transaction(DBCache.get(dataStoreName).database) {
+            ArrayList<XESComponent>(7837736).apply {
+                addAll(
+                    ETLConfiguration.findById(id)!!.toXESInputStream()
+                )
+            }
         }
+        assertEquals(7837736, list.size)
+
         assertEquals(1, list.count { it is Log })
         assertEquals(expectedNumberOfTraces, list.filterIsInstance<Trace>().groupBy { it.identityId }.count())
         assertEquals(expectedNumberOfEvents, list.count { it is Event })

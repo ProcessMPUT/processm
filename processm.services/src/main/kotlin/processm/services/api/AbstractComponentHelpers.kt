@@ -42,7 +42,7 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
 private fun ComponentTypeDto.toComponentType(): ComponentType = when (this) {
     ComponentTypeDto.CausalNet -> ComponentType.causalNet
     ComponentTypeDto.Kpi -> ComponentType.kpi
-    ComponentTypeDto.BPMN -> TODO()
+    ComponentTypeDto.BPMN -> ComponentType.bpmn
     else -> {
         val thisString = this.toString()
         requireNotNull(ComponentType.values().firstOrNull { it.toString().equals(thisString, ignoreCase = true) }) {
@@ -114,6 +114,13 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 KpiComponentData(
                     type = ComponentType.kpi,
                     value = data
+                )
+            }
+            ComponentTypeDto.BPMN -> {
+                BPMNComponentData(
+                    type = ComponentType.bpmn,
+                    xml = javaClass.classLoader.getResourceAsStream("bpmn-mock/pizza-collaboration.bpmn")
+                        .bufferedReader().readText() // FIXME: replace the mock with actual implementation
                 )
             }
             else -> TODO("Data conversion is not implemented for type $componentType.")

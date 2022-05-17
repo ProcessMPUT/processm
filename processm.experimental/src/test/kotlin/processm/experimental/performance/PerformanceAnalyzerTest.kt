@@ -455,7 +455,7 @@ class PerformanceAnalyzerTest {
     @Test
     fun `model6 alignment ignoring start and end`() {
         val alignment =
-            PerformanceAnalyzer(emptyLog, model6, SkipSpecialForFree(StandardDistance())).computeOptimalAlignment(
+            PerformanceAnalyzer(emptyLog, model6, SkipSilentForFree(StandardDistance())).computeOptimalAlignment(
                 trace(
                     a,
                     b,
@@ -482,7 +482,7 @@ class PerformanceAnalyzerTest {
     @Test
     fun `model6 alignment ignoring start and end with cost limiting`() {
         val alignment =
-            PerformanceAnalyzer(emptyLog, model6, SkipSpecialForFree(StandardDistance())).computeOptimalAlignment(
+            PerformanceAnalyzer(emptyLog, model6, SkipSilentForFree(StandardDistance())).computeOptimalAlignment(
                 trace(a, b, c, d, e),
                 100,
                 0.0
@@ -585,7 +585,7 @@ class PerformanceAnalyzerTest {
         //val partialLog = Log(log.traces.toList().subList(0, 400).asSequence())
         val partialLog = Log(log.traces.toList().subList(443, 444).asSequence())
         //(getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val pa = PerformanceAnalyzer(partialLog, offline.result, SkipSpecialForFree(StandardDistance()))
+        val pa = PerformanceAnalyzer(partialLog, offline.result, SkipSilentForFree(StandardDistance()))
         println(pa.precision)
     }
 
@@ -623,7 +623,7 @@ class PerformanceAnalyzerTest {
             val test = log.subList(windowIndices.last, windowIndices.last + windowSize)
             hm.processDiff(Log(add.asSequence()), Log(remove.asSequence()))
 //            val patrain = PerformanceAnalyzer(Log(train.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
-            val patest = PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
+            val patest = PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSilentForFree(StandardDistance()))
 //            println("@${windowIndices.first} train fitness=${patrain.fitness} test fitness=${patest.fitness} test prec=${patest.precision}")
             println("@${windowIndices.first} test fitness=${patest.fitness} test prec=${patest.precision}")
         }
@@ -642,7 +642,7 @@ class PerformanceAnalyzerTest {
         val hm = OnlineMiner()
         hm.processLog(Log(train.asSequence()))
         val patest =
-            PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
+            PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSilentForFree(StandardDistance()))
         println("@${windowIndices.first} test fitness=${patest.fitness} test prec=${patest.precision}")
     }
 
@@ -658,7 +658,7 @@ class PerformanceAnalyzerTest {
         val hm = OnlineMiner()
         hm.processLog(Log(train.asSequence()))
         val patest =
-            PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
+            PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSilentForFree(StandardDistance()))
         //patest.computeOptimalAlignment(test[0], Integer.MAX_VALUE)
         println("@${windowIndices.first} test fitness=${patest.fitness} test prec=${patest.precision}")
     }
@@ -682,7 +682,7 @@ class PerformanceAnalyzerTest {
 //            val patrain = PerformanceAnalyzer(Log(train.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
             if (windowIndices.first == 149) {
                 val patest =
-                    PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
+                    PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSilentForFree(StandardDistance()))
 //            println("@${windowIndices.first} train fitness=${patrain.fitness} test fitness=${patest.fitness} test prec=${patest.precision}")
                 println("@${windowIndices.first} test fitness=${patest.fitness} test prec=${patest.precision}")
                 break
@@ -716,7 +716,7 @@ class PerformanceAnalyzerTest {
         val test = log.subList(start + 2 * windowSize - 1, start + 2 * windowSize)
         hm.processDiff(Log(train.asSequence()), Log(emptySequence()))
         //(getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
-        val patest = PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSpecialForFree(StandardDistance()))
+        val patest = PerformanceAnalyzer(Log(test.asSequence()), hm.result, SkipSilentForFree(StandardDistance()))
         println("@$start test prec=${patest.precision}")
     }
 
@@ -783,7 +783,7 @@ class PerformanceAnalyzerTest {
         )
         offline.processLog(log)
         println(offline.result)
-        val pa = PerformanceAnalyzer(log, offline.result, SkipSpecialForFree(StandardDistance()))
+        val pa = PerformanceAnalyzer(log, offline.result, SkipSilentForFree(StandardDistance()))
         val bot = "⊥"
 //        for((i, a) in pa.optimalAlignment.withIndex()) {
 //            println("$i -> ${a.cost}")
@@ -807,11 +807,11 @@ class PerformanceAnalyzerTest {
         File("../gurobi/model.py").writeText(offline.result.toPython())
         assert(false)
          */
-        val dst = object : SkipSpecialForFree(StandardDistance()) {
+        val dst = object : SkipSilentForFree(StandardDistance()) {
             override val maxAcceptableDistance: Double = 0.5
         }
         val partial = Log(log.traces.toList().subList(0, 1).asSequence())
-        val pa = PerformanceAnalyzer(partial, offline.result, SkipSpecialForFree(StandardDistance()))
+        val pa = PerformanceAnalyzer(partial, offline.result, SkipSilentForFree(StandardDistance()))
         val bot = "⊥"
 //        for((i, a) in pa.optimalAlignment.withIndex()) {
 //            println("$i -> ${a.cost}")
@@ -864,7 +864,7 @@ class PerformanceAnalyzerTest {
         offline.processLog(log)
         // dla pełnego logu test działa niecałe 5 min, dla pierwszych 500 traces poniżej minuty
         val partial = Log(log.traces.toList().subList(0, 500).asSequence())
-        val pa = PerformanceAnalyzer(partial, offline.result, SkipSpecialForFree(StandardDistance()))
+        val pa = PerformanceAnalyzer(partial, offline.result, SkipSilentForFree(StandardDistance()))
         val precision = pa.precision
         assertTrue(0.39 <= precision)
         assertTrue(precision <= 0.40)
@@ -974,7 +974,7 @@ class PerformanceAnalyzerTest {
         println(str)
         val log2 = logFromString(str)
         //      (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
-        println(PerformanceAnalyzer(log2, hm.result, SkipSpecialForFree(StandardDistance())).precision)
+        println(PerformanceAnalyzer(log2, hm.result, SkipSilentForFree(StandardDistance())).precision)
     }
 
     private fun testPossible(model: CausalNet, maxSeqLen: Int = Int.MAX_VALUE, maxPrefixLen: Int = Int.MAX_VALUE) {
@@ -988,7 +988,7 @@ class PerformanceAnalyzerTest {
         }
         println(validSequences)
         println(prefix2possible)
-        val pa = PerformanceAnalyzer(Log(emptySequence()), model, SkipSpecialForFree(StandardDistance()))
+        val pa = PerformanceAnalyzer(Log(emptySequence()), model, SkipSilentForFree(StandardDistance()))
         for ((prefix, expected) in prefix2possible.entries) {
             val actual = pa.possibleNext(listOf(prefix)).values.single()
             assertEquals(expected, actual, "prefix=$prefix expected=$expected actual=$actual")
@@ -1036,7 +1036,7 @@ class PerformanceAnalyzerTest {
         }
         println(model)
         val s = model.start
-        val pa = PerformanceAnalyzer(Log(emptySequence()), model, SkipSpecialForFree(StandardDistance()))
+        val pa = PerformanceAnalyzer(Log(emptySequence()), model, SkipSilentForFree(StandardDistance()))
         assertEquals(setOf(a), pa.possibleNext(listOf(listOf(s))).values.single())
         assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(s, a))).values.single())
         assertEquals(setOf(a, c), pa.possibleNext(listOf(listOf(s, a, a))).values.single())
@@ -1075,7 +1075,7 @@ class PerformanceAnalyzerTest {
         val traces = sequenceOf<Trace>(
             trace(a[0], a[1], b[0], c[0], b[1], c[1])
         )
-        val pa = PerformanceAnalyzer(Log(traces), model, SkipSpecialForFree(StandardDistance()))
+        val pa = PerformanceAnalyzer(Log(traces), model, SkipSilentForFree(StandardDistance()))
         println(pa.precision)
         //pa.possibleNext(listOf(listOf(model.start, a[0], a[1])))
         //pa.replayWithSearch(listOf(model.start, a[0], a[1], c[0]))
