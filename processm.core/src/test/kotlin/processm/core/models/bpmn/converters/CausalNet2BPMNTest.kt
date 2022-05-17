@@ -29,8 +29,10 @@ class CausalNet2BPMNTest {
         }
         val ve = CausalNetVerifierImpl(inp)
         check(ve.isSound) { "Reference causal net in compare is unsound." }
-        val expected = ve.validLoopFreeSequences.map { seq -> seq.map { it.a }.filterNot { it.special } }.toSet()
-        val actual = CausalNetVerifierImpl(reconstructed).validLoopFreeSequences.map { seq -> seq.map { it.a }.filterNot { it.special } }.toSet()
+        val expected = ve.validLoopFreeSequences.map { seq -> seq.map { it.a }.filterNot { it.isArtificial } }.toSet()
+        val actual = CausalNetVerifierImpl(reconstructed).validLoopFreeSequences.map { seq ->
+            seq.map { it.a }.filterNot { it.isArtificial }
+        }.toSet()
         assertEquals(expected, actual)
     }
 

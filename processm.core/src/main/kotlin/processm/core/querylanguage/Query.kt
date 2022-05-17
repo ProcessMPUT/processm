@@ -5,7 +5,6 @@ import org.antlr.v4.runtime.misc.Interval
 import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.ParseTreeWalker
 import java.util.*
-import kotlin.collections.LinkedHashSet
 import kotlin.math.round
 
 /**
@@ -272,6 +271,20 @@ class Query(val query: String) {
             LinkedHashSet<Attribute>(it.value).apply { addAll(_groupByOtherAttributes[it.key]!!) }
         }
         validateExplicitGroupBy(_selectExpressions, groupByAttributes)
+
+        for (_scope in _selectAll.filterValues { it ?: false }.keys) {
+            var scope = _scope
+            while (true) {
+                if (isGroupBy[scope]!!) {
+                    errorListener.delayedThrow(
+                        IllegalArgumentException(
+                            "Select all clause at scope $_scope is not allowed together with the group by clause at scope $scope."
+                        )
+                    )
+                }
+                scope = scope.upper ?: break
+            }
+        }
 
         val orderByExpressions = _orderByExpressions.mapValues {
             sequence {

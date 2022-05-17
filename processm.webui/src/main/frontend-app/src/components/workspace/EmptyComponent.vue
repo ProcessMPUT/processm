@@ -35,7 +35,7 @@
 import Vue from "vue";
 import { Component } from "vue-property-decorator";
 import { kebabize } from "@/utils/StringCaseConverter";
-import { ComponentType } from "@/models/WorkspaceComponent";
+import { ComponentType } from "@/openapi";
 
 @Component
 export default class EmptyComponent extends Vue {

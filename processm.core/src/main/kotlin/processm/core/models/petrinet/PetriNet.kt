@@ -2,11 +2,9 @@ package processm.core.models.petrinet
 
 import com.google.common.collect.Lists
 import processm.core.helpers.optimize
-import processm.core.models.commons.Activity
+import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
-import processm.core.models.commons.ProcessModel
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * Represents the Petri net.
@@ -58,6 +56,35 @@ class PetriNet(
             }
         }
     }
+
+    override val controlStructures: Sequence<ControlStructure>
+        get() = sequence {
+            for ((place, transitions) in placeToFollowingTransition) {
+                if (place === null)
+                    continue
+                if (transitions.size > 1)
+                    yield(XOR(ControlStructureType.XorSplit, place, transitions))
+                else if (transitions.size == 1) {
+                    val prevTransitions = placeToPrecedingTransition[place].orEmpty()
+                    if (prevTransitions.size == 1)
+                        yield(Causality(prevTransitions[0], transitions[0]))
+                }
+            }
+
+            for ((place, transitions) in placeToPrecedingTransition) {
+                if (place === null)
+                    continue
+                if (transitions.size > 1)
+                    yield(XOR(ControlStructureType.XorJoin, place, transitions))
+            }
+
+            for (transition in transitions) {
+                if (transition.outPlaces.size > 1)
+                    yield(AND(ControlStructureType.AndSplit, transition.outPlaces, transition))
+                if (transition.inPlaces.size > 1)
+                    yield(AND(ControlStructureType.AndJoin, transition.inPlaces, transition))
+            }
+        }
 
     override fun createInstance(): PetriNetInstance = PetriNetInstance(this)
 

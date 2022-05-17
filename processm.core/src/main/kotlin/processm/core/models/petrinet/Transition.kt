@@ -1,5 +1,6 @@
 package processm.core.models.petrinet
 
+import kotlinx.serialization.Serializable
 import processm.core.models.commons.Activity
 
 /**
@@ -8,6 +9,7 @@ import processm.core.models.commons.Activity
  * @property inPlaces The collection of the preceding places.
  * @property outPlaces The collection of the succeeding places.
  */
+@Serializable
 open class Transition(
     override val name: String,
     val inPlaces: Collection<Place> = emptyList(),
@@ -42,6 +44,6 @@ open class Transition(
     ): Transition = Transition(name, inPlaces, outPlaces, isSilent)
 
     override fun toString(): String {
-        return if(isSilent) return "τ" else name
+        return if (isSilent) return "τ" else name
     }
 }

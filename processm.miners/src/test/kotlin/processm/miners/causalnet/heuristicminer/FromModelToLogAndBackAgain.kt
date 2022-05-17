@@ -48,7 +48,7 @@ class FromModelToLogAndBackAgain {
         logger().debug("REFERENCE:\n${reference}")
         val referenceVerifier = CausalNetVerifier().verify(reference)
         val expectedSequences =
-            referenceVerifier.validSequences.mapToSet { seq -> seq.map { it.a }.filter { !it.special } }
+            referenceVerifier.validSequences.mapToSet { seq -> seq.map { it.a }.filter { !it.isArtificial } }
         logger().debug("EXPECTED SEQUENCES: ${str(expectedSequences)}")
         assertTrue(referenceVerifier.noDeadParts)
         assertTrue(referenceVerifier.isSound)
@@ -59,7 +59,7 @@ class FromModelToLogAndBackAgain {
         hm.processLog(log)
         val v = CausalNetVerifier().verify(hm.result)
 
-        val actualSequences = v.validSequences.mapToSet { seq -> seq.map { ab -> ab.a }.filter { !it.special } }
+        val actualSequences = v.validSequences.mapToSet { seq -> seq.map { ab -> ab.a }.filter { !it.isArtificial } }
         logger().debug("ACTUAL SEQUENCES: ${str(actualSequences)}")
         logger().debug("UNEXPECTED SEQUENCES: ${str(actualSequences - expectedSequences)}")
         logger().debug("MISSING SEQUENCES: ${str(expectedSequences - actualSequences)}")

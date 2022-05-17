@@ -25,6 +25,7 @@
     "component": {
       "causal-net": "Sieć przyczynowa",
       "kpi": "KPI",
+      "bpmn": "BPMN",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
       "edit": {

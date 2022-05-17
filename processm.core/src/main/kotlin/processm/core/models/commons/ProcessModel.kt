@@ -25,6 +25,11 @@ interface ProcessModel {
     val decisionPoints: Sequence<DecisionPoint>
 
     /**
+     * Control flow structures, e.g., splits, joins, etc.
+     */
+    val controlStructures: Sequence<ControlStructure>
+
+    /**
      * Returns a new instance of the model, which can then be used to execute it
      */
     fun createInstance(): ProcessModelInstance

@@ -2,6 +2,7 @@ package processm.core.models.bpmn
 
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
+import processm.core.helpers.mapToSet
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,7 +25,7 @@ class BPMNModelTest {
                 "Start Event 1", "Start Event 2", "Start Event 3", "Start Event 4",
                 "End Event 1", "End Event 2", "End Event 3", "End Event 4", "End Event 5"
             ),
-            a40export.activities.map { it.name }.toSet()
+            a40export.activities.mapToSet { it.name }
         )
     }
 
@@ -32,7 +33,7 @@ class BPMNModelTest {
     fun `bpmnio A40-export start`() {
         assertEquals(
             setOf("Start Event 1", "Start Event 2", "Expanded Sub-Process 1"),
-            a40export.startActivities.map { it.name }.toSet()
+            a40export.startActivities.mapToSet { it.name }
         )
     }
 
@@ -40,7 +41,7 @@ class BPMNModelTest {
     fun `bpmnio A40-export end`() {
         assertEquals(
             setOf("End Event 1", "End Event 2", "End Event 5"),
-            a40export.endActivities.map { it.name }.toSet()
+            a40export.endActivities.mapToSet { it.name }
         )
     }
 
@@ -86,7 +87,7 @@ class BPMNModelTest {
     fun `test for exceptions`(): Iterator<DynamicTest> =
         (File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/").walk() +
                 File("src/test/resources/bpmn-miwg-test-suite/Reference/").walk())
-            .filter { it.extension.toLowerCase() == "bpmn" }
+            .filter { it.extension.lowercase() == "bpmn" }
             .sortedBy { it.name }
             .iterator()
             .asSequence()

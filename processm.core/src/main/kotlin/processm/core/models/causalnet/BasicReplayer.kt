@@ -2,7 +2,6 @@ package processm.core.models.causalnet
 
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
-import processm.core.models.commons.Activity
 import processm.core.models.commons.Replayer
 import java.util.*
 
@@ -20,10 +19,10 @@ class BasicReplayer(override val model: CausalNet) : Replayer {
     private fun matches(event: Event, node: Node): Boolean =
         (event.lifecycleTransition == "complete" || event.lifecycleTransition == null) && event.conceptName == node.name
 
-    override fun replay(trace: Trace): Sequence<Sequence<BindingDecision>> = replay(trace.events.map { Node(it.conceptName.toString()) }.toList())
+    override fun replay(trace: Trace): Sequence<Sequence<BindingDecision>> =
+        replay(trace.events.map { Node(it.conceptName.toString()) }.toList())
 
     fun replay(trace: List<Node>): Sequence<Sequence<BindingDecision>> = sequence {
-        println(trace)
         val queue = ArrayDeque<ExecutionState>()
         queue.add(ExecutionState(CausalNetStateImpl(), trace, emptyList<BindingDecision>()))
         while (!queue.isEmpty()) {
@@ -38,11 +37,15 @@ class BasicReplayer(override val model: CausalNet) : Replayer {
                     if (ae.activity == currentEvent) {
                         val newState = CausalNetStateImpl(state)
                         newState.execute(ae.join, ae.split)
-                        val dec = listOf(
-                            BindingDecision(ae.join, DecisionPoint(ae.activity, model.joins[ae.activity].orEmpty())),
-                            BindingDecision(ae.split, DecisionPoint(ae.activity, model.splits[ae.activity].orEmpty()))
+                        val dec = listOfNotNull(
+                            model.joins[ae.activity]?.let {
+                                BindingDecision(ae.join, DecisionPoint(ae.activity, it, false))
+                            },
+                            model.splits[ae.activity]?.let {
+                                BindingDecision(ae.split, DecisionPoint(ae.activity, it, true))
+                            }
                         )
-                        if(rest.containsAll(newState.uniqueSet().map { it.target }))
+                        if (rest.containsAll(newState.uniqueSet().map { it.target }))
                             queue.add(ExecutionState(newState, rest, decisionsSoFar + dec))
                     }
                 }
