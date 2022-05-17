@@ -1,12 +1,12 @@
 package processm.services.logic
 
-import io.mockk.every
-import io.mockk.mockkStatic
+import io.mockk.*
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.toFlatSequence
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.models.DataStores
 import processm.dbmodels.models.Organizations
+import processm.etl.jdbc.notifyUsers
 import processm.etl.jdbc.toXESInputStream
 import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
@@ -16,6 +16,18 @@ import java.sql.Types
 import kotlin.test.*
 
 internal class DataStoreServiceTest : ServiceTestBase() {
+
+    @BeforeTest
+    fun `mock ETLConfiguration_notifyUsers`() {
+        mockkStatic(ETLConfiguration::notifyUsers)
+        every { any<ETLConfiguration>().notifyUsers() } just Runs
+    }
+
+    @AfterTest
+    fun `unmock ETLConfiguration_notifyUsers`() {
+        unmockkStatic(ETLConfiguration::notifyUsers)
+    }
+
     @Test
     fun `Read all data stores assigned to organization`(): Unit = withCleanTables(DataStores, Organizations) {
         val expectedOrgId = createOrganization(name = "Expected").value

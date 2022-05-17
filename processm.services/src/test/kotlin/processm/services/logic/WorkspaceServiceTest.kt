@@ -1,25 +1,32 @@
 package processm.services.logic
 
-import io.mockk.every
-import io.mockk.mockk
+import io.mockk.*
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.junit.jupiter.api.BeforeEach
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import processm.miners.triggerEvent
 import java.util.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class WorkspaceServiceTest : ServiceTestBase() {
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         accountServiceMock = mockk()
         workspaceService = WorkspaceService(accountServiceMock)
+    }
+
+    @BeforeTest
+    fun `mock WorkspaceComponentExtension_triggerEvent`() {
+        mockkStatic(WorkspaceComponent::triggerEvent)
+        every { any<WorkspaceComponent>().triggerEvent() } just Runs
+    }
+
+    @AfterTest
+    fun `unmock WorkspaceComponentExtension_triggerEvent`() {
+        mockkStatic(WorkspaceComponent::triggerEvent)
     }
 
     lateinit var accountServiceMock: AccountService
