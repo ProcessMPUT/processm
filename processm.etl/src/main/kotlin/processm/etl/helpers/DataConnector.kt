@@ -1,9 +1,11 @@
-package processm.etl
+package processm.etl.helpers
 
-import com.google.gson.Gson
 import com.ibm.db2.jcc.DB2SimpleDataSource
 import com.microsoft.sqlserver.jdbc.SQLServerDataSource
 import com.mysql.cj.jdbc.MysqlDataSource
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import oracle.jdbc.datasource.impl.OracleDataSource
 import org.postgresql.ds.PGSimpleDataSource
 import processm.dbmodels.models.DataConnector
@@ -11,16 +13,14 @@ import java.sql.Connection
 import java.sql.DriverManager
 import javax.sql.DataSource
 
-/*
-FIXME This is a temporary file to be removed once DataConnector.getConnection() is fully developed in the other branch
- */
-
 fun DataConnector.getConnection(): Connection {
     return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-    else getDataSource(Gson().fromJson<Map<String, String>>(connectionProperties, Map::class.java)).connection
+    else getDataSource(
+        Json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), connectionProperties)
+    ).connection
 }
 
-private fun getDataSource(connectionProperties: Map<String, String>): DataSource {
+fun getDataSource(connectionProperties: Map<String, String>): DataSource {
     return when (connectionProperties["connection-type"]) {
         "PostgreSql" -> PGSimpleDataSource().apply {
             serverNames =

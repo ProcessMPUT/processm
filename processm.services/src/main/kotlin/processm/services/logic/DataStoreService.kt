@@ -2,32 +2,27 @@ package processm.services.logic
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.ibm.db2.jcc.DB2SimpleDataSource
-import com.microsoft.sqlserver.jdbc.SQLServerDataSource
-import com.mysql.cj.jdbc.MysqlDataSource
-import oracle.jdbc.datasource.impl.OracleDataSource
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.`java-time`.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
-import org.postgresql.ds.PGSimpleDataSource
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.afterCommit
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.*
 import processm.etl.discovery.SchemaCrawlerExplorer
+import processm.etl.helpers.getConnection
+import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
 import processm.services.api.models.JdbcEtlProcessConfiguration
-import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
-import javax.sql.DataSource
 
 class DataStoreService {
     /**
@@ -352,51 +347,6 @@ class DataStoreService {
         }
     }
 
-    private fun DataConnector.getConnection(): Connection {
-        return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-        else getDataSource(Gson().fromJson<Map<String, String>>(connectionProperties, Map::class.java)).connection
-    }
-
-    private fun getDataSource(connectionProperties: Map<String, String>): DataSource {
-        return when (connectionProperties["connection-type"]) {
-            "PostgreSql" -> PGSimpleDataSource().apply {
-                serverNames = arrayOf(connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required"))
-                portNumbers = intArrayOf(connectionProperties["port"]?.toIntOrNull() ?: 5432)
-                user = connectionProperties["username"]
-                password = connectionProperties["password"]
-                databaseName = connectionProperties["database"]
-            }
-            "SqlServer" -> SQLServerDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1433
-                user = connectionProperties["username"]
-                setPassword(connectionProperties["password"].orEmpty())
-                databaseName = connectionProperties["database"]
-            }
-            "MySql" -> MysqlDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 3306
-                user = connectionProperties["username"]
-                password = connectionProperties["password"]
-                databaseName = connectionProperties["database"]
-            }
-            "OracleDatabase" -> OracleDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1521
-                user = connectionProperties["username"]
-                setPassword(connectionProperties["password"].orEmpty())
-                databaseName = connectionProperties["database"]
-            }
-            "Db2" -> DB2SimpleDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 50000
-                user = connectionProperties["username"]
-                setPassword(connectionProperties["password"].orEmpty())
-                databaseName = connectionProperties["database"]
-            }
-            else -> throw Error("Unsupported connection type")
-        }
-    }
 
     fun createSamplingJdbcEtlProcess(
         dataStoreId: UUID,

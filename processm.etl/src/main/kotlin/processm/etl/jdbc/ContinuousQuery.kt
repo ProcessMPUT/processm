@@ -9,14 +9,13 @@ import processm.core.logging.logger
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.toMap
-import java.sql.DriverManager
+import processm.etl.helpers.getConnection
 import java.sql.ResultSet
 import java.sql.SQLFeatureNotSupportedException
 import java.sql.Types
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ForkJoinPool
-import processm.etl.getConnection
 
 private const val IDENTITY_ID = "identity:id"
 
