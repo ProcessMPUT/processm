@@ -1964,12 +1964,14 @@ components:
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
+        - $ref: '#/components/schemas/BPMNComponent'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
           alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
+          bpmn: '#/components/schemas/BPMNComponent'
       type: object
       properties:
         data:
@@ -1985,12 +1987,14 @@ components:
         - $ref: '#/components/schemas/KpiComponentData'
         - $ref: '#/components/schemas/AlignerKpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
+        - $ref: '#/components/schemas/BPMNComponentData'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponentData'
           alignerKpi: '#/components/schemas/AlignerKpiComponentData'
           causalNet: '#/components/schemas/CausalNetComponentData'
+          bpmn: '#/components/schemas/BPMNComponentData'
     KpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2120,6 +2124,22 @@ components:
                         type: number
                       y:
                         type: number
+    BPMNComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          properties:
+            xml:
+              type: string
+    BPMNComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BPMNComponentData'
+            customizationData:
+              type: object
     ComponentMessageBody:
       type: object
       required: [ data ]
