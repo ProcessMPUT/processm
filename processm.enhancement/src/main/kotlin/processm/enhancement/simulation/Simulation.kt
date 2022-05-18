@@ -1,27 +1,33 @@
 package processm.enhancement.simulation
 
-//import processm.core.models.causalnet.CausalNetNode.clone
-import org.apache.commons.math3.distribution.NormalDistribution
-import org.apache.commons.math3.distribution.RealDistribution
 import processm.core.models.commons.Activity
-import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
-import java.time.Duration
-import java.time.Instant
 import kotlin.random.Random
 
-class Simulation(private val processModelInstance: ProcessModelInstance, private val nextActivityCumulativeDistributionFunction: Map<Activity, Set<Map<Activity, Double>>> = emptyMap()) {
+/**
+ * Generates business process execution traces.
+ * @param processModelInstance the process model to generate traces for.
+ * @param nextActivityCumulativeDistributionFunction for every activity meant as a current state,
+ * it contains a single CDF (Cumulative distribution function) for every set of alternative successive activities.
+ * If an activity is not present in the collection, then the next activity is chosen at random from uniform distribution
+ */
+class Simulation(
+    private val processModelInstance: ProcessModelInstance,
+    private val nextActivityCumulativeDistributionFunction: Map<Activity, Set<Map<Activity, Double>>> = emptyMap()) {
     private val random = Random.Default
-//    private val normalDistribution = NormalDistribution(5.0, 1.0)
-//    private var lastProcessInstanceStart = Instant.now()
 
-    fun runSingleTrace() = sequence {
+    /**
+     * Produces sequences of activity instances belonging to the same trace.
+     */
+    fun generateTraces() = sequence {
         while (true) {
-//            lastProcessInstanceStart += Duration.ofMinutes(processInstanceStartTime.sample().toLong())
-//            var activitiesAvailableSince = emptyMap<Activity, Instant>()
+            // Contains (stored as keys) currently available activities. For every available activity,
+            // it contains predecessing activity which execution caused the activity to be available.
+            // Once Issue#145 is implemented, the collection is no longer necessary.
             var predecessingActivities = emptyMap<Activity, ActivityInstance?>()
-//            val processModelInstance =  processModel.createInstance()
-            with(processModelInstance) { // setting the state to 'null' restarts the model
+
+            with(processModelInstance) {
+                // setting the state to 'null' restarts the model instance
                 setState(null)
                 val trace = mutableListOf<ActivityInstance>()
                 var lastExecutedActivityInstance: ActivityInstance? = null
@@ -29,18 +35,24 @@ class Simulation(private val processModelInstance: ProcessModelInstance, private
                 while (!isFinalState) {
                     run nextActivity@ {
                         val possibleActivities = availableActivities.toList()
-//                        val lastActivityCompletionTime = (trace.lastOrNull()?.second ?: lastProcessInstanceStart) + (lastExecutedActivityDuration ?: Duration.ZERO)
-//                        val lastActivityInstance = trace.lastOrNull() ?: lastExecutedActivityInstance
-                        predecessingActivities = possibleActivities.map { activity -> activity to (predecessingActivities[activity] ?: lastExecutedActivityInstance) }.toMap()
 
-//                        lastExecutedActivityDuration = Duration.ofMinutes(normalDistribution.sample().toLong())
+                        predecessingActivities = possibleActivities.associateWith { activity ->
+                            (predecessingActivities[activity] ?: lastExecutedActivityInstance)
+                        }
+
+                        // the current implementation assumes that each activity only depends on a single other activity
+                        // generally, the assumption is incorrect and may lead to incorrect results:
+                        // an activity could be scheduled to run before all the activities it actually depends on are completed
 
                         if (possibleActivities.size == 1) {
-                            val activity = possibleActivities[0]
+                            // special case, there is only one successive activity to be executed
+                            val activity = possibleActivities.first()
                             getExecutionFor(activity).execute()
                             lastExecutedActivityInstance = ActivityInstance(activity, predecessingActivities[activity])
                             trace.add(lastExecutedActivityInstance!!)
                         } else {
+                            // check if the last executed activity has appropriate CDF specified for the available next activities
+                            // if no CDF is defined, then check the last but one executed activity
                             trace.reversed().forEach { (traceActivity, _) ->
                                 nextActivityCumulativeDistributionFunction[traceActivity]?.forEach { successingActivitiesCdf ->
                                     if (possibleActivities.containsAll(successingActivitiesCdf.keys)) {
@@ -59,7 +71,8 @@ class Simulation(private val processModelInstance: ProcessModelInstance, private
                                     }
                                 }
                             }
-//
+
+                            // no appropriate CDF found for the current state, so the activity to be executed is selected at random from uniform distribution
                             val randomNextActivity = possibleActivities[random.nextInt(possibleActivities.size)]
                             getExecutionFor(randomNextActivity).execute()
                             lastExecutedActivityInstance = ActivityInstance(randomNextActivity, predecessingActivities[randomNextActivity])

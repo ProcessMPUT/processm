@@ -1,106 +1,66 @@
 package processm.enhancement.simulation
 
-import org.apache.commons.math3.distribution.ExponentialDistribution
-import org.apache.commons.math3.distribution.NormalDistribution
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import processm.core.models.commons.ProcessModel
-import processm.core.models.petrinet.*
-import processm.enhancement.resources.BasicResource
-import processm.enhancement.resources.ResourceBasedScheduler
-import java.time.Instant
+import processm.core.models.petrinet.Marking
+import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.Place
+import processm.core.models.petrinet.Transition
+import kotlin.math.abs
 
 class SimulationTest {
-
     @Test
-    fun `PM book Fig 3 2 simulation runs`() {
-        val net = `PM book Fig 3 2`()
-        val instance = net.createInstance()
-        val simulation = Simulation(instance,
-            nextActivityCumulativeDistributionFunction = emptyMap())
+    fun `produces the same traces from sequential process model`() {
+        val model = sequentialProcessModel()
+        val instance = model.createInstance()
+        val activitiesCount = model.activities.count()
+        val simulation = Simulation(instance, nextActivityCumulativeDistributionFunction = emptyMap())
 
-        val sims = simulation.runSingleTrace().take(10).map { trace ->
-//            instance.setState(Marking(start))
-            trace.joinToString("\n") { "${it.activity.name} after: ${it.executeAfter?.activity?.name}" }
-        }.toList()
-        assertEquals(sims.count(), 10)
-        val aa = 2
+        val traces = simulation.generateTraces().take(10)
+
+        traces.forEach { trace ->
+            assertEquals(activitiesCount, trace.count())
+        }
     }
 
     @Test
-    fun `PM book Fig 3 2 resources assignment`() {
-        val net = `PM book Fig 3 2`()
-        val instance = net.createInstance()
-        val activities = net.activities.map { it.name to it }.toMap()
+    fun `uses uniform distribution if no distribution is provided`() {
+        val model = singleForkProcessModel()
+        val instance = model.createInstance()
+        val tracesCount = 1000
+        val simulation = Simulation(instance, nextActivityCumulativeDistributionFunction = emptyMap())
 
-        val submitterRoles = setOf("submitter")
-        val approverRoles = setOf("approver")
+        val traces = simulation.generateTraces().take(tracesCount)
 
-        val approver = BasicResource(approverRoles)
-        val submitter = BasicResource(submitterRoles)
-        val extraHelp = BasicResource(submitterRoles)
-//        val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-//        val timestamp = "2016-02-16 11:00:02"
-//        val temporalAccessor: TemporalAccessor = formatter.parse(timestamp)
-
-        val simulation = Simulation(instance,
-            nextActivityCumulativeDistributionFunction = emptyMap())
-        val scheduler = ResourceBasedScheduler(
-            simulation,
-            listOf(approver, submitter, extraHelp),
-            mapOf(
-                activities["a"]!! to submitterRoles,
-                activities["b"]!! to submitterRoles,
-                activities["c"]!! to submitterRoles,
-                activities["d"]!! to submitterRoles,
-                activities["f"]!! to submitterRoles,
-                activities["g"]!! to submitterRoles,
-                activities["h"]!! to submitterRoles,
-                activities["e"]!! to approverRoles
-            ),
-            activities.map { it.value to NormalDistribution(5.0, 1.0) }.toMap(),
-            ExponentialDistribution(3.0)
-//            Instant.from(temporalAccessor)
-        )
-
-        val n = 100
-        val sims = scheduler.scheduleWith().take(n).toList()
-        val logs = sims.map { trace ->
-            //            instance.setState(Marking(start))
-            trace.toList().joinToString("\n") { "${it.first.activity.name} after: ${it.first.executeAfter?.activity?.name}, start: ${it.second.first}, end: ${it.second.second}" }
-        }.toList()
-        val avgProcessing = sims.map { trace ->
-            trace.maxOf { (_, duration) -> duration.second }.epochSecond - trace.minOf { (_, duration) -> duration.first }.epochSecond
-        }.toTypedArray().average()
-
-        assertEquals(sims.count(), n)
+        val (traceWithB, traceWithC) = traces.partition { trace -> trace[1].activity.name == "b" }
+        assertEquals(tracesCount, traceWithB.count() + traceWithC.count())
+        assertTrue(abs(traceWithB.count() - traceWithC.count()) < 100)
     }
 
-    private fun `PM book Fig 3 2`(): ProcessModel {
-        val start = Place()
-        val c1 = Place()
-        val c2 = Place()
-        val c3 = Place()
-        val c4 = Place()
-        val c5 = Place()
-        val end = Place()
-        val a = Transition("a", listOf(start), listOf(c1, c2))
-        val b = Transition("b", listOf(c1), listOf(c3))
-        val c = Transition("c", listOf(c1), listOf(c3))
-        val d = Transition("d", listOf(c2), listOf(c4))
-        val e = Transition("e", listOf(c3, c4), listOf(c5))
-        val f = Transition("f", listOf(c5), listOf(c1, c2))
-        val g = Transition("g", listOf(c5), listOf(end))
-        val h = Transition("h", listOf(c5), listOf(end))
-        return PetriNet(
-            listOf(start, c1, c2, c3, c4, c5, end),
-            listOf(a, b, c, d, e, f, g, h),
-            Marking(start),
-            Marking(end)
-        )
+    @Test
+    fun `utilizes the distribution provided as CDF to generate traces`() {
+        val model = singleForkProcessModel()
+        val instance = model.createInstance()
+        val activities = model.activities.map { it.name to it }.toMap()
+        val tracesCount = 1000
+        val simulation = Simulation(
+            instance,
+            mapOf(activities["a"]!! to
+                    setOf(mapOf(
+                       activities["b"]!! to 0.2,
+                       activities["c"]!! to 1.0)
+                    )))
+
+        val traces = simulation.generateTraces().take(tracesCount)
+
+        val (traceWithB, traceWithC) = traces.partition { trace -> trace[1].activity.name == "b" }
+        assertEquals(tracesCount, traceWithB.count() + traceWithC.count())
+        assertTrue(traceWithC.count() - traceWithB.count() > 500)
     }
 
-    private fun sequentialProcessModelInstance(): PetriNetInstance {
+
+    private fun sequentialProcessModel(): PetriNet {
         val start = Place()
         val c1 = Place()
         val c2 = Place()
@@ -114,13 +74,28 @@ class SimulationTest {
         val d = Transition("d", listOf(c3), listOf(c4))
         val e = Transition("e", listOf(c4), listOf(c5))
         val f = Transition("h", listOf(c5), listOf(end))
-        val net = PetriNet(
+        return PetriNet(
             listOf(start, c1, c2, c3, c4, c5, end),
             listOf(a, b, c, d, e, f),
             Marking(start),
             Marking(end)
         )
+    }
 
-        return net.createInstance()
+    private fun singleForkProcessModel(): PetriNet {
+        val start = Place()
+        val c1 = Place()
+        val c2 = Place()
+        val end = Place()
+        val a = Transition("a", listOf(start), listOf(c1))
+        val b = Transition("b", listOf(c1), listOf(c2))
+        val c = Transition("c", listOf(c1), listOf(c2))
+        val d = Transition("d", listOf(c2), listOf(end))
+        return PetriNet(
+            listOf(start, c1, c2, end),
+            listOf(a, b, c, d),
+            Marking(start),
+            Marking(end)
+        )
     }
 }

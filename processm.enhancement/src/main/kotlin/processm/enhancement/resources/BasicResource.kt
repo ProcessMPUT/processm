@@ -5,9 +5,11 @@ import java.time.Instant
 import java.util.*
 
 /**
- * Consider implementing it as a data structure dedicated for storing intervals (e.g. interval tree, segment tree)
+ * Implements a resource that keeps track of enqueued activities to make sure no overlapping occurs.
+ * @param
  */
 class BasicResource(override val roles: Set<String>): Resource {
+    // TODO: Consider implementing it as a data structure dedicated for storing intervals (e.g. interval tree, segment tree)
     private val activities = TreeMap<Instant, Instant>()
 
     override fun getNearestAvailability(activityDuration: Duration, after: Instant): Instant {
@@ -29,7 +31,7 @@ class BasicResource(override val roles: Set<String>): Resource {
         return newActivityStart ?: after
     }
 
-    override fun queueActivity(activityDuration: Duration, after: Instant): Instant {
+    override fun enqueueActivity(activityDuration: Duration, after: Instant): Instant {
         val nearestAvailability = getNearestAvailability(activityDuration, after)
         activities[nearestAvailability] = nearestAvailability + activityDuration
         return nearestAvailability
