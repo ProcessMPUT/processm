@@ -624,6 +624,24 @@ paths:
         schema:
           type: string
           format: uuid
+    get:
+      tags:
+        - dataStores
+      summary: Retrieves the information about execution of the specified ETL process
+      operationId: getEtlProcess
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/EtlProcessInfo'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
     delete:
       tags:
         - dataStores
@@ -638,6 +656,47 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: []
+  /organizations/{organizationId}/data-stores/{dataStoreId}/sampling-etl-processes/:
+    parameters:
+      - name: organizationId
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dataStoreId
+        in: path
+        description: Data store ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - dataStores
+      summary: Create an ETL process intended to generate a sample log
+      operationId: createSamplingJdbcEtlProcess
+      requestBody:
+        description: ETL process details
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/EtlProcessMessageBody'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/EtlProcessMessageBody'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
   /organizations/{organizationId}/workspaces:
     parameters:
       - name: organizationId
@@ -1740,14 +1799,16 @@ components:
             $ref: '#/components/schemas/DataConnector'
     EtlProcessType:
       type: string
-      enum: [automatic]
+      enum: [automatic, jdbc]
     AbstractEtlProcess:
       oneOf:
         - $ref: '#/components/schemas/AutomaticEtlProcess'
+        - $ref: '#/components/schemas/JdbcEtlProcess'
       discriminator:
         propertyName: type
         mapping:
           automatic: '#/components/schemas/AutomaticEtlProcess'
+          jdbc: '#/components/schemas/JdbcEtlProcess'
     AutomaticEtlProcess:
       allOf:
         - $ref: '#/components/schemas/EtlProcess'
@@ -1755,6 +1816,13 @@ components:
           properties:
             caseNotion:
               $ref: '#/components/schemas/CaseNotion'
+    JdbcEtlProcess:
+      allOf:
+        - $ref: '#/components/schemas/EtlProcess'
+        - type: object
+          properties:
+            configuration:
+              $ref: '#/components/schemas/JdbcEtlProcessConfiguration'
     EtlProcess:
       type: object
       required: [name, type, dataConnectorId]
@@ -1767,6 +1835,9 @@ components:
         dataConnectorId:
           type: string
           format: uuid
+        lastExecutionTime:
+          type: string
+          format: date-time
         type:
           $ref: '#/components/schemas/EtlProcessType'
     EtlProcessMessageBody:
@@ -1783,6 +1854,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AbstractEtlProcess'
+    EtlProcessInfo:
+      type: object
+      required: [logIdentityId]
+      properties:
+        logIdentityId:
+          type: string
+          format: uuid
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/EtlError'
+        lastExecutionTime:
+          type: string
+          format: date-time
+    EtlError:
+      type: object
+      required: [message, time]
+      properties:
+        message:
+          type: string
+        exception:
+          type: string
+        time:
+          type: string
+          format: date-time
     DataConnectorConnectivity:
       type: object
       required: [isValid]
@@ -1868,12 +1964,14 @@ components:
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
+        - $ref: '#/components/schemas/BPMNComponent'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponent'
           alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
+          bpmn: '#/components/schemas/BPMNComponent'
       type: object
       properties:
         data:
@@ -1889,12 +1987,14 @@ components:
         - $ref: '#/components/schemas/KpiComponentData'
         - $ref: '#/components/schemas/AlignerKpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
+        - $ref: '#/components/schemas/BPMNComponentData'
       discriminator:
         propertyName: type
         mapping:
           kpi: '#/components/schemas/KpiComponentData'
           alignerKpi: '#/components/schemas/AlignerKpiComponentData'
           causalNet: '#/components/schemas/CausalNetComponentData'
+          bpmn: '#/components/schemas/BPMNComponentData'
     KpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2024,6 +2124,22 @@ components:
                         type: number
                       y:
                         type: number
+    BPMNComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          properties:
+            xml:
+              type: string
+    BPMNComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BPMNComponentData'
+            customizationData:
+              type: object
     ComponentMessageBody:
       type: object
       required: [ data ]
@@ -2130,6 +2246,40 @@ components:
                 type: string
               targetClassId:
                 type: string
+    JdbcEtlProcessConfiguration:
+      type: object
+      required: [query, enabled, batch, traceId, eventId, attributes]
+      properties:
+        query:
+          type: string
+        refresh:
+          type: number
+        enabled:
+          type: boolean
+        batch:
+          type: boolean
+        lastEventExternalId:
+          type: string
+        lastEventExternalIdType:
+          type: integer
+        traceId:
+          type: object
+          $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
+        eventId:
+          type: object
+          $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
+    JdbcEtlColumnConfiguration:
+      type: object
+      required: [source, target]
+      properties:
+        source:
+          type: string
+        target:
+          type: string
     CaseNotionCollectionMessageBody:
       type: object
       required: [data]

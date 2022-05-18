@@ -9,14 +9,27 @@ import kotlin.properties.Delegates
 
 object DatabaseChecker {
     const val jdbcPostgresqlStart = "jdbc:postgresql://"
-    var baseConnectionURL = readDatabaseConnectionURL()
+    lateinit var baseConnectionURL:String
         private set
     var mainDatabaseName: String by Delegates.notNull()
         private set
 
     init {
+        init()
+    }
+
+    private fun init() {
+        baseConnectionURL = readDatabaseConnectionURL()
         ensurePostgreSQLDatabase()
         mainDatabaseName = ensureMainDBNameNotUUID()
+    }
+
+    /**
+     * Invalidates the DB pool cache by calling [DBCache.invalidate] and re-reads the database configurations
+     */
+    fun reloadConfiguration() {
+        DBCache.invalidate()
+        init()
     }
 
     /**
