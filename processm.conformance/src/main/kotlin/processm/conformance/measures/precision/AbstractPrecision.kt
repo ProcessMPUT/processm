@@ -3,6 +3,7 @@ package processm.conformance.measures.precision
 import processm.conformance.measures.Measure
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.Alignment
+import processm.conformance.models.alignments.CompositeAligner
 import processm.core.helpers.Trie
 import processm.core.log.hierarchical.Log
 import processm.core.logging.debug
@@ -49,7 +50,7 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
      * Extract model moves for each alignment
      */
     open fun translate(alignments: Sequence<Alignment>): Sequence<List<Activity>> =
-        alignments.map { alignment -> alignment.steps.mapNotNull { it.modelMove } }
+        alignments.map { alignment -> alignment.steps.mapNotNull { if(it.modelMove?.isSilent == false) it.modelMove else null} }
 
     /**
      * For [artifact] being a sequence of [Alignment]s, compute and return precision.
@@ -67,7 +68,7 @@ abstract class AbstractPrecision(open val model: ProcessModel) : Measure<Any, Do
      * Compute the [Alignment]s for the given log, and then compute and return precision.
      */
     open operator fun invoke(artifact: Log): Double =
-        this(AStar(model).align(artifact)) //TODO replace AStar with CompositeAligner once #134 is fixed
+        this(CompositeAligner(model).align(artifact))
 
     /**
      * Compute and return precision, as described in [1]. Whether the returned value is exact depends on both the quality of [Alignment]s, and the quality of [availableActivities]
