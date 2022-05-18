@@ -45,9 +45,10 @@ class Consumer : Closeable {
     private var wasStarted = false
     private var connection: TopicConnection? = null
     private var session: TopicSession? = null
+    private val connectionLock = Object()
 
     private fun setUpConnection() {
-        synchronized(this) {
+        synchronized(connectionLock) {
             connection = jmsConnFactory.createTopicConnection()
             connection!!.exceptionListener = ExceptionListener { e ->
                 loggedScope { logger ->
@@ -62,7 +63,7 @@ class Consumer : Closeable {
     }
 
     private fun addConsumer(topicName: String, queueName: String, messageHandler: (MapMessage) -> Boolean) {
-        synchronized(this) {
+        synchronized(connectionLock) {
             messageHandlers[topicName to queueName] = messageHandler
 
             if (session == null) return
@@ -84,7 +85,7 @@ class Consumer : Closeable {
     }
 
     private fun closeConnection() {
-        synchronized(this) {
+        synchronized(connectionLock) {
             topicConsumers.forEach { (_, consumer) -> consumer.close() }
             topicConsumers.clear()
             session?.close()
