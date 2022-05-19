@@ -4,6 +4,12 @@ import processm.core.log.attribute.*
 import java.sql.Connection
 import java.util.*
 
+/**
+ * An output XES stream that appends traces/events to the existing event log. The event log must have the identity:id
+ * attribute set for identification. To make appending to the existing traces possible, the traces must also have
+ * the identity:id attribute set. The anonymous traces with identity:id unset will not be appended and instead a new
+ * trace will be created.
+ */
 class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(connection) {
     override fun write(component: XESComponent) {
         if (component is Log) {
@@ -128,7 +134,7 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
         with(traceInsertionSql) {
             sql.delete(sql.length - 2, sql.length)
             sql.append(""") to_insert(log_id,"concept:name","cost:total","cost:currency","identity:id",event_stream) """)
-            sql.append("""ON trace_identity."identity:id"=to_insert."identity:id" AND trace_identity.id IS NULL """)
+            sql.append("""ON trace_identity."identity:id"=to_insert."identity:id"::uuid AND trace_identity.id IS NULL """)
             sql.append("""ORDER BY trace_identity.ord """)
             sql.append(""") RETURNING id,"identity:id")""")
 
