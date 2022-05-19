@@ -3,7 +3,6 @@ package processm.core.models.causalnet
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -80,8 +79,8 @@ class DBSerializerTest {
         assertEquals(orig.instances, copy.instances)
         assertEquals(orig.start, copy.start)
         assertEquals(orig.start, copy.start)
-        assertTrue(copy.start.special)
-        assertTrue(copy.end.special)
+        assertTrue(copy.start.isArtificial)
+        assertTrue(copy.end.isArtificial)
     }
 
     @Test

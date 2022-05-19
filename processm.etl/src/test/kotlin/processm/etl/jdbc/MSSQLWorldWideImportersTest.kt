@@ -1,5 +1,6 @@
 package processm.etl.jdbc
 
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
@@ -14,6 +15,8 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.models.EtlProcessMetadata
+import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
 import java.sql.Date
@@ -29,6 +32,7 @@ class MSSQLWorldWideImportersTest {
     private val logger = logger()
     private lateinit var dataStoreName: String
     private lateinit var externalDB: DBMSEnvironment<*>
+    private lateinit var etlConfigurationId: EntityID<UUID>
     // endregion
 
     // region user input
@@ -70,14 +74,15 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
 ) sub3""".trimIndent() +
             (if (batch) "" else """ where "event_id" > coalesce(?, 0)""") + """ order by "event_id""""
 
-    private fun createEtlConfiguration(lastEventExternalId: String? = "0") {
+    private fun createEtlConfiguration(lastEventExternalId: String? = "0"): EntityID<UUID> {
         dataStoreName = UUID.randomUUID().toString()
-        transaction(DBCache.get(dataStoreName).database) {
+        return transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
-                name = etlConfiguratioName
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                metadata = EtlProcessMetadata.new {
+                    processType = "Jdbc"
+                    name = etlConfiguratioName
+                    dataConnector = externalDB.dataConnector
+                }
                 query = getEventQuery(lastEventExternalId == null)
                 this.lastEventExternalId = lastEventExternalId
                 batch = lastEventExternalId == null
@@ -96,6 +101,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
                 target = "trace_id"
                 traceId = true
             }
+            return@transaction config.id
         }
     }
     // endregion
@@ -114,7 +120,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
 
     @BeforeTest
     fun setUpETL() {
-        createEtlConfiguration()
+        etlConfigurationId = createEtlConfiguration()
     }
 
     @AfterTest
@@ -146,7 +152,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
 
         logger.info("Reading XES...")
         val stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().toList()
         }
 
@@ -175,7 +181,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
         var logUUID: UUID? = null
         logger.info("Importing the first event")
         val part1 = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             val materialized = etl.toXESInputStream().take(partSize).toList()
 
             assertEquals("1", etl.lastEventExternalId)
@@ -195,7 +201,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
 
         logger.info("Importing one more event")
         val part2 = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             val part2 = etl.toXESInputStream().take(3).toList()
 
             for ((i, x) in part2.withIndex())
@@ -273,7 +279,7 @@ order by "trace_rank" desc, "event_id" desc
         var logUUID: UUID? = null
         logger.info("Importing the first $partSize XES components...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 val materialized = etl.toXESInputStream().take(partSize).toList()
                 out.write(materialized.asSequence())
@@ -297,7 +303,7 @@ order by "trace_rank" desc, "event_id" desc
         logger.info("Importing the next $partSize XES components...")
         // import the remaining components
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 val materialized = etl.toXESInputStream().take(partSize).toList()
                 out.write(materialized.asSequence())
@@ -322,7 +328,7 @@ order by "trace_rank" desc, "event_id" desc
     fun `read XES from existing data then add new data next read XES`() {
         logger.info("Importing XES...")
         val stream1 = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().toList()
         }
 
@@ -384,7 +390,7 @@ order by "trace_rank" desc, "event_id" desc
 
         try {
             val stream2 = transaction(DBCache.get(dataStoreName).database) {
-                val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+                val etl = ETLConfiguration.findById(etlConfigurationId)!!
                 return@transaction etl.toXESInputStream().toList()
             }
             assertEquals(1, stream2.filterIsInstance<Log>().size)
@@ -418,7 +424,7 @@ order by "trace_rank" desc, "event_id" desc
     @Test
     fun `read complete XES and then read nothing starting from 0`() {
         val stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().toList()
         }
 
@@ -427,7 +433,7 @@ order by "trace_rank" desc, "event_id" desc
         assertEquals(519622, stream.filterIsInstance<Event>().size)
 
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             assertEquals(0, etl.toXESInputStream().count())
         }
     }
@@ -437,13 +443,13 @@ order by "trace_rank" desc, "event_id" desc
         createEtlConfiguration(null)
 
         var stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().take(100).toList()
         }
         assertFalse { stream.isEmpty() }
 
         stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().toList()
         }
         assertEquals(1, stream.filterIsInstance<Log>().size)
@@ -451,7 +457,7 @@ order by "trace_rank" desc, "event_id" desc
         assertEquals(519622, stream.filterIsInstance<Event>().size)
 
         stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().toList()
         }
         assertTrue { stream.isEmpty() }

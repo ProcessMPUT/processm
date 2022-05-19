@@ -1,11 +1,12 @@
 package processm.core.models.causalnet
 
 import processm.core.helpers.mapToSet
+import processm.core.models.commons.ControlStructureType.*
 import kotlin.test.*
 
 class MutableCausalNetTest {
 
-    //activities inspired by Fig 3.12 in "Process Mining" by Van van der Alst
+    //activities inspired by Fig 3.12 in "Process Mining" by Wil van der Aalst
     private val a = Node("register request")
     private val b = Node("examine thoroughly")
     private val c = Node("examine casually")
@@ -131,8 +132,8 @@ class MutableCausalNetTest {
         val mm = MutableCausalNet()
         assertTrue { mm.start in mm.instances }
         assertTrue { mm.end in mm.instances }
-        assertTrue { mm.start.special }
-        assertTrue { mm.end.special }
+        assertTrue { mm.start.isArtificial }
+        assertTrue { mm.end.isArtificial }
     }
 
     @Test
@@ -501,5 +502,63 @@ class MutableCausalNetTest {
         assertTrue { mm.dependencies.isEmpty() }
         mm.addDependency(dep)
         assertEquals(setOf(dep), mm.dependencies)
+    }
+
+    @Test
+    fun controlStructures() {
+        // PM book Fig. 3.12
+        val model = causalnet {
+            start splits a
+            a splits (b + d) or (c + d)
+            b splits e
+            c splits e
+            d splits e
+            e splits g or h or f
+            g splits end
+            h splits end
+            f splits (b + d) or (c + d)
+            start joins a
+            a or f join b
+            a or f join c
+            a or f join d
+            b + d or c + d join e
+            e joins g
+            e joins h
+            e joins f
+            g joins end
+            h joins end
+        }
+
+        assertEquals(0, model.controlStructures.count { it.type == AndSplit || it.type == AndJoin })
+
+        val xorSplits = model.controlStructures.filter { it.type == XorSplit }.toList()
+        assertEquals(1, xorSplits.size)
+        assertEquals("decide", xorSplits.first().node.name)
+        assertEquals(3, xorSplits.first().controlFlowComplexity)
+
+        val xorJoins = model.controlStructures.filter { it.type == XorJoin }.sortedBy { it.node.name }.toList()
+        assertEquals(4, xorJoins.size)
+        assertEquals(b.name, xorJoins[3].node.name)
+        assertEquals(c.name, xorJoins[2].node.name)
+        assertEquals(d.name, xorJoins[0].node.name)
+        assertEquals(z.name, xorJoins[1].node.name)
+        assertEquals(2, xorJoins[3].controlFlowComplexity)
+        assertEquals(2, xorJoins[2].controlFlowComplexity)
+        assertEquals(2, xorJoins[0].controlFlowComplexity)
+        assertEquals(2, xorJoins[1].controlFlowComplexity)
+
+        val otherSplits = model.controlStructures.filter { it.type == OtherSplit }.sortedBy { it.node.name }.toList()
+        assertEquals(2, otherSplits.size)
+        assertEquals(a.name, otherSplits[0].node.name)
+        assertEquals(f.name, otherSplits[1].node.name)
+        assertEquals(2, otherSplits[0].controlFlowComplexity)
+        assertEquals(2, otherSplits[1].controlFlowComplexity)
+
+        val otherJoins = model.controlStructures.filter { it.type == OtherJoin }.toList()
+        assertEquals(1, otherJoins.size)
+        assertEquals(e.name, otherJoins.first().node.name)
+        assertEquals(2, otherJoins.first().controlFlowComplexity)
+
+        assertEquals(0, model.controlStructures.count { it.type == OrSplit || it.type == OrJoin })
     }
 }

@@ -3,8 +3,10 @@ package processm.services.api
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
+import io.ktor.config.*
 import io.ktor.http.HttpStatusCode
 import processm.services.api.models.OrganizationRole
+import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -53,5 +55,9 @@ object JwtAuthentication {
         .withNotBefore(Date())
         .sign(Algorithm.HMAC512(secret))
 
-    fun generateSecretKey(seed: Long = 0): String = ('A'..'z').shuffled(Random(seed)).subList(0, 20).joinToString("")
+    internal fun generateSecretKey(): String = ('A'..'z').shuffled(SecureRandom()).subList(0, 20).joinToString("")
+
+    fun getSecretKey(config: ApplicationConfig): String = config.propertyOrNull("secret")?.getString() ?: randomSecretKey
+
+    private val randomSecretKey = generateSecretKey()
 }

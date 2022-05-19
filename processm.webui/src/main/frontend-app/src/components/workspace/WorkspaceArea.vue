@@ -150,10 +150,10 @@ import EmptyComponent from "./EmptyComponent.vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import {
-  ComponentType,
   LayoutElement,
   WorkspaceComponent as WorkspaceComponentModel
 } from "@/models/WorkspaceComponent";
+import { ComponentType } from "@/openapi";
 
 @Component({
   components: {

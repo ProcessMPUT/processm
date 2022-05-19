@@ -7,10 +7,12 @@ import {
   AbstractEtlProcess,
   EtlProcessType as ApiEtlProcessType,
   EtlProcess as ApiEtlProcess,
-  CaseNotion as ApiCaseNotion
+  CaseNotion as ApiCaseNotion,
+  EtlProcessInfo
 } from "@/openapi";
 import EtlProcess, { EtlProcessType } from "@/models/EtlProcess";
 import CaseNotion from "@/models/CaseNotion";
+import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
 
 export default class DataStoreService extends BaseService {
   private static get currentOrganizationId() {
@@ -271,7 +273,10 @@ export default class DataStoreService extends BaseService {
             name: etlProcess.name || "",
             type: etlProcess.type,
             dataConnectorId: etlProcess.dataConnectorId,
-            isActive: etlProcess.isActive || false
+            isActive: etlProcess.isActive || false,
+            lastExecutionTime: etlProcess.lastExecutionTime
+              ? new Date(etlProcess.lastExecutionTime)
+              : undefined
           });
         }
 
@@ -288,21 +293,32 @@ export default class DataStoreService extends BaseService {
     processName: string,
     processType: EtlProcessType,
     dataConnectorId: string,
-    caseNotion: CaseNotion
+    configuration: CaseNotion | JdbcEtlProcessConfiguration
   ): Promise<AbstractEtlProcess> {
+    let data: AbstractEtlProcess;
+    if (processType == EtlProcessType.Automatic) {
+      data = {
+        name: processName,
+        dataConnectorId,
+        type: processType as ApiEtlProcessType,
+        caseNotion: {
+          classes: Object.fromEntries((configuration as CaseNotion).classes),
+          edges: (configuration as CaseNotion).edges
+        }
+      };
+    } else {
+      data = {
+        name: processName,
+        dataConnectorId,
+        type: processType as ApiEtlProcessType,
+        configuration: configuration as JdbcEtlProcessConfiguration
+      };
+    }
     const response = await this.dataStoresApi.createEtlProcess(
       DataStoreService.currentOrganizationId,
       dataStoreId,
       {
-        data: {
-          name: processName,
-          dataConnectorId,
-          type: processType as ApiEtlProcessType,
-          caseNotion: {
-            classes: Object.fromEntries(caseNotion.classes),
-            edges: caseNotion.edges
-          }
-        }
+        data: data
       }
     );
 
@@ -322,6 +338,42 @@ export default class DataStoreService extends BaseService {
     );
 
     return response.status == 204;
+  }
+  
+  public async createSamplingJdbcEtlProcess(
+    dataStoreId: string,
+    processName: string,
+    dataConnectorId: string,
+    configuration: CaseNotion | JdbcEtlProcessConfiguration
+  ): Promise<AbstractEtlProcess> {
+    let data: AbstractEtlProcess;
+    data = {
+      name: processName,
+      dataConnectorId,
+      type: ApiEtlProcessType.Jdbc,
+      configuration: configuration as JdbcEtlProcessConfiguration
+    };
+    const response = await this.dataStoresApi.createSamplingJdbcEtlProcess(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      {
+        data: data
+      }
+    );
+
+    return response.data.data;
+  }
+
+  public async getEtlProcessInfo(
+    dataStoreId: string,
+    etlProcessId: string
+  ): Promise<EtlProcessInfo> {
+    const response = await this.dataStoresApi.getEtlProcess(
+      DataStoreService.currentOrganizationId,
+      dataStoreId,
+      etlProcessId
+    );
+    return response.data;
   }
 
   public async removeEtlProcess(
@@ -347,5 +399,14 @@ export default class DataStoreService extends BaseService {
       dataStoreId,
       etlProcessId
     );
+  }
+  
+  public async removeLog(
+    dataStoreId: string,
+    logIdentityId: string
+  ): Promise<void> {
+    await this.dataStoresApi.removeLog(dataStoreId, logIdentityId, {
+      validateStatus: (status: number) => [204, 404].indexOf(status) >= 0
+    });
   }
 }

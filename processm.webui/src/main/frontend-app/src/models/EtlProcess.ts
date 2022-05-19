@@ -4,8 +4,10 @@ export default interface EtlProcess {
   type: EtlProcessType;
   dataConnectorId: string;
   isActive: boolean;
+  lastExecutionTime: Date | undefined;
 }
 
 export enum EtlProcessType {
-  Automatic = "automatic"
+  Automatic = "automatic",
+  Jdbc = "jdbc"
 }

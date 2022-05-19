@@ -14,6 +14,9 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import org.koin.test.KoinTest
 import org.koin.test.mock.MockProvider
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import processm.core.esb.Artemis
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.time.LocalDateTime
@@ -26,6 +29,24 @@ abstract class ServiceTestBase {
     @BeforeEach
     open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
+    }
+
+    companion object {
+        private lateinit var artemis: Artemis
+
+        @JvmStatic
+        @BeforeAll
+        fun `start Artemis`() {
+            artemis = Artemis()
+            artemis.register()
+            artemis.start()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun `unmock ETLConfiguration_notifyUsers`() {
+            artemis.stop()
+        }
     }
 
     protected fun <R> withCleanTables(vararg tables: Table, testLogic: Transaction.() -> R) =

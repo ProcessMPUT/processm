@@ -24,7 +24,7 @@ import processm.miners.triggerEvent
 import java.util.*
 import kotlin.test.*
 
-class KPIServiceTests {
+class LogKPIServiceTests {
     companion object {
 
         val dataStore = UUID.randomUUID()
@@ -87,15 +87,15 @@ class KPIServiceTests {
     @Test
     fun `create KPI component then run service`() {
         createKPIComponent()
-        val kpiService = KPIService()
+        val logKpiService = LogKPIService()
         try {
-            kpiService.register()
-            kpiService.start()
-            assertEquals(ServiceStatus.Started, kpiService.status)
+            logKpiService.register()
+            logKpiService.start()
+            assertEquals(ServiceStatus.Started, logKpiService.status)
 
             Thread.sleep(1000L) // wait for calculation
         } finally {
-            kpiService.stop()
+            logKpiService.stop()
         }
 
         transaction(DBCache.getMainDBPool().database) {
@@ -112,17 +112,17 @@ class KPIServiceTests {
 
     @Test
     fun `run service then create KPI component`() {
-        val kpiService = KPIService()
+        val logKpiService = LogKPIService()
         try {
-            kpiService.register()
-            kpiService.start()
-            assertEquals(ServiceStatus.Started, kpiService.status)
+            logKpiService.register()
+            logKpiService.start()
+            assertEquals(ServiceStatus.Started, logKpiService.status)
 
             createKPIComponent()
 
             Thread.sleep(1000L) // wait for calculation
         } finally {
-            kpiService.stop()
+            logKpiService.stop()
         }
 
         transaction(DBCache.getMainDBPool().database) {
@@ -140,15 +140,15 @@ class KPIServiceTests {
     @Test
     fun `create invalid KPI`() {
         createKPIComponent("just invalid query")
-        val kpiService = KPIService()
+        val logKpiService = LogKPIService()
         try {
-            kpiService.register()
-            kpiService.start()
-            assertEquals(ServiceStatus.Started, kpiService.status)
+            logKpiService.register()
+            logKpiService.start()
+            assertEquals(ServiceStatus.Started, logKpiService.status)
 
             Thread.sleep(1000L) // wait for calculation
         } finally {
-            kpiService.stop()
+            logKpiService.stop()
         }
 
         transaction(DBCache.getMainDBPool().database) {
@@ -166,11 +166,11 @@ class KPIServiceTests {
     @Test
     fun `create invalid KPI then fix it`() {
         createKPIComponent("just invalid query")
-        val kpiService = KPIService()
+        val logKpiService = LogKPIService()
         try {
-            kpiService.register()
-            kpiService.start()
-            assertEquals(ServiceStatus.Started, kpiService.status)
+            logKpiService.register()
+            logKpiService.start()
+            assertEquals(ServiceStatus.Started, logKpiService.status)
 
             Thread.sleep(1000L) // wait for calculation
 
@@ -185,7 +185,7 @@ class KPIServiceTests {
 
             Thread.sleep(1000L) // wait for calculation
         } finally {
-            kpiService.stop()
+            logKpiService.stop()
         }
 
         transaction(DBCache.getMainDBPool().database) {

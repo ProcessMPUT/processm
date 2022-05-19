@@ -1,7 +1,9 @@
 package processm.etl
 
 import org.testcontainers.containers.JdbcDatabaseContainer
+import processm.dbmodels.models.DataConnector
 import java.sql.Connection
+import java.util.*
 
 /**
  * A common interface for external databases uses by tests in [processm.etl.jdbc]
@@ -11,6 +13,13 @@ interface DBMSEnvironment<Container : JdbcDatabaseContainer<*>> : AutoCloseable 
     val password: String
     val jdbcUrl: String
     fun connect(): Connection
+
+    val dataConnector: DataConnector
+        get() = DataConnector.new {
+            name = UUID.randomUUID().toString()
+            val sep = if ("?" in jdbcUrl) "&" else "?"
+            connectionProperties = "$jdbcUrl${sep}user=$user&password=$password"
+        }
 }
 
 /**

@@ -33,18 +33,27 @@ internal class DAONode(id: EntityID<Int>) : IntEntity(id) {
 
     var activity by CausalNetNode.activity
     var instance by CausalNetNode.instance
-    var special by CausalNetNode.special
+    var silent by CausalNetNode.silent
+
+    @Deprecated("Use silent instead", replaceWith = ReplaceWith("silent"))
+    var artificial by CausalNetNode.artificial
     var model by DAOModel referencedOn CausalNetNode.model
 }
 
 internal object CausalNetNode : IntIdTable() {
     val activity = varchar("activity", 100)
     val instance = varchar("instance", 100)
-    val special = bool("special")
+    val silent = bool("silent").default(false)
+
+    /**
+     * Note that the column name is "special" because of the previous naming. This field/column is marked for deletion anyway.
+     */
+    @Deprecated("Use silent instead", replaceWith = ReplaceWith("silent"))
+    val artificial = bool("special")
     val model = reference("model", CausalNetModel, onDelete = ReferenceOption.CASCADE)
 
     init {
-        index(true, activity, instance, special, model)
+        index(true, activity, instance, artificial, model)
     }
 }
 
@@ -106,7 +115,8 @@ object DBSerializer {
                 DAONode.new {
                     activity = node.activity
                     instance = node.instanceId
-                    special = node.special
+                    silent = node.isSilent
+                    artificial = node.isArtificial
                     this.model = daomodel
                 }
             }
@@ -147,7 +157,15 @@ object DBSerializer {
             addLogger(Slf4jSqlDebugLogger)
             val daomodel = DAOModel.findById(modelId)
                 ?: throw NoSuchElementException("Causal net with id $modelId is not found in database ${database.name}.")
-            val idNode = daomodel.nodes.associate { row -> row.id to Node(row.activity, row.instance, row.special) }
+            val idNode =
+                daomodel.nodes.associate { row ->
+                    row.id to Node(
+                        row.activity,
+                        row.instance,
+                        row.artificial,
+                        row.silent
+                    )
+                }
             val start = daomodel.start
             val end = daomodel.end
             if (start == null || end == null)

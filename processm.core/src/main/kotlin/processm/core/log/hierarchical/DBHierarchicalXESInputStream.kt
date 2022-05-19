@@ -437,7 +437,7 @@ class DBHierarchicalXESInputStream(
                         assert(attr is ListAttr)
                         (attr as ListAttr).valueInternal.add(this)
                     } else {
-                        attr.childrenInternal[this.key] = this
+                        attr[this.key] = this
                     }
                 }
             } while (!resultSet.isEnded && resultSet.getLong("parent_id") == attrId)

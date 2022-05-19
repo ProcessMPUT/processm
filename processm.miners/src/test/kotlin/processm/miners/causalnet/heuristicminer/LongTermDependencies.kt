@@ -46,7 +46,7 @@ class LongTermDependencies {
 
     @Test
     fun nodes() {
-        assertEquals(setOf(a, b1, b2, c, d1, d2, e), hm.result.instances.filter { n -> !n.special }.toSet())
+        assertEquals(setOf(a, b1, b2, c, d1, d2, e), hm.result.instances.filter { n -> !n.isArtificial }.toSet())
     }
 
     @Test

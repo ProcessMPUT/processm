@@ -33,6 +33,9 @@ package processm.core.models.petrinet
  * ```
  * This example defines Petri net M1 from "Replaying History on Process Models for Conformance Checking and Performance Analysis" (DOI 10.1002/widm.1045).
  * Which happens to be the same as Fig 3.2 from the PM book.
+ *
+ * By construction of the DSL, each transition must have an unique name. If this is undesirable, set [namePostprocessor]
+ * to a function which, given a transition name used in the DSL, returns a name to be used in the final model.
  */
 class PetriNetDSL {
     class PlaceDescriptor {
@@ -77,6 +80,11 @@ class PetriNetDSL {
 
     val P = PCls(this)
 
+    /**
+     * Transforms transitions' names used in the DSL to names used in the final model. If `null` the names are intact.
+     */
+    var namePostprocessor: ((String) -> String)? = null
+
     private val pds = ArrayList<PlaceDescriptor>()
 
     fun place() = PlaceDescriptor().also { pds.add(it) }
@@ -92,7 +100,7 @@ class PetriNetDSL {
         }
         val transitions = tmap.entries.map { (name, places) ->
             Transition(
-                name,
+                namePostprocessor?.let { it(name) } ?: name,
                 places.second,
                 places.first,
                 isSilent = name[0] == '_'

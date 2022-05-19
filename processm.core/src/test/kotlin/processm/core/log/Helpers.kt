@@ -7,6 +7,9 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.Activity
 import processm.core.verifiers.CausalNetVerifier
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.test.assertTrue
 
 object Helpers {
     fun logFromString(text: String): Log =
@@ -40,4 +43,19 @@ object Helpers {
      */
     fun trace(vararg activities: Activity): Trace =
         Trace(activities.asList().map { event(it.name) }.asSequence())
+
+    fun trace(vararg activities: String): Trace =
+        Trace(activities.map(this::event).asSequence())
+
+    fun trace(vararg activities: Event): Trace =
+        Trace(activities.asSequence())
+
+    operator fun Trace.times(n: Int): Sequence<Trace> = (0 until n).asSequence().map { this@times }
+
+    // http://realtimecollisiondetection.net/blog/?p=89
+    fun assertDoubleEquals(expected: Double, actual: Double, prec: Double = 1e-3) =
+        assertTrue(
+            abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
+            "Expected: $expected, actual: $actual, prec: $prec"
+        )
 }

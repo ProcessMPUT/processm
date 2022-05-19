@@ -43,4 +43,12 @@ object DBCache {
      * Get main database's pool.
      */
     fun getMainDBPool(): DBConnectionPool = get(Brand.mainDBInternalName)
+
+    /**
+     * Invalidates the cache. Calling this should not be necessary except in a test code.
+     */
+    fun invalidate() {
+        db.invalidateAll()
+        lockMap.clear()
+    }
 }

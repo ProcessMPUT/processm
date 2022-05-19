@@ -15,6 +15,8 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
+import processm.dbmodels.models.EtlProcessMetadata
+import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.OracleEnvironment
 import java.util.*
 import kotlin.test.*
@@ -75,13 +77,14 @@ class OracleOTSampleDbTest {
     private val dataStoreName = UUID.randomUUID().toString()
     private val etlConfiguratioName = "Oracle Sample DB ETL Test"
 
-    private fun createEtlConfiguration(lastEventExternalId: String? = "0") {
+    private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
-                name = etlConfiguratioName
-                jdbcUri = externalDB.jdbcUrl
-                user = externalDB.user
-                password = externalDB.password
+                metadata = EtlProcessMetadata.new {
+                    processType = "Jdbc"
+                    name = etlConfiguratioName
+                    dataConnector = externalDB.dataConnector
+                }
                 query = getEventSQL(lastEventExternalId == null)
                 this.lastEventExternalId = lastEventExternalId
                 batch = lastEventExternalId == null
@@ -100,17 +103,17 @@ class OracleOTSampleDbTest {
                 target = "trace_id"
                 traceId = true
             }
+            return@transaction config.id
         }
-    }
 
     private val expectedNumberOfTraces = 107
     private val expectedNumberOfEvents = 187
 
     @Test
     fun `read XES from existing data`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             val stream = etl.toXESInputStream()
             val list = stream.toList()
 
@@ -130,11 +133,11 @@ class OracleOTSampleDbTest {
 
     @Test
     fun `read XES from existing data and write it to data store`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }
@@ -166,12 +169,12 @@ class OracleOTSampleDbTest {
 
     @Test
     fun `read partially XES from existing data and write it to data store then read the remaining XES and write it to data store`() {
-        createEtlConfiguration()
+        val id = createEtlConfiguration()
         val partSize = 100
         var logUUID: UUID? = null
         logger.info("Importing the first $partSize XES components...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 val materialized = etl.toXESInputStream().take(partSize).toList()
                 out.write(materialized.asSequence())
@@ -195,7 +198,7 @@ class OracleOTSampleDbTest {
         // import the remaining components
         logger.info("Importing the remaining XES components...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }
@@ -218,16 +221,16 @@ class OracleOTSampleDbTest {
 
     @Test
     fun `read something then read everything then read nothing from null`() {
-        createEtlConfiguration(null)
+        val id = createEtlConfiguration(null)
 
         var stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().take(100).toList()
         }
         assertFalse { stream.isEmpty() }
 
         stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().toList()
         }
         assertEquals(1, stream.filterIsInstance<Log>().size)
@@ -235,7 +238,7 @@ class OracleOTSampleDbTest {
         assertEquals(expectedNumberOfEvents, stream.filterIsInstance<Event>().size)
 
         stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.name eq etlConfiguratioName }.first()
+            val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().toList()
         }
         assertTrue { stream.isEmpty() }

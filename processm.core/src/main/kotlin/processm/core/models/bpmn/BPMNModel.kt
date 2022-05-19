@@ -5,6 +5,7 @@ import processm.core.models.bpmn.jaxb.TDefinitions
 import processm.core.models.bpmn.jaxb.TFlowNode
 import processm.core.models.bpmn.jaxb.TProcess
 import processm.core.models.causalnet.MutableCausalNet
+import processm.core.models.commons.ControlStructure
 import processm.core.models.commons.ProcessModel
 import processm.core.models.commons.ProcessModelInstance
 import java.io.InputStream
@@ -19,12 +20,11 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
         /**
          * Constructs [BPMNModel] from the given BPMN XML
          */
-        fun fromXML(xml: InputStream): BPMNModel =
-                BPMNModel(BPMNXMLService.load(xml).value)
+        fun fromXML(xml: InputStream): BPMNModel = BPMNModel(BPMNXMLService.load(xml).value)
     }
 
     internal val processes: List<BPMNProcess> =
-            model.rootElement.map { it.value }.filterIsInstance<TProcess>().map { BPMNProcess(it) }
+        model.rootElement.map { it.value }.filterIsInstance<TProcess>().map { BPMNProcess(it) }
 
     /**
      * Lists all TActivities, TEvents and TGateways of the underlying models, incl. these in subprocesses
@@ -52,19 +52,18 @@ class BPMNModel internal constructor(internal val model: TDefinitions) : Process
     override val decisionPoints: Sequence<BPMNDecisionPoint>
         get() = processes.asSequence().flatMap { proc -> proc.allActivities.asSequence().map { it.split } }
 
+    override val controlStructures: Sequence<ControlStructure>
+        get() = processes.asSequence().flatMap { proc -> proc.allActivities.filterIsInstance<ControlStructure>() }
+
     /**
      * Instances of BPMN models are currently not supported, as BPMN support is for import/export only.
      */
     override fun createInstance(): ProcessModelInstance =
-            throw UnsupportedOperationException("BPMN model instances are not supported")
+        throw UnsupportedOperationException("BPMN model instances are not supported")
 
-    internal fun byName(name: QName) = processes
-            .flatMap { p ->
-                p.byName(name)
-                        .filterIsInstance<TFlowNode>()
-                        .map { p to p.get(it) }
-            }
-            .single()
+    internal fun byName(name: QName) = processes.flatMap { p ->
+        p.byName(name).filterIsInstance<TFlowNode>().map { p to p.get(it) }
+    }.single()
 
     fun toCausalNet(): MutableCausalNet = BPMNModel2CausalNet(this).toCausalNet()
 }

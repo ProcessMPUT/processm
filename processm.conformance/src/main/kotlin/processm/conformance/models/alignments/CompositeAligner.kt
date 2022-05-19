@@ -10,7 +10,6 @@ import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.converters.toPetriNet
 import processm.core.models.processtree.ProcessTree
 import java.util.concurrent.*
 import processm.conformance.models.alignments.petrinet.DecompositionAligner as PetriDecompositionAligner
@@ -51,17 +50,17 @@ class CompositeAligner(
             val astarFactory = CachingAlignerFactory(cache) { model, penalty, _ -> AStar(model, penalty) }
             listOfNotNull(
                 astarFactory,
-                if (model is CausalNet) CachingAlignerFactory(cache) { model, penalty, pool ->
+                if (model is CausalNet) CachingAlignerFactory(cache, CausalNetAsPetriNetAlignerFactory { model, penalty, pool ->
                     PetriDecompositionAligner(
-                        (model as CausalNet).toPetriNet(),
+                        model as PetriNet,
                         penalty,
                         pool = pool,
                         alignerFactory = astarFactory
                     )
-                } else null,
-                if (model is CausalNet) CachingAlignerFactory(cache) { model, penalty, _ ->
-                    AStar((model as CausalNet).toPetriNet(), penalty)
-                } else null,
+                }) else null,
+                if (model is CausalNet) CachingAlignerFactory(cache, CausalNetAsPetriNetAlignerFactory { model, penalty, _ ->
+                    AStar(model, penalty)
+                }) else null,
                 if (model is PetriNet) CachingAlignerFactory(cache) { model, penalty, pool ->
                     PetriDecompositionAligner(
                         model as PetriNet,

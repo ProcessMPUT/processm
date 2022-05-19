@@ -2,6 +2,7 @@ package processm.services.api
 
 import com.google.gson.Gson
 import processm.core.helpers.mapToArray
+import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
@@ -9,8 +10,6 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.*
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].
@@ -25,8 +24,8 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
         layout = getLayout(),
         customizationData = getCustomizationData(),
         data = getData(),
-        dataLastModified = dataLastModified?.let { LocalDateTime.ofInstant(it, ZoneId.of("Z")).withNano(0) },
-        userLastModified = LocalDateTime.ofInstant(userLastModified, ZoneId.of("Z")).withNano(0),
+        dataLastModified = dataLastModified?.toLocalDateTime(),
+        userLastModified = userLastModified.toLocalDateTime(),
         lastError = lastError
     )
 
@@ -36,7 +35,7 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
 private fun ComponentTypeDto.toComponentType(): ComponentType = when (this) {
     ComponentTypeDto.CausalNet -> ComponentType.causalNet
     ComponentTypeDto.Kpi -> ComponentType.kpi
-    ComponentTypeDto.BPMN -> TODO()
+    ComponentTypeDto.BPMN -> ComponentType.bpmn
     else -> {
         val thisString = this.toString()
         requireNotNull(ComponentType.values().firstOrNull { it.toString().equals(thisString, ignoreCase = true) }) {
@@ -108,6 +107,13 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 KpiComponentData(
                     type = ComponentType.kpi,
                     value = data
+                )
+            }
+            ComponentTypeDto.BPMN -> {
+                BPMNComponentData(
+                    type = ComponentType.bpmn,
+                    xml = javaClass.classLoader.getResourceAsStream("bpmn-mock/pizza-collaboration.bpmn")
+                        .bufferedReader().readText() // FIXME: replace the mock with actual implementation
                 )
             }
             else -> TODO("Data conversion is not implemented for type $componentType.")

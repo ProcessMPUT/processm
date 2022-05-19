@@ -21,17 +21,17 @@ import javax.jms.Message
 /**
  * A service that calculates KPIs using PQL for [WorkspaceComponent]s.
  */
-class KPIService : AbstractJobService(
+class LogKPIService : AbstractJobService(
     QUARTZ_CONFIG,
     WORKSPACE_COMPONENTS_TOPIC,
     "$WORKSPACE_COMPONENT_TYPE = '${ComponentTypeDto.Kpi}'"
 ) {
     companion object {
-        private const val QUARTZ_CONFIG = "quartz-kpi.properties"
+        private const val QUARTZ_CONFIG = "quartz-logkpi.properties"
     }
 
     override val name: String
-        get() = "KPI"
+        get() = "Log-based KPI"
 
     override fun loadJobs(): List<Pair<JobDetail, Trigger>> = loggedScope {
         val components = transaction(DBCache.getMainDBPool().database) {
@@ -76,7 +76,7 @@ class KPIService : AbstractJobService(
         override fun execute(context: JobExecutionContext) = loggedScope { logger ->
             val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
-            logger.debug("Calculating KPI for component $id...")
+            logger.debug("Calculating log-based KPI for component $id...")
             transaction(DBCache.getMainDBPool().database) {
                 val component = WorkspaceComponent.findById(id)
                 if (component === null) {
@@ -96,7 +96,7 @@ class KPIService : AbstractJobService(
                     component.lastError = null
                 } catch (e: Exception) {
                     component.lastError = e.message
-                    logger.warn("Cannot calculate KPI for component with id $id.", e)
+                    logger.warn("Cannot calculate log-based KPI for component with id $id.", e)
                 }
             }
         }

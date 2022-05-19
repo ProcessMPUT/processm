@@ -11,10 +11,7 @@ import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.logging.trace
 import processm.core.models.commons.Activity
-import processm.core.models.petrinet.Marking
-import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.Place
-import processm.core.models.petrinet.Transition
+import processm.core.models.petrinet.*
 import java.util.concurrent.*
 
 /**
@@ -27,6 +24,11 @@ import java.util.concurrent.*
  * @property penalty The penalty function.
  * @property alignerFactory The factory for base aligners. The base aligner is used to produce partial aligners for
  * the parts of the decomposed [model].
+ *
+ * To ensure that resulting [Alignment]s are valid in the context of [model], internally [DecompositionAligner] rewrites
+ * [PetriNet] ensuring that every silent activity is uniquely named and maintains these names during decomposition.
+ * This ensures that they can be properly matched when returning from decompositions. This renaming is not visible
+ * in the resulting [Alignment]s.
  */
 class DecompositionAligner(
     override val model: PetriNet,
@@ -41,9 +43,35 @@ class DecompositionAligner(
         private val ZERO_LB = CostApproximation(0.0, false)
     }
 
-    private val initialDecomposition: List<PetriNet> by lazy {
-        Decomposition.createInitialDecomposition(model)
+    private val translatedModel: PetriNet
+    private val renaming = HashMap<String, Transition>()
+
+    init {
+        var ctr = 0
+        val newTransitions = ArrayList<Transition>()
+        for (t in model.transitions) {
+            val new = if (t.isSilent) t.copy(name = "${t.name}#${ctr++}") else t
+            newTransitions.add(new)
+            check(
+                renaming.put(new.name, t) == null
+            ) { "PetriNets with duplicated activities are not supported. Offending activity: ${t.name}" }
+        }
+        translatedModel = PetriNet(
+            model.places,
+            newTransitions,
+            model.initialMarking,
+            model.finalMarking
+        )
     }
+
+    private val initialDecomposition: List<PetriNet> by lazy {
+        Decomposition.createInitialDecomposition(translatedModel)
+    }
+
+    private fun returnToOriginalModel(alignment: Alignment): Alignment = Alignment(
+        alignment.steps.map { step -> if (step.modelMove === null) step else step.copy(modelMove = renaming[step.modelMove.name]) },
+        alignment.cost
+    )
 
     /**
      * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
@@ -59,7 +87,7 @@ class DecompositionAligner(
         logger.trace { "Aligning Petri net and trace [${events.joinToString { it.conceptName ?: "" }}]" }
 
         val eventsWithExistingActivities =
-            events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
+            events.filter { e -> translatedModel.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
 
         val alignments = decomposedAlign(eventsWithExistingActivities)
         val alignment =
@@ -73,7 +101,7 @@ class DecompositionAligner(
         val time = System.currentTimeMillis() - start
         logger.debug { "Calculated alignment in ${time}ms using decomposition into ${alignments.size} nets." }
 
-        return output
+        return returnToOriginalModel(output)
     }
 
     /**
@@ -112,7 +140,7 @@ class DecompositionAligner(
      */
     fun alignmentCostLowerBound(events: List<Event>, timeout: Long, unit: TimeUnit): CostApproximation {
         val eventsWithExistingActivities =
-            events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
+            events.filter { e -> translatedModel.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
         var lastResult: AlignmentStepResult? = null
         val f = pool.submit {
             var decomposition = Decomposition.create(initialDecomposition, eventsWithExistingActivities)

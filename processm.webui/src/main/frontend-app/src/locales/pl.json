@@ -25,6 +25,7 @@
     "component": {
       "causal-net": "Sieć przyczynowa",
       "kpi": "KPI",
+      "bpmn": "BPMN",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
       "edit": {
@@ -79,6 +80,27 @@
       "recreate-log": "Odtwórz logi XES",
       "log-recreation-confirmation": "Czy chcesz odtworzyć log XES dla procesu ETL {etlProcessName}? Operacja nadpisuje istniejący log XES."
     }
+  },
+  "add-manual-query-dialog": {
+    "dialog-title": "Dodaj ręczne zapytanie",
+    "query": "Zapytanie SQL",
+    "batch": "Zapytanie wsadowe",
+    "refresh": "Częstotliwość odświeżania",
+    "enabled": "Aktywny",
+    "trace-id-source": "Kolumna z ID śladu",
+    "trace-id-target": "Atrybut z ID śladu",
+    "event-id-source": "Kolumna z ID zdarzenia",
+    "event-id-target": "Atrybut z ID zdarzenia",
+    "source": "Kolumna",
+    "target": "Atrybut",
+    "mappings": "Odwzorowanie z kolumn do atrybutów",
+    "new-mapping": "Dodaj odwzorowanie",
+    "validation": {
+      "non-empty-field": "Wartośc nie może być pusta",
+      "not-a-positive-integer": "Wartość nie jest dodanią liczbą całkowitą"
+    },
+    "last-event-external-id": "Wartość początkowa ostatniego ID zdarzenia",
+    "last-event-external-id-type": "Typ danych ostatniego ID zdarzenia"
   },
   "add-data-connector-dialog": {
     "dialog-title": "Dodaj łącze danych",
@@ -179,9 +201,25 @@
       "registered": "Rejestracja konta zakończona powodzeniem"
     }
   },
+  "xes-preview-dialog": {
+    "title": "Przeglądarka logu",
+    "no-data-store": "Nie znaleziono odpowiedniego magazynu danych",
+    "executing-query": "Wykonywanie zapytania...",
+    "query-executed": "Zapytanie wykonane i wyniki pobrane w {executionTime} ms. Formatowanie wyników...",
+    "results-retrieved": "Zapytanie wykonane i wyniki pobrane w  {executionTime} ms. Wyniki sformatowane w {formattingTime} ms."
+  },
+  "process-details-dialog": {
+    "title": "Szczegóły procesu: {name}",
+    "message": "Komunikat błędu",
+    "exception": "Ślad stosu",
+    "time": "Czas",
+    "log-identity-id": "Log identity:id",
+    "errors": "Błędy"
+  },
   "common": {
     "cancel": "Anuluj",
     "save": "Zapisz",
+    "test": "Test",
     "rename": "Zmień nazwę",
     "remove": "Usuń",
     "close": "Zamknij",
@@ -211,6 +249,10 @@
     "activate": "Aktywuj",
     "deactivate": "Dezaktywuj",
     "operation-successful": "Operacja wykonana pomyślnie",
-    "operation-error": "Nie udało się wykonać operacji"
+    "operation-error": "Nie udało się wykonać operacji",
+    "testing": {
+      "success": "Test udany",
+      "failure": "Test nieudany"
+    }
   }
 }

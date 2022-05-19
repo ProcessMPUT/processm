@@ -157,11 +157,22 @@ abstract class BaseApiTest : KoinTest {
     }
 
     protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T {
-        return gson.fromJson(content, object : TypeToken<T>() {}.type)
+        // TODO: replace GSON with kotlinx/serialization
+        val gsonBuilder = GsonBuilder()
+        // Correctly serialize/deserialize LocalDateTime
+        gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
+            override fun write(out: JsonWriter, value: LocalDateTime?) {
+                out.value(value?.toString())
+            }
+
+            override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
+        })
+        return gsonBuilder.create().fromJson(content, object : TypeToken<T>() {}.type)
     }
 
-    protected fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
-        setBody(gson.toJson(requestBody))
+    protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
+        addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+        setBody(Gson().toJson(requestBody))
     }
 
 }

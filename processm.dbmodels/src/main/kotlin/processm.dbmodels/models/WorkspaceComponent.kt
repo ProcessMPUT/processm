@@ -31,56 +31,69 @@ const val DELETE = "delete"
 
 object WorkspaceComponents : UUIDTable("workspace_components") {
     /**
-     * The machine-readable name of this component.
+     * The machine-readable name of this component (the configuration parameter).
      */
     val name = text("name")
 
     /**
-     * The identifier of the workspace containing this component.
+     * The identifier of the workspace containing this component (the configuration parameter).
      */
     val workspaceId = reference("workspace_id", Workspaces)
 
     /**
-     * The PQL query associated with this component.
+     * The PQL query associated with this component (the configuration parameter).
      */
     val query = text("query")
 
     /**
-     * The id of the data store holding the underlying log data.
+     * The type of the model associated with this component (the configuration parameter).
+     */
+    val modelType = text("model_type").nullable()
+
+    /**
+     * The id of the model associated with this component (the configuration parameter).
+     */
+    val modelId = long("model_id").nullable()
+
+    /**
+     * The id of the data store holding the underlying log data (the configuration parameter).
      */
     val dataStoreId = uuid("data_store_id")
 
     /**
-     * The type of this component. See [ComponentTypeDto].
+     * The type of this component (the configuration parameter). See [ComponentTypeDto].
      */
     val componentType = text("type")
 
     /**
      * The data of this component. Every component may store its own data here, e.g., process model,
-     * database identifiers, a state.
+     * database identifiers, a state (the computed value).
      */
     val data = text("data").nullable()
 
     /**
-     * The data associated with this component by the services module and/or GUI.
+     * The data associated with this component by the services module and/or GUI (the computed value).
      */
     val customizationData = text("customization_data").nullable()
 
     /**
-     * The position and size of the component.
+     * The position and size of the component (the computed value).
      */
     val layoutData = text("layout_data").nullable()
 
     /**
-     * The timestamp of the last modification made by a user.
+     * The timestamp of the last modification made by a user (the computed value).
      */
-    val userLastModified = timestamp("user_last_modified").clientDefault (Instant::now)
+    val userLastModified = timestamp("user_last_modified").clientDefault(Instant::now)
 
     /**
-     * The timestamp of the last modification made by the system.
+     * The timestamp of the last modification made by the system (the computed value).
      */
     val dataLastModified = timestamp("data_last_modified").nullable()
 
+    /**
+     * The description of the last error that occurred for this component (the computed value).
+     */
     val lastError = text("last_error").nullable()
 }
 
@@ -92,6 +105,11 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var name by WorkspaceComponents.name
     var workspace by Workspace referencedOn WorkspaceComponents.workspaceId
     var query by WorkspaceComponents.query
+    var modelType by WorkspaceComponents.modelType.transform(
+        { it?.typeName },
+        { ModelTypeDto.byTypeNameInDatabase(it) }
+    )
+    var modelId by WorkspaceComponents.modelId
     var dataStoreId by WorkspaceComponents.dataStoreId
     var componentType by WorkspaceComponents.componentType.transform(
         { it.typeName },
@@ -107,6 +125,8 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
         id.value,
         name,
         query,
+        modelType,
+        modelId,
         dataStoreId,
         componentType,
         data,
@@ -118,7 +138,8 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
 enum class ComponentTypeDto(val typeName: String) {
     CausalNet("causalNet"),
     BPMN("bpmn"),
-    Kpi("kpi");
+    Kpi("kpi"),
+    AlignerKpi("alignerKpi");
 
     companion object {
         fun byTypeNameInDatabase(typeNameInDatabase: String) = values().first { it.typeName == typeNameInDatabase }
@@ -127,10 +148,23 @@ enum class ComponentTypeDto(val typeName: String) {
     override fun toString(): String = typeName
 }
 
+enum class ModelTypeDto(val typeName: String) {
+    CausalNet("causalNet"),
+    ProcessTree("processTree"),
+    PetriNet("petriNet");
+
+    companion object {
+        fun byTypeNameInDatabase(typeNameInDatabase: String?) =
+            ModelTypeDto.values().firstOrNull { it.typeName == typeNameInDatabase }
+    }
+}
+
 data class WorkspaceComponentDto(
     val id: UUID,
     val name: String,
     val query: String = "SELECT ...",
+    val modelType: ModelTypeDto?,
+    val modelId: Long?,
     val dataStore: UUID,
     val componentType: ComponentTypeDto,
     val data: Any? = null,

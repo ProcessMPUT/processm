@@ -46,4 +46,8 @@ class ETLError(id: EntityID<UUID>) : UUIDEntity(id) {
      * The date and time of the occurrence.
      */
     var time by ETLErrors.time
+
+    fun toDto() = ETLErrorDto(configuration.value, message, exception, time)
 }
+
+data class ETLErrorDto(val configurationId:UUID, val message:String, val exception: String?, val time:Instant)

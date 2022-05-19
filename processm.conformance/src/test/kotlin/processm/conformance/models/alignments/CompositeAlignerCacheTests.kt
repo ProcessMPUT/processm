@@ -142,6 +142,6 @@ class CompositeAlignerCacheTests {
             )
             aligner.align(trace)
         }
-        assertEquals(3, cache.hitCounter)
+        assertEquals(2, cache.hitCounter)
     }
 }

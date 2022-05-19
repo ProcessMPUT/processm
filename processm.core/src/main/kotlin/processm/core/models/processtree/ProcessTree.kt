@@ -133,11 +133,14 @@ class ProcessTree(root: Node? = null) : ProcessModel {
         }
     }
 
-    private val allNodes: kotlin.sequences.Sequence<Node>
+    /**
+     * A sequence of all nodes in this process tree. The order of nodes may or may not match the order of execution.
+     */
+    val allNodes: kotlin.sequences.Sequence<Node>
         get() {
             val r = root
             return if (r != null)
-                sequenceOf(r) + r.chilrenRecursive
+                sequenceOf(r) + r.childrenRecursive
             else
                 emptySequence()
         }
@@ -153,6 +156,9 @@ class ProcessTree(root: Node? = null) : ProcessModel {
 
     override val decisionPoints: kotlin.sequences.Sequence<InternalNode>
         get() = allNodes.filterIsInstance<InternalNode>()
+
+    override val controlStructures: kotlin.sequences.Sequence<InternalNode>
+        get() = decisionPoints
 
     override fun createInstance() = ProcessTreeInstance(this)
 

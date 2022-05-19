@@ -7,8 +7,11 @@ import org.testcontainers.shaded.org.apache.commons.io.IOUtils
 import org.testcontainers.utility.DockerImageName
 import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
+import processm.dbmodels.models.DataConnector
 import processm.etl.Db2Environment.Companion.groupInserts
 import java.nio.charset.StandardCharsets
+import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * DB2 as a component in integration testing sucks:
@@ -176,4 +179,10 @@ class Db2Environment(
                 logger.info(frame?.utf8String?.trim())
             }
     }
+
+    override val dataConnector: DataConnector
+        get() = DataConnector.new {
+            name = UUID.randomUUID().toString()
+            connectionProperties = "$jdbcUrl:user=$user;password=$password;"
+        }
 }

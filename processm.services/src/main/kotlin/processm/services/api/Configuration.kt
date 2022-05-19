@@ -75,7 +75,7 @@ internal fun ApplicationAuthenticationConfiguration(
     return {
         val jwtIssuer = config.property("issuer").getString()
         val jwtRealm = config.property("realm").getString()
-        val jwtSecret = config.propertyOrNull("secret")?.getString() ?: JwtAuthentication.generateSecretKey()
+        val jwtSecret = JwtAuthentication.getSecretKey(config)
 
         jwt {
             realm = jwtRealm
