@@ -1,8 +1,9 @@
 package processm.conformance.rca.ml
 
 import processm.conformance.rca.Feature
+import processm.core.models.commons.DecisionModel
 
-interface DecisionTreeModel : Model {
+interface DecisionTreeModel : DecisionModel<Map<Feature, Any>, Boolean> {
 
     companion object {
         private const val TAB: String = "  "
@@ -17,25 +18,33 @@ interface DecisionTreeModel : Model {
          * The feature the decision is based upon
          */
         val feature: Feature
+
+        fun goToLeft(row: Map<Feature, Any>): Boolean
     }
 
     /**
      * If the value of the [feature] is in [left], go to the left child.
      * If the value of the [feature] is in [right], go to the right child.
      */
-    data class CategoricalSplit<V>(override val feature: Feature, val left: Set<V?>, val right: Set<V?>) : Split
+    data class CategoricalSplit<V>(override val feature: Feature, val left: Set<V?>, val right: Set<V?>) : Split {
+        override fun goToLeft(row: Map<Feature, Any>): Boolean = row[feature] in left
+
+    }
 
     /**
      * If the value of the [feature] is no greater than the [threshold], go to the left child.
      * Otherwise, go to the right child.
      */
-    data class ContinuousSplit<V>(override val feature: Feature, val threshold: V) : Split
+    data class ContinuousSplit<V : Comparable<V>>(override val feature: Feature, val threshold: V) : Split {
+        override fun goToLeft(row: Map<Feature, Any>): Boolean = row[feature] as V <= threshold
+    }
 
     /**
      * A node of a decision tree, either [InternalNode] or [Leaf]
      */
     interface Node {
         fun toMultilineString(indent: String = ""): String
+        fun predict(row: Map<Feature, Any>): Boolean
     }
 
     /**
@@ -74,6 +83,9 @@ interface DecisionTreeModel : Model {
             appendLine()
             append(right.toMultilineString("$indent$TAB"))
         }
+
+        override fun predict(row: Map<Feature, Any>): Boolean =
+            if (split.goToLeft(row)) left.predict(row) else right.predict(row)
     }
 
     /**
@@ -83,6 +95,7 @@ interface DecisionTreeModel : Model {
      */
     data class Leaf(val decision: Boolean, val impurity: Double) : Node {
         override fun toMultilineString(indent: String): String = "${indent}label = $decision (impurity: $impurity)\n"
+        override fun predict(row: Map<Feature, Any>): Boolean = decision
     }
 
     /**
@@ -99,4 +112,6 @@ interface DecisionTreeModel : Model {
      * A debug function to pretty-print the tree
      */
     fun toMultilineString() = root.toMultilineString()
+
+    override fun predict(row: Map<Feature, Any>): Boolean = root.predict(row)
 }

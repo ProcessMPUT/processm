@@ -149,7 +149,11 @@ class SparkDecisionTreeModel internal constructor(
             check((th - 0.5).absoluteValue < 0.001)
             DecisionTreeModel.CategoricalSplit(f, setOf(false), setOf(true))
         } else {
-            DecisionTreeModel.ContinuousSplit(f, split.threshold)
+            when (val th = split.threshold) {
+                is Instant -> DecisionTreeModel.ContinuousSplit(f, th)
+                is Double -> DecisionTreeModel.ContinuousSplit(f, th)
+                else -> throw IllegalStateException("Unexpected type")
+            }
         }
     }
 
