@@ -54,8 +54,8 @@
       "select-data-connector": "Select a data connector first",
       "case-notion-description": "for each entry in {source} related to an entry in {target}"
     },
-    "add-manual-query": {
-      "title": "Add manual query",
+    "add-jdbc-etl-process": {
+      "title": "Add JDBC ETL process",
       "description": "Manually define a query that yields relevant events as result rows"
     },
     "upload-xes-file": {
@@ -75,8 +75,30 @@
       "process-name": "Process name",
       "data-connector": "Data connector",
       "removal-confirmation": "Do you want to permanently remove {etlProcessName} ETL process with all associated data?",
-      "custom-case-notion": "Custom selection"
+      "custom-case-notion": "Custom selection",
+      "last-execution-time": "Last execution time"
     }
+  },
+  "add-jdbc-etl-process-dialog": {
+    "dialog-title": "Add JDBC ETL process",
+    "query": "SQL query",
+    "batch": "Batch query",
+    "refresh": "Refresh rate",
+    "enabled": "Enabled",
+    "trace-id-source": "Trace ID column",
+    "trace-id-target": "Trace ID attribute",
+    "event-id-source": "Event ID column",
+    "event-id-target": "Event ID attribute",
+    "source": "Column",
+    "target": "Attribute",
+    "mappings": "Column to attribute mappings",
+    "new-mapping": "Add mapping",
+    "validation": {
+      "non-empty-field": "The value cannot be empty",
+      "not-a-positive-integer": "The value is not a positive integer"
+    },
+    "last-event-external-id": "Initial last event ID",
+    "last-event-external-id-type": "Last event ID datatype"
   },
   "add-data-connector-dialog": {
     "dialog-title": "Add data connector",
@@ -177,9 +199,25 @@
       "registered": "The account registration was successful"
     }
   },
+  "xes-preview-dialog": {
+    "title": "Log viewer",
+    "no-data-store": "No appropriate data store found to query.",
+    "executing-query": "Executing query...",
+    "query-executed": "Query executed and results retrieved in {executionTime} ms. Formatting results...",
+    "results-retrieved": "Query executed and results retrieved in {executionTime} ms. Formatted results in {formattingTime} ms."
+  },
+  "process-details-dialog": {
+    "title": "Process details: {name}",
+    "message": "Error message",
+    "exception": "Stack trace",
+    "time": "Time",
+    "log-identity-id": "Log identity:id",
+    "errors": "Errors"
+  },
   "common": {
     "cancel": "Cancel",
     "save": "Save",
+    "test": "Test",
     "rename": "Rename",
     "remove": "Remove",
     "close": "Close",
@@ -205,6 +243,10 @@
     "saving": {
       "success": "Successfully saved",
       "failure": "Failed to save"
+    },
+    "testing": {
+      "success": "Test succeeded",
+      "failure": "Test failed"
     }
   }
 }

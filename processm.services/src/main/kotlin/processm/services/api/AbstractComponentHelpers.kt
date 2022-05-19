@@ -2,6 +2,7 @@ package processm.services.api
 
 import com.google.gson.Gson
 import processm.core.helpers.mapToArray
+import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
@@ -9,8 +10,6 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.*
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].
@@ -25,8 +24,8 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
         layout = getLayout(),
         customizationData = getCustomizationData(),
         data = getData(),
-        dataLastModified = dataLastModified?.let { LocalDateTime.ofInstant(it, ZoneId.of("Z")).withNano(0) },
-        userLastModified = LocalDateTime.ofInstant(userLastModified, ZoneId.of("Z")).withNano(0),
+        dataLastModified = dataLastModified?.toLocalDateTime(),
+        userLastModified = userLastModified.toLocalDateTime(),
         lastError = lastError
     )
 

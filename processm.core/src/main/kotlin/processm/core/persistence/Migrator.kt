@@ -19,6 +19,14 @@ object Migrator {
         migrateMainDatabase()
     }
 
+    /**
+     * Ensures that the DB used is the one given in the configuration by calling [DatabaseChecker.reloadConfiguration] and migrates the main DB
+     */
+    fun reloadConfiguration() {
+        dbConfig.reloadConfiguration()
+        migrateMainDatabase()
+    }
+
     fun migrate(dataStoreDBName: String) {
         if (dataStoreDBName.isUUID()) migrateDataStoreDatabase(dataStoreDBName)
         else migrateMainDatabase()

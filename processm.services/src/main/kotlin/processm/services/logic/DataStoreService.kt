@@ -2,27 +2,27 @@ package processm.services.logic
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.ibm.db2.jcc.DB2SimpleDataSource
-import com.microsoft.sqlserver.jdbc.SQLServerDataSource
-import com.mysql.cj.jdbc.MysqlDataSource
-import oracle.jdbc.datasource.impl.OracleDataSource
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.`java-time`.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
-import org.postgresql.ds.PGSimpleDataSource
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.afterCommit
+import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.*
 import processm.etl.discovery.SchemaCrawlerExplorer
+import processm.etl.helpers.getConnection
+import processm.etl.helpers.getDataSource
+import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
-import java.sql.Connection
+import processm.services.api.models.JdbcEtlProcessConfiguration
 import java.sql.DriverManager
+import java.time.Instant
 import java.util.*
-import javax.sql.DataSource
 
 class DataStoreService {
     /**
@@ -218,12 +218,78 @@ class DataStoreService {
         return@transaction etlProcessMetadataId.value
     }
 
+    private fun Transaction.saveJdbcEtl(
+        dataConnectorId: UUID,
+        name: String, configuration: JdbcEtlProcessConfiguration, nComponents: Int? = null
+    ): UUID {
+        val etlProcessMetadata = EtlProcessMetadata.new {
+            this.name = name
+            this.processType = ProcessTypeDto.JDBC.processTypeName
+            this.dataConnector = DataConnector[dataConnectorId]
+        }
+        val cfg = ETLConfiguration.new {
+            this.metadata = etlProcessMetadata
+            this.query = configuration.query
+            this.refresh = if (nComponents == null) configuration.refresh?.toLong() else null
+            this.enabled = configuration.enabled || nComponents != null
+            this.batch = configuration.batch
+            this.lastEventExternalId = if (!configuration.batch) configuration.lastEventExternalId else null
+            this.lastEventExternalIdType = if (!configuration.batch) configuration.lastEventExternalIdType else null
+            this.sampleSize = nComponents
+            afterCommit {
+                notifyUsers()
+            }
+        }
+        ETLColumnToAttributeMap.new {
+            this.configuration = cfg
+            this.sourceColumn = configuration.eventId.source
+            this.target = configuration.eventId.target
+            this.traceId = false
+            this.eventId = true
+        }
+        ETLColumnToAttributeMap.new {
+            this.configuration = cfg
+            this.sourceColumn = configuration.traceId.source
+            this.target = configuration.traceId.target
+            this.traceId = true
+            this.eventId = false
+        }
+        ETLColumnToAttributeMaps.batchInsert(configuration.attributes.asIterable()) { columnCfg ->
+            this[ETLColumnToAttributeMaps.configuration] = cfg.id
+            this[ETLColumnToAttributeMaps.sourceColumn] = columnCfg.source
+            this[ETLColumnToAttributeMaps.target] = columnCfg.target
+            this[ETLColumnToAttributeMaps.traceId] = false
+            this[ETLColumnToAttributeMaps.eventId] = false
+        }
+        return etlProcessMetadata.id.value
+    }
+
+    /**
+     * Creates a JDBC-based ETL process in the specified [dataStoreId]
+     */
+    fun createJdbcEtlProcess(
+        dataStoreId: UUID,
+        dataConnectorId: UUID,
+        name: String,
+        configuration: JdbcEtlProcessConfiguration
+    ) = transaction(DBCache.get("$dataStoreId").database) {
+        return@transaction saveJdbcEtl(dataConnectorId, name, configuration)
+    }
+
     /**
      * Returns all ETL processes stored in the specified [dataStoreId].
      */
     fun getEtlProcesses(dataStoreId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
             return@transaction EtlProcessMetadata.wrapRows(EtlProcessesMetadata.selectAll()).map { it.toDto() }
+        }
+
+    data class EtlProcessInfo(val logIdentityId:UUID, val errors:List<ETLErrorDto>, val lastExecutionTime: Instant?)
+
+    fun getEtlProcessInfo(dataStoreId: UUID, etlProcessId: UUID) =
+        transaction(DBCache.get("$dataStoreId").database) {
+            val etlProcess = ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.first()
+            return@transaction EtlProcessInfo(etlProcess.logIdentityId, etlProcess.errors.map(ETLError::toDto), etlProcess.metadata.lastExecutionTime)
         }
 
     /**
@@ -281,49 +347,14 @@ class DataStoreService {
         }
     }
 
-    private fun DataConnector.getConnection(): Connection {
-        return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
-        else getDataSource(Gson().fromJson<Map<String, String>>(connectionProperties, Map::class.java)).connection
-    }
 
-    private fun getDataSource(connectionProperties: Map<String, String>): DataSource {
-        return when (connectionProperties["connection-type"]) {
-            "PostgreSql" -> PGSimpleDataSource().apply {
-                serverNames = arrayOf(connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required"))
-                portNumbers = intArrayOf(connectionProperties["port"]?.toIntOrNull() ?: 5432)
-                user = connectionProperties["username"]
-                password = connectionProperties["password"]
-                databaseName = connectionProperties["database"]
-            }
-            "SqlServer" -> SQLServerDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1433
-                user = connectionProperties["username"]
-                setPassword(connectionProperties["password"].orEmpty())
-                databaseName = connectionProperties["database"]
-            }
-            "MySql" -> MysqlDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 3306
-                user = connectionProperties["username"]
-                password = connectionProperties["password"]
-                databaseName = connectionProperties["database"]
-            }
-            "OracleDatabase" -> OracleDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1521
-                user = connectionProperties["username"]
-                setPassword(connectionProperties["password"].orEmpty())
-                databaseName = connectionProperties["database"]
-            }
-            "Db2" -> DB2SimpleDataSource().apply {
-                serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
-                portNumber = connectionProperties["port"]?.toIntOrNull() ?: 50000
-                user = connectionProperties["username"]
-                setPassword(connectionProperties["password"].orEmpty())
-                databaseName = connectionProperties["database"]
-            }
-            else -> throw Error("Unsupported connection type")
-        }
+    fun createSamplingJdbcEtlProcess(
+        dataStoreId: UUID,
+        dataConnectorId: UUID,
+        name: String,
+        configuration: JdbcEtlProcessConfiguration,
+        nComponents: Int
+    ) = transaction(DBCache.get("$dataStoreId").database) {
+        return@transaction saveJdbcEtl(dataConnectorId, name, configuration, nComponents)
     }
 }

@@ -4,19 +4,15 @@ import io.mockk.every
 import io.mockk.mockk
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.junit.jupiter.api.BeforeEach
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.util.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class WorkspaceServiceTest : ServiceTestBase() {
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         accountServiceMock = mockk()
         workspaceService = WorkspaceService(accountServiceMock)

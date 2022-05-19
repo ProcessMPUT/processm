@@ -65,6 +65,8 @@ class DecompositionAlignerTests {
             assertEquals(trace.events.count(), alignment.steps.size)
             for (step in alignment.steps)
                 assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -124,6 +126,8 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCosts[i], alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -204,6 +208,8 @@ class DecompositionAlignerTests {
 
             assertEquals(5, alignment.cost, "\n" + alignment.toStringMultiline())
             assertEquals(25, alignment.steps.size)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
 
         totalTime /= 1000000L
@@ -289,6 +295,8 @@ class DecompositionAlignerTests {
                     assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
                 else
                     assertTrue(step.modelMove!!.isSilent)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -418,6 +426,8 @@ class DecompositionAlignerTests {
                     assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
                 else
                     assertTrue(step.modelMove!!.isSilent)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -470,6 +480,8 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCosts[i], alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -506,6 +518,8 @@ class DecompositionAlignerTests {
                     assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
                 else
                     assertTrue(step.modelMove!!.isSilent)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -536,6 +550,8 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(4, alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -586,6 +602,8 @@ class DecompositionAlignerTests {
                     assertEquals(step.logMove!!.conceptName, step.modelMove!!.name)
                 else
                     assertTrue(step.modelMove!!.isSilent)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in net.transitions } }
         }
     }
 
@@ -710,6 +728,8 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(0, alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in petri.transitions } }
         }
     }
 
@@ -792,6 +812,8 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCost[i], alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in petri.transitions } }
         }
     }
 
@@ -842,6 +864,8 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(0, alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in petri.transitions } }
         }
     }
 
@@ -899,6 +923,8 @@ class DecompositionAlignerTests {
             println("Calculated alignment in ${time}ms: $alignment\tcost: ${alignment.cost}")
 
             assertEquals(expectedCost[i], alignment.cost)
+
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in petri.transitions } }
         }
     }
 

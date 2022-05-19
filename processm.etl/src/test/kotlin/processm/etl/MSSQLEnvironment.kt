@@ -4,7 +4,9 @@ import org.testcontainers.containers.MSSQLServerContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
+import processm.dbmodels.models.DataConnector
 import java.sql.Connection
+import java.util.*
 
 class MSSQLEnvironment(
     val container: MSSQLServerContainer<*>,
@@ -112,5 +114,12 @@ class MSSQLEnvironment(
         if (container !== sharedContainer)
             container.close() // otherwise it is testcontainer's responsibility to shutdown the container
     }
+
+    override val dataConnector: DataConnector
+        get() = DataConnector.new {
+            name = UUID.randomUUID().toString()
+            connectionProperties = "$jdbcUrl;user=$user;password=$password"
+            println("connectionProperties=$connectionProperties")
+        }
 }
 

@@ -46,7 +46,7 @@ class CNetAlignmentsBasedApproximatePrecision(model: CausalNet) : CNetAbstractPr
             val prefix = ArrayList<Activity>()
             var current = availableActivities
             for (step in alignment.steps) {
-                if (step.modelMove != null) {
+                if (step.modelMove != null && !step.modelMove.isSilent) {
                     val activity = (step.modelMove as DecoupledNodeExecution).activity
                     prefix.add(activity)
                     current = current.getOrPut(activity)

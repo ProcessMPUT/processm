@@ -25,8 +25,7 @@ import java.time.Instant
 fun Route.UsersApi() {
     val accountService by inject<AccountService>()
     val jwtIssuer = application.environment.config.property("ktor.jwt.issuer").getString()
-    val jwtSecret = application.environment.config.propertyOrNull("ktor.jwt.secret")?.getString()
-        ?: JwtAuthentication.generateSecretKey()
+    val jwtSecret = JwtAuthentication.getSecretKey(application.environment.config.config("ktor.jwt"))
     val jwtTokenTtl = Duration.parse(application.environment.config.property("ktor.jwt.tokenTtl").getString())
 
     route("/users/session") {
