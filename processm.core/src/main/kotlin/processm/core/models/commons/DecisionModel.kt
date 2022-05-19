@@ -1,20 +1,25 @@
 package processm.core.models.commons
 
-import processm.core.log.hierarchical.Trace
+/**
+ * [Row] a description of a single example
+ * [Dataset] a collection of [Row]s
+ * [Decision] the result of passing a single [Row] through the learned [DecisionModel]
+ */
+interface DecisionLearner<in Row, in Dataset, out Decision> {
+    /**
+     * Use the provided [dataset] to train a [DecisionModel]
+     */
+    fun fit(dataset: Dataset): DecisionModel<Row, Decision>
+}
 
 /**
  * A decision model for providing explanations
  */
-interface DecisionModel {
+interface DecisionModel<in Row, out Decision> {
 
     /**
-     * Use the provided trace and decisions to train the model (e.g., infer from the attributes of [trace] why such decision were made)
+     * Provide decision for the given [row]
      */
-    fun train(trace: Trace, decisions: Sequence<Decision>)
-
-    /**
-     * Provide explanations for the given [trace] and the [decisions] made during its execution
-     */
-    fun explain(trace: Trace, decisions: Sequence<Decision>): Sequence<Explanation>
+    fun predict(row: Row): Decision
 
 }

@@ -3,13 +3,20 @@ package processm.core.models.causalnet
 import processm.core.helpers.Counter
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Decision
+import processm.core.models.commons.DecisionLearner
 import processm.core.models.commons.DecisionModel
-import processm.core.models.commons.Explanation
+
+data class Row(val trace: Trace, val seqdecisions: Sequence<Decision>)
+
+data class TextualExplanation(val text: String) {
+    override fun toString(): String = text
+}
 
 /**
  * This is a proof-of-concept of [DecisionModel] to showcase its API
  */
-class PoCDecisionModel(val featureName: String) : DecisionModel {
+class PoCDecisionModel(val featureName: String) : DecisionLearner<Row, Sequence<Row>, Sequence<TextualExplanation>>,
+    DecisionModel<Row, Sequence<TextualExplanation>> {
 
     private class Stump<Feature, Outcome> {
         private val backend = HashMap<Feature, Counter<Outcome>>()
@@ -21,26 +28,26 @@ class PoCDecisionModel(val featureName: String) : DecisionModel {
         fun distribution(f: Feature) = backend.getOrPut(f, { Counter() })
     }
 
-    private data class TextualExplanation(val text: String) : Explanation {
-        override fun toString(): String = text
-    }
-
     private val stumps = HashMap<DecisionPoint, Stump<Any?, Binding?>>()
 
-    override fun train(trace: Trace, seqdecisions: Sequence<Decision>) {
-        val events = trace.events.toList()
-        for ((pos, dec) in seqdecisions.withIndex()) {
-            check(dec is BindingDecision)
-            if (!dec.decisionPoint.isRealDecision)
-                continue
-            val event = events[pos / 2]
-            val feature = event.attributes[featureName]?.getValue()
-            stumps.getOrPut(dec.decisionPoint, { Stump() }).train(feature, dec.binding)
+    override fun fit(dataset: Sequence<Row>): DecisionModel<Row, Sequence<TextualExplanation>> {
+        for ((trace, seqdecisions) in dataset) {
+            val events = trace.events.toList()
+            for ((pos, dec) in seqdecisions.withIndex()) {
+                check(dec is BindingDecision)
+                if (!dec.decisionPoint.isRealDecision)
+                    continue
+                val event = events[pos / 2]
+                val feature = event.attributes[featureName]?.getValue()
+                stumps.getOrPut(dec.decisionPoint, { Stump() }).train(feature, dec.binding)
+            }
         }
+        return this
     }
 
-    override fun explain(trace: Trace, decisions: Sequence<Decision>): Sequence<Explanation> =
+    override fun predict(row: Row): Sequence<TextualExplanation> =
         sequence {
+            val (trace, decisions) = row
             val events = trace.events.toList()
             for ((pos, dec) in decisions.withIndex()) {
                 check(dec is BindingDecision)
@@ -48,7 +55,7 @@ class PoCDecisionModel(val featureName: String) : DecisionModel {
                 if (dec.decisionPoint.isRealDecision) {
                     val feature = event.attributes[featureName]?.getValue()
                     val dist =
-                        stumps.getOrPut(dec.decisionPoint, { Stump<Any?,Binding?>() }).distribution(feature)
+                        stumps.getOrPut(dec.decisionPoint, { Stump<Any?, Binding?>() }).distribution(feature)
                     val sum = dist.values.sum()
                     val p = "%.3f".format(dist[dec.binding] / sum.toDouble())
                     val diststr =

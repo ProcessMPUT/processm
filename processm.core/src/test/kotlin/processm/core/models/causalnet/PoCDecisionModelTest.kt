@@ -47,12 +47,16 @@ class PoCDecisionModelTest {
         val tbc1 = trace(a, b, c, e, feature = 1L)
         val td1 = trace(a, d, e, feature = 1L)
         val td2 = trace(a, d, e, feature = 2L)
-        decisionModel.train(tbc1, replayer.replay(tbc1).single())
-        decisionModel.train(tbc1, replayer.replay(tbc1).single())
-        decisionModel.train(tbc1, replayer.replay(tbc1).single())
-        decisionModel.train(td1, replayer.replay(td1).single())
-        decisionModel.train(td2, replayer.replay(td2).single())
-        decisionModel.explain(tbc1, replayer.replay(tbc1).single()).forEach { println(it) }
+        decisionModel.fit(
+            sequenceOf(
+                Row(tbc1, replayer.replay(tbc1).single()),
+                Row(tbc1, replayer.replay(tbc1).single()),
+                Row(tbc1, replayer.replay(tbc1).single()),
+                Row(td1, replayer.replay(td1).single()),
+                Row(td2, replayer.replay(td2).single()),
+            )
+        )
+        decisionModel.predict(Row(tbc1, replayer.replay(tbc1).single())).forEach { println(it) }
         println()
     }
 }
