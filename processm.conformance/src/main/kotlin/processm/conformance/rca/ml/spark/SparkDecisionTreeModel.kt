@@ -66,8 +66,7 @@ class SparkDecisionTreeModel internal constructor(
     private fun translate(split: GenericContinuousSplit, stage: VectorAssembler) =
         GenericContinuousSplit(translate(split.feature as Int, stage), split.threshold)
 
-    private fun <T> revertColumn(name: Any, stage: T): String? where T : HasInputCols, T : HasOutputCols {
-        require(name is String)
+    private fun <T> revertColumn(name: String, stage: T): String? where T : HasInputCols, T : HasOutputCols {
         if (stage.inputCols.isEmpty())
             return name
         require(stage.inputCols.size == stage.outputCols.size)
@@ -76,7 +75,7 @@ class SparkDecisionTreeModel internal constructor(
     }
 
     private fun translate(split: GenericContinuousSplit, stage: ImputerModel): GenericContinuousSplit {
-        val inp = revertColumn(split.feature, stage) ?: return split
+        val inp = revertColumn(split.feature as String, stage) ?: return split
         return GenericContinuousSplit(inp, split.threshold)
     }
 
