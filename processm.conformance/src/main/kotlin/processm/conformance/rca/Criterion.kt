@@ -6,8 +6,23 @@ import processm.conformance.models.alignments.Alignment
  * The result of a ternary classification.
  */
 enum class MatchResult {
+    /**
+     * Denotes that a case matches the given criterion, e.g., for [ActivityEventCriterion] the given alignment contains misalignment for the given pair (activity, event)
+     */
     MATCH,
+
+    /**
+     * Denotes that a case does not match the given criterion, but it could have matched it, because it contains relevant information.
+     *
+     * E.g., for [ActivityEventCriterion] the given alignment does not contain misalignment for the given pair (activity, event), but contains an aligned pair.
+     */
     NO_MATCH,
+
+    /**
+     * Denotes that it is meaningless to consider whether a case matches or not, e.g., because it does not contain relevant information.
+     *
+     * E.g., for [ActivityEventCriterion] the given alignment does not contain any occurrence of the given activity and/or event.
+     */
     IRRELEVANT
 }
 
