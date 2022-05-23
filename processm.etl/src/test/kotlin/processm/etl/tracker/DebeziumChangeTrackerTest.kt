@@ -31,17 +31,13 @@ class DebeziumChangeTrackerTest {
         props.setProperty("database.user", "")
         props.setProperty("database.password", "")
 
-        val trackerThread: Thread
         val dataModelId = 1
         val metaModelReader = MetaModelReader(dataModelId)
         val metaModelAppender = MetaModelAppender(metaModelReader)
 
         DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)).use {
-            trackerThread = Thread(it)
-            trackerThread.start()
             Thread.sleep(1000000)
         }
-        trackerThread.join()
     }
 
     @Test
@@ -62,16 +58,12 @@ class DebeziumChangeTrackerTest {
         props.setProperty("database.user", "")
         props.setProperty("database.password", "")
 
-        val trackerThread: Thread
         val dataModelId = 3
         val metaModelReader = MetaModelReader(dataModelId)
         val metaModelAppender = MetaModelAppender(metaModelReader)
 
         DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)).use {
-            trackerThread = Thread(it)
-            trackerThread.start()
             Thread.sleep(6000000)
         }
-        trackerThread.join()
     }
 }

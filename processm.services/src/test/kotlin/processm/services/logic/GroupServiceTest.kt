@@ -2,6 +2,8 @@ package processm.services.logic
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
+import org.junit.Before
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
 import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
@@ -10,13 +12,14 @@ import java.util.*
 import kotlin.test.*
 
 class GroupServiceTest : ServiceTestBase() {
+    private lateinit var groupService: GroupService
 
-    @BeforeTest
-    fun setUp() {
+    @Before
+    @BeforeEach
+    override fun setUp() {
+        super.setUp()
         groupService = GroupService()
     }
-
-    lateinit var groupService: GroupService
 
     @Test
     fun `attachment of user to group throws if nonexistent user`(): Unit = withCleanTables(UserGroups, Users) {

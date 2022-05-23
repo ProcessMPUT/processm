@@ -54,7 +54,7 @@
         <org.jetbrains.exposed.version>0.34.2</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
         <junit.jupiter.version>5.6.0</junit.jupiter.version>
-        <mockk.version>1.12.0</mockk.version>
+        <mockk.version>1.12.2</mockk.version>
         <antlr4.version>4.9.2</antlr4.version>
         <com.github.ben-manes.caffeine.version>2.8.5</com.github.ben-manes.caffeine.version>
         <org.apache.commons.commonsDbcp2.version>2.9.0</org.apache.commons.commonsDbcp2.version>
@@ -66,6 +66,7 @@
         <com.ibm.db2.version>11.5.6.0</com.ibm.db2.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
         <testcontainers.version>1.16.0</testcontainers.version>
+        <pooled-jms.version>2.0.5</pooled-jms.version>
 
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>

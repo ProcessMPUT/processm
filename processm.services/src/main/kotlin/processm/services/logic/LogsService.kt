@@ -4,10 +4,10 @@ import de.odysseus.staxon.json.JsonXMLConfig
 import de.odysseus.staxon.json.JsonXMLConfigBuilder
 import de.odysseus.staxon.json.JsonXMLOutputFactory
 import org.apache.commons.io.input.BoundedInputStream
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
+import processm.core.communication.Producer
 import processm.core.log.*
 import processm.core.log.attribute.IDAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -15,21 +15,27 @@ import processm.core.log.hierarchical.toFlatSequence
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import processm.dbmodels.models.DataStores
+import processm.dbmodels.models.*
 import processm.services.api.models.QueryResultCollectionMessageBody
-import java.io.*
+import java.io.BufferedInputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.charset.Charset
 import java.util.*
-import java.util.zip.*
+import java.util.zip.Deflater
+import java.util.zip.GZIPInputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.xml.stream.XMLOutputFactory
 
-class LogsService {
+class LogsService(private val producer: Producer) {
     companion object {
         private const val xesFileInputSizeLimit = 5_000_000L
         private const val logLimit = 10L
         private const val traceLimit = 30L
         private const val eventLimit = 90L
         private const val downloadLimitFactor = 10L
+        private const val identityIdAttributeName = "identity:id"
     }
 
     private fun InputStream.boundStreamSize(streamSizeLimit: Long) =
@@ -54,7 +60,7 @@ class LogsService {
                             val log = it as? Log ?: return@map it
                             val logAttributes = log.attributes.toMutableMap()
 
-                            logAttributes.computeIfAbsent("identity:id") { IDAttr("identity:id", UUID.randomUUID()) }
+                            logAttributes.computeIfAbsent(identityIdAttributeName) { IDAttr(identityIdAttributeName, UUID.randomUUID()) }
 
                             return@map Log(
                                 logAttributes,
@@ -63,7 +69,6 @@ class LogsService {
                                 log.eventGlobals.toMutableMap(),
                                 log.traceClassifiers.toMutableMap(),
                                 log.eventClassifiers.toMutableMap())
-
                         }
                 )
             }
@@ -136,6 +141,33 @@ class LogsService {
                     }
                     zip.closeEntry()
                 }
+            }
+        }
+    }
+
+    /**
+     * Enqueues recreation of XES log based on data collected by [etlProcessId], stored in [dataStoreId].
+     */
+    fun enqueueXesExtractionFromMetaModel(dataStoreId: UUID, etlProcessId: UUID) {
+        val dataStoreName = dataStoreId.toString()
+        transaction(DBCache.get(dataStoreName).database) {
+            val etlProcessDetails = EtlProcessesMetadata
+                .innerJoin(DataConnectors)
+                .slice(EtlProcessesMetadata.name, DataConnectors.dataModelId)
+                .select { EtlProcessesMetadata.id eq etlProcessId }
+                .firstOrNull() ?: throw ValidationException(
+                    ValidationException.Reason.ResourceNotFound,
+                    "The specified ETL process and/or data store does not exist")
+            val dataModelId = etlProcessDetails[DataConnectors.dataModelId]?.value ?: throw ValidationException(
+                ValidationException.Reason.ResourceNotFound,
+                "The specified ETL process and/or data store has no data model")
+            val etlProcessName = etlProcessDetails[EtlProcessesMetadata.name]
+
+            producer.produce(ETL_PROCESS_CONVERSION_TOPIC) {
+                setString(DATA_STORE_ID, "$dataStoreId")
+                setString(ETL_PROCESS_ID, "$etlProcessId")
+                setString(DATA_MODEL_ID, "$dataModelId")
+                setString(ETL_PROCESS_NAME, etlProcessName)
             }
         }
     }

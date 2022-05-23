@@ -1,10 +1,15 @@
 package processm.services.logic
 
 import io.mockk.*
+import org.junit.Before
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.koin.core.component.inject
+import org.koin.dsl.module
+import org.koin.test.mock.declareMock
 import processm.dbmodels.models.*
 import java.util.*
 import kotlin.test.*
@@ -13,15 +18,16 @@ import kotlin.test.*
 class AccountServiceTest : ServiceTestBase() {
     private val correctPassword = "pass"
     private val correctPasswordHash = "\$argon2d\$v=19\$m=65536,t=3,p=1\$P0P1NSt1aP8ONWirWMbAWQ\$bDvD/v5/M7T3gRq8BXqbQA"
+    private lateinit var accountService: AccountService
+    private lateinit var groupServiceMock: GroupService
 
-    @BeforeTest
-    fun setUp() {
+    @Before
+    @BeforeEach
+    override fun setUp() {
+        super.setUp()
         groupServiceMock = mockk()
         accountService = AccountService(groupServiceMock)
     }
-
-    lateinit var accountService: AccountService
-    lateinit var groupServiceMock: GroupService
 
     @Test
     fun `password verification returns user object if password is correct`() = withCleanTables(Users) {

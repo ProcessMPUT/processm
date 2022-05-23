@@ -318,11 +318,12 @@ fun Route.DataStoresApi() {
             val etlProcesses = dataStoreService.getEtlProcesses(pathParams.dataStoreId)
                 .mapToArray {
                     AbstractEtlProcess(
+                        it.id,
                         it.name,
                         it.dataConnectorId,
-                        EtlProcessType.valueOf(it.processType.processTypeName),
-                        it.id,
-                        it.lastExecutionTime?.toLocalDateTime()
+                        it.isActive,
+                        it.lastExecutionTime?.toLocalDateTime(),
+                        EtlProcessType.valueOf(it.processType.processTypeName)
                     )
                 }
 
@@ -336,14 +337,13 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            dataStoreService.assertUserHasSufficientPermissionToDataStore(
-                principal.userId,
-                pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
-            )
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner, OrganizationRoleDto.Writer)
             val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
-            when (etlProcessData.type) {
+            if (etlProcessData.dataConnectorId == null) throw ApiException("A data connector reference is required")
+            if (etlProcessData.name.isNullOrBlank()) throw ApiException("A name for ETL process is required")
+
+            val etlProcessId = when (etlProcessData.type) {
                 EtlProcessType.automatic -> {
                     val relations = etlProcessData.caseNotion?.edges.orEmpty().map { edge ->
                         edge.sourceClassId to edge.targetClassId
@@ -368,14 +368,31 @@ fun Route.DataStoresApi() {
                 else -> throw ApiException("The provided ETL process type is not supported")
             }
 
+            call.respond(HttpStatusCode.Created,
+                EtlProcessMessageBody(AbstractEtlProcess(etlProcessId, etlProcessData.name, etlProcessData.dataConnectorId, type = etlProcessData.type)))
+        }
+
+        patch<Paths.EtlProcess> { pathParams ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner, OrganizationRoleDto.Writer)
+            val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
+                ?: throw ApiException("The provided ETL process definition cannot be parsed")
+            if (etlProcessData.isActive == null) throw ApiException("An activation status for ETL process is required")
+            dataStoreService.changeEtlProcessActivationState(pathParams.dataStoreId, pathParams.etlProcessId, etlProcessData.isActive)
+
+            call.respond(HttpStatusCode.NoContent)
             call.respond(
                 HttpStatusCode.Created,
                 EtlProcessMessageBody(
                     AbstractEtlProcess(
+                        etlProcessData.id,
                         etlProcessData.name,
                         etlProcessData.dataConnectorId,
-                        etlProcessData.type,
-                        etlProcessData.id
+                        etlProcessData.isActive,
+                        null,
+                        etlProcessData.type
                     )
                 )
             )
@@ -417,6 +434,16 @@ fun Route.DataStoresApi() {
             call.respond(HttpStatusCode.NoContent)
         }
 
+        post<Paths.EtlProcessLog> { pathParams ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner, OrganizationRoleDto.Writer)
+            logsService.enqueueXesExtractionFromMetaModel(pathParams.dataStoreId, pathParams.etlProcessId)
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+        
         post<Paths.SamplingEtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
@@ -431,13 +458,14 @@ fun Route.DataStoresApi() {
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             val id = when (etlProcessData.type) {
                 EtlProcessType.jdbc -> {
-                    val configuration =
-                        etlProcessData.configuration ?: throw ApiException("Empty ETL configuration is not supported")
+                    etlProcessData.configuration ?: throw ApiException("Empty ETL configuration is not supported")
+                    etlProcessData.dataConnectorId ?: throw ApiException("Unknown data connector ID is not supported")
+                    etlProcessData.name ?: throw ApiException("Unknown ETL process name is not supported")
                     dataStoreService.createSamplingJdbcEtlProcess(
                         pathParams.dataStoreId,
                         etlProcessData.dataConnectorId,
                         etlProcessData.name,
-                        configuration,
+                        etlProcessData.configuration,
                         nComponents
                     )
                 }
@@ -447,7 +475,13 @@ fun Route.DataStoresApi() {
             call.respond(
                 HttpStatusCode.Created,
                 EtlProcessMessageBody(
-                    AbstractEtlProcess(etlProcessData.name, etlProcessData.dataConnectorId, etlProcessData.type, id)
+                    AbstractEtlProcess(
+                        id,
+                        etlProcessData.name,
+                        etlProcessData.dataConnectorId,
+                        etlProcessData.isActive,
+                        etlProcessData.lastExecutionTime,
+                        etlProcessData.type)
                 )
             )
         }

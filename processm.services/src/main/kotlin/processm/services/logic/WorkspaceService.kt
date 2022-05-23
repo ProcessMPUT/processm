@@ -8,14 +8,14 @@ import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.communication.Producer
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.miners.triggerEvent
 import java.util.*
 
-class WorkspaceService(private val accountService: AccountService) {
-
+class WorkspaceService(private val accountService: AccountService, private val producer: Producer) {
     /**
      * Returns all user workspaces for the specified [userId] in the context of the specified [organizationId].
      */
@@ -246,7 +246,7 @@ class WorkspaceService(private val accountService: AccountService) {
             this.workspace = Workspace[workspaceId]
 
             afterCommit {
-                triggerEvent()
+                triggerEvent(producer)
             }
         }
     }
@@ -272,7 +272,7 @@ class WorkspaceService(private val accountService: AccountService) {
             if (layoutData != null) this.layoutData = layoutData
 
             afterCommit {
-                triggerEvent()
+                triggerEvent(producer)
             }
         }
     }
