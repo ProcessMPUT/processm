@@ -59,14 +59,13 @@ class KernelDensityEstimator(
         private val logger = logger()
     }
 
-    val pointsReadOnly: List<Double>
-        get() = points
-
     private val points = ArrayList<Double>()
     private val n: Int
         get() = points.size
-    private var min: Double = Double.POSITIVE_INFINITY
-    private var max: Double = Double.NEGATIVE_INFINITY
+    private val min: Double
+        get() = points.first()
+    private val max: Double
+        get() = points.last()
 
     /** sum of [points] */
     private var s1: Double = 0.0
@@ -156,11 +155,12 @@ class KernelDensityEstimator(
 
     fun fit(data: Iterable<Double>) {
         for (x in data) {
-            points.add(x)
-            if (x < min)
-                min = x
-            if (x > max)
-                max = x
+            var i = points.binarySearch(x)
+            if (i < 0)
+                i = -i - 1
+            points.add(i, x)
+            assert(i == 0 || points[i - 1] <= points[i])
+            assert(i == points.size - 1 || points[i] <= points[i + 1])
             s1 += x
             s2 += x * x
         }
@@ -209,6 +209,49 @@ class KernelDensityEstimator(
         }
     }
 
-    override fun pdf(x: Double): Double = points.sumOf { xi -> kernel((x - xi) / bandwidth) } / (n * bandwidth)
+    /**
+     * An approximation of pdf. Ignores points far enough from x to be of little importance.
+     */
+    override fun pdf(x: Double): Double {
+        // The commented out code is a slower variant of the code below it using binarySearch
+
+//        var lb = 0
+//        while (lb < points.size && (x - bandwidth * kernel.upperBound) > points[lb])
+//            lb++
+
+        val lb = run {
+            val xlb = x - bandwidth * kernel.upperBound
+            var lb = points.binarySearch(xlb)
+            if (lb >= 0)
+                while (lb < points.size && xlb > points[lb + 1])
+                    lb++
+            else
+                lb = -lb - 1
+            lb
+        }
+
+//        var ub = points.size - 1
+//        while (ub >= 0 && (x - bandwidth * kernel.lowerBound) < points[ub])
+//            ub--
+
+        val ub = run {
+            val xub = x - bandwidth * kernel.lowerBound
+            var ub = points.binarySearch(xub)
+            if (ub >= 0)
+                while (ub >= 0 && xub < points[ub - 1])
+                    ub--
+            else
+                ub = -ub - 1
+            ub
+        }
+        return ((lb until ub).sumOf { xi -> kernel((x - points[xi]) / bandwidth) } +
+                lb * kernel(kernel.lowerBound) +
+                (n - ub) * kernel(kernel.upperBound)) / (n * bandwidth)
+    }
+
+    /**
+     * This is an exact way to compute pdf. Left here for documentation purposes.
+     */
+//    override fun pdf(x: Double): Double = points.sumOf { xi -> kernel((x - xi) / bandwidth) } / (n * bandwidth)
 
 }

@@ -1,5 +1,7 @@
 package processm.conformance.conceptdrift.estimators
 
+import org.apache.commons.math3.distribution.NormalDistribution
+import org.apache.commons.math3.random.MersenneTwister
 import processm.conformance.conceptdrift.numerical.optimization.RMSProp
 import processm.core.log.Helpers.assertDoubleEquals
 import kotlin.test.Ignore
@@ -47,5 +49,17 @@ class KernelDensityEstimatorRegressionTest {
         kdf.optimizer = RMSProp()
         kdf.fit(listOf(-2.1, -1.3, -0.4, 1.9, 5.1, 6.2))
         assertDoubleEquals(3.2, kdf.bandwidth, 0.01)
+    }
+
+    @Test
+    fun `sum of two far away gaussians`() {
+        val rng = MersenneTwister(42)
+        val d1 = NormalDistribution(rng, -10.0, 1.0)
+        val d2 = NormalDistribution(rng, 10.0, 1.0)
+        val points = d1.sample(10).toList() + d2.sample(10).toList()
+        val kde = KernelDensityEstimator()
+        kde.fit(points)
+        assertDoubleEquals(0.033, kde.pdf(-10.0))
+        assertDoubleEquals(0.033, kde.pdf(10.0))
     }
 }
