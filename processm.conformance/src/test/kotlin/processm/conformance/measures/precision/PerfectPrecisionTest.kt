@@ -1,8 +1,8 @@
 package processm.conformance.measures.precision
 
 import org.junit.jupiter.api.assertThrows
-import processm.conformance.measures.precision.causalnet.assertDoubleEquals
 import processm.core.helpers.Trie
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.logFromString
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet

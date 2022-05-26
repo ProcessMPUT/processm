@@ -3,6 +3,7 @@ package processm.conformance.measures.precision.causalnet
 import processm.conformance.measures.precision.AbstractPrecision
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.Trie
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log

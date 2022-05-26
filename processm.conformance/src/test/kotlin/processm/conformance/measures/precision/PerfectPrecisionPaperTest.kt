@@ -1,7 +1,7 @@
 package processm.conformance.measures.precision
 
-import processm.conformance.measures.precision.causalnet.assertDoubleEquals
 import processm.core.log.Helpers
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.models.petrinet.petrinet
 import kotlin.test.Test
 
