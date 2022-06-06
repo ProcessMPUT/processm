@@ -10,6 +10,7 @@ import processm.services.api.models.ErrorMessageBody
 import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.OrganizationMemberCollectionMessageBody
 import processm.services.api.models.OrganizationRole
+import processm.services.logic.AccountService
 import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
 import java.util.*
@@ -43,15 +44,10 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
     )
 
-    override fun componentsRegistration() {
-        super.componentsRegistration()
-        organizationService = declareMock()
-    }
-
-    lateinit var organizationService: OrganizationService
-
     @Test
     fun `responds to organization groups request with 200 and groups list`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val accountService = declareMock<AccountService>()
         val organizationId = UUID.randomUUID()
         val userId = UUID.randomUUID()
         val groupId1 = UUID.randomUUID()
@@ -106,6 +102,8 @@ class OrganizationsApiTest : BaseApiTest() {
     @Test
     fun `responds to groups list of recently removed organization request with 404 and error message`() =
         withConfiguredTestApplication {
+            val organizationService = declareMock<OrganizationService>()
+            val accountService = declareMock<AccountService>()
             val removedOrganizationId = UUID.randomUUID()
 
             withAuthentication {
@@ -131,6 +129,8 @@ class OrganizationsApiTest : BaseApiTest() {
 
     @Test
     fun `responds to organization members request with 200 and members list`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val accountService = declareMock<AccountService>()
         val organizationId = UUID.randomUUID()
         val userId = UUID.randomUUID()
         val memberId1 = UUID.randomUUID()
@@ -185,6 +185,8 @@ class OrganizationsApiTest : BaseApiTest() {
     @Test
     fun `responds to members list of recently removed organization request with 404 and error message`() =
         withConfiguredTestApplication {
+            val organizationService = declareMock<OrganizationService>()
+            val accountService = declareMock<AccountService>()
             val removedOrganizationId = UUID.randomUUID()
 
             withAuthentication {

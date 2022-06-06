@@ -1,30 +1,37 @@
 package processm.services.logic
 
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.`java-time`.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
+import processm.core.communication.Producer
+import processm.core.logging.loggedScope
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.afterCommit
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.*
+import processm.dbmodels.models.TYPE
+import processm.dbmodels.models.ACTIVATE
+import processm.dbmodels.models.DEACTIVATE
 import processm.etl.discovery.SchemaCrawlerExplorer
-import processm.etl.helpers.getConnection
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
 import processm.services.api.models.JdbcEtlProcessConfiguration
+import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
 
-class DataStoreService {
+class DataStoreService(private val producer: Producer) {
     /**
      * Returns all data stores for the specified [organizationId].
      */
@@ -94,28 +101,35 @@ class DataStoreService {
     /**
      * Returns all data connectors for the specified [dataStoreId].
      */
-    fun getDataConnectors(dataStoreId: UUID): List<DataConnectorDto> =
-        transaction(DBCache.get("$dataStoreId").database) {
-            val gson = Gson()
+    @OptIn(ExperimentalSerializationApi::class)
+    fun getDataConnectors(dataStoreId: UUID): List<DataConnectorDto> {
+        assertDataStoreExists(dataStoreId)
+        return transaction(DBCache.get("$dataStoreId").database) {
             return@transaction DataConnector.wrapRows(DataConnectors.selectAll()).map {
-                val connectionProperties =
-                    try
-                    {
-                        gson.fromJson<MutableMap<String, String>>(it.connectionProperties, MutableMap::class.java)
-                    }
-                    catch (e: JsonSyntaxException) {
-                        emptyMap<String, String>().toMutableMap()
-                    }
+                val connectionProperties = try {
+                    Json.decodeFromString(it.connectionProperties)
+                } catch (e: SerializationException) {
+                    emptyMap<String, String>().toMutableMap()
+                }
                 connectionProperties.replace("password", "********")
-                return@map DataConnectorDto(it.id.value, it.name, it.lastConnectionStatus, it.lastConnectionStatusTimestamp, it.dataModel?.id?.value, connectionProperties)
+                return@map DataConnectorDto(
+                    it.id.value,
+                    it.name,
+                    it.lastConnectionStatus,
+                    it.lastConnectionStatusTimestamp,
+                    it.dataModel?.id?.value,
+                    connectionProperties
+                )
             }
         }
+    }
 
     /**
      * Creates a data connector attached to the specified [dataStoreId] using data from [connectionString].
      */
-    fun createDataConnector(dataStoreId: UUID, name: String, connectionString: String)
-        = transaction(DBCache.get("$dataStoreId").database) {
+    fun createDataConnector(dataStoreId: UUID, name: String, connectionString: String): UUID {
+        assertDataStoreExists(dataStoreId)
+        return transaction(DBCache.get("$dataStoreId").database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
                 it[this.name] = name
                 it[this.connectionProperties] = connectionString
@@ -123,12 +137,14 @@ class DataStoreService {
 
             return@transaction dataConnectorId.value
         }
+    }
 
     /**
      * Creates a data connector attached to the specified [dataStoreId] using data from [connectionProperties].
      */
-    fun createDataConnector(dataStoreId: UUID, name: String, connectionProperties: Map<String, String>)
-        = transaction(DBCache.get("$dataStoreId").database) {
+    fun createDataConnector(dataStoreId: UUID, name: String, connectionProperties: Map<String, String>): UUID {
+        assertDataStoreExists(dataStoreId)
+        return transaction(DBCache.get("$dataStoreId").database) {
             val dataConnectorId = DataConnectors.insertAndGetId {
                 it[this.name] = name
                 it[this.connectionProperties] = JSONObject(connectionProperties).toString()
@@ -136,24 +152,34 @@ class DataStoreService {
 
             return@transaction dataConnectorId.value
         }
+    }
 
     /**
      * Removes the data connector specified by the [dataConnectorId].
      */
-    fun removeDataConnector(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
-        return@transaction DataConnectors.deleteWhere {
-            DataConnectors.id eq dataConnectorId
-        } > 0
+    fun removeDataConnector(dataStoreId: UUID, dataConnectorId: UUID) {
+        assertDataStoreExists(dataStoreId)
+        transaction(DBCache.get("$dataStoreId").database) {
+            (DataConnectors.deleteWhere {
+                DataConnectors.id eq dataConnectorId
+             } > 0).let { removalStatus ->
+                if (removalStatus) notifyDeactivated(dataStoreId, dataConnectorId)
+                return@transaction removalStatus
+            }
+        }
     }
 
     /**
      * Renames the data connector specified by [dataConnectorId] to [newName].
      */
-    fun renameDataConnector(dataStoreId: UUID, dataConnectorId: UUID, newName: String) = transaction(DBCache.get("$dataStoreId").database) {
+    fun renameDataConnector(dataStoreId: UUID, dataConnectorId: UUID, newName: String) {
+        assertDataStoreExists(dataStoreId)
+        transaction(DBCache.get("$dataStoreId").database) {
             DataConnectors.update ({ DataConnectors.id eq dataConnectorId }) {
                 it[name] = newName
             } > 0
         }
+    }
 
     /**
      * Tests connectivity using the provided [connectionString].
@@ -172,50 +198,71 @@ class DataStoreService {
     /**
      * Returns case notion suggestions for the data accessed using [dataConnectorId].
      */
-    fun getCaseNotionSuggestions(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
-        val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
-        val metaModelReader = MetaModelReader(dataModelId.value)
-        val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
-        val classNames = metaModelReader.getClassNames()
-        return@transaction businessPerspectiveExplorer.discoverBusinessPerspectives(true)
-            .sortedBy { (_, score) -> score }
-            .map { (businessPerspective, _) ->
-                val relations = businessPerspective.caseNotionClasses
-                    .flatMap { classId -> businessPerspective.getSuccessors(classId).map { classId.value to it.value } }
-                businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations }
+    fun getCaseNotionSuggestions(dataStoreId: UUID, dataConnectorId: UUID): List<Pair<List<Pair<String, String>>, List<Pair<Int, Int>>>> {
+        assertDataStoreExists(dataStoreId)
+        return transaction(DBCache.get("$dataStoreId").database) {
+            val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
+            val metaModelReader = MetaModelReader(dataModelId.value)
+            val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
+            val classNames = metaModelReader.getClassNames()
+            return@transaction businessPerspectiveExplorer.discoverBusinessPerspectives(true)
+                .sortedBy { (_, score) -> score }
+                .map { (businessPerspective, _) ->
+                    val relations = businessPerspective.caseNotionClasses
+                        .flatMap { classId -> businessPerspective.getSuccessors(classId).map { classId.value to it.value } }
+                    businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations }
+        }
     }
 
-    fun getRelationshipGraph(dataStoreId: UUID, dataConnectorId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
-        val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
-        val metaModelReader = MetaModelReader(dataModelId.value)
-        val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
-        val classNames = metaModelReader.getClassNames()
-        val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
-        val relations = relationshipGraph.edgeSet().map { edgeName -> "${relationshipGraph.getEdgeSource(edgeName)}" to "${relationshipGraph.getEdgeTarget(edgeName)}" }
+    /**
+     * Returns a graph consisting of all relations discovered in [dataConnectorId].
+     */
+    fun getRelationshipGraph(dataStoreId: UUID, dataConnectorId: UUID): Pair<Map<String, String>, List<Pair<EntityID<Int>, EntityID<Int>>>> {
+        assertDataStoreExists(dataStoreId)
+        return transaction(DBCache.get("$dataStoreId").database) {
+            val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
+            val metaModelReader = MetaModelReader(dataModelId.value)
+            val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
+            val classNames = metaModelReader.getClassNames()
+            val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
+            val relations = relationshipGraph.edgeSet().map { edgeName -> relationshipGraph.getEdgeSource(edgeName) to relationshipGraph.getEdgeTarget(edgeName) }
 
-        return@transaction classNames.mapKeys { "${it.key}" } to relations
+            return@transaction classNames.mapKeys { "${it.key}" } to relations
+        }
     }
 
     /**
      * Creates an automatic ETL process in the specified [dataStoreId] using case notion described by [relations].
      */
-    fun createAutomaticEtlProcess(dataStoreId: UUID, dataConnectorId: UUID, name: String, relations: List<Pair<String, String>>)
-            = transaction(DBCache.get("$dataStoreId").database) {
-        val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
-            it[this.name] = name
-            it[this.processType] = ProcessTypeDto.Automatic.processTypeName
-            it[this.dataConnectorId] = dataConnectorId
-        }
-        AutomaticEtlProcesses.insert {
-            it[this.id] = etlProcessMetadataId
-        }
-        AutomaticEtlProcessRelations.batchInsert(relations) { (sourceClassId, targetClassId) ->
-            this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
-            this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
-            this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
-        }
+    fun createAutomaticEtlProcess(dataStoreId: UUID, dataConnectorId: UUID, name: String, relations: List<Pair<String, String>>): UUID {
+        assertDataStoreExists(dataStoreId)
+        return transaction(DBCache.get("$dataStoreId").database) {
+            loggedScope { logger ->
+                val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
+                    it[this.name] = name
+                    it[this.processType] = ProcessTypeDto.Automatic.processTypeName
+                    it[this.dataConnectorId] = dataConnectorId
+                }
+                AutomaticEtlProcesses.insert {
+                    it[this.id] = etlProcessMetadataId
+                }
+                AutomaticEtlProcessRelations.batchInsert(relations) { relation ->
+                    try {
+                        val sourceClassId = relation.first.toInt()
+                        val targetClassId = relation.second.toInt()
 
-        return@transaction etlProcessMetadataId.value
+                        this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
+                        this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
+                        this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
+                    } catch (e: NumberFormatException) {
+                        logger.info("Incorrect data format detected while ")
+                    }
+                }
+                notifyActivated(dataStoreId, dataConnectorId)
+
+                return@transaction etlProcessMetadataId.value
+            }
+        }
     }
 
     private fun Transaction.saveJdbcEtl(
@@ -279,10 +326,33 @@ class DataStoreService {
     /**
      * Returns all ETL processes stored in the specified [dataStoreId].
      */
-    fun getEtlProcesses(dataStoreId: UUID) =
-        transaction(DBCache.get("$dataStoreId").database) {
+    fun getEtlProcesses(dataStoreId: UUID): List<EtlProcessMetadataDto> {
+        assertDataStoreExists(dataStoreId)
+        return transaction(DBCache.get("$dataStoreId").database) {
             return@transaction EtlProcessMetadata.wrapRows(EtlProcessesMetadata.selectAll()).map { it.toDto() }
         }
+    }
+
+    /**
+     * Changes activation status of the ETL process specified by [etlProcessId].
+     */
+    fun changeEtlProcessActivationState(dataStoreId: UUID, etlProcessId: UUID, isActive: Boolean) {
+        assertDataStoreExists(dataStoreId)
+        transaction(DBCache.get("$dataStoreId").database) {
+            val dataConnectorId = getDataConnectorIdForEtlProcess(etlProcessId)
+
+            (EtlProcessesMetadata
+                .update({ EtlProcessesMetadata.id eq etlProcessId }) {
+                    it[EtlProcessesMetadata.isActive] = isActive
+                } > 0).let { updateStatus ->
+                    if (updateStatus && dataConnectorId != null) {
+                        if (isActive) notifyActivated(dataStoreId, dataConnectorId)
+                        else notifyModified(dataStoreId, dataConnectorId)
+                    }
+                    return@transaction updateStatus
+                }
+        }
+    }
 
     data class EtlProcessInfo(val logIdentityId:UUID, val errors:List<ETLErrorDto>, val lastExecutionTime: Instant?)
 
@@ -295,10 +365,18 @@ class DataStoreService {
     /**
      * Removes the ETL process specified by the [etlProcessId].
      */
-    fun removeEtlProcess(dataStoreId: UUID, etlProcessId: UUID) = transaction(DBCache.get("$dataStoreId").database) {
-        return@transaction EtlProcessesMetadata.deleteWhere {
-            EtlProcessesMetadata.id eq etlProcessId
-        } > 0
+    fun removeEtlProcess(dataStoreId: UUID, etlProcessId: UUID) {
+        assertDataStoreExists(dataStoreId)
+        transaction(DBCache.get("$dataStoreId").database) {
+            val dataConnectorId = getDataConnectorIdForEtlProcess(etlProcessId)
+
+            (EtlProcessesMetadata.deleteWhere {
+                EtlProcessesMetadata.id eq etlProcessId
+            } > 0).let { removalStatus ->
+                if (removalStatus && dataConnectorId != null) notifyModified(dataStoreId, dataConnectorId)
+                return@transaction removalStatus
+            }
+        }
     }
 
     /**
@@ -310,9 +388,9 @@ class DataStoreService {
     }
 
     /**
-     * Asserts that the specified [userId] has the specified [requiredOrganizationRole] allowing for access to [dataStoreId].
+     * Asserts that the specified [userId] has any of the specified [allowedOrganizationRoles] allowing for access to [dataStoreId].
      */
-    fun assertUserHasSufficientPermissionToDataStore(userId: UUID, dataStoreId: UUID, requiredOrganizationRole: OrganizationRoleDto = OrganizationRoleDto.Reader)
+    fun assertUserHasSufficientPermissionToDataStore(userId: UUID, dataStoreId: UUID, vararg allowedOrganizationRoles: OrganizationRoleDto)
         = transaction(DBCache.getMainDBPool().database) {
             DataStores
                 .innerJoin(Organizations)
@@ -320,7 +398,7 @@ class DataStoreService {
                 .innerJoin(OrganizationRoles)
                 .select { DataStores.id eq dataStoreId and
                         (UsersRolesInOrganizations.userId eq userId) and
-                        (UsersRolesInOrganizations.roleId eq OrganizationRoles.getIdByName(requiredOrganizationRole)) }.limit(1).any()
+                        (UsersRolesInOrganizations.roleId inList allowedOrganizationRoles.map { OrganizationRoles.getIdByName(it) }) }.limit(1).any()
                     || throw ValidationException(ValidationException.Reason.ResourceNotFound, "The specified user account and/or data store does not exist")
     }
 
@@ -328,8 +406,12 @@ class DataStoreService {
      * Returns data store struct by its identifier.
      */
     private fun getById(dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
-        return@transaction DataStore[dataStoreId]
+        return@transaction DataStore.findById(dataStoreId) ?: throw ValidationException(
+            ValidationException.Reason.ResourceNotFound, "The specified data store does not exist or the user has insufficient permissions to it"
+        )
     }
+
+    private fun assertDataStoreExists(dataStoreId: UUID) = getById(dataStoreId)
 
     private fun ensureDataModelExistenceForDataConnector(dataStoreId: UUID, dataConnectorId: UUID): EntityID<Int> {
         val dataConnector = DataConnector.findById(dataConnectorId) ?: throw Error()
@@ -347,6 +429,20 @@ class DataStoreService {
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun DataConnector.getConnection(): Connection {
+        return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
+        else getDataSource(Json.decodeFromString(connectionProperties)).connection
+    }
+
+    private fun getDataConnectorIdForEtlProcess(etlProcessId: UUID): UUID? {
+        return EtlProcessesMetadata
+            .slice(EtlProcessesMetadata.dataConnectorId)
+            .select { EtlProcessesMetadata.id eq etlProcessId }
+            .firstOrNull()
+            ?.get(EtlProcessesMetadata.dataConnectorId)
+            ?.value
+    }
 
     fun createSamplingJdbcEtlProcess(
         dataStoreId: UUID,
@@ -356,5 +452,25 @@ class DataStoreService {
         nComponents: Int
     ) = transaction(DBCache.get("$dataStoreId").database) {
         return@transaction saveJdbcEtl(dataConnectorId, name, configuration, nComponents)
+    }
+
+    fun notifyActivated(dataStoreId: UUID, dataConnectorId: UUID) {
+        notifyStateChanged(dataStoreId, dataConnectorId, ACTIVATE)
+    }
+
+    fun notifyDeactivated(dataStoreId: UUID, dataConnectorId: UUID) {
+        notifyStateChanged(dataStoreId, dataConnectorId, DEACTIVATE)
+    }
+
+    fun notifyModified(dataStoreId: UUID, dataConnectorId: UUID) {
+        notifyStateChanged(dataStoreId, dataConnectorId, RELOAD)
+    }
+
+    private fun notifyStateChanged(dataStoreId: UUID, dataConnectorId: UUID, type: String) {
+        producer.produce(DATA_CONNECTOR_TOPIC) {
+            setString(TYPE, type)
+            setString(DATA_STORE_ID, "$dataStoreId")
+            setString(DATA_CONNECTOR_ID, "$dataConnectorId")
+        }
     }
 }

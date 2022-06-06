@@ -9,8 +9,13 @@ import io.ktor.server.testing.handleRequest
 import io.mockk.*
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.TestInstance
+import org.koin.core.component.inject
+import org.koin.dsl.module
+import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.*
+import processm.services.logic.AccountService
+import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
 import java.util.*
 import java.util.stream.Stream
@@ -32,6 +37,7 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to successful authentication with 201 and token`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials("user@example.com", "pass") } returns mockk {
             every { id } returns UUID.randomUUID()
             every { email } returns "user@example.com"
@@ -55,6 +61,8 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to unsuccessful authentication with 401 and error message`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
+
         every { accountService.verifyUsersCredentials(username = any(), password = any()) } returns null
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
@@ -170,6 +178,8 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to current user details request with 200 and current user account details`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
+
             every { accountService.getAccountDetails(userId = any()) } returns mockk {
                 every { email } returns "user@example.com"
                 every { locale } returns "en_US"
@@ -189,6 +199,8 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to non-existing user details request with 404 and error message`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
+
         every { accountService.getAccountDetails(userId = any()) } throws ValidationException(
             ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
         )
@@ -205,6 +217,8 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to successful account registration attempt with 201`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
+
         every {
             accountService.createAccount(
                 "user@example.com", "OrgName1", accountLocale = any()
@@ -232,6 +246,8 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to account registration attempt with already existing user or organization with 409 and error message`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
+
             every {
                 accountService.createAccount(
                     "user@example.com", "OrgName1", accountLocale = any()
@@ -263,6 +279,7 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to account registration attempt with invalid data with 400 and error message`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
             withAuthentication {
                 with(handleRequest(HttpMethod.Post, "/api/users") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -278,6 +295,8 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to successful password change with 200`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
+
         every {
             accountService.changePassword(
                 userId = any(), currentPassword = "current", newPassword = "new"
@@ -303,6 +322,8 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to password change attempt with incorrect password with 403 and error message`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
+
             every {
                 accountService.changePassword(
                     userId = any(), currentPassword = "wrong_password", newPassword = "new"
@@ -329,6 +350,7 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to password change attempt with invalid data with 400 and error message`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
             withAuthentication {
                 with(handleRequest(HttpMethod.Patch, "/api/users/me/password") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -348,6 +370,8 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to successful locale change with 200`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
+
         every { accountService.changeLocale(userId = any(), locale = "pl_PL") } just runs
 
         withAuthentication {
@@ -365,6 +389,8 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to locale change attempt with invalid locale format with 400 and error message`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
+
             every {
                 accountService.changeLocale(
                     userId = any(), locale = "eng_ENG"
@@ -389,6 +415,7 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to locale change attempt with invalid data with 400 and error message`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
             withAuthentication {
                 with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -405,6 +432,7 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to user roles request with 200 and user roles list`() =
         withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
             val userId = UUID.randomUUID()
             withAuthentication(userId) {
                 every { accountService.getRolesAssignedToUser(userId) } returns listOf(

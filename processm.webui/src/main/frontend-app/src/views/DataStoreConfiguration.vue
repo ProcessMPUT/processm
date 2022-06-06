@@ -314,6 +314,30 @@
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="recreateLog(item)">refresh</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("data-stores.etl.recreate-log") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="changeEtlActivationStatus(item)">{{
+                        item.isActive
+                          ? "pause_circle_outline"
+                          : "play_circle_outline"
+                      }}</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{
+                    item.isActive
+                      ? $t("common.deactivate")
+                      : $t("common.activate")
+                  }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
                       <v-icon small @click="removeEtlProcess(item)"
                         >delete_forever</v-icon
                       >
@@ -651,10 +675,63 @@ export default class DataStoreConfiguration extends Vue {
         etlProcess.id
       );
       this.displaySuccessfulRemovalMessage();
-
       this.etlProcesses.splice(this.etlProcesses.indexOf(etlProcess), 1);
     } catch (error) {
       this.displayFailedRemovalMessage();
+    }
+  }
+
+  async changeEtlActivationStatus(etlProcess: EtlProcess) {
+    if (this.dataStoreId == null) return;
+
+    const isConfirmed =
+      !etlProcess.isActive ||
+      (await this.$confirm(
+        `${this.$t("data-stores.etl.deactivation-confirmation", {
+          etlProcessName: etlProcess.name
+        })}`,
+        {
+          title: `${this.$t("common.warning")}`
+        }
+      ));
+
+    if (!isConfirmed) return;
+
+    try {
+      await this.dataStoreService.changeEtlProcessActivationState(
+        this.dataStoreId,
+        etlProcess.id,
+        !etlProcess.isActive
+      );
+      etlProcess.isActive = !etlProcess.isActive;
+      this.app.success(`${this.$t("common.operation-successful")}`);
+    } catch (error) {
+      this.app.error(`${this.$t("common.operation-failure")}`);
+    }
+  }
+
+  async recreateLog(etlProcess: EtlProcess) {
+    if (this.dataStoreId == null) return;
+
+    const isConfirmed = await this.$confirm(
+      `${this.$t("data-stores.etl.log-recreation-confirmation", {
+        etlProcessName: etlProcess.name
+      })}`,
+      {
+        title: `${this.$t("common.warning")}`
+      }
+    );
+
+    if (!isConfirmed) return;
+
+    try {
+      await this.dataStoreService.recreateXesLogFromEtlProcess(
+        this.dataStoreId,
+        etlProcess.id
+      );
+      this.app.success(`${this.$t("common.operation-successful")}`);
+    } catch (error) {
+      this.app.error(`${this.$t("common.operation-failure")}`);
     }
   }
 

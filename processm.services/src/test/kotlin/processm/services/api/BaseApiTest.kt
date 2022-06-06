@@ -6,6 +6,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
+import com.sun.xml.bind.v2.schemagen.episode.Klass
 import io.ktor.config.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
@@ -17,7 +18,7 @@ import org.junit.Before
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import org.koin.test.AutoCloseKoinTest
+import org.koin.test.KoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
@@ -28,24 +29,32 @@ import processm.services.logic.AccountService
 import java.time.LocalDateTime
 import java.util.*
 import java.util.stream.Stream
+import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-abstract class BaseApiTest : AutoCloseKoinTest() {
+abstract class BaseApiTest : KoinTest {
+    protected val gson: Gson = GsonBuilder()
+        .registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
+            override fun write(out: JsonWriter, value: LocalDateTime?) {
+                out.value(value?.toString())
+            }
+
+            override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
+        }).create()
+
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
+    private val mocksMap = mutableMapOf<KClass<*>, Any>()
 
     // @Before causes the setUp() method to be called when running tests individually
     // @BeforeEach causes the setUp() method to be called before @ParameterizedTest tests
     @Before
     @BeforeEach
-    open fun setUp() {
+    fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
-        MockProvider.register { mockedClass -> mockkClass(mockedClass) }
-    }
-
-    protected open fun componentsRegistration() {
-        accountService = declareMock()
+        // The resolved instances are cached, so every call to `declareMock` returns the same instance.
+        MockProvider.register { mockedClass ->  mocksMap.computeIfAbsent(mockedClass) { mockkClass(mockedClass) } }
     }
 
     @ParameterizedTest
@@ -78,8 +87,6 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
             }
         }
 
-    protected lateinit var accountService: AccountService
-
     protected fun <R> withConfiguredTestApplication(
         configurationCustomization: (MapApplicationConfig.() -> Unit)? = null,
         testLogic: TestApplicationEngine.() -> R
@@ -92,7 +99,6 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
         }
         configurationCustomization?.invoke(configuration)
         application.apiModule()
-        componentsRegistration()
         testLogic(this)
     }
 
@@ -103,6 +109,7 @@ abstract class BaseApiTest : AutoCloseKoinTest() {
         role: Pair<OrganizationRole, UUID> = OrganizationRole.owner to UUID.randomUUID(),
         callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
+        val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
             every { id } returns userId
             every { email } returns login

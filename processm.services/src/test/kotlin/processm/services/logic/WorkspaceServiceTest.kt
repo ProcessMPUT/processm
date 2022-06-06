@@ -1,9 +1,11 @@
 package processm.services.logic
 
-import io.mockk.every
-import io.mockk.mockk
+import io.mockk.*
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
+import org.junit.Before
+import org.junit.jupiter.api.BeforeEach
+import processm.core.communication.Producer
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
@@ -12,14 +14,18 @@ import java.util.*
 import kotlin.test.*
 
 class WorkspaceServiceTest : ServiceTestBase() {
-    @BeforeTest
-    fun setUp() {
-        accountServiceMock = mockk()
-        workspaceService = WorkspaceService(accountServiceMock)
-    }
+    private lateinit var producer: Producer
+    private lateinit var accountService: AccountService
+    private lateinit var workspaceService: WorkspaceService
 
-    lateinit var accountServiceMock: AccountService
-    lateinit var workspaceService: WorkspaceService
+    @Before
+    @BeforeEach
+    override fun setUp() {
+        super.setUp()
+        producer = mockk()
+        accountService = mockk()
+        workspaceService = WorkspaceService(accountService, producer)
+    }
 
     @Test
     fun `returns all user workspaces in the organization`(): Unit = withCleanTables(
@@ -56,8 +62,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val userGroupId = createGroup()
         val userId = createUser(privateGroupId = userGroupId.value)
         val organizationId = createOrganization()
-
-        every { accountServiceMock.getAccountDetails(userId.value) } returns mockk {
+        every { accountService.getAccountDetails(userId.value) } returns mockk {
             every { privateGroup.id } returns userGroupId.value
         }
 
@@ -196,6 +201,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val newComponentCustomizationData = """{"data":"new"}"""
         val newDataQuery = "new query"
         val newDataStore = UUID.randomUUID()
+        every { producer.produce(any(), any()) } just runs
 
         workspaceService.addOrUpdateWorkspaceComponent(
             componentId.value,
@@ -242,6 +248,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             componentType = oldComponentType,
             customizationData = oldComponentCustomizationData
         )
+        every { producer.produce(any(), any()) } just runs
 
         workspaceService.addOrUpdateWorkspaceComponent(
             componentId.value,
@@ -323,6 +330,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        every { producer.produce(any(), any()) } just runs
 
         workspaceService.addOrUpdateWorkspaceComponent(
             componentId,

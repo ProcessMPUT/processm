@@ -1,11 +1,16 @@
 package processm.miners.kpi
 
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import processm.core.DBTestHelper
+import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
 import processm.core.persistence.connection.DBCache
@@ -46,7 +51,7 @@ class LogKPIServiceTests {
                 query = _query
                 workspace = Workspace.all().firstOrNull() ?: Workspace.new { name = "test-workspace" }
             }
-        }.triggerEvent()
+        }.triggerEvent(Producer())
     }
 
     @AfterTest
@@ -154,7 +159,7 @@ class LogKPIServiceTests {
                 }.first()
                 component.query = "select count(^t:name)"
                 component
-            }.triggerEvent()
+            }.triggerEvent(Producer())
 
 
             Thread.sleep(1000L) // wait for calculation
