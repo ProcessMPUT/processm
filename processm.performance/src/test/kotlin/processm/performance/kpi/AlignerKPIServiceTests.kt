@@ -5,12 +5,9 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import processm.core.DBTestHelper
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
-import processm.core.log.DBXESOutputStream
-import processm.core.log.InferConceptInstanceFromStandardLifecycle
-import processm.core.log.XMLXESInputStream
-import processm.core.log.attribute.IDAttr
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
@@ -23,8 +20,8 @@ import kotlin.test.*
 class AlignerKPIServiceTests {
     companion object {
 
-        val dataStore = UUID.randomUUID()
-        val logUUID = UUID.randomUUID()
+        val dataStore = UUID.fromString(DBTestHelper.dbName)
+        val logUUID = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
         var perfectCNetId: Long = -1L
         var mainstreamCNetId: Long = -1L
@@ -32,24 +29,6 @@ class AlignerKPIServiceTests {
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            DBXESOutputStream::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes").use { stream ->
-                DBXESOutputStream(DBCache.get(dataStore.toString()).getConnection()).use { output ->
-                    output.write(InferConceptInstanceFromStandardLifecycle(XMLXESInputStream(stream)).map {
-                        if (it is processm.core.log.Log)
-                            processm.core.log.Log(
-                                HashMap(it.attributes).apply { put("identity:id", IDAttr("identity:id", logUUID)) },
-                                HashMap(it.extensions),
-                                HashMap(it.traceGlobals),
-                                HashMap(it.eventGlobals),
-                                HashMap(it.traceClassifiers),
-                                HashMap(it.eventClassifiers)
-                            )
-                        else
-                            it
-                    })
-                }
-            }
-
             perfectCNetId = createPerfectCNet()
             mainstreamCNetId = createMainstreamCNet()
 
