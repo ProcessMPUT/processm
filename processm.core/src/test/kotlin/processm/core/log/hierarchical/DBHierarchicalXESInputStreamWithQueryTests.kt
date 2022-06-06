@@ -1771,6 +1771,17 @@ class DBHierarchicalXESInputStreamWithQueryTests {
         }
     }
 
+    /**
+     * Demonstrates the bug where multi-level implicit group by with hoisting causes counting of duplicates.
+     */
+    @Test
+    fun multiScopeImplicitGroupBy() {
+        val stream = q("select count(l:name), count(^t:name), count(^^e:name) where l:id=$journal").first()
+        assertEquals(1L, stream.attributes["count(log:concept:name)"]!!.value)
+        assertEquals(101L, stream.attributes["count(^trace:concept:name)"]!!.value)
+        assertEquals(2298L, stream.attributes["count(^^event:concept:name)"]!!.value)
+    }
+
     @Test
     fun limitSingleTest() {
         val stream = q("where l:name='JournalReview' limit l:1")
