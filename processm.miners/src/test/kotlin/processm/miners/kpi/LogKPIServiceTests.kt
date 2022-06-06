@@ -1,9 +1,5 @@
 package processm.miners.kpi
 
-import io.mockk.every
-import io.mockk.just
-import io.mockk.mockk
-import io.mockk.runs
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -26,6 +22,9 @@ class LogKPIServiceTests {
     companion object {
 
         val dataStore = UUID.fromString(DBTestHelper.dbName)
+
+        @Suppress("unused") // make sure that the lazy field JournalReviewExtra is initialized
+        val journal = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
 
         @JvmStatic
