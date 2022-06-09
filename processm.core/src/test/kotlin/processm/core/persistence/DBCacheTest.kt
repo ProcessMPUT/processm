@@ -8,13 +8,16 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.junit.jupiter.api.Timeout
 import processm.core.persistence.connection.DBCache
 import java.lang.management.ManagementFactory
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.*
 
+@Timeout(20L, unit = TimeUnit.SECONDS)
 class DBCacheTest {
     @Test
     fun jmxTest() {
