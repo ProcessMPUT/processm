@@ -16,9 +16,12 @@ import processm.dbmodels.models.EtlProcessMetadata
 import processm.etl.MySQLEnvironment
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
+import kotlin.test.Test
 
-
+@Tag("ETL")
+@Timeout(60, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MySQLEmployeesTest {
 
@@ -125,11 +128,11 @@ class MySQLEmployeesTest {
 
 
             assertEquals(1, list.count { it is Log })
-            assertEquals(expectedNumberOfTraces, list.filterIsInstance<Trace>().groupBy { it.identityId }.count())
+            assertEquals(expectedNumberOfTraces, list.filterIsInstance<Trace>().mapToSet { it.identityId }.size)
             assertEquals(expectedNumberOfEvents, list.count { it is Event })
 
             for (event in list.filterIsInstance<Event>()) {
-                assertTrue(event.conceptName in setOf("hire", "change_salary", "change_title", "change_department"))
+                assertTrue(event.conceptName in conceptNames)
                 assertTrue(event.identityId!!.mostSignificantBits == 0L)
                 assertTrue(event.identityId!!.leastSignificantBits <= Int.MAX_VALUE)
             }
@@ -195,14 +198,14 @@ class MySQLEmployeesTest {
     @Test
     fun `read complete XES and then read nothing starting from 0`() {
         val id = createEtlConfiguration()
-        val stream = transaction(DBCache.get(dataStoreName).database) {
+        val (logs, traces, events) = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(id)!!
-            return@transaction etl.toXESInputStream().toList()
+            return@transaction etl.getDistribution()
         }
 
-        assertEquals(1, stream.filterIsInstance<Log>().size)
-        assertEquals(expectedNumberOfTraces, stream.filterIsInstance<Trace>().mapToSet { it.identityId }.size)
-        assertEquals(expectedNumberOfEvents, stream.filterIsInstance<Event>().size)
+        assertEquals(1, logs)
+        assertEquals(expectedNumberOfTraces, traces)
+        assertEquals(expectedNumberOfEvents, events)
 
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(id)!!
@@ -219,21 +222,21 @@ class MySQLEmployeesTest {
             val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().take(100).toList()
         }
-        assertFalse { stream.isEmpty() }
+        assertFalse(stream.isEmpty())
+
+        val (logs, traces, events) = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.findById(id)!!
+            return@transaction etl.getDistribution()
+        }
+        assertEquals(1, logs)
+        assertEquals(expectedNumberOfTraces, traces)
+        assertEquals(expectedNumberOfEvents, events)
 
         stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(id)!!
             return@transaction etl.toXESInputStream().toList()
         }
-        assertEquals(1, stream.filterIsInstance<Log>().size)
-        assertEquals(expectedNumberOfTraces, stream.filterIsInstance<Trace>().mapToSet { it.identityId }.size)
-        assertEquals(expectedNumberOfEvents, stream.filterIsInstance<Event>().size)
-
-        stream = transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.findById(id)!!
-            return@transaction etl.toXESInputStream().toList()
-        }
-        assertTrue { stream.isEmpty() }
+        assertTrue(stream.isEmpty())
     }
 
     private fun `insert and verify new`(id: EntityID<UUID>) {
@@ -368,22 +371,17 @@ class MySQLEmployeesTest {
     @Test
     fun `read all read nothing add new read new`() {
         val id = createEtlConfiguration()
-        var list: List<XESComponent> = transaction(DBCache.get(dataStoreName).database) {
-            ArrayList<XESComponent>(7837736).apply {
-                addAll(
-                    ETLConfiguration.findById(id)!!.toXESInputStream()
-                )
-            }
+        val (logs, traces, events) = transaction(DBCache.get(dataStoreName).database) {
+            val etl = ETLConfiguration.findById(id)!!
+            return@transaction etl.getDistribution()
         }
-        assertEquals(7837736, list.size)
-
-        assertEquals(1, list.count { it is Log })
-        assertEquals(expectedNumberOfTraces, list.filterIsInstance<Trace>().groupBy { it.identityId }.count())
-        assertEquals(expectedNumberOfEvents, list.count { it is Event })
-        list = transaction(DBCache.get(dataStoreName).database) {
+        assertEquals(1, logs)
+        assertEquals(expectedNumberOfTraces, traces)
+        assertEquals(expectedNumberOfEvents, events)
+        val list = transaction(DBCache.get(dataStoreName).database) {
             ETLConfiguration.findById(id)!!.toXESInputStream().toList()
         }
-        assertTrue { list.isEmpty() }
+        assertTrue(list.isEmpty())
         `insert and verify new`(id)
     }
 
@@ -397,5 +395,19 @@ class MySQLEmployeesTest {
             logger.debug("${x::class} ${x.identityId} ${x.conceptName}")
         assertTrue { list.isEmpty() }
         `insert and verify new`(id)
+    }
+
+    private fun ETLConfiguration.getDistribution(): Triple<Int, Int, Int> {
+        var logs = 0
+        val traces = HashSet<UUID>()
+        var events = 0
+        for (component in toXESInputStream()) {
+            when (component) {
+                is Event -> ++events
+                is Trace -> traces.add(component.identityId!!)
+                is Log -> ++logs
+            }
+        }
+        return Triple(logs, traces.size, events)
     }
 }

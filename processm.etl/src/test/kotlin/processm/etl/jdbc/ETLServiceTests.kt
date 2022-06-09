@@ -6,6 +6,8 @@ import org.jetbrains.exposed.sql.statements.jdbc.JdbcConnectionImpl
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Timeout
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
 import processm.core.helpers.toUUID
@@ -22,8 +24,11 @@ import processm.etl.DBMSEnvironment
 import processm.etl.PostgreSQLEnvironment
 import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
+@Tag("ETL")
+@Timeout(60, unit = TimeUnit.SECONDS)
 class ETLServiceTests {
     companion object {
         // region environment
@@ -428,6 +433,7 @@ OFFSET ?::bigint
             // simulate work
             Thread.sleep(5000L)
 
+            logger.info("Disabling ETL process repeat")
             transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
                     ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }
@@ -438,8 +444,10 @@ OFFSET ?::bigint
             }.notifyUsers()
 
             // simulate break
+            logger.info("Break")
             Thread.sleep(2000L)
 
+            logger.info("Enabling ETL process repeat")
             transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.find {
                     ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq "repeat" }

@@ -17,10 +17,13 @@ import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.DBMSEnvironment
 import processm.etl.PostgreSQLEnvironment
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @Suppress("SqlResolve")
+@Tag("ETL")
+@Timeout(60, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PostgresSakilaWithFloatingPointEventIdsTest {
 
@@ -131,7 +134,9 @@ ORDER BY ${columnQuot}event_id${columnQuot}
     }
     // endregion
 
+    @Tag("slow")
     @Test
+    @Timeout(180, unit = TimeUnit.SECONDS)
     fun `read XES from existing data and write it to data store`() {
         var logUUID: UUID? = null
         logger.info("Importing XES...")

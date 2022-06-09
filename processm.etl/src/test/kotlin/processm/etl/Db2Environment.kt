@@ -11,7 +11,6 @@ import processm.dbmodels.models.DataConnector
 import processm.etl.Db2Environment.Companion.groupInserts
 import java.nio.charset.StandardCharsets
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * DB2 as a component in integration testing sucks:

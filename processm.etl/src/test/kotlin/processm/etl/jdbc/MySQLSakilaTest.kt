@@ -1,11 +1,6 @@
 package processm.etl.jdbc
 
-import org.testcontainers.containers.MSSQLServerContainer
-import org.testcontainers.utility.MountableFile
-import processm.core.logging.logger
 import processm.etl.DBMSEnvironment
-import processm.etl.DBMSEnvironmentConfigurator
-import processm.etl.MSSQLEnvironment
 import processm.etl.MySQLEnvironment
 import java.sql.Connection
 

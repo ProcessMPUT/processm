@@ -15,11 +15,17 @@ import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.EtlProcessMetadata
-import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.OracleEnvironment
 import java.util.*
-import kotlin.test.*
+import java.util.concurrent.TimeUnit
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
+@Tag("ETL")
+@Timeout(60, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OracleOTSampleDbTest {
 

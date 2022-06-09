@@ -18,9 +18,12 @@ import processm.etl.DBMSEnvironment
 import java.sql.Connection
 import java.sql.Timestamp
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
 
 @Suppress("SqlResolve")
+@Tag("ETL")
+@Timeout(60, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class ContinuousQueryTest {
 
@@ -252,7 +255,9 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         }
     }
 
+    @Tag("slow")
     @Test
+    @Timeout(180, unit = TimeUnit.SECONDS)
     fun `read XES from existing data and write it to data store`() {
         val id = createEtlConfiguration()
         var logUUID: UUID? = null
@@ -285,7 +290,9 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         assertEquals(0, invalidContent.count())
     }
 
+    @Tag("slow")
     @Test
+    @Timeout(150, unit = TimeUnit.SECONDS)
     fun `read partially XES from existing data and write it to data store then read the remaining XES and write it to data store`() {
         val id = createEtlConfiguration()
         val partSize = 10000
@@ -294,8 +301,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(id)!!
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
-                val materialized = etl.toXESInputStream().take(partSize).toList()
-                out.write(materialized.asSequence())
+                out.write(etl.toXESInputStream().take(partSize))
             }
 
             assertEquals(expectedLastEventExternalIdAfterTheFirstBatch, etl.lastEventExternalId)
@@ -342,7 +348,9 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     }
 
 
+    @Tag("slow")
     @Test
+    @Timeout(180, unit = TimeUnit.SECONDS)
     fun `read XES from existing data and write it to data store then add new data next read XES and write it to data store`() {
         val id = createEtlConfiguration()
         var logUUID: UUID? = null
@@ -452,7 +460,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             )
         } finally {
             externalDB.connect().use { conn ->
-                conn.autoCommit = true
+                conn.autoCommit = false
                 conn.prepareStatement("delete from payment where rental_id=?").use { stmt ->
                     stmt.setObject(1, rentalId)
                     stmt.execute()
@@ -461,6 +469,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
                     stmt.setObject(1, rentalId)
                     stmt.execute()
                 }
+                conn.commit()
             }
         }
     }
@@ -495,9 +504,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             }
 
             val materializedStream = etl.toXESInputStream().toList()
-            assertEquals(1, materializedStream.count { it is Log })
-            assertEquals(1, materializedStream.count { it is Trace })
-            assertEquals(1, materializedStream.count { it is Event })
+            materializedStream.assertDistribution(1, 1, 1)
 
             val trace = materializedStream.first { it is Trace }
             val event = materializedStream.first { it is Event }
@@ -539,9 +546,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             }
 
             val materializedStream = etl.toXESInputStream().toList()
-            assertEquals(1, materializedStream.count { it is Log })
-            assertEquals(1, materializedStream.count { it is Trace })
-            assertEquals(1, materializedStream.count { it is Event })
+            materializedStream.assertDistribution(1, 1, 1)
 
             val trace = materializedStream.first { it is Trace }
             val event = materializedStream.first { it is Event }
@@ -583,9 +588,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             }
 
             val materializedStream = etl.toXESInputStream().toList()
-            assertEquals(1, materializedStream.count { it is Log })
-            assertEquals(1, materializedStream.count { it is Trace })
-            assertEquals(1, materializedStream.count { it is Event })
+            materializedStream.assertDistribution(1, 1, 1)
 
             val trace = materializedStream.first { it is Trace }
             val event = materializedStream.first { it is Event }
@@ -627,9 +630,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             }
 
             val materializedStream = etl.toXESInputStream().toList()
-            assertEquals(1, materializedStream.count { it is Log })
-            assertEquals(1, materializedStream.count { it is Trace })
-            assertEquals(1, materializedStream.count { it is Event })
+            materializedStream.assertDistribution(1, 1, 1)
 
             val trace = materializedStream.first { it is Trace }
             val event = materializedStream.first { it is Event }
@@ -671,9 +672,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             }
 
             val materializedStream = etl.toXESInputStream().toList()
-            assertEquals(1, materializedStream.count { it is Log })
-            assertEquals(1, materializedStream.count { it is Trace })
-            assertEquals(1, materializedStream.count { it is Event })
+            materializedStream.assertDistribution(1, 1, 1)
 
             val trace = materializedStream.first { it is Trace }
             val event = materializedStream.first { it is Event }
@@ -715,9 +714,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             }
 
             val materializedStream = etl.toXESInputStream().toList()
-            assertEquals(1, materializedStream.count { it is Log })
-            assertEquals(1, materializedStream.count { it is Trace })
-            assertEquals(1, materializedStream.count { it is Event })
+            materializedStream.assertDistribution(1, 1, 1)
 
             val trace = materializedStream.first { it is Trace }
             val event = materializedStream.first { it is Event }
@@ -759,9 +756,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             }
 
             val materializedStream = etl.toXESInputStream().toList()
-            assertEquals(1, materializedStream.count { it is Log })
-            assertEquals(1, materializedStream.count { it is Trace })
-            assertEquals(1, materializedStream.count { it is Event })
+            materializedStream.assertDistribution(1, 1, 1)
 
             val trace = materializedStream.first { it is Trace }
             val event = materializedStream.first { it is Event }
@@ -777,5 +772,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
 
             rollback()
         }
+    }
+
+    private fun Iterable<XESComponent>.assertDistribution(logs: Int, traces: Int, events: Int) {
+        assertEquals(logs, count { it is Log })
+        assertEquals(traces, count { it is Trace })
+        assertEquals(events, count { it is Event })
     }
 }
