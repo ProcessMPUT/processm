@@ -2,9 +2,8 @@ package processm.etl.jdbc
 
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.log.*
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -27,7 +26,7 @@ abstract class ContinuousQueryTest {
 
     // region environment
     private val logger = logger()
-    private val dataStoreName = UUID.randomUUID().toString()
+    private val dataStoreName = DBTestHelper.dbName
     private lateinit var externalDB: DBMSEnvironment<*>
     // endregion
 
@@ -177,10 +176,6 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.get(dataStoreName).close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-        }
     }
     // endregion
 

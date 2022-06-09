@@ -3,9 +3,8 @@ package processm.etl.jdbc
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.log.*
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -30,7 +29,7 @@ class MSSQLWorldWideImportersTest {
 
     // region environment
     private val logger = logger()
-    private lateinit var dataStoreName: String
+    private val dataStoreName: String = DBTestHelper.dbName
     private lateinit var externalDB: DBMSEnvironment<*>
     private lateinit var etlConfigurationId: EntityID<UUID>
     // endregion
@@ -75,7 +74,6 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
             (if (batch) "" else """ where "event_id" > coalesce(?, 0)""") + """ order by "event_id""""
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0"): EntityID<UUID> {
-        dataStoreName = UUID.randomUUID().toString()
         return transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
@@ -137,9 +135,6 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
                     }
             }
             conn.commit()
-        }
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
         }
         transaction(DBCache.get(dataStoreName).database) {
             ETLConfigurations.deleteAll()

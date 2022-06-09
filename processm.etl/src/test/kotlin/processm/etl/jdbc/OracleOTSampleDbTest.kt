@@ -2,9 +2,8 @@ package processm.etl.jdbc
 
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.helpers.mapToSet
 import processm.core.log.*
 import processm.core.log.attribute.value
@@ -46,10 +45,6 @@ class OracleOTSampleDbTest {
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.get(dataStoreName).close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-        }
     }
 
     @AfterTest

@@ -1,9 +1,8 @@
 package processm.etl.jdbc
 
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.log.AppendingDBXESOutputStream
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -39,7 +38,7 @@ class PostgresSakilaWithFloatingPointEventIdsTest {
 
     // region environment
     private val logger = logger()
-    private val dataStoreName = UUID.randomUUID().toString()
+    private val dataStoreName = DBTestHelper.dbName
     private lateinit var externalDB: DBMSEnvironment<*>
     // endregion
 
@@ -129,10 +128,6 @@ ORDER BY ${columnQuot}event_id${columnQuot}
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.get(dataStoreName).close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-        }
     }
     // endregion
 

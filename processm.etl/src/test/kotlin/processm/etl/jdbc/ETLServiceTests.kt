@@ -28,7 +28,7 @@ class ETLServiceTests {
     companion object {
         // region environment
         private val logger = logger()
-        private val dataStoreId = UUID.randomUUID().toString()
+        private val dataStoreId = UUID.randomUUID().toString() // do not replace with DBTestHelper.dbName
         private lateinit var externalDB: DBMSEnvironment<*>
         private lateinit var artemis: Artemis
         // endregion

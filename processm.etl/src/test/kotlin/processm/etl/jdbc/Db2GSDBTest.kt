@@ -3,9 +3,8 @@ package processm.etl.jdbc
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.helpers.mapToSet
 import processm.core.log.DBLogCleaner
 import processm.core.log.Event
@@ -93,10 +92,6 @@ class Db2SalesTest {
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.get(dataStoreName).close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-        }
     }
 
     @AfterTest
@@ -114,9 +109,6 @@ class Db2SalesTest {
         }
         transaction(DBCache.get(dataStoreName).database) {
             ETLConfigurations.deleteAll()
-        }
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
         }
     }
 
