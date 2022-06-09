@@ -45,15 +45,16 @@ class MySQLEmployeesTest {
             " order by `event_id`"
 
 
-    private val dataStoreName = UUID.randomUUID().toString()
-    private val etlConfiguratioName = "MySQL Employees ETL Test"
+    private val dataStoreName = DBTestHelper.dbName
+    private val etlConfigurationName = "MySQL Employees ETL Test"
+    private val conceptNames = setOf("hire", "change_salary", "change_title", "change_department")
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = getEventSQL(lastEventExternalId == null)

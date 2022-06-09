@@ -74,15 +74,15 @@ class OracleOTSampleDbTest {
     }
 
     private val logger = logger()
-    private val dataStoreName = UUID.randomUUID().toString()
-    private val etlConfiguratioName = "Oracle Sample DB ETL Test"
+    private val dataStoreName = DBTestHelper.dbName
+    private val etlConfigurationName = "Oracle Sample DB ETL Test"
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = getEventSQL(lastEventExternalId == null)

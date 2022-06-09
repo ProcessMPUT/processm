@@ -53,15 +53,15 @@ class Db2SalesTest {
 
     private lateinit var externalDB: Db2Environment
 
-    private val dataStoreName = UUID.randomUUID().toString()
-    private val etlConfiguratioName = "Db2 GSDB ETL Test"
+    private val dataStoreName = DBTestHelper.dbName
+    private val etlConfigurationName = "Db2 GSDB ETL Test"
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = if (lastEventExternalId == null) batchEventSQL else incrementalEventSQL

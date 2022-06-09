@@ -90,7 +90,7 @@ abstract class ContinuousQueryTest {
     // endregion
 
     // region user input
-    protected abstract val etlConfiguratioName: String
+    protected abstract val etlConfigurationName: String
 
     /**
      * The SQL query for transforming the data into events. One event per row.
@@ -139,7 +139,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                     processType = "jdbc"
                 }

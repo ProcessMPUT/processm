@@ -8,7 +8,7 @@ import java.sql.Types
 
 class OracleSakilaTest : ContinuousQueryTest() {
 
-    override val etlConfiguratioName: String = "Test ETL process for Oracle Sakila DB"
+    override val etlConfigurationName: String = "Test ETL process for Oracle Sakila DB"
 
     override val dummyFrom: String = " from dual"
     override val sqlLong = "NUMBER(*, 0)"

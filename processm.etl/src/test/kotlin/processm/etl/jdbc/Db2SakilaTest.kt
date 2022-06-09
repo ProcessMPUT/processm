@@ -6,7 +6,7 @@ import processm.etl.Db2Environment
 
 class Db2SakilaTest : ContinuousQueryTest() {
 
-    override val etlConfiguratioName: String = "Test ETL process for Db2 Sakila DB"
+    override val etlConfigurationName: String = "Test ETL process for Db2 Sakila DB"
 
     override val dummyFrom: String = " FROM SYSIBM.SYSDUMMY1"
     override val sqlText: String = "VARCHAR"

@@ -36,7 +36,7 @@ class MSSQLWorldWideImportersTest {
     // endregion
 
     // region user input
-    private val etlConfiguratioName = "ETL Configuration for WorldWideImporters"
+    private val etlConfigurationName = "ETL Configuration for WorldWideImporters"
 
     private fun getEventQuery(batch: Boolean) = """
 WITH MainOrderAux(ParentID, ChildID) AS 
@@ -80,7 +80,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = getEventQuery(lastEventExternalId == null)

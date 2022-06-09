@@ -27,7 +27,7 @@ class PostgresSakilaWithFloatingPointEventIdsTest {
 
     val expectedNumberOfEvents = 47954L
 
-    val etlConfiguratioName: String = "Test ETL process for PostgreSQL Sakila DB with floating-point event ids"
+    val etlConfigurationName: String = "Test ETL process for PostgreSQL Sakila DB with floating-point event ids"
 
     fun initExternalDB(): DBMSEnvironment<*> = PostgreSQLEnvironment.getSakila()
 
@@ -59,7 +59,7 @@ class PostgresSakilaWithFloatingPointEventIdsTest {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = getEventSQL
@@ -141,7 +141,10 @@ ORDER BY ${columnQuot}event_id${columnQuot}
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq etlConfiguratioName }.first().id }.first()
+            val etl = ETLConfiguration.find {
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq etlConfigurationName }
+                    .first().id
+            }.first()
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }
