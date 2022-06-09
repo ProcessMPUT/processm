@@ -330,9 +330,9 @@ class IntegrationTests {
             currentDataStore = createDataStore("datastore")
             currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
             val initialDefinition = AbstractEtlProcess(
-                samplingEtlProcessName,
-                currentDataConnector?.id!!,
-                EtlProcessType.jdbc,
+                name = samplingEtlProcessName,
+                id = currentDataConnector?.id!!,
+                type = EtlProcessType.jdbc,
                 configuration = JdbcEtlProcessConfiguration(
                     query,
                     true,
@@ -424,9 +424,9 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to sakilaJdbcUrl))
 
             val initialDefinition = AbstractEtlProcess(
-                samplingEtlProcessName,
-                currentDataConnector?.id!!,
-                EtlProcessType.jdbc,
+                name = samplingEtlProcessName,
+                id = currentDataConnector?.id!!,
+                type = EtlProcessType.jdbc,
                 configuration = JdbcEtlProcessConfiguration(
                     query,
                     true,
