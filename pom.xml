@@ -220,11 +220,13 @@
                 <configuration>
                     <groups>${groups}</groups>
                     <excludedGroups>${excludedGroups}</excludedGroups>
+                    <parallel>classes</parallel>
+                    <useUnlimitedThreads>true</useUnlimitedThreads>
                     <includes>
                         <include>**/*.java</include>
                         <include>**/*.kt</include>
                     </includes>
-                    <argLine>@../processm.launcher/src/launcher.arguments</argLine>
+                    <argLine>@../processm.launcher/src/launcher.arguments -Xmx6G</argLine>
                 </configuration>
             </plugin>
             <plugin>
