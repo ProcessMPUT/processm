@@ -66,11 +66,12 @@ class OracleEnvironment(
             return container
         }
 
-        private val sharedContainer by lazy {
+        private val sharedContainerDelegate = lazy {
             val container = createContainer()
             Startables.deepStart(listOf(container)).join()
             return@lazy container
         }
+        private val sharedContainer by sharedContainerDelegate
 
         private val sakilaEnv by lazy {
             val env = OracleEnvironment(sharedContainer)
@@ -156,7 +157,7 @@ $sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oe
         get() = container.withSid(sid).jdbcUrl
 
     override fun close() {
-        if (container !== sharedContainer)
+        if (!sharedContainerDelegate.isInitialized() || container !== sharedContainer)
             container.close() // otherwise it is testcontainer's responsibility to shutdown the container
     }
 

@@ -20,11 +20,12 @@ class MSSQLEnvironment(
         fun createContainer(): MSSQLServerContainer<*> = MSSQLServerContainer<MSSQLServerContainer<*>>(DOCKER_IMAGE)
             .acceptLicense()
 
-        private val sharedContainer by lazy {
+        private val sharedContainerDelegate = lazy {
             val container = createContainer()
             Startables.deepStart(listOf(container)).join()
             return@lazy container
         }
+        private val sharedContainer by sharedContainerDelegate
 
         private val sakilaEnv by lazy {
             val env = MSSQLEnvironment(sharedContainer, "sakila")
@@ -111,7 +112,7 @@ class MSSQLEnvironment(
         container.withUrlParam("database", dbName).createConnection("")
 
     override fun close() {
-        if (container !== sharedContainer)
+        if (!sharedContainerDelegate.isInitialized() || container !== sharedContainer)
             container.close() // otherwise it is testcontainer's responsibility to shutdown the container
     }
 

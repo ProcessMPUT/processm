@@ -23,13 +23,14 @@ class MySQLEnvironment(
             return MySQLContainer<MySQLContainer<*>>("mysql:8.0.26")
         }
 
-        private val sharedContainer by lazy {
+        private val sharedContainerDelegate = lazy {
             val container = createContainer()
                 .withUsername(user)
                 .withPassword(password)
             Startables.deepStart(listOf(container)).join()
             return@lazy container
         }
+        private val sharedContainer by sharedContainerDelegate
 
         private val sakilaEnv by lazy {
             val env = MySQLEnvironment(sharedContainer, "sakila")
@@ -109,7 +110,7 @@ class MySQLEnvironment(
     override fun connect(): Connection = container.withDatabaseName(dbName).createConnection("")
 
     override fun close() {
-        if (container !== sharedContainer)
+        if (!sharedContainerDelegate.isInitialized() || container !== sharedContainer)
             container.close() // otherwise it is testcontainer's responsibility to shutdown the container
     }
 }
