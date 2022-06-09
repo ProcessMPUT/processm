@@ -20,6 +20,7 @@ import java.sql.Timestamp
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.test.*
+import kotlin.test.Test
 
 @Suppress("SqlResolve")
 @Tag("ETL")
