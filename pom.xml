@@ -74,7 +74,7 @@
         <maven.compiler.target>11</maven.compiler.target>
 
         <groups/>
-        <excludedGroups>performance</excludedGroups>
+        <excludedGroups>performance,slow</excludedGroups>
     </properties>
 
     <dependencies>
