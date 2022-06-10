@@ -12,7 +12,7 @@ object CausalNets {
     /**
      * A Causal net based on Fig. 3.12 from Process Mining: Data Science in Action book.
      */
-    val fig312: CausalNet by lazy {
+    val fig312: CausalNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
         val a = Node("a")
         val b = Node("b")
         val c = Node("c")
@@ -64,7 +64,7 @@ object CausalNets {
     /**
      * A Causal net based on Fig. 3.16 from Process Mining: Data Science in Action book.
      */
-    val fig316: CausalNet by lazy {
+    val fig316: CausalNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
         val a = Node("a")
         val b = Node("b")
         val c = Node("c")
@@ -95,7 +95,7 @@ object CausalNets {
     /**
      * A Causal net implementing a flower model of activities A-Z.
      */
-    val azFlowerCNet: CausalNet by lazy {
+    val azFlower: CausalNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
         val activities = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".map { Node(it.toString()) }
         val tau = Node("τ", isSilent = true)
         causalnet {
@@ -120,7 +120,7 @@ object CausalNets {
     /**
      * A Causal net made of two flower models, the first containing activities A-M, the second activities N-Z.
      */
-    val parallelFlowersCNet: CausalNet by lazy {
+    val parallelFlowers: CausalNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 

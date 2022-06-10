@@ -1,8 +1,10 @@
 package processm.conformance.measures.precision
 
-import processm.conformance.measures.precision.causalnet.assertDoubleEquals
+import processm.conformance.PetriNets.fig32
+import processm.conformance.PetriNets.fig624N3
+import processm.conformance.PetriNets.sequence
 import processm.core.log.Helpers
-import processm.core.models.petrinet.petrinet
+import processm.core.log.Helpers.assertDoubleEquals
 import kotlin.test.Test
 
 /**
@@ -48,41 +50,19 @@ class PerfectPrecisionPaperTest {
 
     @Test
     fun m1() {
-        val model = petrinet {
-            P tout "a"
-            P tin "a" * "f" tout "b" * "c"
-            P tin "a" * "f" tout "d"
-            P tin "b" * "c" tout "e"
-            P tin "d" tout "e"
-            P tin "e" tout "g" * "h" * "f"
-            P tin "g" * "h"
-        }
-        val prec = PerfectPrecision(model)(log)
+        val prec = PerfectPrecision(fig32)(log)
         assertDoubleEquals(0.97, prec, 0.005)
     }
 
     @Test
     fun m2() {
-        val model = petrinet {
-            P tout "a"
-            P tin "a" tout "c"
-            P tin "c" tout "d"
-            P tin "d" tout "e"
-            P tin "e" tout "h"
-            P tin "h"
-        }
-        val prec = PerfectPrecision(model)(log)
+        val prec = PerfectPrecision(sequence)(log)
         assertDoubleEquals(1.0, prec, 0.005)
     }
 
     @Test
     fun m3() {
-        val model = petrinet {
-            P tout "a"
-            P tin "a" * "b" * "c" * "d" * "e" * "f" tout "b" * "c" * "d" * "e" * "f" * "g" * "h"
-            P tin "g" * "h"
-        }
-        val prec = PerfectPrecision(model)(log)
+        val prec = PerfectPrecision(fig624N3)(log)
         assertDoubleEquals(0.41, prec, 0.005)
     }
 }

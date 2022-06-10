@@ -59,30 +59,26 @@ abstract class PaperTest {
         h joins end
     }
 
-    protected val model3: CausalNet
-
-    init {
-        model3 = causalnet {
-            start splits a
-            a splits b or c or d or e or f
-            b splits c or d or e or f or g or h
-            c splits b or d or e or f or g or h
-            d splits b or c or e or f or g or h
-            e splits b or c or d or f or g or h
-            f splits b or c or d or e or g or h
-            g splits end
-            h splits end
-            start joins a
-            a or c or d or e or f join b
-            a or b or d or e or f join c
-            a or b or c or e or f join d
-            a or b or c or d or f join e
-            a or b or c or d or e join f
-            f or b or c or d or e join g
-            f or b or c or d or e join h
-            g joins end
-            h joins end
-        }
+    protected val model3: CausalNet = causalnet {
+        start splits a
+        a splits b or c or d or e or f
+        b splits c or d or e or f or g or h
+        c splits b or d or e or f or g or h
+        d splits b or c or e or f or g or h
+        e splits b or c or d or f or g or h
+        f splits b or c or d or e or g or h
+        g splits end
+        h splits end
+        start joins a
+        a or c or d or e or f join b
+        a or b or d or e or f join c
+        a or b or c or e or f join d
+        a or b or c or d or f join e
+        a or b or c or d or e join f
+        f or b or c or d or e join g
+        f or b or c or d or e join h
+        g joins end
+        h joins end
     }
 
 
@@ -161,6 +157,7 @@ abstract class PaperTest {
 
     protected val model1Precision = 0.97
     protected val model2Precision = 1.0
-    protected val model3Precision = 0.471 // 0.471 is computed by CNetPerfectPrecision rather than from the paper. The paper gives 0.41 there, but both model representation and precision definition are different
+    protected val model3Precision =
+        0.471 // 0.471 is computed by CNetPerfectPrecision rather than from the paper. The paper gives 0.41 there, but both model representation and precision definition are different
     protected val model4Precision = 1.0
 }

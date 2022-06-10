@@ -1,6 +1,10 @@
 package processm.conformance.models.footprint
 
 import org.junit.jupiter.api.Disabled
+import processm.conformance.CausalNets.azFlower
+import processm.conformance.CausalNets.fig312
+import processm.conformance.CausalNets.fig316
+import processm.conformance.CausalNets.parallelFlowers
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.toFlatSequence
@@ -15,53 +19,6 @@ import kotlin.test.assertTrue
 class DepthFirstSearchCausalNetAsPetriNetTests {
     @Test
     fun `PM book Fig 3 12 conforming log`() {
-        val a = Node("a")
-        val b = Node("b")
-        val c = Node("c")
-        val d = Node("d")
-        val e = Node("e")
-        val f = Node("f")
-        val g = Node("g")
-        val h = Node("h")
-        val z = Node("z")
-        val net = causalnet {
-            start = a
-            end = z
-            a splits b + d
-            a splits c + d
-
-            a joins b
-            f joins b
-            b splits e
-
-            a joins c
-            f joins c
-            c splits e
-
-            a joins d
-            f joins d
-            d splits e
-
-            b + d join e
-            c + d join e
-            e splits g
-            e splits h
-            e splits f
-
-            e joins f
-            f splits b + d
-            f splits c + d
-
-            e joins g
-            g splits z
-
-            e joins h
-            h splits z
-
-            g joins z
-            h joins z
-        }
-
         val log = Helpers.logFromString(
             """
                 a b d e g z
@@ -74,7 +31,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(net.toPetriNet())
+        val dfs = DepthFirstSearch(fig312.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -85,53 +42,6 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
 
     @Test
     fun `PM book Fig 3 12 non-conforming log`() {
-        val a = Node("a")
-        val b = Node("b")
-        val c = Node("c")
-        val d = Node("d")
-        val e = Node("e")
-        val f = Node("f")
-        val g = Node("g")
-        val h = Node("h")
-        val z = Node("z")
-        val net = causalnet {
-            start = a
-            end = z
-            a splits b + d
-            a splits c + d
-
-            a joins b
-            f joins b
-            b splits e
-
-            a joins c
-            f joins c
-            c splits e
-
-            a joins d
-            f joins d
-            d splits e
-
-            b + d join e
-            c + d join e
-            e splits g
-            e splits h
-            e splits f
-
-            e joins f
-            f splits b + d
-            f splits c + d
-
-            e joins g
-            g splits z
-
-            e joins h
-            h splits z
-
-            g joins z
-            h joins z
-        }
-
         val log = Helpers.logFromString(
             """
                 a b c d e g z
@@ -144,7 +54,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(net.toPetriNet())
+        val dfs = DepthFirstSearch(fig312.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -155,32 +65,6 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
 
     @Test
     fun `PM book Fig 3 16 conforming log`() {
-        val a = Node("a")
-        val b = Node("b")
-        val c = Node("c")
-        val d = Node("d")
-        val e = Node("e")
-        val net = causalnet {
-            start = a
-            end = e
-            a splits b
-
-            a joins b
-            b joins b
-            b splits c + d
-            b splits b + c
-
-            b joins c
-            c splits d
-
-            b + c join d
-            c + d join d
-            d splits d
-            d splits e
-
-            d joins e
-        }
-
         val log = Helpers.logFromString(
             """
                 a b c d e
@@ -191,7 +75,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(net.toPetriNet())
+        val dfs = DepthFirstSearch(fig316.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -202,32 +86,6 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
 
     @Test
     fun `PM book Fig 3 16 non-conforming log`() {
-        val a = Node("a")
-        val b = Node("b")
-        val c = Node("c")
-        val d = Node("d")
-        val e = Node("e")
-        val net = causalnet {
-            start = a
-            end = e
-            a splits b
-
-            a joins b
-            b joins b
-            b splits c + d
-            b splits b + c
-
-            b joins c
-            c splits d
-
-            b + c join d
-            c + d join d
-            d splits d
-            d splits e
-
-            d joins e
-        }
-
         val log = Helpers.logFromString(
             """
                 a b d e
@@ -238,7 +96,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(net.toPetriNet())
+        val dfs = DepthFirstSearch(fig316.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -249,26 +107,6 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
 
     @Test
     fun `Flower C-net`() {
-        val activities = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".map { Node(it.toString()) }
-        val tau = Node("τ", isSilent = true)
-        val net = causalnet {
-            start = activities.first()
-            end = activities.last()
-
-            start splits tau
-            start joins tau
-
-            tau splits end
-            tau joins end
-
-            for (activity in activities.subList(1, activities.size - 1)) {
-                tau splits activity
-                tau joins activity
-                activity splits tau
-                activity joins tau
-            }
-        }
-
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -280,7 +118,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(net.toPetriNet())
+        val dfs = DepthFirstSearch(azFlower.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -291,50 +129,6 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
 
     @Test
     fun `Parallel decisions in loop C-net conforming log`() {
-        val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
-        val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
-
-        val st = Node("start", isArtificial = true)
-        val en = Node("end", isArtificial = true)
-
-        val loopStart = Node("ls")
-        val loopEnd = Node("le")
-
-        val dec1 = Node("d1")
-        val dec2 = Node("d2")
-
-        val net = causalnet {
-            start = st
-            end = en
-
-            st splits loopStart
-            st joins loopStart
-            loopStart splits dec1 + dec2
-
-            loopStart joins dec1
-            for (act1 in activities1) {
-                dec1 splits act1
-                dec1 joins act1
-                act1 splits loopEnd
-                for (act2 in activities2) {
-                    act1 + act2 join loopEnd
-                }
-            }
-
-            loopStart joins dec2
-            for (act2 in activities2) {
-                dec2 splits act2
-                dec2 joins act2
-                act2 splits loopEnd
-            }
-
-            loopEnd splits loopStart
-            loopEnd joins loopStart
-
-            loopEnd splits en
-            loopEnd joins en
-        }
-
         val log = Helpers.logFromString(
             """
                 ls d1 M d2 Z le
@@ -343,7 +137,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(net.toPetriNet())
+        val dfs = DepthFirstSearch(parallelFlowers.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -354,50 +148,6 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
 
     @Test
     fun `Parallel decisions in loop C-net non-conforming log`() {
-        val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
-        val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
-
-        val st = Node("start", isArtificial = true)
-        val en = Node("end", isArtificial = true)
-
-        val loopStart = Node("ls")
-        val loopEnd = Node("le")
-
-        val dec1 = Node("d1")
-        val dec2 = Node("d2")
-
-        val net = causalnet {
-            start = st
-            end = en
-
-            st splits loopStart
-            st joins loopStart
-            loopStart splits dec1 + dec2
-
-            loopStart joins dec1
-            for (act1 in activities1) {
-                dec1 splits act1
-                dec1 joins act1
-                act1 splits loopEnd
-                for (act2 in activities2) {
-                    act1 + act2 join loopEnd
-                }
-            }
-
-            loopStart joins dec2
-            for (act2 in activities2) {
-                dec2 splits act2
-                dec2 joins act2
-                act2 splits loopEnd
-            }
-
-            loopEnd splits loopStart
-            loopEnd joins loopStart
-
-            loopEnd splits en
-            loopEnd joins en
-        }
-
         val log = Helpers.logFromString(
             """
                 ls d2 M d1 Z le
@@ -407,7 +157,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(net.toPetriNet())
+        val dfs = DepthFirstSearch(parallelFlowers.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 

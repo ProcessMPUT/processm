@@ -9,28 +9,14 @@ object PetriNets {
     /**
      * A Petri net based on Fig. 3.2 in the Process Mining: Data Science in Action book.
      */
-    val fig32: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        val start = Place()
-        val c1 = Place()
-        val c2 = Place()
-        val c3 = Place()
-        val c4 = Place()
-        val c5 = Place()
-        val end = Place()
-        val a = Transition("a", listOf(start), listOf(c1, c2))
-        val b = Transition("b", listOf(c1), listOf(c3))
-        val c = Transition("c", listOf(c1), listOf(c3))
-        val d = Transition("d", listOf(c2), listOf(c4))
-        val e = Transition("e", listOf(c3, c4), listOf(c5))
-        val f = Transition("f", listOf(c5), listOf(c1, c2))
-        val g = Transition("g", listOf(c5), listOf(end))
-        val h = Transition("h", listOf(c5), listOf(end))
-        PetriNet(
-            listOf(start, c1, c2, c3, c4, c5, end),
-            listOf(a, b, c, d, e, f, g, h),
-            Marking(start),
-            Marking(end)
-        )
+    val fig32: PetriNet = petrinet {
+        P tout "a"
+        P tin "a" * "f" tout "b" * "c"
+        P tin "a" * "f" tout "d"
+        P tin "b" * "c" tout "e"
+        P tin "d" tout "e"
+        P tin "e" tout "g" * "h" * "f"
+        P tin "g" * "h"
     }
 
     /**
@@ -108,6 +94,15 @@ object PetriNets {
     }
 
     /**
+     * A Petri net based on Fig. 6.24 network N3 in the Process Mining: Data Science in Action book.
+     */
+    val fig624N3 = petrinet {
+        P tout "a"
+        P tin "a" * "b" * "d" * "c" * "e" * "f" tout "b" * "d" * "c" * "e" * "f" * "g" * "h"
+        P tin "g" * "h"
+    }
+
+    /**
      * A Petri net based on Fig. 7.3 in the Process mining: Data Science in Action book.
      */
     val fig73: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
@@ -131,15 +126,53 @@ object PetriNets {
         )
     }
 
+    val fig82N1 = petrinet {
+        P tout "a" //start
+        P tin "a" * "f" tout "b" * "c" //p1
+        P tin "a" * "f" tout "d" //p2
+        P tin "b" * "c" tout "e" //p3
+        P tin "d" tout "e" //p4
+        P tin "e" tout "f" * "g" * "h" //p5
+        P tin "g" * "h" //end
+    }
+
+    val fig82N2 = petrinet {
+        P tout "a" //start
+        P tin "a" * "f" tout "b" * "c" //p1
+        P tin "b" * "c" tout "d" //p2
+        P tin "d" tout "e" //p3
+        P tin "e" tout "f" * "g" * "h" //p4
+        P tin "g" * "h" //end
+    }
+
+    val fig82N3 = petrinet {
+        P tout "a" //start
+        P tin "a" tout "c" //p1
+        P tin "a" tout "d" //p2
+        P tin "c" tout "e" //p3
+        P tin "d" tout "e" //p4
+        P tin "e" tout "h" //p5
+        P tin "h" //end
+    }
+
     /**
      * A Petri net flower model made of the activities a, b, c, ..., z.
      */
     val azFlower: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val start = Place()
+        val center = Place()
+        val end = Place()
         PetriNet(
-            places = emptyList(),
-            transitions = "abcdefghijklmnopqrstuwvxyz".map { Transition(it.toString()) },
-            initialMarking = Marking.empty,
-            finalMarking = Marking.empty
+            places = listOf(start, center, end),
+            transitions =
+            "abcdefghijklmnopqrstuwvxyz".map { Transition(it.toString(), listOf(center), listOf(center)) }
+                    +
+                    listOf(
+                        Transition("", listOf(start), listOf(center), true),
+                        Transition("", listOf(center), listOf(end), true),
+                    ),
+            initialMarking = Marking(start),
+            finalMarking = Marking(end)
         )
     }
 

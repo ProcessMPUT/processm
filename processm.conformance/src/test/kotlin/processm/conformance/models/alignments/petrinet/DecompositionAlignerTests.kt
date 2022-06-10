@@ -1,15 +1,13 @@
 package processm.conformance.models.alignments.petrinet
 
-import processm.conformance.CausalNets.azFlowerCNet
+import processm.conformance.CausalNets
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
-import processm.conformance.CausalNets.parallelFlowersCNet
-import processm.conformance.PetriNets.azFlower
+import processm.conformance.PetriNets
 import processm.conformance.PetriNets.fig314
 import processm.conformance.PetriNets.fig32
 import processm.conformance.PetriNets.fig34
 import processm.conformance.PetriNets.fig73
-import processm.conformance.PetriNets.parallelFlowers
 import processm.conformance.PetriNets.sequence
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.cache.CachingAlignerFactory
@@ -306,7 +304,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val aligner = DecompositionAligner(azFlower)
+        val aligner = DecompositionAligner(PetriNets.azFlower)
         for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -322,7 +320,7 @@ class DecompositionAlignerTests {
                 else
                     assertTrue(step.modelMove!!.isSilent)
 
-            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in azFlower.transitions } }
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in PetriNets.azFlower.transitions } }
         }
     }
 
@@ -337,7 +335,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val aligner = DecompositionAligner(azFlower)
+        val aligner = DecompositionAligner(PetriNets.azFlower)
         for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -347,7 +345,7 @@ class DecompositionAlignerTests {
 
             assertEquals(4, alignment.cost)
 
-            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in azFlower.transitions } }
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in PetriNets.azFlower.transitions } }
         }
     }
 
@@ -362,7 +360,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val aligner = DecompositionAligner(parallelFlowers)
+        val aligner = DecompositionAligner(PetriNets.parallelFlowers)
         for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -378,7 +376,7 @@ class DecompositionAlignerTests {
                 else
                     assertTrue(step.modelMove!!.isSilent)
 
-            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in parallelFlowers.transitions } }
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in PetriNets.parallelFlowers.transitions } }
         }
     }
 
@@ -400,7 +398,7 @@ class DecompositionAlignerTests {
             2
         )
 
-        val aligner = DecompositionAligner(parallelFlowers)
+        val aligner = DecompositionAligner(PetriNets.parallelFlowers)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -548,7 +546,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val petri = azFlowerCNet.toPetriNet()
+        val petri = CausalNets.azFlower.toPetriNet()
         val aligner = DecompositionAligner(petri)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
@@ -574,7 +572,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val petri = parallelFlowersCNet.toPetriNet()
+        val petri = CausalNets.parallelFlowers.toPetriNet()
         val aligner = DecompositionAligner(petri)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
@@ -729,7 +727,7 @@ class DecompositionAlignerTests {
             3,
         )
 
-        val petri = parallelFlowersCNet.toPetriNet()
+        val petri = CausalNets.parallelFlowers.toPetriNet()
         val aligner = DecompositionAligner(petri)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
