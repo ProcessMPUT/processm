@@ -1162,7 +1162,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     fun orderByAggregationExpression() {
         val stream = q(
             "select max(^e:timestamp)-min(^e:timestamp)" +
-                    "where l:name='Hospital log' " +
+                    "where l:id=$hospital " +
                     "group by t:name " +
                     "order by max(^e:timestamp)-min(^e:timestamp) desc"
         )
