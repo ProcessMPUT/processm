@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 
 @Suppress("SqlResolve")
 @Tag("ETL")
-@Timeout(60, unit = TimeUnit.SECONDS)
+@Timeout(90, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PostgresSakilaWithFloatingPointEventIdsTest {
 

@@ -25,7 +25,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @Tag("ETL")
-@Timeout(60, unit = TimeUnit.SECONDS)
+@Timeout(90, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OracleOTSampleDbTest {
 
