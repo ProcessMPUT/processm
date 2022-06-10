@@ -66,10 +66,15 @@ class DBCacheTest {
             val finishSemaphore = Semaphore(0)
             val finallyExpected = setOf("A", "B", "C", "D")
 
+            transaction(DBCache.getMainDBPool().database) {
+                addLogger(StdOutSqlLogger)
+                // PostgreSQL poorly supports concurrent modification of schema, so we create schema in advance.
+                SchemaUtils.create(Dummies)
+            }
+
             thread {
                 transaction(DBCache.getMainDBPool().database) {
                     addLogger(StdOutSqlLogger)
-                    SchemaUtils.create(Dummies)
 
                     val A = Dummy.new {
                         value = "A"
@@ -126,7 +131,6 @@ class DBCacheTest {
             thread {
                 transaction(DBCache.getMainDBPool().database) {
                     addLogger(StdOutSqlLogger)
-                    SchemaUtils.create(Dummies)
 
                     val C = Dummy.new {
                         value = "C"
