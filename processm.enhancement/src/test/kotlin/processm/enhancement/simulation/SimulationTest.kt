@@ -3,6 +3,7 @@ package processm.enhancement.simulation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
@@ -13,9 +14,8 @@ class SimulationTest {
     @Test
     fun `produces the same traces from sequential process model`() {
         val model = sequentialProcessModel()
-        val instance = model.createInstance()
         val activitiesCount = model.activities.count()
-        val simulation = Simulation(instance, nextActivityCumulativeDistributionFunction = emptyMap())
+        val simulation = Simulation(model)
 
         val traces = simulation.generateTraces().take(10)
 
@@ -27,9 +27,8 @@ class SimulationTest {
     @Test
     fun `uses uniform distribution if no distribution is provided`() {
         val model = singleForkProcessModel()
-        val instance = model.createInstance()
         val tracesCount = 1000
-        val simulation = Simulation(instance, nextActivityCumulativeDistributionFunction = emptyMap())
+        val simulation = Simulation(model)
 
         val traces = simulation.generateTraces().take(tracesCount)
 
@@ -41,16 +40,11 @@ class SimulationTest {
     @Test
     fun `utilizes the distribution provided as CDF to generate traces`() {
         val model = singleForkProcessModel()
-        val instance = model.createInstance()
-        val activities = model.activities.map { it.name to it }.toMap()
         val tracesCount = 1000
-        val simulation = Simulation(
-            instance,
-            mapOf(activities["a"]!! to
-                    setOf(mapOf(
-                       activities["b"]!! to 0.2,
-                       activities["c"]!! to 1.0)
-                    )))
+        val transitionsProbabilitiesWeights =  DoublingMap2D<String, String, Double>()
+        transitionsProbabilitiesWeights["a", "b"] = 1.0
+        transitionsProbabilitiesWeights["a", "c"] = 5.0
+        val simulation = Simulation(model, transitionsProbabilitiesWeights)
 
         val traces = simulation.generateTraces().take(tracesCount)
 

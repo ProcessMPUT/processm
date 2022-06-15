@@ -1,5 +1,7 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -101,7 +103,7 @@ abstract class CausalNet(
      */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
-                joins.entries.asSequence().map { DecisionPoint(it.key, it.value) }
+                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, it.value.flatMapTo(mutableSetOf()) { join -> join.sources }) }
 
     private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
         if (state.isNotEmpty()) {

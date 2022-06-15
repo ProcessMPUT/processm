@@ -1,20 +1,21 @@
 package processm.enhancement.simulation
 
-import processm.core.models.commons.Activity
-import processm.core.models.commons.ProcessModelInstance
+import processm.core.helpers.map2d.DoublingMap2D
+import processm.core.helpers.map2d.Map2D
+import processm.core.models.commons.*
 import kotlin.random.Random
 
 /**
  * Generates business process execution traces.
- * @param processModelInstance the process model to generate traces for.
- * @param nextActivityCumulativeDistributionFunction for every activity meant as a current state,
- * it contains a single CDF (Cumulative distribution function) for every set of alternative successive activities.
- * If an activity is not present in the collection, then the next activity is chosen at random from uniform distribution
+ * @param processModel the process model to generate traces for.
+ * @param activityTransitionsProbabilityWeights for every pair of activities, it defines a weight
+ * which is proportional to the probability that the transition between activities occurs.
  */
 class Simulation(
-    private val processModelInstance: ProcessModelInstance,
-    private val nextActivityCumulativeDistributionFunction: Map<Activity, Set<Map<Activity, Double>>> = emptyMap()) {
+    private val processModel: ProcessModel,
+    private val activityTransitionsProbabilityWeights: Map2D<String, String, Double> = DoublingMap2D()) {
     private val random = Random.Default
+    private val processModelInstance = processModel.createInstance()
 
     /**
      * Produces sequences of activity instances belonging to the same trace.
@@ -22,9 +23,9 @@ class Simulation(
     fun generateTraces() = sequence {
         while (true) {
             // Contains (stored as keys) currently available activities. For every available activity,
-            // it contains predecessing activity which execution caused the activity to be available.
+            // it contains preceding activity which execution caused the activity to be available.
             // Once Issue#145 is implemented, the collection is no longer necessary.
-            var predecessingActivities = emptyMap<Activity, ActivityInstance?>()
+            var precedingActivities = emptyMap<Activity, ActivityInstance?>()
 
             with(processModelInstance) {
                 // setting the state to 'null' restarts the model instance
@@ -33,51 +34,57 @@ class Simulation(
                 var lastExecutedActivityInstance: ActivityInstance? = null
 
                 while (!isFinalState) {
-                    run nextActivity@ {
+                    val activity = run nextActivity@ {
                         val possibleActivities = availableActivities.toList()
 
-                        predecessingActivities = possibleActivities.associateWith { activity ->
-                            (predecessingActivities[activity] ?: lastExecutedActivityInstance)
+                        precedingActivities = possibleActivities.associateWith { activity ->
+                            (precedingActivities[activity] ?: lastExecutedActivityInstance)
                         }
 
-                        // the current implementation assumes that each activity only depends on a single other activity
+                        // the current implementation assumes that each activity only depends on a single preceding activity
                         // generally, the assumption is incorrect and may lead to incorrect results:
                         // an activity could be scheduled to run before all the activities it actually depends on are completed
 
                         if (possibleActivities.size == 1) {
                             // special case, there is only one successive activity to be executed
-                            val activity = possibleActivities.first()
-                            getExecutionFor(activity).execute()
-                            lastExecutedActivityInstance = ActivityInstance(activity, predecessingActivities[activity])
-                            trace.add(lastExecutedActivityInstance!!)
+                            return@nextActivity possibleActivities.first()
                         } else {
-                            // check if the last executed activity has appropriate CDF specified for the available next activities
-                            // if no CDF is defined, then check the last but one executed activity
-                            trace.reversed().forEach { (traceActivity, _) ->
-                                nextActivityCumulativeDistributionFunction[traceActivity]?.forEach { successingActivitiesCdf ->
-                                    if (possibleActivities.containsAll(successingActivitiesCdf.keys)) {
-                                        val randomValue = random.nextDouble() // randomValue in in <0;1)
-                                        val nextActivity = successingActivitiesCdf
-                                            .filterValues { nextActivityCdf -> nextActivityCdf > randomValue }
-                                            .minByOrNull { it.value }
-                                            ?.key
 
-                                        if (nextActivity != null) {
-                                            getExecutionFor(nextActivity).execute()
-                                            lastExecutedActivityInstance = ActivityInstance(nextActivity, predecessingActivities[nextActivity])
-                                            trace.add(lastExecutedActivityInstance!!)
-                                            return@nextActivity
+                            if (activityTransitionsProbabilityWeights.rows.any()) {
+                                // check if a transition probability is specified for the available next activities
+                                // if no, then check the last but one executed activity
+                                trace.reversed().forEach { (activityInTrace, _) ->
+
+                                    val succeedingActivitiesWeights = possibleActivities.fold(mutableMapOf<Activity, Double>()) { result, activity ->
+                                        activityTransitionsProbabilityWeights.getRow(activityInTrace.name)[activity.name]?.let { weight ->
+                                            result[activity] = weight
+                                        }
+
+                                        return@fold result
+                                    }
+
+                                    val activitiesWeightsSum = succeedingActivitiesWeights.values.sum()
+                                    var randomValue = random.nextDouble( activitiesWeightsSum)
+
+                                    succeedingActivitiesWeights.forEach { (succeedingActivity, activityWeight) ->
+                                        randomValue -= activityWeight
+                                        if (randomValue < 0) {
+                                            return@nextActivity succeedingActivity
                                         }
                                     }
                                 }
                             }
 
-                            // no appropriate CDF found for the current state, so the activity to be executed is selected at random from uniform distribution
-                            val randomNextActivity = possibleActivities[random.nextInt(possibleActivities.size)]
-                            getExecutionFor(randomNextActivity).execute()
-                            lastExecutedActivityInstance = ActivityInstance(randomNextActivity, predecessingActivities[randomNextActivity])
-                            trace.add(lastExecutedActivityInstance!!)
+                            // no appropriate probability found for the current state, so an activity to be executed is selected at random from uniform distribution
+                            return@nextActivity possibleActivities[random.nextInt(possibleActivities.size)]
                         }
+                    }
+
+                    getExecutionFor(activity).execute()
+
+                    if (!activity.isSilent) {
+                        lastExecutedActivityInstance = ActivityInstance(activity, precedingActivities[activity])
+                        trace.add(lastExecutedActivityInstance)
                     }
                 }
 

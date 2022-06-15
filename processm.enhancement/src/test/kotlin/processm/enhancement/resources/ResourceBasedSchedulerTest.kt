@@ -5,29 +5,23 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.verify
 import org.apache.commons.math3.distribution.RealDistribution
-import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.MethodSource
 import processm.core.models.commons.Activity
 import processm.enhancement.simulation.ActivityInstance
 import processm.enhancement.simulation.Simulation
 import java.time.Duration
 import java.time.Instant
-import java.util.stream.Stream
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ResourceBasedSchedulerTest {
 
-    @ParameterizedTest
-    @MethodSource("resourcesToTraces")
-    fun `resources are utilized evenly`(resourcesToTraces: Pair<Int, Int>) {
-        val resourcesCount = resourcesToTraces.first
-        val tracesCount = resourcesToTraces.second
+    @Test
+    fun `resources are utilized evenly`() {
+        val resourcesCount = 10
+        val tracesCount = 25
         val tracesPerResourceFloor = Math.floorDiv(tracesCount, resourcesCount)
-        val activity = mockk<Activity>()
+        val activity = mockk<Activity> { every { name } returns "activity1" }
         val simulation = mockk<Simulation> { every { generateTraces() } returns (1..tracesCount).map { listOf(ActivityInstance(activity, null)) }.asSequence() }
         val processInstanceOccurringRate = mockk<RealDistribution> { every { sample() } returns 0.0 }
         val activityDurationDistribution = mockk<RealDistribution> { every { sample() } returns 5.0 }
@@ -40,8 +34,8 @@ class ResourceBasedSchedulerTest {
         val resourceBasedScheduler = ResourceBasedScheduler(
             simulation,
             resources,
-            mapOf(activity to roles),
-            mapOf(activity to activityDurationDistribution),
+            mapOf(activity.name to roles),
+            mapOf(activity.name to activityDurationDistribution),
             processInstanceOccurringRate
         )
 
@@ -58,7 +52,7 @@ class ResourceBasedSchedulerTest {
     fun `process instance occurring rate is respected`() {
         val tracesCount = 10
         val processInstanceOccurrences = arrayListOf(1.0, 10.0, 2.0, 4.0, 4.0, 2.0, 1.0, 7.0, 11.0, 3.0)
-        val activity = mockk<Activity>()
+        val activity = mockk<Activity> { every { name } returns "activity1" }
         val simulationStartOffset = Instant.now()
         val simulation = mockk<Simulation> { every { generateTraces() } returns (1..tracesCount).map { listOf(ActivityInstance(activity, null)) }.asSequence() }
         val processInstanceOccurringRate = mockk<RealDistribution> { every { sample() } returnsMany processInstanceOccurrences }
@@ -68,8 +62,8 @@ class ResourceBasedSchedulerTest {
         val resourceBasedScheduler = ResourceBasedScheduler(
             simulation,
             listOf(resource),
-            mapOf(activity to roles),
-            mapOf(activity to activityDurationDistribution),
+            mapOf(activity.name to roles),
+            mapOf(activity.name to activityDurationDistribution),
             processInstanceOccurringRate,
             simulationStartOffset
         )
@@ -89,7 +83,7 @@ class ResourceBasedSchedulerTest {
     fun `distribution based activity duration is respected`() {
         val tracesCount = 10
         val activityDurations = arrayListOf(1.0, 10.0, 2.0, 4.0, 4.0, 2.0, 1.0, 7.0, 11.0, 3.0)
-        val activity = mockk<Activity>()
+        val activity = mockk<Activity> { every { name } returns "activity1" }
         val simulationStartOffset = Instant.now()
         val simulation = mockk<Simulation> { every { generateTraces() } returns (1..tracesCount).map { listOf(ActivityInstance(activity, null)) }.asSequence() }
         val processInstanceOccurringRate = mockk<RealDistribution> { every { sample() } returns 1.0 }
@@ -99,8 +93,8 @@ class ResourceBasedSchedulerTest {
         val resourceBasedScheduler = ResourceBasedScheduler(
             simulation,
             listOf(resource),
-            mapOf(activity to roles),
-            mapOf(activity to activityDurationDistribution),
+            mapOf(activity.name to roles),
+            mapOf(activity.name to activityDurationDistribution),
             processInstanceOccurringRate,
             simulationStartOffset
         )
@@ -116,7 +110,7 @@ class ResourceBasedSchedulerTest {
 
     @Test
     fun `throws if cannot find a resource with required role`() {
-        val activity = mockk<Activity> { every { name } returns "activity" }
+        val activity = mockk<Activity> { every { name } returns "activity1" }
         val simulationStartOffset = Instant.now()
         val simulation = mockk<Simulation> { every { generateTraces() } returns listOf(listOf(ActivityInstance(activity, null))).asSequence() }
         val processInstanceOccurringRate = mockk<RealDistribution> { every { sample() } returns 1.0 }
@@ -126,8 +120,8 @@ class ResourceBasedSchedulerTest {
         val resourceBasedScheduler = ResourceBasedScheduler(
             simulation,
             listOf(resource),
-            mapOf(activity to setOf("role2")),
-            mapOf(activity to activityDurationDistribution),
+            mapOf(activity.name to setOf("role2")),
+            mapOf(activity.name to activityDurationDistribution),
             processInstanceOccurringRate,
             simulationStartOffset
         )
@@ -139,8 +133,8 @@ class ResourceBasedSchedulerTest {
     fun `adding critical resources shortens the total execution time`() {
         val tracesCount = 100
         val simulationStartOffset = Instant.now()
-        val activity = mockk<Activity>()
-        val criticalActivity = mockk<Activity>()
+        val activity = mockk<Activity> { every { name } returns "activity1" }
+        val criticalActivity = mockk<Activity> { every { name } returns "activity2" }
         val simulation = mockk<Simulation> { every { generateTraces() } returns (1..tracesCount).map {
             val criticalActivityInstance = ActivityInstance(criticalActivity, null)
             listOf(criticalActivityInstance, ActivityInstance(activity, criticalActivityInstance))
@@ -150,8 +144,8 @@ class ResourceBasedSchedulerTest {
         val criticalActivityDurationDistribution = mockk<RealDistribution> { every { sample() } returns 3.0 }
         val roles = setOf("role")
         val criticalRoles = setOf("critical-role")
-        val activitiesRoles = mapOf(activity to roles, criticalActivity to criticalRoles)
-        val activitiesDurations = mapOf(activity to activityDurationDistribution, criticalActivity to criticalActivityDurationDistribution)
+        val activitiesRoles = mapOf(activity.name to roles, criticalActivity.name to criticalRoles)
+        val activitiesDurations = mapOf(activity.name to activityDurationDistribution, criticalActivity.name to criticalActivityDurationDistribution)
         val schedulerWithCriticalResource = ResourceBasedScheduler(
             simulation,
             listOf(BasicResource(roles), BasicResource(criticalRoles), BasicResource(criticalRoles), BasicResource(criticalRoles)),
@@ -179,10 +173,4 @@ class ResourceBasedSchedulerTest {
 
         assertTrue(simulationWithNoCriticalResourceDuration.toMinutes() / simulationWithCriticalResourceDuration.toMinutes() >= 2 )
     }
-
-    private fun resourcesToTraces(): Stream<Pair<Int, Int>> = Stream.of(
-        10 to 25,
-        2 to 10,
-        100 to 10
-    )
 }

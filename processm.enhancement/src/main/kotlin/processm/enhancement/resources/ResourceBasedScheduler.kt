@@ -14,8 +14,8 @@ import java.time.Instant
 class ResourceBasedScheduler(
     private val simulation: Simulation,
     private val resources: List<Resource>,
-    private val activitiesRoles: Map<Activity, Set<String>>,
-    private val activityDurationsDistributions: Map<Activity, RealDistribution>,
+    private val activitiesRoles: Map<String, Set<String>>,
+    private val activityDurationsDistributions: Map<String, RealDistribution>,
     private val processInstanceOccurringRate: RealDistribution,
     private val simulationStartOffset: Instant? = null) {
 
@@ -32,8 +32,8 @@ class ResourceBasedScheduler(
 
                 trace.forEach { activityInstance ->
                     val latestPrecedingActivityEnd = scheduling[activityInstance.executeAfter]?.second
-                    val permittedRoles = activitiesRoles[activityInstance.activity]
-                    val activityDuration = Duration.ofMinutes(activityDurationsDistributions[activityInstance.activity]!!.sample().toLong())
+                    val permittedRoles = activitiesRoles[activityInstance.activity.name]
+                    val activityDuration = Duration.ofMinutes(activityDurationsDistributions[activityInstance.activity.name]!!.sample().toLong())
                     val availableResource = resources.filter { resource ->
                             permittedRoles == null || resource.roles.any {
                                 permittedRoles.contains(it)

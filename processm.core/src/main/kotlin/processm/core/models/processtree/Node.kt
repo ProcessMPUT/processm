@@ -1,5 +1,6 @@
 package processm.core.models.processtree
 
+import processm.core.models.commons.Activity
 import processm.core.models.processtree.execution.ExecutionNode
 import java.util.*
 
@@ -65,4 +66,6 @@ abstract class Node(vararg nodes: Node) {
     internal abstract val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
 
     internal abstract fun executionNode(parent: ExecutionNode?): ExecutionNode
+
+    internal abstract fun getLastActivitiesInSubtree(): Collection<Activity>
 }

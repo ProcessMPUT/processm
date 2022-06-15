@@ -50,7 +50,9 @@ class PetriNet(
             }
 
             if (res.size > 1) {
-                yield(DecisionPoint(res.flatMapTo(HashSet()) { t -> t.inPlaces }, res))
+                val commonPlaces = res.flatMapTo(HashSet()) { t -> t.inPlaces }
+                val previousActivities = transitions.filter { t -> t.outPlaces.any { commonPlaces.contains(it) } }
+                yield(DecisionPoint(commonPlaces, res, previousActivities))
                 forbidden.add(res)
                 res = null
             } else {
