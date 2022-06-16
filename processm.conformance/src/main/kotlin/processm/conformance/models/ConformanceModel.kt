@@ -1,4 +1,6 @@
 package processm.conformance.models
 
-interface ConformanceModel {
-}
+/**
+ * A marking interface for conformance models.
+ */
+interface ConformanceModel
