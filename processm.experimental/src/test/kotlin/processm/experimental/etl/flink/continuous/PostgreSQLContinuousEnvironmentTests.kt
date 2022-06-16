@@ -9,10 +9,14 @@ import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.helpers.loadConfiguration
 import processm.core.logging.logger
+import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
 import kotlin.concurrent.thread
-import kotlin.test.*
+import kotlin.test.Ignore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @Suppress("SqlResolve")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -21,8 +25,8 @@ class PostgreSQLContinuousEnvironmentTests {
     val logger = logger()
 
     // #region test data
-    val sakilaSchema = "sakila/postgres-sakila-db/postgres-sakila-schema.sql"
-    val sakilaData = "sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
+    val sakilaSchema = "../test-databases/sakila/postgres-sakila-db/postgres-sakila-schema.sql"
+    val sakilaData = "../test-databases/sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
     // #endregion
 
     // #region user input
@@ -95,7 +99,6 @@ class PostgreSQLContinuousEnvironmentTests {
             .withUsername(user)
             .withEnv("POSTGRES_PASSWORD", password)
             .withPassword(password)
-            .withInitScript(sakilaSchema)
         Startables.deepStart(listOf(postgresContainer)).join()
         return postgresContainer
     }
@@ -106,6 +109,8 @@ class PostgreSQLContinuousEnvironmentTests {
             connection.autoCommit = false
 
             connection.createStatement().use { s ->
+                s.execute(File(sakilaSchema).readText())
+
                 // These tables inherit from the payment table. The inheriting tables do not inherit primary key
                 // constraints [1] and lose their default replica identities [2]. When replication is enabled,
                 // PostgreSQL prevents updates and deletes from tables without replica identify. By setting REPLICA
@@ -119,7 +124,7 @@ class PostgreSQLContinuousEnvironmentTests {
                 s.execute("ALTER TABLE payment_p2007_05 REPLICA IDENTITY FULL")
                 s.execute("ALTER TABLE payment_p2007_06 REPLICA IDENTITY FULL")
 
-                s.execute(this::class.java.classLoader.getResource(sakilaData)!!.readText())
+                s.execute(File(sakilaData).readText())
                 connection.commit()
             }
         }

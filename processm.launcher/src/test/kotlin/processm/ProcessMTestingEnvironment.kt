@@ -70,9 +70,9 @@ class ProcessMTestingEnvironment {
         }
 
         private val sakilaJdbcUrl: String by lazy {
-            val dbName = "sakila"
-            val schemaScript = "sakila/postgres-sakila-db/postgres-sakila-schema.sql"
-            val insertScript = "sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
+            val dbName = "test-databases/sakila"
+            val schemaScript = "test-databases/sakila/postgres-sakila-db/postgres-sakila-schema.sql"
+            val insertScript = "test-databases/sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
             createDatabase(dbName)
             val url = jdbcUrlForDb(dbName)
 

@@ -1,10 +1,11 @@
 package processm.etl
 
+import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.MSSQLServerContainer
 import org.testcontainers.lifecycle.Startables
-import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
 import processm.dbmodels.models.DataConnector
+import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import java.sql.Connection
 import java.util.*
 
@@ -18,6 +19,7 @@ class MSSQLEnvironment(
         private val logger = logger()
 
         fun createContainer(): MSSQLServerContainer<*> = MSSQLServerContainer<MSSQLServerContainer<*>>(DOCKER_IMAGE)
+            .withFileSystemBind(TEST_DATABASES_PATH.absolutePath, "/tmp/test-databases/", BindMode.READ_ONLY)
             .acceptLicense()
 
         private val sharedContainerDelegate = lazy {
@@ -42,7 +44,7 @@ class MSSQLEnvironment(
                 "WideWorldImporters"
             )
             env.configureWithBackup(
-                "mssql/WWI/WideWorldImporters-Full.bak",
+                "WWI/WideWorldImporters-Full.bak",
                 "with move 'WWI_Primary' to '/tmp/wwi/WideWorldImporters.mdf', move 'WWI_UserData' to '/tmp/wwi/WideWorldImporters_UserData.ndf', move 'WWI_Log' to '/tmp/wwi/WideWorldImporters.ldf', move 'WWI_InMemory_Data_1' to '/tmp/wwi/WideWorldImporters_InMemory_Data_1'"
             )
             return@lazy env
@@ -54,46 +56,39 @@ class MSSQLEnvironment(
     }
 
     fun configureWithScripts(schemaScript: String, insertScript: String) {
-        val containerSchemaScript = "/tmp/schema.sql"
-        container.copyFileToContainer(MountableFile.forClasspathResource(schemaScript), containerSchemaScript)
-
-        with(
-            container.execInContainer(
-                "/opt/mssql-tools/bin/sqlcmd",
-                "-U",
-                container.username,
-                "-P",
-                container.password,
-                "-i",
-                containerSchemaScript
-            )
-        ) {
-            logger.debug(stdout)
-            logger.warn(stderr)
-            check(exitCode == 0)
+        fun import(script: String, dbName: String) {
+            with(
+                container.execInContainer(
+                    "/opt/mssql-tools/bin/sqlcmd",
+                    "-U",
+                    container.username,
+                    "-P",
+                    container.password,
+                    "-d",
+                    dbName,
+                    "-i",
+                    "/tmp/test-databases/$script"
+                )
+            ) {
+                logger.debug(stdout)
+                logger.warn(stderr)
+                check(exitCode == 0)
+            }
         }
+        import(schemaScript, "")
+        import(insertScript, dbName)
 
         // At this point schema created the DB and it can be used in the connection URL
         // The name of the param is documented on https://docs.microsoft.com/en-us/sql/connect/jdbc/setting-the-connection-properties?view=sql-server-ver15
         container.withUrlParam("database", dbName)
-
-        container.createConnection("").use { connection ->
-            connection.autoCommit = false
-            connection.createStatement().use { s ->
-                s.execute(this::class.java.classLoader.getResource(insertScript)!!.readText())
-            }
-            connection.commit()
-        }
     }
 
     fun configureWithBackup(backupFile: String, restoreCommandSuffix: String) {
-        val backupFileInContainer = "/tmp/db.bak"
-        container.copyFileToContainer(MountableFile.forClasspathResource(backupFile), backupFileInContainer)
         // restore database WideWorldImporters from disk='/tmp/WideWorldImporters-Full.bak' with move 'WWI_Primary' to '/tmp/wwi/WideWorldImporters.mdf', move 'WWI_UserData' to '/tmp/wwi/WideWorldImporters_UserData.ndf', move 'WWI_Log' to '/tmp/wwi/WideWorldImporters.ldf', move 'WWI_InMemory_Data_1' to '/tmp/wwi/WideWorldImporters_InMemory_Data_1';
         container.createConnection("").use { connection ->
             connection.autoCommit = false
             connection.createStatement().use { s ->
-                s.execute("restore database $dbName from disk='${backupFileInContainer}' $restoreCommandSuffix")
+                s.execute("restore database $dbName from disk='/tmp/test-databases/$backupFile' $restoreCommandSuffix")
             }
             connection.commit()
         }

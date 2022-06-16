@@ -3,6 +3,8 @@ package processm.etl
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
+import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
+import java.io.File
 
 class PostgreSQLEnvironment(
     dbName: String,
@@ -31,13 +33,13 @@ class PostgreSQLEnvironment(
             .withDatabaseName(dbName)
             .withUsername(user)
             .withPassword(password)
-            .withInitScript(schemaScript)
         Startables.deepStart(listOf(container)).join()
 
         container.createConnection("").use { connection ->
             connection.autoCommit = false
             connection.createStatement().use { s ->
-                s.execute(this::class.java.classLoader.getResource(insertScript)!!.readText())
+                s.execute(File(TEST_DATABASES_PATH, schemaScript).readText())
+                s.execute(File(TEST_DATABASES_PATH, insertScript).readText())
             }
             connection.commit()
         }

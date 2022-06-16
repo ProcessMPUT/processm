@@ -20,7 +20,7 @@ fun prepare(db2env: Db2Environment, configurator: DBMSEnvironmentConfigurator<Db
 class Db2ScriptConfigurator(val schemaScript: String, val insertScript: String) :
     DBMSEnvironmentConfigurator<Db2Environment, Db2Container> {
     override fun beforeStart(environment: Db2Environment, container: Db2Container) {
-        container.withInitScript(schemaScript)
+        container.withInitScript(schemaScript) // FIXME: copy the file into container and execute
     }
 
     override fun afterStart(environment: Db2Environment, container: Db2Container) {
@@ -36,8 +36,8 @@ class Db2ScriptConfigurator(val schemaScript: String, val insertScript: String) 
 fun prepareSakila() {
     prepare(
         Db2Environment.getSakila(), Db2ScriptConfigurator(
-            "sakila/db2-sakila-db/db2-sakila-schema.sql",
-            "sakila/db2-sakila-db/db2-sakila-insert-data.sql"
+            "../test-databases/sakila/db2-sakila-db/db2-sakila-schema.sql",
+            "../test-databases/sakila/db2-sakila-db/db2-sakila-insert-data.sql"
         )
     )
 }
@@ -51,7 +51,7 @@ fun prepareGSDB() {
             dbName = container.databaseName
 
             container.withCopyFileToContainer(
-                MountableFile.forClasspathResource("db2/gsdb/GSDB_DB2_LUW_ZOS_v2r3.zip"),
+                MountableFile.forHostPath("../test-databases/gsdb/GSDB_DB2_LUW_ZOS_v2r3.zip"),
                 containerZipPath
             )
             container.withDatabaseName("") // disable creating DB on start
