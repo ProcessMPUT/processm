@@ -2,37 +2,30 @@ package processm
 
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
-import processm.core.logging.enter
-import processm.core.logging.exit
-import processm.core.logging.logger
-import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.TimeUnit
+import processm.core.logging.loggedScope
+import kotlin.concurrent.thread
 
 object Main {
     /**
-     * The timeout for awaiting concurrent operations in the common pool when closing.
+     * The main entry point for ProcessM.
      */
-    private const val CONCURRENT_OPERATIONS_TIMEOUT = 10000L
-
     @JvmStatic
-    fun main(args: Array<String>) {
-        logger().enter()
-
+    fun main(args: Array<String>) = loggedScope { logger ->
         try {
             loadConfiguration()
 
-            EnterpriseServiceBus().apply {
+            val esb = EnterpriseServiceBus().apply {
                 autoRegister()
                 startAll()
             }
 
-        } catch (e: Throwable) {
-            logger().error("A fatal error occurred during initialization.", e)
-        } finally {
-            ForkJoinPool.commonPool().awaitQuiescence(CONCURRENT_OPERATIONS_TIMEOUT, TimeUnit.MILLISECONDS)
-        }
+            Runtime.getRuntime().addShutdownHook(thread(false) {
+                esb.close()
+            })
 
-        logger().exit()
+        } catch (e: Throwable) {
+            logger.error("A fatal error occurred during initialization.", e)
+        }
     }
 }
 
