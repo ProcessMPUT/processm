@@ -1,6 +1,7 @@
 package processm.core.log
 
 import processm.core.log.attribute.*
+import processm.core.logging.loggedScope
 import processm.core.querylanguage.Scope
 import java.sql.Connection
 import java.sql.ResultSet
@@ -19,6 +20,8 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
          * current batch. The current trace will be still completed.
          */
         internal const val paramSoftLimit = Short.MAX_VALUE - 8192
+
+        private const val analyzeThreshold = Short.MAX_VALUE
 
         private val ISO8601 = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC)
 
@@ -40,6 +43,12 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
      * A buffer of traces and events to write to the database together. Must contain complete traces.
      */
     protected var queue = ArrayList<XESComponent>(batchSize)
+
+    /**
+     * The counter of the total number of XES components inserted into the database. When exceeds [analyzeThreshold],
+     * the [close] method of this stream calls ANALYZE in the database to recalculate statistics.
+     */
+    private var totalInserts: Long = 0L
 
     init {
         assert(connection.metaData.supportsGetGeneratedKeys())
@@ -106,10 +115,21 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
     /**
      * Commit and close connection with the database
      */
-    override fun close() {
+    override fun close() = loggedScope { logger ->
         flush()
-        connection.commit()
-        connection.close()
+        with(connection) {
+            if (totalInserts >= analyzeThreshold) {
+                createStatement().use { stmt ->
+                    logger.trace("Running ANALYZE after inserting $totalInserts XES components into database.")
+                    // ANALYZE sees the uncommitted rows inserted in this transaction
+                    // https://stackoverflow.com/a/71653180
+                    stmt.execute("ANALYZE (SKIP_LOCKED) logs, logs_attributes, globals, extensions, classifiers, traces, traces_attributes, events, events_attributes")
+                    logger.trace("ANALYZE done.")
+                }
+            }
+            commit()
+            close()
+        }
     }
 
     /**
@@ -186,6 +206,10 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
             execute()
         }
 
+        clearQueue(lastEventIndex, lastTraceIndex, force)
+    }
+
+    protected fun clearQueue(lastEventIndex: Int, lastTraceIndex: Int, force: Boolean) {
         val countItemsToInsert = lastEventIndex + lastTraceIndex + 2
         assert(countItemsToInsert in 1..queue.size)
         if (countItemsToInsert == queue.size) {
@@ -200,6 +224,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 assert(queue.isEmpty())
             }
         }
+        totalInserts += countItemsToInsert
     }
 
     protected fun writeEventData(event: Event, to: SQL, traceIndex: Int?) {

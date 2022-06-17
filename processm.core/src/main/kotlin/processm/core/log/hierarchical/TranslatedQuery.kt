@@ -84,7 +84,7 @@ internal class TranslatedQuery(
         where(scope, it, logId, traceId)
         if (orderBy.isNotEmpty())
             groupById(scope, it)
-        orderBy.toSQL(it, logId, "1", true, true, false)
+        orderBy.toSQL(it, logId, "1", true, true)
 
         val from = from(scope, it)
         it.query.insert(desiredFromPosition, from)
@@ -111,7 +111,7 @@ internal class TranslatedQuery(
                 return@with
 
             append(if (scope == Scope.Log) " WHERE (" else " AND (")
-            pql.whereExpression.toSQL(sql, Type.Any, false)
+            pql.whereExpression.toSQL(sql, Type.Any)
             append(')')
         }
     }
@@ -362,7 +362,7 @@ internal class TranslatedQuery(
 
             assert(pql.selectExpressions[scope]!!.isNotEmpty())
             for (expression in pql.selectExpressions[scope]!!) {
-                expression.toSQL(sql, Type.Any, false)
+                expression.toSQL(sql, Type.Any)
                 append(", ")
             }
             setLength(length - 2)
@@ -593,7 +593,6 @@ internal class TranslatedQuery(
                             logId,
                             "${attribute.scope!!.alias}.id",
                             true,
-                            true,
                             true
                         )
                         sql.query.append(")")
@@ -609,7 +608,7 @@ internal class TranslatedQuery(
             if (scope != Scope.Log)
                 append("PARTITION BY ${scope.alias}.${scope.upper}_id ")
 
-            pql.orderByExpressions[scope]!!.toSQL(sql, logId, "${scope.alias}.id", true, true, false)
+            pql.orderByExpressions[scope]!!.toSQL(sql, logId, "${scope.alias}.id", true, true)
             append("),")
             sql.scopes.add(ScopeWithMetadata(scope, 0))
         }
@@ -634,7 +633,7 @@ internal class TranslatedQuery(
 
         val insertPos = length
 
-        pql.whereExpression.toSQL(sql, Type.Any, false)
+        pql.whereExpression.toSQL(sql, Type.Any)
         if (length != insertPos) {
             insert(insertPos, if (scope == Scope.Log) " WHERE (" else " AND (")
             append(')')
@@ -682,7 +681,7 @@ internal class TranslatedQuery(
                 }
                 setLength(sql.query.length - 1)
 
-                pql.orderByExpressions[scope]!!.toSQL(sql, logId, "1", true, true, false, attributeInverseMap)
+                pql.orderByExpressions[scope]!!.toSQL(sql, logId, "1", true, true, attributeInverseMap)
             }
         }
     }
@@ -697,7 +696,7 @@ internal class TranslatedQuery(
         protected abstract val iterator: IdBasedIterator
         protected var connection: Connection? = null
 
-        fun use(lambda: (iterator: Iterator<T>) -> Unit) {
+        fun use(lambda: (iterator: IdBasedIterator) -> Unit) {
             logger.enter()
             this@TranslatedQuery.connection.use {
                 try {
@@ -723,7 +722,7 @@ internal class TranslatedQuery(
          */
         fun skipBatch() = iterator.skip()
 
-        protected abstract inner class IdBasedIterator : Iterator<T> {
+        abstract inner class IdBasedIterator : Iterator<T> {
             protected var offset: Long = 0L
             protected abstract val ids: Iterator<Any>
             override fun hasNext(): Boolean = ids.hasNext()
@@ -733,6 +732,8 @@ internal class TranslatedQuery(
                     ids.next()
                 offset += batchSize // offset may not reflect the actual position only if hasNext()==false
             }
+
+            fun nextIds(): List<Any> = ids.take(batchSize)
         }
     }
 
@@ -741,7 +742,7 @@ internal class TranslatedQuery(
             override val ids: Iterator<Any> = cache.topEntry.ids!!.iterator()
 
             override fun next(): LogQueryResult {
-                val ids = this.ids.take(batchSize)
+                val ids = nextIds()
                 logger.trace { "Retrieving log/group ids: ${ids.joinToString()}." }
                 val idParam = connection!!.createArrayOf("int", ids.toTypedArray())
                 val entityParameters = cache.topEntry.queryEntity.params.fillPlaceholders(idParam, offset)
@@ -786,7 +787,7 @@ internal class TranslatedQuery(
             override val ids: Iterator<Any> = log.ids!!.iterator()
 
             override fun next(): QueryResult {
-                val ids = this.ids.take(batchSize)
+                val ids = nextIds()
                 logger.trace { "Retrieving trace/group ids: ${ids.joinToString()}." }
                 val idParam = connection!!.createArrayOf("bigint", ids.toTypedArray())
                 val entityParameters = log.queryEntity.params.fillPlaceholders(idParam, offset)
@@ -811,7 +812,7 @@ internal class TranslatedQuery(
             override val ids: Iterator<Any> = trace.ids.iterator()
 
             override fun next(): QueryResult {
-                val ids = this.ids.take(batchSize)
+                val ids = nextIds()
                 logger.trace { "Retrieving event/group ids: ${ids.joinToString()}." }
                 val idParam = connection!!.createArrayOf("bigint", ids.toTypedArray())
                 val entityParameters = trace.queryEntity.params.fillPlaceholders(idParam, offset)
@@ -1167,6 +1168,9 @@ internal class TranslatedQuery(
         }
     }
 
+    private val Attribute.scopeWithMetadata
+        get() = ScopeWithMetadata(this.scope!!, this.hoistingPrefix.length)
+
     private fun Attribute.toSQL(
         sql: MutableSQLQuery,
         logId: Int?,
@@ -1221,7 +1225,7 @@ internal class TranslatedQuery(
     private fun IExpression.toSQL(
         sql: MutableSQLQuery,
         _expectedType: Type,
-        ignoreHoisting: Boolean,
+        useEffectiveScope: Boolean = false,
         attributeToIndex: Map<Attribute, Int>? = null
     ) {
         with(sql.query) {
@@ -1229,7 +1233,7 @@ internal class TranslatedQuery(
                 when (expression) {
                     is Attribute -> expression.toSQL(
                         sql, null, if (expression.type != Type.Unknown) expression.type else expectedType, 1,
-                        ignoreHoisting = ignoreHoisting, attributeToIndex = attributeToIndex
+                        ignoreHoisting = false, attributeToIndex = attributeToIndex
                     )
                     is Literal<*> -> {
                         if (expression.scope != null)
@@ -1286,23 +1290,20 @@ internal class TranslatedQuery(
                         when (expression.name) {
                             "min", "max", "avg", "count", "sum" -> {
                                 assert(expression.children.size == 1)
-                                if (ignoreHoisting ||
-                                    expression.filter { it is Attribute }.all { (it as Attribute).hoistingPrefix == "" }
-                                ) {
-                                    append("(SELECT ")
-                                    append(expression.name)
-                                    append("(a0) FROM (SELECT DISTINCT ON (id) a0 FROM unnest(array_agg(")
-                                    append(expression.effectiveScope.shortName)
-                                    append(".id), array_agg(")
-                                    walk(expression.children[0], expression.expectedChildrenTypes[0])
-                                    append(")) s(id, a0)) s)")
-                                } else {
-                                    append("(SELECT ")
-                                    append(expression.name)
-                                    append("(v) FROM unnest(array_agg(")
-                                    walk(expression.children[0], expression.expectedChildrenTypes[0])
-                                    append(")) s(v))")
-                                }
+                                append("(SELECT ")
+                                append(expression.name)
+                                append("(a0) FROM (SELECT ")
+                                if (!useEffectiveScope)
+                                    append("DISTINCT ON (id) ")
+                                append("a0 FROM unnest(array_agg(")
+                                val attr = expression.filter { it is Attribute }.first() as Attribute
+                                if (useEffectiveScope)
+                                    append(attr.effectiveScope.alias)
+                                else
+                                    append(attr.scopeWithMetadata.alias)
+                                append(".id), array_agg(")
+                                walk(expression.children[0], expression.expectedChildrenTypes[0])
+                                append(")) s(id, a0)) s)")
                             }
                             "round", "lower", "upper" -> {
                                 append(expression.name)
@@ -1368,7 +1369,6 @@ internal class TranslatedQuery(
         expressionIfEmpty: String,
         printOrderBy: Boolean,
         printDirection: Boolean,
-        ignoreHoisting: Boolean,
         attributeToIndex: Map<Attribute, Int>? = null
     ): Int {
         with(sql.query) {
@@ -1383,10 +1383,10 @@ internal class TranslatedQuery(
                             it.query.append(" DESC")
                     }
                     orderByCount += expression.base.toSQL(
-                        sql, logId, Type.Any, Int.MAX_VALUE, null, suffix, ignoreHoisting, attributeToIndex
+                        sql, logId, Type.Any, Int.MAX_VALUE, null, suffix, false, attributeToIndex
                     )
                 } else {
-                    expression.base.toSQL(sql, Type.Any, ignoreHoisting, attributeToIndex)
+                    expression.base.toSQL(sql, Type.Any, true, attributeToIndex)
                     ++orderByCount
                     if (printDirection && expression.direction == OrderDirection.Descending)
                         append(" DESC")

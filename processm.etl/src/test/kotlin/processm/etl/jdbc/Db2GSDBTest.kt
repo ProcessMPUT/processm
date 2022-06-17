@@ -3,9 +3,8 @@ package processm.etl.jdbc
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.helpers.mapToSet
 import processm.core.log.DBLogCleaner
 import processm.core.log.Event
@@ -17,13 +16,15 @@ import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.EtlProcessMetadata
-import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.Db2Environment
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
+import kotlin.test.Test
 
-
+@Tag("ETL")
+@Timeout(90, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class Db2SalesTest {
 
@@ -53,15 +54,15 @@ class Db2SalesTest {
 
     private lateinit var externalDB: Db2Environment
 
-    private val dataStoreName = UUID.randomUUID().toString()
-    private val etlConfiguratioName = "Db2 GSDB ETL Test"
+    private val dataStoreName = DBTestHelper.dbName
+    private val etlConfigurationName = "Db2 GSDB ETL Test"
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = if (lastEventExternalId == null) batchEventSQL else incrementalEventSQL
@@ -93,10 +94,6 @@ class Db2SalesTest {
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.get(dataStoreName).close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-        }
     }
 
     @AfterTest
@@ -114,9 +111,6 @@ class Db2SalesTest {
         }
         transaction(DBCache.get(dataStoreName).database) {
             ETLConfigurations.deleteAll()
-        }
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
         }
     }
 

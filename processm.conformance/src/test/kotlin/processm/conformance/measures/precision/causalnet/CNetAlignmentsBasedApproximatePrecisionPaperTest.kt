@@ -3,6 +3,7 @@ package processm.conformance.measures.precision.causalnet
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.CausalNetAsPetriNetAligner
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.models.petrinet.converters.CausalNet2PetriNet
 import kotlin.test.Test
 import kotlin.test.assertTrue

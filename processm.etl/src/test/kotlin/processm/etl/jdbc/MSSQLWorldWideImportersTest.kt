@@ -3,9 +3,8 @@ package processm.etl.jdbc
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.log.*
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -16,27 +15,30 @@ import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.EtlProcessMetadata
-import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
 import java.sql.Date
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.*
+import kotlin.test.Test
 
+@Tag("ETL")
+@Timeout(90, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MSSQLWorldWideImportersTest {
 
     // region environment
     private val logger = logger()
-    private lateinit var dataStoreName: String
+    private val dataStoreName: String = DBTestHelper.dbName
     private lateinit var externalDB: DBMSEnvironment<*>
     private lateinit var etlConfigurationId: EntityID<UUID>
     // endregion
 
     // region user input
-    private val etlConfiguratioName = "ETL Configuration for WorldWideImporters"
+    private val etlConfigurationName = "ETL Configuration for WorldWideImporters"
 
     private fun getEventQuery(batch: Boolean) = """
 WITH MainOrderAux(ParentID, ChildID) AS 
@@ -75,12 +77,11 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
             (if (batch) "" else """ where "event_id" > coalesce(?, 0)""") + """ order by "event_id""""
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0"): EntityID<UUID> {
-        dataStoreName = UUID.randomUUID().toString()
         return transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = getEventQuery(lastEventExternalId == null)
@@ -138,9 +139,6 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
             }
             conn.commit()
         }
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""")
-        }
         transaction(DBCache.get(dataStoreName).database) {
             ETLConfigurations.deleteAll()
         }
@@ -156,22 +154,19 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
             return@transaction etl.toXESInputStream().toList()
         }
 
-        assertEquals(1, stream.filterIsInstance<Log>().size)
-        assertEquals(66057, stream.filterIsInstance<Trace>().size)
-        assertEquals(519622, stream.filterIsInstance<Event>().size)
+        stream.assertDistribution(1, 66057, 519622)
 
         logger.info("Verifying contents...")
+        val conceptNames = setOf(
+            "placed",
+            "item picked",
+            "picking complete",
+            "invoice issued",
+            "delivered"
+        )
         assertTrue(stream
             .filterIsInstance<Event>()
-            .all {
-                it.conceptName in setOf(
-                    "placed",
-                    "item picked",
-                    "picking complete",
-                    "invoice issued",
-                    "delivered"
-                )
-            }
+            .all { it.conceptName in conceptNames }
         )
     }
 
@@ -192,11 +187,9 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
         assertEquals(partSize, part1.size)
         for ((i, x) in part1.withIndex())
             logger.debug("$i ${x::class.simpleName} ${x.identityId}")
-        assertEquals(1, part1.filterIsInstance<Log>().size)
-        assertEquals(logUUID, part1.filterIsInstance<Log>().single().identityId)
-        assertEquals(1, part1.filterIsInstance<Trace>().size)
-        assertEquals(1, part1.filterIsInstance<Event>().size)
-        val event1 = part1.filterIsInstance<Event>().single()
+        part1.assertDistribution(1, 1, 1)
+        assertEquals(logUUID, part1.first { it is Log }.identityId)
+        val event1 = part1.first { it is Event }
         assertEquals(UUID.fromString("00000000-0000-0000-0000-000000000001"), event1.identityId)
 
         logger.info("Importing one more event")
@@ -212,16 +205,11 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
         }
 
         assertEquals(3, part2.size)
-        assertEquals(1, part2.filterIsInstance<Log>().size)
-        assertEquals(1, part2.filterIsInstance<Trace>().size)
-        assertEquals(1, part2.filterIsInstance<Event>().size)
+        part2.assertDistribution(1, 1, 1)
+        assertEquals(logUUID, part2.first { it is Log }.identityId)
         assertEquals(
-            logUUID,
-            part2.filterIsInstance<Log>().single().identityId
-        )
-        assertEquals(
-            part1.filterIsInstance<Trace>().single().identityId,
-            part2.filterIsInstance<Trace>().single().identityId
+            part1.first { it is Trace }.identityId,
+            part2.first { it is Trace }.identityId
         )
         val event2 = part2.filterIsInstance<Event>().single()
         assertNotEquals(event1.identityId, event2.identityId)
@@ -332,9 +320,7 @@ order by "trace_rank" desc, "event_id" desc
             return@transaction etl.toXESInputStream().toList()
         }
 
-        assertEquals(1, stream1.filterIsInstance<Log>().size)
-        assertEquals(66057, stream1.filterIsInstance<Trace>().size)
-        assertEquals(519622, stream1.filterIsInstance<Event>().size)
+        stream1.assertDistribution(1, 66057, 519622)
 
         // simulate new order
         val orderID = externalDB.connect().use { conn ->
@@ -393,10 +379,8 @@ order by "trace_rank" desc, "event_id" desc
                 val etl = ETLConfiguration.findById(etlConfigurationId)!!
                 return@transaction etl.toXESInputStream().toList()
             }
-            assertEquals(1, stream2.filterIsInstance<Log>().size)
-            assertEquals(1, stream2.filterIsInstance<Trace>().size)
+            stream2.assertDistribution(1, 1, 5)
             val events = stream2.filterIsInstance<Event>()
-            assertEquals(5, events.size)
             assertEquals(events[0].timeTimestamp, Instant.parse("2021-08-30T00:00:00.000Z"))
             assertEquals(events[0].conceptName, "placed")
             assertEquals(events[1].timeTimestamp, Instant.parse("2021-08-30T09:40:00.000Z"))
@@ -428,9 +412,7 @@ order by "trace_rank" desc, "event_id" desc
             return@transaction etl.toXESInputStream().toList()
         }
 
-        assertEquals(1, stream.filterIsInstance<Log>().size)
-        assertEquals(66057, stream.filterIsInstance<Trace>().size)
-        assertEquals(519622, stream.filterIsInstance<Event>().size)
+        stream.assertDistribution(1, 66057, 519622)
 
         transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(etlConfigurationId)!!
@@ -440,26 +422,30 @@ order by "trace_rank" desc, "event_id" desc
 
     @Test
     fun `read something then read everything then read nothing from null`() {
-        createEtlConfiguration(null)
+        val etlConfigurationId = createEtlConfiguration(null)
 
         var stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().take(100).toList()
         }
-        assertFalse { stream.isEmpty() }
+        assertFalse(stream.isEmpty())
 
         stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().toList()
         }
-        assertEquals(1, stream.filterIsInstance<Log>().size)
-        assertEquals(66057, stream.filterIsInstance<Trace>().size)
-        assertEquals(519622, stream.filterIsInstance<Event>().size)
+        stream.assertDistribution(1, 66057, 519622)
 
         stream = transaction(DBCache.get(dataStoreName).database) {
             val etl = ETLConfiguration.findById(etlConfigurationId)!!
             return@transaction etl.toXESInputStream().toList()
         }
-        assertTrue { stream.isEmpty() }
+        assertTrue(stream.isEmpty())
+    }
+
+    private fun Iterable<XESComponent>.assertDistribution(logs: Int, traces: Int, events: Int) {
+        assertEquals(logs, count { it is Log })
+        assertEquals(traces, count { it is Trace })
+        assertEquals(events, count { it is Event })
     }
 }

@@ -2,6 +2,7 @@ package processm.core.querylanguage
 
 import org.antlr.v4.runtime.RecognitionException
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.*
 
 @Tag("PQL")
@@ -1178,5 +1179,67 @@ class QueryTests {
             """.trimMargin()
         val query = Query(q)
         assertEquals(q, query.toString())
+    }
+
+    @Test
+    fun deleteAllLogsTest() {
+        val query = Query("delete log")
+        assertEquals(Scope.Log, query.deleteScope)
+        assertTrue(query.isImplicitSelectAll[Scope.Log]!!)
+        assertTrue(query.isImplicitSelectAll[Scope.Trace]!!)
+        assertTrue(query.isImplicitSelectAll[Scope.Event]!!)
+        assertTrue(query.selectAll[Scope.Log]!!)
+        assertTrue(query.selectAll[Scope.Trace]!!)
+        assertTrue(query.selectAll[Scope.Event]!!)
+        assertTrue(query.selectStandardAttributes.values.all { it.isEmpty() })
+        assertTrue(query.selectOtherAttributes.values.all { it.isEmpty() })
+        assertTrue(query.selectExpressions.values.all { it.isEmpty() })
+        assertFalse(query.isGroupBy[Scope.Log]!!)
+        assertFalse(query.isGroupBy[Scope.Trace]!!)
+        assertFalse(query.isGroupBy[Scope.Event]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
+    }
+
+    @Test
+    fun deleteAllImplicitTest() {
+        val query = Query("delete")
+        assertEquals(Scope.Event, query.deleteScope)
+        assertTrue(query.isImplicitSelectAll[Scope.Log]!!)
+        assertTrue(query.isImplicitSelectAll[Scope.Trace]!!)
+        assertTrue(query.isImplicitSelectAll[Scope.Event]!!)
+        assertTrue(query.selectAll[Scope.Log]!!)
+        assertTrue(query.selectAll[Scope.Trace]!!)
+        assertTrue(query.selectAll[Scope.Event]!!)
+        assertTrue(query.selectStandardAttributes.values.all { it.isEmpty() })
+        assertTrue(query.selectOtherAttributes.values.all { it.isEmpty() })
+        assertTrue(query.selectExpressions.values.all { it.isEmpty() })
+        assertFalse(query.isGroupBy[Scope.Log]!!)
+        assertFalse(query.isGroupBy[Scope.Trace]!!)
+        assertFalse(query.isGroupBy[Scope.Event]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Log]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Trace]!!)
+        assertFalse(query.isImplicitGroupBy[Scope.Event]!!)
+    }
+
+    @Test
+    fun deleteWithGroupByNotAllowed() {
+        val ex = assertThrows<RecognitionException> {
+            Query("delete event group by l:name")
+        }
+        assertTrue("mismatched input" in ex.message!!)
+        assertTrue("group by" in ex.message!!)
+        assertTrue("expecting" in ex.message!!)
+    }
+
+    @Test
+    fun deleteWithSelectNotAllowed() {
+        val ex = assertThrows<RecognitionException> {
+            Query("select e:name delete event where l:name='abc'")
+        }
+        assertTrue("mismatched input" in ex.message!!)
+        assertTrue("delete" in ex.message!!)
+        assertTrue("expecting" in ex.message!!)
     }
 }

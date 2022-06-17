@@ -8,13 +8,16 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.junit.jupiter.api.Timeout
 import processm.core.persistence.connection.DBCache
 import java.lang.management.ManagementFactory
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.test.*
 
+@Timeout(20L, unit = TimeUnit.SECONDS)
 class DBCacheTest {
     @Test
     fun jmxTest() {
@@ -63,10 +66,15 @@ class DBCacheTest {
             val finishSemaphore = Semaphore(0)
             val finallyExpected = setOf("A", "B", "C", "D")
 
+            transaction(DBCache.getMainDBPool().database) {
+                addLogger(StdOutSqlLogger)
+                // PostgreSQL poorly supports concurrent modification of schema, so we create schema in advance.
+                SchemaUtils.create(Dummies)
+            }
+
             thread {
                 transaction(DBCache.getMainDBPool().database) {
                     addLogger(StdOutSqlLogger)
-                    SchemaUtils.create(Dummies)
 
                     val A = Dummy.new {
                         value = "A"
@@ -123,7 +131,6 @@ class DBCacheTest {
             thread {
                 transaction(DBCache.getMainDBPool().database) {
                     addLogger(StdOutSqlLogger)
-                    SchemaUtils.create(Dummies)
 
                     val C = Dummy.new {
                         value = "C"

@@ -2,6 +2,7 @@ package processm.etl
 
 import org.testcontainers.containers.JdbcDatabaseContainer
 import processm.dbmodels.models.DataConnector
+import java.io.File
 import java.sql.Connection
 import java.util.*
 
@@ -9,6 +10,10 @@ import java.util.*
  * A common interface for external databases uses by tests in [processm.etl.jdbc]
  */
 interface DBMSEnvironment<Container : JdbcDatabaseContainer<*>> : AutoCloseable {
+    companion object {
+        val TEST_DATABASES_PATH: File = File("../test-databases/")
+    }
+
     val user: String
     val password: String
     val jdbcUrl: String
@@ -31,6 +36,7 @@ abstract class AbstractDBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
     override val user: String,
     override val password: String
 ) : DBMSEnvironment<Container> {
+
     private val containerDelegate = lazy { initAndRun() }
     private val container: Container
         get() = containerDelegate.value

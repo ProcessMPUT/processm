@@ -1,33 +1,21 @@
 package processm.performance.kpi
 
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import processm.core.log.DBLogCleaner
-import processm.core.log.DBXESOutputStream
-import processm.core.log.InferConceptInstanceFromStandardLifecycle
-import processm.core.log.XMLXESInputStream
-import processm.core.log.attribute.IDAttr
+import processm.core.DBTestHelper
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
-import processm.core.logging.logger
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.petrinet
-import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.util.*
-import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CalculatorTests {
     companion object {
-        private val logger = logger()
-
-        private val logIds = ArrayList<Int>()
-        private val dbName = UUID.randomUUID().toString()
-        private val logUUID: UUID = UUID.randomUUID()
+        private val dbName = DBTestHelper.dbName
+        private val logUUID: UUID = DBTestHelper.JournalReviewExtra
         private val perfectPetriNet = petrinet {
             P tout "invite reviewers"
             P tin "invite reviewers" tout "get review 1" * "time-out 1"
@@ -201,61 +189,6 @@ class CalculatorTests {
                 accept joins _end
                 reject splits _end
                 reject joins _end
-            }
-        }
-
-        @BeforeAll
-        @JvmStatic
-        fun setUp() {
-            try {
-                logger.info("Loading data")
-                measureTimeMillis {
-                    DBXESOutputStream::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes")
-                        .use { stream ->
-                            DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
-                                output.write(InferConceptInstanceFromStandardLifecycle(XMLXESInputStream(stream)).map {
-                                    if (it is processm.core.log.Log)
-                                        processm.core.log.Log(
-                                            HashMap(it.attributes).apply {
-                                                put(
-                                                    "identity:id",
-                                                    IDAttr("identity:id", logUUID)
-                                                )
-                                            },
-                                            HashMap(it.extensions),
-                                            HashMap(it.traceGlobals),
-                                            HashMap(it.eventGlobals),
-                                            HashMap(it.traceClassifiers),
-                                            HashMap(it.eventClassifiers)
-                                        )
-                                    else
-                                        it
-                                })
-                            }
-                        }
-                }.also { logger.info("Data loaded in ${it}ms.") }
-
-                DBCache.get(dbName).getConnection().use {
-                    val response = it.prepareStatement("SELECT id FROM logs ORDER BY id DESC LIMIT 2").executeQuery()
-                    while (response.next()) {
-                        logIds.add(response.getInt("id"))
-                    }
-                }
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                throw e
-            }
-        }
-
-        @AfterAll
-        @JvmStatic
-        fun tearDown() {
-            DBCache.get(dbName).getConnection().use { conn ->
-                conn.autoCommit = false
-                for (logId in logIds) {
-                    DBLogCleaner.removeLog(conn, logId)
-                }
-                conn.commit()
             }
         }
     }

@@ -2,9 +2,8 @@ package processm.etl.jdbc
 
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.helpers.mapToSet
 import processm.core.log.*
 import processm.core.log.attribute.value
@@ -16,11 +15,17 @@ import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.EtlProcessMetadata
-import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.OracleEnvironment
 import java.util.*
-import kotlin.test.*
+import java.util.concurrent.TimeUnit
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
+@Tag("ETL")
+@Timeout(90, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OracleOTSampleDbTest {
 
@@ -46,10 +51,6 @@ class OracleOTSampleDbTest {
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.get(dataStoreName).close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-        }
     }
 
     @AfterTest
@@ -74,15 +75,15 @@ class OracleOTSampleDbTest {
     }
 
     private val logger = logger()
-    private val dataStoreName = UUID.randomUUID().toString()
-    private val etlConfiguratioName = "Oracle Sample DB ETL Test"
+    private val dataStoreName = DBTestHelper.dbName
+    private val etlConfigurationName = "Oracle Sample DB ETL Test"
 
     private fun createEtlConfiguration(lastEventExternalId: String? = "0") =
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = getEventSQL(lastEventExternalId == null)

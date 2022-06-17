@@ -1,6 +1,7 @@
 package processm.miners.causalnet.heuristicminer
 
 import processm.core.helpers.mapToSet
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
@@ -13,18 +14,8 @@ import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselec
 import processm.miners.causalnet.heuristicminer.bindingselectors.CountSeparately
 import processm.miners.causalnet.heuristicminer.dependencygraphproviders.DefaultDependencyGraphProvider
 import processm.miners.causalnet.onlineminer.BasicTraceToNodeTrace
-import kotlin.math.absoluteValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-
-fun assertDoubleEquals(expected: Double?, actual: Double?, eps: Double = 1e-5) {
-    if (expected == null || actual == null)
-        assertEquals(expected, actual)
-    else {
-        assertTrue { (expected.absoluteValue <= eps && actual.absoluteValue <= eps) || ((actual / expected).absoluteValue - 1).absoluteValue <= eps }
-    }
-}
 
 class PM_chapter_72 {
 

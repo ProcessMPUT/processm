@@ -66,14 +66,16 @@
         <com.ibm.db2.version>11.5.6.0</com.ibm.db2.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
         <testcontainers.version>1.16.0</testcontainers.version>
+        <io.fabric8.docker-maven-plugin.version>0.40.0</io.fabric8.docker-maven-plugin.version>
         <pooled-jms.version>2.0.5</pooled-jms.version>
 
+        <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
 
         <groups/>
-        <excludedGroups>performance</excludedGroups>
+        <excludedGroups>performance,slow</excludedGroups>
     </properties>
 
     <dependencies>
@@ -219,11 +221,13 @@
                 <configuration>
                     <groups>${groups}</groups>
                     <excludedGroups>${excludedGroups}</excludedGroups>
+                    <parallel>classes</parallel>
+                    <useUnlimitedThreads>true</useUnlimitedThreads>
                     <includes>
                         <include>**/*.java</include>
                         <include>**/*.kt</include>
                     </includes>
-                    <argLine>@../processm.launcher/src/launcher.arguments</argLine>
+                    <argLine>@../processm.launcher/src/launcher.arguments -Xmx6G</argLine>
                 </configuration>
             </plugin>
             <plugin>
@@ -249,7 +253,7 @@
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
-                <version>0.36.1</version>
+                <version>${io.fabric8.docker-maven-plugin.version}</version>
                 <configuration>
                     <images>
                         <image>
