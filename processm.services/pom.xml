@@ -20,7 +20,7 @@
         <ktor.version>1.6.1</ktor.version>
         <openapi-tools.version>5.3.0</openapi-tools.version>
         <swagger-ui.version>3.51.2</swagger-ui.version>
-        <koin.version>2.2.3</koin.version>
+        <koin.version>3.1.5</koin.version>
         <jargon2.version>1.1.1</jargon2.version>
         <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
@@ -37,7 +37,7 @@
                 <executions>
                     <execution>
                         <id>generate code</id>
-                        <phase>generate-resources</phase>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>generate</goal>
                         </goals>
@@ -309,6 +309,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.insert-koin</groupId>
+            <artifactId>koin-test-junit5</artifactId>
+            <version>${koin.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.kosprov.jargon2</groupId>
             <artifactId>jargon2-api</artifactId>
             <version>${jargon2.version}</version>
@@ -344,6 +350,13 @@
             <artifactId>jcc</artifactId>
             <version>${com.ibm.db2.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>core</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

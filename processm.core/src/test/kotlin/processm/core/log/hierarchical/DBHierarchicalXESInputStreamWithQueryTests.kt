@@ -3,6 +3,7 @@ package processm.core.log.hierarchical
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.assertThrows
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.implies
 import processm.core.helpers.mapToSet
@@ -258,6 +259,13 @@ class DBHierarchicalXESInputStreamWithQueryTests {
                 assertNull(event.identityId)
                 standardAndAllAttributesMatch(log, event)
             }
+        }
+    }
+
+    @Test
+    fun scopedSelectAllWithGroupBy() {
+        assertThrows<IllegalArgumentException> {
+            q("select l:*, t:*, e:*, max(e:timestamp)-min(e:timestamp) where l:name like 'Jour%Rev%' and l:id=$uuid1 group by e:instance")
         }
     }
 

@@ -9,7 +9,7 @@ import processm.core.logging.logger
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.toMap
-import java.sql.DriverManager
+import processm.etl.helpers.getConnection
 import java.sql.ResultSet
 import java.sql.SQLFeatureNotSupportedException
 import java.sql.Types
@@ -116,7 +116,7 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream {
     if (batch && lastEventExternalId !== null)
         return emptySequence()
     val baseSequence = sequence<Pair<XESComponent, Any?>> {
-        DriverManager.getConnection(jdbcUri, user, password)
+        metadata.dataConnector.getConnection()
             .use { connection ->
                 try {
                     connection.setNetworkTimeout(ForkJoinPool.commonPool(), NETWORK_TIMEOUT)
@@ -127,7 +127,7 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream {
                     if (!batch)
                         stmt.setObject(1, castToSQLType(lastEventExternalId, lastEventExternalIdType))
 
-                    lastExecutionTime = Instant.now()
+                    metadata.lastExecutionTime = Instant.now()
                     stmt.executeQuery().use { rs ->
                         // helper structures
                         val columnMap = columnToAttributeMap.toMap()

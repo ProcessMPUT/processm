@@ -25,6 +25,7 @@
     "component": {
       "causal-net": "Sieć przyczynowa",
       "kpi": "KPI",
+      "bpmn": "BPMN",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
       "edit": {
@@ -74,8 +75,32 @@
       "process-name": "Nazwa procesu",
       "data-connector": "Łącze danych",
       "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie procesu ETL {etlProcessName} i powiązanych danych?",
-      "custom-case-notion": "Własny wybór"
+      "custom-case-notion": "Własny wybór",
+      "deactivation-confirmation": "Czy chcesz przestać śledzić zmiany dla procesu ETL {etlProcessName}?",
+      "recreate-log": "Odtwórz logi XES",
+      "log-recreation-confirmation": "Czy chcesz odtworzyć log XES dla procesu ETL {etlProcessName}? Operacja nadpisuje istniejący log XES."
     }
+  },
+  "add-manual-query-dialog": {
+    "dialog-title": "Dodaj ręczne zapytanie",
+    "query": "Zapytanie SQL",
+    "batch": "Zapytanie wsadowe",
+    "refresh": "Częstotliwość odświeżania",
+    "enabled": "Aktywny",
+    "trace-id-source": "Kolumna z ID śladu",
+    "trace-id-target": "Atrybut z ID śladu",
+    "event-id-source": "Kolumna z ID zdarzenia",
+    "event-id-target": "Atrybut z ID zdarzenia",
+    "source": "Kolumna",
+    "target": "Atrybut",
+    "mappings": "Odwzorowanie z kolumn do atrybutów",
+    "new-mapping": "Dodaj odwzorowanie",
+    "validation": {
+      "non-empty-field": "Wartośc nie może być pusta",
+      "not-a-positive-integer": "Wartość nie jest dodanią liczbą całkowitą"
+    },
+    "last-event-external-id": "Wartość początkowa ostatniego ID zdarzenia",
+    "last-event-external-id-type": "Typ danych ostatniego ID zdarzenia"
   },
   "add-data-connector-dialog": {
     "dialog-title": "Dodaj łącze danych",
@@ -93,6 +118,7 @@
     "password": "Hasło",
     "database-name": "Nazwa bazy danych",
     "database": "Baza danych",
+    "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
     "validation": {
       "non-empty-field": "Wartość nie może być pusta",
       "connection-string-format": "Wartość nie spełnia formatu connection stringa",
@@ -175,9 +201,25 @@
       "registered": "Rejestracja konta zakończona powodzeniem"
     }
   },
+  "xes-preview-dialog": {
+    "title": "Przeglądarka logu",
+    "no-data-store": "Nie znaleziono odpowiedniego magazynu danych",
+    "executing-query": "Wykonywanie zapytania...",
+    "query-executed": "Zapytanie wykonane i wyniki pobrane w {executionTime} ms. Formatowanie wyników...",
+    "results-retrieved": "Zapytanie wykonane i wyniki pobrane w  {executionTime} ms. Wyniki sformatowane w {formattingTime} ms."
+  },
+  "process-details-dialog": {
+    "title": "Szczegóły procesu: {name}",
+    "message": "Komunikat błędu",
+    "exception": "Ślad stosu",
+    "time": "Czas",
+    "log-identity-id": "Log identity:id",
+    "errors": "Błędy"
+  },
   "common": {
     "cancel": "Anuluj",
     "save": "Zapisz",
+    "test": "Test",
     "rename": "Zmień nazwę",
     "remove": "Usuń",
     "close": "Zamknij",
@@ -203,6 +245,14 @@
     "saving": {
       "success": "Pomyślnie zapisano",
       "failure": "Zapisywanie nie powiodło się"
+    },
+    "activate": "Aktywuj",
+    "deactivate": "Dezaktywuj",
+    "operation-successful": "Operacja wykonana pomyślnie",
+    "operation-error": "Nie udało się wykonać operacji",
+    "testing": {
+      "success": "Test udany",
+      "failure": "Test nieudany"
     }
   }
 }

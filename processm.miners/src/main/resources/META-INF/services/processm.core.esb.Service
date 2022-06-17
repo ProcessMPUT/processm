@@ -1,2 +1,2 @@
-processm.miners.kpi.KPIService
+processm.miners.kpi.LogKPIService
 processm.miners.causalnet.CausalNetMinerService

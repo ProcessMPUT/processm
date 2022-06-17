@@ -24,9 +24,7 @@ class MetaModel(
     private val objectRelations = mutableMapOf<Pair<EntityID<Int>, EntityID<Int>>, MutableList<Pair<String, String>>>()
 
     private fun addObjectVersions(objectId: String, objectClassId: EntityID<Int>, objectVersions: List<EntityID<Int>>) {
-        this.objectVersions
-            .getOrPut(objectClassId, ::mutableMapOf)
-            .put(objectId, objectVersions)
+        this.objectVersions.getOrPut(objectClassId, ::mutableMapOf)[objectId] = objectVersions
     }
 
     private fun addObjectRelations(sourceObjectId: String, sourceObjectClassId: EntityID<Int>, targetObjectId: String, targetObjectClassId: EntityID<Int>) {
@@ -54,7 +52,7 @@ class MetaModel(
                     val classId = metaModelReader.getClassId(event.entityTable)
                     val objectVersionFields = event.objectData.mapKeys { (attributeName) -> metaModelReader.getAttributeId(classId, attributeName) }
 
-                    metaModelAppender.addObjectVersion(event.entityId, classId, event.eventType,event.timestamp ?: now, objectVersionFields)
+                    metaModelAppender.addObjectVersion(event.entityId, classId, event.eventType, event.timestamp, objectVersionFields)
                 }
 
                 logger.info("Successfully handled ${databaseChangeEvents.count()} DB change events")
@@ -204,27 +202,25 @@ class MetaModel(
                     }
                     .toMap()
 
-                val referencingAttributeIds = BatchInsertStatement(AttributesNames)
-                    .apply {
-                        classes.forEach { metaModelClass ->
-                            metaModelClass.attributes.forEach { attribute ->
-                                classIds[metaModelClass.name]?.let { classId ->
-                                    addBatch()
-                                    this[AttributesNames.name] = attribute.name
-                                    this[AttributesNames.isReferencingAttribute] = attribute.isPartOfForeignKey
-                                    this[AttributesNames.type] = attribute.type
-                                    this[AttributesNames.classId] = classId
-                                }
+                val referencingAttributeIds = BatchInsertStatement(AttributesNames).apply {
+                    classes.forEach { metaModelClass ->
+                        metaModelClass.attributes.forEach { attribute ->
+                            classIds[metaModelClass.name]?.let { classId ->
+                                addBatch()
+                                this[AttributesNames.name] = attribute.name
+                                this[AttributesNames.isReferencingAttribute] = attribute.isPartOfForeignKey
+                                this[AttributesNames.type] = attribute.type
+                                this[AttributesNames.classId] = classId
                             }
                         }
-                        execute(this@transaction)
-                    }.resultedValues
+                    }
+                    execute(this@transaction)
+                }.resultedValues
                     .orEmpty()
                     .filter { it[AttributesNames.isReferencingAttribute] }
-                    .map {
-                        (it [AttributesNames.classId] to it[AttributesNames.name]) to it[AttributesNames.id]
+                    .associate {
+                        (it[AttributesNames.classId] to it[AttributesNames.name]) to it[AttributesNames.id]
                     }
-                    .toMap()
 
                 BatchInsertStatement(Relationships).apply {
                     relationships.forEach { relationship ->

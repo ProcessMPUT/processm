@@ -3,13 +3,12 @@ package processm.dbmodels.models
 import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.UUIDTable
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.`java-time`.datetime
-import java.time.LocalDateTime
+import org.jetbrains.exposed.dao.id.IdTable
 import java.util.*
 
-object AutomaticEtlProcesses : UUIDTable("automatic_etl_processes") {
+object AutomaticEtlProcesses : IdTable<UUID>("automatic_etl_processes") {
+    override val id = reference("id", EtlProcessesMetadata)
+    override val primaryKey = PrimaryKey(id)
 }
 
 class AutomaticEtlProcess(id: EntityID<UUID>) : UUIDEntity(id) {

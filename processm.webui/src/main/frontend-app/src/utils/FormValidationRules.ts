@@ -9,6 +9,13 @@ export function notEmptyRule(
   return !!value || errorMessage;
 }
 
+export function isDefinedRule(
+  value: any | undefined,
+  errorMessage: string
+): string | boolean {
+  return value !== undefined || errorMessage;
+}
+
 export function connectionStringFormatRule(
   value: string,
   errorMessage: string
@@ -46,4 +53,12 @@ export function portNumberRule(
     (Number.isInteger(portNumber) && portNumber >= 0 && portNumber <= 65535) ||
     errorMessage
   );
+}
+
+export function isPositiveIntegerRule(
+  value: string,
+  errorMessage: string
+): string | boolean {
+  const int = Number(value);
+  return (Number.isInteger(int) && int > 0) || errorMessage;
 }

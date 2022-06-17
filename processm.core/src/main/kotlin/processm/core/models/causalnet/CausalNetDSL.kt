@@ -95,8 +95,8 @@ class SetOfSetOfNodes(val base: Set<Set<Node>>) : Set<Set<Node>> by base {
 class CausalNetDSL {
     internal val joins = ArrayList<Join>()
     internal val splits = ArrayList<Split>()
-    var start: Node = Node("start", special = true)
-    var end: Node = Node("end", special = true)
+    var start: Node = Node("start", isArtificial = true)
+    var end: Node = Node("end", isArtificial = true)
 
     infix fun Set<Node>.join(target: Node) {
         this@CausalNetDSL.joins.add(Join(this.mapToSet { source -> Dependency(source, target) }))

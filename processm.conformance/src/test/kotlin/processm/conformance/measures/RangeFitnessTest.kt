@@ -1,6 +1,7 @@
 package processm.conformance.measures
 
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log
@@ -109,14 +110,6 @@ class RangeFitnessTest {
             yield(trace(a, d, b, e, f, b, d, e, e, f, d, b, e, g))
             yield(trace(a, d, c, e, f, d, b, e, f, c, d, e, f, d, b, e, g))
         }.map { Trace(sequenceOf(event("start")) + it.events + sequenceOf(event("end"))) }
-
-
-    // http://realtimecollisiondetection.net/blog/?p=89
-    private fun assertDoubleEquals(expected: Double, actual: Double, prec: Double = 1e-3) =
-        assertTrue(
-            abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
-            "Expected: $expected, actual: $actual, prec: $prec"
-        )
 
 
     @Test

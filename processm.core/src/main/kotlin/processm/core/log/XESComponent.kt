@@ -14,6 +14,12 @@ import java.util.*
 abstract class XESComponent(
     internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 ) {
+    companion object {
+        private val identityMap: Map<String, String> = object : HashMap<String, String>() {
+            override fun get(key: String): String? = key
+        }
+    }
+
     /**
      * Standard attribute based on concept:name
      * Standard extension: Concept
@@ -46,9 +52,7 @@ abstract class XESComponent(
 
     init {
         if (attributesInternal.isNotEmpty())
-            setStandardAttributes(object : HashMap<String, String>() {
-                override fun get(key: String): String? = key
-            })
+            setStandardAttributes(identityMap)
     }
 
     /**

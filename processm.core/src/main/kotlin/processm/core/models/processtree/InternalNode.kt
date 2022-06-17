@@ -1,6 +1,7 @@
 package processm.core.models.processtree
 
 import processm.core.models.commons.Activity
+import processm.core.models.commons.ControlStructure
 import processm.core.models.commons.DecisionPoint
 
 /**
@@ -8,9 +9,8 @@ import processm.core.models.commons.DecisionPoint
  *
  * Strict decisions in a process tree are possible only in [Exclusive] and [RedoLoop]
  */
-abstract class InternalNode(vararg nodes: Node) : Node(*nodes), DecisionPoint {
+abstract class InternalNode(vararg nodes: Node) : Node(*nodes), DecisionPoint, ControlStructure {
     override val possibleOutcomes: List<NodeDecision> = emptyList()
-
     override val previousActivities: Collection<Activity> get() = getPrecedingActivitiesFromParent()
 
     protected fun getPrecedingActivitiesFromParent() =

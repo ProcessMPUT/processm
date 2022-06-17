@@ -19,19 +19,22 @@ class FullSimulationPipelineTest {
     @Test
     fun `Petri Net from PM book Fig 3 2`() {
         val model = `PM book Fig 3 2`()
+        runSimulationPipeline(model)
     }
 
     @Test
     fun `Causal Net from PM book Fig 3 12`() {
         val model = `PM book Fig 3 12`()
+        runSimulationPipeline(model)
     }
 
     @Test
     fun `Process Tree from PM book Fig 7 27`() {
         val model = `PM book Fig 7 27`()
+        runSimulationPipeline(model)
     }
 
-    private fun SimulationPipeline(processModel: ProcessModel) {
+    private fun runSimulationPipeline(processModel: ProcessModel) {
         val activities = processModel.activities.map { it.name to it }.toMap()
 
         val submitterRoles = setOf("submitter")
@@ -59,7 +62,7 @@ class FullSimulationPipelineTest {
             ExponentialDistribution(3.0)
         )
 
-        val tracesCount = 1
+        val tracesCount = 5
         val sims = scheduler.scheduleWith().take(tracesCount).toList()
         val logs = sims.map { trace ->
             trace.toList().joinToString("\n") { "${it.first.activity.name} after: ${it.first.executeAfter?.activity?.name}, start: ${it.second.first}, end: ${it.second.second}" }

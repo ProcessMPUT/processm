@@ -19,7 +19,7 @@ abstract class Node(vararg nodes: Node) {
         internal set
 
     /**
-     * Symbol of the node. For operators should be graphic symbol, activity will use name.
+     * Symbol of the node. For an operator a graphic symbol, for an activity its name.
      */
     abstract val symbol: String
 
@@ -55,17 +55,16 @@ abstract class Node(vararg nodes: Node) {
         return if (childrenInternal.isNotEmpty()) childrenInternal.joinToString(",", "$symbol(", ")") else symbol
     }
 
-    internal val chilrenRecursive: kotlin.sequences.Sequence<Node>
+    internal val childrenRecursive: kotlin.sequences.Sequence<Node>
         get() = sequence {
             yieldAll(childrenInternal)
             for (child in children)
-                yieldAll(child.chilrenRecursive)
+                yieldAll(child.childrenRecursive)
         }
 
     internal abstract val startActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
     internal abstract val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity>
 
     internal abstract fun executionNode(parent: ExecutionNode?): ExecutionNode
-
     internal abstract fun getLastActivitiesInSubtree(): Collection<Activity>
 }

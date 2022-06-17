@@ -254,17 +254,17 @@
                             color="primary"
                             class="mx-2"
                             :disabled="dataConnectors.length == 0"
-                            @click.stop="addEtlProcessDialog = true"
+                            @click.stop="addJdbcEtlProcessDialog = true"
                             v-bind="attrs"
                           >
-                            {{ $t("data-stores.add-manual-query.title") }}
+                            {{ $t("data-stores.add-jdbc-etl-process.title") }}
                           </v-btn>
                         </div>
                       </template>
                       <span>{{
                         dataConnectors.length == 0
                           ? $t("data-stores.data-connector-required")
-                          : $t("data-stores.add-manual-query.description")
+                          : $t("data-stores.add-jdbc-etl-process.description")
                       }}</span>
                     </v-tooltip>
                   </div>
@@ -298,6 +298,10 @@
                   value: 'type'
                 },
                 {
+                  text: $t('data-stores.etl.last-execution-time'),
+                  value: 'lastExecutionTime'
+                },
+                {
                   text: $t('common.actions'),
                   value: 'actions',
                   align: 'center',
@@ -310,12 +314,46 @@
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="recreateLog(item)">refresh</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("data-stores.etl.recreate-log") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="changeEtlActivationStatus(item)">{{
+                        item.isActive
+                          ? "pause_circle_outline"
+                          : "play_circle_outline"
+                      }}</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{
+                    item.isActive
+                      ? $t("common.deactivate")
+                      : $t("common.activate")
+                  }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
                       <v-icon small @click="removeEtlProcess(item)"
                         >delete_forever</v-icon
                       >
                     </v-btn>
                   </template>
                   <span>{{ $t("common.remove") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="showEtlProcessDetails(item)"
+                      >info</v-icon
+                      >
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("common.details") }}</span>
                 </v-tooltip>
               </template>
               <template v-slot:[`item.dataConnectorId`]="{ item }">
@@ -351,6 +389,19 @@
       @cancelled="dataConnectorIdToRename = null"
       @submitted="renameDataConnector"
     />
+    <add-jdbc-etl-process-dialog
+      v-model="addJdbcEtlProcessDialog"
+      :data-store-id="dataStoreId"
+      :dataConnectors="dataConnectors"
+      @cancelled="addJdbcEtlProcessDialog = false"
+      @submitted="addJdbcEtlProcess"
+    />
+    <process-details-dialog
+      :value="processDetailsDialogEtlProcess !== null"
+      :data-store-id="dataStoreId"
+      :etl-process="processDetailsDialogEtlProcess"
+      @cancelled="processDetailsDialogEtlProcess = null"
+      ></process-details-dialog>
   </v-dialog>
 </template>
 
@@ -376,9 +427,13 @@ import RenameDialog from "@/components/RenameDialog.vue";
 import AddAutomaticEtlProcessDialog from "@/components/etl/AddAutomaticEtlProcessDialog.vue";
 import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
+import AddJdbcEtlProcessDialog from "@/components/etl/AddJdbcEtlProcessDialog.vue";
+import ProcessDetailsDialog from "@/components/etl/ProcessDetailsDialog.vue";
 
 @Component({
   components: {
+    ProcessDetailsDialog,
+    AddJdbcEtlProcessDialog,
     AddDataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
@@ -393,7 +448,7 @@ export default class DataStoreConfiguration extends Vue {
   private readonly xesProcessor = new XesProcessor();
   addDataConnectorDialog = false;
   addAutomaticEtlProcessDialog = false;
-  addEtlProcessDialog = false;
+  addJdbcEtlProcessDialog = false;
   fileUploadDialog = false;
   isUploading = false;
   dataConnectors: DataConnector[] = [];
@@ -407,6 +462,7 @@ export default class DataStoreConfiguration extends Vue {
   isLoadingEtlProcesses = false;
   dataConnectorIdToRename: string | null = null;
   capitalize = capitalize;
+  processDetailsDialogEtlProcess: EtlProcess|null = null;
 
   @Prop({ default: false })
   readonly value!: boolean;
@@ -619,10 +675,63 @@ export default class DataStoreConfiguration extends Vue {
         etlProcess.id
       );
       this.displaySuccessfulRemovalMessage();
-
       this.etlProcesses.splice(this.etlProcesses.indexOf(etlProcess), 1);
     } catch (error) {
       this.displayFailedRemovalMessage();
+    }
+  }
+
+  async changeEtlActivationStatus(etlProcess: EtlProcess) {
+    if (this.dataStoreId == null) return;
+
+    const isConfirmed =
+      !etlProcess.isActive ||
+      (await this.$confirm(
+        `${this.$t("data-stores.etl.deactivation-confirmation", {
+          etlProcessName: etlProcess.name
+        })}`,
+        {
+          title: `${this.$t("common.warning")}`
+        }
+      ));
+
+    if (!isConfirmed) return;
+
+    try {
+      await this.dataStoreService.changeEtlProcessActivationState(
+        this.dataStoreId,
+        etlProcess.id,
+        !etlProcess.isActive
+      );
+      etlProcess.isActive = !etlProcess.isActive;
+      this.app.success(`${this.$t("common.operation-successful")}`);
+    } catch (error) {
+      this.app.error(`${this.$t("common.operation-failure")}`);
+    }
+  }
+
+  async recreateLog(etlProcess: EtlProcess) {
+    if (this.dataStoreId == null) return;
+
+    const isConfirmed = await this.$confirm(
+      `${this.$t("data-stores.etl.log-recreation-confirmation", {
+        etlProcessName: etlProcess.name
+      })}`,
+      {
+        title: `${this.$t("common.warning")}`
+      }
+    );
+
+    if (!isConfirmed) return;
+
+    try {
+      await this.dataStoreService.recreateXesLogFromEtlProcess(
+        this.dataStoreId,
+        etlProcess.id
+      );
+      this.app.success(`${this.$t("common.operation-successful")}`);
+    } catch (error) {
+      this.app.error(`${this.$t("common.operation-failure")}`);
     }
   }
 
@@ -683,6 +792,15 @@ export default class DataStoreConfiguration extends Vue {
         (dataStore) => dataStore.id == this.dataConnectorIdToRename
       )?.name || null
     );
+  }
+
+  async addJdbcEtlProcess() {
+    this.addJdbcEtlProcessDialog = false;
+    await this.loadEtlProcesses();
+  }
+
+  showEtlProcessDetails(etlProcess: EtlProcess) {
+    this.processDetailsDialogEtlProcess = etlProcess
   }
 }
 </script>

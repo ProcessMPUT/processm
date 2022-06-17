@@ -5,6 +5,7 @@ import processm.core.helpers.allPermutations
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.Trace
+import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.Marking
@@ -966,8 +967,8 @@ class CompositeAlignerPetriNetTests {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", special = true)
-        val en = Node("end", special = true)
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")
@@ -1032,8 +1033,8 @@ class CompositeAlignerPetriNetTests {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", special = true)
-        val en = Node("end", special = true)
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")
@@ -1105,8 +1106,8 @@ class CompositeAlignerPetriNetTests {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", special = true)
-        val en = Node("end", special = true)
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")
@@ -1187,8 +1188,8 @@ class CompositeAlignerPetriNetTests {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", special = true)
-        val en = Node("end", special = true)
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")
@@ -1249,5 +1250,70 @@ class CompositeAlignerPetriNetTests {
             assertNull(aligner.align(trace, 1, TimeUnit.MILLISECONDS))
             assertNotNull(aligner.align(trace, 100, TimeUnit.SECONDS))
         }
+    }
+
+    @Test
+    fun `return alignments for a correct model`() {
+        val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
+        val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
+
+        val st = Node("start", isArtificial = true)
+        val en = Node("end", isArtificial = true)
+
+        val loopStart = Node("ls")
+        val loopEnd = Node("le")
+
+        val dec1 = Node("d1")
+        val dec2 = Node("d2")
+
+        val model = causalnet {
+            start = st
+            end = en
+
+            st splits loopStart
+            st joins loopStart
+            loopStart splits dec1 + dec2
+
+            loopStart joins dec1
+            for (act1 in activities1) {
+                dec1 joins act1
+                act1 splits loopEnd
+                for (act2 in activities2) {
+                    act1 + act2 join loopEnd
+                }
+            }
+
+            for (act1 in activities1.allSubsets(true).filter { it.size <= 3 }) {
+                dec1 splits act1
+            }
+
+            loopStart joins dec2
+            for (act2 in activities2) {
+                dec2 splits act2
+                dec2 joins act2
+                act2 splits loopEnd
+            }
+
+            for (act2 in activities1.allSubsets(true).filter { it.size <= 3 }) {
+                dec2 splits act2
+            }
+
+            loopEnd splits loopStart
+            loopEnd joins loopStart
+
+            loopEnd splits en
+            loopEnd joins en
+        }
+
+        val log = Helpers.logFromString(
+            """
+                ls d2 M d1 Z le
+                d2 ls d1 Z M le
+                ls d1 d2 A N ls le ls d1 C d2 O le
+            """
+        )
+
+        val alignments = CompositeAligner(model, cache = null, pool = pool).align(log)
+        assertTrue { alignments.all { alignment -> alignment.steps.all { step -> step.modelMove is DecoupledNodeExecution? } } }
     }
 }

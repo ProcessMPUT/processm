@@ -98,12 +98,15 @@ abstract class CausalNet(
     override val endActivities: Sequence<Node> = sequenceOf(end)
 
     /**
-     * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to chose a [Split].
+     * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to choose a [Split].
      * Some of them may be not real decisions, i.e., at most one possible outcome.
      */
     override val decisionPoints: Sequence<DecisionPoint>
-        get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value) } +
-                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, it.value.flatMapTo(mutableSetOf()) { join -> join.sources }) }
+        get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value, true) } +
+                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, false, it.value.flatMapTo(mutableSetOf()) { join -> join.sources }) }
+
+    override val controlStructures: Sequence<DecisionPoint>
+        get() = decisionPoints
 
     private inline fun available(state: CausalNetState, callback: (node: Node, join: Join?, split: Split?) -> Unit) {
         if (state.isNotEmpty()) {
@@ -126,6 +129,7 @@ abstract class CausalNet(
     }
 
 
+    @Deprecated("Use available() instead")
     fun available4(state: CausalNetState, node: Node): List<DecoupledNodeExecution> {
         if (state.isNotEmpty()) {
             val relevant = state.uniqueSet().filterTo(HashSet()) { it.target == node }
@@ -253,7 +257,7 @@ abstract class CausalNet(
 
 
     /**
-     * True if [right] is isomorphic with [this], starting with [inital] as a (possibly empty) mapping from [this] to [right].
+     * True if [right] is isomorphic with [this], starting with [initial] as a (possibly empty) mapping from [this] to [right].
      */
     fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? =
         Isomorphism(this, right).run(initial)
