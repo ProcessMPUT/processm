@@ -171,7 +171,7 @@
                     <execution>
                         <!-- Called by clean phase - cleans schema given by dbschema property (public is default). -->
                         <id>clean-schema</id>
-                        <phase>clean</phase>
+                        <phase>none</phase>
                         <goals>
                             <goal>execute</goal>
                         </goals>

@@ -1,5 +1,6 @@
 package processm.conformance.measures.precision.causalnet
 
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log

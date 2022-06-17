@@ -1,7 +1,11 @@
 package processm.conformance.models.alignments
 
+import processm.conformance.ProcessTrees.azFlower
+import processm.conformance.ProcessTrees.fig727
+import processm.conformance.ProcessTrees.fig729
+import processm.conformance.ProcessTrees.parallelDecisionsInLoop
+import processm.conformance.ProcessTrees.parallelFlowers
 import processm.core.log.Helpers.logFromString
-import processm.core.models.processtree.ProcessTree
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -9,7 +13,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `PM book Fig 7 27 conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = logFromString(
             """
                 A B D E H
@@ -23,7 +26,7 @@ class AStarProcessTreeTests {
                 """
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(fig727)
         for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -40,7 +43,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `PM book Fig 7 27 non-conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = logFromString(
             """
                 A E B D H
@@ -71,7 +73,7 @@ class AStarProcessTreeTests {
             4
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(fig727)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -86,7 +88,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `Flower process tree`() {
-        val tree = ProcessTree.parse("⟲(τ,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z)")
         val log = logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -98,7 +99,7 @@ class AStarProcessTreeTests {
             """
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(azFlower)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -113,7 +114,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `Parallel flower models`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -127,7 +127,7 @@ class AStarProcessTreeTests {
             """
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(parallelFlowers)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -142,7 +142,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `Parallel flower models non-conforming log`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = logFromString(
             """
                 1 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -155,7 +154,7 @@ class AStarProcessTreeTests {
             """
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(parallelFlowers)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -170,7 +169,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `Parallel decisions in loop process tree`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -181,7 +179,7 @@ class AStarProcessTreeTests {
             """
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(parallelDecisionsInLoop)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -195,7 +193,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `Parallel decisions in loop non-conforming log`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = logFromString(
             """
                 A A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -222,7 +219,7 @@ class AStarProcessTreeTests {
             4
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(parallelDecisionsInLoop)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -236,7 +233,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `PM book Fig 7 29 conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = logFromString(
             """
                 A C E G
@@ -246,7 +242,7 @@ class AStarProcessTreeTests {
                 """
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(fig729)
         for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -263,7 +259,6 @@ class AStarProcessTreeTests {
 
     @Test
     fun `PM book Fig 7 29 non-conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = logFromString(
             """
                 D F B G E C A
@@ -274,7 +269,7 @@ class AStarProcessTreeTests {
             5,
         )
 
-        val astar = AStar(tree)
+        val astar = AStar(fig729)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)

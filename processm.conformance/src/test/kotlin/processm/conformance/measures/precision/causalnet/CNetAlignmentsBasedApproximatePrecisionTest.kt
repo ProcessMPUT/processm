@@ -1,10 +1,11 @@
 package processm.conformance.measures.precision.causalnet
 
 import processm.core.log.Helpers
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
-import kotlin.test.*
+import kotlin.test.Test
 
 class CNetAlignmentsBasedApproximatePrecisionTest {
 

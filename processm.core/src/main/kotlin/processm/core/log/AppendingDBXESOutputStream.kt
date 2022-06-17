@@ -164,20 +164,7 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
             execute()
         }
 
-        val countItemsToInsert = lastEventIndex + lastTraceIndex + 2
-        assert(countItemsToInsert in 1..queue.size)
-        if (countItemsToInsert == queue.size) {
-            queue.clear()
-            assert(queue.isEmpty())
-        } else {
-            // #102: if the total number of parameters in an SQL query is too large, keep the remaining traces and events in the queue
-            queue = ArrayList(queue.subList(countItemsToInsert, queue.size))
-            // #102: when ending the log, we must flush the queue
-            if (force) {
-                flushQueue(force)
-                assert(queue.isEmpty())
-            }
-        }
+        clearQueue(lastEventIndex, lastTraceIndex, force)
     }
 
     private fun writeAttributes(

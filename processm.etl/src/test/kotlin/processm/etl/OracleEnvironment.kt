@@ -4,8 +4,8 @@ import org.testcontainers.containers.OracleContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
-import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
+import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import java.io.File
 import java.sql.Connection
 
@@ -46,7 +46,6 @@ class OracleEnvironment(
 
         private const val DEFAULT_USER = "SYSTEM"
         private const val DEFAULT_PASSWORD = "2e3e056f2c2bf71e"
-        private const val EMPTY_DB_RESOURCE = "oracle/database.tar.lzma"
 
         private val logger = logger()
 
@@ -59,18 +58,19 @@ class OracleEnvironment(
                 .withUsername(DEFAULT_USER)
                 .withPassword(DEFAULT_PASSWORD)
                 .withStartupTimeoutSeconds(500)
-                .withCopyFileToContainer(MountableFile.forClasspathResource(EMPTY_DB_RESOURCE), "/database.tar.lzma")
+                .withFileSystemBind(TEST_DATABASES_PATH.absolutePath, "/tmp/test-databases/")
                 .withLogConsumer { frame ->
                     logger.info(frame?.utf8String?.trim())
                 }
             return container
         }
 
-        private val sharedContainer by lazy {
+        private val sharedContainerDelegate = lazy {
             val container = createContainer()
             Startables.deepStart(listOf(container)).join()
             return@lazy container
         }
+        private val sharedContainer by sharedContainerDelegate
 
         private val sakilaEnv by lazy {
             val env = OracleEnvironment(sharedContainer)
@@ -94,14 +94,12 @@ class OracleEnvironment(
 
 
     fun configureWithScripts(vararg scripts: String) {
-        for ((idx, script) in scripts.withIndex()) {
-            val path = "/tmp/$idx.sql"
-            container.copyFileToContainer(MountableFile.forClasspathResource(script), path)
+        for (script in scripts) {
             with(
                 container.execInContainer(
                     "sqlplus",
                     "${container.username}/${container.password}@localhost:1521/$sid",
-                    "@$path"
+                    "@/tmp/test-databases/$script"
                 )
             ) {
                 logger.debug(stdout)
@@ -114,10 +112,6 @@ class OracleEnvironment(
     fun configureSampleDB() {
         val scriptPath = "/tmp/script.sh"
 
-        container.copyFileToContainer(
-            MountableFile.forClasspathResource("oracle/db-sample-schemas-18c.tar.gz"),
-            "/tmp/sample.tar.gz"
-        )
         val f = File.createTempFile("processm", null)
         f.deleteOnExit()
         val connectString = "localhost:1521/$sid"
@@ -130,7 +124,7 @@ cd /opt/oracle/product/18c/dbhomeXE/md/admin/
 $sqlplus '@mdprivs.sql'
 $sqlplus '@mdinst.sql'
 cd /tmp
-tar xf sample.tar.gz
+tar xf test-databases/oracle/db-sample-schemas-18c.tar.gz
 cd db-sample-schemas-18c
 ln -s . __SUB__CWD__
 $sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oepw pmpw ixpw shpw bipw example temp /tmp/logs '$connectString'
@@ -156,7 +150,7 @@ $sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oe
         get() = container.withSid(sid).jdbcUrl
 
     override fun close() {
-        if (container !== sharedContainer)
+        if (!sharedContainerDelegate.isInitialized() || container !== sharedContainer)
             container.close() // otherwise it is testcontainer's responsibility to shutdown the container
     }
 

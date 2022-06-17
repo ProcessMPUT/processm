@@ -1,52 +1,24 @@
 package processm.conformance.measures
 
+import processm.conformance.PetriNets.fig82N1
+import processm.conformance.PetriNets.fig82N2
+import processm.conformance.PetriNets.fig82N3
 import processm.core.log.Helpers
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.times
 import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log
-import processm.core.models.petrinet.petrinet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TokenBasedFitnessTest {
-
-    val N1 = petrinet {
-        P tout "a" //start
-        P tin "a" * "f" tout "b" * "c" //p1
-        P tin "a" * "f" tout "d" //p2
-        P tin "b" * "c" tout "e" //p3
-        P tin "d" tout "e" //p4
-        P tin "e" tout "f" * "g" * "h" //p5
-        P tin "g" * "h" //end
-    }
-
-    val N2 = petrinet {
-        P tout "a" //start
-        P tin "a" * "f" tout "b" * "c" //p1
-        P tin "b" * "c" tout "d" //p2
-        P tin "d" tout "e" //p3
-        P tin "e" tout "f" * "g" * "h" //p4
-        P tin "g" * "h" //end
-    }
-
-    val N3 = petrinet {
-        P tout "a" //start
-        P tin "a" tout "c" //p1
-        P tin "a" tout "d" //p2
-        P tin "c" tout "e" //p3
-        P tin "d" tout "e" //p4
-        P tin "e" tout "h" //p5
-        P tin "h" //end
-    }
-
     @Test
     fun `PM book fig 8_3 - trace fitness`() {
 
         val log = Helpers.logFromString("a c d e h")
         val trace = log.traces.first()
-        val fitness = TokenBasedFitness(N1)
+        val fitness = TokenBasedFitness(fig82N1)
         with(fitness.tokenReplay(trace)) {
             assertEquals(7, p)
             assertEquals(7, c)
@@ -59,7 +31,7 @@ class TokenBasedFitnessTest {
     @Test
     fun `PM book fig 8_3 - log fitness`() {
         val log = Helpers.logFromString("a c d e h")
-        val fitness = TokenBasedFitness(N1)
+        val fitness = TokenBasedFitness(fig82N1)
         assertEquals(1.0, fitness(log))
     }
 
@@ -70,7 +42,7 @@ class TokenBasedFitnessTest {
             |a c d e h
         """.trimMargin()
         )
-        val fitness = TokenBasedFitness(N1)
+        val fitness = TokenBasedFitness(fig82N1)
         assertEquals(1.0, fitness(log))
     }
 
@@ -78,7 +50,7 @@ class TokenBasedFitnessTest {
     fun `PM book fig 8_3 - joint`() {
         val log = Helpers.logFromString("a c d e h")
         val trace = log.traces.first()
-        val fitness = TokenBasedFitness(N1)
+        val fitness = TokenBasedFitness(fig82N1)
         with(fitness.tokenReplay(trace)) {
             assertEquals(7, p)
             assertEquals(7, c)
@@ -93,7 +65,7 @@ class TokenBasedFitnessTest {
     @Test
     fun `PM book fig 8_4`() {
         val trace = Helpers.logFromString("a d c e h").traces.first()
-        val fitness = TokenBasedFitness(N2)
+        val fitness = TokenBasedFitness(fig82N2)
         with(fitness.tokenReplay(trace)) {
             assertEquals(6, p)
             assertEquals(6, c)
@@ -105,7 +77,7 @@ class TokenBasedFitnessTest {
     @Test
     fun `PM book fig 8_5`() {
         val trace = Helpers.logFromString("a b d e g").traces.first()
-        val fitness = TokenBasedFitness(N3)
+        val fitness = TokenBasedFitness(fig82N3)
         with(fitness.tokenReplay(trace)) {
             assertEquals(5, p)
             assertEquals(5, c)
@@ -150,12 +122,12 @@ class TokenBasedFitnessTest {
 
     @Test
     fun `PM book page 253 N1`() {
-        assertDoubleEquals(1.0, TokenBasedFitness(N1)(fullLog))
+        assertDoubleEquals(1.0, TokenBasedFitness(fig82N1)(fullLog))
     }
 
     @Test
     fun `PM book fig 8_6`() {
-        val tc = TokenBasedFitness(N2).tokenReplay(fullLog)
+        val tc = TokenBasedFitness(fig82N2).tokenReplay(fullLog)
         assertEquals(443, tc.m)
         assertEquals(443, tc.r)
         assertDoubleEquals(0.9504, tc.fitness)
@@ -163,7 +135,7 @@ class TokenBasedFitnessTest {
 
     @Test
     fun `PM book fig 8_7`() {
-        val tc = TokenBasedFitness(N3).tokenReplay(fullLog)
+        val tc = TokenBasedFitness(fig82N3).tokenReplay(fullLog)
         assertEquals(10 + 146 + 566 + 461, tc.m)
         assertEquals(430 + 607, tc.r)
         assertDoubleEquals(0.8797, tc.fitness)

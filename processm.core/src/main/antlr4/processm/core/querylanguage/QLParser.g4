@@ -5,13 +5,22 @@ options { tokenVocab=QLLexer; }
 
 // parser rules start with lowercase letters
 // Axiom.
-query       : select where? group_by? order_by? limit? offset? EOF
+query       : read_query EOF
+            | delete_query EOF
+            ;
+
+read_query  : select where? group_by? order_by? limit? offset?
+            ;
+
+delete_query: delete where? order_by? limit? offset?
             ;
 
 select      :                               # select_all_implicit
             | SELECT '*' (',' column_list)? # select_all
             | SELECT column_list            # select_column_list
             ;
+
+delete      : DELETE SCOPE? ;
 
 where       : WHERE logic_expr ;
 

@@ -12,7 +12,6 @@ import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
-import processm.services.logic.OrganizationService
 import java.time.Instant
 import java.util.*
 import java.util.stream.Stream
@@ -23,17 +22,9 @@ import kotlin.test.assertNotNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DataStoresApiTest : BaseApiTest() {
-
-    override fun componentsRegistration() {
-        super.componentsRegistration()
-        organizationService = declareMock()
-        dataStoreService = declareMock()
-        logsService = declareMock()
-    }
-
-    lateinit var organizationService: OrganizationService
-    lateinit var dataStoreService: DataStoreService
-    lateinit var logsService: LogsService
+    //val organizationService: OrganizationService by lazy { declareMock() }
+    val dataStoreService: DataStoreService by lazy { declareMock() }
+    val logsService: LogsService by lazy { declareMock() }
 
     override fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?> = Stream.of(null)
 
@@ -49,7 +40,12 @@ class DataStoresApiTest : BaseApiTest() {
             val etlProcessId = UUID.randomUUID()
             val logIdentityId = UUID.randomUUID()
             val cfg = mockk<JdbcEtlProcessConfiguration>(relaxed = true)
-            val process = AbstractEtlProcess("name", dataConnectorId, EtlProcessType.jdbc, configuration = cfg)
+            val process = AbstractEtlProcess(
+                name = "name",
+                dataConnectorId = dataConnectorId,
+                type = EtlProcessType.jdbc,
+                configuration = cfg
+            )
 
             val text = """{"data":[{"foo": "bar"}]}"""
             val lastExecutionTime = Instant.now()
@@ -71,7 +67,7 @@ class DataStoresApiTest : BaseApiTest() {
                 } just Runs
                 every {
                     dataStoreService.removeEtlProcess(dataStoreId, etlProcessId)
-                } returns true andThen false
+                } //returns true andThen false
                 every {
                     dataStoreService.assertUserHasSufficientPermissionToDataStore(
                         userId,

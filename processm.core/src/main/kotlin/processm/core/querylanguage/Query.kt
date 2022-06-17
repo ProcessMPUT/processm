@@ -108,9 +108,16 @@ class Query(val query: String) {
      * The expressions to select split into the scopes.
      */
     val selectExpressions: Map<Scope, List<Expression>> = Collections.unmodifiableMap(_selectExpressions)
-
-
     // endregion
+
+    // region delete clause
+    /**
+     * The scope to delete the objects at. Null for non-deleting query.
+     */
+    var deleteScope: Scope? = null
+        private set
+    // endregion
+
     // region where clause
     /**
      * The expression in the where clause.
@@ -307,6 +314,10 @@ class Query(val query: String) {
             }.asIterable()
             validateImplicitGroupBy(orderByAllExpressions)
         }
+
+        assert(deleteScope === null || isGroupBy.values.all { !it } && isImplicitGroupBy.values.all { !it }) {
+            "Combining the deletion with the group by clause should not be possible due to the grammar"
+        }
     }
 
     private fun validateExplicitGroupBy(
@@ -441,6 +452,11 @@ class Query(val query: String) {
             }
         }
         // endregion
+
+        override fun exitDelete(ctx: QLParser.DeleteContext?) {
+            deleteScope = ctx!!.SCOPE()?.let { Scope.parse(it.text) } ?: Scope.Event
+            exitSelect_all_implicit(null) // mark all attributes for selection
+        }
 
         // region PQL where clause
         override fun exitWhere(ctx: QLParser.WhereContext?) {

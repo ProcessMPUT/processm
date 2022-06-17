@@ -6,8 +6,6 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.`java-time`.datetime
 import org.jetbrains.exposed.sql.`java-time`.timestamp
-import processm.dbmodels.etl.jdbc.ETLConfigurations
-import processm.dbmodels.etl.jdbc.ETLConfigurations.nullable
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.*
@@ -22,7 +20,7 @@ object EtlProcessesMetadata : UUIDTable("etl_processes_metadata") {
     val creationDate = datetime("creation_date").clientDefault { LocalDateTime.now() }
     val lastUpdatedDate = datetime("last_updated_date").nullable()
     val dataConnectorId = reference("data_connector_id", DataConnectors)
-    val isActive = bool("is_active")
+    val isActive = bool("is_active").default(true)
     val lastExecutionTime = timestamp("last_execution_time").nullable()
 }
 

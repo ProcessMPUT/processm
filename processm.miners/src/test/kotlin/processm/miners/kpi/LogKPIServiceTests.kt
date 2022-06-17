@@ -1,20 +1,14 @@
 package processm.miners.kpi
 
-import io.mockk.every
-import io.mockk.just
-import io.mockk.mockk
-import io.mockk.runs
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import processm.core.DBTestHelper
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
-import processm.core.log.DBXESOutputStream
-import processm.core.log.XMLXESInputStream
-import processm.core.log.attribute.IDAttr
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.Workspace
@@ -27,31 +21,15 @@ import kotlin.test.*
 class LogKPIServiceTests {
     companion object {
 
-        val dataStore = UUID.randomUUID()
-        val logUUID = UUID.randomUUID()
+        val dataStore = UUID.fromString(DBTestHelper.dbName)
+
+        @Suppress("unused") // make sure that the lazy field JournalReviewExtra is initialized
+        val journal = DBTestHelper.JournalReviewExtra
         val artemis = Artemis()
 
         @JvmStatic
         @BeforeAll
         fun setUp() {
-            DBXESOutputStream::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes").use { stream ->
-                DBXESOutputStream(DBCache.get(dataStore.toString()).getConnection()).use { output ->
-                    output.write(XMLXESInputStream(stream).map {
-                        if (it is processm.core.log.Log)
-                            processm.core.log.Log(
-                                HashMap(it.attributes).apply { put("identity:id", IDAttr("identity:id", logUUID)) },
-                                HashMap(it.extensions),
-                                HashMap(it.traceGlobals),
-                                HashMap(it.eventGlobals),
-                                HashMap(it.traceClassifiers),
-                                HashMap(it.eventClassifiers)
-                            )
-                        else
-                            it
-                    })
-                }
-            }
-
             artemis.register()
             artemis.start()
         }

@@ -3,18 +3,7 @@ package processm.services.logic
 import io.mockk.*
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.select
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
 import processm.core.communication.Producer
-import processm.dbmodels.models.DataStores
-import processm.dbmodels.models.Organizations
-import java.util.*
-import kotlin.test.*
-import io.mockk.every
-import io.mockk.mockkStatic
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import processm.core.esb.Artemis
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.toFlatSequence
 import processm.dbmodels.etl.jdbc.ETLConfiguration
@@ -26,14 +15,14 @@ import processm.services.api.models.JdbcEtlProcessConfiguration
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.sql.Types
+import java.util.*
 import kotlin.test.*
 
 internal class DataStoreServiceTest : ServiceTestBase() {
     private lateinit var producer: Producer
     private lateinit var dataStoreService: DataStoreService
 
-    @Before
-    @BeforeEach
+    @BeforeTest
     override fun setUp() {
         super.setUp()
         producer = mockk()
@@ -185,7 +174,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `create sampling ETL proces`(): Unit = withCleanTables(DataStores, Organizations) {
-        val service = DataStoreService()
+        val service = DataStoreService(producer)
         val org = createOrganization().value
 
         val ds = service.createDataStore(organizationId = org, name = "New data store")
@@ -203,8 +192,8 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `create, query and delete sampling ETL proces`(): Unit = withCleanTables(DataStores, Organizations) {
-        val service = DataStoreService()
-        val logsService = LogsService()
+        val service = DataStoreService(producer)
+        val logsService = LogsService(producer)
         val org = createOrganization().value
 
         val ds = service.createDataStore(organizationId = org, name = "New data store")

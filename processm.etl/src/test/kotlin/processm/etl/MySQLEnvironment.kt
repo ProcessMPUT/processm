@@ -1,10 +1,11 @@
 package processm.etl
 
+import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
-import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
+import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import java.io.File
 import java.sql.Connection
 
@@ -23,13 +24,15 @@ class MySQLEnvironment(
             return MySQLContainer<MySQLContainer<*>>("mysql:8.0.26")
         }
 
-        private val sharedContainer by lazy {
+        private val sharedContainerDelegate = lazy {
             val container = createContainer()
                 .withUsername(user)
                 .withPassword(password)
+                .withFileSystemBind(TEST_DATABASES_PATH.absolutePath, "/tmp/test-databases/", BindMode.READ_ONLY)
             Startables.deepStart(listOf(container)).join()
             return@lazy container
         }
+        private val sharedContainer by sharedContainerDelegate
 
         private val sakilaEnv by lazy {
             val env = MySQLEnvironment(sharedContainer, "sakila")
@@ -48,17 +51,17 @@ class MySQLEnvironment(
         private val employeesEnv by lazy {
             val env = MySQLEnvironment(sharedContainer, "employees")
             env.configure(
-                listOf("mysql/test_db/employees.sql"),
+                listOf("test_db/employees.sql"),
                 listOf(
-                    "mysql/test_db/load_departments.dump",
-                    "mysql/test_db/load_dept_emp.dump",
-                    "mysql/test_db/load_dept_manager.dump",
-                    "mysql/test_db/load_employees.dump",
-                    "mysql/test_db/load_salaries1.dump",
-                    "mysql/test_db/load_salaries2.dump",
-                    "mysql/test_db/load_salaries3.dump",
-                    "mysql/test_db/load_titles.dump",
-                    "mysql/test_db/show_elapsed.sql"
+                    "test_db/load_departments.dump",
+                    "test_db/load_dept_emp.dump",
+                    "test_db/load_dept_manager.dump",
+                    "test_db/load_employees.dump",
+                    "test_db/load_salaries1.dump",
+                    "test_db/load_salaries2.dump",
+                    "test_db/load_salaries3.dump",
+                    "test_db/load_titles.dump",
+                    "test_db/show_elapsed.sql"
                 )
             )
             return@lazy env
@@ -75,19 +78,18 @@ class MySQLEnvironment(
         // The insert script is, on the other hand, simply too big for JDBC
         // SETs were copied from https://dba.stackexchange.com/questions/44297/speeding-up-mysqldump-reload/44309#44309 and they seem to vastly improve performance
         val scriptText = StringBuilder()
+        // FIXME: it sets the working directory to the path where the first script resides; may fail when files reside in different directories
         scriptText.append(
             """#!/bin/sh                 
-                cd /tmp
+                cd /tmp/test-databases/${File(scripts.first()).parent}
             (echo 'create database $dbName; use $dbName;'            
             echo 'SET autocommit=0; SET unique_checks=0; SET foreign_key_checks=0;'"""
         )
-        for ((idx, script) in scripts.withIndex()) {
-            val containerPath = "/tmp/script$idx.sql"
-            container.copyFileToContainer(MountableFile.forClasspathResource(script), containerPath)
+        for (script in scripts) {
+            val containerPath = "/tmp/test-databases/$script"
             scriptText.append("; cat '$containerPath' ")
         }
-        for (source in auxiliaries)
-            container.copyFileToContainer(MountableFile.forClasspathResource(source), "/tmp/" + File(source).name)
+
         scriptText.append("; echo 'commit')|mysql --user='root' --password='$password'")
         container.copyFileToContainer(Transferable.of(scriptText.toString().toByteArray()), containerShellScript)
 
@@ -109,7 +111,7 @@ class MySQLEnvironment(
     override fun connect(): Connection = container.withDatabaseName(dbName).createConnection("")
 
     override fun close() {
-        if (container !== sharedContainer)
+        if (!sharedContainerDelegate.isInitialized() || container !== sharedContainer)
             container.close() // otherwise it is testcontainer's responsibility to shutdown the container
     }
 }

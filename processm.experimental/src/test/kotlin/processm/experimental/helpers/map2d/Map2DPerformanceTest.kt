@@ -1,6 +1,7 @@
 package processm.experimental.helpers.map2d
 
 import com.google.common.collect.HashBasedTable
+import org.junit.jupiter.api.Tag
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.map2d.Map2D
 import java.io.File
@@ -38,6 +39,7 @@ sns.catplot(x="n", y="time", hue="name", kind="point", col="test", col_wrap=4, s
 plt.show()
  */
 @Ignore
+@Tag("performance")
 class Map2DPerformanceTest {
 
     fun createMaps(nRows: Int, nCols: Int) = listOf(

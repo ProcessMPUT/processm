@@ -1,20 +1,18 @@
 package processm.conformance.measures
 
-import org.junit.jupiter.api.Disabled
+import processm.conformance.PetriNets.fig32
+import processm.conformance.PetriNets.fig624N3
+import processm.conformance.PetriNets.sequence
 import processm.conformance.models.alignments.CompositeAligner
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.times
 import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
-import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.petrinet
-import kotlin.math.abs
-import kotlin.math.max
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Tests based on "Replaying History on Process Models for Conformance Checking and Performance Analysis" (DOI 10.1002/widm.1045
@@ -30,32 +28,6 @@ class FitnessTest {
     private val f = Node("f")
     private val g = Node("g")
     private val h = Node("h")
-
-
-    private val model1: PetriNet = petrinet {
-        P tout "a"
-        P tin "a" * "f" tout "b" * "c"
-        P tin "a" * "f" tout "d"
-        P tin "b" * "c" tout "e"
-        P tin "d" tout "e"
-        P tin "e" tout "g" * "h" * "f"
-        P tin "g" * "h"
-    }
-
-    private val model2: PetriNet = petrinet {
-        P tout "a"
-        P tin "a" tout "c"
-        P tin "c" tout "d"
-        P tin "d" tout "e"
-        P tin "e" tout "h"
-        P tin "h"
-    }
-
-    private val model3 = petrinet {
-        P tout "a"
-        P tin "a" * "b" * "d" * "c" * "e" * "f" tout "b" * "d" * "c" * "e" * "f" * "g" * "h"
-        P tin "g" * "h"
-    }
 
 
     private val log = Log(
@@ -130,35 +102,26 @@ class FitnessTest {
         model4 = m
     }
 
-    // http://realtimecollisiondetection.net/blog/?p=89
-    private fun assertDoubleEquals(expected: Double, actual: Double, prec: Double = 1e-3) =
-        assertTrue(
-            abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
-            "Expected: $expected, actual: $actual, prec: $prec"
-        )
-
-
     @Test
     fun `model1 movem`() {
-        assertEquals(5, Fitness(CompositeAligner(model1)).movem)
+        assertEquals(5, Fitness(CompositeAligner(fig32)).movem)
     }
 
     @Test
     fun `model1 fitness`() {
-        assertDoubleEquals(1.0, Fitness(CompositeAligner(model1))(log))
+        assertDoubleEquals(1.0, Fitness(CompositeAligner(fig32))(log))
     }
 
     @Test
     fun `model2 fitness`() {
-        assertDoubleEquals(0.8, Fitness(CompositeAligner(model2))(log))
+        assertDoubleEquals(0.8, Fitness(CompositeAligner(sequence))(log))
     }
 
     @Test
     fun `model3 fitness`() {
-        assertDoubleEquals(1.0, Fitness(CompositeAligner(model3))(log))
+        assertDoubleEquals(1.0, Fitness(CompositeAligner(fig624N3))(log))
     }
 
-    @Disabled("Keeps crashing on TC. Investigate in #96")
     @Test
     fun `model4 fitness`() {
         assertDoubleEquals(1.0, Fitness(CompositeAligner(model4))(log))
@@ -167,14 +130,14 @@ class FitnessTest {
     @Test
     fun `model1 incomplete alignment`() {
         val alignments = List(log.traces.count()) { null }
-        val f = Fitness(CompositeAligner(model1))
+        val f = Fitness(CompositeAligner(fig32))
         assertEquals(0.0, f(log, alignments))
     }
 
     @Test
     fun `model1 partial alignment`() {
         val alignments = List(log.traces.count()) { null }
-        val f = Fitness(CompositeAligner(model1))
+        val f = Fitness(CompositeAligner(fig32))
         assertEquals(0.0, f(log, alignments))
     }
 }

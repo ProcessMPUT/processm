@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory.getLogger
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.mapToSet
 import processm.core.log.Event
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.XMLXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -22,8 +23,6 @@ import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDep
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import java.io.File
 import java.util.zip.GZIPInputStream
-import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.test.*
 
@@ -309,13 +308,6 @@ class PerformanceAnalyzerTest {
         }
         model4 = m
     }
-
-    // http://realtimecollisiondetection.net/blog/?p=89
-    private fun assertDoubleEquals(expected: Double, actual: Double, prec: Double = 1e-3) =
-        assertTrue(
-            abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
-            "Expected: $expected, actual: $actual, prec: $prec"
-        )
 
 
     @Test
