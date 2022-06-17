@@ -8,13 +8,13 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.locations.*
 import kotlinx.coroutines.runBlocking
-import org.apache.commons.dbcp2.DriverManagerConnectionFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
+import processm.etl.PostgreSQLEnvironment
 import processm.services.api.Paths
 import processm.services.api.models.*
 import java.util.*
@@ -68,28 +68,14 @@ class ProcessMTestingEnvironment {
             val password = sharedDbContainer.password
             return "jdbc:postgresql://$ip:$port/$dbName?loggerLevel=OFF&user=$user&password=$password"
         }
-
-        private val sakilaJdbcUrl: String by lazy {
-            val dbName = "test-databases/sakila"
-            val schemaScript = "test-databases/sakila/postgres-sakila-db/postgres-sakila-schema.sql"
-            val insertScript = "test-databases/sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
-            createDatabase(dbName)
-            val url = jdbcUrlForDb(dbName)
-
-            DriverManagerConnectionFactory(url).createConnection().use { connection ->
-                connection.autoCommit = false
-                connection.createStatement().use { s ->
-                    s.execute(this::class.java.classLoader.getResource(schemaScript)!!.readText())
-                    s.execute(this::class.java.classLoader.getResource(insertScript)!!.readText())
-                }
-                connection.commit()
-            }
-            return@lazy url
-        }
     }
 
+    private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
+
     val sakilaJdbcUrl: String
-        get() = Companion.sakilaJdbcUrl
+        get() = with(sakilaEnv.value) {
+            "$jdbcUrl&user=$user&password=$password"
+        }
 
     fun withPreexistingDatabase(jdbcUrl: String): ProcessMTestingEnvironment {
         this.jdbcUrl = jdbcUrl
@@ -117,6 +103,8 @@ class ProcessMTestingEnvironment {
             }
         } finally {
             ForkJoinPool.commonPool().shutdownNow()
+            if (sakilaEnv.isInitialized())
+                sakilaEnv.value.close()
         }
     }
 
