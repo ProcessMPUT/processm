@@ -1,4 +1,4 @@
-package processm.performance.kpi
+package processm.enhancement.kpi
 
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.models.commons.Activity
