@@ -1,12 +1,9 @@
 package processm.etl.jdbc
 
-import org.junit.jupiter.api.Timeout
 import processm.etl.DBMSEnvironment
 import processm.etl.Db2Environment
-import java.util.concurrent.TimeUnit
 
 
-@Timeout(120, unit = TimeUnit.SECONDS)
 class Db2SakilaTest : ContinuousQueryTest() {
 
     override val etlConfigurationName: String = "Test ETL process for Db2 Sakila DB"
