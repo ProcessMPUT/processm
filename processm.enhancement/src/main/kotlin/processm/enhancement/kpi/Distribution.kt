@@ -1,4 +1,4 @@
-package processm.performance.kpi
+package processm.enhancement.kpi
 
 import kotlinx.serialization.Serializable
 import kotlin.math.ceil

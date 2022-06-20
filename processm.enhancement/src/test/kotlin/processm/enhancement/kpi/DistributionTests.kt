@@ -1,4 +1,4 @@
-package processm.performance.kpi
+package processm.enhancement.kpi
 
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test

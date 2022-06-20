@@ -1,4 +1,4 @@
-package processm.performance.kpi
+package processm.enhancement.kpi
 
 import processm.core.DBTestHelper
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream

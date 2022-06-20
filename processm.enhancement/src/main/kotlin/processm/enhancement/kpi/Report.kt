@@ -1,4 +1,4 @@
-package processm.performance.kpi
+package processm.enhancement.kpi
 
 import kotlinx.serialization.*
 import kotlinx.serialization.builtins.nullable

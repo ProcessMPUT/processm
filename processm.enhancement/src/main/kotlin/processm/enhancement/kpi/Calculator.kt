@@ -1,4 +1,4 @@
-package processm.performance.kpi
+package processm.enhancement.kpi
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.AStar
