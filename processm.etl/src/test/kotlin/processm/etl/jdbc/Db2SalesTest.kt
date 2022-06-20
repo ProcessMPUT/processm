@@ -4,6 +4,8 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.OS
 import processm.core.DBTestHelper
 import processm.core.helpers.mapToSet
 import processm.core.log.DBLogCleaner
@@ -26,6 +28,7 @@ import kotlin.test.Test
 @Tag("ETL")
 @Timeout(90, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DisabledOnOs(OS.WINDOWS) // 2-3 times slower on Windows than on linux and mac
 class Db2SalesTest {
 
     private val batchEventSQL = """
