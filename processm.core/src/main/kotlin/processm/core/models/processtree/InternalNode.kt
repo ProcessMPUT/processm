@@ -1,5 +1,6 @@
 package processm.core.models.processtree
 
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ControlStructure
 import processm.core.models.commons.DecisionPoint
 
@@ -10,4 +11,12 @@ import processm.core.models.commons.DecisionPoint
  */
 abstract class InternalNode(vararg nodes: Node) : Node(*nodes), DecisionPoint, ControlStructure {
     override val possibleOutcomes: List<NodeDecision> = emptyList()
+    override val previousActivities: Collection<Activity> get() = getPrecedingActivitiesFromParent()
+
+    protected fun getPrecedingActivitiesFromParent() =
+        (parent as? InternalNode)?.getPrecedingActivities(this) ?: emptySet()
+
+    override fun getLastActivitiesInSubtree(): Collection<Activity> = childrenInternal.flatMap { it.getLastActivitiesInSubtree() }
+
+    protected open fun getPrecedingActivities(childNode: Node): Collection<Activity> = getPrecedingActivitiesFromParent()
 }

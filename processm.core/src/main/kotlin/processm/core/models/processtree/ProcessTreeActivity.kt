@@ -33,4 +33,6 @@ open class ProcessTreeActivity(name: String) : Node(), Activity {
     override val endActivities: kotlin.sequences.Sequence<ProcessTreeActivity> = sequenceOf(this)
 
     override fun executionNode(parent: ExecutionNode?): ActivityExecution = ActivityExecution(this, parent)
+
+    override fun getLastActivitiesInSubtree() = setOf(this)
 }

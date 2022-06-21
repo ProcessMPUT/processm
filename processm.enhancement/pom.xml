@@ -10,10 +10,10 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>performance</artifactId>
+    <artifactId>enhancement</artifactId>
     <packaging>jar</packaging>
 
-    <name>ProcessM Performance Analysis</name>
+    <name>ProcessM Enhancement Analysis</name>
 
     <dependencies>
         <dependency>
@@ -37,6 +37,11 @@
             <groupId>${project.parent.groupId}</groupId>
             <artifactId>dbmodels</artifactId>
             <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>${org.apache.commons.math.version}</version>
         </dependency>
     </dependencies>
 

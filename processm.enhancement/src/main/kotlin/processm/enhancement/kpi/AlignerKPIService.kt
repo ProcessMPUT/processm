@@ -1,4 +1,4 @@
-package processm.performance.kpi
+package processm.enhancement.kpi
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select

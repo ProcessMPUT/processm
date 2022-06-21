@@ -38,7 +38,7 @@
         <module>processm.services</module>
         <module>processm.miners</module>
         <module>processm.conformance</module>
-        <module>processm.performance</module>
+        <module>processm.enhancement</module>
         <module>processm.webui</module>
         <module>processm.launcher</module>
         <module>processm.experimental</module>
@@ -53,7 +53,7 @@
         <kotlinx.serialization.version>1.3.2</kotlinx.serialization.version>
         <org.jetbrains.exposed.version>0.34.2</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
-        <junit.jupiter.version>5.6.0</junit.jupiter.version>
+        <junit.jupiter.version>5.8.2</junit.jupiter.version>
         <mockk.version>1.12.2</mockk.version>
         <antlr4.version>4.9.2</antlr4.version>
         <com.github.ben-manes.caffeine.version>2.8.5</com.github.ben-manes.caffeine.version>
@@ -66,6 +66,7 @@
         <com.ibm.db2.version>11.5.6.0</com.ibm.db2.version>
         <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
         <testcontainers.version>1.16.0</testcontainers.version>
+        <org.apache.commons.math.version>3.6.1</org.apache.commons.math.version>
         <io.fabric8.docker-maven-plugin.version>0.40.0</io.fabric8.docker-maven-plugin.version>
         <pooled-jms.version>2.0.5</pooled-jms.version>
 
