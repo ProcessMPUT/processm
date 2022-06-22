@@ -1,5 +1,7 @@
 package processm.core.models.causalnet
 
+import processm.core.helpers.mapToSet
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -96,12 +98,12 @@ abstract class CausalNet(
     override val endActivities: Sequence<Node> = sequenceOf(end)
 
     /**
-     * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to chose a [Split].
+     * All decision points of the model. Each node (except [start] and [end]) generates two, one to chose a [Join] and the other to choose a [Split].
      * Some of them may be not real decisions, i.e., at most one possible outcome.
      */
     override val decisionPoints: Sequence<DecisionPoint>
         get() = splits.entries.asSequence().map { DecisionPoint(it.key, it.value, true) } +
-                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, false) }
+                joins.entries.asSequence().map { DecisionPoint(it.key, it.value, false, it.value.flatMapTo(mutableSetOf()) { join -> join.sources }) }
 
     override val controlStructures: Sequence<DecisionPoint>
         get() = decisionPoints
@@ -255,7 +257,7 @@ abstract class CausalNet(
 
 
     /**
-     * True if [right] is isomorphic with [this], starting with [inital] as a (possibly empty) mapping from [this] to [right].
+     * True if [right] is isomorphic with [this], starting with [initial] as a (possibly empty) mapping from [this] to [right].
      */
     fun isomorphic(right: CausalNet, initial: Map<Node, Node>): Map<Node, Node>? =
         Isomorphism(this, right).run(initial)

@@ -1,6 +1,6 @@
 package processm.core.log
 
-import org.junit.jupiter.api.AfterAll
+import processm.core.DBTestHelper
 import processm.core.log.attribute.IDAttr
 import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 
 class AppendingDBXESOutputStreamTest {
     companion object {
-        val dbName = UUID.randomUUID().toString()
+        val dbName = DBTestHelper.dbName
         val logUUID = UUID.randomUUID()
         val trace1UUID = UUID.randomUUID()
         val trace2UUID = UUID.randomUUID()
@@ -59,15 +59,6 @@ class AppendingDBXESOutputStreamTest {
                 sequenceOf(trace1) + events1.drop(1).take(1) + sequenceOf(trace2) + events2.drop(1).take(1) +
                 sequenceOf(trace1) + events1.drop(2).take(1) + sequenceOf(trace2) + events2.drop(2).take(1) +
                 sequenceOf(trace1) + events1.drop(3).take(1) + sequenceOf(trace2) + events2.drop(3).take(1)
-
-
-        @JvmStatic
-        @AfterAll
-        fun dropDatabase() {
-            DBCache.get(dbName).getConnection().use { conn ->
-                conn.prepareStatement("""DROP DATABASE "$dbName"""")
-            }
-        }
     }
 
     @AfterTest

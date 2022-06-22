@@ -9,6 +9,7 @@ tokens {STRING}
 
 
 SELECT      : 'select' ;
+DELETE      : 'delete' ;
 WHERE       : 'where' ;
 GROUP_BY    : 'group' [ \t\r\n]+ 'by' ;
 ORDER_BY    : 'order' [ \t\r\n]+ 'by' ;

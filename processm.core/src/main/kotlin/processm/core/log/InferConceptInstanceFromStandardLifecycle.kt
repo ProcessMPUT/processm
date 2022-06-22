@@ -42,9 +42,22 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
     override fun iterator(): Iterator<XESComponent> = sequence<XESComponent> {
         // key1: activity name, key2: concept:instance, value: the current state of the lifecycle model
         val activityInstanceToLifecycle = DoublingMap2D<String, String, PetriNetInstance>()
+        val nameMap = object : HashMap<String, String>() {
+            override fun get(key: String): String = super.get(key) ?: key
+        }
         for (component in base) {
             when (component) {
-                is Log, is Trace -> {
+                is Log -> {
+                    // start over when new log/trace occurs
+                    activityInstanceToLifecycle.clear()
+                    nameMap.clear()
+                    for (extension in component.extensions.values) {
+                        if (extension.extension !== null)
+                            extension.mapStandardToCustomNames(nameMap)
+                    }
+                    yield(component)
+                }
+                is Trace -> {
                     // start over when new log/trace occurs
                     activityInstanceToLifecycle.clear()
                     yield(component)
@@ -62,6 +75,7 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
                                 Marking(transitions[component.lifecycleTransition!!]!!.outPlaces.associateWith { 1 })
                             (old ?: standardLifecycle.createInstance()).apply { setState(marking) }
                         }
+                        yield(component)
                     } else {
                         // increment conceptInstance if the existing instance does not allow to run the given lifecycle:transition
                         var conceptInstance = 1
@@ -85,7 +99,9 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
 
                         val attributes = HashMap(component.attributes)
                         attributes[CONCEPT_INSTANCE] = StringAttr(CONCEPT_INSTANCE, conceptInstance.toString())
-                        yield(Event(attributes))
+                        val event = Event(attributes)
+                        event.setStandardAttributes(nameMap)
+                        yield(event)
                     }
                 }
                 else -> throw IllegalArgumentException("Unrecognized XES component $component.")

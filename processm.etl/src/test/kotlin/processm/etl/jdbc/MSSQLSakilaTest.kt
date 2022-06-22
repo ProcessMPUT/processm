@@ -5,7 +5,7 @@ import processm.etl.MSSQLEnvironment
 
 class MSSQLSakilaTest : ContinuousQueryTest() {
 
-    override val etlConfiguratioName: String = "Test ETL process for MS SQL Server Sakila DB"
+    override val etlConfigurationName: String = "Test ETL process for MS SQL Server Sakila DB"
 
     override val sqlUUID = "uniqueidentifier"
 

@@ -12,5 +12,6 @@ data class FootprintDecisionPoint(
     val nextActivities: List<Activity>,
 ) : DecisionPoint {
 
+    override val previousActivities = setOf(previousActivity)
     override val possibleOutcomes: Collection<Decision> = nextActivities.map { FootprintDecision(it, this) }
 }

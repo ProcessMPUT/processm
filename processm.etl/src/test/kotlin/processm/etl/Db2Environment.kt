@@ -1,17 +1,17 @@
 package processm.etl
 
+import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.Db2Container
 import org.testcontainers.ext.ScriptUtils
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.shaded.org.apache.commons.io.IOUtils
 import org.testcontainers.utility.DockerImageName
-import org.testcontainers.utility.MountableFile
 import processm.core.logging.logger
 import processm.dbmodels.models.DataConnector
+import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import processm.etl.Db2Environment.Companion.groupInserts
 import java.nio.charset.StandardCharsets
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * DB2 as a component in integration testing sucks:
@@ -75,7 +75,7 @@ class Db2Environment(
                 "GSDB",
                 "sales",
                 "salespw",
-                "db2/gsdb/database.tar.xz"
+                "gsdb/database.tar.xz"
             )
 
         /**
@@ -154,14 +154,9 @@ class Db2Environment(
 
     override fun initAndRun(): Db2Container {
         val container = initContainer()
-            .withCopyFileToContainer(
-                MountableFile.forClasspathResource(persistentDatabaseResourcePath),
-                "/database.tar.xz"
-            )
-
         Startables.deepStart(listOf(container)).join()
 
-        return container as Db2Container
+        return container
     }
 
     override fun initContainer(): Db2Container {
@@ -175,6 +170,8 @@ class Db2Environment(
             .withPassword(password)
             .withEnv("AUTOCONFIG", "false")
             .withEnv("ARCHIVE_LOGS", "false")
+            .withEnv("DB_FILE", persistentDatabaseResourcePath)
+            .withFileSystemBind(TEST_DATABASES_PATH.absolutePath, "/tmp/test-databases/", BindMode.READ_ONLY)
             .withLogConsumer { frame ->
                 logger.info(frame?.utf8String?.trim())
             }

@@ -70,8 +70,8 @@ class PetriNetTests {
         assertEquals(listOf(g, h), net.endActivities.toList())
         val decisionPoints = net.decisionPoints.toList()
         assertEquals(2, decisionPoints.size)
-        assertTrue(DecisionPoint(setOf(c1), setOf(b, c)) in decisionPoints)
-        assertTrue(DecisionPoint(setOf(c5), setOf(f, g, h)) in decisionPoints)
+        assertTrue(DecisionPoint(setOf(c1), setOf(b, c), setOf(a, f)) in decisionPoints)
+        assertTrue(DecisionPoint(setOf(c5), setOf(f, g, h), setOf(e)) in decisionPoints)
     }
 
     @Test

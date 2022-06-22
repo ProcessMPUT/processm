@@ -1,5 +1,6 @@
 package processm.core.models.petrinet
 
+import processm.core.models.commons.Activity
 import processm.core.models.commons.DecisionPoint
 
 /**
@@ -7,7 +8,8 @@ import processm.core.models.commons.DecisionPoint
  */
 data class DecisionPoint(
     val places: Set<Place>,
-    val transitions: Set<Transition>
+    val transitions: Set<Transition>,
+    override val previousActivities: Collection<Activity> = emptySet()
 ) : DecisionPoint {
 
     init {

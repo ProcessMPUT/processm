@@ -4,14 +4,14 @@ import io.ktor.http.*
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.TestInstance
+import org.koin.core.component.inject
+import org.koin.dsl.module
 import org.koin.test.mock.declareMock
 import processm.services.api.models.ErrorMessageBody
 import processm.services.api.models.GroupCollectionMessageBody
 import processm.services.api.models.GroupMessageBody
 import processm.services.api.models.OrganizationRole
-import processm.services.logic.GroupService
-import processm.services.logic.OrganizationService
-import processm.services.logic.ValidationException
+import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.Test
@@ -47,17 +47,10 @@ class GroupsApiTest : BaseApiTest() {
         HttpMethod.Delete to "/api/groups/${UUID.randomUUID()}/subgroups/${UUID.randomUUID()}"
     )
 
-    override fun componentsRegistration() {
-        super.componentsRegistration()
-        groupService = declareMock()
-        organizationService = declareMock()
-    }
-
-    lateinit var groupService: GroupService
-    lateinit var organizationService: OrganizationService
-
     @Test
     fun `responds with 200 and subgroups list`() = withConfiguredTestApplication {
+        val groupService = declareMock<GroupService>()
+        val organizationService = declareMock<OrganizationService>()
         val groupId = UUID.randomUUID()
         val rootGroupId = UUID.randomUUID()
         val subgroupId1 = UUID.randomUUID()
@@ -93,6 +86,7 @@ class GroupsApiTest : BaseApiTest() {
 
     @Test
     fun `responds to unknown group's subgroups request with 404 and error message`() = withConfiguredTestApplication {
+        val groupService = declareMock<GroupService>()
         val groupId = UUID.randomUUID()
 
         withAuthentication {
@@ -113,6 +107,8 @@ class GroupsApiTest : BaseApiTest() {
     @Test
     fun `responds to request for subgroups in organization not related to user with 403 and error message`() =
         withConfiguredTestApplication {
+            val groupService = declareMock<GroupService>()
+            val organizationService = declareMock<OrganizationService>()
             val groupId = UUID.randomUUID()
             val rootGroupId = UUID.randomUUID()
 
@@ -133,6 +129,8 @@ class GroupsApiTest : BaseApiTest() {
 
     @Test
     fun `responds with 200 and the specified group`() = withConfiguredTestApplication {
+        val groupService = declareMock<GroupService>()
+        val organizationService = declareMock<OrganizationService>()
         val groupId = UUID.randomUUID()
         val rootGroupId = UUID.randomUUID()
         val organizationId = UUID.randomUUID()
@@ -159,6 +157,8 @@ class GroupsApiTest : BaseApiTest() {
     @Test
     fun `responds to request for group in organization not related to user with 403 and error message`() =
         withConfiguredTestApplication {
+            val groupService = declareMock<GroupService>()
+            val organizationService = declareMock<OrganizationService>()
             val groupId = UUID.randomUUID()
             val rootGroupId = UUID.randomUUID()
 
@@ -179,6 +179,8 @@ class GroupsApiTest : BaseApiTest() {
 
     @Test
     fun `responds to unknown group request with 404 and error message`() = withConfiguredTestApplication {
+        val groupService = declareMock<GroupService>()
+        val organizationService = declareMock<OrganizationService>()
         val groupId = UUID.randomUUID()
         val rootGroupId = UUID.randomUUID()
         val organizationId = UUID.randomUUID()

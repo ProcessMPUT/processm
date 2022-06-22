@@ -8,7 +8,7 @@ class PostgresSakilaTest : ContinuousQueryTest() {
     override val expectedNumberOfEvents = 47954L
     override val expectedNumberOfTracesInTheFirstBatch = 1804L
 
-    override val etlConfiguratioName: String = "Test ETL process for PostgreSQL Sakila DB"
+    override val etlConfigurationName: String = "Test ETL process for PostgreSQL Sakila DB"
 
     override fun initExternalDB(): DBMSEnvironment<*> = PostgreSQLEnvironment.getSakila()
 

@@ -4,12 +4,15 @@ import io.debezium.engine.ChangeEvent
 import io.debezium.engine.DebeziumEngine
 import io.debezium.engine.format.Json
 import io.debezium.engine.format.KeyValueChangeEventFormat
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.*
 import processm.core.logging.loggedScope
+import processm.etl.tracker.DatabaseChangeApplier.*
 import java.io.Closeable
 import java.util.*
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
-import processm.etl.tracker.DatabaseChangeApplier.*
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Listens to database data changes using Debezium library and emits events.
@@ -18,12 +21,17 @@ import processm.etl.tracker.DatabaseChangeApplier.*
  * @param changeApplier Component to save data change events to meta model data storage.
  */
 
-class DebeziumChangeTracker(properties: Properties, private val changeApplier: DatabaseChangeApplier) : DebeziumEngine.ChangeConsumer<ChangeEvent<String, String>>, Runnable, Closeable {
+class DebeziumChangeTracker(properties: Properties, private val changeApplier: DatabaseChangeApplier) : DebeziumEngine.ChangeConsumer<ChangeEvent<String, String>>, Closeable {
 
-    private val tracker= DebeziumEngine.create(KeyValueChangeEventFormat.of(Json::class.java, Json::class.java))
+    private val connectionStateMonitor = ConnectionStateMonitor()
+    private val executor = Executors.newSingleThreadExecutor();
+    private val tracker = DebeziumEngine.create(KeyValueChangeEventFormat.of(Json::class.java, Json::class.java))
         .using(properties)
+        .using(connectionStateMonitor)
         .notifying(this)
         .build()
+
+    val isAlive get() = connectionStateMonitor.isConnected
 
     override fun handleBatch(
         records: MutableList<ChangeEvent<String, String>>,
@@ -54,12 +62,29 @@ class DebeziumChangeTracker(properties: Properties, private val changeApplier: D
         }
     }
 
-    override fun run() {
-        tracker.run()
+    fun reconnect() {
+        tracker.close()
+        start()
+    }
+
+    fun start() {
+        executor.execute(tracker)
     }
 
     override fun close() {
-        tracker.close()
+        loggedScope { logger ->
+            try {
+                tracker.close()
+                executor.shutdown()
+                while (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    logger.info("Waiting 5 seconds for the Debezium tracker engine to shut down")
+                }
+            }
+            catch (e: InterruptedException) {
+                logger.warn("An ${InterruptedException::class.simpleName} was thrown during shutdown of Debezium tracker engine")
+            }
+
+        }
     }
 
     private fun deserializeDebeziumEvent(changeEvent: ChangeEvent<String, String>): DatabaseChangeEvent {
@@ -129,6 +154,29 @@ class DebeziumChangeTracker(properties: Properties, private val changeApplier: D
             Boolean::class -> selectedElement.jsonPrimitive.boolean as TResult
             Map::class -> selectedElement.jsonObject.map { _object -> _object.key to _object.value.toString() }.toMap() as TResult
             else -> selectedElement.jsonPrimitive.content as TResult
+        }
+    }
+
+    private class ConnectionStateMonitor: DebeziumEngine.ConnectorCallback {
+        private val activeTasksCounter = AtomicInteger(0)
+        @Volatile var isConnected = false
+            private set
+        val activeTasksCount get() = activeTasksCounter.getOpaque()
+
+        override fun connectorStopped() {
+            isConnected = false
+        }
+
+        override fun taskStopped() {
+            activeTasksCounter.decrementAndGet()
+        }
+
+        override fun connectorStarted() {
+            isConnected = true
+        }
+
+        override fun taskStarted() {
+            activeTasksCounter.incrementAndGet()
         }
     }
 }

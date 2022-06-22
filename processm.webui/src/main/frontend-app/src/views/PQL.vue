@@ -15,6 +15,16 @@
         system. The uploaded files will be public available. The system operator
         is not responsible for the content made public in this way.
       </v-alert>
+      <v-col align="left">
+        <v-select
+          v-model="dataStoreId"
+          item-text="name"
+          item-value="id"
+          :items="availableDataStores"
+          label="Select data store"
+          dense
+        ></v-select>
+      </v-col>
       <v-col align="right">
         <v-btn class="mx-2" color="primary" @click="fileUploadDialog = true">
           Upload XES file
@@ -165,6 +175,7 @@ import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import XesDataTable from "@/components/XesDataTable.vue";
 import FileUploadDialog from "@/components/FileUploadDialog.vue";
 import App from "@/App.vue";
+import DataStore from "@/models/DataStore";
 
 @Component({
   components: { XesDataTable, FileUploadDialog }
@@ -175,10 +186,12 @@ export default class PQL extends Vue {
   @Inject() dataStoreService!: DataStoreService;
   private readonly xesProcessor = new XesProcessor();
   private dataStoreId: string | null = null;
+  availableDataStores: Array<DataStore> = [];
   fileSizeLimit = 5242880;
   isLoadingData = false;
   isUploading = false;
   isDownloading = false;
+  isLoadingDataStores = false;
   query = "";
   headers = new Array<string>();
   items = new Array<LogItem>();
@@ -269,9 +282,15 @@ export default class PQL extends Vue {
   ];
 
   async created() {
-    this.dataStoreId =
-      Vue.prototype.$sessionStorage.defaultDataStoreId ??
-      (await this.dataStoreService.getAll())?.[0]?.id;
+    try {
+      this.isLoadingDataStores = true;
+      this.availableDataStores = await this.dataStoreService.getAll();
+    } finally {
+      this.isLoadingDataStores = false;
+    }
+
+    if (this.availableDataStores.length > 0)
+      this.dataStoreId = this.availableDataStores[0].id;
   }
 
   queryModified() {

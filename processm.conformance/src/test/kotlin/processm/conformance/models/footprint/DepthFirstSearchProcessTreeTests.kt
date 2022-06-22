@@ -1,15 +1,18 @@
 package processm.conformance.models.footprint
 
 import org.junit.jupiter.api.Test
+import processm.conformance.ProcessTrees.azFlower
+import processm.conformance.ProcessTrees.fig727
+import processm.conformance.ProcessTrees.fig729
+import processm.conformance.ProcessTrees.parallelDecisionsInLoop
+import processm.conformance.ProcessTrees.parallelFlowers
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.toFlatSequence
-import processm.core.models.processtree.ProcessTree
 import kotlin.test.assertEquals
 
 class DepthFirstSearchProcessTreeTests {
     @Test
     fun `PM book Fig 7 27 conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = Helpers.logFromString(
             """
                 A B D E H
@@ -24,7 +27,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(fig727)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -35,7 +38,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `PM book Fig 7 27 non-conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = Helpers.logFromString(
             """
                 A E B D H
@@ -53,7 +55,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(fig727)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -64,7 +66,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `Flower process tree`() {
-        val tree = ProcessTree.parse("⟲(τ,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z)")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -77,7 +78,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(azFlower)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -88,7 +89,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `Parallel flower models`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -103,7 +103,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(azFlower)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -114,7 +114,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `Parallel flower models non-conforming log`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = Helpers.logFromString(
             """
                 1 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -128,7 +127,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(parallelFlowers)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -139,7 +138,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `Parallel decisions in loop process tree`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -151,7 +149,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(parallelDecisionsInLoop)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -162,7 +160,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `Parallel decisions in loop non-conforming log`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = Helpers.logFromString(
             """
                 A A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -178,7 +175,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(parallelDecisionsInLoop)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -189,7 +186,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `PM book Fig 7 29 conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = Helpers.logFromString(
             """
                 A C E G
@@ -200,7 +196,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(fig729)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -211,7 +207,6 @@ class DepthFirstSearchProcessTreeTests {
 
     @Test
     fun `PM book Fig 7 29 non-conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = Helpers.logFromString(
             """
                 D F B G E C A
@@ -219,7 +214,7 @@ class DepthFirstSearchProcessTreeTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(tree)
+        val dfs = DepthFirstSearch(fig729)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 

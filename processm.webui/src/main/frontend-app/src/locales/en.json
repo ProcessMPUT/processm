@@ -76,6 +76,9 @@
       "data-connector": "Data connector",
       "removal-confirmation": "Do you want to permanently remove {etlProcessName} ETL process with all associated data?",
       "custom-case-notion": "Custom selection",
+      "deactivation-confirmation": "Do you want to stop tracking changes in {etlProcessName} ETL process?",
+      "recreate-log": "Recreate XES log",
+      "log-recreation-confirmation": "Do you want to recreate the XES log of {etlProcessName} ETL process? The operation overrides existing XES log.",
       "last-execution-time": "Last execution time"
     }
   },
@@ -116,6 +119,7 @@
     "password": "Password",
     "database-name": "Database name",
     "database": "Database",
+    "connector-not-supported": "Connection string based connectors are not yet supported",
     "validation": {
       "non-empty-field": "The value cannot be empty",
       "connection-string-format": "The value doesn't conform to connection string format",
@@ -244,6 +248,10 @@
       "success": "Successfully saved",
       "failure": "Failed to save"
     },
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "operation-successful": "Successfully completed the operation",
+    "operation-error": "Failed to complete the operation",
     "testing": {
       "success": "Test succeeded",
       "failure": "Test failed"

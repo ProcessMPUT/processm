@@ -1,5 +1,8 @@
 package processm.conformance.measures
 
+import processm.conformance.PetriNets.fig32
+import processm.conformance.PetriNets.fig624N3
+import processm.conformance.PetriNets.sequence
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
@@ -7,11 +10,7 @@ import processm.core.log.Helpers.trace
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.Node
-import processm.core.models.petrinet.PetriNet
-import processm.core.models.petrinet.petrinet
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
-import kotlin.math.max
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -30,33 +29,6 @@ class RangeFitnessTest {
     private val f = Node("f")
     private val g = Node("g")
     private val h = Node("h")
-
-
-    private val model1: PetriNet = petrinet {
-        P tout "a"
-        P tin "a" * "f" tout "b" * "c"
-        P tin "a" * "f" tout "d"
-        P tin "b" * "c" tout "e"
-        P tin "d" tout "e"
-        P tin "e" tout "g" * "h" * "f"
-        P tin "g" * "h"
-    }
-
-    private val model2: PetriNet = petrinet {
-        P tout "a"
-        P tin "a" tout "c"
-        P tin "c" tout "d"
-        P tin "d" tout "e"
-        P tin "e" tout "h"
-        P tin "h"
-    }
-
-    private val model3 = petrinet {
-        P tout "a"
-        P tin "a" * "b" * "d" * "c" * "e" * "f" tout "b" * "d" * "c" * "e" * "f" * "g" * "h"
-        P tin "g" * "h"
-    }
-
 
     private operator fun Trace.times(n: Int): Sequence<Trace> = (0 until n).asSequence().map { this@times }
 
@@ -114,12 +86,12 @@ class RangeFitnessTest {
 
     @Test
     fun `model1 movem`() {
-        assertEquals(5.0, RangeFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS).movem)
+        assertEquals(5.0, RangeFitness(DecompositionAligner(fig32), 1, TimeUnit.SECONDS).movem)
     }
 
     @Test
     fun `model1 fitness`() {
-        val fitness = RangeFitness(DecompositionAligner(model1), 1, TimeUnit.SECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(fig32), 1, TimeUnit.SECONDS)(log)
         assertTrue { fitness.start <= fitness.endInclusive }
         assertDoubleEquals(1.0, fitness.start)
     }
@@ -127,7 +99,7 @@ class RangeFitnessTest {
     @Test
     fun `model2 trace with superfluous repetitions long wait`() {
         val log = Log(sequenceOf(trace(a, c, d, e, d, e, h)))
-        val fitness = RangeFitness(DecompositionAligner(model2), 100, TimeUnit.SECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(sequence), 100, TimeUnit.SECONDS)(log)
         val trueFitness = 0.833
         assertDoubleEquals(trueFitness, fitness.start)
         assertDoubleEquals(trueFitness, fitness.endInclusive)
@@ -136,7 +108,7 @@ class RangeFitnessTest {
     @Test
     fun `model2 trace with superfluous repetitions short wait`() {
         val log = Log(sequenceOf(trace(a, c, d, e, d, e, h)))
-        val fitness = RangeFitness(DecompositionAligner(model2), 1, TimeUnit.NANOSECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(sequence), 1, TimeUnit.NANOSECONDS)(log)
         val trueFitness = 0.833
         assertDoubleEquals(trueFitness, fitness.start)
         assertDoubleEquals(trueFitness, fitness.endInclusive)
@@ -145,7 +117,7 @@ class RangeFitnessTest {
     @Test
     fun `model2 trace with superfluous repetitions and nonexisting activities`() {
         val log = Log(sequenceOf(trace(a, c, d, e, f, d, b, e, h)))
-        val fitness = RangeFitness(DecompositionAligner(model2), 100, TimeUnit.SECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(sequence), 100, TimeUnit.SECONDS)(log)
         val trueFitness = 0.714
         assertDoubleEquals(trueFitness, fitness.start)
         assertDoubleEquals(trueFitness, fitness.endInclusive)
@@ -153,21 +125,21 @@ class RangeFitnessTest {
 
     @Test
     fun `model2 fitness short wait`() {
-        val fitness = RangeFitness(DecompositionAligner(model2), 1, TimeUnit.NANOSECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(sequence), 1, TimeUnit.NANOSECONDS)(log)
         assertDoubleEquals(0.8, fitness.start)
         assertDoubleEquals(0.8, fitness.endInclusive)
     }
 
     @Test
     fun `model2 fitness long wait`() {
-        val fitness = RangeFitness(DecompositionAligner(model2), 10, TimeUnit.SECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(sequence), 10, TimeUnit.SECONDS)(log)
         assertDoubleEquals(0.8, fitness.start)
         assertDoubleEquals(0.8, fitness.endInclusive)
     }
 
     @Test
     fun `model3 fitness`() {
-        val fitness = RangeFitness(DecompositionAligner(model3), 1, TimeUnit.SECONDS)(log)
+        val fitness = RangeFitness(DecompositionAligner(fig624N3), 1, TimeUnit.SECONDS)(log)
         assertDoubleEquals(1.0, fitness.start)
         assertDoubleEquals(1.0, fitness.endInclusive)
     }

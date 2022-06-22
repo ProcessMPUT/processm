@@ -1,9 +1,8 @@
 package processm.etl.jdbc
 
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
+import processm.core.DBTestHelper
 import processm.core.log.AppendingDBXESOutputStream
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
@@ -18,16 +17,19 @@ import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.DBMSEnvironment
 import processm.etl.PostgreSQLEnvironment
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @Suppress("SqlResolve")
+@Tag("ETL")
+@Timeout(90, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PostgresSakilaWithFloatingPointEventIdsTest {
 
     val expectedNumberOfEvents = 47954L
 
-    val etlConfiguratioName: String = "Test ETL process for PostgreSQL Sakila DB with floating-point event ids"
+    val etlConfigurationName: String = "Test ETL process for PostgreSQL Sakila DB with floating-point event ids"
 
     fun initExternalDB(): DBMSEnvironment<*> = PostgreSQLEnvironment.getSakila()
 
@@ -39,7 +41,7 @@ class PostgresSakilaWithFloatingPointEventIdsTest {
 
     // region environment
     private val logger = logger()
-    private val dataStoreName = UUID.randomUUID().toString()
+    private val dataStoreName = DBTestHelper.dbName
     private lateinit var externalDB: DBMSEnvironment<*>
     // endregion
 
@@ -59,7 +61,7 @@ class PostgresSakilaWithFloatingPointEventIdsTest {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
                     processType = "Jdbc"
-                    name = etlConfiguratioName
+                    name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
                 query = getEventSQL
@@ -129,19 +131,20 @@ ORDER BY ${columnQuot}event_id${columnQuot}
     @AfterAll
     fun tearDown() {
         externalDB.close()
-        DBCache.get(dataStoreName).close()
-        DBCache.getMainDBPool().getConnection().use { conn ->
-            conn.prepareStatement("""DROP DATABASE "$dataStoreName"""").execute()
-        }
     }
     // endregion
 
+    @Tag("slow")
     @Test
+    @Timeout(180, unit = TimeUnit.SECONDS)
     fun `read XES from existing data and write it to data store`() {
         var logUUID: UUID? = null
         logger.info("Importing XES...")
         transaction(DBCache.get(dataStoreName).database) {
-            val etl = ETLConfiguration.find { ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq etlConfiguratioName }.first().id }.first()
+            val etl = ETLConfiguration.find {
+                ETLConfigurations.metadata eq EtlProcessMetadata.find { EtlProcessesMetadata.name eq etlConfigurationName }
+                    .first().id
+            }.first()
             AppendingDBXESOutputStream(DBCache.get(dataStoreName).getConnection()).use { out ->
                 out.write(etl.toXESInputStream())
             }

@@ -123,6 +123,11 @@
             <artifactId>quartz</artifactId>
             <version>2.3.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.messaginghub</groupId>
+            <artifactId>pooled-jms</artifactId>
+            <version>${pooled-jms.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -166,7 +171,7 @@
                     <execution>
                         <!-- Called by clean phase - cleans schema given by dbschema property (public is default). -->
                         <id>clean-schema</id>
-                        <phase>clean</phase>
+                        <phase>none</phase>
                         <goals>
                             <goal>execute</goal>
                         </goals>

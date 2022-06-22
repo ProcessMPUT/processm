@@ -13,6 +13,7 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import org.koin.dsl.module
 import org.koin.ktor.ext.Koin
+import processm.core.communication.Producer
 import processm.core.logging.loggedScope
 import processm.services.api.*
 import processm.services.logic.*
@@ -49,9 +50,10 @@ fun Application.apiModule() {
                 single { AccountService(get()) }
                 single { OrganizationService() }
                 single { GroupService() }
-                single { WorkspaceService(get()) }
-                single { DataStoreService() }
-                single { LogsService() }
+                single { WorkspaceService(get(), get()) }
+                single { DataStoreService(get()) }
+                single { LogsService(get()) }
+                single { Producer() }
             })
         }
 

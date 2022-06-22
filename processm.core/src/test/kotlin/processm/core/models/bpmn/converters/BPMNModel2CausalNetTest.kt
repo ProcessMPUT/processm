@@ -18,9 +18,10 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun a10() {
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.1.0.bpmn").inputStream().use { xml ->
-            BPMNModel.fromXML(xml)
-        }
+        val bpmnModel =
+            File("src/test/resources/bpmn-miwg-test-suite/Reference/A.1.0.bpmn").absoluteFile.inputStream().use { xml ->
+                BPMNModel.fromXML(xml)
+            }
         val converted = bpmnModel.toCausalNet()
         val expected = causalnet {
             start splits startEvent()
