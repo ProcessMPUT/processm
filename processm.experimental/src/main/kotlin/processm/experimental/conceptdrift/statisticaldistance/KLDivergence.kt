@@ -1,12 +1,12 @@
-package processm.conformance.conceptdrift
+package processm.experimental.conceptdrift.statisticaldistance
 
-import processm.conformance.conceptdrift.estimators.ContinousDistribution
+import processm.conformance.conceptdrift.estimators.ContinuousDistribution
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 
-fun KLDivergence(p: ContinousDistribution, q: ContinousDistribution, integrator: Integrator): Double =
+fun KLDivergence(p: ContinuousDistribution, q: ContinuousDistribution, integrator: Integrator): Double =
     integrator(min(p.lowerBound, q.lowerBound), max(p.upperBound, q.upperBound)) { x ->
         val eps = 1e-15
         val px = p.pdf(x)
@@ -22,8 +22,8 @@ fun KLDivergence(p: ContinousDistribution, q: ContinousDistribution, integrator:
  * This is a special case when KL-Divergence of such a joint distribution is simply a sum of KL-Divergences of marginal distributions
  */
 fun NaiveKLDivergence(
-    ps: List<ContinousDistribution>,
-    qs: List<ContinousDistribution>,
+    ps: List<ContinuousDistribution>,
+    qs: List<ContinuousDistribution>,
     integrator: Integrator
 ): Double {
     require(ps.size == qs.size)

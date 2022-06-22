@@ -1,13 +1,18 @@
-package processm.conformance.conceptdrift
+package processm.experimental.conceptdrift
 
+import processm.conformance.conceptdrift.DriftDetector
+import processm.conformance.conceptdrift.allExcept
+import processm.conformance.conceptdrift.cvFolds
 import processm.conformance.conceptdrift.estimators.KernelDensityEstimator
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrator
+import processm.conformance.conceptdrift.transpose
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.rca.Feature
 import processm.conformance.rca.propositionalize
 import processm.core.logging.debug
 import processm.core.logging.logger
+import processm.experimental.conceptdrift.statisticaldistance.NaiveKLDivergence
 import java.util.*
 import kotlin.math.absoluteValue
 

@@ -16,6 +16,6 @@ object EpanechnikovKernel : Kernel {
      * Strictly speaking for x=-1 and x=1 this should be NaN, but I don't think this would be useful
      */
     override fun derivative(x: Double): Double = if (x.absoluteValue <= 1) -0.75 * 2 * x else 0.0
-    override val lowerBound: Double= -1.0
-    override val upperBound: Double=1.0
+    override val lowerBound: Double = -1.0
+    override val upperBound: Double = 1.0
 }

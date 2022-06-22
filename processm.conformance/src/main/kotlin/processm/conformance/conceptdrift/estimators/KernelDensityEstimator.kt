@@ -1,5 +1,6 @@
 package processm.conformance.conceptdrift.estimators
 
+import processm.conformance.conceptdrift.BucketingDoubleList
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrator
 import processm.conformance.conceptdrift.numerical.optimization.Optimizer
@@ -46,7 +47,7 @@ class KernelDensityEstimator(
     var optimizer: Optimizer = RMSProp(),
     var integrator: Integrator = MidpointIntegrator(0.001),
     var bandwidthFixpointPrecision: Double = 1e-3
-) : ContinousDistribution {
+) : ContinuousDistribution {
 
 
     companion object {
@@ -59,13 +60,13 @@ class KernelDensityEstimator(
         private val logger = logger()
     }
 
-    private val points = ArrayList<Double>()
-    private val n: Int
-        get() = points.size
+    private val points = BucketingDoubleList()
+    val n: Int
+        get() = points.totalSize
     private val min: Double
-        get() = points.first()
+        get() = points.first().value
     private val max: Double
-        get() = points.last()
+        get() = points.last().value
 
     /** sum of [points] */
     private var s1: Double = 0.0
@@ -85,16 +86,21 @@ class KernelDensityEstimator(
     override var upperBound: Double = Double.NaN
         private set
 
+    override lateinit var relevantRanges: List<ClosedFloatingPointRange<Double>>
+        private set
+
     val mean: Double
         get() = s1 / n
     val standardDeviation: Double
         get() = sqrt(s2 / (n - 1) - s1 / n * s1 / (n - 1))
 
     private fun updateBounds() {
-        //(x - min) / bandwidth) = kernel.lowerBound
-        lowerBound = kernel.lowerBound * bandwidth + min
-        //(x - max) / bandwidth) = kernel.upperBound
-        upperBound = kernel.upperBound * bandwidth + max
+        relevantRanges = points.relevantRanges(
+            (bandwidth * kernel.lowerBound).absoluteValue,
+            (bandwidth * kernel.upperBound).absoluteValue
+        )
+        lowerBound = relevantRanges.first().start
+        upperBound = relevantRanges.last().endInclusive
     }
 
     /**
@@ -108,7 +114,7 @@ class KernelDensityEstimator(
      * See https://en.wikipedia.org/wiki/Kernel_density_estimation#A_rule-of-thumb_bandwidth_estimator
      */
     private fun silverman(): Double {
-        val ed = Distribution(points)
+        val ed = Distribution(points.flatten())
         return 0.9 * minOf(standardDeviation, (ed.Q3 - ed.Q1) / 1.34) * (n.toDouble().pow(-1.0 / 5))
     }
 
@@ -123,7 +129,7 @@ class KernelDensityEstimator(
             var r = 0.0
             for (j in points.indices)
                 if (i == null || i != j)
-                    r += kernel((x - points[j]) / h)
+                    r += points[j].counter * kernel((x - points[j].value) / h)
             val n1 = if (i !== null) n - 1 else n
             return r / (n1 * h)
         }
@@ -135,8 +141,8 @@ class KernelDensityEstimator(
             var r = 0.0
             for (j in points.indices)
                 if (i === null || i != j) {
-                    val dx = x - points[j]
-                    r += kernel.derivative(dx / h) * dx
+                    val dx = x - points[j].value
+                    r += points[j].counter * (kernel.derivative(dx / h) * dx)
                 }
             val n1 = if (i !== null) n - 1 else n
             return r / (n1 * h.pow(4))
@@ -148,19 +154,16 @@ class KernelDensityEstimator(
             val left = integrator(lowerBound, upperBound) { x ->
                 2 * f(x, h, null) * fprim(x, h, null)
             }
-            val right = 2.0 * points.withIndex().sumOf { (i, x) -> fprim(x, h, i) } / n
+            val right = 2.0 * points.withIndex().sumOf { (i, x) -> x.counter * fprim(x.value, h, i) } / n
             return@optimizer left - right
         }.also { logger.trace { "Optimization steps: $ctr" } }
     }
 
     fun fit(data: Iterable<Double>) {
         for (x in data) {
-            var i = points.binarySearch(x)
-            if (i < 0)
-                i = -i - 1
-            points.add(i, x)
-            assert(i == 0 || points[i - 1] <= points[i])
-            assert(i == points.size - 1 || points[i] <= points[i + 1])
+            if (!x.isFinite())
+                continue
+            points.add(x)
             s1 += x
             s2 += x * x
         }
@@ -211,47 +214,26 @@ class KernelDensityEstimator(
 
     /**
      * An approximation of pdf. Ignores points far enough from x to be of little importance.
+     *
+     * PDF can be computed exactly using the following code:
+     * ```
+     * override fun pdf(x: Double): Double = points.sumOf { xi -> kernel((x - xi) / bandwidth) } / (n * bandwidth)
+     * ```
      */
     override fun pdf(x: Double): Double {
-        // The commented out code is a slower variant of the code below it using binarySearch
+        val lb = points.insertionIndexOf(x - bandwidth * kernel.upperBound)
+        val nlb = points.countUpToExclusive(lb) //(0 until lb).sumOf {points[it].counter}
 
-//        var lb = 0
-//        while (lb < points.size && (x - bandwidth * kernel.upperBound) > points[lb])
-//            lb++
-
-        val lb = run {
-            val xlb = x - bandwidth * kernel.upperBound
-            var lb = points.binarySearch(xlb)
-            if (lb >= 0)
-                while (lb < points.size && xlb > points[lb + 1])
-                    lb++
-            else
-                lb = -lb - 1
-            lb
-        }
-
-//        var ub = points.size - 1
-//        while (ub >= 0 && (x - bandwidth * kernel.lowerBound) < points[ub])
-//            ub--
-
-        val ub = run {
-            val xub = x - bandwidth * kernel.lowerBound
-            var ub = points.binarySearch(xub)
-            if (ub >= 0)
-                while (ub >= 0 && xub < points[ub - 1])
-                    ub--
-            else
-                ub = -ub - 1
-            ub
-        }
-        return ((lb until ub).sumOf { xi -> kernel((x - points[xi]) / bandwidth) } +
-                lb * kernel(kernel.lowerBound) +
-                (n - ub) * kernel(kernel.upperBound)) / (n * bandwidth)
+        val ub = points.insertionIndexOf(x - bandwidth * kernel.lowerBound, lb)
+        val nub = points.countFrom(ub) //(ub until points.size).sumOf {points[it].counter}
+        return ((lb until ub).sumOf { xi -> points[xi].counter * kernel((x - points[xi].value) / bandwidth) } +
+                nlb * kernel(kernel.lowerBound) +
+                nub * kernel(kernel.upperBound)) / (n * bandwidth)
     }
+}
 
-    /**
-     * This is an exact way to compute pdf. Left here for documentation purposes.
-     */
-//    override fun pdf(x: Double): Double = points.sumOf { xi -> kernel((x - xi) / bandwidth) } / (n * bandwidth)
-
+fun List<Double>.toKDF(): KernelDensityEstimator {
+    val kdf = KernelDensityEstimator()
+    kdf.fit(this.filter(Double::isFinite))
+    return kdf
 }

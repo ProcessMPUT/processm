@@ -2,9 +2,9 @@ package processm.conformance.conceptdrift.estimators
 
 import org.apache.commons.math3.distribution.NormalDistribution
 import org.apache.commons.math3.random.MersenneTwister
+import org.junit.jupiter.api.Tag
 import processm.conformance.conceptdrift.numerical.optimization.RMSProp
 import processm.core.log.Helpers.assertDoubleEquals
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -33,7 +33,7 @@ class KernelDensityEstimatorRegressionTest {
         assertDoubleEquals(1.9746, kdf.bandwidth, 0.01)
     }
 
-    @Ignore("Takes time")
+    @Tag("performance")
     @Test
     fun `gaussian - iterative`() {
         val points = listOf(-2.1, -1.3, -0.4, 1.9, 5.1, 6.2)
@@ -61,5 +61,18 @@ class KernelDensityEstimatorRegressionTest {
         kde.fit(points)
         assertDoubleEquals(0.033, kde.pdf(-10.0))
         assertDoubleEquals(0.033, kde.pdf(10.0))
+    }
+
+    @Tag("performance")
+    @Test
+    fun `performance`() {
+        val rng = MersenneTwister(0xdeadbeef)
+        val points = ArrayList<Double>()
+        for (mean in 1..10)
+            repeat(10000) { points.add(rng.nextGaussian() + mean) }
+        val kdf = KernelDensityEstimator()
+        kdf.fit(points)
+        for (mean in 1..10)
+            repeat(10000) { kdf.pdf(rng.nextGaussian() + mean) }
     }
 }

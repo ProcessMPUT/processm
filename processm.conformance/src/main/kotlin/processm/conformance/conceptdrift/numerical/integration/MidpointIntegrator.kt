@@ -9,8 +9,8 @@ package processm.conformance.conceptdrift.numerical.integration
  */
 class MidpointIntegrator(override val step: Double) : Integrator {
     override fun invoke(lower: Double, upper: Double, f: (Double) -> Double): Double {
-        require(lower.isFinite())
-        require(upper.isFinite())
+        require(lower.isFinite()) {"The lower bound must be finite. Currently it is $lower"}
+        require(upper.isFinite()) {"The upper bound must be finite. Currently it is $upper"}
         require(lower <= upper)
         var x = lower
         var result = 0.0

@@ -1,10 +1,11 @@
-package processm.conformance.conceptdrift
+package processm.experimental.conceptdrift
 
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.apache.commons.math3.stat.inference.TTest
 import processm.conformance.conceptdrift.estimators.KernelDensityEstimator
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrator
+import processm.conformance.conceptdrift.statisticaldistance.NaiveKLDivergence
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.rca.Feature
 import processm.conformance.rca.propositionalize
