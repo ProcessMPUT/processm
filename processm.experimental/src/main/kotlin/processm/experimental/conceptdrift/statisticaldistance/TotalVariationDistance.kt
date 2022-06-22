@@ -2,6 +2,7 @@ package processm.experimental.conceptdrift.statisticaldistance
 
 import processm.conformance.conceptdrift.estimators.ContinuousDistribution
 import processm.conformance.conceptdrift.numerical.integration.Integrator
+import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 

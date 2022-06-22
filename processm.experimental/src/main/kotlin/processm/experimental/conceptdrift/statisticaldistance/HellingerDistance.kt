@@ -1,7 +1,7 @@
 package processm.experimental.conceptdrift.statisticaldistance
 
 import processm.conformance.conceptdrift.estimators.ContinuousDistribution
-import processm.conformance.conceptdrift.estimators.merge
+import processm.conformance.conceptdrift.merge
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import kotlin.math.sqrt
 

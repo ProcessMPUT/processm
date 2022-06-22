@@ -5,6 +5,7 @@ import processm.conformance.conceptdrift.numerical.integration.Integrator
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 
 class RenyiDivergence(val alpha: Double) {
 

@@ -2,15 +2,17 @@ package processm.experimental.conceptdrift
 
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.apache.commons.math3.stat.inference.TTest
+import processm.conformance.conceptdrift.DriftDetector
 import processm.conformance.conceptdrift.estimators.KernelDensityEstimator
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrator
-import processm.conformance.conceptdrift.statisticaldistance.NaiveKLDivergence
+import processm.conformance.conceptdrift.transpose
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.rca.Feature
 import processm.conformance.rca.propositionalize
 import processm.core.logging.debug
 import processm.core.logging.logger
+import processm.experimental.conceptdrift.statisticaldistance.NaiveKLDivergence
 import java.util.*
 
 private fun List<Double>.toKDF(): KernelDensityEstimator {
@@ -40,11 +42,7 @@ internal class KLDivergenceMovingAverageDriftDetector(val windowSize: Int) : Dri
 
     val currentKLDivergence: Double
         get() {
-            return NaiveKLDivergence(
-                dataModels,
-                processModels,
-                integrator
-            )
+            return NaiveKLDivergence(dataModels, processModels, integrator)
         }
 
     companion object {
