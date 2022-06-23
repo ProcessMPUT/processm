@@ -135,7 +135,7 @@ class KernelDensityEstimator(
         }
 
         /**
-         * A derivative of the pdf with the bandiwdth as the parameter [h] and an option to skip [i]-th data point
+         * A derivative of the pdf with the bandwidth as the parameter [h] and an option to skip [i]-th data point
          */
         fun fprim(x: Double, h: Double, i: Int?): Double {
             var r = 0.0

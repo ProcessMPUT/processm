@@ -1,6 +1,6 @@
 package processm.conformance.conceptdrift.estimators
 
-interface Kernel {
+interface Kernel : ContinuousDistribution {
     /**
      * Returns the value of probability density function for x
      */
@@ -11,13 +11,8 @@ interface Kernel {
      */
     fun derivative(x: Double): Double
 
-    /**
-     * Returns the lowest value for x, such that `this(x)` yields non-negligible probability
-     */
-    val lowerBound: Double
+    override fun pdf(x: Double): Double = this(x)
 
-    /**
-     * Returns the highest value for x, such that `this(x)` yields non-negligible probability
-     */
-    val upperBound: Double
+    override val relevantRanges: List<ClosedFloatingPointRange<Double>>
+        get() = listOf(lowerBound..upperBound)
 }

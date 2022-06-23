@@ -3,10 +3,19 @@ package processm.conformance.conceptdrift.estimators
 import org.apache.commons.math3.distribution.NormalDistribution
 import kotlin.math.pow
 
-class ApproximateGaussianKernel(log10resolution: Int, private val range: Int) : Kernel {
+/**
+ * An approximation of [GaussianKernel] precomputing all the values of the Gaussian probability density function (PDF)
+ * for arguments from within the range -[range]..[range] with the step of 10^[log10resolution]
+ */
+class ApproximateGaussianKernel(private val log10resolution: Int, private val range: Int) : Kernel {
 
     companion object {
         private val nd = NormalDistribution(0.0, 1.0)
+
+        /**
+         * A reasonable default configuration with resolution of 2 decimal places and range of -3..3
+         * (c.f. [https://en.wikipedia.org/w/index.php?title=68%E2%80%9395%E2%80%9399.7_rule&oldid=1080869256](https://en.wikipedia.org/w/index.php?title=68%E2%80%9395%E2%80%9399.7_rule&oldid=1080869256))
+         */
         val KERNEL_2_3 = ApproximateGaussianKernel(2, 3)
     }
 
@@ -15,16 +24,15 @@ class ApproximateGaussianKernel(log10resolution: Int, private val range: Int) : 
         nd.density(i / resolution - range)
     }
 
-    override fun invoke(x: Double): Double {
-        if (x < -range || x >= range)
-            return pdf[0]
-        val i = ((x + range) * resolution).toInt()
-        return (pdf[i] + pdf[i + 1]) / 2
-    }
+    /**
+     * Returns the value of the Gaussian PDF for [x] rounded to [log10resolution] decimal places if within -[range]..[range], or `PDF(-range)` otherwise
+     */
+    override fun invoke(x: Double): Double =
+        pdf[if (x < -range || x >= range) 0 else ((x + range) * resolution).toInt()]
 
 
     //https://en.wikipedia.org/wiki/Normal_distribution#Symmetries_and_derivatives
     override fun derivative(x: Double): Double = -x * this(x)
     override val lowerBound: Double = -range.toDouble()
-    override val upperBound: Double= range.toDouble()
+    override val upperBound: Double = range.toDouble()
 }
