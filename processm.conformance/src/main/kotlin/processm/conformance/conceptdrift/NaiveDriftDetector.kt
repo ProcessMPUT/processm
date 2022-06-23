@@ -33,7 +33,18 @@ private class BoundedBinomialEstimator(val capacity: Int) {
     }
 }
 
+/**
+ * A drift detector comparing the relative number of misalignments (i.e., [Alignment]s with `Alignment.cost!=0`) in the
+ * last [windowSize] alignments passed to [observe] vs the previous [windowSize] alignments passed to [observe].
+ * If the absolute value of the difference exceeds the [threshold], a concept drift is signalled
+ */
 class NaiveDriftDetector(val windowSize: Int, val threshold: Double) : DriftDetector<Alignment, List<Alignment>> {
+
+    init {
+        require(threshold > 0) { "The threshold must be positive" }
+        require(threshold < 1) { "The threshold must be below 1" }
+    }
+
     override var drift: Boolean = false
         private set
 

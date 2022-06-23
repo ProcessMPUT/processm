@@ -1,5 +1,9 @@
 package processm.conformance.conceptdrift.estimators
 
+/**
+ * A kernel used by [KernelDensityEstimator], i.e., a continuous distribution with the capability of computing the
+ * derivative of the probability density function
+ */
 interface Kernel : ContinuousDistribution {
     /**
      * Returns the value of probability density function for x

@@ -2,7 +2,7 @@ package processm.conformance.conceptdrift
 
 import processm.conformance.conceptdrift.estimators.ContinuousDistribution
 import processm.conformance.conceptdrift.estimators.KernelDensityEstimator
-import processm.conformance.conceptdrift.estimators.toKDF
+import processm.conformance.conceptdrift.estimators.computeKernelDensityEstimator
 import processm.conformance.conceptdrift.numerical.integration.Integrator
 import processm.conformance.conceptdrift.numerical.integration.MidpointIntegrator
 import processm.conformance.models.alignments.Alignment
@@ -56,8 +56,8 @@ open class BoundStatisticalDistanceDriftDetector(
         val data = shuffled.map { data_[it] }
         require(process.size == data.size)
         return cvFolds(k, process.size).maxOf { testFold ->
-            val processDistributions = process.allExcept(testFold).filterNotNull().transpose().map(List<Double>::toKDF)
-            val dataDistributions = data.allExcept(testFold).transpose().map(List<Double>::toKDF)
+            val processDistributions = process.allExcept(testFold).filterNotNull().transpose().map(List<Double>::computeKernelDensityEstimator)
+            val dataDistributions = data.allExcept(testFold).transpose().map(List<Double>::computeKernelDensityEstimator)
             val (fitting, notFitting) = testFold.partition { process[it] !== null }
             fitting.forEach {
                 (processDistributions zip process[it]!!).forEach { (d, v) -> d.fit(listOf(v)) }
@@ -92,8 +92,8 @@ open class BoundStatisticalDistanceDriftDetector(
         logger.debug { "threshold = $threshold" }
         check(threshold.isFinite())
 
-        processModels.addAll(fitting.filterNotNull().transpose().map(List<Double>::toKDF))
-        dataModels.addAll(all.transpose().map(List<Double>::toKDF))
+        processModels.addAll(fitting.filterNotNull().transpose().map(List<Double>::computeKernelDensityEstimator))
+        dataModels.addAll(all.transpose().map(List<Double>::computeKernelDensityEstimator))
 
         drift = false
     }

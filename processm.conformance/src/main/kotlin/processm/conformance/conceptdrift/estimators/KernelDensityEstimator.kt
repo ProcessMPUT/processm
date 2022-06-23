@@ -61,6 +61,10 @@ class KernelDensityEstimator(
     }
 
     private val points = BucketingDoubleList()
+
+    /**
+     * The total number of points used by the estimator
+     */
     val n: Int
         get() = points.totalSize
     private val min: Double
@@ -89,8 +93,17 @@ class KernelDensityEstimator(
     override lateinit var relevantRanges: List<ClosedFloatingPointRange<Double>>
         private set
 
+    /**
+     * An unbiased estimation of the mean
+     */
     val mean: Double
         get() = s1 / n
+
+    /**
+     * A biased estimation of the standard deviation
+     *
+     * @see Distribution.standardDeviation
+     */
     val standardDeviation: Double
         get() = sqrt(s2 / (n - 1) - s1 / n * s1 / (n - 1))
 
@@ -159,6 +172,9 @@ class KernelDensityEstimator(
         }.also { logger.trace { "Optimization steps: $ctr" } }
     }
 
+    /**
+     * Include [data] in the estimation, updating [mean], [standardDeviation], [bandwidth] and [relevantRanges] in the process
+     */
     fun fit(data: Iterable<Double>) {
         for (x in data) {
             if (!x.isFinite())
@@ -232,7 +248,10 @@ class KernelDensityEstimator(
     }
 }
 
-fun List<Double>.toKDF(): KernelDensityEstimator {
+/**
+ * Create a [KernelDensityEstimator] from the given list of values
+ */
+fun List<Double>.computeKernelDensityEstimator(): KernelDensityEstimator {
     val kdf = KernelDensityEstimator()
     kdf.fit(this.filter(Double::isFinite))
     return kdf

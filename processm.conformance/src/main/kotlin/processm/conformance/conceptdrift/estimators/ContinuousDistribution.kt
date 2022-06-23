@@ -1,5 +1,8 @@
 package processm.conformance.conceptdrift.estimators
 
+/**
+ * A common interface to represent a continous probability distribution or its approximation
+ */
 interface ContinuousDistribution {
 
     /**
@@ -21,5 +24,8 @@ interface ContinuousDistribution {
      */
     val relevantRanges: List<ClosedFloatingPointRange<Double>>
 
+    /**
+     * The probability density function of the distribution
+     */
     fun pdf(x: Double): Double
 }
