@@ -113,7 +113,7 @@ class BucketingDoubleList(val log10resolution: Int = 3) : AbstractList<Element>(
     /**
      * Returns the total number of values in the list from [index] onwards, i.e., the sum of [Element.counter] for indexes `index until size`
      */
-    fun countFrom(index: Int) = totalSize - countUpToExclusive(index) //(index until size).sumOf { data[it].counter }
+    fun countFrom(index: Int) = totalSize - countUpToExclusive(index)
 
     /**
      * Returns an ordered list of disjoint ranges such that for any value `x` present in the list:

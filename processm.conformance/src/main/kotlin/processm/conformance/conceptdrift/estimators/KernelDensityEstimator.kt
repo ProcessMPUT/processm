@@ -241,10 +241,10 @@ class KernelDensityEstimator(
      */
     override fun pdf(x: Double): Double {
         val lb = points.insertionIndexOf(x - bandwidth * kernel.upperBound)
-        val nlb = points.countUpToExclusive(lb) //(0 until lb).sumOf {points[it].counter}
+        val nlb = points.countUpToExclusive(lb)
 
         val ub = points.insertionIndexOf(x - bandwidth * kernel.lowerBound, lb)
-        val nub = points.countFrom(ub) //(ub until points.size).sumOf {points[it].counter}
+        val nub = points.countFrom(ub)
         return ((lb until ub).sumOf { xi -> points[xi].counter * kernel((x - points[xi].value) / bandwidth) } +
                 nlb * kernel(kernel.lowerBound) +
                 nub * kernel(kernel.upperBound)) / (n * bandwidth)
