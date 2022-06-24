@@ -1,7 +1,7 @@
 package processm.conformance.conceptdrift.estimators
 
 /**
- * A common interface to represent a continous probability distribution or its approximation
+ * A common interface to represent a continuous probability distribution or its approximation
  */
 interface ContinuousDistribution {
 
