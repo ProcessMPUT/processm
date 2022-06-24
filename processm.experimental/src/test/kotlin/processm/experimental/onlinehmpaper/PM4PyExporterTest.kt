@@ -2,12 +2,15 @@ package processm.experimental.onlinehmpaper
 
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import java.io.File
 import java.io.FileOutputStream
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 class PM4PyExporterTest {
 
     @Test
+    @Ignore("This test creates data for the manual verification.")
     fun test() {
         val a = Node("a")
         val b = Node("b")
@@ -25,7 +28,7 @@ class PM4PyExporterTest {
             b or c or b + c join d
             d joins end
         }
-        FileOutputStream("/tmp/test.xml").use {
+        FileOutputStream(File.createTempFile("test", ".xml")).use {
             net.toPM4PY(it)
         }
     }

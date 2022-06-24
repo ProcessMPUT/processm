@@ -431,7 +431,7 @@ OFFSET ?::bigint
             service.start()
 
             // simulate work
-            Thread.sleep(5000L)
+            Thread.sleep(4000L)
 
             logger.info("Disabling ETL process repeat")
             transaction(DBCache.get(dataStoreId).database) {
@@ -445,7 +445,7 @@ OFFSET ?::bigint
 
             // simulate break
             logger.info("Break")
-            Thread.sleep(2000L)
+            Thread.sleep(3000L)
 
             logger.info("Enabling ETL process repeat")
             transaction(DBCache.get(dataStoreId).database) {
@@ -458,7 +458,7 @@ OFFSET ?::bigint
             }.notifyUsers()
 
             // wait for imports
-            Thread.sleep(5000L)
+            Thread.sleep(4000L)
 
         } finally {
             service.stop()
