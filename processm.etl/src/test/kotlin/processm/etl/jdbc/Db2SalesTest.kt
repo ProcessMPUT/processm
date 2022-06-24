@@ -26,7 +26,7 @@ import kotlin.test.*
 import kotlin.test.Test
 
 @Tag("ETL")
-@Timeout(90, unit = TimeUnit.SECONDS)
+@Timeout(120, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisabledOnOs(OS.WINDOWS) // 2-3 times slower on Windows than on linux and mac
 class Db2SalesTest {
