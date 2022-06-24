@@ -10,10 +10,10 @@ class BucketingDoubleListTest {
         with(BucketingDoubleList()) {
             assertEquals(0, size)
             assertEquals(0, totalSize)
-            add(1.0)
+            addAll(listOf(1.0))
             assertEquals(1, size)
             assertEquals(1, totalSize)
-            add(1.0)
+            addAll(listOf(1.0))
             assertEquals(1, size)
             assertEquals(2, totalSize)
         }
@@ -24,10 +24,10 @@ class BucketingDoubleListTest {
         with(BucketingDoubleList()) {
             assertEquals(0, size)
             assertEquals(0, totalSize)
-            add(1.0)
+            addAll(listOf(1.0))
             assertEquals(1, size)
             assertEquals(1, totalSize)
-            add(2.0)
+            addAll(listOf(2.0))
             assertEquals(2, size)
             assertEquals(2, totalSize)
         }
@@ -38,16 +38,16 @@ class BucketingDoubleListTest {
         with(BucketingDoubleList()) {
             assertEquals(0, size)
             assertEquals(0, totalSize)
-            add(1.0)
+            addAll(listOf(1.0))
             assertEquals(1, size)
             assertEquals(1, totalSize)
-            add(2.0)
+            addAll(listOf(2.0))
             assertEquals(2, size)
             assertEquals(2, totalSize)
-            add(1.00001)
+            addAll(listOf(1.00001))
             assertEquals(2, size)
             assertEquals(3, totalSize)
-            add(2.00001)
+            addAll(listOf(2.00001))
             assertEquals(2, size)
             assertEquals(4, totalSize)
         }
@@ -56,11 +56,11 @@ class BucketingDoubleListTest {
     @Test
     fun `add and countUpToExclusive`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
             assertEquals(0, countUpToExclusive(0))
             assertEquals(2, countUpToExclusive(1))
             assertEquals(4, countUpToExclusive(2))
@@ -71,11 +71,11 @@ class BucketingDoubleListTest {
     @Test
     fun `add and countFrom`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
             assertEquals(5, countFrom(0))
             assertEquals(3, countFrom(1))
             assertEquals(1, countFrom(2))
@@ -86,11 +86,21 @@ class BucketingDoubleListTest {
     @Test
     fun `add ordered and flatten`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            assertEquals(listOf(1.0, 1.0, 2.0, 2.0, 3.0), flatten())
+        }
+    }
+
+    @Test
+    fun `addAll ordered and flatten`() {
+        with(BucketingDoubleList()) {
+            addAll(listOf(1.0, 2.0, 3.0))
+            addAll(listOf(1.0, 2.0))
+            assertEquals(5, totalSize)
             assertEquals(listOf(1.0, 1.0, 2.0, 2.0, 3.0), flatten())
         }
     }
@@ -98,11 +108,20 @@ class BucketingDoubleListTest {
     @Test
     fun `add unordered and flatten`() {
         with(BucketingDoubleList()) {
-            add(3.0)
-            add(2.0)
-            add(1.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(3.0))
+            addAll(listOf(2.0))
+            addAll(listOf(1.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            assertEquals(listOf(1.0, 1.0, 2.0, 2.0, 3.0), flatten())
+        }
+    }
+
+    @Test
+    fun `addAll unordered and flatten`() {
+        with(BucketingDoubleList()) {
+            addAll(listOf(3.0, 2.0, 1.0))
+            addAll(listOf(1.0, 2.0))
             assertEquals(listOf(1.0, 1.0, 2.0, 2.0, 3.0), flatten())
         }
     }
@@ -110,11 +129,11 @@ class BucketingDoubleListTest {
     @Test
     fun `add and insertionIndexOf for absent values`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
             //[1.0, 1.0], [2.0, 2.0], 3.0
             assertEquals(0, insertionIndexOf(0.5))
             assertEquals(1, insertionIndexOf(1.5))
@@ -126,11 +145,11 @@ class BucketingDoubleListTest {
     @Test
     fun `add and insertionIndexOf for present values`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
             //[1.0, 1.0], [2.0, 2.0], 3.0
             assertEquals(0, insertionIndexOf(1.0))
             assertEquals(1, insertionIndexOf(2.0))
@@ -141,11 +160,11 @@ class BucketingDoubleListTest {
     @Test
     fun `add and insertionIndexOf for almost-present larger values`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
             //[1.0, 1.0], [2.0, 2.0], 3.0
             assertEquals(0, insertionIndexOf(1.00001))
             assertEquals(1, insertionIndexOf(2.00001))
@@ -156,11 +175,11 @@ class BucketingDoubleListTest {
     @Test
     fun `add and insertionIndexOf for almost-present smaller values`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
-            add(1.0)
-            add(2.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
             //[1.0, 1.0], [2.0, 2.0], 3.0
             assertEquals(0, insertionIndexOf(0.99999))
             assertEquals(1, insertionIndexOf(1.99999))
@@ -171,9 +190,9 @@ class BucketingDoubleListTest {
     @Test
     fun `add and relevantRanges no overlap`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
             with(relevantRanges(0.2, 0.1).toList()) {
                 assertEquals(3, size)
                 assertEquals(0.8..1.1, get(0))
@@ -186,9 +205,9 @@ class BucketingDoubleListTest {
     @Test
     fun `add and relevantRanges full overlap`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(3.0)
+            addAll(listOf(1.0))
+            addAll(listOf(2.0))
+            addAll(listOf(3.0))
             with(relevantRanges(2.0, 2.0).toList()) {
                 assertEquals(1, size)
                 assertEquals(-1.0..5.0, get(0))
@@ -199,11 +218,7 @@ class BucketingDoubleListTest {
     @Test
     fun `add and relevantRanges some overlap`() {
         with(BucketingDoubleList()) {
-            add(1.0)
-            add(2.0)
-            add(5.0)
-            add(8.0)
-            add(9.0)
+            addAll(listOf(1.0, 2.0, 5.0, 8.0, 9.0))
             with(relevantRanges(1.0, 1.0).toList()) {
                 assertEquals(3, size)
                 assertEquals(0.0..3.0, get(0))

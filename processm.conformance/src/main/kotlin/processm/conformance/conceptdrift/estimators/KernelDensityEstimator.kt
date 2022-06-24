@@ -178,10 +178,9 @@ class KernelDensityEstimator(
     fun fit(data: Iterable<Double>) {
         var s2 = 0.0
         val oldn = n
-        for (x in data) {
-            if (!x.isFinite())
-                continue
-            points.add(x)
+        val finite = data.filter(Double::isFinite)
+        points.addAll(finite)
+        for (x in finite) {
             s1 += x
             s2 += x * x
         }

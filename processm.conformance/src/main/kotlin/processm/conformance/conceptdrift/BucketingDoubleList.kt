@@ -37,7 +37,7 @@ class BucketingDoubleList(val log10resolution: Int = 3) : AbstractList<Element>(
         override fun compareTo(other: Int): Int = intValue.compareTo(other)
     }
 
-    private val data = ArrayList<ElementImpl>()
+    private var data = ArrayList<ElementImpl>()
 
     /**
      * The number of unique values
@@ -48,8 +48,8 @@ class BucketingDoubleList(val log10resolution: Int = 3) : AbstractList<Element>(
     /**
      * The total number of values, i.e., a faster equivalent of `flatten().size`
      */
-    var totalSize: Int = 0
-        private set
+    val totalSize: Int
+        get() = if (data.isNotEmpty()) data.last().cumulativeCounter else 0
 
     override fun get(index: Int): Element = data[index]
 
@@ -66,29 +66,86 @@ class BucketingDoubleList(val log10resolution: Int = 3) : AbstractList<Element>(
 
     private fun Double.roundToResolution() = (this * resolution).roundToInt()
 
+    private fun makeNewElementList(values: Collection<Double>): List<ElementImpl> {
+        val sorted = values.mapTo(ArrayList()) { it.roundToResolution() }.also { it.sort() }
+        val result = ArrayList<ElementImpl>(sorted.size)
+        var previous: ElementImpl? = null
+        for (value in sorted.sorted()) {
+            if (previous?.intValue != value) {
+                val element = ElementImpl(value, 1, (previous?.cumulativeCounter ?: 0) + 1)
+                result.add(element)
+                previous = element
+            } else {
+                previous.counter++
+                previous.cumulativeCounter++
+            }
+        }
+        assert(result.last().cumulativeCounter == values.size)
+        return result
+    }
+
     /**
      * Adds [value] to the list, first rounding it to the expected resolution.
      * If the rounded value is not present in the list, a new [Element] is added, otherwise the corresponding counter is incremented.
+     *
+     * Let `n` denote [size] and `m` denote [values.size]. [addAll] takes `O(m*log(m) + (m+n))`, where `O(m*log(m))`
+     * is the cost of sorting [values] and `O(m+n)` is the cost of merging [data] and sorted [values]
      */
-    fun add(value: Double) {
-        val x = value.roundToResolution()
-        var i = data.binarySearchBy(x) { it.intValue }
-        if (i < 0) {
-            i = -i - 1
-            data.add(i, ElementImpl(x, 1, if (i > 0) data[i - 1].cumulativeCounter else 0))
-        } else {
-            data[i].counter++
+    fun addAll(values: Collection<Double>) {
+        if (values.isEmpty())
+            return
+        val toAdd = makeNewElementList(values)
+        var i = insertionIndexOf(toAdd.first().intValue)
+        var prevCumulativeCounter = countUpToExclusive(i)
+        var j = 0
+        val result = ArrayList<ElementImpl>(data.size + toAdd.size)
+        result.addAll(data.subList(0, i))
+        while (i < data.size && j < toAdd.size) {
+            when {
+                data[i].intValue == toAdd[j].intValue -> {
+                    data[i].counter += toAdd[j].counter
+                    result.add(data[i])
+                    i++
+                    j++
+                }
+                data[i].intValue < toAdd[j].intValue -> {
+                    result.add(data[i++])
+                }
+                else -> {
+                    assert(data[i].intValue > toAdd[j].intValue)
+                    result.add(toAdd[j++])
+                }
+            }
+            with(result.last()) {
+                prevCumulativeCounter += counter
+                cumulativeCounter = prevCumulativeCounter
+            }
         }
-        for (j in i until data.size)
-            data[j].cumulativeCounter++
-        totalSize++
+        assert(i == data.size || j == toAdd.size)
+        while (j < toAdd.size) {
+            result.add(toAdd[j++])
+            with(result.last()) {
+                prevCumulativeCounter += counter
+                cumulativeCounter = prevCumulativeCounter
+            }
+        }
+        while (i < data.size) {
+            result.add(data[i++])
+            with(result.last()) {
+                prevCumulativeCounter += counter
+                cumulativeCounter = prevCumulativeCounter
+            }
+        }
+        data = result
     }
 
     /**
      * A specialized copy of [List.binarySearch] without range-checking or calling to a comparator instead of using `<` and `>`
+     * Always returns a non-negative index, indicating the position of x, or the position x should be inserted to if x is absent
      */
-    fun insertionIndexOf(value: Double, low: Int = 0): Int {
-        val x = value.roundToResolution()
+    fun insertionIndexOf(value: Double, low: Int = 0): Int = insertionIndexOf(value.roundToResolution(), low)
+
+    private fun insertionIndexOf(x: Int, low: Int = 0): Int {
         var low = low
         var high = data.size - 1
 
