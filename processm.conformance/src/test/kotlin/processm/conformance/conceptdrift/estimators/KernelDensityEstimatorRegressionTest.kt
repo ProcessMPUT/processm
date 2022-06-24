@@ -5,6 +5,7 @@ import org.apache.commons.math3.random.MersenneTwister
 import org.junit.jupiter.api.Tag
 import processm.conformance.conceptdrift.numerical.optimization.RMSProp
 import processm.core.log.Helpers.assertDoubleEquals
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -61,5 +62,18 @@ class KernelDensityEstimatorRegressionTest {
         kde.fit(points)
         assertDoubleEquals(0.033, kde.pdf(-10.0))
         assertDoubleEquals(0.033, kde.pdf(10.0))
+    }
+
+    @Test
+    fun `mean and standard deviation`() {
+        val points = List(10) { it + 1.0 }
+        val n = points.size
+        val s2 = points.sumOf { it * it }
+        val s1 = points.sum()
+        val std = sqrt(s2 / (n - 1) - s1 / n * s1 / (n - 1))
+        val kde = KernelDensityEstimator()
+        kde.fit(points)
+        assertDoubleEquals(s1 / n, kde.mean)
+        assertDoubleEquals(std, kde.standardDeviation)
     }
 }

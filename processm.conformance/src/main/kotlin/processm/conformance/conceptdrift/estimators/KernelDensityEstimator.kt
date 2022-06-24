@@ -75,8 +75,8 @@ class KernelDensityEstimator(
     /** sum of [points] */
     private var s1: Double = 0.0
 
-    /** sum of squares of [points] */
-    private var s2: Double = 0.0
+    /** sum of squares of [points] divided by n-1 */
+    private var s2divn1: Double = 0.0
 
     /**
      * The bandwidth for the estimation (frequently denoted by h).
@@ -105,7 +105,7 @@ class KernelDensityEstimator(
      * @see Distribution.standardDeviation
      */
     val standardDeviation: Double
-        get() = sqrt(s2 / (n - 1) - s1 / n * s1 / (n - 1))
+        get() = sqrt(s2divn1 - s1 / n * s1 / (n - 1))
 
     private fun updateBounds() {
         relevantRanges = points.relevantRanges(
@@ -176,6 +176,8 @@ class KernelDensityEstimator(
      * Include [data] in the estimation, updating [mean], [standardDeviation], [bandwidth] and [relevantRanges] in the process
      */
     fun fit(data: Iterable<Double>) {
+        var s2 = 0.0
+        val oldn = n
         for (x in data) {
             if (!x.isFinite())
                 continue
@@ -183,6 +185,7 @@ class KernelDensityEstimator(
             s1 += x
             s2 += x * x
         }
+        s2divn1 = (oldn - 1) / (n - 1) * s2divn1 + s2 / (n - 1)
         if (points.size >= MIN_N) {
             if (!lowerBound.isFinite() || lowerBound > min || upperBound < max) {
                 /*
