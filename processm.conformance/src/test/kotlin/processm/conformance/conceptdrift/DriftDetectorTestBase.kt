@@ -100,7 +100,6 @@ abstract class DriftDetectorTestBase {
         `sudden univariate drift`(rng, d1, d2, dnoise)
     }
 
-    //    @Ignore("This test has increased number of examples and increased noise, to ensure enough learning material. Unfortunately it takes a lot of time, so it is disabled by default")
     @Test
     fun `sudden univariate drift in variance`() {
         val rng = MersenneTwister(42)
@@ -110,7 +109,6 @@ abstract class DriftDetectorTestBase {
         `sudden univariate drift`(rng, d1, d2, dnoise, m = 300, pnoise = 0.3)
     }
 
-    //    @Ignore("This test has increased number of examples and decreased noise, as detecting the difference between two distributions with an identical mean and variance is not an easy task. It thus takes a few minutes to complete and is disabled by default")
     @Test
     fun `sudden univariate drift in shape`() {
         val rng = MersenneTwister(42)
@@ -333,20 +331,6 @@ abstract class DriftDetectorTestBase {
         `sudden multivariate drift`(rng, Mixture(d1, m), Mixture(d2, m), Mixture(dnoise, mnoise))
     }
 
-//    @Tag("performance")
-//    @Test
-//    fun `sudden 5variate drift in variance`() {
-//        val rng = MersenneTwister(42)
-//        val nin = 5
-//        val nout = 5
-//        val d1 = (1..nin).map { NormalDistribution(rng, 1.0, it.toDouble()) }
-//        val d2 = (1..nin).map { NormalDistribution(rng, 1.0, 4 * it.toDouble()) }
-//        val dnoise = (1..nin).map { NormalDistribution(rng, 0.0, 1.0) }
-//        val m = (1..nout).map { a -> (1..nin).map { b -> (a + b).toDouble() } }
-//        val mnoise = (1..nout).map { a -> (1..nin).map { b -> if (a == b) 1.0 else 0.0 } }
-//        `sudden multivariate drift`(rng, Mixture(d1, m), Mixture(d2, m), Mixture(dnoise, mnoise))
-//    }
-
     @Test
     fun `sudden bivariate drift in mean`() {
         val rng = MersenneTwister(42)
@@ -431,7 +415,6 @@ abstract class DriftDetectorTestBase {
         `gradual drift`(rng, d1, d2, dnoise)
     }
 
-    //    @Ignore("This test has increased number of examples and decreased noise, as detecting the difference between two distributions with an identical mean and variance is not an easy task. It thus takes a few minutes to complete and is disabled by default")
     @Test
     fun `gradual drift in shape`() {
         val rng = MersenneTwister(42)
