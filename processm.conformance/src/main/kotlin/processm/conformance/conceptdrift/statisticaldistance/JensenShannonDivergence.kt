@@ -7,6 +7,9 @@ import kotlin.math.ln
 
 private val LN2 = ln(2.0)
 
+/**
+ * Jensen-Shannon Divergence, as described in [https://en.wikipedia.org/w/index.php?title=Jensen%E2%80%93Shannon_divergence&oldid=1091202066](https://en.wikipedia.org/w/index.php?title=Jensen%E2%80%93Shannon_divergence&oldid=1091202066)
+ */
 fun JensenShannonDivergence(p: ContinuousDistribution, q: ContinuousDistribution, integrator: Integrator): Double =
     integrator(p.relevantRanges.merge(q.relevantRanges)) { x ->
         //In theory s*ln(2) integrates to 2ln(2) and could be taken out of the integral. In practice - it does not, I suspect limited integration ranges, but didn't verify it.
