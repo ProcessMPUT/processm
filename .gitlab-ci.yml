@@ -7,7 +7,7 @@
 # See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 image: alpine:latest
 stages:
-#- automerge
+- automerge
 - test
 variables:
   ACCEPT: 'Accept: application/json'
@@ -17,7 +17,7 @@ Merge_MR_IF_TeamCity_Built:
   stage: automerge
   when: manual
   only:
-  - merge_requests
+  #- merge_requests
   tags:
   - docker
   before_script:
