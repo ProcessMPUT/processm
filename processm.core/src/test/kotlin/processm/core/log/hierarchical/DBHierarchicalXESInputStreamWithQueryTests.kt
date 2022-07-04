@@ -1,6 +1,7 @@
 package processm.core.log.hierarchical
 
 import processm.core.DBTestHelper.dbName
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
 import processm.core.log.attribute.RealAttr
 import processm.core.log.attribute.value
 import processm.core.querylanguage.Query
@@ -65,7 +66,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
                 assertEquals(1, event.attributes.count())
-                assertEquals("concept:name", event.attributes.values.first().key)
+                assertEquals(CONCEPT_NAME, event.attributes.values.first().key)
 
                 standardAndAllAttributesMatch(log, event)
             }
@@ -561,7 +562,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         assertEquals("JournalReview", log.conceptName)
         assertNull(log.lifecycleModel)
         assertNull(log.identityId)
-        assertEquals("JournalReview", log.attributes["concept:name"]!!.value as String)
+        assertEquals("JournalReview", log.attributes[CONCEPT_NAME]!!.value as String)
         standardAndAllAttributesMatch(log, log)
 
         assertEquals(97, log.traces.count())
@@ -656,7 +657,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         assertEquals("JournalReview", log.conceptName)
         assertNull(log.lifecycleModel)
         assertNull(log.identityId)
-        assertEquals("JournalReview", log.attributes["concept:name"]!!.value as String)
+        assertEquals("JournalReview", log.attributes[CONCEPT_NAME]!!.value as String)
         standardAndAllAttributesMatch(log, log)
 
         assertEquals(101, log.traces.count())
@@ -737,8 +738,8 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
         for (trace in log.traces) {
             assertNotNull(trace.conceptName)
-            assertNotNull(trace.attributes["concept:name"]?.value)
-            assertEquals(trace.conceptName, trace.attributes["concept:name"]?.value)
+            assertNotNull(trace.attributes[CONCEPT_NAME]?.value)
+            assertEquals(trace.conceptName, trace.attributes[CONCEPT_NAME]?.value)
             assertNotNull(trace.attributes["min(^event:time:timestamp)"]?.value)
             assertNotNull(trace.attributes["max(^event:time:timestamp)"]?.value)
             assertNotNull(trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"]?.value)

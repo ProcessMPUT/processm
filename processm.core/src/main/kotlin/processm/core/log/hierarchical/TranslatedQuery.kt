@@ -1201,7 +1201,7 @@ internal class TranslatedQuery(
                 if (index !== null) {
                     append("a$index")
                 } else if (attribute.isStandard) {
-                    if (attribute.scope == Scope.Log && attribute.standardName == "db:id")
+                    if (attribute.scope == Scope.Log && attribute.standardName == DB_ID)
                         append("l.id") // for backward-compatibility with the previous implementation of the XES layer
                     else
                         append("${sqlScope.alias}.\"${attribute.standardName}\"")

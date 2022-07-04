@@ -4,6 +4,8 @@ import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.implies
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.StringAttr
 import processm.core.log.attribute.value
 import java.time.Duration
@@ -187,8 +189,8 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
                 assertNull(event.orgRole)
                 assertNull(event.identityId)
 
-                assertTrue(event.attributes["concept:name"]?.value in eventNames)
-                assertTrue(event.attributes["lifecycle:transition"]?.value in lifecycleTransitions)
+                assertTrue(event.attributes[CONCEPT_NAME]?.value in eventNames)
+                assertTrue(event.attributes[LIFECYCLE_TRANSITION]?.value in lifecycleTransitions)
                 standardAndAllAttributesMatch(log, event)
             }
         }

@@ -2,6 +2,9 @@ package processm.core.log
 
 import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.parseISO8601
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
 import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import kotlin.test.Test
@@ -128,10 +131,10 @@ internal class XMLXESInputStreamTest {
             assertEquals(receivedLog.eventGlobals.size, 4)
 
             assertEquals(receivedLog.eventGlobals.getValue("conceptowy:name").value, "__INVALID__")
-            assertEquals(receivedLog.eventGlobals.getValue("lifecycle:transition").value, "complete")
-            assertEquals(receivedLog.eventGlobals.getValue("org:group").value, "__INVALID__")
+            assertEquals(receivedLog.eventGlobals.getValue(LIFECYCLE_TRANSITION).value, "complete")
+            assertEquals(receivedLog.eventGlobals.getValue(ORG_GROUP).value, "__INVALID__")
             assertEquals(
-                receivedLog.eventGlobals.getValue("time:timestamp").value,
+                receivedLog.eventGlobals.getValue(TIME_TIMESTAMP).value,
                 "1970-01-01T01:00:00.000+01:00".parseISO8601()
             )
         }
@@ -151,7 +154,7 @@ internal class XMLXESInputStreamTest {
             assertEquals(receivedLog.eventClassifiers.getValue("Event Name").keys, "conceptowy:name")
 
             assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").name, "Department Classifier")
-            assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").keys, "org:group")
+            assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").keys, ORG_GROUP)
         }
     }
 
@@ -292,15 +295,15 @@ internal class XMLXESInputStreamTest {
             assertEquals(receivedEvent.attributes.size, 9)
 
             assertEquals(
-                receivedEvent.attributes.getValue("time:timestamp").value,
+                receivedEvent.attributes.getValue(TIME_TIMESTAMP).value,
                 "2005-01-03T00:00:00+01:00".parseISO8601()
             )
             assertEquals(receivedEvent.attributes.getValue("Activity code").value, 410100L)
-            assertEquals(receivedEvent.attributes.getValue("lifecycle:transition").value, "complete")
+            assertEquals(receivedEvent.attributes.getValue(LIFECYCLE_TRANSITION).value, "complete")
             assertEquals(receivedEvent.attributes.getValue("Section").value, "Section 5")
             assertEquals(receivedEvent.attributes.getValue("Producer code").value, "SRTH")
             assertEquals(receivedEvent.attributes.getValue("conceptowy:name").value, "1e consult poliklinisch")
-            assertEquals(receivedEvent.attributes.getValue("org:group").value, "Radiotherapy")
+            assertEquals(receivedEvent.attributes.getValue(ORG_GROUP).value, "Radiotherapy")
             assertEquals(receivedEvent.attributes.getValue("Number of executions").value, 1L)
             assertEquals(receivedEvent.attributes.getValue("Specialism code").value, 61L)
         }

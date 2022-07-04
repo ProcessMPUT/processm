@@ -5,6 +5,7 @@ import processm.core.helpers.forceToUUID
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.*
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
 import processm.core.logging.logger
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
@@ -16,8 +17,6 @@ import java.sql.Types
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ForkJoinPool
-
-private const val IDENTITY_ID = "identity:id"
 
 /**
  * The timeout in milliseconds for the communication with the external DB. If no response is retrieved within this

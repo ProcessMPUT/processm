@@ -3,6 +3,20 @@ package processm.core.log.hierarchical
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.*
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
+import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
+import processm.core.log.attribute.Attribute.Companion.XES_FEATURES
+import processm.core.log.attribute.Attribute.Companion.XES_VERSION
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -224,11 +238,11 @@ class DBHierarchicalXESInputStream(
             readExpressions(result.expressions, this, logId.toLong())
 
             // the standard attributes are to be read after all other attributes, as they may override the previous values
-            xesVersion = result.entity.getString("xes:version")
-            xesFeatures = result.entity.getString("xes:features")
-            conceptName = result.entity.getString("concept:name") ?: conceptName
-            identityId = result.entity.getString("identity:id").toUUID() ?: identityId
-            lifecycleModel = result.entity.getString("lifecycle:model") ?: lifecycleModel
+            xesVersion = result.entity.getString(XES_VERSION)
+            xesFeatures = result.entity.getString(XES_FEATURES)
+            conceptName = result.entity.getString(CONCEPT_NAME) ?: conceptName
+            identityId = result.entity.getString(IDENTITY_ID).toUUID() ?: identityId
+            lifecycleModel = result.entity.getString(LIFECYCLE_MODEL) ?: lifecycleModel
             count = result.entity.getIntOrNull("count") ?: 1
 
             setCustomAttributes(nameMap)
@@ -344,10 +358,10 @@ class DBHierarchicalXESInputStream(
             readExpressions(result.expressions, this, traceId)
 
             // the standard attributes are to be read after all other attributes, as they may override the previous values
-            conceptName = result.entity.getString("concept:name") ?: conceptName
-            costCurrency = result.entity.getString("cost:currency") ?: costCurrency
-            costTotal = result.entity.getDoubleOrNull("cost:total") ?: costTotal
-            identityId = result.entity.getString("identity:id").toUUID() ?: identityId
+            conceptName = result.entity.getString(CONCEPT_NAME) ?: conceptName
+            costCurrency = result.entity.getString(COST_CURRENCY) ?: costCurrency
+            costTotal = result.entity.getDoubleOrNull(COST_TOTAL) ?: costTotal
+            identityId = result.entity.getString(IDENTITY_ID).toUUID() ?: identityId
             isEventStream = result.entity.getBooleanOrNull("event_stream") ?: false
             count = result.entity.getIntOrNull("count") ?: 1
 
@@ -372,17 +386,17 @@ class DBHierarchicalXESInputStream(
             readExpressions(result.expressions, this, eventId)
 
             // the standard attributes are to be read after all other attributes, as they may override the previous values
-            conceptName = result.entity.getString("concept:name") ?: conceptName
-            conceptInstance = result.entity.getString("concept:instance") ?: conceptInstance
-            costTotal = result.entity.getDoubleOrNull("cost:total") ?: costTotal
-            costCurrency = result.entity.getString("cost:currency") ?: costCurrency
-            identityId = result.entity.getString("identity:id").toUUID() ?: identityId
-            lifecycleState = result.entity.getString("lifecycle:state") ?: lifecycleState
-            lifecycleTransition = result.entity.getString("lifecycle:transition") ?: lifecycleTransition
-            orgRole = result.entity.getString("org:role") ?: orgRole
-            orgGroup = result.entity.getString("org:group") ?: orgGroup
-            orgResource = result.entity.getString("org:resource") ?: orgResource
-            timeTimestamp = result.entity.getTimestamp("time:timestamp", gmtCalendar)?.toInstant() ?: timeTimestamp
+            conceptName = result.entity.getString(CONCEPT_NAME) ?: conceptName
+            conceptInstance = result.entity.getString(CONCEPT_INSTANCE) ?: conceptInstance
+            costTotal = result.entity.getDoubleOrNull(COST_TOTAL) ?: costTotal
+            costCurrency = result.entity.getString(COST_CURRENCY) ?: costCurrency
+            identityId = result.entity.getString(IDENTITY_ID).toUUID() ?: identityId
+            lifecycleState = result.entity.getString(LIFECYCLE_STATE) ?: lifecycleState
+            lifecycleTransition = result.entity.getString(LIFECYCLE_TRANSITION) ?: lifecycleTransition
+            orgRole = result.entity.getString(ORG_ROLE) ?: orgRole
+            orgGroup = result.entity.getString(ORG_GROUP) ?: orgGroup
+            orgResource = result.entity.getString(ORG_RESOURCE) ?: orgResource
+            timeTimestamp = result.entity.getTimestamp(TIME_TIMESTAMP, gmtCalendar)?.toInstant() ?: timeTimestamp
             count = result.entity.getIntOrNull("count") ?: 1
 
             setCustomAttributes(nameMap)

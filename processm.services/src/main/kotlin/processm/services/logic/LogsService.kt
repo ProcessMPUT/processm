@@ -9,6 +9,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
 import processm.core.communication.Producer
 import processm.core.log.*
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
 import processm.core.log.attribute.IDAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
@@ -35,7 +36,7 @@ class LogsService(private val producer: Producer) {
         private const val traceLimit = 30L
         private const val eventLimit = 90L
         private const val downloadLimitFactor = 10L
-        private const val identityIdAttributeName = "identity:id"
+        private const val identityIdAttributeName = IDENTITY_ID
     }
 
     private fun InputStream.boundStreamSize(streamSizeLimit: Long) =

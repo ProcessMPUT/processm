@@ -102,7 +102,7 @@ internal class DBXESInputStreamTest {
         assertEquals(receivedLog.eventClassifiers.getValue("Event Name").keys, "conceptowy:name")
 
         assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").name, "Department Classifier")
-        assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").keys, "org:group")
+        assertEquals(receivedLog.traceClassifiers.getValue("Department Classifier").keys, ORG_GROUP)
     }
 
     @Test
@@ -140,12 +140,12 @@ internal class DBXESInputStreamTest {
             with(children.getValue("meta:key")) {
                 assertEquals(children.size, 7)
 
-                assertEquals(children.getValue("org:group").value, "Radiotherapy")
+                assertEquals(children.getValue(ORG_GROUP).value, "Radiotherapy")
                 assertEquals(children.getValue("Specialism code").value, 61L)
                 assertEquals(children.getValue("conceptowy:name").value, "1e consult poliklinisch")
                 assertEquals(children.getValue("Activity code").value, 410100L)
-                assertEquals("2005-01-03T00:00:00.000+01:00".parseISO8601(), children.getValue("time:timestamp").value)
-                assertEquals(children.getValue("lifecycle:transition").value, "complete")
+                assertEquals("2005-01-03T00:00:00.000+01:00".parseISO8601(), children.getValue(TIME_TIMESTAMP).value)
+                assertEquals(children.getValue(LIFECYCLE_TRANSITION).value, "complete")
 
                 with(children.getValue("listKey") as ListAttr) {
                     assertEquals(children.size, 1)
@@ -173,7 +173,7 @@ internal class DBXESInputStreamTest {
             assertEquals(size, 2)
 
             assertEquals(getValue("conceptowy:name").value, "__INVALID__")
-            assertEquals(getValue("org:group").value, "__INVALID__")
+            assertEquals(getValue(ORG_GROUP).value, "__INVALID__")
         }
     }
 
@@ -233,14 +233,14 @@ internal class DBXESInputStreamTest {
         with(receivedEvent.attributes) {
             assertEquals(size, 6)
 
-            assertEquals("Radiotherapy", getValue("org:group").value)
+            assertEquals("Radiotherapy", getValue(ORG_GROUP).value)
             assertEquals(61L, getValue("Specialism code").value)
             assertEquals(1, getValue("Specialism code").children.size)
             assertEquals(20.20, getValue("Specialism code").children.getValue("fl-y").value)
             assertEquals("administratief tarief - eerste pol", getValue("conceptowy:name").value)
-            assertEquals("complete", getValue("lifecycle:transition").value)
+            assertEquals("complete", getValue(LIFECYCLE_TRANSITION).value)
             assertEquals(419100L, getValue("Activity code").value)
-            assertEquals(date, getValue("time:timestamp").value)
+            assertEquals(date, getValue(TIME_TIMESTAMP).value)
         }
 
         with(receivedEvent) {

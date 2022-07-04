@@ -15,6 +15,8 @@ import processm.core.helpers.toUUID
 import processm.core.log.DBLogCleaner
 import processm.core.log.DBXESOutputStream
 import processm.core.log.Log
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
 import processm.core.log.attribute.IDAttr
 import processm.core.log.attribute.StringAttr
 import processm.core.logging.logger
@@ -31,8 +33,8 @@ import kotlin.reflect.KClass
  */
 class MetaModelToXesConversionService : Service {
     companion object {
-        private const val identityIdAttributeName = "identity:id"
-        private const val conceptNameAttributeName = "concept:name"
+        private const val identityIdAttributeName = IDENTITY_ID
+        private const val conceptNameAttributeName = CONCEPT_NAME
         private val logger = logger()
     }
 
