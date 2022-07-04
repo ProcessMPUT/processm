@@ -128,6 +128,14 @@
             <artifactId>pooled-jms</artifactId>
             <version>${pooled-jms.version}</version>
         </dependency>
+        <!-- WARNING: GPL 2.0 license; For testing purposes only. -->
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-core</artifactId>
+            <version>0.16</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
