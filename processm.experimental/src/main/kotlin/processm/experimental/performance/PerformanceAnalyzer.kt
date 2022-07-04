@@ -1,4 +1,5 @@
 package processm.experimental.performance
+
 import org.apache.commons.collections4.multiset.HashMultiSet
 import org.apache.commons.math3.fraction.BigFraction
 import processm.core.helpers.Counter
@@ -34,7 +35,7 @@ class PerformanceAnalyzer(
         override operator fun get(key: processm.core.models.causalnet.Node) = computeIfAbsent(key) {
             val old = ctr.copy()
             ctr.shl(1)
-            check(!ctr.isZero()) {"There are too many nodes in the model"}
+            check(!ctr.isZero()) { "There are too many nodes in the model" }
             return@computeIfAbsent old
         }
 
@@ -76,7 +77,7 @@ class PerformanceAnalyzer(
                     for (node in freshReachable) {
                         for (dep in model.outgoing[node].orEmpty()) {
                             val t = encoder[dep.target]
-                            val tmp=reachableEnc.copy()
+                            val tmp = reachableEnc.copy()
                             tmp.or(newReachableEnc)
                             tmp.and(t)
                             if (!tmp.isZero())
@@ -97,7 +98,8 @@ class PerformanceAnalyzer(
                             if (joins.any { j ->
                                     val tmp = j.copy()
                                     tmp.and(reachableEncOrAux)
-                                    return@any tmp == j }) {
+                                    return@any tmp == j
+                                }) {
                                 //if (true) {
                                 newReachable.add(dep.target)
                                 reachable.add(dep.target)
@@ -232,7 +234,7 @@ class PerformanceAnalyzer(
             partialAlignment.alignment.all { it.activity == null } -> model.instances
             else -> emptySet()
         }
-        if(reachableCache.size>=10000)
+        if (reachableCache.size >= 10000)
             reachableCache.clear()
 
         var h1 = 0.0
@@ -274,20 +276,14 @@ class PerformanceAnalyzer(
         return minOccurrences
     }
 
-    private val intersectionOfTargets = object : HashMap<Node, Set<Node>>() {
-        override operator fun get(key: processm.core.models.causalnet.Node): Set<processm.core.models.causalnet.Node> =
-            computeIfAbsent(key) { key ->
-                var intersection: Set<processm.core.models.causalnet.Node>? = null
-                for (split in model.splits[key].orEmpty()) {
-                    if (intersection == null)
-                        intersection = split.targets
-                    else
-                        intersection = intersection.intersect(split.targets)
-                    if (intersection.isEmpty())
-                        break
-                }
-                return@computeIfAbsent intersection.orEmpty()
-            }
+    private val intersectionOfTargets = HashMapWithDefault<Node, Set<Node>> { key ->
+        var intersection: Set<Node>? = null
+        for (split in model.splits[key].orEmpty()) {
+            intersection = intersection?.intersect(split.targets) ?: split.targets
+            if (intersection.isEmpty())
+                break
+        }
+        intersection.orEmpty()
     }
 
     /*
@@ -638,9 +634,7 @@ class PerformanceAnalyzer(
         return alignment
     }
 
-    private class CostCache : HashMap<AlignmentState, Double>() {
-        override operator fun get(key: AlignmentState) = super.get(key) ?: Double.POSITIVE_INFINITY
-    }
+    private fun costCache() = HashMapWithDefault<AlignmentState, Double>(false) { Double.POSITIVE_INFINITY }
 
     private fun available(partialAlignment: Alignment): List<DecoupledNodeExecution> {
         val model = partialAlignment.context.model
@@ -684,7 +678,7 @@ class PerformanceAnalyzer(
         val traceLength = trace.events.count()
         logger.debug { "callctr=$callCtr" }
         callCtr++
-        val bestCost = CostCache()
+        val bestCost = costCache()
         val events = trace.events.toList()
 //        println(events.map{it.conceptName})
         val queue = PriorityQueue(AlignmentComparator(0))
