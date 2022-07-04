@@ -25,6 +25,10 @@ open class Trace(
     var isEventStream: Boolean = false
         internal set
 
+    init {
+        lateInit()
+    }
+
     /**
      * Equals if both are Trace and contains the same attributes
      */

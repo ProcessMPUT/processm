@@ -78,6 +78,10 @@ open class Event(
     var timeTimestamp: Instant? = null
         internal set
 
+    init {
+        lateInit()
+    }
+
     /**
      * Equals if both are Event and contains the same attributes
      */

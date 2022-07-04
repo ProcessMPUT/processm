@@ -1,5 +1,6 @@
 package processm.core.log
 
+import processm.core.helpers.identityMap
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.value
 import java.util.*
@@ -14,12 +15,6 @@ import java.util.*
 abstract class XESComponent(
     internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
 ) {
-    companion object {
-        private val identityMap: Map<String, String> = object : HashMap<String, String>() {
-            override fun get(key: String): String? = key
-        }
-    }
-
     /**
      * Standard attribute based on concept:name
      * Standard extension: Concept
@@ -50,9 +45,12 @@ abstract class XESComponent(
     val attributes: Map<String, Attribute<*>>
         get() = Collections.unmodifiableMap(attributesInternal)
 
-    init {
+    /**
+     * Call this function at the end of constructor in all derived non-abstract classes.
+     */
+    protected fun lateInit() {
         if (attributesInternal.isNotEmpty())
-            setStandardAttributes(identityMap)
+            setStandardAttributes(identityMap())
     }
 
     /**

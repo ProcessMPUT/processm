@@ -88,6 +88,10 @@ open class Log(
             field = value?.intern()
         }
 
+    init {
+        lateInit()
+    }
+
     /**
      * Equals if both are Log and contains the same attributes
      */
