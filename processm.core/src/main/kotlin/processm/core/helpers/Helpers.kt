@@ -315,3 +315,14 @@ fun <T> intersect(sets: Collection<Set<T>>): Set<T> =
             result
         }
     }
+
+/**
+ * Returns the sum of all elements in this collection as [Long].
+ */
+fun Iterable<Int>.longSum(): Long {
+    var sum = 0L
+    for (element in this) {
+        sum += element
+    }
+    return sum
+}

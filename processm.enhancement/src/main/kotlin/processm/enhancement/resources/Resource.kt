@@ -8,6 +8,8 @@ import java.time.Instant
  */
 interface Resource {
 
+    val name: String
+
     /**
      * A collection of roles assigned to the resource.
      */
