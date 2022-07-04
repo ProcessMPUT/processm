@@ -2,6 +2,7 @@ package processm.core.log.hierarchical
 
 import processm.core.helpers.NestableAutoCloseable
 import processm.core.helpers.mapToArray
+import processm.core.log.attribute.Attribute.Companion.DB_ID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
