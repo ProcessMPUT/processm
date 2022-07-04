@@ -20,9 +20,9 @@ object PetriNets {
     }
 
     /**
-     * A Petri net based on Fig. 3.4 in the Process mining: Data Science in Action book.
+     * A Petri net based on Fig. 3.4c in the Process mining: Data Science in Action book.
      */
-    val fig34: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    val fig34c: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
         val i1 = Place()
         val i2 = Place()
         val i3 = Place()
@@ -205,12 +205,20 @@ object PetriNets {
     /**
      * A Petri net implementing a sequence of activities a -> c -> d -> e -> h.
      */
-    val sequence: PetriNet = petrinet {
-        P tout "a"
-        P tin "a" tout "c"
-        P tin "c" tout "d"
-        P tin "d" tout "e"
-        P tin "e" tout "h"
-        P tin "h"
+    val sequence: PetriNet = getSequence("a", "c", "d", "e", "h")
+
+    /**
+     * Produces a Petri net that allows only for the sequential execution of the given activities in the given order.
+     */
+    fun getSequence(vararg activities: String) = petrinet {
+        var prev: String? = null
+        for (activity in activities) {
+            if (prev !== null)
+                P tin prev tout activity
+            else
+                P tout activity
+            prev = activity
+        }
+        P tin activities.last()
     }
 }

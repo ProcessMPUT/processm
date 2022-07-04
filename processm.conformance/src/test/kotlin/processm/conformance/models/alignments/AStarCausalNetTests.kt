@@ -3,7 +3,7 @@ package processm.conformance.models.alignments
 import processm.conformance.CausalNets.azFlower
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
-import processm.conformance.CausalNets.parallelFlowers
+import processm.conformance.CausalNets.parallelDecisionsInLoop
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.models.causalnet.Node
@@ -162,7 +162,7 @@ class AStarCausalNetTests {
             """
         )
 
-        val astar = AStar(parallelFlowers)
+        val astar = AStar(parallelDecisionsInLoop)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
@@ -190,7 +190,7 @@ class AStarCausalNetTests {
             3,
         )
 
-        val astar = AStar(parallelFlowers)
+        val astar = AStar(parallelDecisionsInLoop)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)

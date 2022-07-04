@@ -7,7 +7,7 @@ import processm.conformance.CausalNets.fig316
 import processm.conformance.PetriNets
 import processm.conformance.PetriNets.fig314
 import processm.conformance.PetriNets.fig32
-import processm.conformance.PetriNets.fig34
+import processm.conformance.PetriNets.fig34c
 import processm.conformance.PetriNets.fig73
 import processm.core.helpers.allPermutations
 import processm.core.helpers.allSubsets
@@ -100,16 +100,16 @@ class CompositeAlignerPetriNetTests {
 
     @Test
     fun `PM book Fig 3 4 c conforming log`() {
-        val t1 = fig34.transitions.first { it.name == "t1" }
-        val t2 = fig34.transitions.first { it.name == "t2" }
-        val t3 = fig34.transitions.first { it.name == "t3" }
-        val t4 = fig34.transitions.first { it.name == "t4" }
-        val t5 = fig34.transitions.first { it.name == "t5" }
+        val t1 = fig34c.transitions.first { it.name == "t1" }
+        val t2 = fig34c.transitions.first { it.name == "t2" }
+        val t3 = fig34c.transitions.first { it.name == "t3" }
+        val t4 = fig34c.transitions.first { it.name == "t4" }
+        val t5 = fig34c.transitions.first { it.name == "t5" }
         val allMoves = List(5) { t1 } + List(5) { t2 } + List(5) { t3 } + List(5) { t4 } + List(5) { t5 }
 
         val limit = 10000
         var totalTime: Long = 0L
-        val aligner = CompositeAligner(fig34, pool = pool)
+        val aligner = CompositeAligner(fig34c, pool = pool)
         for (activities in allMoves.allPermutations().take(limit)) {
             val trace = Trace(activities.asSequence().map { Helpers.event(it.name) })
             val start = System.nanoTime()
@@ -129,16 +129,16 @@ class CompositeAlignerPetriNetTests {
 
     @Test
     fun `PM book Fig 3 4 c non-conforming log`() {
-        val t2 = fig34.transitions.first { it.name == "t2" }
-        val t3 = fig34.transitions.first { it.name == "t3" }
-        val t4 = fig34.transitions.first { it.name == "t4" }
-        val t5 = fig34.transitions.first { it.name == "t5" }
+        val t2 = fig34c.transitions.first { it.name == "t2" }
+        val t3 = fig34c.transitions.first { it.name == "t3" }
+        val t4 = fig34c.transitions.first { it.name == "t4" }
+        val t5 = fig34c.transitions.first { it.name == "t5" }
         // missing t1s
         val allMoves = List(5) { t2 } + List(5) { t3 } + List(5) { t4 } + List(5) { t5 }
 
         val limit = 100
         var totalTime: Long = 0L
-        val aligner = CompositeAligner(fig34, pool = pool)
+        val aligner = CompositeAligner(fig34c, pool = pool)
         for (activities in allMoves.allPermutations().take(limit)) {
             val trace = Trace(activities.asSequence().map { Helpers.event(it.name) })
             val start = System.nanoTime()
@@ -552,7 +552,7 @@ class CompositeAlignerPetriNetTests {
             """
         )
 
-        val petri = CausalNets.parallelFlowers.toPetriNet()
+        val petri = CausalNets.parallelDecisionsInLoop.toPetriNet()
         val aligner = CompositeAligner(petri, pool = pool)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
@@ -581,7 +581,7 @@ class CompositeAlignerPetriNetTests {
             3,
         )
 
-        val petri = CausalNets.parallelFlowers.toPetriNet()
+        val petri = CausalNets.parallelDecisionsInLoop.toPetriNet()
         val aligner = CompositeAligner(petri, pool = pool)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()

@@ -1,6 +1,6 @@
 package processm.conformance.models.alignments
 
-import processm.conformance.CausalNets.parallelFlowers
+import processm.conformance.CausalNets.parallelDecisionsInLoop
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.helpers.SameThreadExecutorService
 import processm.core.helpers.allSubsets
@@ -58,7 +58,7 @@ class CausalNetAsPetriNetAlignerTest {
         val factory = CausalNetAsPetriNetAlignerFactory { model, penalty, _ ->
             AStar(model, penalty)
         }
-        val aligner = factory(parallelFlowers, PenaltyFunction(), SameThreadExecutorService)
+        val aligner = factory(parallelDecisionsInLoop, PenaltyFunction(), SameThreadExecutorService)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
