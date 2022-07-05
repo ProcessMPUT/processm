@@ -15,7 +15,8 @@ import java.util.*
 import kotlin.random.Random
 
 /**
- * Generates a log from a business [processModel] using the Markov simulation.
+ * Generates a log from a business [processModel] using the Markov simulation. The resulting log is perfectly
+ * aligned with the model. The distribution of decisions follows the [activityTransitionsProbabilityWeights].
  * @param processModel the process model to generate traces for.
  * @param activityTransitionsProbabilityWeights for every pair of activities, it defines a weight
  * which is proportional to the probability that the transition between activities occurs.
@@ -65,6 +66,8 @@ class MarkovSimulation(
                 while (!isFinalState) {
                     val activity = run nextActivity@{
                         val possibleActivities = availableActivities.toList()
+
+                        check(possibleActivities.isNotEmpty()) { "Simulation reached terminal non-final state of process model. Process model is probably invalid." }
 
                         precedingActivities = possibleActivities.associateWith { activity ->
                             (precedingActivities[activity] ?: lastEvent)

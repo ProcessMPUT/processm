@@ -2,8 +2,10 @@ package processm.enhancement.simulation
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import processm.conformance.CausalNets
 import processm.conformance.PetriNets
+import processm.conformance.models.alignments.CompositeAligner
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -13,6 +15,7 @@ import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import kotlin.math.abs
+import kotlin.test.Test
 
 @OptIn(InMemoryXESProcessing::class)
 class MarkovSimulationTest {
@@ -59,6 +62,27 @@ class MarkovSimulationTest {
         val (traceWithB, traceWithC) = log.traces.partition { trace -> trace.events.elementAt(1).conceptName == "b" }
         assertEquals(tracesCount, traceWithB.count() + traceWithC.count())
         assertTrue(traceWithC.count() - traceWithB.count() > 500)
+    }
+
+    @Test
+    fun `model that terminates in the non-terminal state throw an exception`() {
+        val simulation = MarkovSimulation(CausalNets.fig316)
+        val exception = assertThrows<IllegalStateException> {
+            simulation.takeTraces(10).forEach { /*just iterate*/ }
+        }
+        assertTrue("terminal non-final state" in exception.message!!)
+    }
+
+    @Test
+    fun `generated log is perfectly aligned with the model`() {
+        val simulation = MarkovSimulation(CausalNets.fig312)
+        val tracesCount = 1000
+        val log = HoneyBadgerHierarchicalXESInputStream(simulation.takeTraces(tracesCount)).first()
+        val aligner = CompositeAligner(CausalNets.fig312)
+        val alignments = aligner.align(log)
+
+        for (alignment in alignments)
+            assertEquals(0, alignment.cost)
     }
 
 
