@@ -13,7 +13,7 @@
     <artifactId>enhancement</artifactId>
     <packaging>jar</packaging>
 
-    <name>ProcessM Enhancement Analysis</name>
+    <name>ProcessM Enhancement</name>
 
     <dependencies>
         <dependency>
