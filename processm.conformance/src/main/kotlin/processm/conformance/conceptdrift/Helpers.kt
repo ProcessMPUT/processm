@@ -74,6 +74,8 @@ fun List<ClosedFloatingPointRange<Double>>.merge(other: List<ClosedFloatingPoint
                 modified = true
             }
         }
+        check(start.isFinite())
+        check(end.isFinite())
         result.add(start.rangeTo(end))
     }
     assert(i == size || j == other.size)

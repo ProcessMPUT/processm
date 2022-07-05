@@ -184,7 +184,11 @@ class KernelDensityEstimator(
             s1 += x
             s2 += x * x
         }
-        s2divn1 = (oldn - 1) / (n - 1) * s2divn1 + s2 / (n - 1)
+        if (n > 1) {
+            if (oldn > 1)
+                s2divn1 *= (oldn - 1).toDouble() / (n - 1)
+            s2divn1 += s2 / (n - 1)
+        }
         if (points.size >= MIN_N) {
             if (!lowerBound.isFinite() || lowerBound > min || upperBound < max) {
                 /*
