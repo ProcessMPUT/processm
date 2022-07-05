@@ -11,9 +11,11 @@ import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sqrt
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
+@Ignore("Hellinger distance is underdeveloped and the code is left only for future reference")
 class HellingerDistanceTest {
 
     private fun HellingerDistanceForNormalDistribution(p: MyNormalDistribution, q: MyNormalDistribution) =
