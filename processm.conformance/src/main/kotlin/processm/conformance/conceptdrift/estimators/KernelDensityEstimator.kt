@@ -141,7 +141,7 @@ class KernelDensityEstimator(
         fun f(x: Double, h: Double, i: Int?): Double {
             var r = 0.0
             for (j in points.indices)
-                if (i == null || i != j)
+                if (i != j)
                     r += points[j].counter * kernel((x - points[j].value) / h)
             val n1 = if (i !== null) n - 1 else n
             return r / (n1 * h)
@@ -153,7 +153,7 @@ class KernelDensityEstimator(
         fun fprim(x: Double, h: Double, i: Int?): Double {
             var r = 0.0
             for (j in points.indices)
-                if (i === null || i != j) {
+                if (i != j) {
                     val dx = x - points[j].value
                     r += points[j].counter * (kernel.derivative(dx / h) * dx)
                 }
