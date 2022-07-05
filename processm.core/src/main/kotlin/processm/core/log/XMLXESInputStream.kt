@@ -1,5 +1,6 @@
 package processm.core.log
 
+import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.fastParseISO8601
 import processm.core.helpers.toUUID
 import processm.core.log.attribute.*
@@ -30,9 +31,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     /**
      * Maps standard names of attributes into custom names in the XES document being read.
      */
-    private val nameMap = object : HashMap<String, String>() {
-        override fun get(key: String): String? = super.get(key) ?: key
-    }
+    private val nameMap = HashMapWithDefault<String, String>(false) { k -> k }
 
     override fun iterator(): Iterator<XESComponent> = sequence<XESComponent> {
         val xmlInputFactory: XMLInputFactory = XMLInputFactory.newInstance()
@@ -133,10 +132,9 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             "trace" -> log.traceClassifiersInternal
             "event" -> log.eventClassifiersInternal
             else -> throw IllegalArgumentException(
-                "Illegal <classifier> scope. Expected 'trace' or 'event', found ${reader.getAttributeValue(
-                    null,
-                    "scope"
-                )} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}"
+                "Illegal <classifier> scope. Expected 'trace' or 'event', found ${
+                    reader.getAttributeValue(null, "scope")
+                } in line ${reader.location.lineNumber} column ${reader.location.columnNumber}"
             )
         }
 

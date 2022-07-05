@@ -1,7 +1,21 @@
 package processm.core.querylanguage
 
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.Companion.DB_ID
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
+import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
+import processm.core.log.attribute.Attribute.Companion.XES_FEATURES
+import processm.core.log.attribute.Attribute.Companion.XES_VERSION
 import java.util.*
-import kotlin.NoSuchElementException
 
 /**
  * Represents an attribute in a PQL query.
@@ -63,14 +77,14 @@ class Attribute(attribute: String, override val line: Int, override val charPosi
     override val type: Type
         get() = if (this.isStandard && !this.isClassifier) {
             when (this.standardName) {
-                "concept:name", "concept:instance",
-                "cost:currency",
-                "lifecycle:model", "lifecycle:transition", "lifecycle:state",
-                "org:resource", "org:role", "org:group",
-                "xes:version", "xes:features" -> Type.String
-                "db:id", "cost:total" -> Type.Number
-                "identity:id" -> Type.UUID
-                "time:timestamp" -> Type.Datetime
+                CONCEPT_NAME, CONCEPT_INSTANCE,
+                COST_CURRENCY,
+                LIFECYCLE_MODEL, LIFECYCLE_TRANSITION, LIFECYCLE_STATE,
+                ORG_RESOURCE, ORG_ROLE, ORG_GROUP,
+                XES_VERSION, XES_FEATURES -> Type.String
+                DB_ID, COST_TOTAL -> Type.Number
+                IDENTITY_ID -> Type.UUID
+                TIME_TIMESTAMP -> Type.Datetime
                 else -> throw IllegalArgumentException("Line $line position $charPositionInLine: Unknown type of attribute $standardName.")
             }
         } else {

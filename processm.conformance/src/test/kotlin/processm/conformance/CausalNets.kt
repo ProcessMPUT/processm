@@ -120,7 +120,7 @@ object CausalNets {
     /**
      * A Causal net made of two flower models, the first containing activities A-M, the second activities N-Z.
      */
-    val parallelFlowers: CausalNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    val parallelDecisionsInLoop: CausalNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 

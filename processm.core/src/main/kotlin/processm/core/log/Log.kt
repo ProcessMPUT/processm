@@ -2,6 +2,9 @@ package processm.core.log
 
 import processm.core.helpers.toUUID
 import processm.core.log.attribute.Attribute
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
 import processm.core.log.attribute.IDAttr
 import processm.core.log.attribute.StringAttr
 import java.util.*
@@ -85,6 +88,10 @@ open class Log(
             field = value?.intern()
         }
 
+    init {
+        lateInit()
+    }
+
     /**
      * Equals if both are Log and contains the same attributes
      */
@@ -111,15 +118,15 @@ open class Log(
     )
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue()?.toString()
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue()
+        conceptName = attributesInternal[nameMap[CONCEPT_NAME]]?.getValue()?.toString()
+        identityId = attributesInternal[nameMap[IDENTITY_ID]]?.getValue()
             ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
-        lifecycleModel = attributesInternal[nameMap["lifecycle:model"]]?.getValue()?.toString()
+        lifecycleModel = attributesInternal[nameMap[LIFECYCLE_MODEL]]?.getValue()?.toString()
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {
-        setCustomAttribute(conceptName, "concept:name", ::StringAttr, nameMap)
-        setCustomAttribute(identityId, "identity:id", ::IDAttr, nameMap)
-        setCustomAttribute(lifecycleModel, "lifecycle:mode", ::StringAttr, nameMap)
+        setCustomAttribute(conceptName, CONCEPT_NAME, ::StringAttr, nameMap)
+        setCustomAttribute(identityId, IDENTITY_ID, ::IDAttr, nameMap)
+        setCustomAttribute(lifecycleModel, LIFECYCLE_MODEL, ::StringAttr, nameMap)
     }
 }

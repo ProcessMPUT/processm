@@ -8,6 +8,8 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.`java-time`.datetime
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
 
 object AttributesNames : IntIdTable("attributes_names") {
     val name = text("name")
@@ -141,8 +143,8 @@ class Relationship(id: EntityID<Int>) : IntEntity(id) {
 data class RelationshipDto(val id: Int, val name: String, val sourceClassId: Int, val targetClassId: Int, val referencingAttributesName: Int)
 
 object Events : LongIdTable("events") {
-    val name = text("concept:name").nullable()
-    val resource = text("org:resource").nullable()
+    val name = text(CONCEPT_NAME).nullable()
+    val resource = text(ORG_RESOURCE).nullable()
 }
 
 class Event(id: EntityID<Long>) : LongEntity(id) {

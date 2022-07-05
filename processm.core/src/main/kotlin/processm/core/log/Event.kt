@@ -3,6 +3,17 @@ package processm.core.log
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toUUID
 import processm.core.log.attribute.*
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
+import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
 import java.time.Instant
 import java.util.*
 
@@ -67,6 +78,10 @@ open class Event(
     var timeTimestamp: Instant? = null
         internal set
 
+    init {
+        lateInit()
+    }
+
     /**
      * Equals if both are Event and contains the same attributes
      */
@@ -77,43 +92,43 @@ open class Event(
     override fun hashCode(): Int = attributesInternal.hashCode()
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue()?.toString()
-        conceptInstance = attributesInternal[nameMap["concept:instance"]]?.getValue()?.toString()
+        conceptName = attributesInternal[nameMap[CONCEPT_NAME]]?.getValue()?.toString()
+        conceptInstance = attributesInternal[nameMap[CONCEPT_INSTANCE]]?.getValue()?.toString()
 
-        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue()
+        costTotal = attributesInternal[nameMap[COST_TOTAL]]?.getValue()
             ?.let { it as? Double ?: it.toString().toDoubleOrNull() }
-        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue()?.toString()
+        costCurrency = attributesInternal[nameMap[COST_CURRENCY]]?.getValue()?.toString()
 
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue()
+        identityId = attributesInternal[nameMap[IDENTITY_ID]]?.getValue()
             ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
 
-        lifecycleState = attributesInternal[nameMap["lifecycle:state"]]?.getValue()?.toString()
-        lifecycleTransition = attributesInternal[nameMap["lifecycle:transition"]]?.getValue()?.toString()
+        lifecycleState = attributesInternal[nameMap[LIFECYCLE_STATE]]?.getValue()?.toString()
+        lifecycleTransition = attributesInternal[nameMap[LIFECYCLE_TRANSITION]]?.getValue()?.toString()
 
-        orgRole = attributesInternal[nameMap["org:role"]]?.getValue()?.toString()
-        orgGroup = attributesInternal[nameMap["org:group"]]?.getValue()?.toString()
-        orgResource = attributesInternal[nameMap["org:resource"]]?.getValue()?.toString()
+        orgRole = attributesInternal[nameMap[ORG_ROLE]]?.getValue()?.toString()
+        orgGroup = attributesInternal[nameMap[ORG_GROUP]]?.getValue()?.toString()
+        orgResource = attributesInternal[nameMap[ORG_RESOURCE]]?.getValue()?.toString()
 
-        timeTimestamp = attributesInternal[nameMap["time:timestamp"]]?.getValue()
+        timeTimestamp = attributesInternal[nameMap[TIME_TIMESTAMP]]?.getValue()
             ?.let { it as? Instant ?: runCatching { it.toString().parseISO8601() }.getOrNull() }
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {
-        setCustomAttribute(conceptName, "concept:name", ::StringAttr, nameMap)
-        setCustomAttribute(conceptInstance, "concept:instance", ::StringAttr, nameMap)
+        setCustomAttribute(conceptName, CONCEPT_NAME, ::StringAttr, nameMap)
+        setCustomAttribute(conceptInstance, CONCEPT_INSTANCE, ::StringAttr, nameMap)
 
-        setCustomAttribute(costTotal, "cost:total", ::RealAttr, nameMap)
-        setCustomAttribute(costCurrency, "cost:currency", ::StringAttr, nameMap)
+        setCustomAttribute(costTotal, COST_TOTAL, ::RealAttr, nameMap)
+        setCustomAttribute(costCurrency, COST_CURRENCY, ::StringAttr, nameMap)
 
-        setCustomAttribute(identityId, "identity:id", ::IDAttr, nameMap)
+        setCustomAttribute(identityId, IDENTITY_ID, ::IDAttr, nameMap)
 
-        setCustomAttribute(lifecycleState, "lifecycle:state", ::StringAttr, nameMap)
-        setCustomAttribute(lifecycleTransition, "lifecycle:transition", ::StringAttr, nameMap)
+        setCustomAttribute(lifecycleState, LIFECYCLE_STATE, ::StringAttr, nameMap)
+        setCustomAttribute(lifecycleTransition, LIFECYCLE_TRANSITION, ::StringAttr, nameMap)
 
-        setCustomAttribute(orgRole, "org:role", ::StringAttr, nameMap)
-        setCustomAttribute(orgGroup, "org:group", ::StringAttr, nameMap)
-        setCustomAttribute(orgResource, "org:resource", ::StringAttr, nameMap)
+        setCustomAttribute(orgRole, ORG_ROLE, ::StringAttr, nameMap)
+        setCustomAttribute(orgGroup, ORG_GROUP, ::StringAttr, nameMap)
+        setCustomAttribute(orgResource, ORG_RESOURCE, ::StringAttr, nameMap)
 
-        setCustomAttribute(timeTimestamp, "time:timestamp", ::DateTimeAttr, nameMap)
+        setCustomAttribute(timeTimestamp, TIME_TIMESTAMP, ::DateTimeAttr, nameMap)
     }
 }

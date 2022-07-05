@@ -3,7 +3,7 @@ package processm.conformance.models.alignments
 import processm.conformance.CausalNets.azFlower
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
-import processm.conformance.CausalNets.parallelFlowers
+import processm.conformance.CausalNets.parallelDecisionsInLoop
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.Helpers.trace
@@ -171,7 +171,7 @@ class AStarCausalNetAsPetriNetTests {
             """
         )
 
-        val petri = parallelFlowers.toPetriNet()
+        val petri = parallelDecisionsInLoop.toPetriNet()
         val astar = AStar(petri)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
@@ -200,7 +200,7 @@ class AStarCausalNetAsPetriNetTests {
             3,
         )
 
-        val converter = CausalNet2PetriNet(parallelFlowers)
+        val converter = CausalNet2PetriNet(parallelDecisionsInLoop)
         val petri = converter.toPetriNet()
         val astar = CausalNetAsPetriNetAligner(AStar(petri), converter)
         for ((i, trace) in log.traces.withIndex()) {

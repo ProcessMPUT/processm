@@ -1,5 +1,6 @@
 package processm.experimental.core.log
 
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
 import java.io.File
 import java.util.*
 import java.util.concurrent.Executors
@@ -30,7 +31,7 @@ object ValidateIdentityId {
                             if (!reader.isStartElement ||
                                 (reader.name.localPart != "id" &&
                                         (reader.name.localPart != "string" ||
-                                                "identity:id" != reader.getAttributeValue(null, "key")))
+                                                IDENTITY_ID != reader.getAttributeValue(null, "key")))
                             )
                                 continue
 

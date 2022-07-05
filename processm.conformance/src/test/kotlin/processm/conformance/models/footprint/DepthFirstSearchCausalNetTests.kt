@@ -3,7 +3,7 @@ package processm.conformance.models.footprint
 import processm.conformance.CausalNets.azFlower
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
-import processm.conformance.CausalNets.parallelFlowers
+import processm.conformance.CausalNets.parallelDecisionsInLoop
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.toFlatSequence
@@ -136,7 +136,7 @@ class DepthFirstSearchCausalNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(parallelFlowers)
+        val dfs = DepthFirstSearch(parallelDecisionsInLoop)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -156,7 +156,7 @@ class DepthFirstSearchCausalNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(parallelFlowers)
+        val dfs = DepthFirstSearch(parallelDecisionsInLoop)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 

@@ -2,14 +2,17 @@ package processm.enhancement.resources
 
 import java.time.Duration
 import java.time.Instant
-import kotlin.test.*
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class BasicResourceTest {
     lateinit var basicResource: BasicResource
     
     @BeforeTest
     fun setUp() {
-        basicResource = BasicResource(emptySet())
+        basicResource = BasicResource("basic", emptySet())
     }
 
     @Test

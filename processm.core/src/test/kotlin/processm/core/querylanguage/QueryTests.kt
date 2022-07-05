@@ -3,6 +3,10 @@ package processm.core.querylanguage
 import org.antlr.v4.runtime.RecognitionException
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertThrows
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
 import kotlin.test.*
 
 @Tag("PQL")
@@ -21,7 +25,7 @@ class QueryTests {
         assertEquals(1, query.selectStandardAttributes[Scope.Log]!!.size)
         assertEquals(0, query.selectOtherAttributes[Scope.Log]!!.size)
         assertEquals(0, query.selectExpressions[Scope.Log]!!.size)
-        assertEquals("concept:name", query.selectStandardAttributes[Scope.Log]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.selectStandardAttributes[Scope.Log]!!.elementAt(0).standardName)
         assertTrue(query.selectStandardAttributes[Scope.Log]!!.all { it.isStandard })
         assertTrue(query.selectStandardAttributes[Scope.Log]!!.all { it.effectiveScope == Scope.Log })
         assertTrue(query.selectStandardAttributes[Scope.Log]!!.all { !it.isClassifier })
@@ -29,8 +33,8 @@ class QueryTests {
         assertEquals(2, query.selectStandardAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.selectOtherAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.selectExpressions[Scope.Trace]!!.size)
-        assertEquals("concept:name", query.selectStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
-        assertEquals("cost:currency", query.selectStandardAttributes[Scope.Trace]!!.elementAt(1).standardName)
+        assertEquals(CONCEPT_NAME, query.selectStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
+        assertEquals(COST_CURRENCY, query.selectStandardAttributes[Scope.Trace]!!.elementAt(1).standardName)
         assertTrue(query.selectStandardAttributes[Scope.Trace]!!.all { it.isStandard })
         assertTrue(query.selectStandardAttributes[Scope.Trace]!!.all { it.effectiveScope == Scope.Trace })
         assertTrue(query.selectStandardAttributes[Scope.Trace]!!.all { !it.isClassifier })
@@ -38,8 +42,8 @@ class QueryTests {
         assertEquals(2, query.selectStandardAttributes[Scope.Event]!!.size)
         assertEquals(0, query.selectOtherAttributes[Scope.Event]!!.size)
         assertEquals(0, query.selectExpressions[Scope.Event]!!.size)
-        assertEquals("concept:name", query.selectStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
-        assertEquals("cost:total", query.selectStandardAttributes[Scope.Event]!!.elementAt(1).standardName)
+        assertEquals(CONCEPT_NAME, query.selectStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
+        assertEquals(COST_TOTAL, query.selectStandardAttributes[Scope.Event]!!.elementAt(1).standardName)
         assertTrue(query.selectStandardAttributes[Scope.Event]!!.all { it.isStandard })
         assertTrue(query.selectStandardAttributes[Scope.Event]!!.all { it.effectiveScope == Scope.Event })
         assertTrue(query.selectStandardAttributes[Scope.Event]!!.all { !it.isClassifier })
@@ -62,8 +66,8 @@ class QueryTests {
         assertEquals(2, query.selectStandardAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.selectOtherAttributes[Scope.Trace]!!.size)
         assertEquals(0, query.selectExpressions[Scope.Trace]!!.size)
-        assertEquals("concept:name", query.selectStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
-        assertEquals("cost:total", query.selectStandardAttributes[Scope.Trace]!!.elementAt(1).standardName)
+        assertEquals(CONCEPT_NAME, query.selectStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
+        assertEquals(COST_TOTAL, query.selectStandardAttributes[Scope.Trace]!!.elementAt(1).standardName)
         assertTrue(query.selectStandardAttributes[Scope.Trace]!!.all { it.isStandard })
         assertTrue(query.selectStandardAttributes[Scope.Trace]!!.all { it.effectiveScope == Scope.Trace })
         assertTrue(query.selectStandardAttributes[Scope.Trace]!!.all { !it.isClassifier })
@@ -205,7 +209,7 @@ class QueryTests {
         assertEquals(0, query.selectExpressions[Scope.Event]!!.size)
         assertEquals("conceptowy:name", query.selectOtherAttributes[Scope.Event]!!.elementAt(0).name)
         assertEquals("[event:conceptowy:name]", query.selectOtherAttributes[Scope.Event]!!.elementAt(0).toString())
-        assertEquals("time:timestamp", query.selectOtherAttributes[Scope.Event]!!.elementAt(1).name)
+        assertEquals(TIME_TIMESTAMP, query.selectOtherAttributes[Scope.Event]!!.elementAt(1).name)
         assertEquals("[event:time:timestamp]", query.selectOtherAttributes[Scope.Event]!!.elementAt(1).toString())
         assertEquals("org:resource2", query.selectOtherAttributes[Scope.Event]!!.elementAt(2).name)
         assertEquals("[event:org:resource2]", query.selectOtherAttributes[Scope.Event]!!.elementAt(2).toString())
@@ -705,8 +709,8 @@ class QueryTests {
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertFalse(query.isGroupBy[Scope.Trace]!!)
         assertTrue(query.isGroupBy[Scope.Event]!!)
-        assertEquals("concept:name", query.selectStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
-        assertEquals("concept:name", query.selectStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.selectStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.selectStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
         assertEquals("sum(event:cost:total)", query.selectExpressions[Scope.Event]!!.elementAt(0).toString())
         assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
         assertEquals(0, query.groupByStandardAttributes[Scope.Trace]!!.size)
@@ -716,7 +720,7 @@ class QueryTests {
         assertEquals(0, query.groupByOtherAttributes[Scope.Event]!!.size)
         assertTrue(query.groupByStandardAttributes[Scope.Event]!!.all { it.isStandard })
         assertTrue(query.groupByStandardAttributes[Scope.Event]!!.all { !it.isClassifier })
-        assertEquals("concept:name", query.groupByStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.groupByStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
         assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Event]!!.elementAt(0).effectiveScope)
     }
 
@@ -735,7 +739,7 @@ class QueryTests {
         assertFalse(query.isGroupBy[Scope.Log]!!)
         assertTrue(query.isGroupBy[Scope.Trace]!!)
         assertTrue(query.isGroupBy[Scope.Event]!!)
-        assertEquals("concept:name", query.selectStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.selectStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
         assertEquals("sum(event:cost:total)", query.selectExpressions[Scope.Event]!!.elementAt(0).toString())
         assertEquals(0, query.groupByStandardAttributes[Scope.Log]!!.size)
         assertEquals(1, query.groupByStandardAttributes[Scope.Trace]!!.size)
@@ -745,8 +749,8 @@ class QueryTests {
         assertEquals(0, query.groupByOtherAttributes[Scope.Event]!!.size)
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { it.isStandard })
         assertTrue(query.groupByStandardAttributes[Scope.Trace]!!.all { !it.isClassifier })
-        assertEquals("concept:name", query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
-        assertEquals("concept:name", query.groupByStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.groupByStandardAttributes[Scope.Event]!!.elementAt(0).standardName)
         assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).scope)
         assertEquals(Scope.Trace, query.groupByStandardAttributes[Scope.Trace]!!.elementAt(0).effectiveScope)
     }
@@ -775,7 +779,7 @@ class QueryTests {
         assertEquals(0, query.groupByOtherAttributes[Scope.Event]!!.size)
         assertTrue(query.groupByStandardAttributes[Scope.Log]!!.all { it.isStandard })
         assertTrue(query.groupByStandardAttributes[Scope.Log]!!.all { !it.isClassifier })
-        assertEquals("concept:name", query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).standardName)
+        assertEquals(CONCEPT_NAME, query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).standardName)
         assertEquals(Scope.Event, query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).scope)
         assertEquals(Scope.Log, query.groupByStandardAttributes[Scope.Log]!!.elementAt(0).effectiveScope)
     }

@@ -1,10 +1,16 @@
 package processm.core.models.metadata
 
-data class URN(val urn: String) {
+/**
+ * Universal Resource Name. See RFC8141.
+ */
+@JvmInline
+value class URN(val urn: String) {
     init {
         if (!reURN.matches(urn))
             throw IllegalArgumentException()
     }
+
+    override fun toString(): String = urn
 
     companion object {
         /**
@@ -23,6 +29,7 @@ data class URN(val urn: String) {
             "<pctencoded>" to "(?:%\\p{XDigit}\\p{XDigit})", //pct-encoded   = "%" HEXDIG HEXDIG
             "<subdelims>" to "[!$&'()*+,;=]" //sub-delims    = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
         )
+
         /**
          * Based on https://tools.ietf.org/html/rfc8141#section-2
          */
@@ -40,6 +47,5 @@ data class URN(val urn: String) {
                 { re, (old, new) -> re.replace(old, new) }),
             RegexOption.IGNORE_CASE
         )
-
     }
 }

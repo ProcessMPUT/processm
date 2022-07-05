@@ -42,7 +42,7 @@ private val charToSuperscript = mapOf(
     'C' to "\u1D9C",
     'D' to "\u1d30",
     'E' to "\u1d31",
-    'F' to "\u1DA0",
+    'F' to "\u1DA0", // should be \uA7F3 but most fonts do not support it, instead we use lowercase superscript ᶠ
     'G' to "\u1d33",
     'H' to "\u1d34",
     'I' to "\u1d35",
@@ -53,7 +53,7 @@ private val charToSuperscript = mapOf(
     'N' to "\u1d3a",
     'O' to "\u1d3c",
     'P' to "\u1d3e",
-    //'Q' to "Q",
+    //'Q' to "Q", // should be \uA7F4 but most fonts do not support it, instead we use ordinary Q
     'R' to "\u1d3f",
     'S' to "\u02E2",
     'T' to "\u1d40",
@@ -183,12 +183,23 @@ private val charToSubscript = mapOf(
 //    'ⲧ' to "\u209C"
 )
 
-fun String.toSuperscript(): String = buildString {
+/**
+ * Replaces the characters in this string with the superscript counterparts, i.e., the corresponding characters
+ * painted above the baseline. The characters without the superscript counterparts are left intact.
+ * See e.g., https://en.wikipedia.org/wiki/Unicode_subscripts_and_superscripts
+ */
+fun CharSequence.toSuperscript(): String = buildString {
     for (char in this@toSuperscript)
         append(charToSuperscript[char] ?: char)
 }
 
-fun String.toSubscript(): String = buildString {
+/**
+ * Replaces the characters in this string with the subscript counterparts, i.e., the corresponding characters
+ * painted below the baseline. The characters without the subscript counterparts are left intact.
+ * See e.g., https://en.wikipedia.org/wiki/Unicode_subscripts_and_superscripts
+ * https://en.wikipedia.org/wiki/Small_caps#Unicode
+ */
+fun CharSequence.toSubscript(): String = buildString {
     for (char in this@toSubscript)
         append(charToSubscript[char] ?: char)
 }

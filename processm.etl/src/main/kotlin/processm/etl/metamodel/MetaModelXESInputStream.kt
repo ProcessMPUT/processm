@@ -6,6 +6,11 @@ import processm.core.log.Event
 import processm.core.log.Log
 import processm.core.log.Trace
 import processm.core.log.XESInputStream
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
 import processm.core.log.attribute.DateTimeAttr
 import processm.core.log.attribute.NullAttr
 import processm.core.log.attribute.StringAttr
@@ -28,7 +33,7 @@ class MetaModelXESInputStream(
         sequence {
             yield(Log(
                 mutableMapOf(
-                    "lifecycle:model" to StringAttr("lifecycle:model", "custom")
+                    LIFECYCLE_MODEL to StringAttr(LIFECYCLE_MODEL, "custom")
             )))
             traceSet.forEach { trace ->
                 val traceEvents = transaction(DBCache.get(dataStoreDBName).database) { metaModelReader.getTraceData(trace) }
@@ -38,17 +43,20 @@ class MetaModelXESInputStream(
 
                 yield(Trace(
                     mutableMapOf(
-                        "concept:name" to StringAttr("concept:name", traceId)
+                        CONCEPT_NAME to StringAttr(CONCEPT_NAME, traceId)
                 )))
                 traceEvents.forEach { (timestamp, eventData) ->
                     val dataChanges = eventData.changes.orEmpty().map { "${it.key}: ${it.value}" }.joinToString()
                     yield(Event(
                         mutableMapOf(
-                            "org:resource" to StringAttr("org:resource", eventData.objectId),
-                            "concept:name" to StringAttr("concept:name", "${eventData.changeType} ${eventData.className}"),
-                            "lifecycle:transition" to StringAttr("lifecycle:transition", eventData.changeType),
+                            ORG_RESOURCE to StringAttr(ORG_RESOURCE, eventData.objectId),
+                            CONCEPT_NAME to StringAttr(CONCEPT_NAME, "${eventData.changeType} ${eventData.className}"),
+                            LIFECYCLE_TRANSITION to StringAttr(LIFECYCLE_TRANSITION, eventData.changeType),
                             "Activity" to StringAttr("Activity", "${eventData.changeType} $dataChanges"),
-                            "time:timestamp" to if (timestamp != null) DateTimeAttr("time:timestamp", Instant.ofEpochMilli(timestamp)) else NullAttr("time:timestamp")
+                            TIME_TIMESTAMP to if (timestamp != null) DateTimeAttr(
+                                TIME_TIMESTAMP,
+                                Instant.ofEpochMilli(timestamp)
+                            ) else NullAttr(TIME_TIMESTAMP)
                         )
                     ))
                 }

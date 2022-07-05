@@ -69,6 +69,7 @@
         <org.apache.commons.math.version>3.6.1</org.apache.commons.math.version>
         <io.fabric8.docker-maven-plugin.version>0.40.0</io.fabric8.docker-maven-plugin.version>
         <pooled-jms.version>2.0.5</pooled-jms.version>
+        <org.slf4j.version>1.7.36</org.slf4j.version>
 
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
@@ -90,6 +91,16 @@
             <artifactId>kotlin-test-junit5</artifactId>
             <version>${kotlin.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-engine</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
