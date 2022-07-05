@@ -34,7 +34,7 @@ class KernelDensityEstimatorRegressionTest {
         assertDoubleEquals(1.9746, kdf.bandwidth, 0.01)
     }
 
-    @Tag("performance")
+    @Tag("slow")
     @Test
     fun `gaussian - iterative`() {
         val points = listOf(-2.1, -1.3, -0.4, 1.9, 5.1, 6.2)

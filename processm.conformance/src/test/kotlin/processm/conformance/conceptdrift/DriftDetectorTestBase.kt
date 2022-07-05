@@ -261,7 +261,7 @@ abstract class DriftDetectorTestBase {
         pnoise, m
     )
 
-    @Tag("performance")
+    @Tag("slow")
     @Test
     fun `gradual 5variate drift in mean`() {
         val rng = MersenneTwister(42)
@@ -275,7 +275,7 @@ abstract class DriftDetectorTestBase {
         `gradual multivariate drift`(rng, Mixture(d1, m), Mixture(d2, m), Mixture(dnoise, mnoise), m = 25, n = 75)
     }
 
-    @Tag("performance")
+    @Tag("slow")
     @Test
     fun `gradual 5variate drift in mean in one dimension`() {
         val rng = MersenneTwister(42)
@@ -289,7 +289,7 @@ abstract class DriftDetectorTestBase {
         `gradual multivariate drift`(rng, Mixture(d1, m), Mixture(d2, m), Mixture(dnoise, mnoise), m = 25, n = 75)
     }
 
-    @Tag("performance")
+    @Tag("slow")
     @Test
     fun `sudden 5variate drift in mean`() {
         val rng = MersenneTwister(42)
@@ -303,7 +303,7 @@ abstract class DriftDetectorTestBase {
         `sudden multivariate drift`(rng, Mixture(d1, m), Mixture(d2, m), Mixture(dnoise, mnoise), m = 50)
     }
 
-    @Tag("performance")
+    @Tag("slow")
     @Test
     fun `5variate nodrift`() {
         val rng = MersenneTwister(42)
@@ -317,7 +317,7 @@ abstract class DriftDetectorTestBase {
         `sudden multivariate drift`(rng, s, s, Mixture(dnoise, mnoise), m = 50, hasDrift = false)
     }
 
-    @Tag("performance")
+    @Tag("slow")
     @Test
     fun `sudden 5variate drift in mean in one dimension`() {
         val rng = MersenneTwister(42)
