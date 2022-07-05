@@ -1,9 +1,11 @@
 package processm.etl.jdbc
 
+import org.junit.jupiter.api.condition.DisabledOnOs
+import org.junit.jupiter.api.condition.OS
 import processm.etl.DBMSEnvironment
 import processm.etl.Db2Environment
 
-
+@DisabledOnOs(OS.WINDOWS) // 2-3 times slower on Windows than on linux and mac
 class Db2SakilaTest : ContinuousQueryTest() {
 
     override val etlConfigurationName: String = "Test ETL process for Db2 Sakila DB"

@@ -24,7 +24,7 @@ import kotlin.test.Test
 
 @Suppress("SqlResolve")
 @Tag("ETL")
-@Timeout(90, unit = TimeUnit.SECONDS)
+@Timeout(120, unit = TimeUnit.SECONDS)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class ContinuousQueryTest {
 

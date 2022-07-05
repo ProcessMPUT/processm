@@ -29,18 +29,19 @@ class BigFractionHelpersTest {
     fun performance() {
         val values = List(30) { 1 shl it }
         val nReps = 100
-        val naiveTime = (0..nReps).map {
-            measureNanoTime {
+        System.gc()
+        val naiveTime = measureNanoTime {
+            repeat(nReps) {
                 var expected = BigFraction.ZERO
                 for (v in values)
                     expected += BigFraction(1, v)
             }
-        }.sum()
-        val sumOfReciprocalsTime = (0..nReps).map {
-            measureNanoTime {
+        }
+        val sumOfReciprocalsTime = measureNanoTime {
+            repeat(nReps) {
                 sumOfReciprocals(values)
             }
-        }.sum()
-        assertTrue { sumOfReciprocalsTime < naiveTime }
+        }
+        assertTrue("sumOfReciprocalsTime: $sumOfReciprocalsTime; naiveTime: $naiveTime") { sumOfReciprocalsTime <= naiveTime }
     }
 }

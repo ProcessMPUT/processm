@@ -17,6 +17,20 @@ import processm.core.models.commons.Activity
 import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.experimental.onlinehmpaper.filterLog
+import processm.experimental.performance.CausalNets.a
+import processm.experimental.performance.CausalNets.b
+import processm.experimental.performance.CausalNets.c
+import processm.experimental.performance.CausalNets.d
+import processm.experimental.performance.CausalNets.e
+import processm.experimental.performance.CausalNets.f
+import processm.experimental.performance.CausalNets.g
+import processm.experimental.performance.CausalNets.h
+import processm.experimental.performance.CausalNets.model0
+import processm.experimental.performance.CausalNets.model1
+import processm.experimental.performance.CausalNets.model2
+import processm.experimental.performance.CausalNets.model3
+import processm.experimental.performance.CausalNets.model6
+import processm.experimental.performance.CausalNets.model7
 import processm.miners.causalnet.heuristicminer.OfflineHeuristicMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
 import processm.miners.causalnet.heuristicminer.longdistance.VoidLongDistanceDependencyMiner
@@ -26,47 +40,8 @@ import java.util.zip.GZIPInputStream
 import kotlin.math.min
 import kotlin.test.*
 
-fun CausalNet.toPython(): String {
-    fun wrap(obj: Any): String {
-        val text = obj.toString()
-        require('\'' !in text)
-        return "'%s'".format(text.replace("\n", "\\n"))
-    }
-
-    val result = StringBuilder()
-    fun bindings(bindings: Iterable<Binding>, name: String) {
-        result.append(name)
-        result.appendLine(" = [")
-        result.append(bindings.joinToString(separator = ",\n") { b ->
-            "    [" + b.dependencies.joinToString(separator = ", ") {
-                "(%s, %s)".format(
-                    wrap(it.source),
-                    wrap(it.target)
-                )
-            } + "]"
-        })
-        result.appendLine()
-        result.appendLine("]")
-    }
-    result.append("nodes = [")
-    result.append(this.instances.joinToString(separator = ", ", transform = ::wrap))
-    result.appendLine("]")
-    bindings(joins.values.flatten(), "joins")
-    bindings(splits.values.flatten(), "splits")
-    return result.toString()
-}
-
 @InMemoryXESProcessing
 class PerformanceAnalyzerTest {
-
-    private val a = Node("a")
-    private val b = Node("b")
-    private val c = Node("c")
-    private val d = Node("d")
-    private val e = Node("e")
-    private val f = Node("f")
-    private val g = Node("g")
-    private val h = Node("h")
 
     private fun event(name: String): Event {
         return object : Event() {
@@ -94,19 +69,6 @@ class PerformanceAnalyzerTest {
     @BeforeTest
     fun setupLogger() {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.TRACE
-    }
-
-    private val model0 = causalnet {
-        start = a
-        end = e
-        a splits b
-        b splits c + d
-        c splits e
-        d splits e
-        a joins b
-        b joins c
-        b joins d
-        c + d join e
     }
 
     private val emptyLog = Log(emptySequence())
@@ -157,73 +119,6 @@ class PerformanceAnalyzerTest {
     @Test
     fun `model0 movem`() {
         assertEquals(5.0, PerformanceAnalyzer(emptyLog, model0).movem)
-    }
-
-
-    /**
-     * From "Replaying History on Process Models for Conformance Checking and Performance Analysis"
-     */
-    private val model1 = causalnet {
-        start splits a
-        a splits (b + d) or (c + d)
-        b splits e
-        c splits e
-        d splits e
-        e splits g or h or f
-        g splits end
-        h splits end
-        f splits (b + d) or (c + d)
-        start joins a
-        a or f join b
-        a or f join c
-        a or f join d
-        b + d or c + d join e
-        e joins g
-        e joins h
-        e joins f
-        g joins end
-        h joins end
-    }
-
-    private val model2 = causalnet {
-        start splits a
-        a splits c
-        c splits d
-        d splits e
-        e splits h
-        h splits end
-        start joins a
-        a joins c
-        c joins d
-        d joins e
-        e joins h
-        h joins end
-    }
-
-    private val model3: CausalNet
-
-    init {
-        model3 = causalnet {
-            start splits a
-            a splits b or c or d or e or f
-            b splits c or d or e or f or g or h
-            c splits b or d or e or f or g or h
-            d splits b or c or e or f or g or h
-            e splits b or c or d or f or g or h
-            f splits b or c or d or e or g or h
-            g splits end
-            h splits end
-            start joins a
-            a or c or d or e or f join b
-            a or b or d or e or f join c
-            a or b or c or e or f join d
-            a or b or c or d or f join e
-            a or b or c or d or e join f
-            f or b or c or d or e join g
-            f or b or c or d or e join h
-            g joins end
-            h joins end
-        }
     }
 
     @Test
@@ -397,39 +292,11 @@ class PerformanceAnalyzerTest {
         assertDoubleEquals(0.61, PerformanceAnalyzer(log, model4).stateLevelGeneralization, 0.01)
     }
 
-    private val model5 = causalnet {
-        start = a
-        end = e
-        a splits b or c or b + c
-        b splits d
-        c splits d
-        d splits e
-        a joins b
-        a joins c
-        b or c or b + c join d
-        d joins e
-    }
-
     @Test
     fun test() {
         for (alignment in PerformanceAnalyzer(emptyLog, model3).allFreePartialAlignments(listOf(model3.start, a, b))) {
             println(alignment.state.mapToSet { it.target })
         }
-    }
-
-    private val model6 = causalnet {
-        start splits a
-        start joins a
-        a splits b
-        b splits c + d
-        c splits e
-        d splits e
-        a joins b
-        b joins c
-        b joins d
-        c + d join e
-        e splits end
-        e joins end
     }
 
     @Test
@@ -489,18 +356,6 @@ class PerformanceAnalyzerTest {
 
     @Test
     fun `nongreedy alignment`() {
-        val model7 = causalnet {
-            start = a
-            end = e
-            a splits b or c
-            b splits e
-            c splits d
-            d splits e
-            a joins b
-            a joins c
-            c joins d
-            b or d join e
-        }
         val alignment =
             PerformanceAnalyzer(emptyLog, model7).computeOptimalAlignment(trace(a, b, e, c, d, e), 100).alignment
         assertNotNull(alignment)
