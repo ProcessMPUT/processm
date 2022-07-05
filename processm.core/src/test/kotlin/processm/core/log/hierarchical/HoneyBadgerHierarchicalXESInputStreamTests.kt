@@ -34,7 +34,7 @@ class HoneyBadgerHierarchicalXESInputStreamTests {
         System.gc()
 
         // measure time
-        val rep = 5
+        val rep = 10
         val hboTime = measureTimeMillis { repeat(rep) { readHBO(file) } } / rep
         val hbTime = measureTimeMillis { repeat(rep) { readHB(file) } } / rep
         println("HBold time:  $hboTime ms\nHB time: $hbTime ms")

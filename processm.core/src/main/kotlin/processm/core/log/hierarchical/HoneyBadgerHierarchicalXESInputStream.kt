@@ -18,20 +18,24 @@ annotation class InMemoryXESProcessing
  */
 @InMemoryXESProcessing
 class HoneyBadgerHierarchicalXESInputStream(base: XESInputStream) : LogInputStream {
-    private lateinit var logStarts: IntArray
+    /**
+     * Upper Int holds the index in [traceStarts] of the first trace.
+     * Lower Int holds the index in [materialized] of the log.
+     */
+    private lateinit var logStarts: LongArray
     private lateinit var traceStarts: IntArray
     private val materialized: List<XESComponent> by lazy {
         val materialized = base.toList()
-        val logStarts = ArrayList<Int>()
+        val logStarts = ArrayList<Long>()
         val traceStarts = ArrayList<Int>()
         for ((i, c) in materialized.withIndex()) {
             when (c) {
                 is BaseTrace -> traceStarts.add(i)
-                is BaseLog -> logStarts.add(i)
+                is BaseLog -> logStarts.add((traceStarts.size.toLong() shl Int.SIZE_BITS) or i.toLong())
             }
         }
 
-        this.logStarts = logStarts.toIntArray()
+        this.logStarts = logStarts.toLongArray()
         this.traceStarts = traceStarts.toIntArray()
 
         return@lazy materialized
@@ -42,13 +46,19 @@ class HoneyBadgerHierarchicalXESInputStream(base: XESInputStream) : LogInputStre
         if (materialized.isEmpty()) // this line initializes fields due to the lazy initializer above
             return@sequence
 
-        for ((i, lStartInc) in logStarts.withIndex()) {
-            val lEndExc = if (i < logStarts.size - 1) logStarts[i + 1] else materialized.size
+        for ((i, lStartRaw) in logStarts.withIndex()) {
+            val lStartInc = lStartRaw.toInt()
+            val tStartIdx = (lStartRaw shr Int.SIZE_BITS).toInt()
+            val lEndRaw =
+                if (i < logStarts.size - 1) logStarts[i + 1]
+                else (traceStarts.size.toLong() shl Int.SIZE_BITS) or materialized.size.toLong()
+            val tEndIdx = (lEndRaw shr Int.SIZE_BITS).toInt()
+            val lEndExc = lEndRaw.toInt()
             val log = Log(
-                traces = traceStarts
+                traces = traceStarts.asList() // this is just view rather than a copy
+                    .subList(tStartIdx, tEndIdx) // this is view too
                     .asSequence()
                     .withIndex()
-                    .filter { (_, tStart) -> lStartInc < tStart && tStart < lEndExc }
                     .map { (j, tStartInc) ->
                         val tEndExc =
                             if (j < traceStarts.size - 1 && traceStarts[j + 1] < lEndExc) traceStarts[j + 1] else lEndExc
