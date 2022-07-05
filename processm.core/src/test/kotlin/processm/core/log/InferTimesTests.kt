@@ -1,6 +1,14 @@
 package processm.core.log
 
 import processm.core.DBTestHelper
+import processm.core.helpers.fastParseISO8601
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
+import processm.core.log.attribute.DateTimeAttr
+import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -25,6 +33,33 @@ class InferTimesTests {
                     DBTestHelper.dbName,
                     Query("where l:id=${DBTestHelper.JournalReviewExtra}")
                 ).toFlatSequence()
+            )
+        ).first()
+    }
+
+    private val dummyBPAF by lazy {
+        HoneyBadgerHierarchicalXESInputStream(
+            InferTimes(
+                sequenceOf(
+                    Log(mutableMapOf(LIFECYCLE_MODEL to StringAttr(LIFECYCLE_MODEL, "bpaf"))),
+                    Trace(),
+                    Event(
+                        mutableMapOf(
+                            CONCEPT_NAME to StringAttr(CONCEPT_NAME, "A"),
+                            CONCEPT_INSTANCE to StringAttr(CONCEPT_INSTANCE, "1"),
+                            LIFECYCLE_STATE to StringAttr(LIFECYCLE_STATE, "Open.Running.InProgress"),
+                            TIME_TIMESTAMP to DateTimeAttr(TIME_TIMESTAMP, "2022-07-05T16:27:00.00Z".fastParseISO8601())
+                        )
+                    ),
+                    Event(
+                        mutableMapOf(
+                            CONCEPT_NAME to StringAttr(CONCEPT_NAME, "A"),
+                            CONCEPT_INSTANCE to StringAttr(CONCEPT_INSTANCE, "1"),
+                            LIFECYCLE_STATE to StringAttr(LIFECYCLE_STATE, "Closed.Completed"),
+                            TIME_TIMESTAMP to DateTimeAttr(TIME_TIMESTAMP, "2022-07-05T16:30:00.00Z".fastParseISO8601())
+                        )
+                    )
+                )
             )
         ).first()
     }
@@ -65,5 +100,20 @@ class InferTimesTests {
                 assertTrue(Duration.parse(event[SUSPENSION_TIME.urn] as CharSequence).compareTo(actSuspension) <= 0)
             }
         }
+    }
+
+    @Test
+    fun `lead and service time of dummy BPAF is 3 min`() {
+        val trace = dummyBPAF.traces.first()
+        assertEquals("PT3M", trace[LEAD_TIME.urn])
+        assertEquals("PT3M", trace[SERVICE_TIME.urn])
+        assertEquals("PT0S", trace[WAITING_TIME.urn])
+        assertEquals("PT0S", trace[SUSPENSION_TIME.urn])
+
+        val last = trace.events.last()
+        assertEquals("PT3M", last[LEAD_TIME.urn])
+        assertEquals("PT3M", last[SERVICE_TIME.urn])
+        assertEquals("PT0S", last[WAITING_TIME.urn])
+        assertEquals("PT0S", last[SUSPENSION_TIME.urn])
     }
 }

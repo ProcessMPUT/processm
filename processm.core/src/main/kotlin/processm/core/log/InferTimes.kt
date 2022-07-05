@@ -94,10 +94,9 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
                 }
                 is Log -> {
                     flushBuffer()
-                    calculator = when (component.lifecycleModel?.lowercase()) {
-                        "bpaf" -> BPAFCalculator
-                        else -> StandardLifecycleCalculator
-                    }
+                    calculator =
+                        if (component.lifecycleModel?.equals("bpaf", true) == true) BPAFCalculator
+                        else StandardLifecycleCalculator
                     yield(component)
                 }
             }
@@ -126,6 +125,9 @@ private interface Calculator {
     fun getState(event: Event): State
 }
 
+/**
+ * See IEEE 1849-2016 Figure 5.
+ */
 private object StandardLifecycleCalculator : Calculator {
     override fun getState(event: Event): State = when (event.lifecycleTransition?.lowercase()) {
         "start", "resume" -> State.Servicing
@@ -135,13 +137,16 @@ private object StandardLifecycleCalculator : Calculator {
     }
 }
 
+/**
+ * See IEEE 1849-2016 Figure 4.
+ */
 private object BPAFCalculator : Calculator {
     override fun getState(event: Event): State = with(event.lifecycleState?.lowercase()) {
         if (this === null) State.Stopped
         else if (this == "open") State.Servicing
         else if (startsWith("open.running") && this != "open.running.suspended") State.Servicing
         else if (startsWith("open.notrunning") && !startsWith("open.notrunning.suspended")) State.Waiting
-        else if (startsWith("open.running.suspended")) State.Suspended
+        else if (this == "open.running.suspended" || startsWith("open.notrunning.suspended")) State.Suspended
         else State.Stopped
     }
 }
