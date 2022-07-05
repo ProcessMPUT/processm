@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import processm.conformance.ProcessTrees
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.CompositeAligner
 import processm.core.log.Helpers
@@ -91,7 +92,6 @@ class DecompositionAlignerPerformanceTests {
 
     @Test
     fun `PM book Fig 7 27 conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = Helpers.logFromString(
             """
                 A B D E H
@@ -105,12 +105,11 @@ class DecompositionAlignerPerformanceTests {
                 """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.fig727, log)
     }
 
     @Test
     fun `PM book Fig 7 27 non-conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = Helpers.logFromString(
             """
                 A E B D H
@@ -127,12 +126,11 @@ class DecompositionAlignerPerformanceTests {
                 """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.fig727, log)
     }
 
     @Test
     fun `Flower process tree`() {
-        val tree = ProcessTree.parse("⟲(τ,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z)")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -144,12 +142,11 @@ class DecompositionAlignerPerformanceTests {
             """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.azFlower, log)
     }
 
     @Test
     fun `Parallel flower models`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -163,12 +160,11 @@ class DecompositionAlignerPerformanceTests {
             """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.parallelFlowers, log)
     }
 
     @Test
     fun `Parallel flower models non-conforming log`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = Helpers.logFromString(
             """
                 1 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -181,12 +177,11 @@ class DecompositionAlignerPerformanceTests {
             """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.parallelFlowers, log)
     }
 
     @Test
     fun `Parallel decisions in loop process tree`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -197,12 +192,11 @@ class DecompositionAlignerPerformanceTests {
             """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.parallelDecisionsInLoop, log)
     }
 
     @Test
     fun `Parallel decisions in loop non-conforming log`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = Helpers.logFromString(
             """
                 A A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -217,12 +211,11 @@ class DecompositionAlignerPerformanceTests {
             """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.parallelDecisionsInLoop, log)
     }
 
     @Test
     fun `PM book Fig 7 29 conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = Helpers.logFromString(
             """
                 A C E G
@@ -232,18 +225,17 @@ class DecompositionAlignerPerformanceTests {
                 """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.fig729, log)
     }
 
     @Test
     fun `PM book Fig 7 29 non-conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = Helpers.logFromString(
             """
                 D F B G E C A
                 """
         )
 
-        compare(tree, log)
+        compare(ProcessTrees.fig729, log)
     }
 }
