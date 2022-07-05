@@ -238,4 +238,25 @@ class DoublingMap2DTest {
         assertEquals(setOf(2), m.rows)
         assertEquals(setOf(1, 2), m.columns)
     }
+
+    @Test
+    fun `putAll(emptyMap2D)`() {
+        val map1 = DoublingMap2D<String, Int, Double>()
+        val map2 = DoublingMap2D<String, Int, Double>()
+        map2.putAll(map1)
+
+        assertEquals(map1, map2)
+    }
+
+    @Test
+    fun `putAll(non-emptyMap2D)`() {
+        val map1 = DoublingMap2D<String, Int, Double>()
+        map1["A", 1] = 2.0
+        map1["A", 2] = 3.0
+        map1["B", 4] = 5.0
+        val map2 = DoublingMap2D<String, Int, Double>()
+        map2.putAll(map1)
+
+        assertEquals(map1, map2)
+    }
 }
