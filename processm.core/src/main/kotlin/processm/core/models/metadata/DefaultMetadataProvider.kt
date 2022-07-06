@@ -3,12 +3,13 @@ package processm.core.models.metadata
 /**
  * Map-based metadata provider
  */
-class DefaultMetadataProvider<T : MetadataValue>(override val name: URN) : MetadataProvider {
+class DefaultMetadataProvider<T : MetadataValue>(
+    override val name: URN,
+    private val _metadata: MutableMap<MetadataSubject, T> = HashMap()
+) : MetadataProvider, Map<MetadataSubject, MetadataValue> by _metadata {
 
-    private val _metadata = HashMap<MetadataSubject, T>()
-
-    override fun get(a: MetadataSubject): T {
-        return _metadata.getValue(a)
+    override fun get(key: MetadataSubject): T {
+        return _metadata.getValue(key)
     }
 
     override operator fun contains(a: MetadataSubject): Boolean {
