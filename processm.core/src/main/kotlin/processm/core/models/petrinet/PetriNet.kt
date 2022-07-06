@@ -4,6 +4,8 @@ import com.google.common.collect.Lists
 import processm.core.helpers.optimize
 import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
+import processm.core.models.metadata.DefaultMutableMetadataHandler
+import processm.core.models.metadata.MetadataHandler
 import java.util.*
 
 /**
@@ -18,7 +20,8 @@ class PetriNet(
     val transitions: List<Transition>,
     val initialMarking: Marking = places.firstOrNull()?.let { Marking(it) } ?: Marking.empty,
     val finalMarking: Marking = places.lastOrNull()?.let { Marking(it) } ?: Marking.empty,
-) : ProcessModel {
+    private val metadataHandler: MetadataHandler = DefaultMutableMetadataHandler()
+) : ProcessModel, MetadataHandler by metadataHandler {
     override val activities: Sequence<Activity> = transitions.asSequence()
 
     override val startActivities: Sequence<Activity> = available(initialMarking)
