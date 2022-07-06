@@ -1,9 +1,11 @@
 package processm.core.models.commons
 
+import processm.core.models.metadata.MetadataSubject
+
 /**
  * An activity of the model, identified by [name]
  */
-interface Activity {
+interface Activity : MetadataSubject {
     /**
      * The name of this activity.
      */
