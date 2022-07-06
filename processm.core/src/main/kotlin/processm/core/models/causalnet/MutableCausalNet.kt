@@ -13,11 +13,6 @@ class MutableCausalNet(
 ) : CausalNet(start, end, metadataHandler),
     MutableMetadataHandler by metadataHandler {
 
-    init {
-        for (name in BasicMetadata.BASIC_TIME_STATISTICS)
-            addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
-    }
-
     /**
      * Adds a (set of) new activity instance(s) to the model
      */
