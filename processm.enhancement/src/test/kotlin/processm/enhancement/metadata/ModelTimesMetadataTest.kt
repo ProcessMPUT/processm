@@ -6,10 +6,7 @@ import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.commons.ProcessModel
-import processm.core.models.metadata.BasicMetadata
-import processm.core.models.metadata.DefaultMutableMetadataHandler
-import processm.core.models.metadata.MetadataHandler
-import processm.core.models.metadata.URN
+import processm.core.models.metadata.*
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.converters.toPetriNet
 import processm.core.models.processtree.ProcessTree

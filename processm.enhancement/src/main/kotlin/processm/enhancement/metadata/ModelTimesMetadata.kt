@@ -8,11 +8,8 @@ import processm.core.log.attribute.value
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.*
 import processm.core.models.metadata.BasicMetadata.BASIC_TIME_STATISTICS
-import processm.core.models.metadata.DefaultMetadataProvider
-import processm.core.models.metadata.MetadataProvider
-import processm.core.models.metadata.MutableMetadataHandler
-import processm.core.models.metadata.URN
 import java.time.Duration
 
 

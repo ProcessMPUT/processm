@@ -1,8 +1,7 @@
-package processm.enhancement.metadata
+package processm.core.models.metadata
 
 import processm.core.helpers.AbstractDistribution
-import processm.core.models.metadata.MetadataValue
-import processm.enhancement.kpi.Distribution
+import processm.core.helpers.Distribution
 import java.time.Duration
 
 
