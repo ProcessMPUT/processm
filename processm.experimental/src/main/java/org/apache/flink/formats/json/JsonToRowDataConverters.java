@@ -32,14 +32,16 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.Text
 import org.apache.flink.table.api.TableException;
 import org.apache.flink.table.data.*;
 import org.apache.flink.table.types.logical.*;
-import org.apache.flink.table.types.logical.utils.LogicalTypeChecks;
 import org.apache.flink.table.types.logical.utils.LogicalTypeUtils;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.HashMap;
@@ -236,7 +238,6 @@ public class JsonToRowDataConverters implements Serializable {
                                     timestampFormat));
             }
         }
-
         LocalTime localTime = parsedTimestamp.query(TemporalQueries.localTime());
         LocalDate localDate = parsedTimestamp.query(TemporalQueries.localDate());
 
@@ -314,7 +315,7 @@ public class JsonToRowDataConverters implements Serializable {
 
     private JsonToRowDataConverter createMapConverter(
             String typeSummary, LogicalType keyType, LogicalType valueType) {
-        if (!LogicalTypeChecks.hasFamily(keyType, LogicalTypeFamily.CHARACTER_STRING)) {
+        if (!keyType.is(LogicalTypeFamily.CHARACTER_STRING)) {
             throw new UnsupportedOperationException(
                     "JSON format doesn't support non-string as key type of map. "
                             + "The type is: "
@@ -351,8 +352,13 @@ public class JsonToRowDataConverters implements Serializable {
             for (int i = 0; i < arity; i++) {
                 String fieldName = fieldNames[i];
                 JsonNode field = node.get(fieldName);
-                Object convertedField = convertField(fieldConverters[i], fieldName, field);
-                row.setField(i, convertedField);
+                try {
+                    Object convertedField = convertField(fieldConverters[i], fieldName, field);
+                    row.setField(i, convertedField);
+                } catch (Throwable t) {
+                    throw new JsonParseException(
+                            String.format("Fail to deserialize at field: %s.", fieldName), t);
+                }
             }
             return row;
         };

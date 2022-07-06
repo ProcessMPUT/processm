@@ -33,7 +33,7 @@ class PropositionalSparseDataset(base: List<Map<Feature, Any>>) : List<Map<Featu
  *
  * [ListAttr] are ignored as there's no obvious way to incorporate them and [IDAttr] are ignored on purpose as useless
  */
-internal fun Alignment.propositionalize(): HashMap<Feature, Any> {
+fun Alignment.propositionalize(): HashMap<Feature, Any> {
     val ctr = HashMap<String?, Int>()
     val result = HashMap<Feature, Any>()
     for (step in steps) {
