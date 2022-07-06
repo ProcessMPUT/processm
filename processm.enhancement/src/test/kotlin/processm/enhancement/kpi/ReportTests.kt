@@ -1,5 +1,6 @@
 package processm.enhancement.kpi
 
+import processm.core.helpers.Distribution
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.models.commons.Activity
 import processm.core.models.petrinet.Transition

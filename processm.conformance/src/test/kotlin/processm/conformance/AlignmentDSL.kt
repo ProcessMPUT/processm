@@ -77,6 +77,8 @@ class AlignmentDSL {
 
     infix fun String.with(v: Pair<String, Any>) = EventAux(this) with v
 
+    fun String.asEvent() = EventAux(this)
+
     fun result(): Alignment = Alignment(steps, cost)
 
 }
