@@ -1,6 +1,10 @@
 package processm.core.log
 
+import processm.core.helpers.identityMap
 import processm.core.log.attribute.*
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
@@ -35,18 +39,12 @@ object Helpers {
     }
 
     fun event(name: String, vararg attrs: Pair<String, Any>): Event = Event().apply {
-        attributesInternal["concept:name"] = StringAttr("concept:name", name)
-        attributesInternal["lifecycle:transition"] = StringAttr("lifecycle:transition", "complete")
-        attributesInternal["concept:instance"] = NullAttr("concept:instance")
+        attributesInternal[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, name)
+        attributesInternal[LIFECYCLE_TRANSITION] = StringAttr(LIFECYCLE_TRANSITION, "complete")
+        attributesInternal[CONCEPT_INSTANCE] = NullAttr(CONCEPT_INSTANCE)
         for ((key, value) in attrs)
             attributesInternal[key] = wrap(key, value)
-        setStandardAttributes(
-            mapOf(
-                "concept:name" to "concept:name",
-                "lifecycle:transition" to "lifecycle:transition",
-                "concept:instance" to "concept:instance"
-            )
-        )
+        setStandardAttributes(identityMap())
     }
 
     /**

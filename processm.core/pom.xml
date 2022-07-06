@@ -66,7 +66,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.32</version>
+            <version>${org.slf4j.version}</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -128,6 +128,14 @@
             <artifactId>pooled-jms</artifactId>
             <version>${pooled-jms.version}</version>
         </dependency>
+        <!-- WARNING: GPL 2.0 license; For testing purposes only. -->
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-core</artifactId>
+            <version>0.16</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

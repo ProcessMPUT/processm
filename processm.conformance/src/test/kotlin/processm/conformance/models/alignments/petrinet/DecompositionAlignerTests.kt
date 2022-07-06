@@ -6,7 +6,7 @@ import processm.conformance.CausalNets.fig316
 import processm.conformance.PetriNets
 import processm.conformance.PetriNets.fig314
 import processm.conformance.PetriNets.fig32
-import processm.conformance.PetriNets.fig34
+import processm.conformance.PetriNets.fig34c
 import processm.conformance.PetriNets.fig73
 import processm.conformance.PetriNets.sequence
 import processm.conformance.models.alignments.AStar
@@ -97,16 +97,16 @@ class DecompositionAlignerTests {
 
     @Test
     fun `PM book Fig 3 4 c conforming log`() {
-        val t1 = fig34.transitions.first { it.name == "t1" }
-        val t2 = fig34.transitions.first { it.name == "t2" }
-        val t3 = fig34.transitions.first { it.name == "t3" }
-        val t4 = fig34.transitions.first { it.name == "t4" }
-        val t5 = fig34.transitions.first { it.name == "t5" }
+        val t1 = fig34c.transitions.first { it.name == "t1" }
+        val t2 = fig34c.transitions.first { it.name == "t2" }
+        val t3 = fig34c.transitions.first { it.name == "t3" }
+        val t4 = fig34c.transitions.first { it.name == "t4" }
+        val t5 = fig34c.transitions.first { it.name == "t5" }
         val allMoves = List(5) { t1 } + List(5) { t2 } + List(5) { t3 } + List(5) { t4 } + List(5) { t5 }
 
         val limit = 10000
         var totalTime: Long = 0L
-        val aligner = DecompositionAligner(fig34)
+        val aligner = DecompositionAligner(fig34c)
         for (activities in allMoves.allPermutations().take(limit)) {
             val trace = Trace(activities.asSequence().map { Helpers.event(it.name) })
             val start = System.nanoTime()
@@ -127,15 +127,15 @@ class DecompositionAlignerTests {
     @Test
     fun `PM book Fig 3 4 c non-conforming log`() {
         // missing t1s
-        val t2 = fig34.transitions.first { it.name == "t2" }
-        val t3 = fig34.transitions.first { it.name == "t3" }
-        val t4 = fig34.transitions.first { it.name == "t4" }
-        val t5 = fig34.transitions.first { it.name == "t5" }
+        val t2 = fig34c.transitions.first { it.name == "t2" }
+        val t3 = fig34c.transitions.first { it.name == "t3" }
+        val t4 = fig34c.transitions.first { it.name == "t4" }
+        val t5 = fig34c.transitions.first { it.name == "t5" }
         val allMoves = List(5) { t2 } + List(5) { t3 } + List(5) { t4 } + List(5) { t5 }
 
         val limit = 100
         var totalTime: Long = 0L
-        val aligner = DecompositionAligner(fig34)
+        val aligner = DecompositionAligner(fig34c)
         for (activities in allMoves.allPermutations().take(limit)) {
             val trace = Trace(activities.asSequence().map { Helpers.event(it.name) })
             val start = System.nanoTime()
@@ -146,7 +146,7 @@ class DecompositionAlignerTests {
             assertEquals(5, alignment.cost, "\n" + alignment.toStringMultiline())
             assertEquals(25, alignment.steps.size)
 
-            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in fig34.transitions } }
+            assertTrue { alignment.steps.all { step -> step.modelMove == null || step.modelMove in fig34c.transitions } }
         }
 
         totalTime /= 1000000L
@@ -572,7 +572,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val petri = CausalNets.parallelFlowers.toPetriNet()
+        val petri = CausalNets.parallelDecisionsInLoop.toPetriNet()
         val aligner = DecompositionAligner(petri)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
@@ -727,7 +727,7 @@ class DecompositionAlignerTests {
             3,
         )
 
-        val petri = CausalNets.parallelFlowers.toPetriNet()
+        val petri = CausalNets.parallelDecisionsInLoop.toPetriNet()
         val aligner = DecompositionAligner(petri)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()

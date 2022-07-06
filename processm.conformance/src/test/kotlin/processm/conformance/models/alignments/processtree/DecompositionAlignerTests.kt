@@ -1,14 +1,13 @@
 package processm.conformance.models.alignments.processtree
 
 import org.junit.jupiter.api.Test
+import processm.conformance.ProcessTrees
 import processm.core.log.Helpers
-import processm.core.models.processtree.ProcessTree
 import kotlin.test.assertEquals
 
 class DecompositionAlignerTests {
     @Test
     fun `PM book Fig 7 27 conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = Helpers.logFromString(
             """
                 A B D E H
@@ -22,7 +21,7 @@ class DecompositionAlignerTests {
                 """
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.fig727)
         for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -39,7 +38,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `PM book Fig 7 27 non-conforming log`() {
-        val tree = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
         val log = Helpers.logFromString(
             """
                 A E B D H
@@ -70,7 +68,7 @@ class DecompositionAlignerTests {
             4
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.fig727)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -85,7 +83,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `Flower process tree`() {
-        val tree = ProcessTree.parse("⟲(τ,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z)")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -97,7 +94,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.azFlower)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -112,7 +109,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `Parallel flower models`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -126,7 +122,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.parallelFlowers)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -141,7 +137,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `Parallel flower models non-conforming log`() {
-        val tree = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
         val log = Helpers.logFromString(
             """
                 1 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -154,7 +149,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.parallelFlowers)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -169,7 +164,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `Parallel decisions in loop process tree`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
         val log = Helpers.logFromString(
             """
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -180,7 +174,7 @@ class DecompositionAlignerTests {
             """
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.parallelDecisionsInLoop)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -194,8 +188,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `Parallel decisions in loop non-conforming log`() {
-        val tree = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
-
         val log = Helpers.logFromString(
             """
                 A A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
@@ -222,7 +214,7 @@ class DecompositionAlignerTests {
             4
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.parallelDecisionsInLoop)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -236,7 +228,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `PM book Fig 7 29 conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = Helpers.logFromString(
             """
                 A C E G
@@ -246,7 +237,7 @@ class DecompositionAlignerTests {
                 """
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.fig729)
         for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)
@@ -263,7 +254,6 @@ class DecompositionAlignerTests {
 
     @Test
     fun `PM book Fig 7 29 non-conforming log`() {
-        val tree = ProcessTree.parse("→(×(→(A,∧(C,E)),→(B,∧(D,F))),G)")
         val log = Helpers.logFromString(
             """
                 D F B G E C A
@@ -274,7 +264,7 @@ class DecompositionAlignerTests {
             5,
         )
 
-        val aligner = DecompositionAligner(tree)
+        val aligner = DecompositionAligner(ProcessTrees.fig729)
         for ((i, trace) in log.traces.withIndex()) {
             val start = System.currentTimeMillis()
             val alignment = aligner.align(trace)

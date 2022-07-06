@@ -1,6 +1,7 @@
 package processm.enhancement.kpi
 
 import processm.core.DBTestHelper
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
@@ -202,7 +203,7 @@ class CalculatorTests {
             val calculator = Calculator(model)
             val report = calculator.calculate(log)
 
-            val traceCostTotal = report.traceKPI["cost:total"]!!
+            val traceCostTotal = report.traceKPI[COST_TOTAL]!!
             println("trace cost:total: $traceCostTotal")
             assertEquals(50, traceCostTotal.raw.size)
             assertEquals(11.0, traceCostTotal.min)
@@ -264,7 +265,7 @@ class CalculatorTests {
             val calculator = Calculator(model)
             val report = calculator.calculate(log)
 
-            val traceCostTotal = report.traceKPI["cost:total"]!!
+            val traceCostTotal = report.traceKPI[COST_TOTAL]!!
             println("trace cost:total: $traceCostTotal")
             assertEquals(50, traceCostTotal.raw.size)
             assertEquals(11.0, traceCostTotal.min)

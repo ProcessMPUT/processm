@@ -9,6 +9,7 @@ import processm.core.DBTestHelper
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
@@ -249,8 +250,8 @@ class AlignerKPIServiceTests {
             val report = Report.fromJson(component.data!!)
             assertEquals(0, report.logKPI.size)
             assertEquals(1, report.traceKPI.size)
-            assertEquals(20.0, report.traceKPI["cost:total"]!!.median)
-            assertEquals(50, report.traceKPI["cost:total"]!!.raw.size)
+            assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
+            assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
 
             with(report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
                 // instant activities
@@ -316,8 +317,8 @@ class AlignerKPIServiceTests {
             val report = Report.fromJson(component.data!!)
             assertEquals(0, report.logKPI.size)
             assertEquals(1, report.traceKPI.size)
-            assertEquals(20.0, report.traceKPI["cost:total"]!!.median)
-            assertEquals(50, report.traceKPI["cost:total"]!!.raw.size)
+            assertEquals(20.0, report.traceKPI[COST_TOTAL]!!.median)
+            assertEquals(50, report.traceKPI[COST_TOTAL]!!.raw.size)
 
             with(report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
                 // missing activities

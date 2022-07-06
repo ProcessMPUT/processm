@@ -13,7 +13,7 @@
     <artifactId>enhancement</artifactId>
     <packaging>jar</packaging>
 
-    <name>ProcessM Enhancement Analysis</name>
+    <name>ProcessM Enhancement</name>
 
     <dependencies>
         <dependency>
@@ -32,6 +32,13 @@
             <groupId>${project.parent.groupId}</groupId>
             <artifactId>conformance</artifactId>
             <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>conformance</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>

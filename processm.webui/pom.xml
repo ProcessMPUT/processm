@@ -9,7 +9,7 @@
         <groupId>processm</groupId>
         <artifactId>root</artifactId>
         <version>0.1-SNAPSHOT</version>
-        <relativePath>../</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>webui</artifactId>
@@ -42,7 +42,7 @@
 
                 <configuration>
                     <workingDirectory>src/main/frontend-app</workingDirectory>
-                    <installDirectory>src/main</installDirectory>
+                    <installDirectory>target</installDirectory>
                 </configuration>
 
                 <executions>

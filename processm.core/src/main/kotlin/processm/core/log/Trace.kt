@@ -2,6 +2,10 @@ package processm.core.log
 
 import processm.core.helpers.toUUID
 import processm.core.log.attribute.Attribute
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
 import processm.core.log.attribute.IDAttr
 import processm.core.log.attribute.RealAttr
 import processm.core.log.attribute.StringAttr
@@ -21,6 +25,10 @@ open class Trace(
     var isEventStream: Boolean = false
         internal set
 
+    init {
+        lateInit()
+    }
+
     /**
      * Equals if both are Trace and contains the same attributes
      */
@@ -32,18 +40,18 @@ open class Trace(
     override fun hashCode(): Int = Objects.hash(isEventStream, attributesInternal)
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap["concept:name"]]?.getValue()?.toString()
-        costTotal = attributesInternal[nameMap["cost:total"]]?.getValue()
+        conceptName = attributesInternal[nameMap[CONCEPT_NAME]]?.getValue()?.toString()
+        costTotal = attributesInternal[nameMap[COST_TOTAL]]?.getValue()
             ?.let { it as? Double ?: it.toString().toDoubleOrNull() }
-        costCurrency = attributesInternal[nameMap["cost:currency"]]?.getValue()?.toString()
-        identityId = attributesInternal[nameMap["identity:id"]]?.getValue()
+        costCurrency = attributesInternal[nameMap[COST_CURRENCY]]?.getValue()?.toString()
+        identityId = attributesInternal[nameMap[IDENTITY_ID]]?.getValue()
             ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {
-        setCustomAttribute(conceptName, "concept:name", ::StringAttr, nameMap)
-        setCustomAttribute(costTotal, "cost:total", ::RealAttr, nameMap)
-        setCustomAttribute(costCurrency, "cost:currency", ::StringAttr, nameMap)
-        setCustomAttribute(identityId, "identity:id", ::IDAttr, nameMap)
+        setCustomAttribute(conceptName, CONCEPT_NAME, ::StringAttr, nameMap)
+        setCustomAttribute(costTotal, COST_TOTAL, ::RealAttr, nameMap)
+        setCustomAttribute(costCurrency, COST_CURRENCY, ::StringAttr, nameMap)
+        setCustomAttribute(identityId, IDENTITY_ID, ::IDAttr, nameMap)
     }
 }

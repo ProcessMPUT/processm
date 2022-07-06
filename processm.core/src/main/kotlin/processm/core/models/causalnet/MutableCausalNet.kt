@@ -14,7 +14,7 @@ class MutableCausalNet(
     MutableMetadataHandler by metadataHandler {
 
     init {
-        for (name in BasicStatistics.BASIC_TIME_STATISTICS)
+        for (name in BasicMetadata.BASIC_TIME_STATISTICS)
             addMetadataProvider(DefaultMetadataProvider<IntMetadata>(name))
     }
 

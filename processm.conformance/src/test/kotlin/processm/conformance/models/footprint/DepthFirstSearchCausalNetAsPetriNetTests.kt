@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Disabled
 import processm.conformance.CausalNets.azFlower
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
-import processm.conformance.CausalNets.parallelFlowers
+import processm.conformance.CausalNets.parallelDecisionsInLoop
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.toFlatSequence
@@ -137,7 +137,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(parallelFlowers.toPetriNet())
+        val dfs = DepthFirstSearch(parallelDecisionsInLoop.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -157,7 +157,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         )
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(parallelFlowers.toPetriNet())
+        val dfs = DepthFirstSearch(parallelDecisionsInLoop.toPetriNet())
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 

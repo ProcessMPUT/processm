@@ -5,6 +5,18 @@ import processm.core.DBTestHelper
 import processm.core.helpers.parseISO8601
 import processm.core.log.Event
 import processm.core.log.XESComponent
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
+import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
+import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
 import processm.core.log.attribute.value
 import processm.core.log.getStandardToCustomNameMap
 import processm.core.logging.logger
@@ -54,27 +66,27 @@ open class DBHierarchicalXESInputStreamWithQueryTestsBase {
         fun cmp(standard: Any?, standardName: String) =
             assertTrue(standard == component.attributes[nameMap[standardName]]?.value || component.attributes[nameMap[standardName]]?.value == null)
 
-        cmp(component.conceptName, "concept:name")
-        cmp(component.identityId, "identity:id")
+        cmp(component.conceptName, CONCEPT_NAME)
+        cmp(component.identityId, IDENTITY_ID)
 
         when (component) {
             is Log -> {
-                cmp(component.lifecycleModel, "lifecycle:model")
+                cmp(component.lifecycleModel, LIFECYCLE_MODEL)
             }
             is Trace -> {
-                cmp(component.costCurrency, "cost:currency")
-                cmp(component.costTotal, "cost:total")
+                cmp(component.costCurrency, COST_CURRENCY)
+                cmp(component.costTotal, COST_TOTAL)
             }
             is Event -> {
-                cmp(component.conceptInstance, "concept:instance")
-                cmp(component.costCurrency, "cost:currency")
-                cmp(component.costTotal, "cost:total")
-                cmp(component.lifecycleTransition, "lifecycle:transition")
-                cmp(component.lifecycleState, "lifecycle:state")
-                cmp(component.orgGroup, "org:group")
-                cmp(component.orgResource, "org:resource")
-                cmp(component.orgRole, "org:role")
-                cmp(component.timeTimestamp, "time:timestamp")
+                cmp(component.conceptInstance, CONCEPT_INSTANCE)
+                cmp(component.costCurrency, COST_CURRENCY)
+                cmp(component.costTotal, COST_TOTAL)
+                cmp(component.lifecycleTransition, LIFECYCLE_TRANSITION)
+                cmp(component.lifecycleState, LIFECYCLE_STATE)
+                cmp(component.orgGroup, ORG_GROUP)
+                cmp(component.orgResource, ORG_RESOURCE)
+                cmp(component.orgRole, ORG_ROLE)
+                cmp(component.timeTimestamp, TIME_TIMESTAMP)
             }
         }
 

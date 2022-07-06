@@ -3,6 +3,7 @@ package processm.core.log.hierarchical
 import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
+import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
 import processm.core.log.attribute.StringAttr
 import processm.core.log.attribute.value
 import java.time.DayOfWeek
@@ -391,7 +392,7 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
 
         for (trace in log.traces) {
             assertNotNull(trace.costTotal)
-            assertNotNull(trace.attributes["cost:total"]?.value)
+            assertNotNull(trace.attributes[COST_TOTAL]?.value)
         }
     }
 

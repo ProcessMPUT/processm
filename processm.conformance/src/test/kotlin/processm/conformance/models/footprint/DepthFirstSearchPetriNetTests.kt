@@ -3,7 +3,7 @@ package processm.conformance.models.footprint
 import processm.conformance.PetriNets.azFlower
 import processm.conformance.PetriNets.fig314
 import processm.conformance.PetriNets.fig32
-import processm.conformance.PetriNets.fig34
+import processm.conformance.PetriNets.fig34c
 import processm.conformance.PetriNets.fig73
 import processm.conformance.PetriNets.parallelFlowers
 import processm.core.helpers.allPermutations
@@ -66,11 +66,11 @@ class DepthFirstSearchPetriNetTests {
 
     @Test
     fun `PM book Fig 3 4 c conforming log`() {
-        val t1 = fig34.transitions.first { it.name == "t1" }
-        val t2 = fig34.transitions.first { it.name == "t2" }
-        val t3 = fig34.transitions.first { it.name == "t3" }
-        val t4 = fig34.transitions.first { it.name == "t4" }
-        val t5 = fig34.transitions.first { it.name == "t5" }
+        val t1 = fig34c.transitions.first { it.name == "t1" }
+        val t2 = fig34c.transitions.first { it.name == "t2" }
+        val t3 = fig34c.transitions.first { it.name == "t3" }
+        val t4 = fig34c.transitions.first { it.name == "t4" }
+        val t5 = fig34c.transitions.first { it.name == "t5" }
         val allMoves = List(5) { t1 } + List(5) { t2 } + List(5) { t3 } + List(5) { t4 } + List(5) { t5 }
         val limit = 10000
         val log = allMoves
@@ -80,7 +80,7 @@ class DepthFirstSearchPetriNetTests {
 
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(fig34)
+        val dfs = DepthFirstSearch(fig34c)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
@@ -91,10 +91,10 @@ class DepthFirstSearchPetriNetTests {
 
     @Test
     fun `PM book Fig 3 4 c non-conforming log`() {
-        val t2 = fig34.transitions.first { it.name == "t2" }
-        val t3 = fig34.transitions.first { it.name == "t3" }
-        val t4 = fig34.transitions.first { it.name == "t4" }
-        val t5 = fig34.transitions.first { it.name == "t5" }
+        val t2 = fig34c.transitions.first { it.name == "t2" }
+        val t3 = fig34c.transitions.first { it.name == "t3" }
+        val t4 = fig34c.transitions.first { it.name == "t4" }
+        val t5 = fig34c.transitions.first { it.name == "t5" }
         // missing t1s
         val allMoves = List(5) { t2 } + List(5) { t3 } + List(5) { t4 } + List(5) { t5 }
         val limit = 10000
@@ -105,7 +105,7 @@ class DepthFirstSearchPetriNetTests {
 
 
         val startTime = System.currentTimeMillis()
-        val dfs = DepthFirstSearch(fig34)
+        val dfs = DepthFirstSearch(fig34c)
         val model = dfs.assess(log.toFlatSequence())
         val time = System.currentTimeMillis() - startTime
 
