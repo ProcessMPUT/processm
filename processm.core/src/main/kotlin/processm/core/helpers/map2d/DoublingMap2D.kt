@@ -1,7 +1,6 @@
 package processm.core.helpers.map2d
 
 import kotlinx.serialization.Serializable
-import processm.core.helpers.chain
 
 /**
  * The default implementation of [Map2D], backed by two hashmaps of hashmaps: one from rows, to columns, to values, and the other from columns, to rows, to values.
@@ -160,6 +159,6 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
 
     override val values: Iterable<Value>
         get() = object : Iterable<Value> {
-            override fun iterator(): Iterator<Value> = chain(rcv.values.asSequence().map { it.values })
+            override fun iterator(): Iterator<Value> = rcv.values.asSequence().flatMap { it.values }.iterator()
         }
 }
