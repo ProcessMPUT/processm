@@ -1,7 +1,6 @@
-package processm.core.helpers
+package processm.core.helpers.stats
 
 import kotlinx.serialization.Serializable
-import processm.core.helpers.AbstractDistribution
 import kotlin.math.ceil
 import kotlin.math.sqrt
 

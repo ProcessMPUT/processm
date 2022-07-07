@@ -1,7 +1,7 @@
 package processm.enhancement.kpi
 
 import org.junit.jupiter.api.assertThrows
-import processm.core.helpers.Distribution
+import processm.core.helpers.stats.Distribution
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

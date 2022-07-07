@@ -1,7 +1,7 @@
 package processm.core.models.metadata
 
-import processm.core.helpers.AbstractDistribution
-import processm.core.helpers.Distribution
+import processm.core.helpers.stats.AbstractDistribution
+import processm.core.helpers.stats.Distribution
 import java.time.Duration
 
 
