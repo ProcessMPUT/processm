@@ -32,17 +32,17 @@ interface DescriptiveStatistics<Raw, Aggregate> {
     val max: Raw
 
     /**
-     * The average of the distribution.
+     * The average
      */
     val average: Aggregate
 
     /**
-     * An estimation of standard deviation of the distribution.
+     * The standard deviation
      */
     val standardDeviation: Aggregate
 
     /**
-     * Number of data points supporting the distribution
+     * The number of data points
      */
     val count: Int
 }
