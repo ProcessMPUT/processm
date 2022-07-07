@@ -1,5 +1,7 @@
 package processm.core.models.metadata
 
+import kotlin.math.pow
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -28,6 +30,12 @@ class IntMetadataTest {
         assertEquals(16, mtd.max)
         assertEquals(-1, mtd.min)
         assertEquals(3.0, mtd.median)
+        assertEquals(
+            sqrt(
+                (1 + 1 + 4 + 9 + 9 + 14 * 14 + 15 * 15 + 16 * 16) / 7.0 -
+                        (-1 + 1 + 2 + 3 + 3 + 14 + 15 + 16).toDouble().pow(2) / (8.0 * 7.0)
+            ), mtd.standardDeviation
+        )
     }
 
     @Test
