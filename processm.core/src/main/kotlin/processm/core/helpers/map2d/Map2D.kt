@@ -118,6 +118,6 @@ interface Map2D<Row, Column, Value> {
      * All values stored in the map, in arbitrary order.
      * A direct counterpart of [Map.values], although without the [Collection] interface to avoid unnecessary overhead
      */
-    val values: Iterable<Value>
-        get() = TODO()
+    val values: Sequence<Value>
+        get() = rows.asSequence().flatMap { getRow(it).values.asSequence() }
 }

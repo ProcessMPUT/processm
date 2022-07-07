@@ -259,4 +259,14 @@ class DoublingMap2DTest {
 
         assertEquals(map1, map2)
     }
+
+    @Test
+    fun values() {
+        val m = DoublingMap2D<String, Int, Double>()
+        m["A", 1] = 2.0
+        m["A", 2] = 3.0
+        m["B", 4] = 5.0
+        m["B", 5] = 5.0
+        assertEquals(listOf(2.0, 3.0, 5.0, 5.0), m.values.sorted().toList())
+    }
 }
