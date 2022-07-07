@@ -1,10 +1,13 @@
 package processm.enhancement.metadata
 
+import processm.conformance.alignment
+import processm.core.helpers.mapToSet
 import processm.core.log.InferConceptInstanceFromStandardLifecycle
 import processm.core.log.XMLXESInputStream
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.*
 import processm.core.models.petrinet.PetriNet
@@ -244,6 +247,69 @@ class ModelTimesMetadataTest {
             assertEquals(Duration.ofHours(120), max)
             assertEquals(50, average.toHours())
             assertEquals(100, count)
+        }
+    }
+
+    @Test
+    fun `correct attribution`() {
+        val d1 = Duration.ofHours(1)
+        val d2 = Duration.ofHours(2)
+        val providers = sequenceOf(alignment {
+            "a" with (BasicMetadata.WAITING_TIME.urn to d1.toString()) executing "a"
+            "b" with (BasicMetadata.SERVICE_TIME.urn to d2.toString()) executing "b"
+        }).getTimesMetadataProviders()
+        assertEquals(2, providers.size)
+        assertEquals(setOf(BasicMetadata.WAITING_TIME, BasicMetadata.SERVICE_TIME), providers.mapToSet { it.name })
+        with(providers.single { it.name == BasicMetadata.WAITING_TIME }) {
+            assertEquals(1, keys.size)
+            with(keys.single()) {
+                assertIs<Activity>(this)
+                assertEquals("a", name)
+            }
+            with(values.single()) {
+                assertIs<DurationDistributionMetadata>(this)
+                assertEquals(d1, min)
+                assertEquals(d1, max)
+                assertEquals(1, count)
+            }
+        }
+        with(providers.single { it.name == BasicMetadata.SERVICE_TIME }) {
+            assertEquals(1, keys.size)
+            with(keys.single()) {
+                assertIs<Activity>(this)
+                assertEquals("b", name)
+            }
+            with(values.single()) {
+                assertIs<DurationDistributionMetadata>(this)
+                assertEquals(d2, min)
+                assertEquals(d2, max)
+                assertEquals(1, count)
+            }
+        }
+    }
+
+    @Test
+    fun `correct aggregation`() {
+        val d1 = Duration.ofHours(1)
+        val d2 = Duration.ofHours(2)
+        val providers = sequenceOf(alignment {
+            "a" with (BasicMetadata.WAITING_TIME.urn to d1.toString()) executing "a"
+            "a" with (BasicMetadata.WAITING_TIME.urn to d2.toString()) executing "a"
+        }).getTimesMetadataProviders()
+        assertEquals(1, providers.size)
+        assertEquals(setOf(BasicMetadata.WAITING_TIME), providers.mapToSet { it.name })
+        with(providers.single()) {
+            assertEquals(1, keys.size)
+            with(keys.single()) {
+                assertIs<Activity>(this)
+                assertEquals("a", name)
+            }
+            with(values.single()) {
+                assertIs<DurationDistributionMetadata>(this)
+                assertEquals(d1, min)
+                assertEquals(d2, max)
+                assertEquals(2, count)
+            }
         }
     }
 }

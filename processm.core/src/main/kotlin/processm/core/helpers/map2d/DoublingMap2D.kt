@@ -159,7 +159,7 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
     }
 
     override val values: Iterable<Value>
-        get() = object:Iterable<Value> {
+        get() = object : Iterable<Value> {
             override fun iterator(): Iterator<Value> = chain(rcv.values.asSequence().map { it.values })
         }
 }
