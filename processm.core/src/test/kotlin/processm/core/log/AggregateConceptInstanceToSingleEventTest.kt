@@ -3,7 +3,7 @@ package processm.core.log
 import processm.core.log.Helpers.event
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
 import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.hierarchical.HierarchicalXESInputStream
+import processm.core.log.hierarchical.FlatteningXESInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -26,7 +26,7 @@ class AggregateConceptInstanceToSingleEventTest {
             event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
         )
         val log = HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence())))
-        val stream = AggregateConceptInstanceToSingleEvent(HierarchicalXESInputStream(sequenceOf(log))).iterator()
+        val stream = AggregateConceptInstanceToSingleEvent(FlatteningXESInputStream(sequenceOf(log))).iterator()
         assertIs<Log>(stream.next())
         assertIs<Trace>(stream.next())
         assertEquals(trace[1], stream.next())
@@ -49,7 +49,7 @@ class AggregateConceptInstanceToSingleEventTest {
             event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
         )
         val log = HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence())))
-        val stream = AggregateConceptInstanceToSingleEvent(HierarchicalXESInputStream(sequenceOf(log))).iterator()
+        val stream = AggregateConceptInstanceToSingleEvent(FlatteningXESInputStream(sequenceOf(log))).iterator()
         assertIs<Log>(stream.next())
         assertIs<Trace>(stream.next())
         assertEquals(trace[4], stream.next())
@@ -73,7 +73,7 @@ class AggregateConceptInstanceToSingleEventTest {
         )
         val log = HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence())))
         val stream = AggregateConceptInstanceToSingleEvent(
-            HierarchicalXESInputStream(sequenceOf(log)),
+            FlatteningXESInputStream(sequenceOf(log)),
             aggregator = List<Pair<Int, Event>>::first
         ).iterator()
         assertIs<Log>(stream.next())
@@ -90,7 +90,7 @@ class AggregateConceptInstanceToSingleEventTest {
         val trace = listOf(event("a"), event("b"))
         val log =
             HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence()), HierarchicalTrace(trace.asSequence())))
-        val base = HierarchicalXESInputStream(sequenceOf(log))
+        val base = FlatteningXESInputStream(sequenceOf(log))
         val stream = AggregateConceptInstanceToSingleEvent(base)
         assertEquals(base.toList(), stream.toList())
     }
@@ -100,7 +100,7 @@ class AggregateConceptInstanceToSingleEventTest {
         val trace = listOf(event("a"), event("b"))
         val log =
             HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence()), HierarchicalTrace(trace.asSequence())))
-        val base = HierarchicalXESInputStream(sequenceOf(log, log))
+        val base = FlatteningXESInputStream(sequenceOf(log, log))
         val stream = AggregateConceptInstanceToSingleEvent(base)
         assertEquals(base.toList(), stream.toList())
     }
