@@ -68,9 +68,9 @@ fun MutableMetadataHandler.extendWithTimesMetadataFromStream(model: ProcessModel
         }
         for (component in AggregateConceptInstanceToSingleEvent(InferTimes(stream))) {
             when (component) {
-                is Log -> continue
-                is Trace -> flush()
                 is Event -> buffer.add(component)
+                is Trace -> flush()
+                is Log -> continue
             }
         }
         flush()
