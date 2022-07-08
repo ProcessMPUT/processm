@@ -8,7 +8,5 @@ import processm.core.helpers.stats.DescriptiveStatistics
  */
 interface NumericalMetadata<T : Number, TAvg : Number> : MetadataValue, DescriptiveStatistics<T, TAvg> {
 
-    val mean: TAvg
-        get() = average
     val histogram: Map<T, Int>
 }
