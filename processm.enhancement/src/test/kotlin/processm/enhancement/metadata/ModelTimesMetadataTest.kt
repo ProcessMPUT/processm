@@ -1,9 +1,11 @@
 package processm.enhancement.metadata
 
 import processm.conformance.alignment
+import processm.core.DBTestHelper
 import processm.core.helpers.mapToSet
 import processm.core.log.InferConceptInstanceFromStandardLifecycle
-import processm.core.log.XMLXESInputStream
+import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.log.hierarchical.toFlatSequence
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
@@ -13,6 +15,7 @@ import processm.core.models.metadata.*
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.converters.toPetriNet
 import processm.core.models.processtree.ProcessTree
+import processm.core.querylanguage.Query
 import java.time.Duration
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -167,13 +170,18 @@ class ModelTimesMetadataTest {
         val journalPetriNet = journalCNet.toPetriNet()
     }
 
+    private val journal by lazy {
+        InferConceptInstanceFromStandardLifecycle(
+            DBHierarchicalXESInputStream(DBTestHelper.dbName, Query("where l:id=${DBTestHelper.JournalReviewExtra}"))
+                .toFlatSequence()
+        )
+    }
+
     @Test
     fun causalnet() {
         val model = MutableCausalNet()
         model.copyFrom(journalCNet) { it }
-        this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes").use { stream ->
-            model.extendWithTimesMetadataFromStream(InferConceptInstanceFromStandardLifecycle(XMLXESInputStream(stream)))
-        }
+        model.extendWithTimesMetadataFromStream(journal)
         checkModel(model)
     }
 
@@ -181,12 +189,7 @@ class ModelTimesMetadataTest {
     fun `process tree`() {
         val handler = DefaultMutableMetadataHandler()
         val model = ProcessTree(journalProcessTree.root, handler)
-        this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes").use { stream ->
-            handler.extendWithTimesMetadataFromStream(
-                model,
-                InferConceptInstanceFromStandardLifecycle(XMLXESInputStream(stream))
-            )
-        }
+        handler.extendWithTimesMetadataFromStream(model, journal)
         checkModel(model)
     }
 
@@ -196,12 +199,7 @@ class ModelTimesMetadataTest {
         val model = with(journalPetriNet) {
             PetriNet(places, transitions, initialMarking, finalMarking, handler)
         }
-        this::class.java.getResourceAsStream("/xes-logs/JournalReview-extra.xes").use { stream ->
-            handler.extendWithTimesMetadataFromStream(
-                model,
-                InferConceptInstanceFromStandardLifecycle(XMLXESInputStream(stream))
-            )
-        }
+        handler.extendWithTimesMetadataFromStream(model, journal)
         checkModel(model)
     }
 
