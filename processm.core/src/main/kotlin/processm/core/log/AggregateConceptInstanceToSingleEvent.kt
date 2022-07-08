@@ -24,7 +24,9 @@ class AggregateConceptInstanceToSingleEvent(
         val buffer = DoublingMap2D<String?, String?, ArrayList<Pair<Int, Event>>>()
         var ctr = 0
         suspend fun SequenceScope<XESComponent>.flushBuffer() {
-            yieldAll(buffer.values.mapNotNull(aggregator).sortedBy { it.first }.map { it.second })
+            val tmp = buffer.values.mapNotNullTo(ArrayList(), aggregator)
+            tmp.sortBy { it.first }
+            tmp.forEach { yield(it.second) }
             ctr = 0
             buffer.clear()
         }
@@ -36,11 +38,7 @@ class AggregateConceptInstanceToSingleEvent(
                         .add(ctr to component)
                     ctr++
                 }
-                is Trace -> {
-                    flushBuffer()
-                    yield(component)
-                }
-                is Log -> {
+                is Trace, is Log -> {
                     flushBuffer()
                     yield(component)
                 }
