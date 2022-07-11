@@ -337,10 +337,12 @@ class PetriNet(
         val result = ArrayList<Set<Transition>>()
         for (t in placeToFollowingTransition[start].orEmpty()) {
             if (t.isSilent) {
-                if (t !in visited)
+                if (t !in visited) {
+                    val visitedPlusT = visited + setOf(t)
                     Lists
-                        .cartesianProduct(t.outPlaces.map { forwardSearchInternal(it, visited + setOf(t)) })
+                        .cartesianProduct(t.outPlaces.map { forwardSearchInternal(it, visitedPlusT) })
                         .mapTo(result) { parts -> parts.flatMapTo(HashSet()) { it } }
+                }
             } else
                 result.add(setOf(t))
         }

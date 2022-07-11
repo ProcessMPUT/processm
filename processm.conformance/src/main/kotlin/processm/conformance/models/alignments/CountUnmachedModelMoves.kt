@@ -66,9 +66,8 @@ class CountUnmachedPetriNetMoves(val model: PetriNet) : CountUnmachedModelMoves 
     private fun following(place: Place): Set<Set<String>> {
         return followingCache.computeIfAbsent(place) { place ->
             val following = HashSet<Set<String>>()
-            for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.toList()
-                .sortedBy { it.size }) {
-                if (!following.any { subset -> set.containsAll(subset) })
+            for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.sortedBy { it.size }) {
+                if (following.none { subset -> set.containsAll(subset) })
                     following.add(set)
             }
             return@computeIfAbsent following
