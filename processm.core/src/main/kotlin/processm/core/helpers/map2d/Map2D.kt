@@ -113,4 +113,11 @@ interface Map2D<Row, Column, Value> {
      * The total number of items in this map.
      */
     val size: Int
+
+    /**
+     * All values stored in the map, in arbitrary order.
+     * A direct counterpart of [Map.values], although without the [Collection] interface to avoid unnecessary overhead
+     */
+    val values: Sequence<Value>
+        get() = rows.asSequence().flatMap { getRow(it).values.asSequence() }
 }

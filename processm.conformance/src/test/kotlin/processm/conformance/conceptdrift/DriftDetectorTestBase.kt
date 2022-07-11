@@ -8,7 +8,7 @@ import org.apache.commons.math3.random.RandomGenerator
 import org.junit.jupiter.api.Tag
 import processm.conformance.alignment
 import processm.conformance.models.alignments.Alignment
-import processm.core.helpers.Distribution
+import processm.core.helpers.stats.Distribution
 import processm.core.log.Helpers.assertDoubleEquals
 import kotlin.math.sqrt
 import kotlin.test.Test

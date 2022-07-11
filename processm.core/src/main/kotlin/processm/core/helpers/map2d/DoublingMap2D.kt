@@ -156,4 +156,7 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
             setLength(length - 1)
         append('}')
     }
+
+    override val values: Sequence<Value>
+        get() = rcv.values.asSequence().flatMap { it.values }
 }

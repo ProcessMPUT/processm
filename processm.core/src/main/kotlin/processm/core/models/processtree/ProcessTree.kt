@@ -2,11 +2,14 @@ package processm.core.models.processtree
 
 import processm.core.helpers.mapToArray
 import processm.core.models.commons.ProcessModel
+import processm.core.models.metadata.DefaultMutableMetadataHandler
+import processm.core.models.metadata.MetadataHandler
 
 /**
  * Process Tree model with `root` reference
  */
-class ProcessTree(root: Node? = null) : ProcessModel {
+class ProcessTree(root: Node? = null, private val metadataHandler: MetadataHandler = DefaultMutableMetadataHandler()) :
+    ProcessModel, MetadataHandler by metadataHandler {
     companion object {
         /**
          * Parses the prefix notation of the process tree into [ProcessTree].

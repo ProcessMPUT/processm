@@ -1,7 +1,7 @@
 package processm.core.models.metadata
 
-interface MetadataProvider {
+interface MetadataProvider : Map<MetadataSubject, MetadataValue> {
     val name: URN
     operator fun contains(a: MetadataSubject): Boolean
-    fun get(a: MetadataSubject): MetadataValue
+    override fun get(key: MetadataSubject): MetadataValue
 }

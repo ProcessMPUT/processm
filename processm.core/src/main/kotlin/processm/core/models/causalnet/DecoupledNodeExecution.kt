@@ -2,9 +2,10 @@ package processm.core.models.causalnet
 
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ActivityExecution
+import java.util.*
 
 /**
- * Represents the possiblity of executing [activity] using [join] and [split]
+ * Represents the possibility of executing [activity] using [join] and [split]
  */
 open class DecoupledNodeExecution(
     override val activity: Node,
@@ -20,6 +21,11 @@ open class DecoupledNodeExecution(
 
     override val isArtificial: Boolean
         get() = activity.isArtificial
+
+    override fun equals(obj: Any?): Boolean =
+        obj is DecoupledNodeExecution && activity == obj.activity && join == obj.join && split == obj.split
+
+    override fun hashCode(): Int = Objects.hash(activity, join, split)
 
     override fun execute() {
         throw UnsupportedOperationException()

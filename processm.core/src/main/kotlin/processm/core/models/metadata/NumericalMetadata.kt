@@ -1,14 +1,12 @@
 package processm.core.models.metadata
 
+import processm.core.helpers.stats.DescriptiveStatistics
+
 
 /**
  * Numerical metadata (aka statistic), offering average, median, min, max and histogram
  */
-interface NumericalMetadata<T : Number, TAvg : Number> : MetadataValue {
+interface NumericalMetadata<T : Number, TAvg : Number> : MetadataValue, DescriptiveStatistics<T, TAvg> {
 
-    val mean: TAvg
-    val median: TAvg
-    val min: T
-    val max: T
     val histogram: Map<T, Int>
 }
