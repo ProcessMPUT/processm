@@ -5,6 +5,7 @@ import processm.core.helpers.optimize
 import processm.core.models.commons.*
 import processm.core.models.commons.DecisionPoint
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Represents the Petri net.
@@ -346,7 +347,7 @@ class PetriNet(
         return result
     }
 
-    private val forwardSearchCache = HashMap<Place, List<Set<Transition>>>()
+    private val forwardSearchCache = ConcurrentHashMap<Place, List<Set<Transition>>>()
 
     /**
      * Returns sets of transitions that can be executed for a single token in [start].
