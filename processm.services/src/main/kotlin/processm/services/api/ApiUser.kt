@@ -1,8 +1,8 @@
 package processm.services.api
 
 import com.auth0.jwt.interfaces.Claim
-import io.ktor.auth.Principal
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
+import io.ktor.server.auth.*
 import processm.services.api.models.OrganizationRole
 import java.util.*
 

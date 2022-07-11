@@ -1,5 +1,6 @@
 package processm.experimental.etl.flink.artemis
 
+import jakarta.jms.*
 import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
@@ -9,7 +10,6 @@ import processm.core.logging.logger
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.jms.*
 import javax.naming.InitialContext
 import kotlin.reflect.KClass
 

@@ -7,7 +7,7 @@ import org.apache.commons.dbcp2.PoolingDataSource
 import org.apache.commons.pool2.ObjectPool
 import org.apache.commons.pool2.impl.GenericObjectPool
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManager
+import org.jetbrains.exposed.sql.DatabaseConfig
 import processm.core.persistence.connection.DatabaseChecker
 import java.sql.Connection
 import javax.management.ObjectName
@@ -76,7 +76,7 @@ class DBConnectionPool(databaseName: String) {
         // Prevent repeating the code inside transaction { }
         // The default in kotlin/exposed is to repeat 3 times before throwing an exception outside transaction.
         // If the transaction block has side effects, the default may lead to an undesirable state.
-        Database.connect(getDataStore(), manager = { db -> ThreadLocalTransactionManager(db, 1) })
+        Database.connect(getDataStore(), databaseConfig = DatabaseConfig.invoke { defaultRepetitionAttempts = 1 })
     }
 
     companion object {

@@ -14,9 +14,6 @@
 
     <properties>
         <flink.version>1.15.0</flink.version>
-        <!-- Some Flink dependencies have Scala-dependent version. The variable is for consistency, even though ProcessM does not use Scala -->
-        <scala.binary.version>2.12</scala.binary.version>
-        <debezium.version>1.5.2.Final</debezium.version>
     </properties>
 
     <artifactId>experimental</artifactId>

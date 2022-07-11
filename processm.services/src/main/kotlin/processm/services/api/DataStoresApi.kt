@@ -1,15 +1,15 @@
 package processm.services.api
 
 
-import io.ktor.application.*
-import io.ktor.auth.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.locations.*
-import io.ktor.locations.post
-import io.ktor.request.*
-import io.ktor.response.*
-import io.ktor.routing.Route
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.locations.*
+import io.ktor.server.locations.post
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.Route
 import org.antlr.v4.runtime.RecognitionException
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
@@ -279,10 +279,7 @@ fun Route.DataStoresApi() {
                         CaseNotion(
                             classes.toMap(),
                             relations.mapToArray { (sourceClass, targetClass) ->
-                                CaseNotionEdges(
-                                    "$sourceClass",
-                                    "$targetClass"
-                                )
+                                CaseNotionEdgesInner("$sourceClass", "$targetClass")
                             })
                     }
 
@@ -302,7 +299,9 @@ fun Route.DataStoresApi() {
             )
             val caseNotionWithAllClasses = CaseNotion(
                 classes.toMap(),
-                relations.mapToArray { (sourceClass, targetClass) -> CaseNotionEdges("$sourceClass", "$targetClass") })
+                relations.mapToArray { (sourceClass, targetClass) ->
+                    CaseNotionEdgesInner("$sourceClass", "$targetClass")
+                })
 
             call.respond(
                 HttpStatusCode.OK,
@@ -337,7 +336,12 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner, OrganizationRoleDto.Writer)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                pathParams.dataStoreId,
+                OrganizationRoleDto.Owner,
+                OrganizationRoleDto.Writer
+            )
             val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             if (etlProcessData.dataConnectorId == null) throw ApiException("A data connector reference is required")
@@ -368,19 +372,37 @@ fun Route.DataStoresApi() {
                 else -> throw ApiException("The provided ETL process type is not supported")
             }
 
-            call.respond(HttpStatusCode.Created,
-                EtlProcessMessageBody(AbstractEtlProcess(etlProcessId, etlProcessData.name, etlProcessData.dataConnectorId, type = etlProcessData.type)))
+            call.respond(
+                HttpStatusCode.Created,
+                EtlProcessMessageBody(
+                    AbstractEtlProcess(
+                        etlProcessId,
+                        etlProcessData.name,
+                        etlProcessData.dataConnectorId,
+                        type = etlProcessData.type
+                    )
+                )
+            )
         }
 
         patch<Paths.EtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner, OrganizationRoleDto.Writer)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                pathParams.dataStoreId,
+                OrganizationRoleDto.Owner,
+                OrganizationRoleDto.Writer
+            )
             val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             if (etlProcessData.isActive == null) throw ApiException("An activation status for ETL process is required")
-            dataStoreService.changeEtlProcessActivationState(pathParams.dataStoreId, pathParams.etlProcessId, etlProcessData.isActive)
+            dataStoreService.changeEtlProcessActivationState(
+                pathParams.dataStoreId,
+                pathParams.etlProcessId,
+                etlProcessData.isActive
+            )
 
             call.respond(HttpStatusCode.NoContent)
             call.respond(
@@ -438,12 +460,17 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            dataStoreService.assertUserHasSufficientPermissionToDataStore(principal.userId, pathParams.dataStoreId, OrganizationRoleDto.Owner, OrganizationRoleDto.Writer)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                pathParams.dataStoreId,
+                OrganizationRoleDto.Owner,
+                OrganizationRoleDto.Writer
+            )
             logsService.enqueueXesExtractionFromMetaModel(pathParams.dataStoreId, pathParams.etlProcessId)
 
             call.respond(HttpStatusCode.NoContent)
         }
-        
+
         post<Paths.SamplingEtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
@@ -481,7 +508,8 @@ fun Route.DataStoresApi() {
                         etlProcessData.dataConnectorId,
                         etlProcessData.isActive,
                         etlProcessData.lastExecutionTime,
-                        etlProcessData.type)
+                        etlProcessData.type
+                    )
                 )
             )
         }

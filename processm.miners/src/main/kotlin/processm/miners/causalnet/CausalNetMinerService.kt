@@ -1,5 +1,7 @@
 package processm.miners.causalnet
 
+import jakarta.jms.MapMessage
+import jakarta.jms.Message
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -16,8 +18,6 @@ import processm.dbmodels.models.*
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import java.time.Instant
 import java.util.*
-import javax.jms.MapMessage
-import javax.jms.Message
 
 class CausalNetMinerService : AbstractJobService(
     QUARTZ_CONFIG,

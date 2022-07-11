@@ -6,9 +6,8 @@ import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-import com.sun.xml.bind.v2.schemagen.episode.Klass
-import io.ktor.config.*
 import io.ktor.http.*
+import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.mockk.MockKAnnotations
 import io.mockk.every
@@ -54,7 +53,7 @@ abstract class BaseApiTest : KoinTest {
     fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
         // The resolved instances are cached, so every call to `declareMock` returns the same instance.
-        MockProvider.register { mockedClass ->  mocksMap.computeIfAbsent(mockedClass) { mockkClass(mockedClass) } }
+        MockProvider.register { mockedClass -> mocksMap.computeIfAbsent(mockedClass) { mockkClass(mockedClass) } }
     }
 
     @ParameterizedTest

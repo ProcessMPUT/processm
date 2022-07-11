@@ -1,10 +1,10 @@
 package processm.core.models.bpmn.converters
 
+import jakarta.xml.bind.JAXBElement
 import processm.core.models.bpmn.BPMNModel
 import processm.core.models.bpmn.jaxb.*
 import processm.core.models.causalnet.*
 import processm.core.models.causalnet.Node
-import javax.xml.bind.JAXBElement
 import javax.xml.namespace.QName
 
 /**

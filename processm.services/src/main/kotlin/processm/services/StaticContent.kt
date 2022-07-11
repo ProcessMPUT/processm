@@ -1,12 +1,9 @@
 package processm.services
 
-import io.ktor.application.Application
-import io.ktor.http.content.*
-import io.ktor.routing.routing
-import processm.core.logging.enter
-import processm.core.logging.exit
+import io.ktor.server.application.*
+import io.ktor.server.http.content.*
+import io.ktor.server.routing.*
 import processm.core.logging.loggedScope
-import processm.core.logging.logger
 import java.io.File
 
 fun Application.staticContentModule() {

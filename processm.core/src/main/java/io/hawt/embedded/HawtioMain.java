@@ -17,22 +17,18 @@
  */
 package io.hawt.embedded;
 
+import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.webapp.WebAppContext;
+
 import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.log.Slf4jLog;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.webapp.WebAppContext;
 
 /**
  * A simple way to run hawtio embedded inside a JVM by booting up a Jetty server
@@ -80,9 +76,10 @@ public class HawtioMain {
     }
 
     public void run(boolean join) throws Exception {
-        System.setProperty("org.eclipse.jetty.util.log.class", Slf4jLog.class.getName());
-        Slf4jLog log = new Slf4jLog("jetty");
-        Log.setLog(log);
+//        System.setProperty("org.eclipse.jetty.util.log.class", Slf4jLog.class.getName());
+//        Slf4jLog log = new Slf4jLog("jetty");
+//        Log.setLog(log);
+        var log = Log.getLogger("jetty");
 
         server = new Server(new InetSocketAddress(InetAddress.getByName(options.getHost()), options.getPort()));
 
@@ -137,7 +134,7 @@ public class HawtioMain {
         server.stop();
     }
 
-    private WebAppContext createHawtioWebapp(Server server, String scheme) {
+    private WebAppContext createHawtioWebapp(Server server, String scheme) throws IOException {
         WebAppContext webapp = new WebAppContext();
         webapp.setServer(server);
         webapp.setContextPath(options.getContextPath());
@@ -160,7 +157,7 @@ public class HawtioMain {
         String scheme = "http";
         if (null != options.getKeyStore()) {
             System.out.println("Configuring SSL");
-            SslContextFactory sslcontf = new SslContextFactory();
+            var sslcontf = new SslContextFactory.Server();
             HttpConfiguration httpconf = new HttpConfiguration();
             sslcontf.setKeyStorePath(options.getKeyStore());
             if (null != options.getKeyStorePass()) {
@@ -186,7 +183,7 @@ public class HawtioMain {
         return scheme;
     }
 
-    protected void findThirdPartyPlugins(Slf4jLog log, HandlerCollection handlers, File tempDir) {
+    protected void findThirdPartyPlugins(Logger log, HandlerCollection handlers, File tempDir) {
         File dir = new File(options.getPlugins());
         if (!dir.exists() || !dir.isDirectory()) {
             return;
@@ -203,7 +200,7 @@ public class HawtioMain {
                 war -> deployPlugin(war, log, handlers, tempDir));
     }
 
-    private void deployPlugin(File war, Slf4jLog log, HandlerCollection handlers, File tempDir) {
+    private void deployPlugin(File war, Logger log, HandlerCollection handlers, File tempDir) {
         String contextPath = resolveContextPath(war);
 
         WebAppContext plugin = new WebAppContext();

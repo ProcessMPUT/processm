@@ -102,10 +102,10 @@ internal class TranslatedQuery(
         sql.scopes.add(ScopeWithMetadata(scope, 0))
         with(sql.query) {
             // filter by trace id and log id if necessary
-            @Suppress("NON_EXHAUSTIVE_WHEN")
             when (scope) {
                 Scope.Event -> append(" WHERE e.trace_id=$traceId")
                 Scope.Trace -> append(" WHERE t.log_id=$logId")
+                Scope.Log -> Unit
             }
 
             if (pql.whereExpression == Expression.empty)
@@ -625,6 +625,7 @@ internal class TranslatedQuery(
         when (scope) {
             Scope.Event -> append(" WHERE e.trace_id=ANY(?)")
             Scope.Trace -> append(" WHERE t.log_id=ANY(?)")
+            Scope.Log -> Unit
         }
         if (scope != Scope.Log)
             sql.params.add(outerScopeGroup!!)

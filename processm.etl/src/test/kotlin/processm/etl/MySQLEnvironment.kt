@@ -20,9 +20,7 @@ class MySQLEnvironment(
         private const val user = "root"
         private const val password = "sakila_password"
 
-        fun createContainer(): MySQLContainer<*> {
-            return MySQLContainer<MySQLContainer<*>>("mysql:8.0.26")
-        }
+        fun createContainer(): MySQLContainer<*> = MySQLContainer("mysql:8.0.26")
 
         private val sharedContainerDelegate = lazy {
             val container = createContainer()

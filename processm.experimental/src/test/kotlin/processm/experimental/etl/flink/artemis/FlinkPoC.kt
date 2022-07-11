@@ -56,7 +56,7 @@ class FlinkPoC {
         val password = UUID.randomUUID().toString()
         val imageName = DockerImageName.parse("debezium/postgres:11")
             .asCompatibleSubstituteFor("postgres")
-        val postgresContainer = PostgreSQLContainer<PostgreSQLContainer<*>>(imageName)
+        val postgresContainer = PostgreSQLContainer(imageName)
             .withDatabaseName("postgres")
             .withUsername("postgres")
             .withEnv("POSTGRES_PASSWORD", password)

@@ -48,28 +48,35 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <kotlin.version>1.5.21</kotlin.version>
-        <kotlinx.coroutines.version>1.5.0</kotlinx.coroutines.version>
-        <kotlinx.serialization.version>1.3.2</kotlinx.serialization.version>
-        <org.jetbrains.exposed.version>0.34.2</org.jetbrains.exposed.version>
+        <kotlin.version>1.7.0</kotlin.version>
+        <kotlinx.coroutines.version>1.6.3</kotlinx.coroutines.version>
+        <kotlinx.serialization.version>1.3.3</kotlinx.serialization.version>
+        <org.jetbrains.exposed.version>0.38.2</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
         <junit.jupiter.version>5.8.2</junit.jupiter.version>
-        <mockk.version>1.12.2</mockk.version>
-        <antlr4.version>4.9.2</antlr4.version>
-        <com.github.ben-manes.caffeine.version>2.8.5</com.github.ben-manes.caffeine.version>
+        <mockk.version>1.12.4</mockk.version>
+        <!-- cannot update ANTLR4 because of the version conflict with spark-catalyst and the runtime version check in ANTLR4 lib -->
+        <antlr4.version>4.8-1</antlr4.version>
+        <com.github.ben-manes.caffeine.version>3.1.1</com.github.ben-manes.caffeine.version>
         <org.apache.commons.commonsDbcp2.version>2.9.0</org.apache.commons.commonsDbcp2.version>
         <!-- version 42.2.15 causes strange exceptions: org.postgresql.util.PSQLException: ERROR: invalid input syntax for type bigint: "[J@53ec2968"-->
-        <org.postgresql.version>42.2.14</org.postgresql.version>
-        <mysql.mysql-connector-java.version>8.0.21</mysql.mysql-connector-java.version>
-        <com.microsoft.sqlserver.version>9.2.0.jre11</com.microsoft.sqlserver.version>
-        <com.oracle.database.jdbc.version>21.1.0.0</com.oracle.database.jdbc.version>
-        <com.ibm.db2.version>11.5.6.0</com.ibm.db2.version>
-        <maven.dependency.plugin.version>3.2.0</maven.dependency.plugin.version>
-        <testcontainers.version>1.16.0</testcontainers.version>
+        <org.postgresql.version>42.4.0</org.postgresql.version>
+        <mysql.mysql-connector-java.version>8.0.29</mysql.mysql-connector-java.version>
+        <com.microsoft.sqlserver.version>10.2.1.jre11</com.microsoft.sqlserver.version>
+        <com.oracle.database.jdbc.version>21.6.0.0.1</com.oracle.database.jdbc.version>
+        <com.ibm.db2.version>11.5.7.0</com.ibm.db2.version>
+        <maven.dependency.plugin.version>3.3.0</maven.dependency.plugin.version>
+        <maven.jar.plugin.version>3.2.2</maven.jar.plugin.version>
+        <maven.shade.plugin.version>3.3.0</maven.shade.plugin.version>
+        <testcontainers.version>1.17.3</testcontainers.version>
         <org.apache.commons.math.version>3.6.1</org.apache.commons.math.version>
-        <io.fabric8.docker-maven-plugin.version>0.40.0</io.fabric8.docker-maven-plugin.version>
-        <pooled-jms.version>2.0.5</pooled-jms.version>
+        <io.fabric8.docker-maven-plugin.version>0.40.1</io.fabric8.docker-maven-plugin.version>
+        <pooled-jms.version>3.0.0</pooled-jms.version>
         <org.slf4j.version>1.7.36</org.slf4j.version>
+        <debezium.version>1.9.4.Final</debezium.version>
+        <logback-classic.version>1.2.11</logback-classic.version>
+        <!-- Some Spark and Flink dependencies have Scala-dependent version. The variable is for consistency, even though ProcessM does not use Scala -->
+        <scala.binary.version>2.12</scala.binary.version>
 
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
@@ -245,7 +252,7 @@
             <plugin>
                 <groupId>org.jetbrains.dokka</groupId>
                 <artifactId>dokka-maven-plugin</artifactId>
-                <version>0.10.0</version>
+                <version>${kotlin.version}</version>
                 <executions>
                     <execution>
                         <phase>pre-site</phase>
@@ -255,11 +262,13 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <sourceRoots>
-                        <root>
-                            <path>${project.basedir}/src/main/kotlin</path>
-                        </root>
-                    </sourceRoots>
+                    <dokkaPlugins>
+                        <plugin>
+                            <groupId>org.jetbrains.dokka</groupId>
+                            <artifactId>kotlin-as-java-plugin</artifactId>
+                            <version>${kotlin.version}</version>
+                        </plugin>
+                    </dokkaPlugins>
                 </configuration>
             </plugin>
             <plugin>

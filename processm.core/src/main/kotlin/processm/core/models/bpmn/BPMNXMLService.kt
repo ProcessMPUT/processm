@@ -1,5 +1,8 @@
 package processm.core.models.bpmn
 
+import jakarta.xml.bind.JAXBContext
+import jakarta.xml.bind.JAXBElement
+import jakarta.xml.bind.UnmarshallerHandler
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.AttributesImpl
 import processm.core.models.bpmn.jaxb.ObjectFactory
@@ -7,15 +10,11 @@ import processm.core.models.bpmn.jaxb.TDefinitions
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
-import javax.xml.bind.JAXBContext
-import javax.xml.bind.JAXBElement
-import javax.xml.bind.UnmarshallerHandler
 import javax.xml.namespace.QName
 import javax.xml.stream.XMLEventReader
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLOutputFactory
 import javax.xml.stream.events.*
-import kotlin.collections.ArrayList
 
 
 /**

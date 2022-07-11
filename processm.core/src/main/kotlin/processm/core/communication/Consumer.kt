@@ -1,10 +1,10 @@
 package processm.core.communication
 
+import jakarta.jms.*
 import processm.core.esb.getTopicConnectionFactory
 import processm.core.logging.loggedScope
 import java.io.Closeable
 import java.util.*
-import javax.jms.*
 import javax.naming.InitialContext
 import kotlin.concurrent.schedule
 

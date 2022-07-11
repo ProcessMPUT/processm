@@ -1,15 +1,15 @@
 package processm.experimental.etl.flink.artemis
 
+import jakarta.jms.Session
+import jakarta.jms.TopicConnection
+import jakarta.jms.TopicPublisher
+import jakarta.jms.TopicSession
 import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
-import javax.jms.Session
-import javax.jms.TopicConnection
-import javax.jms.TopicPublisher
-import javax.jms.TopicSession
 import javax.naming.InitialContext
 import kotlin.reflect.KClass
 

@@ -12,9 +12,9 @@ import kotlin.test.assertTrue
 class BPMNModelTest {
 
     val a40export =
-        BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.4.0-export.bpmn").inputStream())
+        BPMNModel.fromXML(javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.4.0-export.bpmn")!!)
     val c10export =
-        BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/C.1.0-export.bpmn").inputStream())
+        BPMNModel.fromXML(javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/C.1.0-export.bpmn")!!)
 
     @Test
     fun `bpmnio A40-export activities`() {
@@ -55,7 +55,7 @@ class BPMNModelTest {
     @Test
     fun `bpmnio A20-export gateways`() {
         val dps =
-            BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.0-export.bpmn").inputStream()).decisionPoints
+            BPMNModel.fromXML(javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.0-export.bpmn")!!).decisionPoints
         assertEquals(8, dps.count())
         assertEquals(3, dps.filter { it.isRealDecision }.single().possibleOutcomes.size)
     }
@@ -63,7 +63,7 @@ class BPMNModelTest {
     @Test
     fun `bpmnio A21-export gateways`() {
         val dps =
-            BPMNModel.fromXML(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.1-export.bpmn").inputStream()).decisionPoints
+            BPMNModel.fromXML(javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.1-export.bpmn")!!).decisionPoints
         assertEquals(8, dps.count())
         assertEquals(3, dps.filter { it.isRealDecision }.single().possibleOutcomes.size)
     }

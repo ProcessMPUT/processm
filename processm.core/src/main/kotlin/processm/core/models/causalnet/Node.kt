@@ -15,6 +15,7 @@ import java.util.*
 data class Node(
     val activity: String,
     val instanceId: String = "",
+    @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
     override val isArtificial: Boolean = false,
     override val isSilent: Boolean = isArtificial
 ) : MetadataSubject,

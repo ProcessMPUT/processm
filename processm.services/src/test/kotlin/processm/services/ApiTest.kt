@@ -1,11 +1,10 @@
 package processm.services
 
-import io.ktor.config.*
 import io.ktor.http.*
-import io.ktor.locations.*
+import io.ktor.server.config.*
 import io.ktor.server.testing.*
-import io.ktor.util.*
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class ApiTest {
     @Test

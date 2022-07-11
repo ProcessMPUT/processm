@@ -6,7 +6,7 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.locations.*
+import io.ktor.server.locations.*
 import kotlinx.coroutines.runBlocking
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
@@ -22,7 +22,7 @@ import java.util.concurrent.ForkJoinPool
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
-@OptIn(KtorExperimentalLocationsAPI::class)
+@KtorExperimentalLocationsAPI
 class ProcessMTestingEnvironment {
 
     var jdbcUrl: String? = null
@@ -44,7 +44,7 @@ class ProcessMTestingEnvironment {
             //TODO investigate - it seems that if user != "postgres" processm.core.persistence.Migrator.ensureDatabaseExists fails while creating a new datastore
             val user = "postgres"
             val password = "postgres"
-            val container = PostgreSQLContainer<PostgreSQLContainer<*>>(image)
+            val container = PostgreSQLContainer(image)
                 .withDatabaseName("postgres")
                 .withUsername(user)
                 .withPassword(password)
@@ -154,8 +154,10 @@ class ProcessMTestingEnvironment {
         block: suspend HttpResponse.() -> R
     ): R =
         runBlocking {
-            HttpClient(CIO).use { client ->
-                val response = client.get<HttpResponse>(apiUrl(endpoint)) {
+            HttpClient(CIO) {
+                expectSuccess = true
+            }.use { client ->
+                val response = client.get(apiUrl(endpoint)) {
                     token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
                     if (prepare !== null)
                         prepare()
@@ -170,7 +172,7 @@ class ProcessMTestingEnvironment {
     ): R =
         runBlocking {
             HttpClient(CIO).use { client ->
-                val response = client.delete<HttpResponse>(apiUrl(endpoint)) {
+                val response = client.delete(apiUrl(endpoint)) {
                     token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
                 }
                 return@runBlocking response.block()
@@ -187,11 +189,11 @@ class ProcessMTestingEnvironment {
     fun <T, R> post(endpoint: String, data: T?, block: suspend HttpResponse.() -> R): R =
         runBlocking {
             HttpClient(CIO).use { client ->
-                val response = client.post<HttpResponse>(apiUrl(endpoint)) {
+                val response = client.post(apiUrl(endpoint)) {
                     token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
                     if (data !== null) {
                         contentType(ContentType.Application.Json)
-                        body = Gson().toJson(data)
+                        setBody(Gson().toJson(data))
                     }
                 }
                 return@runBlocking response.block()

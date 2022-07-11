@@ -5,7 +5,7 @@ import schemacrawler.inclusionrule.RegularExpressionInclusionRule
 import schemacrawler.schema.Table
 import schemacrawler.schema.View
 import schemacrawler.schemacrawler.*
-import schemacrawler.utility.SchemaCrawlerUtility
+import schemacrawler.tools.utility.SchemaCrawlerUtility
 import java.sql.Connection
 
 class SchemaCrawlerExplorer(private val connection: Connection, schema: String? = null) : DatabaseExplorer {
@@ -18,10 +18,9 @@ class SchemaCrawlerExplorer(private val connection: Connection, schema: String? 
         val loadOptionsBuilder: LoadOptionsBuilder = LoadOptionsBuilder.builder()
             .withSchemaInfoLevel(SchemaInfoLevelBuilder.standard())
 
-        options = SchemaCrawlerOptionsBuilder.builder()
+        options = SchemaCrawlerOptionsBuilder.newSchemaCrawlerOptions()
             .withLimitOptions(limitOptionsBuilder.toOptions())
             .withLoadOptions(loadOptionsBuilder.toOptions())
-            .toOptions()
     }
 
     override fun getClasses(): Set<Class> {
