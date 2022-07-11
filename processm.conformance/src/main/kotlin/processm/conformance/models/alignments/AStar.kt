@@ -26,10 +26,10 @@ import java.util.*
 class AStar(
     override val model: ProcessModel,
     override val penalty: PenaltyFunction = PenaltyFunction(),
-    val countUnmachedModelMoves: CountUnmachedModelMoves? =
+    val countUnmatchedModelMoves: CountUnmatchedModelMoves? =
         when (model) {
-            is PetriNet -> CountUnmachedPetriNetMoves(model)
-            is CausalNet -> CountUnmachedCausalNetMoves(model)
+            is PetriNet -> CountUnmatchedPetriNetMoves(model)
+            is CausalNet -> CountUnmatchedCausalNetMoves(model)
             else -> null
         }
 ) : Aligner {
@@ -78,7 +78,7 @@ class AStar(
                 nEvents.add(HashMap(tmp))
             }
             this.nEvents = nEvents.asReversed()
-            countUnmachedModelMoves?.reset()
+            countUnmatchedModelMoves?.reset()
         }
         val thread = Thread.currentThread()
         val queue = PriorityQueue<SearchState>()
@@ -334,7 +334,7 @@ class AStar(
         val unmachedModelMovesCount = if (prevProcessState == null)
             0
         else
-            countUnmachedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
+            countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
 
         // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
         sum += (unmachedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
