@@ -1,6 +1,9 @@
 package processm.miners.causalnet.onlineminer
 
 import org.apache.commons.math3.fraction.BigFraction
+import processm.core.helpers.Distribution
+import kotlin.math.pow
+import kotlin.math.sqrt
 import kotlin.system.measureNanoTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,18 +33,34 @@ class BigFractionHelpersTest {
         val values = List(30) { 1 shl it }
         val nReps = 100
         System.gc()
-        val naiveTime = measureNanoTime {
-            repeat(nReps) {
+        val naiveTime = Distribution((1..nReps).map {
+            measureNanoTime {
                 var expected = BigFraction.ZERO
                 for (v in values)
                     expected += BigFraction(1, v)
-            }
-        }
-        val sumOfReciprocalsTime = measureNanoTime {
-            repeat(nReps) {
+            }.toDouble()
+        })
+
+        val sumOfReciprocalsTime = Distribution((1..nReps).map {
+            measureNanoTime {
                 sumOfReciprocals(values)
-            }
-        }
-        assertTrue("sumOfReciprocalsTime: $sumOfReciprocalsTime; naiveTime: $naiveTime") { sumOfReciprocalsTime <= naiveTime }
+            }.toDouble()
+        })
+
+        // perform one-tailed unpaired t-test for the means of two populations
+        // see https://en.wikipedia.org/wiki/Student%27s_t-test#Independent_two-sample_t-test
+        // H0: avg(naiveTime) = avg(sumOfRep...)
+        // H1: avg(naiveTime) > avg(sumOfRep...)
+        // alpha = 0.05
+        // df = 2 * nReps - 2
+        val sp = sqrt(0.5 * (naiveTime.standardDeviation.pow(2) + sumOfReciprocalsTime.standardDeviation.pow(2)))
+        val t = (sumOfReciprocalsTime.average - naiveTime.average) / (sp * sqrt(2.0 / nReps))
+        val df = 2 * nReps - 2
+        assertEquals(198, df) // this must be consistent with nReps above, as we use tcrit from tables
+        val tcrit = 1.652585784
+
+        if (t > 0)
+            println(t)
+        assertTrue("sumOfReciprocalsTime: $sumOfReciprocalsTime; naiveTime: $naiveTime") { t <= tcrit }
     }
 }
