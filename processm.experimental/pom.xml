@@ -48,6 +48,7 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
@@ -127,6 +128,7 @@
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-cep</artifactId>
             <version>${flink.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.debezium</groupId>
