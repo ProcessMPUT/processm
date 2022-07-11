@@ -43,7 +43,11 @@ class AStar(
     private val endActivities: Set<String?> =
         model.endActivities.mapNotNullTo(HashSet()) { if (it.isSilent) null else it.name }
 
-    var visitedStatesCount: Int = 0
+    /**
+     * Statistics for tests only.
+     */
+    @Deprecated("This property is not thread safe and concurrent runs of align() may yield unpredictable results. Do not use, except in the single-threaded tests.")
+    internal var visitedStatesCount: Int = 0
         private set
 
     /**
