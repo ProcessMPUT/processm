@@ -76,9 +76,6 @@ public class HawtioMain {
     }
 
     public void run(boolean join) throws Exception {
-//        System.setProperty("org.eclipse.jetty.util.log.class", Slf4jLog.class.getName());
-//        Slf4jLog log = new Slf4jLog("jetty");
-//        Log.setLog(log);
         var log = Log.getLogger("jetty");
 
         server = new Server(new InetSocketAddress(InetAddress.getByName(options.getHost()), options.getPort()));

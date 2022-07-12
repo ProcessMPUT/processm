@@ -30,7 +30,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.activemq</groupId>
-            <!-- consider replacing with artemis-server or artemis-jms-server or artemis-jakarta-server -->
             <artifactId>artemis-jakarta-server</artifactId>
             <version>2.23.1</version>
             <exclusions>
@@ -53,12 +52,6 @@
                     <groupId>javax.servlet</groupId>
                     <artifactId>servlet-api</artifactId>
                 </exclusion>
-                <!-- conflicting JMS client implementation -->
-                <!-- <exclusion>
-                    <groupId>org.apache.activemq</groupId>
-                    <artifactId>artemis-jms-client-all</artifactId>
-                </exclusion>
-                -->
             </exclusions>
         </dependency>
         <dependency>
@@ -149,13 +142,6 @@
             <artifactId>jakarta.xml.bind-api</artifactId>
             <version>${jaxb.version}</version>
         </dependency>
-        <!--
-        <dependency>
-            <groupId>org.glassfish.jaxb</groupId>
-            <artifactId>jaxb-runtime</artifactId>
-            <version>${jaxb.version}</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-impl</artifactId>

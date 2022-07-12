@@ -23,8 +23,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <!-- I wanted to use 3.2.1, but it had some issues with a missing method in Netty, dunno why exactly -->
-            <!-- FIXME: There is dependency conflict with Artemis w.r.t. the version of netty-all. -->
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_${scala.binary.version}</artifactId>
             <version>3.3.0</version>
