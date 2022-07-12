@@ -7,6 +7,11 @@ import processm.core.models.processtree.ProcessTree
  */
 object ProcessTrees {
     /**
+     * The process tree without nodes.
+     */
+    val empty = ProcessTree()
+
+    /**
      * A process tree from Fig. 7.27 in the Process Mining: Data Science in Action book.
      */
     val fig727 = ProcessTree.parse("→(A,⟲(→(∧(×(B,C),D),E),F),×(G,H))")
@@ -28,4 +33,9 @@ object ProcessTrees {
     val parallelFlowers = ProcessTree.parse("∧(⟲(τ,A,C,E,G,I,K,M,O,Q,S,U,W,Y),⟲(τ,B,D,F,H,J,L,N,P,R,T,V,X,Z))")
 
     val parallelDecisionsInLoop = ProcessTree.parse("⟲(∧(×(A,C,E,G,I,K,M,O,Q,S,U,W,Y),×(B,D,F,H,J,L,N,P,R,T,V,X,Z)),τ)")
+
+    /**
+     * A process tree implementing a sequence of two "a" activities.
+     */
+    val duplicateA = ProcessTree.parse("→(a,a)")
 }
