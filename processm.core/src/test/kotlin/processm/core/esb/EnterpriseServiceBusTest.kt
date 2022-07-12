@@ -175,10 +175,10 @@ class EnterpriseServiceBusTest {
 
     @Test
     fun autoRegisterTest() {
-        // Verify whether it automatically detected standard services like Artemis
-        val esb = EnterpriseServiceBus()
+        // Verify whether it automatically detected standard services like Artemis and Hawtio
         esb.autoRegister()
         assertTrue(esb.services.any { it is Artemis })
+        assertTrue(esb.services.any { it is Hawtio })
     }
 }
 

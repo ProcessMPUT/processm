@@ -17,10 +17,10 @@
     <name>ProcessM Services</name>
 
     <properties>
-        <ktor.version>1.6.1</ktor.version>
-        <openapi-tools.version>5.3.0</openapi-tools.version>
-        <swagger-ui.version>3.51.2</swagger-ui.version>
-        <koin.version>3.1.5</koin.version>
+        <ktor.version>2.0.3</ktor.version>
+        <openapi-tools.version>6.0.1</openapi-tools.version>
+        <swagger-ui.version>4.12.0</swagger-ui.version>
+        <koin.version>3.2.0</koin.version>
         <jargon2.version>1.1.1</jargon2.version>
         <openapi.specfile>api-spec.yaml</openapi.specfile>
     </properties>
@@ -68,6 +68,7 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- TODO: remove kotlin-maven-plugin; compiler configuration should be inherited -->
             <plugin>
                 <artifactId>kotlin-maven-plugin</artifactId>
                 <groupId>org.jetbrains.kotlin</groupId>
@@ -128,7 +129,9 @@
                             <outputDirectory>${project.build.directory}/swagger-ui</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${project.build.directory}/swagger-ui/META-INF/resources/webjars/swagger-ui-dist/${swagger-ui.version}</directory>
+                                    <directory>
+                                        ${project.build.directory}/swagger-ui/META-INF/resources/webjars/swagger-ui-dist/${swagger-ui.version}
+                                    </directory>
                                     <filtering>false</filtering>
                                 </resource>
                             </resources>
@@ -166,69 +169,43 @@
 
     <dependencies>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>dbmodels</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>core</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>miners</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>webui</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>processm</groupId>
+            <groupId>${project.parent.groupId}</groupId>
             <artifactId>etl</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-server-core</artifactId>
-            <version>${ktor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-server-netty</artifactId>
-            <version>${ktor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-network-tls-certificates</artifactId>
-            <version>${ktor.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-client</artifactId>
-            <version>${ktor.version}</version>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>core</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-client-apache</artifactId>
-            <version>${ktor.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-server-test-host</artifactId>
-            <version>${ktor.version}</version>
-            <scope>test</scope>
-        </dependency>
+
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.1.0</version>
+            <version>4.2.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -252,46 +229,135 @@
             <version>${org.jetbrains.exposed.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>openapi-generator</artifactId>
-            <version>${openapi-tools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>openapi-generator-maven-plugin</artifactId>
-            <version>${openapi-tools.version}</version>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.11.0</version>
         </dependency>
         <dependency>
             <groupId>org.webjars.npm</groupId>
             <artifactId>swagger-ui-dist</artifactId>
             <version>${swagger-ui.version}</version>
         </dependency>
+
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-auth</artifactId>
+            <artifactId>ktor-client</artifactId>
             <version>${ktor.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-locations</artifactId>
+            <artifactId>ktor-client-apache-jvm</artifactId>
             <version>${ktor.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-metrics</artifactId>
-            <version>${ktor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-gson</artifactId>
-            <version>${ktor.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.ktor</groupId>
-            <artifactId>ktor-auth-jwt</artifactId>
+            <artifactId>ktor-network-tls-certificates-jvm</artifactId>
             <version>${ktor.version}</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-serialization-gson-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-auth-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-auth-jwt-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-auto-head-response-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-compression-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-content-negotiation-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-core-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-data-conversion-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-default-headers-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-hsts-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-locations-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-metrics-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-netty-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-status-pages-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-test-host-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <scope>test</scope>
+            <!--
+            Maven cannot resolve the transitive dependency org.jetbrains.kotlinx:kotlinx-coroutines-bom:jar:1.6.2
+            of ktor-server-test-host-jvm:2.0.3. Thus, we exclude this dependency from resolution and instead provide it below.
+            -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jetbrains.kotlinx</groupId>
+                    <artifactId>kotlinx-coroutines-bom</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-bom</artifactId>
+            <version>${kotlinx.coroutines.version}</version>
+            <type>pom</type>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>io.insert-koin</groupId>
             <artifactId>koin-core</artifactId>
@@ -350,13 +416,6 @@
             <artifactId>jcc</artifactId>
             <version>${com.ibm.db2.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.parent.groupId}</groupId>
-            <artifactId>core</artifactId>
-            <version>${project.parent.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

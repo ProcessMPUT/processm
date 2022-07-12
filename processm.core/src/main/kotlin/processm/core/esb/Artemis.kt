@@ -1,10 +1,10 @@
 package processm.core.esb
 
+import jakarta.jms.TopicConnectionFactory
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
-import javax.jms.TopicConnectionFactory
 import javax.naming.Context
 
 /**

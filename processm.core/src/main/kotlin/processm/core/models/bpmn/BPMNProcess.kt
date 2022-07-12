@@ -1,9 +1,9 @@
 package processm.core.models.bpmn
 
+import jakarta.xml.bind.JAXBElement
 import processm.core.logging.logger
 import processm.core.models.bpmn.jaxb.*
 import java.util.*
-import javax.xml.bind.JAXBElement
 import javax.xml.namespace.QName
 
 internal inline fun hasId(node: BPMNFlowNode, qname: QName) = hasId(node.id, qname)

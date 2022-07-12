@@ -1,19 +1,13 @@
 package processm.services.api
 
-import io.ktor.application.call
-import io.ktor.auth.authenticate
-import io.ktor.auth.authentication
-import io.ktor.auth.parseAuthorizationHeader
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.auth.HttpAuthHeader
-import io.ktor.locations.KtorExperimentalLocationsAPI
-import io.ktor.locations.delete
-import io.ktor.locations.get
-import io.ktor.request.acceptLanguageItems
-import io.ktor.request.authorization
-import io.ktor.request.receiveOrNull
-import io.ktor.response.respond
-import io.ktor.routing.*
+import io.ktor.http.*
+import io.ktor.http.auth.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.locations.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.core.logging.loggedScope
 import processm.services.api.models.*
@@ -21,7 +15,6 @@ import processm.services.logic.AccountService
 import java.time.Duration
 import java.time.Instant
 
-@KtorExperimentalLocationsAPI
 fun Route.UsersApi() {
     val accountService by inject<AccountService>()
     val jwtIssuer = application.environment.config.property("ktor.jwt.issuer").getString()

@@ -5,9 +5,11 @@ import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import io.ktor.client.call.*
-import io.ktor.client.features.*
+import io.ktor.client.plugins.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.server.locations.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.assertThrows
 import processm.services.api.Paths
@@ -56,9 +58,10 @@ suspend inline fun <reified T> HttpResponse.deserialize(): T {
 
         override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
     })
-    return gsonBuilder.create().fromJson(receive<String>(), T::class.java)
+    return gsonBuilder.create().fromJson(body<String>(), T::class.java)
 }
 
+@OptIn(KtorExperimentalLocationsAPI::class)
 class IntegrationTests {
 
     @Test
@@ -98,7 +101,7 @@ class IntegrationTests {
 
             val info = runBlocking {
                 for (i in 0..10) {
-                    Thread.sleep(1000)
+                    delay(1000)
                     val info = get<Paths.EtlProcess, EtlProcessInfo> {
                         return@get deserialize<EtlProcessInfo>()
                     }
@@ -116,7 +119,9 @@ class IntegrationTests {
             }
 
             deleteCurrentEtlProcess()
-            assertThrows<ClientRequestException> { get<Paths.EtlProcess, Unit> {} }
+            assertThrows<ClientRequestException> {
+                get<Paths.EtlProcess, Unit> {}
+            }
         }
     }
 
@@ -197,7 +202,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                     }
                     if (info.lastExecutionTime !== null)
                         return@runBlocking info
-                    Thread.sleep(1000)
+                    delay(1000)
                 }
                 error("The ETL process was not executed in the prescribed amount of time")
             }
@@ -221,7 +226,9 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             deleteCurrentEtlProcess()
-            assertThrows<ClientRequestException> { get<Paths.EtlProcess, Unit> {} }
+            assertThrows<ClientRequestException> {
+                get<Paths.EtlProcess, Unit> {}
+            }
         }
     }
 

@@ -1,12 +1,12 @@
 package processm.etl.jdbc
 
+import jakarta.jms.Session
+import jakarta.jms.TopicConnection
+import jakarta.jms.TopicPublisher
+import jakarta.jms.TopicSession
 import org.jetbrains.exposed.sql.name
 import processm.core.esb.getTopicConnectionFactory
 import processm.dbmodels.etl.jdbc.*
-import javax.jms.Session
-import javax.jms.TopicConnection
-import javax.jms.TopicPublisher
-import javax.jms.TopicSession
 import javax.naming.InitialContext
 
 private val jmsContext = InitialContext()

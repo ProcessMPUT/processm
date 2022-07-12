@@ -1,5 +1,7 @@
 package processm.etl.jdbc
 
+import jakarta.jms.MapMessage
+import jakarta.jms.Message
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
@@ -15,8 +17,6 @@ import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStores
-import javax.jms.MapMessage
-import javax.jms.Message
 
 /**
  * A micro-service running the JDBC-based ETL processes. On [start] call it loads the ETL configurations from all

@@ -41,7 +41,7 @@ class LogKPIServiceTests {
         }
     }
 
-    fun createKPIComponent(_query: String = "select count(l:name)") {
+    fun createKPIComponent(_query: String = "select count(l:name) where l:name='JournalReview'") {
         transaction(DBCache.getMainDBPool().database) {
             WorkspaceComponent.new {
                 name = "test-kpi"
@@ -156,7 +156,7 @@ class LogKPIServiceTests {
                 val component = WorkspaceComponent.find {
                     (WorkspaceComponents.name eq "test-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
                 }.first()
-                component.query = "select count(^t:name)"
+                component.query = "select count(^t:name) where l:name='JournalReview'"
                 component
             }.triggerEvent(Producer())
 

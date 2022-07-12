@@ -11,7 +11,7 @@
  */
 package processm.services.api
 
-import io.ktor.locations.*
+import io.ktor.server.locations.*
 import java.util.*
 
 @KtorExperimentalLocationsAPI

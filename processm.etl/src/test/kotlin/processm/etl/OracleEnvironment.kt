@@ -5,9 +5,11 @@ import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.logging.logger
+import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import java.io.File
 import java.sql.Connection
+import java.util.*
 
 
 /**
@@ -44,7 +46,7 @@ class OracleEnvironment(
 ) : DBMSEnvironment<MyOracleContainer> {
     companion object {
 
-        private const val DEFAULT_USER = "SYSTEM"
+        private const val DEFAULT_USER = "C##processm"
         private const val DEFAULT_PASSWORD = "2e3e056f2c2bf71e"
 
         private val logger = logger()
@@ -53,6 +55,7 @@ class OracleEnvironment(
             val imageName = DockerImageName
                 .parse("processm/oracle:latest")
                 .asCompatibleSubstituteFor("container-registry.oracle.com/database/express:18.4.0-xe")
+                .asCompatibleSubstituteFor("gvenzl/oracle-xe")
             val container = MyOracleContainer(imageName)
             container
                 .withUsername(DEFAULT_USER)
@@ -62,14 +65,22 @@ class OracleEnvironment(
                 .withLogConsumer { frame ->
                     logger.info(frame?.utf8String?.trim())
                 }
+
+            Startables.deepStart(listOf(container)).join()
+            container.execInContainer(
+                "sh",
+                "-c",
+                """echo 'CREATE USER $DEFAULT_USER IDENTIFIED BY "$DEFAULT_PASSWORD" ;' | sqlplus 'SYS/$DEFAULT_PASSWORD@localhost:1521/xe AS SYSDBA'"""
+            )
+            container.execInContainer(
+                "sh",
+                "-c",
+                """echo 'GRANT ALL PRIVILEGES TO $DEFAULT_USER CONTAINER=all ;' | sqlplus 'SYS/$DEFAULT_PASSWORD@localhost:1521/xe AS SYSDBA'"""
+            )
             return container
         }
 
-        private val sharedContainerDelegate = lazy {
-            val container = createContainer()
-            Startables.deepStart(listOf(container)).join()
-            return@lazy container
-        }
+        private val sharedContainerDelegate = lazy { createContainer() }
         private val sharedContainer by sharedContainerDelegate
 
         private val sakilaEnv by lazy {
@@ -148,6 +159,12 @@ $sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oe
 
     override val jdbcUrl: String
         get() = container.withSid(sid).jdbcUrl
+
+    override val dataConnector: DataConnector
+        get() = DataConnector.new {
+            name = UUID.randomUUID().toString()
+            connectionProperties = jdbcUrl
+        }
 
     override fun close() {
         if (!sharedContainerDelegate.isInitialized() || container !== sharedContainer)

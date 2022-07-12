@@ -3,24 +3,28 @@ package processm.services
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-import io.ktor.application.*
-import io.ktor.auth.*
-import io.ktor.features.*
-import io.ktor.gson.*
 import io.ktor.http.*
-import io.ktor.locations.*
-import io.ktor.response.*
-import io.ktor.routing.*
+import io.ktor.serialization.gson.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.locations.*
+import io.ktor.server.plugins.autohead.*
+import io.ktor.server.plugins.compression.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.dataconversion.*
+import io.ktor.server.plugins.defaultheaders.*
+import io.ktor.server.plugins.hsts.*
+import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import org.koin.dsl.module
-import org.koin.ktor.ext.Koin
+import org.koin.ktor.plugin.Koin
 import processm.core.communication.Producer
 import processm.core.logging.loggedScope
 import processm.services.api.*
 import processm.services.logic.*
 import java.time.LocalDateTime
 
-@OptIn(ExperimentalStdlibApi::class)
-@KtorExperimentalLocationsAPI
 fun Application.apiModule() {
     loggedScope { logger ->
         logger.info("Starting API module")

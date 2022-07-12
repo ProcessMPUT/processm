@@ -431,7 +431,7 @@ OFFSET ?::bigint
             service.start()
 
             // simulate work
-            Thread.sleep(4000L)
+            Thread.sleep(3500L)
 
             logger.info("Disabling ETL process repeat")
             transaction(DBCache.get(dataStoreId).database) {
@@ -458,7 +458,7 @@ OFFSET ?::bigint
             }.notifyUsers()
 
             // wait for imports
-            Thread.sleep(4000L)
+            Thread.sleep(3500L)
 
         } finally {
             service.stop()
@@ -476,7 +476,7 @@ OFFSET ?::bigint
             assertEquals(1, stream.count())
             val log = stream.first()
             assertEquals(2, log.traces.count())
-            // this one should run twice in the time period of 5s
+            // this one should run twice in the time period of 7s
             assertEquals(4, log.traces.sumOf { it.events.count() })
         }
     }

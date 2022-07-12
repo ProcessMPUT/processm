@@ -18,7 +18,7 @@ class MSSQLEnvironment(
         private const val DOCKER_IMAGE = "mcr.microsoft.com/mssql/server:2019-CU12-ubuntu-20.04"
         private val logger = logger()
 
-        fun createContainer(): MSSQLServerContainer<*> = MSSQLServerContainer<MSSQLServerContainer<*>>(DOCKER_IMAGE)
+        fun createContainer(): MSSQLServerContainer<*> = MSSQLServerContainer(DOCKER_IMAGE)
             .withFileSystemBind(TEST_DATABASES_PATH.absolutePath, "/tmp/test-databases/", BindMode.READ_ONLY)
             .acceptLicense()
 

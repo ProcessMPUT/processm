@@ -1,21 +1,15 @@
 package processm.services.api
 
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
-import io.ktor.request.header
-import io.ktor.server.testing.handleRequest
+import io.ktor.http.*
+import io.ktor.server.request.*
+import io.ktor.server.testing.*
 import io.mockk.*
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.TestInstance
-import org.koin.core.component.inject
-import org.koin.dsl.module
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.*
 import processm.services.logic.AccountService
-import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
 import java.util.*
 import java.util.stream.Stream
@@ -150,7 +144,7 @@ class UsersApiTest : BaseApiTest() {
                 currentToken = request.header(HttpHeaders.Authorization)
             }
         }
-        var randomizedToken = StringBuilder(assertNotNull(currentToken))
+        val randomizedToken = StringBuilder(assertNotNull(currentToken))
 
         do {
             repeat(20) {

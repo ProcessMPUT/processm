@@ -7,6 +7,7 @@ import processm.core.models.commons.DecisionPoint
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Represents the Petri net.
@@ -52,7 +53,8 @@ class PetriNet(
 
             if (res.size > 1) {
                 val commonPlaces = res.flatMapTo(HashSet()) { t -> t.inPlaces }
-                val previousActivities = transitions.filterTo(HashSet()) { t -> t.outPlaces.any { commonPlaces.contains(it) } }
+                val previousActivities =
+                    transitions.filterTo(HashSet()) { t -> t.outPlaces.any { commonPlaces.contains(it) } }
                 yield(DecisionPoint(commonPlaces, res, previousActivities))
                 forbidden.add(res)
                 res = null
@@ -339,17 +341,19 @@ class PetriNet(
         val result = ArrayList<Set<Transition>>()
         for (t in placeToFollowingTransition[start].orEmpty()) {
             if (t.isSilent) {
-                if (t !in visited)
+                if (t !in visited) {
+                    val visitedPlusT = visited + setOf(t)
                     Lists
-                        .cartesianProduct(t.outPlaces.map { forwardSearchInternal(it, visited + setOf(t)) })
+                        .cartesianProduct(t.outPlaces.map { forwardSearchInternal(it, visitedPlusT) })
                         .mapTo(result) { parts -> parts.flatMapTo(HashSet()) { it } }
+                }
             } else
                 result.add(setOf(t))
         }
         return result
     }
 
-    private val forwardSearchCache = HashMap<Place, List<Set<Transition>>>()
+    private val forwardSearchCache = ConcurrentHashMap<Place, List<Set<Transition>>>()
 
     /**
      * Returns sets of transitions that can be executed for a single token in [start].

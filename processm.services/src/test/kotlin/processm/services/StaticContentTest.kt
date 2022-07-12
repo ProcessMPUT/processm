@@ -3,6 +3,7 @@ package processm.services
 import io.ktor.client.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import kotlinx.coroutines.runBlocking
 import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
@@ -45,8 +46,8 @@ class StaticContentTest {
                 }
             }
         }
-        val httpGetDoc = client.get<String>(baseURI)
-        val httpsGetDoc = client.get<String>(baseURIs)
+        val httpGetDoc = client.get(baseURI).bodyAsText()
+        val httpsGetDoc = client.get(baseURIs).bodyAsText()
 
         assertTrue(httpGetDoc.startsWith("<!DOCTYPE html>"))
         assertEquals(httpGetDoc, httpsGetDoc)

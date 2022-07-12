@@ -1,7 +1,7 @@
 package processm.experimental.etl.flink.artemis
 
+import jakarta.jms.*
 import processm.core.esb.getTopicConnectionFactory
-import javax.jms.*
 import javax.naming.NameNotFoundException
 
 object JMSUtils {

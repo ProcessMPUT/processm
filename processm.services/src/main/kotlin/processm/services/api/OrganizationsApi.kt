@@ -1,17 +1,11 @@
 package processm.services.api
 
-import io.ktor.application.call
-import io.ktor.auth.authenticate
-import io.ktor.auth.authentication
-import io.ktor.http.HttpStatusCode
-import io.ktor.locations.KtorExperimentalLocationsAPI
-import io.ktor.locations.delete
-import io.ktor.locations.get
-import io.ktor.response.respond
-import io.ktor.routing.Route
-import io.ktor.routing.post
-import io.ktor.routing.put
-import io.ktor.routing.route
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.locations.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.services.api.models.*
 import processm.services.logic.OrganizationService

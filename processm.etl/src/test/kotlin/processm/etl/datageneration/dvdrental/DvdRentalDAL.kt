@@ -1,9 +1,10 @@
 package processm.etl.datageneration.dvdrental
 
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.`java-time`.datetime
+import org.jetbrains.exposed.sql.javatime.datetime
 
 class DvdRentalDAL {
 
@@ -123,7 +124,7 @@ class DvdRentalDAL {
         // 1 keys.  Not present in object
     }
 
-    object FilmActors : IntIdTable("film_actor") {
+    object FilmActors : IdTable<Int>("film_actor") {
         // Database Columns
         val actorId = reference("user_id", Actors)
         val filmId = reference("user_group_id", Films)
@@ -133,7 +134,7 @@ class DvdRentalDAL {
         val lastUpdate = datetime("last_update")
     }
 
-    object FilmCategories : IntIdTable("film_category") {
+    object FilmCategories : IdTable<Int>("film_category") {
         // Database Columns
 
         val filmId = reference("film_id", Films)

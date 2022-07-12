@@ -1,9 +1,8 @@
 package processm.core.models.bpmn
 
+import jakarta.xml.bind.JAXBElement
 import org.junit.jupiter.api.Test
 import processm.core.models.bpmn.jaxb.*
-import java.io.File
-import javax.xml.bind.JAXBElement
 import javax.xml.namespace.QName
 import kotlin.test.Ignore
 import kotlin.test.assertFalse
@@ -268,26 +267,31 @@ class JaxbRecursiveComparerTest {
 
     @Test
     fun sameObjectFromFile() {
-        val a =
-            BPMNXMLService.loadStrict(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn").inputStream())
+        val a = BPMNXMLService.loadStrict(
+            javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn")!!
+        )
         assertTrue(JaxbRecursiveComparer()(a, a))
     }
 
     @Test
     fun sameFile() {
-        val a =
-            BPMNXMLService.loadStrict(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn").inputStream())
-        val b =
-            BPMNXMLService.loadStrict(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn").inputStream())
+        val a = BPMNXMLService.loadStrict(
+            javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn")!!
+        )
+        val b = BPMNXMLService.loadStrict(
+            javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn")!!
+        )
         assertTrue(JaxbRecursiveComparer()(a, b))
     }
 
     @Test
     fun differentFiles() {
-        val a =
-            BPMNXMLService.loadStrict(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn").inputStream())
-        val b =
-            BPMNXMLService.loadStrict(File("src/test/resources/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.0-export.bpmn").inputStream())
+        val a = BPMNXMLService.loadStrict(
+            javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.1.0-export.bpmn")!!
+        )
+        val b = BPMNXMLService.loadStrict(
+            javaClass.getResourceAsStream("/bpmn-miwg-test-suite/bpmn.io (Cawemo, Camunda Modeler) 1.12.0/A.2.0-export.bpmn")!!
+        )
         assertFalse(JaxbRecursiveComparer()(a, b))
     }
 

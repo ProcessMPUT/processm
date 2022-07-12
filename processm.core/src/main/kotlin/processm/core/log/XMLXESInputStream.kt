@@ -34,7 +34,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     private val nameMap = HashMapWithDefault<String, String>(false) { k -> k }
 
     override fun iterator(): Iterator<XESComponent> = sequence<XESComponent> {
-        val xmlInputFactory: XMLInputFactory = XMLInputFactory.newInstance()
+        val xmlInputFactory: XMLInputFactory = XMLInputFactory.newDefaultFactory()
         val reader = xmlInputFactory.createXMLStreamReader(input)
 
         while (reader.hasNext()) {

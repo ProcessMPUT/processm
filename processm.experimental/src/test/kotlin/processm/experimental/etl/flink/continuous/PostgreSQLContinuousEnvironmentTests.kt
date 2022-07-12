@@ -94,7 +94,7 @@ class PostgreSQLContinuousEnvironmentTests {
     private fun setUpPostgreSQL(): PostgreSQLContainer<*> {
         val imageName = DockerImageName.parse("debezium/postgres:12")
             .asCompatibleSubstituteFor("postgres")
-        val postgresContainer = PostgreSQLContainer<PostgreSQLContainer<*>>(imageName)
+        val postgresContainer = PostgreSQLContainer(imageName)
             .withDatabaseName(dbName)
             .withUsername(user)
             .withEnv("POSTGRES_PASSWORD", password)

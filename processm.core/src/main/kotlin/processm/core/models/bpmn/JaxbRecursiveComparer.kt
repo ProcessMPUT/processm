@@ -1,11 +1,11 @@
 package processm.core.models.bpmn
 
+import jakarta.xml.bind.JAXBElement
+import jakarta.xml.bind.annotation.*
 import org.w3c.dom.Element
 import processm.core.logging.logger
 import processm.core.models.bpmn.jaxb.TDefinitions
 import java.lang.reflect.Field
-import javax.xml.bind.JAXBElement
-import javax.xml.bind.annotation.*
 import javax.xml.namespace.QName
 
 /**

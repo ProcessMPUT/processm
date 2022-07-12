@@ -1,5 +1,7 @@
 package processm.enhancement.kpi
 
+import jakarta.jms.MapMessage
+import jakarta.jms.Message
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -16,8 +18,6 @@ import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import java.time.Instant
 import java.util.*
-import javax.jms.MapMessage
-import javax.jms.Message
 
 class AlignerKPIService : AbstractJobService(
     QUARTZ_CONFIG,

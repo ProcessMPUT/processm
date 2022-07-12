@@ -1,5 +1,6 @@
 package processm.etl.metamodel
 
+import jakarta.jms.MapMessage
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -18,7 +19,6 @@ import processm.dbmodels.models.*
 import processm.etl.tracker.DebeziumChangeTracker
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import javax.jms.MapMessage
 import kotlin.concurrent.schedule
 import kotlin.reflect.KClass
 

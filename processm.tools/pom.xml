@@ -34,7 +34,7 @@
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>9.2.0.jre11</version>
+            <version>${com.microsoft.sqlserver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -44,7 +44,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.5</version>
+            <version>${logback-classic.version}</version>
         </dependency>
     </dependencies>
 
@@ -53,7 +53,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>${maven.shade.plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>

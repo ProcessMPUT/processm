@@ -3,8 +3,8 @@ package processm.services.api
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.config.*
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
+import io.ktor.server.config.*
 import processm.services.api.models.OrganizationRole
 import java.security.SecureRandom
 import java.time.Duration

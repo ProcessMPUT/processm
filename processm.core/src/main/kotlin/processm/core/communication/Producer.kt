@@ -1,9 +1,9 @@
 package processm.core.communication
 
+import jakarta.jms.MapMessage
+import jakarta.jms.Session
 import org.messaginghub.pooled.jms.JmsPoolConnectionFactory
 import processm.core.esb.getTopicConnectionFactory
-import javax.jms.MapMessage
-import javax.jms.Session
 import javax.naming.InitialContext
 
 /**
@@ -14,8 +14,8 @@ class Producer {
         // check https://github.com/messaginghub/pooled-jms/blob/main/pooled-jms-docs/Configuration.md for detailed description
         private const val maxConnections = 1
         private const val connectionIdleTimeout = 30
-        private const val connectionCheckInterval: Long =  0 // no check
-        private const val useProviderJMSContext  = false // no check
+        private const val connectionCheckInterval: Long = 0L // no check
+        private const val useProviderJMSContext = false // no check
 
         private val jmsPoolingFactory = JmsPoolConnectionFactory()
         private val jmsContext = InitialContext()

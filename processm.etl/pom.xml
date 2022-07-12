@@ -17,8 +17,7 @@
     <name>ProcessM ETL</name>
 
     <properties>
-        <schemacrawler.version>16.9.5</schemacrawler.version>
-        <debezium.version>1.5.2.Final</debezium.version>
+        <schemacrawler.version>16.16.18</schemacrawler.version>
     </properties>
 
     <dependencies>
@@ -109,7 +108,7 @@
         <dependency>
             <groupId>org.jgrapht</groupId>
             <artifactId>jgrapht-core</artifactId>
-            <version>1.5.0</version>
+            <version>1.5.1</version>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -204,7 +203,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
+                <version>${maven.jar.plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>

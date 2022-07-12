@@ -13,7 +13,7 @@ import kotlin.math.max
 /**
  * A base interface for counting necessary skip moves in the log
  */
-interface CountUnmachedModelMoves {
+interface CountUnmatchedModelMoves {
     /**
      * Called before each new trace
      */
@@ -27,9 +27,9 @@ interface CountUnmachedModelMoves {
 }
 
 /**
- * [CountUnmachedModelMoves] for [CausalNet]s
+ * [CountUnmatchedModelMoves] for [CausalNet]s
  */
-class CountUnmachedCausalNetMoves(val model: CausalNet) : CountUnmachedModelMoves {
+class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMoves {
     override fun compute(startIndex: Int, nEvents: List<Map<String?, Int>>, prevProcessState: ProcessModelState): Int {
         prevProcessState as CausalNetState
         val nEvents = nEvents[startIndex]
@@ -55,9 +55,9 @@ class CountUnmachedCausalNetMoves(val model: CausalNet) : CountUnmachedModelMove
 }
 
 /**
- * [CountUnmachedModelMoves] for [PetriNet]s
+ * [CountUnmatchedModelMoves] for [PetriNet]s
  */
-class CountUnmachedPetriNetMoves(val model: PetriNet) : CountUnmachedModelMoves {
+class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMoves {
 
     private val consumentsCache = HashMap<Pair<Place, Int>, Int>()
 
@@ -66,9 +66,8 @@ class CountUnmachedPetriNetMoves(val model: PetriNet) : CountUnmachedModelMoves 
     private fun following(place: Place): Set<Set<String>> {
         return followingCache.computeIfAbsent(place) { place ->
             val following = HashSet<Set<String>>()
-            for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.toList()
-                .sortedBy { it.size }) {
-                if (!following.any { subset -> set.containsAll(subset) })
+            for (set in model.forwardSearch(place).mapToSet { set -> set.mapToSet { it.name } }.sortedBy { it.size }) {
+                if (following.none { subset -> set.containsAll(subset) })
                     following.add(set)
             }
             return@computeIfAbsent following

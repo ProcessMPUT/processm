@@ -5,7 +5,6 @@ import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -18,10 +17,9 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun a10() {
-        val bpmnModel =
-            File("src/test/resources/bpmn-miwg-test-suite/Reference/A.1.0.bpmn").absoluteFile.inputStream().use { xml ->
-                BPMNModel.fromXML(xml)
-            }
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/A.1.0.bpmn")!!.use { xml ->
+            BPMNModel.fromXML(xml)
+        }
         val converted = bpmnModel.toCausalNet()
         val expected = causalnet {
             start splits startEvent()
@@ -65,7 +63,7 @@ class BPMNModel2CausalNetTest {
             task(2) or mergeFlow or task(2) + mergeFlow join endEvent()
             endEvent() joins end
         }
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.2.0.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/A.2.0.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
@@ -97,7 +95,7 @@ class BPMNModel2CausalNetTest {
             task(2) or mergeFlow or task(2) + mergeFlow join endEvent()
             endEvent() joins end
         }
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.2.1.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/A.2.1.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
@@ -159,7 +157,7 @@ class BPMNModel2CausalNetTest {
                     endEvent(2) + endEvent(5) or
                     endEvent(1) + endEvent(2) + endEvent(5) join end
         }
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.4.0.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/A.4.0.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
@@ -221,7 +219,7 @@ class BPMNModel2CausalNetTest {
                     endEvent(2) + endEvent(5) or
                     endEvent(1) + endEvent(2) + endEvent(5) join end
         }
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/A.4.1.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/A.4.1.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         // Apparently, names in A.4.1 contain trailing spaces. The sole purpose of the code below is to rewrite the obtained cnet renaming nodes
@@ -235,7 +233,7 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun `b10`() {
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/B.1.0.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/B.1.0.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         // B.1.0.bpmn contains TCallActivity, which is not supported in the current state of the converter
@@ -255,7 +253,11 @@ class BPMNModel2CausalNetTest {
             Node("Archive\u000aInvoice") splits Node("Invoice\u000aprocessed")
             Node("Scan Invoice") joins Node("Archive\u000aoriginal")
             Node("Archive\u000aoriginal") splits Node("Approver to \u000abe assigned")
-            Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false) + Node("Assign approver") join Node("Assign\u000aApprover")
+            Node(
+                "Invoice\u000areceived",
+                "NAME:BPMN MIWG Test Case C.1.0",
+                false
+            ) + Node("Assign approver") join Node("Assign\u000aApprover")
             Node("Assign\u000aApprover") splits Node("Approve Invoice") + Node("Approver to \u000abe assigned")
             Node("Approver to \u000abe assigned") joins Node("Assign approver")
             Node("Assign approver") splits Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A") + Node("Assign\u000aApprover")
@@ -284,13 +286,37 @@ class BPMNModel2CausalNetTest {
             Node("Invoice review\u000a needed") joins Node("Review and document result")
             Node("Review and document result") splits Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Rechnung kl\u00e4ren")
             Node("Invoice\u000areceived", "NAME:Team-Assistant", false) joins Node("Scan Invoice")
-            Node("Scan Invoice") splits Node("Archive\u000aoriginal") + Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false)
-            Node("Invoice\u000aprocessed") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("Invoice not\u000aprocessed") or Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") or Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") or Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") join end
+            Node("Scan Invoice") splits Node("Archive\u000aoriginal") + Node(
+                "Invoice\u000areceived",
+                "NAME:BPMN MIWG Test Case C.1.0",
+                false
+            )
+            Node("Invoice\u000aprocessed") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node(
+                "Invoice\u000aprocessed"
+            ) + Node("Invoice not\u000aprocessed") or Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node(
+                "ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817"
+            ) + Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node(
+                "Invoice\u000aprocessed"
+            ) or Node("Invoice not\u000aprocessed") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") or Node(
+                "Invoice\u000aprocessed"
+            ) + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node(
+                "ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817"
+            ) + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node(
+                "Invoice not\u000aprocessed"
+            ) or Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node("Invoice not\u000aprocessed") + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node(
+                "ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817"
+            ) or Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") or Node("Invoice\u000aprocessed") + Node("ID:sid-282524E6-660F-431D-8F19-1C3E9E9DE817") + Node(
+                "Invoice not\u000aprocessed"
+            ) + Node("ID:sid-BC9AC0B6-1785-4E35-A974-7FEF1A586B9D") join end
             Node("Assign approver") joins Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A")
             Node("ID:sid-F0D29912-929D-491C-8D23-73BD80CF980A") splits Node("Invoice review\u000a needed") or Node("7 days")
-            start splits Node("Invoice\u000areceived", "NAME:Team-Assistant", false) + Node("Invoice\u000areceived", "NAME:BPMN MIWG Test Case C.1.0", false)
+            start splits Node("Invoice\u000areceived", "NAME:Team-Assistant", false) + Node(
+                "Invoice\u000areceived",
+                "NAME:BPMN MIWG Test Case C.1.0",
+                false
+            )
         }
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.1.0.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/C.1.0.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
@@ -321,10 +347,12 @@ class BPMNModel2CausalNetTest {
             Node("Rechnung kl\u00e4ren") splits Node("Review\u000asuccessful?")
             Node("Rechnung kl\u00e4ren") joins Node("Review\u000asuccessful?")
             Node("Review\u000asuccessful?") splits Node("Approve Invoice") or Node("Invoice not\u000aprocessed")
-            Node("Invoice not\u000aprocessed") + Node("Invoice\u000aprocessed") or Node("Invoice\u000aprocessed") or Node("Invoice not\u000aprocessed") join end
+            Node("Invoice not\u000aprocessed") + Node("Invoice\u000aprocessed") or Node("Invoice\u000aprocessed") or Node(
+                "Invoice not\u000aprocessed"
+            ) join end
             start splits Node("Invoice\u000d\u000areceived")
         }
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.1.1.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/C.1.1.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
@@ -334,8 +362,8 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun `c20`() {
-       val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.2.0.bpmn").inputStream().use { xml ->
-           BPMNModel.fromXML(xml)
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/C.2.0.bpmn")!!.use { xml ->
+            BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
         assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
@@ -343,8 +371,8 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun `c30`() {
-       val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.3.0.bpmn").inputStream().use { xml ->
-           BPMNModel.fromXML(xml)
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/C.3.0.bpmn")!!.use { xml ->
+            BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
         assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
@@ -352,7 +380,7 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun `c40`() {
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.4.0.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/C.4.0.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         val converted = bpmnModel.toCausalNet()
@@ -361,7 +389,7 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun `c50`() {
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.5.0.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/C.5.0.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         // C.5.0.bpmn contains TCallActivity, which is not supported in the current state of the converter
@@ -370,7 +398,7 @@ class BPMNModel2CausalNetTest {
 
     @Test
     fun `c60`() {
-        val bpmnModel = File("src/test/resources/bpmn-miwg-test-suite/Reference/C.6.0.bpmn").inputStream().use { xml ->
+        val bpmnModel = javaClass.getResourceAsStream("/bpmn-miwg-test-suite/Reference/C.6.0.bpmn")!!.use { xml ->
             BPMNModel.fromXML(xml)
         }
         // C.6.0.bpmn contains compensations, which are not supported in the current state of the converter.

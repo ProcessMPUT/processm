@@ -18,6 +18,8 @@
 
     <properties>
         <dbschema>public</dbschema>
+        <jetty.version>9.4.48.v20220622</jetty.version>
+        <jaxb.version>3.0.1</jaxb.version>
     </properties>
 
     <dependencies>
@@ -28,9 +30,8 @@
         </dependency>
         <dependency>
             <groupId>org.apache.activemq</groupId>
-            <artifactId>apache-artemis</artifactId>
-            <version>2.10.1</version>
-            <type>pom</type>
+            <artifactId>artemis-jakarta-server</artifactId>
+            <version>2.23.1</version>
             <exclusions>
                 <!-- duplicate logger API dependency -->
                 <exclusion>
@@ -51,11 +52,6 @@
                     <groupId>javax.servlet</groupId>
                     <artifactId>servlet-api</artifactId>
                 </exclusion>
-                <!-- conflicting JMS client implementation -->
-                <exclusion>
-                    <groupId>org.apache.activemq</groupId>
-                    <artifactId>artemis-jms-client-all</artifactId>
-                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -71,12 +67,12 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.2.5</version>
+            <version>${logback-classic.version}</version>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
-            <version>6.5.7</version>
+            <version>7.15.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -92,6 +88,12 @@
             <groupId>org.jetbrains.exposed</groupId>
             <artifactId>exposed-core</artifactId>
             <version>${org.jetbrains.exposed.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>
@@ -122,12 +124,51 @@
             <groupId>org.quartz-scheduler</groupId>
             <artifactId>quartz</artifactId>
             <version>2.3.2</version>
+            <exclusions>
+                <exclusion>
+                    <!-- deprecated version of SLF4J -->
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.messaginghub</groupId>
             <artifactId>pooled-jms</artifactId>
             <version>${pooled-jms.version}</version>
         </dependency>
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>${jaxb.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>${jaxb.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-webapp</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-util</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+
         <!-- WARNING: GPL 2.0 license; For testing purposes only. -->
         <dependency>
             <groupId>org.openjdk.jol</groupId>
@@ -161,9 +202,9 @@
                 <dependencies>
                     <!-- specify the dependent jdbc driver here -->
                     <dependency>
-                        <groupId>postgresql</groupId>
+                        <groupId>org.postgresql</groupId>
                         <artifactId>postgresql</artifactId>
-                        <version>9.1-901-1.jdbc4</version>
+                        <version>${org.postgresql.version}</version>
                     </dependency>
                 </dependencies>
 
@@ -222,9 +263,9 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.jvnet.jaxb2.maven2</groupId>
-                <artifactId>maven-jaxb2-plugin</artifactId>
-                <version>0.14.0</version>
+                <groupId>com.evolvedbinary.maven.jvnet</groupId>
+                <artifactId>jaxb30-maven-plugin</artifactId>
+                <version>0.15.0</version>
                 <executions>
                     <execution>
                         <id>generate</id>
@@ -234,6 +275,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <markGenerated>true</markGenerated>
                     <schemaDirectory>src/bpmn</schemaDirectory>
                     <schemaIncludes>
                         <include>*.xsd</include>
@@ -244,7 +286,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
+                <version>${maven.jar.plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>

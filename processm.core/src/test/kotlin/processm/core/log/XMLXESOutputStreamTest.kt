@@ -94,7 +94,7 @@ internal class XMLXESOutputStreamTest {
     @Test
     fun `Close XML without passing any XML Element`() {
         StringWriter().use { received ->
-            val writer = XMLXESOutputStream(XMLOutputFactory.newInstance().createXMLStreamWriter(received))
+            val writer = XMLXESOutputStream(XMLOutputFactory.newDefaultFactory().createXMLStreamWriter(received))
             writer.close()
 
             assertEquals(received.toString(), "")

@@ -6,7 +6,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.`java-time`.CurrentDateTime
+import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
 import processm.core.communication.Producer
@@ -16,9 +16,9 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.afterCommit
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.*
-import processm.dbmodels.models.TYPE
 import processm.dbmodels.models.ACTIVATE
 import processm.dbmodels.models.DEACTIVATE
+import processm.dbmodels.models.TYPE
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers

@@ -1,7 +1,7 @@
 package processm.core.esb
 
-import javax.jms.ExceptionListener
-import javax.jms.MessageListener
+import jakarta.jms.ExceptionListener
+import jakarta.jms.MessageListener
 
 /**
  * The JMS listener for use in [AbstractJobService].

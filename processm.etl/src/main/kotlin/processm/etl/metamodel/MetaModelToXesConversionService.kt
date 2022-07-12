@@ -1,5 +1,6 @@
 package processm.etl.metamodel
 
+import jakarta.jms.MapMessage
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.innerJoin
@@ -25,7 +26,6 @@ import processm.dbmodels.models.*
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import javax.jms.MapMessage
 import kotlin.reflect.KClass
 
 /**
