@@ -70,12 +70,12 @@ class OracleEnvironment(
             container.execInContainer(
                 "sh",
                 "-c",
-                """echo 'CREATE USER C##processm IDENTIFIED BY "2e3e056f2c2bf71e" ;' | sqlplus 'SYS/2e3e056f2c2bf71e@localhost:1521/xe AS SYSDBA'"""
+                """echo 'CREATE USER $DEFAULT_USER IDENTIFIED BY "$DEFAULT_PASSWORD" ;' | sqlplus 'SYS/$DEFAULT_PASSWORD@localhost:1521/xe AS SYSDBA'"""
             )
             container.execInContainer(
                 "sh",
                 "-c",
-                """echo 'GRANT ALL PRIVILEGES TO C##processm CONTAINER=all ;' | sqlplus 'SYS/2e3e056f2c2bf71e@localhost:1521/xe AS SYSDBA'"""
+                """echo 'GRANT ALL PRIVILEGES TO $DEFAULT_USER CONTAINER=all ;' | sqlplus 'SYS/$DEFAULT_PASSWORD@localhost:1521/xe AS SYSDBA'"""
             )
             return container
         }
