@@ -1,14 +1,15 @@
 package processm.core.models.causalnet
 
 import processm.core.helpers.mapToSet
-import processm.core.models.metadata.*
+import processm.core.models.metadata.DefaultMutableMetadataHandler
+import processm.core.models.metadata.MutableMetadataHandler
 
 /**
  * The default implementation of a causal net model
  */
 class MutableCausalNet(
-    start: Node = Node("start", isArtificial = true),
-    end: Node = Node("end", isArtificial = true),
+    start: Node = Node("start", isSilent = true),
+    end: Node = Node("end", isSilent = true),
     private val metadataHandler: MutableMetadataHandler = DefaultMutableMetadataHandler()
 ) : CausalNet(start, end, metadataHandler),
     MutableMetadataHandler by metadataHandler {

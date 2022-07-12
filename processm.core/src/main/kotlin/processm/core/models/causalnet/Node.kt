@@ -15,21 +15,21 @@ import java.util.*
 data class Node(
     val activity: String,
     val instanceId: String = "",
+    override val isSilent: Boolean = false,
     @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
-    override val isArtificial: Boolean = false,
-    override val isSilent: Boolean = isArtificial
+    override val isArtificial: Boolean = isSilent
 ) : MetadataSubject,
     Activity {
 
     private val hash: Int by lazy {
-        Objects.hash(activity, instanceId, isArtificial)
+        Objects.hash(activity, instanceId, isSilent)
     }
 
     override val name: String
         get() = activity
 
     override fun toString(): String {
-        return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (isArtificial) "*" else "")
+        return activity + (if (instanceId.isNotEmpty()) "($instanceId)" else "") + (if (isSilent) "*" else "")
     }
 
     override fun hashCode(): Int = hash

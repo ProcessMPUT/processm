@@ -19,6 +19,7 @@ open class DecoupledNodeExecution(
     override val isSilent: Boolean
         get() = activity.isSilent
 
+    @Suppress("deprecated")
     @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
     override val isArtificial: Boolean
         get() = activity.isArtificial

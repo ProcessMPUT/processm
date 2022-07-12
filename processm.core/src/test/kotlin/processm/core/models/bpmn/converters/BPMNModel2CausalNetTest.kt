@@ -225,7 +225,7 @@ class BPMNModel2CausalNetTest {
         // Apparently, names in A.4.1 contain trailing spaces. The sole purpose of the code below is to rewrite the obtained cnet renaming nodes
         val tmp = bpmnModel.toCausalNet()
         val converted = MutableCausalNet()
-        converted.copyFrom(tmp) { node -> Node(node.activity.trim(), node.instanceId.trim(), node.isArtificial) }
+        converted.copyFrom(tmp) { node -> Node(node.activity.trim(), node.instanceId.trim(), node.isSilent) }
 
         assertTrue { CausalNetVerifierImpl(converted).isStructurallySound }
         assertTrue { expected.structurallyEquals(converted) }

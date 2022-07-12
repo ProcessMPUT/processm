@@ -1,5 +1,6 @@
 package processm.core.models.bpmn.converters
 
+import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.models.causalnet.Node
@@ -29,10 +30,10 @@ class CausalNet2BPMNTest {
         }
         val ve = CausalNetVerifierImpl(inp)
         check(ve.isSound) { "Reference causal net in compare is unsound." }
-        val expected = ve.validLoopFreeSequences.map { seq -> seq.map { it.a }.filterNot { it.isArtificial } }.toSet()
-        val actual = CausalNetVerifierImpl(reconstructed).validLoopFreeSequences.map { seq ->
-            seq.map { it.a }.filterNot { it.isArtificial }
-        }.toSet()
+        val expected = ve.validLoopFreeSequences.mapToSet { seq -> seq.map { it.a }.filterNot { it.isSilent } }
+        val actual = CausalNetVerifierImpl(reconstructed).validLoopFreeSequences.mapToSet { seq ->
+            seq.map { it.a }.filterNot { it.isSilent }
+        }
         assertEquals(expected, actual)
     }
 

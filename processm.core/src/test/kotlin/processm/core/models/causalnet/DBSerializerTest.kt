@@ -79,8 +79,8 @@ class DBSerializerTest {
         assertEquals(orig.instances, copy.instances)
         assertEquals(orig.start, copy.start)
         assertEquals(orig.start, copy.start)
-        assertTrue(copy.start.isArtificial)
-        assertTrue(copy.end.isArtificial)
+        assertTrue(copy.start.isSilent)
+        assertTrue(copy.end.isSilent)
     }
 
     @Test

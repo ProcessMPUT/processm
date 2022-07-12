@@ -34,8 +34,8 @@ class OnlineMiner(
             return@compute nv
         }
     }
-    private val start = Node("start", isArtificial = true)
-    private val end = Node("end", isArtificial = true)
+    private val start = Node("start", isSilent = true)
+    private val end = Node("end", isSilent = true)
 
     private fun aggregateLog(log: Log): HashMultiSet<NodeTrace> {
         val result = HashMultiSet<NodeTrace>()

@@ -3,6 +3,7 @@ package processm.experimental.miners.causalnet.heuristicminer
 import org.junit.jupiter.api.*
 import processm.core.comparators.CausalNetTraceComparison
 import processm.core.helpers.allPermutations
+import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
@@ -26,8 +27,7 @@ class CompareOfflineWithOnline {
     private fun seqs(model: CausalNet) =
         CausalNetVerifier().verify(model)
             .validLoopFreeSequences
-            .map { seq -> seq.map { ab -> ab.a }.filter { !it.isArtificial } }
-            .toSet()
+            .mapToSet { seq -> seq.map { ab -> ab.a }.filter { !it.isSilent } }
 
     private fun online(log: Log, traceRegister: TraceRegister): Set<List<Node>> {
         /*val hm = OnlineHeuristicMiner(

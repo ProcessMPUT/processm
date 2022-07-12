@@ -172,12 +172,13 @@ object CausalNets {
      * A sequential Causal net with two "a" activities run in line.
      */
     val duplicateA: CausalNet by lazy {
-        val st = Node("start", isSilent = true)
-        val en = Node("end", isSilent = true)
+        val cnet = MutableCausalNet()
+
+        val st = cnet.start
+        val en = cnet.end
         val a1 = Node("a", instanceId = "1")
         val a2 = Node("a", instanceId = "2")
 
-        val cnet = MutableCausalNet(start = st, end = en)
         cnet.addInstance(a1)
         cnet.addInstance(a2)
 
@@ -190,6 +191,7 @@ object CausalNets {
         cnet.addJoin(Join(setOf(sta1)))
         cnet.addJoin(Join(setOf(a1a2)))
         cnet.addJoin(Join(setOf(a2en)))
+
         cnet
     }
 }
