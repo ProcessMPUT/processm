@@ -1,7 +1,7 @@
 package processm.miners.causalnet.onlineminer
 
 import org.apache.commons.math3.fraction.BigFraction
-import processm.core.helpers.Distribution
+import processm.core.helpers.stats.Distribution
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.system.measureNanoTime
