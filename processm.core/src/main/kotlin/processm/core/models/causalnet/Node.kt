@@ -17,9 +17,13 @@ data class Node(
     val instanceId: String = "",
     override val isSilent: Boolean = false,
     @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
-    override val isArtificial: Boolean = isSilent
+    override val isArtificial: Boolean = false,
 ) : MetadataSubject,
     Activity {
+
+    init {
+        assert(!isArtificial) { "Node.isArtificial is deprecated and should be set to the default of false." }
+    }
 
     private val hash: Int by lazy {
         Objects.hash(activity, instanceId, isSilent)

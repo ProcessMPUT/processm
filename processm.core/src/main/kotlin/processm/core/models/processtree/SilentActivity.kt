@@ -1,7 +1,9 @@
 package processm.core.models.processtree
 
+/**
+ * A silent activity for process trees.
+ */
 open class SilentActivity(
-    @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
     override val isArtificial: Boolean = false
 ) : ProcessTreeActivity("") {
     /**

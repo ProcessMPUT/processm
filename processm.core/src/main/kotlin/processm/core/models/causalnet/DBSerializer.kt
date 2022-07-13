@@ -162,8 +162,8 @@ object DBSerializer {
                     row.id to Node(
                         row.activity,
                         row.instance,
-                        row.artificial,
-                        row.silent
+                        row.silent,
+                        row.artificial
                     )
                 }
             val start = daomodel.start
