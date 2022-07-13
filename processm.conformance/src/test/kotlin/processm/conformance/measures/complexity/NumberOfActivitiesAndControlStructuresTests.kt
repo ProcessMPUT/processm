@@ -36,7 +36,6 @@ class NumberOfActivitiesAndControlStructuresTests {
         assertEquals(total, NOAC(PetriNets.fig314))
     }
 
-
     @Test
     fun `NOAC equals 2 for the empty causal net`() {
         assertEquals(2, NOAC(CausalNets.empty))
