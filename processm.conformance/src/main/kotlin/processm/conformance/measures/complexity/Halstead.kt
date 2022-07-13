@@ -10,7 +10,7 @@ import processm.core.models.commons.ProcessModel
  * and
  * M. H. Halstead. Elements of Software Science. Elsevier, Amsterdam, 1987.
  */
-class Halstead : Measure<ProcessModel, HalsteadComplexityMetric> {
+object Halstead : Measure<ProcessModel, HalsteadComplexityMetric> {
     override fun invoke(artifact: ProcessModel): HalsteadComplexityMetric = HalsteadComplexityMetric(
         (artifact.activities + artifact.controlStructures).distinct().count(),
         artifact.activities.distinct().count(),

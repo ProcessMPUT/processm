@@ -11,7 +11,9 @@ import processm.core.models.commons.ProcessModel
  * in Proceedings of the 2006 International Conference on Business Process Management Workshops, Berlin,
  * Heidelberg, 2006, pp. 117–128.
  */
-class NumberOfActivitiesAndControlStructures : Measure<ProcessModel, Int> {
+object NumberOfActivitiesAndControlStructures : Measure<ProcessModel, Int> {
     override fun invoke(artifact: ProcessModel): Int =
         artifact.activities.count() + artifact.controlStructures.count { it !is Activity /* do not count activities twice */ }
 }
+
+typealias NOAC = NumberOfActivitiesAndControlStructures

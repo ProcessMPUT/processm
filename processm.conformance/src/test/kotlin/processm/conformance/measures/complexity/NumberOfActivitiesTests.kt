@@ -12,86 +12,86 @@ class NumberOfActivitiesTests {
 
     @Test
     fun `the empty Petri net has 0 activities`() {
-        assertEquals(0, NumberOfActivities(PetriNets.empty))
+        assertEquals(0, NOA(PetriNets.empty))
     }
 
     @Test
     fun `the number of activities in a nonempty Petri net equals the number of transitions`() {
-        assertEquals(PetriNets.fig32.transitions.size, NumberOfActivities(PetriNets.fig32))
-        assertEquals(PetriNets.fig34c.transitions.size, NumberOfActivities(PetriNets.fig34c))
-        assertEquals(PetriNets.fig314.transitions.size, NumberOfActivities(PetriNets.fig314))
-        assertEquals(PetriNets.fig624N3.transitions.size, NumberOfActivities(PetriNets.fig624N3))
-        assertEquals(PetriNets.fig82N1.transitions.size, NumberOfActivities(PetriNets.fig82N1))
-        assertEquals(PetriNets.fig82N2.transitions.size, NumberOfActivities(PetriNets.fig82N2))
-        assertEquals(PetriNets.fig82N3.transitions.size, NumberOfActivities(PetriNets.fig82N3))
-        assertEquals(PetriNets.azFlower.transitions.size, NumberOfActivities(PetriNets.azFlower))
-        assertEquals(PetriNets.parallelFlowers.transitions.size, NumberOfActivities(PetriNets.parallelFlowers))
+        assertEquals(PetriNets.fig32.transitions.size, NOA(PetriNets.fig32))
+        assertEquals(PetriNets.fig34c.transitions.size, NOA(PetriNets.fig34c))
+        assertEquals(PetriNets.fig314.transitions.size, NOA(PetriNets.fig314))
+        assertEquals(PetriNets.fig624N3.transitions.size, NOA(PetriNets.fig624N3))
+        assertEquals(PetriNets.fig82N1.transitions.size, NOA(PetriNets.fig82N1))
+        assertEquals(PetriNets.fig82N2.transitions.size, NOA(PetriNets.fig82N2))
+        assertEquals(PetriNets.fig82N3.transitions.size, NOA(PetriNets.fig82N3))
+        assertEquals(PetriNets.azFlower.transitions.size, NOA(PetriNets.azFlower))
+        assertEquals(PetriNets.parallelFlowers.transitions.size, NOA(PetriNets.parallelFlowers))
     }
 
     @Test
     fun `silent activities in a Petri net count`() {
         assertTrue(StandardLifecycle.transitions.any { it.isSilent })
-        assertEquals(StandardLifecycle.transitions.size, NumberOfActivities(StandardLifecycle))
+        assertEquals(StandardLifecycle.transitions.size, NOA(StandardLifecycle))
     }
 
     @Test
     fun `duplicate activities in a Petri net count`() {
-        assertEquals(2, NumberOfActivities(PetriNets.duplicateA))
+        assertEquals(2, NOA(PetriNets.duplicateA))
     }
 
     @Test
     fun `the empty Causal net has only start and end activities`() {
-        assertEquals(2, NumberOfActivities(CausalNets.empty))
+        assertEquals(2, NOA(CausalNets.empty))
     }
 
     @Test
     fun `the number of activities in a nonempty causal net is correct`() {
-        assertEquals(CausalNets.fig312.activities.count(), NumberOfActivities(CausalNets.fig312))
-        assertEquals(CausalNets.fig316.activities.count(), NumberOfActivities(CausalNets.fig316))
-        assertEquals(CausalNets.azFlower.activities.count(), NumberOfActivities(CausalNets.azFlower))
+        assertEquals(CausalNets.fig312.activities.count(), NOA(CausalNets.fig312))
+        assertEquals(CausalNets.fig316.activities.count(), NOA(CausalNets.fig316))
+        assertEquals(CausalNets.azFlower.activities.count(), NOA(CausalNets.azFlower))
         assertEquals(
             CausalNets.parallelDecisionsInLoop.activities.count(),
-            NumberOfActivities(CausalNets.parallelDecisionsInLoop)
+            NOA(CausalNets.parallelDecisionsInLoop)
         )
     }
 
     @Test
     fun `silent activities in a causal net count`() {
         assertTrue(CausalNets.azFlower.activities.any { it.isSilent })
-        assertEquals(CausalNets.azFlower.activities.count(), NumberOfActivities(CausalNets.azFlower))
+        assertEquals(CausalNets.azFlower.activities.count(), NOA(CausalNets.azFlower))
     }
 
     @Test
     fun `duplicate activities in a causal net count`() {
-        assertEquals(4, NumberOfActivities(CausalNets.duplicateA))
+        assertEquals(4, NOA(CausalNets.duplicateA))
     }
 
     @Test
     fun `the empty process tree has 0 activities`() {
-        assertEquals(0, NumberOfActivities(ProcessTrees.empty))
+        assertEquals(0, NOA(ProcessTrees.empty))
     }
 
     @Test
     fun `the number of activities in a nonempty process tree equals the number of leafs`() {
         assertEquals(
             ProcessTrees.fig727.allNodes.count { it.children.isEmpty() },
-            NumberOfActivities(ProcessTrees.fig727)
+            NOA(ProcessTrees.fig727)
         )
         assertEquals(
             ProcessTrees.fig729.allNodes.count { it.children.isEmpty() },
-            NumberOfActivities(ProcessTrees.fig729)
+            NOA(ProcessTrees.fig729)
         )
         assertEquals(
             ProcessTrees.azFlower.allNodes.count { it.children.isEmpty() },
-            NumberOfActivities(ProcessTrees.azFlower)
+            NOA(ProcessTrees.azFlower)
         )
         assertEquals(
             ProcessTrees.parallelFlowers.allNodes.count { it.children.isEmpty() },
-            NumberOfActivities(ProcessTrees.parallelFlowers)
+            NOA(ProcessTrees.parallelFlowers)
         )
         assertEquals(
             ProcessTrees.parallelDecisionsInLoop.allNodes.count { it.children.isEmpty() },
-            NumberOfActivities(ProcessTrees.parallelDecisionsInLoop)
+            NOA(ProcessTrees.parallelDecisionsInLoop)
         )
     }
 
@@ -100,17 +100,17 @@ class NumberOfActivitiesTests {
         assertTrue(ProcessTrees.azFlower.activities.any { it.isSilent })
         assertEquals(
             ProcessTrees.azFlower.allNodes.count { it.children.isEmpty() },
-            NumberOfActivities(ProcessTrees.azFlower)
+            NOA(ProcessTrees.azFlower)
         )
         assertTrue(ProcessTrees.parallelFlowers.activities.any { it.isSilent })
         assertEquals(
             ProcessTrees.parallelFlowers.allNodes.count { it.children.isEmpty() },
-            NumberOfActivities(ProcessTrees.parallelFlowers)
+            NOA(ProcessTrees.parallelFlowers)
         )
     }
 
     @Test
     fun `duplicate activities in a process tree count`() {
-        assertEquals(2, NumberOfActivities(ProcessTrees.duplicateA))
+        assertEquals(2, NOA(ProcessTrees.duplicateA))
     }
 }

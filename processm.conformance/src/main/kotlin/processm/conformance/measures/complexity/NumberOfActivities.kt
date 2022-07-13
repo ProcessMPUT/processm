@@ -12,3 +12,5 @@ import processm.core.models.commons.ProcessModel
 object NumberOfActivities : Measure<ProcessModel, Int> {
     override fun invoke(artifact: ProcessModel): Int = artifact.activities.count()
 }
+
+typealias NOA = NumberOfActivities
