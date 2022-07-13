@@ -24,8 +24,8 @@ open class DecoupledNodeExecution(
     override val isArtificial: Boolean
         get() = activity.isArtificial
 
-    override fun equals(obj: Any?): Boolean =
-        obj is DecoupledNodeExecution && activity == obj.activity && join == obj.join && split == obj.split
+    override fun equals(other: Any?): Boolean =
+        other is DecoupledNodeExecution && activity == other.activity && join == other.join && split == other.split
 
     override fun hashCode(): Int = Objects.hash(activity, join, split)
 
