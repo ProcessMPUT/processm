@@ -88,13 +88,13 @@ internal class BPMNModel2CausalNet(val model: BPMNModel) {
             for (node in conv.cnet.instances) {
                 node2converter.computeIfAbsent(node) { ArrayList() }.add(conv)
             }
-        for ((node, convs) in node2converter.filter { !it.key.isArtificial && it.value.size >= 2 }) {
+        for ((node, convs) in node2converter.filter { !it.key.isSilent && it.value.size >= 2 }) {
             for (conv in convs) {
                 val prefix = prefix(conv.bpmn.base)
                 localToGlobal[conv.cnet to node] = Node(
                     node.activity,
                     prefix + (if (node.instanceId.isNotEmpty()) ":${node.instanceId}" else ""),
-                    node.isArtificial
+                    node.isSilent
                 )
             }
         }

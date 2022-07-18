@@ -18,10 +18,10 @@ interface Activity : MetadataSubject {
         get() = false
 
     /**
-     * Marks the silent activity that does not exist in the model but was added on the fly during execution to simplify
-     * workflow.
+     * Marks the silent activity that does not exist in the model but was added on the fly during execution to achieve
+     * the desired semantics of the workflow.
+     * The implementing class must ensure that `!isSilent` implies `!isArtificial`.
      */
-    @Deprecated("Use isSilent instead", replaceWith = ReplaceWith("isSilent"))
     val isArtificial: Boolean
         get() = false
 }

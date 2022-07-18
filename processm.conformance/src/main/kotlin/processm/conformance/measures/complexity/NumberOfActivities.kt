@@ -9,6 +9,8 @@ import processm.core.models.commons.ProcessModel
  * in Proceedings of the 2006 International Conference on Business Process Management Workshops, Berlin,
  * Heidelberg, 2006, pp. 117–128.
  */
-class NumberOfActivities : Measure<ProcessModel, Int> {
+object NumberOfActivities : Measure<ProcessModel, Int> {
     override fun invoke(artifact: ProcessModel): Int = artifact.activities.count()
 }
+
+typealias NOA = NumberOfActivities

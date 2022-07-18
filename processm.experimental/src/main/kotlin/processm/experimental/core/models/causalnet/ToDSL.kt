@@ -26,15 +26,15 @@ fun CausalNet.toDSL(): String {
             return "start"
         if (n == end)
             return "end"
-        return if (n.instanceId.isBlank() && !n.isArtificial)
+        return if (n.instanceId.isBlank() && !n.isSilent)
             "Node(${str(n.activity)})"
         else
-            "Node(${str(n.activity)}, ${str(n.instanceId)}, ${n.isArtificial})"
+            "Node(${str(n.activity)}, ${str(n.instanceId)}, ${n.isSilent})"
     }
 
     var result = ""
-    result += "start = Node(${str(start.activity)}, ${str(start.instanceId)}, ${start.isArtificial})\n"
-    result += "end = Node(${str(end.activity)}, ${str(end.instanceId)}, ${end.isArtificial})\n"
+    result += "start = Node(${str(start.activity)}, ${str(start.instanceId)}, ${start.isSilent})\n"
+    result += "end = Node(${str(end.activity)}, ${str(end.instanceId)}, ${end.isSilent})\n"
     for (node in instances.sortedBy { it.activity }) {
         val njoins = this.joins[node].orEmpty().flatMap { it.dependencies }.size
         if (njoins > 0) {

@@ -72,8 +72,8 @@ class OfflineHeuristicMiner(
         val finalModel = MutableCausalNet(start = model.start, end = model.end)
         val dep2finalDep = HashMap<Dependency, Dependency>()
         for (dep in usedDependencies) {
-            val s = Node(dep.source.activity, isArtificial = dep.source.isArtificial)
-            val t = Node(dep.target.activity, isArtificial = dep.target.isArtificial)
+            val s = Node(dep.source.activity, isSilent = dep.source.isSilent)
+            val t = Node(dep.target.activity, isSilent = dep.target.isSilent)
             finalModel.addInstance(s, t)
             dep2finalDep[dep] = finalModel.addDependency(s, t)
         }

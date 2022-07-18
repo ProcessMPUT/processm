@@ -24,18 +24,21 @@ data class HalsteadComplexityMetric internal constructor(
     /**
      * Process length. Derived from Halstead's calculated estimated program length (\hat{N}).
      */
-    val length: Double =
-        uniqueOperators * log2(uniqueOperators.toDouble()) + uniqueOperands * log2(uniqueOperands.toDouble())
+    val length: Double = uniqueOperators * log2(uniqueOperators.coerceAtLeast(1).toDouble()) +
+            uniqueOperands * log2(uniqueOperands.coerceAtLeast(1).toDouble())
 
     /**
      * Process volume. Derived from Halstead's volume (V).
      */
-    val volume: Double = (totalOperators + totalOperands) * log2((uniqueOperators + uniqueOperands).toDouble())
+    val volume: Double =
+        (totalOperators + totalOperands) * log2((uniqueOperators + uniqueOperands).coerceAtLeast(1).toDouble())
 
     /**
      * Process difficulty. Derived from Halstead's difficulty (D).
      */
-    val difficulty: Double = uniqueOperators / 2.0 * totalOperands / uniqueOperands
+    val difficulty: Double =
+        if (totalOperands > 0 && uniqueOperands > 0) (uniqueOperators / 2.0 * totalOperands / uniqueOperands)
+        else 0.0
 
     /**
      * Halstead's effort (E)

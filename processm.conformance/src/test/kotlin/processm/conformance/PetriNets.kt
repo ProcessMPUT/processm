@@ -7,6 +7,11 @@ import processm.core.models.petrinet.*
  */
 object PetriNets {
     /**
+     * The Petri net without places and transitions.
+     */
+    val empty: PetriNet = petrinet {}
+
+    /**
      * A Petri net based on Fig. 3.2 in the Process Mining: Data Science in Action book.
      */
     val fig32: PetriNet = petrinet {
@@ -220,5 +225,23 @@ object PetriNets {
             prev = activity
         }
         P tin activities.last()
+    }
+
+    /**
+     * A sequence of two "a" activities.
+     */
+    val duplicateA: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val start = Place()
+        val middle = Place()
+        val end = Place()
+        PetriNet(
+            places = listOf(start, middle, end),
+            transitions = listOf(
+                Transition("a", listOf(start), listOf(middle)),
+                Transition("a", listOf(middle), listOf(end))
+            ),
+            initialMarking = Marking(start),
+            finalMarking = Marking(end),
+        )
     }
 }

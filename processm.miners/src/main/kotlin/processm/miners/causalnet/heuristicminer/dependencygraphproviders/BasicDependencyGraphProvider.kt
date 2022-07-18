@@ -12,8 +12,8 @@ import processm.miners.causalnet.onlineminer.NodeTrace
  */
 open class BasicDependencyGraphProvider(protected val minDirectlyFollows: Int) : DependencyGraphProvider {
 
-    override val start = Node("start", isArtificial = true)
-    override val end = Node("end", isArtificial = true)
+    override val start = Node("start", isSilent = true)
+    override val end = Node("end", isSilent = true)
     protected val mutableNodes = mutableSetOf(start, end)
     override val nodes: Set<Node>
         get() = mutableNodes

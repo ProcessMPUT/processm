@@ -141,7 +141,7 @@ class AStarCausalNetTests {
         )
 
         val astar = AStar(azFlower)
-        for ((i, trace) in log.traces.withIndex()) {
+        for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
@@ -163,7 +163,7 @@ class AStarCausalNetTests {
         )
 
         val astar = AStar(parallelDecisionsInLoop)
-        for ((i, trace) in log.traces.withIndex()) {
+        for (trace in log.traces) {
             val start = System.currentTimeMillis()
             val alignment = astar.align(trace)
             val time = System.currentTimeMillis() - start
@@ -208,8 +208,8 @@ class AStarCausalNetTests {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", isArtificial = true)
-        val en = Node("end", isArtificial = true)
+        val st = Node("start", isSilent = true)
+        val en = Node("end", isSilent = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")

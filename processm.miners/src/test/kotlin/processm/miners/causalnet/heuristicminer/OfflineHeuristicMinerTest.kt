@@ -140,7 +140,7 @@ class OfflineHeuristicMinerTest {
         assertTrue {
             v.validLoopFreeSequences.any { seq ->
                 seq
-                    .filterNot { it.a.isArtificial }
+                    .filterNot { it.a.isSilent }
                     .map { it.a.activity } == text.split(" ")
             }
         }

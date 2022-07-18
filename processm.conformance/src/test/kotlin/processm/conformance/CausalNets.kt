@@ -1,13 +1,15 @@
 package processm.conformance
 
-import processm.core.models.causalnet.CausalNet
-import processm.core.models.causalnet.Node
-import processm.core.models.causalnet.causalnet
+import processm.core.models.causalnet.*
 
 /**
  * Causal nets for tests.
  */
 object CausalNets {
+    /**
+     * The Causal net with only two activities: start and end.
+     */
+    val empty = causalnet { }
 
     /**
      * A Causal net based on Fig. 3.12 from Process Mining: Data Science in Action book.
@@ -124,8 +126,8 @@ object CausalNets {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }
         val activities2 = "NOPQRSTUVWXYZ".map { Node(it.toString()) }
 
-        val st = Node("start", isArtificial = true)
-        val en = Node("end", isArtificial = true)
+        val st = Node("start", isSilent = true)
+        val en = Node("end", isSilent = true)
 
         val loopStart = Node("ls")
         val loopEnd = Node("le")
@@ -164,5 +166,32 @@ object CausalNets {
             loopEnd splits en
             loopEnd joins en
         }
+    }
+
+    /**
+     * A sequential Causal net with two "a" activities run in line.
+     */
+    val duplicateA: CausalNet by lazy {
+        val cnet = MutableCausalNet()
+
+        val st = cnet.start
+        val en = cnet.end
+        val a1 = Node("a", instanceId = "1")
+        val a2 = Node("a", instanceId = "2")
+
+        cnet.addInstance(a1)
+        cnet.addInstance(a2)
+
+        val sta1 = cnet.addDependency(st, a1)
+        val a1a2 = cnet.addDependency(a1, a2)
+        val a2en = cnet.addDependency(a2, en)
+        cnet.addSplit(Split(setOf(sta1)))
+        cnet.addSplit(Split(setOf(a1a2)))
+        cnet.addSplit(Split(setOf(a2en)))
+        cnet.addJoin(Join(setOf(sta1)))
+        cnet.addJoin(Join(setOf(a1a2)))
+        cnet.addJoin(Join(setOf(a2en)))
+
+        cnet
     }
 }

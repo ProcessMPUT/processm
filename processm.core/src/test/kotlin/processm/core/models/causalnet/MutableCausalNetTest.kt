@@ -132,8 +132,8 @@ class MutableCausalNetTest {
         val mm = MutableCausalNet()
         assertTrue { mm.start in mm.instances }
         assertTrue { mm.end in mm.instances }
-        assertTrue { mm.start.isArtificial }
-        assertTrue { mm.end.isArtificial }
+        assertTrue { mm.start.isSilent }
+        assertTrue { mm.end.isSilent }
     }
 
     @Test

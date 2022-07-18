@@ -46,7 +46,7 @@ fun CausalNet.toGraphviz(drawBindgings: Boolean = false): String {
         result.append(" [label=\"")
         result.append(a.name)
         result.append("\"")
-        if (a.isArtificial)
+        if (a.isSilent)
             result.append(",fontcolor=red")
         result.appendLine("];")
     }
