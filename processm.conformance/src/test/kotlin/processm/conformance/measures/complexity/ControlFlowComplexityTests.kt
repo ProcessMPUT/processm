@@ -56,7 +56,7 @@ class ControlFlowComplexityTests {
     }
 
     @Test
-    fun `CFC equals XX for causal net fig316`() {
+    fun `CFC equals 12 for causal net fig316`() {
         val XORsplits = 2
         val XORjoins = 2
         val ANDsplits = 0
@@ -77,7 +77,7 @@ class ControlFlowComplexityTests {
     }
 
     @Test
-    fun `CFC equals XX for process tree fig727`() {
+    fun `CFC equals 9 for process tree fig727`() {
         val XORsplits = 2 + 2
         val XORjoins = 0
         val ANDsplits = 1
