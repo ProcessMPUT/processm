@@ -5,6 +5,7 @@ import processm.conformance.models.alignments.Alignment
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
+import processm.core.helpers.asCollection
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import java.util.concurrent.ExecutorCompletionService
@@ -20,7 +21,7 @@ class RangeFitness(
     val aligner: DecompositionAligner,
     val timeout: Long,
     val unit: TimeUnit,
-    val eventsSummarizer: EventsSummarizer<out Any> = DefaultEventsSummarizer(),
+    val eventsSummarizer: EventsSummarizer<Any> = DefaultEventsSummarizer,
     val maxCacheSize: Int = 65535
 ) : Measure<Log, ClosedFloatingPointRange<Double>> {
 
@@ -74,7 +75,7 @@ class RangeFitness(
             val c = alignment.cost.toDouble()
             return DecompositionAligner.CostApproximation(c, true)
         }
-        val events = trace.events.toList()
+        val events = trace.events.asCollection()
         val summary = eventsSummarizer(events)
         return cache.computeIfAbsent(summary) {
             aligner.alignmentCostLowerBound(events, timeout, unit)

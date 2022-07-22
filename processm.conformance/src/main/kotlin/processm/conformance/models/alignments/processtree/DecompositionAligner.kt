@@ -24,7 +24,7 @@ class DecompositionAligner(
     }
 
     override fun align(trace: Trace): Alignment {
-        val events = trace.events.toList()
+        val events = trace.events.asCollection()
         val eventsWithExistingActivities =
             events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
 

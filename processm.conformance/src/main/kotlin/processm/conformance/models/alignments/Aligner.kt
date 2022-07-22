@@ -37,7 +37,7 @@ interface Aligner {
      * event if there are repetitions in [log].
      * @see align
      */
-    fun align(log: Sequence<Trace>, summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer()) =
+    fun align(log: Sequence<Trace>, summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer) =
         summarizer?.flatMap(log) { trace -> align(trace) } ?: log.map { align(it) }
 
     /**
@@ -48,5 +48,5 @@ interface Aligner {
      * event if there are repetitions in [log].
      * @see align
      */
-    fun align(log: Log, summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer()) = align(log.traces, summarizer)
+    fun align(log: Log, summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer) = align(log.traces, summarizer)
 }

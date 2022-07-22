@@ -127,7 +127,7 @@ class CompositeAligner(
         log: Sequence<Trace>,
         timeout: Long = -1,
         unit: TimeUnit = TimeUnit.SECONDS,
-        summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer()
+        summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer
     ): Sequence<Alignment?> =
         summarizer?.flatMap(log) { align(it, timeout, unit) } ?: log.map { align(it, timeout, unit) }
 
@@ -140,6 +140,6 @@ class CompositeAligner(
         log: Log,
         timeout: Long = -1,
         unit: TimeUnit = TimeUnit.SECONDS,
-        summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer()
+        summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer
     ) = align(log.traces, timeout, unit, summarizer)
 }

@@ -18,7 +18,7 @@ class CachingAligner(val baseAligner: Aligner, val alignmentCache: AlignmentCach
         get() = baseAligner.penalty
 
     override fun align(trace: Trace): Alignment {
-        val events = trace.events.toList()
+        val events = trace.events.asIterable()
         return alignmentCache.get(baseAligner.model, events) ?: (baseAligner.align(trace)
             .also { alignmentCache.put(baseAligner.model, events, it) })
     }

@@ -50,11 +50,11 @@ class EventsSummarizerTest {
         every { t1b.events } returns sequenceOf(e1)
         every { t2.events } returns sequenceOf(e2)
         every { t3.events } returns sequenceOf(e3)
-        summarizer = EventsSummarizer() {
+        summarizer = EventsSummarizer {
             when {
-                it[0] === e1 -> 1
-                it[0] === e2 -> 2
-                it[0] === e3 -> 3
+                it.first() === e1 -> 1
+                it.first() === e2 -> 2
+                it.first() === e3 -> 3
                 else -> error(it)
             }
         }

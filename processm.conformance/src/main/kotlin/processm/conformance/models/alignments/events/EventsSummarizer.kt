@@ -9,21 +9,19 @@ import processm.core.log.hierarchical.Trace
  *
  * For example, maybe only event names are relevant for further processing and all other attributes are ignored - a summary may be a list of names
  */
-fun interface EventsSummarizer<T> {
-    operator fun invoke(events: List<Event>): T
-    operator fun invoke(trace: Trace): T = invoke(trace.events.toList())
+fun interface EventsSummarizer<out T> {
+    operator fun invoke(events: Iterable<Event>): T
+    operator fun invoke(trace: Trace): T = invoke(trace.events.asIterable())
 
     /**
      * Returns a list of the same length as [log], such that `log.map(block) == flatMap(log, block)`, but computed more
      * efficiently: for each [Trace] summary (a result of calling [invoke]), [block] is called exactly once.
      */
+    @Suppress("UNCHECKED_CAST")
     fun <R> flatMap(log: Iterable<Trace>, block: (Trace) -> R): List<R> {
-        // Using Pairs for cases when R is a nullable type to avoid calling block multiple times
-        val alignments = HashMap<Any?, Pair<Boolean, R>>()
+        val alignments = HashMap<Any?, Any?>()
         return log.map { trace ->
-            alignments
-                .computeIfAbsent(this@EventsSummarizer(trace)) { true to block(trace) }
-                .second
+            alignments.computeIfAbsent(this@EventsSummarizer(trace)) { block(trace) ?: Unit } as? R as R
         }
     }
 
@@ -32,12 +30,11 @@ fun interface EventsSummarizer<T> {
      * on the i-th element of [log], but computed more efficiently: for each [Trace] summary, [block] is called exactly once.
      * The evaluation is lazy due to use of [Sequence].
      */
+    @Suppress("UNCHECKED_CAST")
     fun <R> flatMap(log: Sequence<Trace>, block: (Trace) -> R): Sequence<R> {
-        val alignments = HashMap<Any?, Pair<Boolean, R>>()
+        val alignments = HashMap<Any?, Any?>()
         return log.map { trace ->
-            alignments
-                .computeIfAbsent(this@EventsSummarizer(trace)) { true to block(trace) }
-                .second
+            alignments.computeIfAbsent(this@EventsSummarizer(trace)) { block(trace) ?: Unit } as? R as R
         }
     }
 

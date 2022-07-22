@@ -82,7 +82,7 @@ class DecompositionAligner(
      */
     override fun align(trace: Trace): Alignment {
         val start = System.currentTimeMillis()
-        val events = trace.events.toList()
+        val events = trace.events.asCollection()
 
         logger.trace { "Aligning Petri net and trace [${events.joinToString { it.conceptName ?: "" }}]" }
 
@@ -138,7 +138,7 @@ class DecompositionAligner(
      *   `alignmentCostLowerBound(events).cost == align(events).cost`
      * * Otherwise, [CostApproximation.exact]=false and   `alignmentCostLowerBound(events).cost <= align(events).cost`
      */
-    fun alignmentCostLowerBound(events: List<Event>, timeout: Long, unit: TimeUnit): CostApproximation {
+    fun alignmentCostLowerBound(events: Collection<Event>, timeout: Long, unit: TimeUnit): CostApproximation {
         val eventsWithExistingActivities =
             events.filter { e -> translatedModel.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
         var lastResult: AlignmentStepResult? = null

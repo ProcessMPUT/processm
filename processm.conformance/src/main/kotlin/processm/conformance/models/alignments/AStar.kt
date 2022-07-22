@@ -2,6 +2,7 @@ package processm.conformance.models.alignments
 
 import processm.conformance.models.DeviationType
 import processm.conformance.models.alignments.cache.Cache
+import processm.core.helpers.asCollection
 import processm.core.helpers.ternarylogic.Ternary
 import processm.core.log.Event
 import processm.core.log.hierarchical.Trace
@@ -26,7 +27,8 @@ import java.util.*
 class AStar(
     override val model: ProcessModel,
     override val penalty: PenaltyFunction = PenaltyFunction(),
-    val countUnmatchedModelMoves: CountUnmatchedModelMoves? =
+    // FIXME: #155 CountUnmatchedPetriNetMoves keeps trace-specific state and so concurrent calls to align() are not thread-safe contrary to the class documentation.
+    private val countUnmatchedModelMoves: CountUnmatchedModelMoves? =
         when (model) {
             is PetriNet -> CountUnmatchedPetriNetMoves(model)
             is CausalNet -> CountUnmatchedCausalNetMoves(model)
@@ -58,7 +60,7 @@ class AStar(
      * @throws InterruptedException If the calculation cancelled.
      */
     override fun align(trace: Trace): Alignment {
-        val events = trace.events.toList()
+        val events = trace.events.asCollection()
         val eventsWithExistingActivities = events.filter { e -> activities.contains(e.conceptName) }
         visitedStatesCount = 0
         val alignment = alignInternal(eventsWithExistingActivities)
@@ -68,18 +70,7 @@ class AStar(
     }
 
     private fun alignInternal(events: List<Event>): Alignment {
-        run {
-            val nEvents = ArrayList<Map<String?, Int>>()
-            val tmp = HashMap<String?, Int>()
-            for (e in events.asReversed()) {
-                tmp.compute(e.conceptName) { _, old ->
-                    (old ?: 0) + 1
-                }
-                nEvents.add(HashMap(tmp))
-            }
-            this.nEvents = nEvents.asReversed()
-            countUnmatchedModelMoves?.reset()
-        }
+        val nEvents = countRemainingEventsWithTheSameConceptName(events)
         val thread = Thread.currentThread()
         val queue = PriorityQueue<SearchState>()
         val visited = Cache<SearchState>()
@@ -96,7 +87,8 @@ class AStar(
                     instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                     else -> Ternary.False
                 },
-                null
+                null,
+                nEvents,
             ),
             activity = null, // before first activity
             event = -1, // before first event
@@ -182,7 +174,7 @@ class AStar(
                     } else {
                         val currentCost = searchState.currentCost + penalty.silentMove
                         // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
-                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown, prevProcessState)
+                        val predictedCost = predict(events, nextEventIndex, Ternary.Unknown, prevProcessState, nEvents)
                             .coerceAtLeast(searchState.predictedCost - penalty.silentMove)
                         if (currentCost + predictedCost <= upperBoundCost) {
                             queue.add(
@@ -206,7 +198,7 @@ class AStar(
                     val currentCost = searchState.currentCost + penalty.synchronousMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
-                        predict(events, nextEventIndex + 1, Ternary.Unknown, searchState.processState)
+                        predict(events, nextEventIndex + 1, Ternary.Unknown, searchState.processState, nEvents)
                             .coerceAtLeast(searchState.predictedCost - penalty.synchronousMove)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
@@ -226,7 +218,7 @@ class AStar(
                     val currentCost = searchState.currentCost + penalty.modelMove
                     // Pass Ternary.Unknown because obtaining the actual state requires execution in the model
                     val predictedCost =
-                        predict(events, nextEventIndex, Ternary.Unknown, searchState.processState)
+                        predict(events, nextEventIndex, Ternary.Unknown, searchState.processState, nEvents)
                             .coerceAtLeast(searchState.predictedCost - penalty.modelMove)
                     if (currentCost + predictedCost <= upperBoundCost) {
                         queue.add(
@@ -251,7 +243,8 @@ class AStar(
                         instance.availableActivities.any(Activity::isSilent) -> Ternary.Unknown
                         else -> Ternary.False
                     },
-                    prevProcessState
+                    prevProcessState,
+                    nEvents
                 ).coerceAtLeast(searchState.predictedCost - penalty.logMove)
                 if (currentCost + predictedCost <= upperBoundCost) {
                     val state = SearchState(
@@ -270,6 +263,23 @@ class AStar(
         }
 
         throw IllegalStateException("Cannot align the log with the model. The final state of the model is not reachable.")
+    }
+
+    private fun countRemainingEventsWithTheSameConceptName(events: List<Event>): List<Map<String?, Int>> {
+        if (countUnmatchedModelMoves === null)
+            return emptyList()
+
+        val nEvents = ArrayList<Map<String?, Int>>()
+        val tmp = HashMap<String?, Int>()
+        for (e in events.asReversed()) {
+            tmp.compute(e.conceptName) { _, old ->
+                (old ?: 0) + 1
+            }
+            nEvents.add(HashMap(tmp))
+        }
+        countUnmatchedModelMoves.reset()
+
+        return nEvents.asReversed()
     }
 
     private fun formatAlignment(
@@ -305,13 +315,12 @@ class AStar(
     private fun isSynchronousMove(event: Event?, activity: Activity): Boolean =
         event !== null && event.conceptName == activity.name
 
-    private lateinit var nEvents: List<Map<String?, Int>>
-
     private fun predict(
         events: List<Event>,
         startIndex: Int,
         isFinalState: Ternary,
-        prevProcessState: ProcessModelState?
+        prevProcessState: ProcessModelState?,
+        nEvents: List<Map<String?, Int>>
     ): Int {
         if (startIndex == SKIP_EVENT || startIndex >= events.size)
             return if (isFinalState != Ternary.False) 0 else penalty.modelMove // we reached the end of trace, should we move in the model?

@@ -11,6 +11,6 @@ import processm.core.models.commons.ProcessModel
  * There's no [getOrPut] or similar method on purpose, because ensuring that it is thread-safe and efficient could be a tricky business.
  */
 interface AlignmentCache {
-    fun get(model: ProcessModel, events: List<Event>): Alignment?
-    fun put(model: ProcessModel, events: List<Event>, alignment: Alignment)
+    fun get(model: ProcessModel, events: Iterable<Event>): Alignment?
+    fun put(model: ProcessModel, events: Iterable<Event>, alignment: Alignment)
 }
