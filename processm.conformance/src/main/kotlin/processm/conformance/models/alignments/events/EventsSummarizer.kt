@@ -12,37 +12,35 @@ import processm.core.log.hierarchical.Trace
 fun interface EventsSummarizer<out T> {
     operator fun invoke(events: Iterable<Event>): T
     operator fun invoke(trace: Trace): T = invoke(trace.events.asIterable())
-
-    /**
-     * Returns a list of the same length as [log], such that `log.map(block) == flatMap(log, block)`, but computed more
-     * efficiently: for each [Trace] summary (a result of calling [invoke]), [block] is called exactly once.
-     */
-    @Suppress("UNCHECKED_CAST")
-    fun <R> flatMap(log: Iterable<Trace>, block: (Trace) -> R): List<R> {
-        val alignments = HashMap<Any?, Any?>()
-        return log.map { trace ->
-            alignments.computeIfAbsent(this@EventsSummarizer(trace)) { block(trace) ?: Unit } as? R as R
-        }
-    }
-
-    /**
-     * Returns a sequence of the same length as [log], such that its i-th element is equal to the result of calling `block`
-     * on the i-th element of [log], but computed more efficiently: for each [Trace] summary, [block] is called exactly once.
-     * The evaluation is lazy due to use of [Sequence].
-     */
-    @Suppress("UNCHECKED_CAST")
-    fun <R> flatMap(log: Sequence<Trace>, block: (Trace) -> R): Sequence<R> {
-        val alignments = HashMap<Any?, Any?>()
-        return log.map { trace ->
-            alignments.computeIfAbsent(this@EventsSummarizer(trace)) { block(trace) ?: Unit } as? R as R
-        }
-    }
-
-    /**
-     * Returns a sequence of the same length as [log], such that its i-th element is equal to the result of calling `block`
-     * on the i-th trace of [log], but computed more efficiently: for each [Trace] summary, [block] is called exactly once.
-     * The evaluation is lazy due to use of [Sequence].
-     */
-    fun <R> flatMap(log: Log, block: (Trace) -> R) = flatMap(log.traces, block)
-
 }
+
+/**
+ * Returns a sequence of the same length as [log], such that its i-th element is equal to the result of calling `block`
+ * on the i-th element of [log], but computed more efficiently: for each [Trace] summary, [block] is called exactly once.
+ * The evaluation is lazy due to use of [Sequence].
+ */
+inline fun <reified R> EventsSummarizer<*>.flatMap(log: Sequence<Trace>, crossinline block: (Trace) -> R): Sequence<R> {
+    val alignments = HashMap<Any?, Any>()
+    return log.map { trace ->
+        alignments.computeIfAbsent(this@flatMap(trace)) { block(trace) ?: Unit } as? R as R
+    }
+}
+
+/**
+ * Returns a list of the same length as [log], such that `log.map(block) == flatMap(log, block)`, but computed more
+ * efficiently: for each [Trace] summary (a result of calling [invoke]), [block] is called exactly once.
+ */
+inline fun <reified R> EventsSummarizer<*>.flatMap(log: Iterable<Trace>, crossinline block: (Trace) -> R): List<R> {
+    val alignments = HashMap<Any?, Any>()
+    return log.map { trace ->
+        alignments.computeIfAbsent(this@flatMap(trace)) { block(trace) ?: Unit } as? R as R
+    }
+}
+
+/**
+ * Returns a sequence of the same length as [log], such that its i-th element is equal to the result of calling `block`
+ * on the i-th trace of [log], but computed more efficiently: for each [Trace] summary, [block] is called exactly once.
+ * The evaluation is lazy due to use of [Sequence].
+ */
+inline fun <reified R> EventsSummarizer<*>.flatMap(log: Log, crossinline block: (Trace) -> R) =
+    flatMap(log.traces, block)

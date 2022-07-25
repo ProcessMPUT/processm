@@ -9,8 +9,10 @@ import processm.core.models.commons.ProcessModel
  * operating on similar models and thus having shared decompositions.
  *
  * There's no [getOrPut] or similar method on purpose, because ensuring that it is thread-safe and efficient could be a tricky business.
+ *
+ * Note that the general contract on [List.hashCode] and [List.equals] requires use of the contained items.
  */
 interface AlignmentCache {
-    fun get(model: ProcessModel, events: Iterable<Event>): Alignment?
-    fun put(model: ProcessModel, events: Iterable<Event>, alignment: Alignment)
+    fun get(model: ProcessModel, events: List<Event>): Alignment?
+    fun put(model: ProcessModel, events: List<Event>, alignment: Alignment)
 }

@@ -2,6 +2,7 @@ package processm.conformance.models.alignments
 
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
+import processm.conformance.models.alignments.events.flatMap
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.ProcessModel

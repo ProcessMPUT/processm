@@ -5,6 +5,7 @@ import processm.conformance.models.alignments.cache.CachingAlignerFactory
 import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
+import processm.conformance.models.alignments.events.flatMap
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet

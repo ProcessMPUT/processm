@@ -20,16 +20,16 @@ open class LRUAlignmentCache<EventsSummary>(val summarizer: EventsSummarizer<Eve
     var hitCounter: Int = 0
         private set
 
-    protected fun cacheKey(model: ProcessModel, events: Iterable<Event>) = model to summarizer(events)
+    protected fun cacheKey(model: ProcessModel, events: List<Event>) = model to summarizer(events)
 
     @Synchronized
-    override fun get(model: ProcessModel, events: Iterable<Event>): Alignment? = cache[cacheKey(model, events)].also {
+    override fun get(model: ProcessModel, events: List<Event>): Alignment? = cache[cacheKey(model, events)].also {
         if (it !== null)
             hitCounter++
     }
 
     @Synchronized
-    override fun put(model: ProcessModel, events: Iterable<Event>, alignment: Alignment) {
+    override fun put(model: ProcessModel, events: List<Event>, alignment: Alignment) {
         cache[cacheKey(model, events)] = alignment
     }
 

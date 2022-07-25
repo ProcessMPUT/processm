@@ -1,6 +1,5 @@
 package processm.core.verifiers.causalnet
 
-import processm.core.helpers.SequenceWithMemory
 import processm.core.helpers.mapToSet
 import processm.core.helpers.withMemory
 import processm.core.logging.logger
@@ -52,7 +51,7 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
     /**
      * The set of all valid sequences. There is a possiblity that this set is infinite.
      */
-    val validSequences: SequenceWithMemory<CausalNetSequence> by lazy {
+    val validSequences: Sequence<CausalNetSequence> by lazy {
         computeSetOfValidSequences(false) { _, _ -> true }.withMemory()
     }
 
@@ -65,14 +64,14 @@ class CausalNetVerifierImpl(val model: CausalNet, val useCache: Boolean = true) 
      * and B contains no less of each obligations than A.
      * In simple terms, B is A plus something.
      */
-    val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> by lazy {
+    val validLoopFreeSequences: Sequence<CausalNetSequence> by lazy {
         computeSetOfValidSequences(true) { _, _ -> true }.withMemory()
     }
 
     /**
      * @see processm.core.verifiers.CausalNetVerificationReport.validLoopFreeSequencesWithArbitrarySerialization
      */
-    val validLoopFreeSequencesWithArbitrarySerialization: SequenceWithMemory<CausalNetSequence> by lazy {
+    val validLoopFreeSequencesWithArbitrarySerialization: Sequence<CausalNetSequence> by lazy {
         val beenThereDoneThat = HashSet<Pair<Set<Node>, Set<Dependency>>>()
         computeSetOfValidSequences(true) { current, visiting ->
             val key = current.mapToSet { it.a } to current.last().state.uniqueSet()
