@@ -51,17 +51,21 @@ class CompositeAligner(
             val astarFactory = CachingAlignerFactory(cache) { model, penalty, _ -> AStar(model, penalty) }
             listOfNotNull(
                 astarFactory,
-                if (model is CausalNet) CachingAlignerFactory(cache, CausalNetAsPetriNetAlignerFactory { model, penalty, pool ->
-                    PetriDecompositionAligner(
-                        model as PetriNet,
-                        penalty,
-                        pool = pool,
-                        alignerFactory = astarFactory
-                    )
-                }) else null,
-                if (model is CausalNet) CachingAlignerFactory(cache, CausalNetAsPetriNetAlignerFactory { model, penalty, _ ->
-                    AStar(model, penalty)
-                }) else null,
+                if (model is CausalNet) CachingAlignerFactory(
+                    cache,
+                    CausalNetAsPetriNetAlignerFactory { model, penalty, pool ->
+                        PetriDecompositionAligner(
+                            model as PetriNet,
+                            penalty,
+                            pool = pool,
+                            alignerFactory = astarFactory
+                        )
+                    }) else null,
+                if (model is CausalNet) CachingAlignerFactory(
+                    cache,
+                    CausalNetAsPetriNetAlignerFactory { model, penalty, _ ->
+                        AStar(model, penalty)
+                    }) else null,
                 if (model is PetriNet) CachingAlignerFactory(cache) { model, penalty, pool ->
                     PetriDecompositionAligner(
                         model as PetriNet,
@@ -85,11 +89,11 @@ class CompositeAligner(
      * reachable.
      * @throws InterruptedException If the calculation cancelled.
      */
-    fun align(trace: Trace, timeout: Long, unit: TimeUnit): Alignment? {
+    fun align(trace: Trace, costUpperBound: Int, timeout: Long, unit: TimeUnit): Alignment? {
         val completionService = ExecutorCompletionService<Alignment>(pool)
         val futures = alignerFactories.map { factory ->
             completionService.submit {
-                factory(model, penalty, pool).align(trace)
+                factory(model, penalty, pool).align(trace, costUpperBound)
             }
         }
 
@@ -117,7 +121,34 @@ class CompositeAligner(
      * reachable.
      * @throws InterruptedException If the calculation cancelled.
      */
-    override fun align(trace: Trace): Alignment = align(trace, -1L, TimeUnit.SECONDS)!!
+    fun align(trace: Trace, timeout: Long = -1L, unit: TimeUnit = TimeUnit.SECONDS): Alignment =
+        align(trace, Int.MAX_VALUE, timeout, unit) ?: throw IllegalStateException("An alignment cannot be calculated")
+
+    /**
+     * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
+     *
+     * @throws InterruptedException If the calculation cancelled.
+     */
+    override fun align(trace: Trace, costUpperBound: Int): Alignment? =
+        align(trace, costUpperBound, -1L, TimeUnit.SECONDS)
+
+    override fun align(trace: Trace): Alignment =
+        align(trace, -1L, TimeUnit.SECONDS)
+
+    /**
+     * Calculates [Alignment]s for the given sequence of traces. The alignments are returned in the same order as traces in [log].
+     * Uses [summarizer] to compute an alignment once for every summary returned by the summarizer.
+     * Each alignment is computed for at most [timeout] [unit]s and once it is reached, the computation is interrupted and null is returned in place of the alignment.
+     */
+    fun align(
+        log: Sequence<Trace>,
+        costUpperBound: Int,
+        timeout: Long = -1,
+        unit: TimeUnit = TimeUnit.SECONDS,
+        summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer
+    ): Sequence<Alignment?> =
+        summarizer?.flatMap(log) { align(it, costUpperBound, timeout, unit) }
+            ?: log.map { align(it, costUpperBound, timeout, unit) }
 
     /**
      * Calculates [Alignment]s for the given sequence of traces. The alignments are returned in the same order as traces in [log].
@@ -129,8 +160,21 @@ class CompositeAligner(
         timeout: Long = -1,
         unit: TimeUnit = TimeUnit.SECONDS,
         summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer
-    ): Sequence<Alignment?> =
+    ): Sequence<Alignment> =
         summarizer?.flatMap(log) { align(it, timeout, unit) } ?: log.map { align(it, timeout, unit) }
+
+    /**
+     * Calculates [Alignment]s for the given sequence of traces. The alignments are returned in the same order as traces in [log].
+     * Uses [summarizer] to compute an alignment once for every summary returned by the summarizer.
+     * Each alignment is computed for at most [timeout] [unit]s and once it is reached, the computation is interrupted and null is returned in place of the alignment.
+     */
+    fun align(
+        log: Log,
+        costUpperBound: Int,
+        timeout: Long = -1,
+        unit: TimeUnit = TimeUnit.SECONDS,
+        summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer
+    ): Sequence<Alignment?> = align(log.traces, costUpperBound, timeout, unit, summarizer)
 
     /**
      * Calculates [Alignment]s for the given sequence of traces. The alignments are returned in the same order as traces in [log].
@@ -142,5 +186,5 @@ class CompositeAligner(
         timeout: Long = -1,
         unit: TimeUnit = TimeUnit.SECONDS,
         summarizer: EventsSummarizer<*>? = DefaultEventsSummarizer
-    ) = align(log.traces, timeout, unit, summarizer)
+    ): Sequence<Alignment> = align(log.traces, timeout, unit, summarizer)
 }

@@ -10,6 +10,9 @@ import processm.core.models.commons.ProcessModel
  * A wrapper for [baseAligner] using cache provided by [alignmentCache]
  */
 class CachingAligner(val baseAligner: Aligner, val alignmentCache: AlignmentCache) : Aligner {
+    companion object {
+        private val INVALID = Alignment(emptyList(), -1)
+    }
 
     override val model: ProcessModel
         get() = baseAligner.model
@@ -17,10 +20,13 @@ class CachingAligner(val baseAligner: Aligner, val alignmentCache: AlignmentCach
     override val penalty: PenaltyFunction
         get() = baseAligner.penalty
 
-    override fun align(trace: Trace): Alignment {
+    override fun align(trace: Trace, costUpperBound: Int): Alignment? {
         val events = trace.events.toList()
-        return alignmentCache.get(baseAligner.model, events) ?: (baseAligner.align(trace)
-            .also { alignmentCache.put(baseAligner.model, events, it) })
+        val cached = alignmentCache.get(baseAligner.model, events)
+        if (cached === INVALID)
+            return null
+        return cached ?: (baseAligner.align(trace, costUpperBound)
+            .also { alignmentCache.put(baseAligner.model, events, it ?: INVALID) })
     }
 
 }

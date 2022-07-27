@@ -23,28 +23,36 @@ class DecompositionAligner(
         private const val INFINITE_UPPER_BOUND = 1000000
     }
 
-    override fun align(trace: Trace): Alignment {
+    override fun align(trace: Trace, costUpperBound: Int): Alignment? {
         val events = trace.events.asCollection()
         val eventsWithExistingActivities =
             events.filter { e -> model.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
 
-        val alignment = decompose(model.root!!, eventsWithExistingActivities)
+        val alignment = try {
+            decompose(model.root!!, eventsWithExistingActivities, costUpperBound)
+        } catch (_: UpperBoundExceeded) {
+            return null
+        }
         if (events.size == eventsWithExistingActivities.size)
             return alignment
 
-        return alignment.fillMissingEvents(events, penalty)
+        return alignment.fillMissingEvents(events, penalty).also { if (it.cost > costUpperBound) return@align null }
     }
 
-    private fun decompose(node: Node, events: List<Event>): Alignment =
-        when (node) {
-            is Sequence -> decomposeSequence(node, events)
-            is Exclusive -> decomposeExclusive(node, events)
-            is Parallel -> decomposeParallel(node, events)
-            is RedoLoop -> decomposeRedoLoop(node, events)
-            else -> align(node, events)
+    private fun decompose(node: Node, events: List<Event>, costUpperBound: Int): Alignment {
+        val alignment = when (node) {
+            is Sequence -> decomposeSequence(node, events, costUpperBound)
+            is Exclusive -> decomposeExclusive(node, events, costUpperBound)
+            is Parallel -> decomposeParallel(node, events, costUpperBound)
+            is RedoLoop -> decomposeRedoLoop(node, events, costUpperBound)
+            else -> align(node, events, costUpperBound)
         }
+        if (alignment.cost > costUpperBound)
+            throw UpperBoundExceeded()
+        return alignment
+    }
 
-    private fun decomposeSequence(node: Sequence, events: List<Event>): Alignment {
+    private fun decomposeSequence(node: Sequence, events: List<Event>, costUpperBound: Int): Alignment {
         val decomposition = LogDecomposition(node, events)
 
         val valid = decomposition.nodes.indices.all { i ->
@@ -68,19 +76,27 @@ class DecompositionAligner(
                     continue
                 visited.add(subTraceIndex)
 
-                val alignment = decompose(decomposition.nodes[subTraceIndex], decomposition.traces[subTraceIndex])
+                val alignment = decompose(
+                    decomposition.nodes[subTraceIndex],
+                    decomposition.traces[subTraceIndex],
+                    costUpperBound - cost
+                )
+
                 steps.addAll(alignment.steps)
                 cost += alignment.cost
+
+                if (cost > costUpperBound)
+                    throw UpperBoundExceeded()
             }
 
             steps.verify(events)
             return Alignment(steps, cost)
         }
 
-        return align(node, events)
+        return align(node, events, costUpperBound)
     }
 
-    private fun decomposeExclusive(node: Exclusive, events: List<Event>): Alignment {
+    private fun decomposeExclusive(node: Exclusive, events: List<Event>, costUpperBound: Int): Alignment {
         val decomposition = LogDecomposition(node, events)
 
         // find the child for which to calculate subalignment
@@ -93,7 +109,7 @@ class DecompositionAligner(
             // great! it is valid to calculate subalignment for this trace
             assert(decomposition.traces[index] == events)
 
-            val alignment = decompose(decomposition.nodes[index], decomposition.traces[index])
+            val alignment = decompose(decomposition.nodes[index], decomposition.traces[index], costUpperBound)
             alignment.steps.verify(events)
             return alignment
         }
@@ -105,29 +121,35 @@ class DecompositionAligner(
                 possibleChildren.add(decomposition.nodes[i])
         }
         if (possibleChildren.size < decomposition.nodes.size) {
-            return align(Exclusive(*possibleChildren.toTypedArray()), events)
+            return align(Exclusive(*possibleChildren.toTypedArray()), events, costUpperBound)
         }
 
-        return align(node, events)
+        return align(node, events, costUpperBound)
     }
 
-    private fun decomposeParallel(node: Parallel, events: List<Event>): Alignment {
+    private fun decomposeParallel(node: Parallel, events: List<Event>, costUpperBound: Int): Alignment {
         val decomposition = LogDecomposition(node, events)
 
         val subAlignments =
-            decomposition.nodes.indices.map { decompose(decomposition.nodes[it], decomposition.traces[it]) }
+            decomposition.nodes.indices.map {
+                decompose(
+                    decomposition.nodes[it],
+                    decomposition.traces[it],
+                    costUpperBound
+                )
+            }
         val alignment = subAlignments.merge(events)
         alignment.steps.verify(events)
         return alignment
     }
 
-    private fun decomposeRedoLoop(node: RedoLoop, events: List<Event>): Alignment {
+    private fun decomposeRedoLoop(node: RedoLoop, events: List<Event>, costUpperBound: Int): Alignment {
         val decomposition = LogDecomposition(node, events)
 
         // fast path: one iteration of the loop
         val unique = HashSet<Int>()
         if (events.indices.all { e -> unique.add(decomposition.eventMap[e]) } && unique.size <= 1 && unique.firstOrNull() ?: 0 == 0)
-            return decompose(decomposition.nodes[0], decomposition.traces[0])
+            return decompose(decomposition.nodes[0], decomposition.traces[0], costUpperBound)
 
         // the first and the last activity must belong to the first subtrace
         val firstSubtrace = decomposition.traces[0]
@@ -147,11 +169,11 @@ class DecompositionAligner(
 
             // use simplified loop
             if (usedChildren.size < decomposition.nodes.size) {
-                return align(RedoLoop(*usedChildren.toTypedArray()), events)
+                return align(RedoLoop(*usedChildren.toTypedArray()), events, costUpperBound)
             }
         }
 
-        return align(node, events)
+        return align(node, events, costUpperBound)
     }
 
     private fun simplify(node: Node, events: List<Event>): Node =
@@ -179,7 +201,7 @@ class DecompositionAligner(
             }
         }
 
-        // add non-matching option for the case it when skipping this alternative is less costly than replaying the trace
+        // add a non-matching option for the case when skipping this alternative is less costly than replaying the trace
         // on one of the "good" alternatives
         if (badAlternative != -1)
             used[badAlternative] = decomposition.nodes[badAlternative]
@@ -231,10 +253,10 @@ class DecompositionAligner(
             else -> throw IllegalArgumentException("Unknown node ${node::class.simpleName}.")
         }
 
-    private fun align(node: Node, events: List<Event>): Alignment {
+    private fun align(node: Node, events: List<Event>, costUpperBound: Int): Alignment {
         val simplified = simplify(node, events)
         val aligner = alignerFactory(ProcessTree(simplified), penalty, SameThreadExecutorService)
-        return aligner.align(Trace(events.asSequence()))
+        return aligner.align(Trace(events.asSequence()), costUpperBound) ?: throw UpperBoundExceeded()
     }
 
     private fun hasSilentActivity(node: Node): Boolean {
@@ -317,4 +339,6 @@ class DecompositionAligner(
             return set
         }
     }
+
+    private class UpperBoundExceeded : Exception()
 }

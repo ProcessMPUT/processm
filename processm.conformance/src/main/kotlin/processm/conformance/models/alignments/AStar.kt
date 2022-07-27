@@ -37,6 +37,7 @@ class AStar(
 ) : Aligner {
     companion object {
         private const val SKIP_EVENT = Int.MIN_VALUE
+        private const val QUEUE_INITIAL_CAP = 1 shl 7 // the default is 11
     }
 
     private val activities: Set<String?> =
@@ -55,24 +56,26 @@ class AStar(
     /**
      * Calculates [Alignment] for the given [trace]. Use [Thread.interrupt] to cancel calculation without yielding result.
      *
-     * @throws IllegalStateException If the alignment cannot be calculated, e.g., because the final model state is not
-     * reachable.
+     * @param trace The trace to align.
+     * @param costUpperBound The maximal cost of the resulting alignment.
+     * @return The alignment with the minimal cost or null if an alignment with the cost within the [costUpperBound] does
+     * not exist.
      * @throws InterruptedException If the calculation cancelled.
      */
-    override fun align(trace: Trace): Alignment {
+    override fun align(trace: Trace, costUpperBound: Int): Alignment? {
         val events = trace.events.asCollection()
         val eventsWithExistingActivities = events.filter { e -> activities.contains(e.conceptName) }
         visitedStatesCount = 0
-        val alignment = alignInternal(eventsWithExistingActivities)
+        val alignment = alignInternal(eventsWithExistingActivities, costUpperBound)
         if (events.size == eventsWithExistingActivities.size)
             return alignment
-        return alignment.fillMissingEvents(events, penalty)
+        return alignment?.fillMissingEvents(events, penalty)?.also { if (it.cost > costUpperBound) return@align null }
     }
 
-    private fun alignInternal(events: List<Event>): Alignment {
+    private fun alignInternal(events: List<Event>, costLimit: Int): Alignment? {
         val nEvents = countRemainingEventsWithTheSameConceptName(events)
         val thread = Thread.currentThread()
-        val queue = PriorityQueue<SearchState>()
+        val queue = PriorityQueue<SearchState>(QUEUE_INITIAL_CAP)
         val visited = Cache<SearchState>()
 
         val instance = model.createInstance()
@@ -97,7 +100,7 @@ class AStar(
         )
         queue.add(initialSearchState)
 
-        var upperBoundCost = Int.MAX_VALUE
+        var upperBoundCost = costLimit
         var lastCost = 0
         while (queue.isNotEmpty()) {
             val searchState = queue.poll()!!
@@ -130,7 +133,7 @@ class AStar(
                     // Clearing the queue at this point is linear in the queue size and brings insignificant reductions
                     // that amount from 0 to few tens of search states in our experiments (compared to thousands or even
                     // millions of states in the queue). On the other hand, the states with the cost over the upperbound
-                    // remaining in the queue will be never pushed to the root and/or reached, so keeping them is cheap.
+                    // remaining in the queue will never be pushed to the root and/or reached, so keeping them is cheap.
                     // Note that we prevent below the insertion of new states of larger cost than the upperbound.
                     // Note also that the queue clean-up procedure can be done in O(log(n)) by replacing heap-based queue
                     // with the queue with total order. However, this may increase the time of other operations on the
@@ -262,7 +265,7 @@ class AStar(
             }
         }
 
-        throw IllegalStateException("Cannot align the log with the model. The final state of the model is not reachable.")
+        return null
     }
 
     private fun countRemainingEventsWithTheSameConceptName(events: List<Event>): List<Map<String?, Int>> {
@@ -277,9 +280,11 @@ class AStar(
             }
             nEvents.add(HashMap(tmp))
         }
+        nEvents.reverse()
+
         countUnmatchedModelMoves.reset()
 
-        return nEvents.asReversed()
+        return nEvents
     }
 
     private fun formatAlignment(
@@ -340,13 +345,13 @@ class AStar(
                 sum += penalty.modelMove
         }
 
-        val unmachedModelMovesCount = if (prevProcessState == null)
+        val unmatchedModelMovesCount = if (prevProcessState == null)
             0
         else
             countUnmatchedModelMoves?.compute(startIndex, nEvents, prevProcessState) ?: 0
 
         // Subtract one modelMove, because we are considering previous state and it may have been already included in the cost
-        sum += (unmachedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
+        sum += (unmatchedModelMovesCount - 1).coerceAtLeast(0) * penalty.modelMove
 
         return sum
     }

@@ -80,7 +80,7 @@ class DecompositionAligner(
      * reachable.
      * @throws InterruptedException If the calculation cancelled.
      */
-    override fun align(trace: Trace): Alignment {
+    override fun align(trace: Trace, costUpperBound: Int): Alignment? {
         val start = System.currentTimeMillis()
         val events = trace.events.asCollection()
 
@@ -89,14 +89,20 @@ class DecompositionAligner(
         val eventsWithExistingActivities =
             events.filter { e -> translatedModel.activities.any { a -> !a.isSilent && a.name == e.conceptName } }
 
-        val alignments = decomposedAlign(eventsWithExistingActivities)
+        val alignments = decomposedAlign(eventsWithExistingActivities, costUpperBound)
         val alignment =
             if (alignments.size == 1) alignments[0]
             else alignments.mergeDuplicateAware(eventsWithExistingActivities, penalty)
 
+        if (alignment.cost > costUpperBound)
+            return null
+
         val output =
             if (events.size == eventsWithExistingActivities.size) alignment
             else alignment.fillMissingEvents(events, penalty)
+
+        if (output.cost > costUpperBound)
+            return null
 
         val time = System.currentTimeMillis() - start
         logger.debug { "Calculated alignment in ${time}ms using decomposition into ${alignments.size} nets." }
@@ -146,7 +152,7 @@ class DecompositionAligner(
             var decomposition = Decomposition.create(initialDecomposition, eventsWithExistingActivities)
             while (true) {
                 try {
-                    val r = decomposedAlignStep(eventsWithExistingActivities, decomposition)
+                    val r = decomposedAlignStep(eventsWithExistingActivities, decomposition, Int.MAX_VALUE)
                     lastResult = r
                     if (r.decomposition == null)
                         break
@@ -187,11 +193,12 @@ class DecompositionAligner(
 
     private fun decomposedAlignStep(
         events: List<Event>,
-        decomposition: Decomposition
+        decomposition: Decomposition,
+        costUpperBound: Int
     ): AlignmentStepResult {
         val futures = decomposition.nets.mapIndexed { i, net ->
             pool.submit<Alignment> {
-                alignerFactory(net, penalty, pool).align(Trace(decomposition.traces[i].asSequence()))
+                alignerFactory(net, penalty, pool).align(Trace(decomposition.traces[i].asSequence()), costUpperBound)
             }
         }
         val alignments = try {
@@ -219,10 +226,10 @@ class DecompositionAligner(
         return AlignmentStepResult(alignments, decomposition.nets, recomposed)
     }
 
-    private fun decomposedAlign(events: List<Event>): List<Alignment> {
+    private fun decomposedAlign(events: List<Event>, costUpperBound: Int): List<Alignment> {
         var decomposition = Decomposition.create(initialDecomposition, events)
         while (true) {
-            val stepResult = decomposedAlignStep(events, decomposition)
+            val stepResult = decomposedAlignStep(events, decomposition, costUpperBound)
             if (stepResult.decomposition == null)
                 return stepResult.alignments
             decomposition = stepResult.decomposition

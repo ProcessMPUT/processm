@@ -1,8 +1,11 @@
 package processm.conformance.models.alignments.events
 
 import processm.core.log.Event
+import processm.core.log.attribute.Attribute
+import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
+import processm.core.models.commons.Activity
 
 /**
  * Transforms a [Trace] or a list of [Event] into some summary such that if two traces have the same summary they are indistinguishable in further processing.
@@ -12,6 +15,10 @@ import processm.core.log.hierarchical.Trace
 fun interface EventsSummarizer<out T> {
     operator fun invoke(events: Iterable<Event>): T
     operator fun invoke(trace: Trace): T = invoke(trace.events.asIterable())
+
+    fun summary(activities: Iterable<Activity>): T = invoke(
+        activities.map { Event(mutableMapOf(Attribute.CONCEPT_NAME to StringAttr(Attribute.CONCEPT_NAME, it.name))) }
+    )
 }
 
 /**
