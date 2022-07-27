@@ -663,7 +663,7 @@ class `BPIC15_2f complete` {
         val aligner = CompositeAligner(net, pool = pool)
         val log = load("../xes-logs/BPIC15_2f.xes.gz")
 
-        val alignments = aligner.align(log, 10, TimeUnit.MILLISECONDS).toList()
+        val alignments = aligner.align(log, Int.MAX_VALUE, 10, TimeUnit.MILLISECONDS).toList()
 
         assertEquals(log.traces.count(), alignments.size)
         assertTrue("It is possible that the test failed due to some performance issues") { alignments.any { it != null } }
