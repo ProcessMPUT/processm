@@ -1,13 +1,17 @@
 package processm.conformance.models.antialignments
 
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import processm.conformance.PetriNets
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
+import processm.core.logging.debug
+import processm.core.logging.loggedScope
 import processm.core.models.commons.ProcessModel
 import kotlin.test.Test
-import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Tests based on the examples in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
@@ -63,19 +67,42 @@ class TwoPhaseDFSPetriNetTests {
         test(PetriNets.fig3, table1, expectedCost, expectedModelMoves)
     }
 
+    @Test
+    fun `example 4`() {
+        val expectedModelMoves = listOf("A", "C", "D", "G", "H", "F", "I")
+        val expectedCost = 0
+
+        test(PetriNets.fig4, table1, expectedCost, expectedModelMoves)
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = intArrayOf(0, 1, 2, 3, 4))
+    fun `example 5`(dropIndex: Int) = test(
+        model = PetriNets.fig1,
+        log = Log(table1.traces.withIndex().mapNotNull { (i, v) -> if (i != dropIndex) v else null }),
+        expectedCost = listOf(5, 1, 1, 2, 1)[dropIndex],
+        expectedModelMoves = listOf(
+            listOf("A", "B", "D", "E", "I"),
+            listOf("A", "C", "G", "H", "D", "F", "I"),
+            listOf("A", "C", "G", "H", "D", "F", "I"),
+            listOf("A", "C", "H", "D", "F", "I"),
+            listOf("A", "C", "D", "H", "F", "I"),
+        )[dropIndex]
+    )
+
+
     private fun test(
         model: ProcessModel,
         log: Log,
         expectedCost: Int,
         expectedModelMoves: List<String>
-    ) {
+    ) = loggedScope { logger ->
         val antiAlignments = TwoPhaseDFS(model).align(log, expectedModelMoves.size)
-        println(antiAlignments)
+        logger.debug { antiAlignments.toString() }
 
-        val antiAlignment = antiAlignments.first()
-        assertEquals(expectedCost, antiAlignment.cost)
-        assertEquals(expectedModelMoves.size, antiAlignment.size)
-        assertContentEquals(expectedModelMoves, antiAlignment.steps.mapNotNull { it.modelMove?.name })
+        assertTrue(antiAlignments.any { a -> expectedCost == a.cost })
+        assertTrue(antiAlignments.any { a -> expectedModelMoves.size == a.size })
+        assertTrue(antiAlignments.any { a -> expectedModelMoves == a.steps.mapNotNull { it.modelMove?.name } })
     }
 
 }

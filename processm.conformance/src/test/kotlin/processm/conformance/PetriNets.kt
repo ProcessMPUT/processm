@@ -277,6 +277,39 @@ object PetriNets {
     val fig3: PetriNet = flower("A", "B", "C", "D", "E", "F", "G", "H", "I")
 
     /**
+     * A Petri net from Fig. 4 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig4: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val start = Place()
+        val end = Place()
+
+        val parts = listOf(
+            getSequence("A", "B", "D", "E", "I"),
+            getSequence("A", "C", "D", "G", "H", "F", "I"),
+            getSequence("A", "C", "G", "D", "H", "F", "I"),
+            getSequence("A", "C", "H", "D", "F", "I"),
+            getSequence("A", "C", "D", "H", "F", "I")
+        )
+
+        fun PetriNet.pl(): List<Place> = places.filter { it !in initialMarking && it !in finalMarking }
+        fun PetriNet.tr(): List<Transition> = transitions.map {
+            when {
+                initialMarking.keys.first() in it.inPlaces -> it.copy(inPlaces = listOf(start))
+                finalMarking.keys.first() in it.outPlaces -> it.copy(outPlaces = listOf(end))
+                else -> it
+            }
+        }
+
+        PetriNet(
+            places = parts.flatMap { it.pl() },
+            transitions = parts.flatMap { it.tr() },
+            initialMarking = Marking(start),
+            finalMarking = Marking(end),
+        )
+    }
+
+    /**
      * A Petri net from Fig. 5 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
      * on Anti-Alignments.
      */

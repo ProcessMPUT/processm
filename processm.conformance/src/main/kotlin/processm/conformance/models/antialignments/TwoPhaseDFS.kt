@@ -125,12 +125,9 @@ class TwoPhaseDFS(
         m: Int = x.size,
         n: Int = y.size,
         maxN: Int = n + 1,
-        //cache: HashMap<Long, Int> = HashMap()
         cache: IntArray = IntArray((m + 1) * (n + 1) - 1).also { Arrays.fill(it, -1) }
     ): Int {
         fun computeIfAbsent(m: Int, n: Int): Int {
-//            val key = (m.toLong() shl Int.SIZE_BITS) + n
-//            return cache[key] ?: longestCommonSubsequence(x, y, m, n, cache).also { cache[key] = it }
             val key = m * maxN + n
             var value = cache[key]
             if (value < 0) {
