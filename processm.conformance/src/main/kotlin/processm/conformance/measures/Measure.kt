@@ -3,7 +3,7 @@ package processm.conformance.measures
 /**
  * A basic interface for a measure
  */
-fun interface Measure<T, out R> {
+fun interface Measure<in T, out R> {
     /**
      * Calculates the measure for the given [artifact].
      */

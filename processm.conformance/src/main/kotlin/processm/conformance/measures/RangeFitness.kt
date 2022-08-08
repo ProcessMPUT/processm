@@ -20,7 +20,7 @@ class RangeFitness(
     val aligner: DecompositionAligner,
     val timeout: Long,
     val unit: TimeUnit,
-    val eventsSummarizer: EventsSummarizer<out Any> = DefaultEventsSummarizer(),
+    val eventsSummarizer: EventsSummarizer<Any> = DefaultEventsSummarizer,
     val maxCacheSize: Int = 65535
 ) : Measure<Log, ClosedFloatingPointRange<Double>> {
 

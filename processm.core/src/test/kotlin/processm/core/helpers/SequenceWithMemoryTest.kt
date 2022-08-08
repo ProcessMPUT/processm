@@ -1,6 +1,10 @@
 package processm.core.helpers
 
-import kotlin.test.*
+import org.junit.jupiter.api.assertThrows
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SequenceWithMemoryTest {
 
@@ -47,5 +51,37 @@ class SequenceWithMemoryTest {
         while (i.hasNext())
             target.add(i.next())
         assertEquals(listOf(1, 2, 3, 4, 5), target)
+    }
+
+    @Test
+    fun `isEmpty for the empty sequence`() {
+        val seq = emptySequence<Any>().asList()
+        assertTrue(seq.isEmpty())
+        assertEquals(0, seq.size)
+    }
+
+    @Test
+    fun `isEmpty for a non-empty sequence`() {
+        val seq = sequenceOf<Int>(1, 2, 3, 4).asList()
+        assertFalse(seq.isEmpty())
+        assertEquals(4, seq.size)
+    }
+
+    @Test
+    fun `get cached item`() {
+        val seq = sequenceOf<Int>(1, 2, 3, 4).asList()
+        assertEquals(2, seq[1])
+        assertEquals(1, seq[0]) // cached
+        assertEquals(2, seq[1]) // cached
+        assertEquals(3, seq[2])
+        assertEquals(4, seq[3])
+        assertEquals(4, seq[3]) // cached
+    }
+
+    @Test
+    fun `throw IndexOutOfBoundsException for index exceeding size`() {
+        val seq = sequenceOf<Int>(1, 2, 3, 4).asList()
+        assertThrows<IndexOutOfBoundsException> { seq[4] }
+        assertThrows<IndexOutOfBoundsException> { seq[4] } // cached
     }
 }

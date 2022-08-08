@@ -121,7 +121,7 @@ private fun List<Step>.matchingSteps(start: Int, other: Iterable<Step>): Int {
  * Fills this alignment with missing events from the given list of [events]. The order of steps in this alignment
  * must be consistent with the order of [events] excluding the missing events.
  */
-fun Alignment.fillMissingEvents(events: List<Event>, penalty: PenaltyFunction): Alignment {
+fun Alignment.fillMissingEvents(events: Iterable<Event>, penalty: PenaltyFunction): Alignment {
     val steps = ArrayList<Step>(this.steps)
     var cost = this.cost
     var stepIndex = 0
@@ -151,7 +151,7 @@ fun Alignment.fillMissingEvents(events: List<Event>, penalty: PenaltyFunction): 
 /**
  * Verifies whether this list of alignment [Step]s is consistent with the given list of [events].
  */
-fun List<Step>.verify(events: List<Event>) {
+fun Iterable<Step>.verify(events: Iterable<Event>) {
     assert((events.asSequence() zipOrThrow this.asSequence().mapNotNull(Step::logMove)).all { (e1, e2) -> e1 == e2 }) {
         "events:\t${events.joinToString { it.conceptName.toString() }}\n" +
                 "alignment:\t${this.mapNotNull(Step::logMove).joinToString { it.conceptName.toString() }}"

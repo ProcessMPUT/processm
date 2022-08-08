@@ -17,7 +17,7 @@ class CachingAlignerTest {
         val pm = mockk<ProcessModel>()
         val baseAligner = mockk<Aligner>()
         every { baseAligner.model } returns pm
-        every { baseAligner.align(trace) } returns alignment andThenThrows RuntimeException()
+        every { baseAligner.align(trace, Int.MAX_VALUE) } returns alignment andThenThrows RuntimeException()
 
         val alignmentCache = mockk<AlignmentCache>()
         every { alignmentCache.get(pm, trace.events.toList()) } returns null andThen alignment
@@ -25,12 +25,12 @@ class CachingAlignerTest {
 
         val cachingAligner = CachingAligner(baseAligner, alignmentCache)
 
-        verify(exactly = 0) { baseAligner.align(any() as Trace) }
+        verify(exactly = 0) { baseAligner.align(any() as Trace, Int.MAX_VALUE) }
         assertSame(alignment, cachingAligner.align(trace))
-        verify(exactly = 1) { baseAligner.align(any() as Trace) }
+        verify(exactly = 1) { baseAligner.align(any() as Trace, Int.MAX_VALUE) }
         assertSame(alignment, cachingAligner.align(trace))
-        verify(exactly = 1) { baseAligner.align(any() as Trace) }
+        verify(exactly = 1) { baseAligner.align(any() as Trace, Int.MAX_VALUE) }
         assertSame(alignment, cachingAligner.align(trace))
-        verify(exactly = 1) { baseAligner.align(any() as Trace) }
+        verify(exactly = 1) { baseAligner.align(any() as Trace, Int.MAX_VALUE) }
     }
 }

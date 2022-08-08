@@ -1,6 +1,5 @@
 package processm.core.verifiers
 
-import processm.core.helpers.SequenceWithMemory
 import processm.core.verifiers.causalnet.CausalNetSequence
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 
@@ -18,7 +17,7 @@ class CausalNetVerificationReport internal constructor(verifier: CausalNetVerifi
     /**
      * Compute possible extensions for a given valid sequence, according to Definition 3.11 in PM
      */
-    val validSequences: SequenceWithMemory<CausalNetSequence> = verifier.validSequences
+    val validSequences: Sequence<CausalNetSequence> = verifier.validSequences
 
     /**
      * The set of all valid sequences without loops. This set should never be infinite.
@@ -29,7 +28,7 @@ class CausalNetVerificationReport internal constructor(verifier: CausalNetVerifi
      * and B contains no less of each obligations than A.
      * In simple terms, B is A plus something.
      */
-    val validLoopFreeSequences: SequenceWithMemory<CausalNetSequence> = verifier.validLoopFreeSequences
+    val validLoopFreeSequences: Sequence<CausalNetSequence> = verifier.validLoopFreeSequences
 
     /**
      * An approximation of the subset of all valid sequences without loops with a single, arbitrary serialization whenever there is paralellism involved.

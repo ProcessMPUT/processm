@@ -46,7 +46,7 @@ class CountUnmatchedCausalNetMoves(val model: CausalNet) : CountUnmatchedModelMo
 
         return minFutureExecutions
             .entries
-            .sumBy { (activity, counter) ->
+            .sumOf { (activity, counter) ->
                 val e = nEvents[activity] ?: 0
                 (counter - e).coerceAtLeast(0)
             }
@@ -94,7 +94,7 @@ class CountUnmatchedPetriNetMoves(val model: PetriNet) : CountUnmatchedModelMove
         for ((place, counter) in prevProcessState) {
             val following = this.following(place)
             val consuments = consumentsCache.computeIfAbsent(place to startIndex) {
-                following.sumBy { set -> set.minOf { nEvents[it] ?: 0 } }
+                following.sumOf { set -> set.minOf { nEvents[it] ?: 0 } }
             }
             if (counter > consuments)
                 nonConsumable.add(following to counter - consuments)

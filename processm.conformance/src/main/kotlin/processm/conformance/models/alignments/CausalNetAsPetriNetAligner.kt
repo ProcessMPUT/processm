@@ -12,7 +12,7 @@ import processm.core.models.petrinet.converters.CausalNet2PetriNet
 import java.util.concurrent.ExecutorService
 
 class CausalNetAsPetriNetAligner(private val base: Aligner, private val converter: CausalNet2PetriNet) :
-    Aligner by base {
+    Aligner {
 
     companion object {
         private val logger = logger()
@@ -29,8 +29,13 @@ class CausalNetAsPetriNetAligner(private val base: Aligner, private val converte
 
     private val transition2Node: Map<Transition, Node>
         get() = converter.node2Transition.inverseBidiMap()
+    override val penalty: PenaltyFunction
+        get() = base.penalty
+    override val model: ProcessModel
+        get() = base.model
 
-    override fun align(trace: Trace): Alignment = translate(base.align(trace))
+    override fun align(trace: Trace, costUpperBound: Int): Alignment? =
+        base.align(trace, costUpperBound)?.let(::translate)
 
     override fun align(log: Log, summarizer: EventsSummarizer<*>?): Sequence<Alignment> =
         base.align(log, summarizer).map(this::translate)

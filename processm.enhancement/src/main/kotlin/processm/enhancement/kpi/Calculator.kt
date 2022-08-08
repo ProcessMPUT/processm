@@ -10,8 +10,8 @@ import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
-import processm.core.helpers.stats.Distribution
 import processm.core.helpers.map2d.DoublingMap2D
+import processm.core.helpers.stats.Distribution
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.IntAttr
 import processm.core.log.attribute.RealAttr
@@ -33,7 +33,7 @@ import processm.core.models.processtree.ProcessTree
 class Calculator(
     val model: ProcessModel,
     val aligner: Aligner = getDefaultAligner(model),
-    val eventsSummarizer: EventsSummarizer<*> = DefaultEventsSummarizer()
+    val eventsSummarizer: EventsSummarizer<*> = DefaultEventsSummarizer
 ) {
     companion object {
         private val ProcessTreeDecompositionAlignerFactory = AlignerFactory { model, penalty, _ ->

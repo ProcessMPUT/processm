@@ -163,18 +163,20 @@ object PetriNets {
     /**
      * A Petri net flower model made of the activities a, b, c, ..., z.
      */
-    val azFlower: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    val azFlower: PetriNet = flower(*"abcdefghijklmnopqrstuwvxyz".map { it.toString() }.toTypedArray())
+
+    fun flower(vararg activities: String): PetriNet {
         val start = Place()
         val center = Place()
         val end = Place()
-        PetriNet(
+        return PetriNet(
             places = listOf(start, center, end),
             transitions =
-            "abcdefghijklmnopqrstuwvxyz".map { Transition(it.toString(), listOf(center), listOf(center)) }
+            activities.map { Transition(it, listOf(center), listOf(center)) }
                     +
                     listOf(
-                        Transition("", listOf(start), listOf(center), true),
-                        Transition("", listOf(center), listOf(end), true),
+                        Transition("𝜏", listOf(start), listOf(center), true),
+                        Transition("𝜏", listOf(center), listOf(end), true),
                     ),
             initialMarking = Marking(start),
             finalMarking = Marking(end)
@@ -243,5 +245,145 @@ object PetriNets {
             initialMarking = Marking(start),
             finalMarking = Marking(end),
         )
+    }
+
+    /**
+     * A Petri net from Fig. 1 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig1: PetriNet = petrinet {
+        P tout "A"
+        P tin "A" tout "B" * "C"
+        P tin "B" tout "E"
+        P tin "E" * "F" tout "I"
+        P tin "B" * "C" tout "D"
+        P tin "D" tout "E" * "F"
+        P tin "C" tout "_tau" * "G"
+        P tin "_tau" * "G" tout "H"
+        P tin "H" tout "F"
+        P tin "I"
+    }
+
+    /**
+     * A Petri net from Fig. 2 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig2: PetriNet = getSequence("A", "B", "D", "E", "I")
+
+    /**
+     * A Petri net from Fig. 3 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig3: PetriNet = flower("A", "B", "C", "D", "E", "F", "G", "H", "I")
+
+    /**
+     * A Petri net from Fig. 4 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig4: PetriNet by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val start = Place()
+        val end = Place()
+
+        val parts = listOf(
+            getSequence("A", "B", "D", "E", "I"),
+            getSequence("A", "C", "D", "G", "H", "F", "I"),
+            getSequence("A", "C", "G", "D", "H", "F", "I"),
+            getSequence("A", "C", "H", "D", "F", "I"),
+            getSequence("A", "C", "D", "H", "F", "I")
+        )
+
+        fun PetriNet.pl(): List<Place> = places.filter { it !in initialMarking && it !in finalMarking }
+        fun PetriNet.tr(): List<Transition> = transitions.map {
+            when {
+                initialMarking.keys.first() in it.inPlaces -> it.copy(inPlaces = listOf(start))
+                finalMarking.keys.first() in it.outPlaces -> it.copy(outPlaces = listOf(end))
+                else -> it
+            }
+        }
+
+        PetriNet(
+            places = parts.flatMap { it.pl() },
+            transitions = parts.flatMap { it.tr() },
+            initialMarking = Marking(start),
+            finalMarking = Marking(end),
+        )
+    }
+
+    /**
+     * A Petri net from Fig. 5 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig5: PetriNet = petrinet {
+        P tout "A"
+        P tin "A" tout "B" * "C"
+        P tin "B" tout "E"
+        P tin "E" * "F" tout "I"
+        P tin "B" * "C" tout "D"
+        P tin "D" tout "E" * "F"
+        P tin "C" tout "_tauG" * "G"
+        P tin "_tauG" * "G" tout "F"
+        P tin "C" tout "_tauH" * "H"
+        P tin "_tauH" * "H" tout "F"
+        P tin "I"
+    }
+
+    /**
+     * A Petri net from Fig. 6 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig6: PetriNet = petrinet {
+        P tout "A"
+        P tin "A" tout "B" * "C"
+        P tin "B" tout "E"
+        P tin "E" * "F" tout "I"
+        P tin "B" * "C" tout "D"
+        P tin "D" tout "E" * "F"
+        P tin "C" * "F" * "G" * "H" tout "F" * "G" * "H"
+        P tin "I"
+    }
+
+    /**
+     * A Petri net from Fig. 7 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig7: PetriNet = petrinet {
+        P tout "A"
+        P tin "A" tout "B" * "C"
+        P tin "B" tout "E"
+        P tin "E" * "F" tout "I"
+        P tin "B" * "C" * "D" tout "D" * "E" * "F"
+        P tin "C" tout "_tauG" * "G"
+        P tin "_tauG" * "G" tout "H"
+        P tin "H" tout "F"
+        P tin "I"
+    }
+
+    /**
+     * A Petri net from Fig. 8 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig8: PetriNet = petrinet {
+        P tout "_tau1"
+        P tin "_tau1" tout "A" * "B" * "C" * "D" * "E" * "F" * "G" * "H" * "I"
+        P tin "A" * "B" * "C" * "D" * "E" * "F" * "G" * "H" * "I" tout "_tau2"
+        P tin "_tau2"
+    }
+
+    /**
+     * A Petri net from Fig. 11 in B.F. van Dongen, A Unified Approach for Measuring Precision and Generalization Based
+     * on Anti-Alignments.
+     */
+    val fig11: PetriNet = petrinet {
+        P tout "A"
+        P tin "A" * "C" tout "B" * "C" * "_tau1"
+        P tin "B" tout "E"
+        P tin "E" * "F" * "_tau3" tout "F" * "I"
+        P tin "B" * "_tau1" tout "D"
+        P tin "D" tout "E" * "_tau3"
+        P tin "_tau1" tout "_tau2" * "G"
+        P tin "_tau2" * "G" tout "H"
+        P tin "H" tout "_tau3"
+        P tin "C" tout "F"
+        P tin "I"
     }
 }

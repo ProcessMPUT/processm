@@ -49,7 +49,7 @@ class AlignerTest {
             override val model: ProcessModel
                 get() = error("")
 
-            override fun align(trace: Trace): Alignment =
+            override fun align(trace: Trace, costUpperBound: Int): Alignment? =
                 when {
                     trace === t1 -> a1
                     trace === t2 -> a2

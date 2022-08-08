@@ -1,6 +1,5 @@
 package processm.miners.causalnet.heuristicminer.longdistance.avoidability
 
-import processm.core.helpers.SequenceWithMemory
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.Node
 import processm.core.verifiers.CausalNetVerifier
@@ -12,7 +11,7 @@ import processm.core.verifiers.causalnet.CausalNetSequence
 class ValidSequenceBasedAvoidabilityChecker :
     AvoidabilityChecker {
 
-    private var seqs: SequenceWithMemory<CausalNetSequence>? = null
+    private var seqs: Sequence<CausalNetSequence>? = null
 
     override fun setContext(model: CausalNet) {
         seqs = CausalNetVerifier().verify(model).validLoopFreeSequences
