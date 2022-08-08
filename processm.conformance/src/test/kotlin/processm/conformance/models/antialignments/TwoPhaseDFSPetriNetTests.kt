@@ -61,8 +61,8 @@ class TwoPhaseDFSPetriNetTests {
 
     @Test
     fun `example 3`() {
-        val expectedModelMoves = listOf("G", "G", "G", "G", "G", "G")
-        val expectedCost = expectedModelMoves.size + table1.traces.minOf { it.events.count() }
+        val expectedModelMoves = listOf("𝜏", "G", "G", "G", "G", "G", "G", "𝜏")
+        val expectedCost = expectedModelMoves.count { it != "𝜏" } + table1.traces.minOf { it.events.count() }
 
         test(PetriNets.fig3, table1, expectedCost, expectedModelMoves)
     }
@@ -85,8 +85,8 @@ class TwoPhaseDFSPetriNetTests {
             listOf("A", "B", "D", "E", "I"),
             listOf("A", "C", "G", "H", "D", "F", "I"),
             listOf("A", "C", "G", "H", "D", "F", "I"),
-            listOf("A", "C", "H", "D", "F", "I"),
-            listOf("A", "C", "D", "H", "F", "I"),
+            listOf("A", "C", "_tau", "H", "D", "F", "I"),
+            listOf("A", "C", "_tau", "D", "H", "F", "I"),
         )[dropIndex]
     )
 
@@ -97,7 +97,8 @@ class TwoPhaseDFSPetriNetTests {
         expectedCost: Int,
         expectedModelMoves: List<String>
     ) = loggedScope { logger ->
-        val antiAlignments = TwoPhaseDFS(model).align(log, expectedModelMoves.size)
+        val labeledSize = expectedModelMoves.count { it != "𝜏" }
+        val antiAlignments = TwoPhaseDFS(model).align(log, labeledSize)
         logger.debug { antiAlignments.toString() }
 
         assertTrue(antiAlignments.any { a -> expectedCost == a.cost })

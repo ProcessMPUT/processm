@@ -175,8 +175,8 @@ object PetriNets {
             activities.map { Transition(it, listOf(center), listOf(center)) }
                     +
                     listOf(
-                        Transition("", listOf(start), listOf(center), true),
-                        Transition("", listOf(center), listOf(end), true),
+                        Transition("𝜏", listOf(start), listOf(center), true),
+                        Transition("𝜏", listOf(center), listOf(end), true),
                     ),
             initialMarking = Marking(start),
             finalMarking = Marking(end)

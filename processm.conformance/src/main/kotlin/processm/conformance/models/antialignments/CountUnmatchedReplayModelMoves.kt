@@ -10,7 +10,8 @@ internal class CountUnmatchedReplayModelMoves(val model: ReplayModel) : CountUnm
 
         var counter = 0 // lower bound
         for (i in prevProcessState.index until model.trace.size) {
-            if (model.trace[i].name !in nEvents)
+            val act = model.trace[i]
+            if (!act.isSilent && act.name !in nEvents)
                 counter += 1
         }
         return counter

@@ -9,7 +9,7 @@ import processm.conformance.models.alignments.Alignment
 typealias AntiAlignment = Alignment
 
 /**
- * The total number of non-silent model-only moves
+ * The total number of non-artificial model-only moves
  */
 val AntiAlignment.size: Int
-    get() = steps.count { it.modelMove !== null && !it.modelMove.isSilent }
+    get() = steps.count { it.modelMove !== null && !it.modelMove.isArtificial }

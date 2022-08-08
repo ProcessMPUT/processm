@@ -55,7 +55,7 @@ internal class ReplayModelInstance(override val model: ReplayModel) : ProcessMod
 /**
  * @property index The index of the next activity to execute.
  */
-internal class ReplayModelState(var index: Int) : ProcessModelState {
+internal data class ReplayModelState(var index: Int) : ProcessModelState {
     override fun copy(): ProcessModelState = ReplayModelState(index)
 }
 

@@ -1,9 +1,6 @@
 package processm.conformance.models.antialignments
 
-import processm.conformance.models.alignments.AStar
-import processm.conformance.models.alignments.Aligner
-import processm.conformance.models.alignments.AlignerFactory
-import processm.conformance.models.alignments.PenaltyFunction
+import processm.conformance.models.alignments.*
 import processm.conformance.models.alignments.cache.Cache
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.core.helpers.SameThreadExecutorService
@@ -49,12 +46,11 @@ class TwoPhaseDFS(
         val antiAlignments = ArrayList<AntiAlignment>()
         var globalCost = -1 // maximize
         val perTraceAntiAlignments = ArrayList<AntiAlignment>()
-        //val lcsCache = HashMap<Long, Int>()
         val lcsCache = IntArray((size + 1) * (logUnique.values.maxOf { it.second.size } + 1))
 
         val replayModel = ReplayModel(model.activities.toList())
         val aligner = alignerFactory(replayModel, penalty, SameThreadExecutorService)
-        main@ for (modelTrace in modelTraces(size)) {
+        main@ for ((modelTrace, modelStates) in modelTraces(size)) {
             val matchingLogTrace = logUnique[eventsSummarizer.summary(modelTrace)]
             if (matchingLogTrace !== null) {
                 if (0 >= globalCost) {
@@ -62,14 +58,15 @@ class TwoPhaseDFS(
                     replayModel.trace = modelTrace
                     val alignment = aligner.align(matchingLogTrace.first, 0)!!
                     assert(alignment.cost == 0)
-                    antiAlignments.add(alignment)
+                    antiAlignments.add(mapStates(alignment, modelStates))
                 }
                 continue
             }
 
+            val modelTraceNoSilent = modelTrace.filter { !it.isSilent }
             val costEstimateUB = logUnique.values.minOf { logTrace ->
                 val events = logTrace.second
-                val lcs = longestCommonSubsequence(modelTrace, events, cache = lcsCache.also { Arrays.fill(it, -1) })
+                val lcs = longestCommonSubseq(modelTraceNoSilent, events, cache = lcsCache.also { Arrays.fill(it, -1) })
                 (modelTrace.size - lcs) * penalty.modelMove + (events.size - lcs) * penalty.logMove + lcs * penalty.synchronousMove
             }
 
@@ -79,7 +76,6 @@ class TwoPhaseDFS(
 
             // globalCost >= costEstimateUB
 
-            //println(modelTrace.map { it.name })
             replayModel.trace = modelTrace
             var perTraceCost = costEstimateUB // minimize
             perTraceAntiAlignments.clear()
@@ -93,11 +89,11 @@ class TwoPhaseDFS(
                     // globalCost <= alignment.cost < perTraceCost <= costEstimateUB
                     perTraceCost = alignment.cost
                     perTraceAntiAlignments.clear()
-                    perTraceAntiAlignments.add(alignment)
+                    perTraceAntiAlignments.add(mapStates(alignment, modelStates))
                 } else if (alignment.cost == perTraceCost) {
                     assert(alignment.cost >= globalCost)
                     //assert(perTraceAntiAlignments.all { it.cost == alignment.cost })
-                    perTraceAntiAlignments.add(alignment)
+                    perTraceAntiAlignments.add(mapStates(alignment, modelStates))
                 }
             }
 
@@ -119,7 +115,7 @@ class TwoPhaseDFS(
         return antiAlignments
     }
 
-    private fun longestCommonSubsequence(
+    private fun longestCommonSubseq(
         x: List<Activity>,
         y: List<Event>,
         m: Int = x.size,
@@ -131,7 +127,7 @@ class TwoPhaseDFS(
             val key = m * maxN + n
             var value = cache[key]
             if (value < 0) {
-                value = longestCommonSubsequence(x, y, m, n, maxN, cache)
+                value = longestCommonSubseq(x, y, m, n, maxN, cache)
                 cache[key] = value
             }
             return value
@@ -155,7 +151,7 @@ class TwoPhaseDFS(
         return max(lcs1, lcs2)
     }
 
-    private fun modelTraces(maxSize: Int): Sequence<List<Activity>> = sequence {
+    private fun modelTraces(maxSize: Int): Sequence<Pair<List<Activity>, List<ProcessModelState>>> = sequence {
         val cache = Cache<List<Activity>>()
 
         val instance = model.createInstance()
@@ -175,10 +171,12 @@ class TwoPhaseDFS(
 
             if (instance.isFinalState) {
                 val trace = ArrayList<Activity>()
+                val states = ArrayList<ProcessModelState>()
                 var s = searchState
                 while (s.previous !== null) {
-                    if (!s.activity!!.isSilent && !s.activity!!.name.isEmpty()) {
+                    if (!s.activity!!.isArtificial) {
                         trace.add(s.activity!!)
+                        states.add(s.state)
                     }
                     s = s.previous!!
                 }
@@ -189,8 +187,11 @@ class TwoPhaseDFS(
                 if (!cache.add(trace))
                     continue
 
+                states.add(s.state) // the initial state
+
                 trace.reverse()
-                yield(trace)
+                states.reverse()
+                yield(trace to states)
 
                 continue
             }
@@ -216,6 +217,13 @@ class TwoPhaseDFS(
             }
         }
     }
+
+    private fun mapStates(alignment: Alignment, states: List<ProcessModelState>): Alignment = alignment.copy(
+        steps = alignment.steps.map { s ->
+            if (s.modelState === null) s
+            else s.copy(modelState = states[(s.modelState as ReplayModelState).index])
+        }
+    )
 
     private class SearchState(
         /**
