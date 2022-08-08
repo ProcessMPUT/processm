@@ -6,12 +6,17 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 class ReplayModelTests {
+
+    companion object {
+        private val a = Act("a")
+        private val b = Act("b")
+        private val c = Act("c")
+        private val model = ReplayModel(listOf(a, b, c))
+    }
+
+
     @Test
     fun `replay a b c`() {
-        val a = Act("a")
-        val b = Act("b")
-        val c = Act("c")
-        val model = ReplayModel(listOf(a, b, c))
         val instance = model.createInstance()
 
         assertContentEquals(sequenceOf(a), instance.availableActivities)
@@ -27,6 +32,26 @@ class ReplayModelTests {
         instance.availableActivityExecutions.first().execute()
 
         assertContentEquals(emptySequence(), instance.availableActivities)
+    }
+
+    @Test
+    fun `start activity is a`() {
+        assertContentEquals(sequenceOf(a), model.startActivities)
+    }
+
+    @Test
+    fun `end activity is c`() {
+        assertContentEquals(sequenceOf(c), model.endActivities)
+    }
+
+    @Test
+    fun `no decision points`() {
+        assertEquals(0, model.decisionPoints.count())
+    }
+
+    @Test
+    fun `no control structures`() {
+        assertEquals(0, model.controlStructures.count())
     }
 
     private class Act(override val name: String) : Activity {

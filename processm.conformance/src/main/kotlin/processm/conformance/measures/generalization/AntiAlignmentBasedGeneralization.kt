@@ -107,7 +107,7 @@ class AntiAlignmentBasedGeneralization(
         val stack = ArrayDeque<SearchState>()
         stack.addLast(
             SearchState(
-                activity = Dummy,
+                activity = null,
                 processState = initialState
             )
         )
@@ -122,7 +122,7 @@ class AntiAlignmentBasedGeneralization(
                 var result = 0
                 var s = searchState
                 while (s.previous !== null) {
-                    if (!s.activity.isArtificial)
+                    if (!s.activity!!.isArtificial)
                         result += 1
                     s = s.previous!!
                 }
@@ -152,25 +152,8 @@ class AntiAlignmentBasedGeneralization(
         return checkNotNull(best) { "A final state is not reachable." }
     }
 
-    companion object {
-        private object Dummy : Activity {
-            override val name: String
-                get() = "𝜏"
-
-            override val isSilent: Boolean
-                get() = true
-
-            override val isArtificial: Boolean
-                get() = true
-
-            override fun equals(other: Any?): Boolean = this === other
-
-            override fun hashCode(): Int = name.hashCode()
-        }
-    }
-
     private data class SearchState(
-        val activity: Activity,
+        val activity: Activity?,
         val processState: ProcessModelState,
         val previous: SearchState? = null
     )
