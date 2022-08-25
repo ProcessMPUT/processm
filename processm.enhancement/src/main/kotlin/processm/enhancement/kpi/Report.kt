@@ -7,10 +7,15 @@ import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.*
-import processm.core.helpers.stats.Distribution
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.map2d.Map2D
+import processm.core.helpers.stats.Distribution
 import processm.core.models.commons.Activity
+import processm.core.models.commons.Arc
+
+
+@Serializable
+data class ArcKPI(val inbound: Distribution?, val outbound: Distribution?)
 
 /**
  * KPI report consisting of KPIs at the log, trace, and event scopes.
@@ -33,15 +38,20 @@ data class Report(
      * the second key corresponds to the activity in the [model], null for the unaligned events;
      * value corresponds to the distribution of KPI values among events.
      */
-    val eventKPI: Map2D<String, Activity?, Distribution>
+    val eventKPI: Map2D<String, Activity?, Distribution>,
+    val arcKPI: Map2D<String, Arc, ArcKPI>
 ) {
     companion object {
         private val reportFormat = Json {
             allowStructuredMapKeys = true
             serializersModule = SerializersModule {
-                polymorphic(Activity::class) {
+                polymorphic(Any::class) {
                     subclass(processm.core.models.causalnet.Node::class)
                     subclass(processm.core.models.petrinet.Transition::class)
+                    subclass(processm.core.models.causalnet.Dependency::class)
+                    subclass(VirtualPetriNetArc::class)
+                    subclass(ArcKPI::class)
+                    subclass(Distribution::class)
                     // FIXME: process trees require a custom serializer
                     //subclass(processm.core.models.processtree.Node::class)
                 }
@@ -50,8 +60,8 @@ data class Report(
                         DoublingMap2D::class,
                         DoublingMap2D.serializer(
                             String.serializer(),
-                            PolymorphicSerializer(Activity::class).nullable,
-                            Distribution.serializer()
+                            PolymorphicSerializer(Any::class).nullable,
+                            PolymorphicSerializer(Any::class)
                         ) as KSerializer<DoublingMap2D<*, *, *>>
                     )
                 }

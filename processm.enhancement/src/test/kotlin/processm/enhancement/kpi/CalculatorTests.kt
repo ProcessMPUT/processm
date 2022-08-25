@@ -1,16 +1,20 @@
 package processm.enhancement.kpi
 
 import processm.core.DBTestHelper
+import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.core.models.commons.Activity
+import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.petrinet
 import processm.core.querylanguage.Query
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class CalculatorTests {
@@ -252,6 +256,38 @@ class CalculatorTests {
                 assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
                 assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
                 assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+            }
+
+            println("Service time for arcs:")
+            for ((arc, distribution) in report.arcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+                println("$arc: $distribution")
+            }
+
+            with(report.arcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+                with(entries.single { it.key.source.name == "decide" && it.key.target.name == "accept" }.value) {
+                    assertNotNull(inbound)
+                    assertEquals(0.0, inbound!!.min)
+                    assertEquals(1.0, inbound!!.median)
+                    assertEquals(12.0, inbound!!.max)
+                    assertEquals(45, inbound!!.count)
+                    assertNotNull(outbound)
+                    assertEquals(0.0, outbound!!.min)
+                    assertDoubleEquals(3.0, outbound!!.average)
+                    assertEquals(12.0, outbound!!.max)
+                    assertEquals(45, outbound!!.count)
+                }
+                with(entries.single { it.key.source.name == "decide" && it.key.target.name == "reject" }.value) {
+                    assertNotNull(inbound)
+                    assertEquals(0.0, inbound!!.min)
+                    assertEquals(4.0, inbound!!.median)
+                    assertEquals(9.0, inbound!!.max)
+                    assertEquals(55, inbound!!.count)
+                    assertNotNull(outbound)
+                    assertEquals(0.0, outbound!!.min)
+                    assertDoubleEquals(2.672, outbound!!.average)
+                    assertEquals(5.0, outbound!!.max)
+                    assertEquals(55, outbound!!.count)
+                }
             }
         }
     }
