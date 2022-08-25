@@ -24,7 +24,8 @@ import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
-import processm.core.models.processtree.ProcessTree
+import processm.core.models.processtree.*
+import kotlin.sequences.Sequence
 
 /**
  * A KPI calculator.
@@ -72,6 +73,7 @@ class Calculator(
         fun put(token: TokenWithPayload) = data.addLast(token)
         fun get(): TokenWithPayload = data.removeFirst()
     }
+
     private class RawArcKPI(
         val inbound: ArrayList<Double> = ArrayList(),
         val outbound: ArrayList<Double> = ArrayList()
@@ -112,8 +114,13 @@ class Calculator(
             val alignments = aligner.align(log, eventsSummarizer)
 
             val tokens = HashMap<Place, FIFOTokenPool>()
+            val ptExecutionHistory = ArrayList<Pair<ProcessTreeActivity, List<NumericAttribute>>>()
+            val ptArcs = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, VirtualProcessTreeArc>()
+            (model as? ProcessTree)?.generateArcs(includeSilent = true)?.forEach { ptArcs[it.source, it.target] = it }
+
             for (alignment in alignments) {
                 tokens.clear()
+                ptExecutionHistory.clear()
                 for (step in alignment.steps) {
                     val activity = when (step.type) {
                         DeviationType.None -> (step.modelMove as? DecoupledNodeExecution)?.activity ?: step.modelMove!!
@@ -123,6 +130,7 @@ class Calculator(
 
                     val decoupledNodeExecution = step.modelMove as? DecoupledNodeExecution
                     val transition = activity as? Transition
+                    val ptActivity = activity as? ProcessTreeActivity
 
                     val inArcs = transition?.inPlaces?.mapNotNull { place ->
                         val (source, attributes) = tokens[place]?.get() ?: return@mapNotNull null
@@ -138,6 +146,24 @@ class Calculator(
                     val rawValues =
                         step.logMove!!.attributes.mapNotNull { (key, attribute) ->
                             if (attribute.isNumeric()) NumericAttribute(key, attribute.toDouble()) else null
+                        }
+
+                    if (ptActivity !== null)
+                        for ((previous, previousAttributes) in ptExecutionHistory.reversed()) {
+                            val arc = ptArcs[previous, ptActivity]
+                            if (arc !== null) {
+                                for ((key, attributeValue) in rawValues) {
+                                    arcKPIraw.compute(key, arc) { _, _, old ->
+                                        (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
+                                    }
+                                }
+                                for ((key, attributeValue) in previousAttributes) {
+                                    arcKPIraw.compute(key, arc) { _, _, old ->
+                                        (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
+                                    }
+                                }
+                                break
+                            }
                         }
 
                     transition?.outPlaces?.forEach { place ->
@@ -161,6 +187,8 @@ class Calculator(
                             }
                         }
                     }
+
+                    ptActivity?.let { ptExecutionHistory.add(it to rawValues) }
                 }
             }
 
@@ -186,3 +214,4 @@ class Calculator(
     private fun Attribute<*>.isNumeric(): Boolean = this is IntAttr || this is RealAttr
     private fun Attribute<*>.toDouble(): Double = (this.value as Number).toDouble()
 }
+

@@ -18,4 +18,6 @@ data class VirtualPetriNetArc(override val source: Transition, override val targ
         require(via in source.outPlaces)
         require(via in target.inPlaces)
     }
+
+    override fun toString(): String = "[$source -> ... -> $target]"
 }
