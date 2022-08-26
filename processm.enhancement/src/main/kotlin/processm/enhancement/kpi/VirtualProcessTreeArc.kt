@@ -1,5 +1,6 @@
 package processm.enhancement.kpi
 
+import processm.core.helpers.cartesianProduct
 import processm.core.models.commons.Arc
 import processm.core.models.processtree.*
 
@@ -7,20 +8,25 @@ import processm.core.models.processtree.*
 data class VirtualProcessTreeArc(override val source: ProcessTreeActivity, override val target: ProcessTreeActivity) :
     Arc
 
+data class VirtualProcessTreeMultiArc(val sources: Set<ProcessTreeActivity>, val target: ProcessTreeActivity) {
+    fun toArcs() = sources.map { VirtualProcessTreeArc(it, target) }
+}
 
-fun ProcessTree.generateArcs(includeSilent: Boolean = false): Set<VirtualProcessTreeArc> {
-    val result = HashSet<VirtualProcessTreeArc>()
-    fun process(node: Node, causes: List<ProcessTreeActivity>): List<ProcessTreeActivity> {
+
+fun ProcessTree.generateArcs(includeSilent: Boolean = false): Set<VirtualProcessTreeMultiArc> {
+    val result = HashSet<VirtualProcessTreeMultiArc>()
+    fun process(node: Node, causes: List<List<ProcessTreeActivity>>): List<List<ProcessTreeActivity>> {
         when (node) {
             is ProcessTreeActivity -> {
                 if (!node.isSilent || includeSilent) {
-                    causes.mapTo(result) { VirtualProcessTreeArc(it, node) }
-                    return listOf(node)
+                    causes.mapTo(result) { VirtualProcessTreeMultiArc(it.toSet(), node) }
+                    return listOf(listOf(node))
                 } else
                     return emptyList()
             }
 
             is Sequence -> {
+                //TODO czy tu sie da uzyc fold/reduce/czegos takiego?
                 var newCauses = causes
                 for (child in node.children) {
                     newCauses = process(child, newCauses)
@@ -28,7 +34,11 @@ fun ProcessTree.generateArcs(includeSilent: Boolean = false): Set<VirtualProcess
                 return newCauses
             }
 
-            is Exclusive, is Parallel -> {
+            is Parallel -> {
+                return node.children.map { process(it, causes).flatten()}.cartesianProduct().toList()
+            }
+
+            is Exclusive -> {
                 return node.children.flatMap { process(it, causes) }
             }
 

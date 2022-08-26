@@ -17,6 +17,7 @@ import processm.core.log.attribute.IntAttr
 import processm.core.log.attribute.RealAttr
 import processm.core.log.attribute.value
 import processm.core.log.hierarchical.Log
+import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.Arc
@@ -67,17 +68,106 @@ class Calculator(
     }
 
     private data class NumericAttribute(val key: String, val attributeValue: Double)
-    private data class TokenWithPayload(val source: Transition, val attributes: List<NumericAttribute>)
-    private class FIFOTokenPool {
-        private val data = ArrayDeque<TokenWithPayload>()
-        fun put(token: TokenWithPayload) = data.addLast(token)
-        fun get(): TokenWithPayload = data.removeFirst()
+
+
+    private class RawArcKPI(val inbound: ArrayList<Double> = ArrayList(), val outbound: ArrayList<Double> = ArrayList())
+
+    private abstract class ArcKPIHandler(val arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) {
+        open fun reset() {}
+        abstract fun step(activity: Activity, rawValues: List<NumericAttribute>)
     }
 
-    private class RawArcKPI(
-        val inbound: ArrayList<Double> = ArrayList(),
-        val outbound: ArrayList<Double> = ArrayList()
-    )
+    private class ProcessTreeArcKPIHandler(model: ProcessTree, arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) :
+        ArcKPIHandler(arcKPIraw) {
+
+        private val history = ArrayList<Pair<ProcessTreeActivity, List<NumericAttribute>>>()
+        private val arcs = HashMap<ProcessTreeActivity, ArrayList<VirtualProcessTreeMultiArc>>().apply {
+            model.generateArcs().forEach { computeIfAbsent(it.target) { ArrayList() }.add(it) }
+        }
+
+        override fun reset() = history.clear()
+
+        override fun step(activity: Activity, rawValues: List<NumericAttribute>) {
+            require(activity is ProcessTreeActivity)
+            val candidates = arcs[activity]?.map { HashSet(it.sources) to it }
+            if (!candidates.isNullOrEmpty()) {
+                for ((previous, _) in history.reversed()) {
+                    for (candidate in candidates) {
+                        if (candidate.first.remove(previous) && candidate.first.isEmpty()) {
+                            for (arc in candidate.second.toArcs()) {
+                                for ((key, attributeValue) in rawValues) {
+                                    arcKPIraw.compute(key, arc) { _, _, old ->
+                                        (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
+                                    }
+                                }
+                                history.last { (previous, _) -> previous == arc.source }
+                                    .let { (_, previousAttributes) ->
+                                        for ((key, attributeValue) in previousAttributes) {
+                                            arcKPIraw.compute(key, arc) { _, _, old ->
+                                                (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
+                                            }
+                                        }
+                                    }
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+            history.add(activity to rawValues)
+        }
+
+    }
+
+    private class CNetArcKPIHandler(arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) : ArcKPIHandler(arcKPIraw) {
+
+        override fun step(activity: Activity, rawValues: List<NumericAttribute>) {
+            check(activity is DecoupledNodeExecution)
+            for ((key, attributeValue) in rawValues) {
+                activity.join?.dependencies?.forEach { d ->
+                    arcKPIraw.compute(key, d) { _, _, old ->
+                        (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
+                    }
+                }
+                activity.split?.dependencies?.forEach { d ->
+                    arcKPIraw.compute(key, d) { _, _, old ->
+                        (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
+                    }
+                }
+            }
+        }
+    }
+
+    private class PetriNetArcKPIHandler(arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) : ArcKPIHandler(arcKPIraw) {
+
+        private data class TokenWithPayload(val source: Transition, val rawValues: List<NumericAttribute>)
+
+        private val tokens = HashMap<Place, ArrayDeque<TokenWithPayload>>()
+        override fun reset() = tokens.clear()
+
+        override fun step(activity: Activity, rawValues: List<NumericAttribute>) {
+            check(activity is Transition)
+            activity.inPlaces.forEach { place ->
+                val (source, oldRawValues) = tokens[place]?.removeFirst() ?: return@forEach
+                val arc = VirtualPetriNetArc(source, activity, place)
+                oldRawValues.forEach { (key, attributeValue) ->
+                    arcKPIraw.compute(key, arc) { _, _, old ->
+                        (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
+                    }
+                }
+                for ((key, attributeValue) in rawValues) {
+                    arcKPIraw.compute(key, arc) { _, _, old ->
+                        (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
+                    }
+                }
+            }
+
+            activity.outPlaces.forEach { place ->
+                tokens.computeIfAbsent(place) { ArrayDeque() }.addLast(TokenWithPayload(activity, rawValues))
+            }
+        }
+
+    }
 
     /**
      * Calculates KPI report from all numeric attributes spotted in the [logs].
@@ -89,6 +179,13 @@ class Calculator(
         val traceKPIraw = HashMap<String, ArrayList<Double>>()
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
         val arcKPIraw = DoublingMap2D<String, Arc, RawArcKPI>()
+
+        val arcKPIHandler: ArcKPIHandler = when (model) {
+            is ProcessTree -> ProcessTreeArcKPIHandler(model, arcKPIraw)
+            is CausalNet -> CNetArcKPIHandler(arcKPIraw)
+            is PetriNet -> PetriNetArcKPIHandler(arcKPIraw)
+            else -> throw UnsupportedOperationException("Process models of type ${model::class} are not supported")
+        }
 
         for (log in logs) {
             for (attribute in log.attributes.values) {
@@ -113,14 +210,8 @@ class Calculator(
 
             val alignments = aligner.align(log, eventsSummarizer)
 
-            val tokens = HashMap<Place, FIFOTokenPool>()
-            val ptExecutionHistory = ArrayList<Pair<ProcessTreeActivity, List<NumericAttribute>>>()
-            val ptArcs = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, VirtualProcessTreeArc>()
-            (model as? ProcessTree)?.generateArcs(includeSilent = true)?.forEach { ptArcs[it.source, it.target] = it }
-
             for (alignment in alignments) {
-                tokens.clear()
-                ptExecutionHistory.clear()
+                arcKPIHandler.reset()
                 for (step in alignment.steps) {
                     val activity = when (step.type) {
                         DeviationType.None -> (step.modelMove as? DecoupledNodeExecution)?.activity ?: step.modelMove!!
@@ -128,67 +219,17 @@ class Calculator(
                         DeviationType.ModelDeviation -> continue // no-way to get values for the model-only moves
                     }
 
-                    val decoupledNodeExecution = step.modelMove as? DecoupledNodeExecution
-                    val transition = activity as? Transition
-                    val ptActivity = activity as? ProcessTreeActivity
-
-                    val inArcs = transition?.inPlaces?.mapNotNull { place ->
-                        val (source, attributes) = tokens[place]?.get() ?: return@mapNotNull null
-                        val arc = VirtualPetriNetArc(source, transition, place)
-                        attributes.forEach { (key, attributeValue) ->
-                            arcKPIraw.compute(key, arc) { _, _, old ->
-                                (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
-                            }
-                        }
-                        return@mapNotNull arc
-                    }
-
-                    val rawValues =
-                        step.logMove!!.attributes.mapNotNull { (key, attribute) ->
-                            if (attribute.isNumeric()) NumericAttribute(key, attribute.toDouble()) else null
-                        }
-
-                    if (ptActivity !== null)
-                        for ((previous, previousAttributes) in ptExecutionHistory.reversed()) {
-                            val arc = ptArcs[previous, ptActivity]
-                            if (arc !== null) {
-                                for ((key, attributeValue) in rawValues) {
-                                    arcKPIraw.compute(key, arc) { _, _, old ->
-                                        (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
-                                    }
-                                }
-                                for ((key, attributeValue) in previousAttributes) {
-                                    arcKPIraw.compute(key, arc) { _, _, old ->
-                                        (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
-                                    }
-                                }
-                                break
-                            }
-                        }
-
-                    transition?.outPlaces?.forEach { place ->
-                        tokens.computeIfAbsent(place) { FIFOTokenPool() }.put(TokenWithPayload(transition, rawValues))
+                    val rawValues = step.logMove!!.attributes.mapNotNull { (key, attribute) ->
+                        if (attribute.isNumeric()) NumericAttribute(key, attribute.toDouble()) else null
                     }
 
                     for ((key, attributeValue) in rawValues) {
-
                         eventKPIraw.compute(key, activity) { _, _, old ->
                             (old ?: ArrayList()).apply { add(attributeValue) }
                         }
-
-                        (decoupledNodeExecution?.join?.dependencies ?: inArcs)?.forEach { d ->
-                            arcKPIraw.compute(key, d) { _, _, old ->
-                                (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
-                            }
-                        }
-                        decoupledNodeExecution?.split?.dependencies?.forEach { d ->
-                            arcKPIraw.compute(key, d) { _, _, old ->
-                                (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
-                            }
-                        }
                     }
 
-                    ptActivity?.let { ptExecutionHistory.add(it to rawValues) }
+                    step.modelMove?.let { arcKPIHandler.step(it, rawValues) }
                 }
             }
 

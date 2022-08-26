@@ -1,7 +1,11 @@
 package processm.enhancement.kpi
 
+import processm.conformance.measures.precision.causalnet.times
 import processm.core.DBTestHelper
+import processm.core.log.Helpers
 import processm.core.log.Helpers.assertDoubleEquals
+import processm.core.log.Helpers.event
+import processm.core.log.Helpers.trace
 import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
@@ -412,4 +416,38 @@ class CalculatorTests {
 
     private fun q(pql: String): Log =
         DBHierarchicalXESInputStream(dbName, Query(pql), false).first()
+
+
+    @Test
+    fun `two parallel tasks in a process tree`() {
+        val model = ProcessTree.parse("→(∧(a,b), c)")
+        val log = Log(
+            traces =
+            trace(event("a", "time" to 1), event("b", "time" to 2), event("c", "time" to 10)).times(10) +
+                    trace(event("b", "time" to 3), event("a", "time" to 2), event("c", "time" to 20)).times(10)
+        )
+        val report = Calculator(model).calculate(log)
+        report.eventKPI.getRow("time").forEach(::println)
+        println()
+        val arcs = report.arcKPI.getRow("time")
+        arcs.forEach(::println)
+        with(arcs.entries) {
+            with(single { it.key.source.name == "a" && it.key.target.name == "c" }.value) {
+                assertNotNull(inbound)
+                assertEquals(20, inbound!!.count)
+                assertNotNull(outbound)
+                assertEquals(20, outbound!!.count)
+                assertDoubleEquals(1.5, outbound!!.average)
+            }
+            with(single { it.key.source.name == "b" && it.key.target.name == "c" }.value) {
+                assertNotNull(inbound)
+                assertEquals(20, inbound!!.count)
+                assertNotNull(outbound)
+                assertEquals(20, outbound!!.count)
+                assertDoubleEquals(2.5, outbound!!.average)
+            }
+        }
+
+    }
+
 }
