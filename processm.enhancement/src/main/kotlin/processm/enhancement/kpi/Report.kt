@@ -11,12 +11,8 @@ import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.map2d.Map2D
 import processm.core.helpers.stats.Distribution
 import processm.core.models.commons.Activity
-import processm.core.models.commons.Arc
+import processm.core.models.commons.CausalArc
 import processm.core.models.processtree.ProcessTreeActivity
-
-
-@Serializable
-data class ArcKPI(val inbound: Distribution?, val outbound: Distribution?)
 
 /**
  * KPI report consisting of KPIs at the log, trace, and event scopes.
@@ -40,7 +36,16 @@ data class Report(
      * value corresponds to the distribution of KPI values among events.
      */
     val eventKPI: Map2D<String, Activity?, Distribution>,
-    val arcKPI: Map2D<String, Arc, ArcKPI>
+    /**
+     * The event-scope KPIs computed as for [eventKPI], but assigned to [CausalArc]s of the model that are
+     * originating in this particular event.
+     */
+    val outboundArcKPI: Map2D<String, CausalArc, Distribution>,
+    /**
+     * The event-scope KPIs computed as for [eventKPI], but assigned to [CausalArc]s of the model that are
+     * terminating in this particular event.
+     */
+    val inboundArcKPI: Map2D<String, CausalArc, Distribution>
 ) {
     companion object {
         private val reportFormat = Json {
@@ -50,10 +55,9 @@ data class Report(
                     subclass(processm.core.models.causalnet.Node::class)
                     subclass(processm.core.models.petrinet.Transition::class)
                     subclass(processm.core.models.causalnet.Dependency::class)
-                    subclass(VirtualPetriNetArc::class)
-                    subclass(ArcKPI::class)
+                    subclass(VirtualPetriNetCausalArc::class)
                     subclass(Distribution::class)
-                    subclass(VirtualProcessTreeArc::class)
+                    subclass(VirtualProcessTreeCausalArc::class)
                     subclass(ProcessTreeActivity::class)
                 }
                 polymorphic(Map2D::class) {

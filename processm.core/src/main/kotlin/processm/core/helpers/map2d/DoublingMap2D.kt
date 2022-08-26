@@ -126,6 +126,18 @@ class DoublingMap2D<Row, Column, Value>() : Map2D<Row, Column, Value> {
         return map2D
     }
 
+    fun <R> mapValuesNotNull(func: (row: Row, col: Column, old: Value) -> R?): Map2D<Row, Column, R> {
+        val map2D = DoublingMap2D<Row, Column, R>()
+        for ((row, cv) in rcv) {
+            for ((col, value) in cv) {
+                val newValue = func(row, col, value)
+                if (newValue !== null)
+                    map2D[row, col] = newValue
+            }
+        }
+        return map2D
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DoublingMap2D<*, *, *>) return false

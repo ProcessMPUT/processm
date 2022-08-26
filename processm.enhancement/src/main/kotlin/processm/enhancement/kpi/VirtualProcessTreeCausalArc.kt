@@ -2,18 +2,32 @@ package processm.enhancement.kpi
 
 import kotlinx.serialization.Serializable
 import processm.core.helpers.cartesianProduct
-import processm.core.models.commons.Arc
+import processm.core.models.commons.CausalArc
 import processm.core.models.processtree.*
 
+/**
+ * An [CausalArc] using [ProcessTreeActivity]. This is not a real structure in a process tree, but rather an abstraction
+ * representing causal dependency.
+ */
 @Serializable
-data class VirtualProcessTreeArc(override val source: ProcessTreeActivity, override val target: ProcessTreeActivity) :
-    Arc
+data class VirtualProcessTreeCausalArc(override val source: ProcessTreeActivity, override val target: ProcessTreeActivity) :
+    CausalArc
 
+/**
+ * A data structure for a process tree similar to a join from Causal Nets.
+ *
+ * @param sources The set of activities that must be executed jointly before [target] can be executed
+ */
 data class VirtualProcessTreeMultiArc(val sources: Set<ProcessTreeActivity>, val target: ProcessTreeActivity) {
-    fun toArcs() = sources.asSequence().map { VirtualProcessTreeArc(it, target) }
+    fun toArcs() = sources.asSequence().map { VirtualProcessTreeCausalArc(it, target) }
+
+    override fun toString(): String =
+        sources.joinToString(prefix = "[", separator = ", ", postfix = "]") { it.name } + " -> ${target.name}"
 }
 
-
+/**
+ * Computes [VirtualProcessTreeMultiArc] by applying the semantics of the nodes and computing sets of possible predecessors/successors.
+ */
 fun ProcessTree.generateArcs(includeSilent: Boolean = false): Set<VirtualProcessTreeMultiArc> {
     val result = HashSet<VirtualProcessTreeMultiArc>()
     fun process(causes: List<List<ProcessTreeActivity>>, node: Node): List<List<ProcessTreeActivity>> =

@@ -7,7 +7,7 @@ import processm.core.models.processtree.SilentActivity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class VirtualProcessTreeArcTest {
+class VirtualProcessTreeCausalArcTest {
 
     val ir = ProcessTreeActivity("invite reviewers")
     val gr1 = ProcessTreeActivity("get review 1")

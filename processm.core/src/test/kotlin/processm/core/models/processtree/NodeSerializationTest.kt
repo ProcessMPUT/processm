@@ -12,7 +12,7 @@ class NodeSerializationTest {
         val deserialized = Json.decodeFromString(serializer<T>(), Json.encodeToString(node))
         assertEquals(node, deserialized)
     }
-    
+
     @Test
     fun `named activity`() {
         test(ProcessTreeActivity("a"))

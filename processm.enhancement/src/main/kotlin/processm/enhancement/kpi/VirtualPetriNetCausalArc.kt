@@ -1,7 +1,7 @@
 package processm.enhancement.kpi
 
 import kotlinx.serialization.Serializable
-import processm.core.models.commons.Arc
+import processm.core.models.commons.CausalArc
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 
@@ -13,7 +13,7 @@ import processm.core.models.petrinet.Transition
  * Considering two arcs jointly enables computing more useful distributions in [Calculator]
  */
 @Serializable
-data class VirtualPetriNetArc(override val source: Transition, override val target: Transition, val via: Place) : Arc {
+data class VirtualPetriNetCausalArc(override val source: Transition, override val target: Transition, val via: Place) : CausalArc {
     init {
         require(via in source.outPlaces)
         require(via in target.inPlaces)

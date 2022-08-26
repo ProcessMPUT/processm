@@ -21,7 +21,7 @@ import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
-import processm.core.models.commons.Arc
+import processm.core.models.commons.CausalArc
 import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
@@ -68,27 +68,71 @@ class Calculator(
         }
     }
 
+    /**
+     * An auxiliary class to store the value of the attribute [key] as a [Double], to be eventually added to a [Distribution]
+     */
     private data class NumericAttribute(val key: String, val attributeValue: Double)
 
-
+    /**
+     * An auxiliary class mimicking [ArcKPI], but using [ArrayList] instead of [Distribution]
+     */
     private class RawArcKPI(val inbound: ArrayList<Double> = ArrayList(), val outbound: ArrayList<Double> = ArrayList())
 
-    private abstract class ArcKPIHandler(val arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) {
+    /**
+     * A base class for per-model type handler of arc KPIs
+     *
+     * @param arcKPIraw The target for the KPIs found by the handler
+     */
+    private abstract class ArcKPIHandler(val arcKPIraw: DoublingMap2D<String, CausalArc, RawArcKPI>) {
+
+        /**
+         * Called before processing each trace
+         */
         open fun reset() {}
+
+        /**
+         * Called for each alignment step with a non-null model move
+         *
+         * @param activity Contains the value of [processm.conformance.models.alignments.Step.modelMove]
+         * @param rawValues Numeric attributes retrieved for the [activity]
+         */
         abstract fun step(activity: Activity, rawValues: List<NumericAttribute>)
     }
 
-    private class ProcessTreeArcKPIHandler(model: ProcessTree, arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) :
+    /**
+     * [ArcKPIHandler] for [ProcessTree]s, operating on [VirtualProcessTreeCausalArc]s, i.e., arcs connecting activities,
+     * instead of arcs connecting activities with internal nodes. Similarily for [PetriNetArcKPIHandler], this enables
+     * computing more interesting KPIs (otherwise they would be no different than those already computed for activities),
+     * at the cost of using a heuristics. More details are given in the description of [step].
+     */
+    private class ProcessTreeArcKPIHandler(model: ProcessTree, arcKPIraw: DoublingMap2D<String, CausalArc, RawArcKPI>) :
         ArcKPIHandler(arcKPIraw) {
 
-
+        /**
+         * For each activity the most recent value of its numeric attributes. It maintains order, so the most recently executed activity is last when iterating over it.
+         */
         private val history = LRUMap<ProcessTreeActivity, List<NumericAttribute>>()
+
+        /**
+         * For each activity, a list of [VirtualProcessTreeMultiArc]s pointing to it.
+         */
         private val arcs = HashMap<ProcessTreeActivity, ArrayList<VirtualProcessTreeMultiArc>>().apply {
             model.generateArcs().forEach { computeIfAbsent(it.target) { ArrayList() }.add(it) }
         }
 
         override fun reset() = history.clear()
 
+        /**
+         * Finds a multi-arc from [arcs] such that its target is [activity] and its sources were the most recently executed.
+         * It prefers the most extensive hypothesis, e.g., for the process tree `⟲(a, ∧(b,c), b)` and the trace `a c b a`
+         * it will assume that both `c` and `b` are causes for `a`. This, unfortunately, may be an overly greedy strategy.
+         * Consider: `⟲(a, →(b, ×(c, ∧(b,c))))` and the trace `a b c a`. The activity `b` is executed as the first element
+         * of the sequence, not as a parallel task in `∧(b,c)`, yet [step] will claim that both `b` and `c` are causes for `a`,
+         * yet such a phenomenon would not occur should we replace the second `b` with another activity, e.g., `⟲(a, →(b, ×(c, ∧(d,c))))`
+         * This possibly could be solved should there be [InternalNode]s in alignments, as one could then follow a path of
+         * internal nodes and ensure that one activity is a direct cause of another. Currently, it is not obvious that
+         * it is worth the effort.
+         */
         override fun step(activity: Activity, rawValues: List<NumericAttribute>) {
             require(activity is ProcessTreeActivity)
             //There cannot be repetitions in history, because it is a map. It is thus sufficient to decrease a counter
@@ -105,34 +149,43 @@ class Calculator(
                 arc.sources.forEach { src -> candidates.computeIfAbsent(src) { ArrayList() }.add(candidate) }
             }
             if (candidates.isNotEmpty()) {
-                for (previous in history.keys.reversed()) {
+                val acceptedCandidates = ArrayList<VirtualProcessTreeMultiArc>()
+                historyLoop@ for (previous in history.keys.reversed()) {
                     for (candidate in candidates[previous].orEmpty()) {
-                        assert(candidate.ctr > 0) { "The counter must be positive, as we cannot construct a candidate with a non-positive counter, and we break out of the loop the first time we reach 0 on any candidate" }
-                        candidate.ctr--
-                        if (candidate.ctr == 0) {
-                            for (arc in candidate.arc.toArcs()) {
-                                for ((key, attributeValue) in rawValues) {
-                                    arcKPIraw.compute(key, arc) { _, _, old ->
-                                        (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
-                                    }
-                                }
-                                for ((key, attributeValue) in history[arc.source]!!) {
-                                    arcKPIraw.compute(key, arc) { _, _, old ->
-                                        (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
-                                    }
-                                }
+                        if (candidate.ctr > 0) {
+                            candidate.ctr--
+                            if (candidate.ctr == 0)
+                                acceptedCandidates.add(candidate.arc)
+                        }
+                    }
+                    if (previous == activity)
+                        break@historyLoop   // if we arrived at the previous execution of the current activity, we cannot search any further
+                }
+                if (acceptedCandidates.isNotEmpty()) {
+                    val multiArc = acceptedCandidates.maxBy { it.sources.size }
+                    for (arc in multiArc.toArcs()) {
+                        for ((key, attributeValue) in rawValues) {
+                            arcKPIraw.compute(key, arc) { _, _, old ->
+                                (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
                             }
-                            break
+                        }
+                        for ((key, attributeValue) in history[arc.source]!!) {
+                            arcKPIraw.compute(key, arc) { _, _, old ->
+                                (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
+                            }
                         }
                     }
                 }
             }
             history[activity] = rawValues
         }
-
     }
 
-    private class CNetArcKPIHandler(arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) : ArcKPIHandler(arcKPIraw) {
+    /**
+     * A straightforward [ArcKPIHandler] for [CausalNet]s, leveraging the fact that [DecoupledNodeExecution] used by [Aligner]
+     * reports both bindings.
+     */
+    private class CNetArcKPIHandler(arcKPIraw: DoublingMap2D<String, CausalArc, RawArcKPI>) : ArcKPIHandler(arcKPIraw) {
 
         override fun step(activity: Activity, rawValues: List<NumericAttribute>) {
             check(activity is DecoupledNodeExecution)
@@ -151,7 +204,14 @@ class Calculator(
         }
     }
 
-    private class PetriNetArcKPIHandler(arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) : ArcKPIHandler(arcKPIraw) {
+    /**
+     * A [ArcKPIHandler] for [PetriNet]s operating on [VirtualPetriNetCausalArc]s, i.e., arcs consisting of two real arcs:
+     * one from a transition to a place, and the other from the place to another transition. As places are, necessarily,
+     * without any KPIs, this approach allows for more interesting KPIs leveraging knowledge from two transitions at the
+     * same time. The drawback is that must assume some order of consuming tokens: currently, it is FIFO.
+     */
+    private class PetriNetArcKPIHandler(arcKPIraw: DoublingMap2D<String, CausalArc, RawArcKPI>) :
+        ArcKPIHandler(arcKPIraw) {
 
         private data class TokenWithPayload(val source: Transition, val rawValues: List<NumericAttribute>)
 
@@ -162,7 +222,7 @@ class Calculator(
             check(activity is Transition)
             activity.inPlaces.forEach { place ->
                 val (source, oldRawValues) = tokens[place]?.removeFirst() ?: return@forEach
-                val arc = VirtualPetriNetArc(source, activity, place)
+                val arc = VirtualPetriNetCausalArc(source, activity, place)
                 oldRawValues.forEach { (key, attributeValue) ->
                     arcKPIraw.compute(key, arc) { _, _, old ->
                         (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
@@ -191,7 +251,7 @@ class Calculator(
         val logKPIraw = HashMap<String, ArrayList<Double>>()
         val traceKPIraw = HashMap<String, ArrayList<Double>>()
         val eventKPIraw = DoublingMap2D<String, Activity?, ArrayList<Double>>()
-        val arcKPIraw = DoublingMap2D<String, Arc, RawArcKPI>()
+        val arcKPIraw = DoublingMap2D<String, CausalArc, RawArcKPI>()
 
         val arcKPIHandler: ArcKPIHandler = when (model) {
             is ProcessTree -> ProcessTreeArcKPIHandler(model, arcKPIraw)
@@ -251,13 +311,13 @@ class Calculator(
         val logKPI = logKPIraw.mapValues { (_, v) -> Distribution(v) }
         val traceKPI = traceKPIraw.mapValues { (_, v) -> Distribution(v) }
         val eventKPI = eventKPIraw.mapValues { _, _, v -> Distribution(v) }
-        val arcKPI = arcKPIraw.mapValues { _, _, v ->
-            ArcKPI(
-                if (v.inbound.isNotEmpty()) Distribution(v.inbound) else null,
-                if (v.outbound.isNotEmpty()) Distribution(v.outbound) else null
-            )
+        val inboundArcKPI = arcKPIraw.mapValuesNotNull { _, _, v ->
+            if (v.inbound.isNotEmpty()) Distribution(v.inbound) else null
         }
-        return Report(logKPI, traceKPI, eventKPI, arcKPI)
+        val outboundArcKPI = arcKPIraw.mapValuesNotNull { _, _, v ->
+            if (v.outbound.isNotEmpty()) Distribution(v.outbound) else null
+        }
+        return Report(logKPI, traceKPI, eventKPI, outboundArcKPI, inboundArcKPI)
     }
 
     /**
