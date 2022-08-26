@@ -12,6 +12,7 @@ import processm.core.models.commons.Activity
 import processm.core.models.commons.Arc
 import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
+import processm.core.models.processtree.ProcessTreeActivity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -26,6 +27,7 @@ class ReportTests {
                 set("e", Transition("start"), Distribution(doubleArrayOf(5.0, 6.0)))
                 set("e", Transition("stop"), Distribution(doubleArrayOf(-5.0, -6.0)))
                 set("e", null, Distribution(doubleArrayOf(0.11, 0.99)))
+                set("f", ProcessTreeActivity("pt"), Distribution(doubleArrayOf(-.1, -101.0)))
             },
             arcKPI = DoublingMap2D<String, Arc, ArcKPI>().apply {
                 set(
@@ -46,10 +48,22 @@ class ReportTests {
                 )
                 set(
                     "e",
-                    VirtualPetriNetArc(Transition("z", outPlaces = listOf(place)), Transition("x", inPlaces = listOf(place)), place),
+                    VirtualPetriNetArc(
+                        Transition("z", outPlaces = listOf(place)),
+                        Transition("x", inPlaces = listOf(place)),
+                        place
+                    ),
                     ArcKPI(
                         null,
                         Distribution(doubleArrayOf(32.0, 37.0))
+                    )
+                )
+                set(
+                    "e",
+                    VirtualProcessTreeArc(ProcessTreeActivity("z"), ProcessTreeActivity("x")),
+                    ArcKPI(
+                        null,
+                        Distribution(doubleArrayOf(42.0, 69.0))
                     )
                 )
             }
@@ -67,7 +81,16 @@ class ReportTests {
         val a = Transition("a", outPlaces = listOf(place))
         val b = Transition("b", inPlaces = listOf(place))
         val arc = VirtualPetriNetArc(a, b, place)
-        val deserialized = Json.decodeFromString(serializer<VirtualPetriNetArc>(),  Json.encodeToString(arc))
+        val deserialized = Json.decodeFromString(serializer<VirtualPetriNetArc>(), Json.encodeToString(arc))
+        assertEquals(arc, deserialized)
+    }
+
+    @Test
+    fun virtualProcessTreeArcSerializationTest() {
+        val a = ProcessTreeActivity("a")
+        val b = ProcessTreeActivity("b")
+        val arc = VirtualProcessTreeArc(a, b)
+        val deserialized = Json.decodeFromString(serializer<VirtualProcessTreeArc>(), Json.encodeToString(arc))
         assertEquals(arc, deserialized)
     }
 }

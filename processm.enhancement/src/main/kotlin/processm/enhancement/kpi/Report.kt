@@ -12,6 +12,7 @@ import processm.core.helpers.map2d.Map2D
 import processm.core.helpers.stats.Distribution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.Arc
+import processm.core.models.processtree.ProcessTreeActivity
 
 
 @Serializable
@@ -52,8 +53,8 @@ data class Report(
                     subclass(VirtualPetriNetArc::class)
                     subclass(ArcKPI::class)
                     subclass(Distribution::class)
-                    // FIXME: process trees require a custom serializer
-                    //subclass(processm.core.models.processtree.Node::class)
+                    subclass(VirtualProcessTreeArc::class)
+                    subclass(ProcessTreeActivity::class)
                 }
                 polymorphic(Map2D::class) {
                     subclass(

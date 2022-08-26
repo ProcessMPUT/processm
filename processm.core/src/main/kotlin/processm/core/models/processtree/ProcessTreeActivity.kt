@@ -1,10 +1,36 @@
 package processm.core.models.processtree
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import processm.core.models.commons.Activity
 import processm.core.models.processtree.execution.ActivityExecution
 import processm.core.models.processtree.execution.ExecutionNode
 
+@Serializable(with = ProcessTreeActivity.Companion.ProcessTreeActivitySerializer::class)
 open class ProcessTreeActivity(name: String) : Node(), Activity {
+    companion object {
+
+        @Serializable
+        @SerialName("ProcessTreeActivity")
+        private class ProcessTreeActivitySurrogate(val name: String)
+        object ProcessTreeActivitySerializer : KSerializer<ProcessTreeActivity> {
+            override val descriptor: SerialDescriptor = ProcessTreeActivitySurrogate.serializer().descriptor
+
+            override fun deserialize(decoder: Decoder): ProcessTreeActivity =
+                ProcessTreeActivity(decoder.decodeSerializableValue(ProcessTreeActivitySurrogate.serializer()).name)
+
+            override fun serialize(encoder: Encoder, value: ProcessTreeActivity) = encoder.encodeSerializableValue(
+                ProcessTreeActivitySurrogate.serializer(),
+                ProcessTreeActivitySurrogate(value.name)
+            )
+
+        }
+    }
+
     /**
      * The name of an activity as a representation of an object
      */

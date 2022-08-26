@@ -1,9 +1,11 @@
 package processm.enhancement.kpi
 
+import kotlinx.serialization.Serializable
 import processm.core.helpers.cartesianProduct
 import processm.core.models.commons.Arc
 import processm.core.models.processtree.*
 
+@Serializable
 data class VirtualProcessTreeArc(override val source: ProcessTreeActivity, override val target: ProcessTreeActivity) :
     Arc
 
