@@ -10,7 +10,7 @@ import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
-import processm.core.helpers.LRUMap
+import processm.core.helpers.MRUMap
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.stats.Distribution
 import processm.core.log.attribute.Attribute
@@ -111,7 +111,7 @@ class Calculator(
         /**
          * For each activity the most recent value of its numeric attributes. It maintains order, so the most recently executed activity is last when iterating over it.
          */
-        private val history = LRUMap<ProcessTreeActivity, List<NumericAttribute>>()
+        private val history = MRUMap<ProcessTreeActivity, List<NumericAttribute>>()
 
         /**
          * For each activity, a list of [VirtualProcessTreeMultiArc]s pointing to it.

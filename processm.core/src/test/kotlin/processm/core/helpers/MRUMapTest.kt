@@ -2,11 +2,11 @@ package processm.core.helpers
 
 import kotlin.test.*
 
-class LRUMapTest {
+class MRUMapTest {
 
     @Test
     fun put() {
-        val map = LRUMap<String, Int>()
+        val map = MRUMap<String, Int>()
         map["a"] = 1
         map["b"] = 2
         assertEquals(listOf("a" to 1, "b" to 2), map.asIterable().map { it.key to it.value })
@@ -19,7 +19,7 @@ class LRUMapTest {
     @Ignore("This test is known to fail, as the implementation of LRUMap is incomplete")
     @Test
     fun compute() {
-        val map = LRUMap<String, Int>()
+        val map = MRUMap<String, Int>()
         map.compute("a") { _, _ -> 1 }
         map.compute("b") { _, _ -> 2 }
         assertEquals(listOf("a" to 1, "b" to 2), map.asIterable().map { it.key to it.value })
@@ -32,7 +32,7 @@ class LRUMapTest {
     @Ignore("This test is known to fail, as the implementation of LRUMap is incomplete")
     @Test
     fun computeIfPresent() {
-        val map = LRUMap<String, Int>()
+        val map = MRUMap<String, Int>()
         map["a"] = 1
         map["b"] = 2
         assertEquals(listOf("a" to 1, "b" to 2), map.asIterable().map { it.key to it.value })
@@ -44,7 +44,7 @@ class LRUMapTest {
 
     @Test
     fun putAll() {
-        val map = LRUMap<String, Int>()
+        val map = MRUMap<String, Int>()
         map.putAll(listOf("a" to 1))
         map.putAll(listOf("b" to 2))
         assertEquals(listOf("a" to 1, "b" to 2), map.asIterable().map { it.key to it.value })
