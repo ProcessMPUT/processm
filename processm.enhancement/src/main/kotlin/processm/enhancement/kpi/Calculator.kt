@@ -10,6 +10,7 @@ import processm.conformance.models.alignments.cache.DefaultAlignmentCache
 import processm.conformance.models.alignments.events.DefaultEventsSummarizer
 import processm.conformance.models.alignments.events.EventsSummarizer
 import processm.conformance.models.alignments.petrinet.DecompositionAligner
+import processm.core.helpers.LRUMap
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.stats.Distribution
 import processm.core.log.attribute.Attribute
@@ -80,7 +81,8 @@ class Calculator(
     private class ProcessTreeArcKPIHandler(model: ProcessTree, arcKPIraw: DoublingMap2D<String, Arc, RawArcKPI>) :
         ArcKPIHandler(arcKPIraw) {
 
-        private val history = ArrayList<Pair<ProcessTreeActivity, List<NumericAttribute>>>()
+
+        private val history = LRUMap<ProcessTreeActivity, List<NumericAttribute>>()
         private val arcs = HashMap<ProcessTreeActivity, ArrayList<VirtualProcessTreeMultiArc>>().apply {
             model.generateArcs().forEach { computeIfAbsent(it.target) { ArrayList() }.add(it) }
         }
@@ -89,32 +91,43 @@ class Calculator(
 
         override fun step(activity: Activity, rawValues: List<NumericAttribute>) {
             require(activity is ProcessTreeActivity)
-            val candidates = arcs[activity]?.map { HashSet(it.sources) to it }
-            if (!candidates.isNullOrEmpty()) {
-                for ((previous, _) in history.reversed()) {
-                    for (candidate in candidates) {
-                        if (candidate.first.remove(previous) && candidate.first.isEmpty()) {
-                            for (arc in candidate.second.toArcs()) {
+            //There cannot be repetitions in history, because it is a map. It is thus sufficient to decrease a counter
+            //each time we visit a candidate, as we cannot decrease the counter more than once for the same activity.
+            //A similar technique is used in "Artificial Intelligence: A Modern Approach" in the forward-chaining algorithm
+            //for reasoning in the propositional logic.
+            class Candidate(var ctr: Int, val arc: VirtualProcessTreeMultiArc)
+
+            val candidates = HashMap<ProcessTreeActivity, ArrayList<Candidate>>()
+            arcs[activity]?.forEach { arc ->
+                assert(arc.sources.isNotEmpty())
+                val candidate = Candidate(arc.sources.size, arc)
+                // The same candidate is shared between multiple entries in candidates to access the same, shared counter
+                arc.sources.forEach { src -> candidates.computeIfAbsent(src) { ArrayList() }.add(candidate) }
+            }
+            if (candidates.isNotEmpty()) {
+                for (previous in history.keys.reversed()) {
+                    for (candidate in candidates[previous].orEmpty()) {
+                        assert(candidate.ctr > 0) { "The counter must be positive, as we cannot construct a candidate with a non-positive counter, and we break out of the loop the first time we reach 0 on any candidate" }
+                        candidate.ctr--
+                        if (candidate.ctr == 0) {
+                            for (arc in candidate.arc.toArcs()) {
                                 for ((key, attributeValue) in rawValues) {
                                     arcKPIraw.compute(key, arc) { _, _, old ->
                                         (old ?: RawArcKPI()).apply { inbound.add(attributeValue) }
                                     }
                                 }
-                                history.last { (previous, _) -> previous == arc.source }
-                                    .let { (_, previousAttributes) ->
-                                        for ((key, attributeValue) in previousAttributes) {
-                                            arcKPIraw.compute(key, arc) { _, _, old ->
-                                                (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
-                                            }
-                                        }
+                                for ((key, attributeValue) in history[arc.source]!!) {
+                                    arcKPIraw.compute(key, arc) { _, _, old ->
+                                        (old ?: RawArcKPI()).apply { outbound.add(attributeValue) }
                                     }
+                                }
                             }
                             break
                         }
                     }
                 }
             }
-            history.add(activity to rawValues)
+            history[activity] = rawValues
         }
 
     }

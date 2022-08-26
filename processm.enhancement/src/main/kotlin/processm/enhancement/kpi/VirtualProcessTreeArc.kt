@@ -4,55 +4,50 @@ import processm.core.helpers.cartesianProduct
 import processm.core.models.commons.Arc
 import processm.core.models.processtree.*
 
-//TODO possibly should be equipped with an actual path
 data class VirtualProcessTreeArc(override val source: ProcessTreeActivity, override val target: ProcessTreeActivity) :
     Arc
 
 data class VirtualProcessTreeMultiArc(val sources: Set<ProcessTreeActivity>, val target: ProcessTreeActivity) {
-    fun toArcs() = sources.map { VirtualProcessTreeArc(it, target) }
+    fun toArcs() = sources.asSequence().map { VirtualProcessTreeArc(it, target) }
 }
 
 
 fun ProcessTree.generateArcs(includeSilent: Boolean = false): Set<VirtualProcessTreeMultiArc> {
     val result = HashSet<VirtualProcessTreeMultiArc>()
-    fun process(node: Node, causes: List<List<ProcessTreeActivity>>): List<List<ProcessTreeActivity>> {
+    fun process(causes: List<List<ProcessTreeActivity>>, node: Node): List<List<ProcessTreeActivity>> =
         when (node) {
             is ProcessTreeActivity -> {
                 if (!node.isSilent || includeSilent) {
                     causes.mapTo(result) { VirtualProcessTreeMultiArc(it.toSet(), node) }
-                    return listOf(listOf(node))
+                    listOf(listOf(node))
                 } else
-                    return emptyList()
+                    emptyList()
             }
 
             is Sequence -> {
-                //TODO czy tu sie da uzyc fold/reduce/czegos takiego?
-                var newCauses = causes
-                for (child in node.children) {
-                    newCauses = process(child, newCauses)
-                }
-                return newCauses
+                node.children.fold(causes, ::process)
             }
 
             is Parallel -> {
-                return node.children.map { process(it, causes).flatten()}.cartesianProduct().toList()
+                node.children.map { process(causes, it).flatten() }.cartesianProduct().toList()
             }
 
             is Exclusive -> {
-                return node.children.flatMap { process(it, causes) }
+                node.children.flatMap { process(causes, it) }
             }
 
             is RedoLoop -> {
-                val doPhase1 = process(node.children[0], causes)
-                val redoPhase = node.children.subList(1, node.children.size).flatMap { process(it, doPhase1) }
-                val doPhase2 = process(node.children[0], redoPhase)
+                val doPhase1 = process(causes, node.children[0])
+                val redoPhase = node.children.subList(1, node.children.size).flatMap { process(doPhase1, it) }
+                // even though we ignore the returned value, this second call to process is necessary to update the content of result
+                val doPhase2 = process(redoPhase, node.children[0])
                 assert(doPhase1 == doPhase2)
-                return doPhase1
+                doPhase1
             }
 
             else -> throw NotImplementedError("${node::class} is not supported")
         }
-    }
-    process(requireNotNull(root), emptyList())
+
+    process(emptyList(), requireNotNull(root))
     return result
 }
