@@ -1,5 +1,6 @@
 package processm.enhancement.kpi
 
+import processm.conformance.ProcessTrees
 import processm.conformance.measures.precision.causalnet.times
 import processm.core.DBTestHelper
 import processm.core.log.Helpers.assertDoubleEquals
@@ -46,17 +47,6 @@ class CalculatorTests {
             P tin "decide" tout "accept" * "reject"
             P tin "accept" * "reject"
         }
-
-        private val mainstreamProcessTree = ProcessTree.parse(
-            """
-            →(invite reviewers, ∧(×(get review 1, time-out 1), ×(get review 2, time-out 2), ×(get review 3, time-out 3)), collect reviews, decide, ×(accept, reject))
-        """.trimIndent()
-        )
-        private val perfectProcessTree = ProcessTree.parse(
-            """
-            →(invite reviewers, ∧(×(get review 1, time-out 1), ×(get review 2, time-out 2), ×(get review 3, time-out 3)), collect reviews, decide, ⟲(τ, →(invite additional reviewer, ×(get review X, time-out X))), ×(accept, reject))
-        """.trimIndent()
-        )
 
         private val perfectCNet by lazy {
             val inviteReviewers = Node("invite reviewers")
@@ -219,7 +209,7 @@ class CalculatorTests {
 
     @Test
     fun `time per activity on the mainstream model - ProcessTree`() =
-        `time per activity on the mainstream model`(mainstreamProcessTree)
+        `time per activity on the mainstream model`(ProcessTrees.journalReviewMainstreamProcessTree)
 
     private fun `time per activity on the mainstream model`(model: ProcessModel) {
         val log = q(
@@ -319,7 +309,7 @@ class CalculatorTests {
 
     @Test
     fun `time per activity on the perfect model - ProcessTree`() =
-        `time per activity on the perfect model`(perfectProcessTree)
+        `time per activity on the perfect model`(ProcessTrees.journalReviewPerfectProcessTree)
 
     private fun `time per activity on the perfect model`(model: ProcessModel) {
         val log = q(
@@ -409,13 +399,12 @@ class CalculatorTests {
 
     @Test
     fun `two parallel tasks in a process tree`() {
-        val model = ProcessTree.parse("→(∧(a,b), c)")
         val log = Log(
             traces =
             trace(event("a", "time" to 1), event("b", "time" to 2), event("c", "time" to 10)).times(10) +
                     trace(event("b", "time" to 3), event("a", "time" to 2), event("c", "time" to 20)).times(10)
         )
-        val report = Calculator(model).calculate(log)
+        val report = Calculator(ProcessTrees.twoParallelTasksAndSingleFollower).calculate(log)
         with(report.inboundArcKPI.getRow("time").entries) {
             with(single { it.key.source.name == "a" && it.key.target.name == "c" }.value) {
                 assertEquals(20, count)
@@ -439,7 +428,6 @@ class CalculatorTests {
 
     @Test
     fun `loop with a repeated activity`() {
-        val model = ProcessTree.parse("⟲(a, ∧(b,c), b)")
         val log = Log(
             traces =
             sequenceOf(
@@ -451,7 +439,7 @@ class CalculatorTests {
                 )
             )
         )
-        val report = Calculator(model).calculate(log)
+        val report = Calculator(ProcessTrees.loopWithRepeatedActivityInRedo).calculate(log)
         with(report.inboundArcKPI.getRow("time").entries.single { it.key.source.name == "c" && it.key.target.name == "a" }.value) {
             assertEquals(1, count)
         }
@@ -463,7 +451,6 @@ class CalculatorTests {
     @Test
     @Ignore("This test is known to fail. See the discussion in the documentation of [Calculator.ProcessTreeArcKPIHandler]")
     fun `cunning loop`() {
-        val model = ProcessTree.parse("⟲(a, →(b, ×(c, ∧(b,c))))")
         val log = Log(
             traces =
             sequenceOf(
@@ -475,14 +462,13 @@ class CalculatorTests {
                 )
             )
         )
-        val report = Calculator(model).calculate(log)
+        val report = Calculator(ProcessTrees.loopWithPossibilityOfRepeatedActivity).calculate(log)
         assertTrue { report.inboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
         assertTrue { report.outboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
     }
 
     @Test
     fun `straightforward loop`() {
-        val model = ProcessTree.parse("⟲(a, →(b, ×(c, ∧(d,c))))")
         val log = Log(
             traces =
             sequenceOf(
@@ -494,7 +480,7 @@ class CalculatorTests {
                 )
             )
         )
-        val report = Calculator(model).calculate(log)
+        val report = Calculator(ProcessTrees.loopWithSequenceAndExclusiveInRedo).calculate(log)
         assertTrue { report.inboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
         assertTrue { report.outboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
     }
