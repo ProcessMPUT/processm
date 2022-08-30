@@ -15,9 +15,20 @@ package processm.core.helpers
  * listOf('c', 2)
  * ```
  */
-fun <T> List<Iterable<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
-    val iterators = this@cartesianProduct.map { it.iterator() }.toMutableList()
-    val current = iterators.map { it.next() }.toMutableList()
+fun <T> List<List<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
+    class ResettableListIterator<T>(private val base: List<T>) : Iterator<T> {
+        private var idx = 0
+        override fun hasNext(): Boolean = idx < base.size
+
+        override fun next(): T = base[idx++]
+
+        fun reset() {
+            idx = 0
+        }
+    }
+
+    val iterators = this@cartesianProduct.mapTo(ArrayList()) { ResettableListIterator(it) }
+    val current = iterators.mapTo(ArrayList()) { it.next() }
     while (true) {
         yield(ArrayList(current))   //return a copy
         var finished = true
@@ -27,7 +38,7 @@ fun <T> List<Iterable<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
                 finished = false
                 break
             } else {
-                iterators[idx] = this@cartesianProduct[idx].iterator()
+                iterators[idx].reset()
                 current[idx] = iterators[idx].next()
             }
         }
