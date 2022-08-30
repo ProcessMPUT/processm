@@ -1,6 +1,7 @@
 package processm.enhancement.kpi
 
 import kotlinx.serialization.*
+import kotlinx.serialization.builtins.PairSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.*
@@ -51,22 +52,46 @@ data class Report(
         private val reportFormat = Json {
             allowStructuredMapKeys = true
             serializersModule = SerializersModule {
-                polymorphic(Any::class) {
+                polymorphic(Activity::class) {
                     subclass(processm.core.models.causalnet.Node::class)
                     subclass(processm.core.models.petrinet.Transition::class)
+                    subclass(ProcessTreeActivity::class)
+                }
+                polymorphic(CausalArc::class) {
                     subclass(processm.core.models.causalnet.Dependency::class)
                     subclass(VirtualPetriNetCausalArc::class)
-                    subclass(Distribution::class)
                     subclass(VirtualProcessTreeCausalArc::class)
-                    subclass(ProcessTreeActivity::class)
                 }
                 polymorphic(Map2D::class) {
                     subclass(
                         DoublingMap2D::class,
                         DoublingMap2D.serializer(
                             String.serializer(),
-                            PolymorphicSerializer(Any::class).nullable,
-                            PolymorphicSerializer(Any::class)
+                            object : KSerializer<Any?> {
+
+                                private val baseSerializer = PairSerializer(
+                                    PolymorphicSerializer(Activity::class).nullable,
+                                    PolymorphicSerializer(CausalArc::class).nullable
+                                )
+                                override val descriptor: SerialDescriptor
+                                    get() = baseSerializer.descriptor
+
+                                override fun deserialize(decoder: Decoder): Any? {
+                                    val (s, t) = baseSerializer.deserialize(decoder)
+                                    return s ?: t
+                                }
+
+                                override fun serialize(encoder: Encoder, value: Any?) {
+                                    if (value is Activity?)
+                                        baseSerializer.serialize(encoder, value to null)
+                                    else {
+                                        check(value is CausalArc)
+                                        baseSerializer.serialize(encoder, null to value)
+                                    }
+                                }
+
+                            },
+                            Distribution.serializer()
                         ) as KSerializer<DoublingMap2D<*, *, *>>
                     )
                 }

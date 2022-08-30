@@ -13,10 +13,12 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.petrinet
-import processm.core.models.processtree.ProcessTree
 import processm.core.querylanguage.Query
 import java.util.*
-import kotlin.test.*
+import kotlin.test.Ignore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CalculatorTests {
     companion object {
