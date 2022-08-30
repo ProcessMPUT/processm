@@ -15,7 +15,7 @@ package processm.core.helpers
  * listOf('c', 2)
  * ```
  */
-fun <T> List<List<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
+fun <T, L> List<L>.cartesianProduct(): Sequence<List<T>> where L : List<T>, L : RandomAccess = sequence {
     class ResettableListIterator<T>(private val base: List<T>) : Iterator<T> {
         private var idx = 0
         override fun hasNext(): Boolean = idx < base.size

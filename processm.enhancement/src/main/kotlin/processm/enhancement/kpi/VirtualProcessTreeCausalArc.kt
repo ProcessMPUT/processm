@@ -45,7 +45,8 @@ fun ProcessTree.generateArcs(includeSilent: Boolean = false): Set<VirtualProcess
             }
 
             is Parallel -> {
-                node.children.map { process(causes, it).flatten() }.cartesianProduct().toList()
+                node.children.map { child -> process(causes, child).flatMapTo(ArrayList()) { it } }.cartesianProduct()
+                    .toList()
             }
 
             is Exclusive -> {
