@@ -2,6 +2,7 @@ import {
   DataLink,
   DataNode
 } from "@/components/workspace/causal-net/CausalNet";
+// TODO add PetriNet = "petriNet" to ComponentType
 import { AlignerKpiReport, ComponentType } from "@/openapi";
 
 type CustomizationData = {};
@@ -51,6 +52,21 @@ export class BPMNComponentData extends ComponentData {
   }
 }
 
+export class PetriNetComponentData extends ComponentData {
+  // TODO: Change any to some type
+  places?: Array<any>;
+  transitions?: Array<any>;
+  initialMarking: any
+  finalMarking: any
+
+  get isDisplayable() {
+    return this.initialMarking != null
+        && this.finalMarking != null
+        && this?.places?.length != 0
+        && this.transitions?.length != 0;
+  }
+}
+
 export class LayoutElement {
   constructor(init: Partial<LayoutElement>) {
     Object.assign(this, init);
@@ -87,6 +103,11 @@ export class WorkspaceComponent {
       }
       case ComponentType.AlignerKpi: {
         this.data = new AlignerKpiComponentData(init.data ?? {});
+        break;
+      }
+      case ComponentType.PetriNet: {
+        // TODO: Implement
+        this.data = new PetriNetComponentData(init.data ?? {});
         break;
       }
       case ComponentType.Bpmn: {

@@ -1,0 +1,53 @@
+<template>
+  <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+    <title>kpi</title>
+    <g id="Layer_1">
+      <title>Layer 1</title>
+      <line
+          stroke="#7f7f7f"
+          id="svg_9"
+          y2="6"
+          x2="21"
+          y1="12"
+          x1="3"
+          fill="none"
+      />
+      <line
+          stroke="#7f7f7f"
+          id="svg_10"
+          y2="18"
+          x2="21"
+          y1="12"
+          x1="3"
+          fill="none"
+      />
+      <rect
+          width="1"
+          height="6"
+          id="svg_8"
+          y="15"
+          x="21"
+          stroke="#b2b2b2"
+          fill="#b2b2b2"
+      />
+      <rect
+          width="1"
+          height="6"
+          id="svg_7"
+          y="3"
+          x="21"
+          stroke="#b2b2b2"
+          fill="#b2b2b2"
+      />
+      <ellipse
+          ry="2"
+          rx="2"
+          id="svg_5"
+          cy="12"
+          cx="3"
+          stroke="#b2b2b2"
+          fill="#b2b2b2"
+      />
+    </g>
+  </svg>
+</template>

@@ -28,6 +28,7 @@
     "testEnvironment": "jsdom"
   },
   "dependencies": {
+    "petri-net-editor": "file:../../../../processm.webui.petrinet/src/main/petri-net-editor",
     "@types/clarinet": "^0.12.0",
     "@types/dagre": "^0.7.44",
     "axios": "^0.19.2",
@@ -81,9 +82,9 @@
     "@vue/eslint-config-prettier": "^6.0.0",
     "@vue/eslint-config-typescript": "^5.1.0",
     "@vue/vue2-jest": "^27.0.0-alpha.3",
-    "eslint": "^6.8.0",
+    "eslint": "^8.15.0",
     "eslint-plugin-prettier": "^3.4.0",
-    "eslint-plugin-vue": "^6.2.2",
+    "eslint-plugin-vue": "^8.7.1",
     "jest": "^27.3.1",
     "mocker-api": "^1.14.0",
     "prettier": "2.1.2",

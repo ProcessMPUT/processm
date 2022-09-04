@@ -26,6 +26,7 @@
       "causal-net": "Sieć przyczynowa",
       "kpi": "KPI",
       "bpmn": "BPMN",
+      "petri-net": "Sieć Petriego",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
       "edit": {
