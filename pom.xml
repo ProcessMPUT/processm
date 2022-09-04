@@ -43,6 +43,7 @@
         <module>processm.launcher</module>
         <module>processm.experimental</module>
         <module>processm.tools</module>
+        <module>processm.webui.petrinet</module>
     </modules>
 
     <properties>
