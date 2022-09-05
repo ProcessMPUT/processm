@@ -38,4 +38,43 @@ object ProcessTrees {
      * A process tree implementing a sequence of two "a" activities.
      */
     val duplicateA = ProcessTree.parse("→(a,a)")
+
+    /**
+     * A process tree for the Journal Review log implementing only the mainstream path without the possibility to invite additional reviewers
+     */
+    val journalReviewMainstreamProcessTree = ProcessTree.parse(
+        """
+            →(invite reviewers, ∧(×(get review 1, time-out 1), ×(get review 2, time-out 2), ×(get review 3, time-out 3)), collect reviews, decide, ×(accept, reject))
+        """.trimIndent()
+    )
+
+    /**
+     * A process tree for the Journal Review log implementing the complete process, incl. the possibility to invite additional reviewers
+     */
+    val journalReviewPerfectProcessTree = ProcessTree.parse(
+        """
+            →(invite reviewers, ∧(×(get review 1, time-out 1), ×(get review 2, time-out 2), ×(get review 3, time-out 3)), collect reviews, decide, ⟲(τ, →(invite additional reviewer, ×(get review X, time-out X))), ×(accept, reject))
+        """.trimIndent()
+    )
+
+    /**
+     * A process tree allowing for traces `a b c` and `b a c`
+     */
+    val twoParallelTasksAndSingleFollower = ProcessTree.parse("→(∧(a,b), c)")
+
+    /**
+     * A process tree with a repeated activity in the redo part of a loop, allowing for traces: `a b c a ...`, `a c b a ...`, and `a b a ...`
+     */
+    val loopWithRepeatedActivityInRedo = ProcessTree.parse("⟲(a, ∧(b,c), b)")
+
+    /**
+     * A process tree with an optional repetition of an activity in the redo part, allowing for traces: `a b c a ...`, `a b b c a ...` and `a b c b a ...`
+     */
+    val loopWithPossibilityOfRepeatedActivity = ProcessTree.parse("⟲(a, →(b, ×(c, ∧(b,c))))")
+
+    /**
+     * The same process tree as in [loopWithPossibilityOfRepeatedActivity], but the repetition is called `d` instead of `b`,
+     * allowing for traces: `a b c a ...`, `a b d c a ...` and `a b c d a ...`
+     */
+    val loopWithSequenceAndExclusiveInRedo = ProcessTree.parse("⟲(a, →(b, ×(c, ∧(d,c))))")
 }

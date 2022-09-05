@@ -24,7 +24,7 @@ class ProcessTree(root: Node? = null, private val metadataHandler: MetadataHandl
             val trimmed = string.trim()
             require(trimmed.isNotEmpty())
 
-            if (trimmed.length > 3 && trimmed[1] == '(' && trimmed[string.length - 1] == ')') {
+            if (trimmed.length > 3 && trimmed[1] == '(' && trimmed[trimmed.length - 1] == ')') {
                 val ctor = when (trimmed[0]) {
                     '→' -> ::Sequence
                     '∧' -> ::Parallel

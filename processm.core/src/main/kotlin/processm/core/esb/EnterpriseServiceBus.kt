@@ -94,7 +94,7 @@ class EnterpriseServiceBus : Closeable {
     fun start(service: Service): Unit = loggedScope { logger ->
         synchronized(servicesInternal) {
             require(service in servicesInternal) { "Service ${service.name} is not registered." }
-            val servicePlace = petriNet.places.first { (it as? ServicePlace)?.service === service } as ServicePlace
+            val servicePlace = petriNet.places.first { (it as? ServicePlace)?.service == service } as ServicePlace
             require(servicePlace !in petriNetInstance!!.currentState) { "Service ${service.name} is already started." }
             assert(service.status == ServiceStatus.Stopped)
 
@@ -113,7 +113,7 @@ class EnterpriseServiceBus : Closeable {
     fun stop(service: Service): Unit = loggedScope { logger ->
         synchronized(servicesInternal) {
             require(service in servicesInternal) { "Service ${service.name} is not registered." }
-            val servicePlace = petriNet.places.first { (it as? ServicePlace)?.service === service } as ServicePlace
+            val servicePlace = petriNet.places.first { (it as? ServicePlace)?.service == service } as ServicePlace
             require(servicePlace in petriNetInstance!!.currentState) { "Service ${service.name} is already stopped." }
             assert(service.status == ServiceStatus.Started)
 
