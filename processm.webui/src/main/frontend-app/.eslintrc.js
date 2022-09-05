@@ -18,7 +18,18 @@ module.exports = {
   rules: {
     "no-console": process.env.NODE_ENV === "production" ? "error" : "off",
     "no-debugger": process.env.NODE_ENV === "production" ? "error" : "off",
-    "prettier/prettier": "warn"
+    "prettier/prettier": "warn",
+    'vue/valid-v-slot': ['error', {
+      allowModifiers: true,
+    }]
   },
-  plugins: ["prettier", "@typescript-eslint"]
+  plugins: ["prettier", "@typescript-eslint"],
+  overrides: [
+    {
+      files: ['src/views/**/*.vue'],
+      rules: {
+        'vue/multi-word-component-names': 0,
+      },
+    },
+  ],
 };

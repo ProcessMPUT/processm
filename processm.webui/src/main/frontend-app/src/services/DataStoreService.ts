@@ -346,8 +346,7 @@ export default class DataStoreService extends BaseService {
     dataConnectorId: string,
     configuration: CaseNotion | JdbcEtlProcessConfiguration
   ): Promise<AbstractEtlProcess> {
-    let data: AbstractEtlProcess;
-    data = {
+    const data: AbstractEtlProcess = {
       name: processName,
       dataConnectorId,
       type: ApiEtlProcessType.Jdbc,

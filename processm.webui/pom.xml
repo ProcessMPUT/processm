@@ -87,4 +87,12 @@
             </plugin>
         </plugins>
     </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>${parent.groupId}</groupId>
+            <artifactId>webui.petrinet</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+    </dependencies>
 </project>

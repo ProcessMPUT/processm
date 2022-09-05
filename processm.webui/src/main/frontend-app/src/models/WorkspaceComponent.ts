@@ -3,9 +3,9 @@ import {
   DataNode
 } from "@/components/workspace/causal-net/CausalNet";
 // TODO add PetriNet = "petriNet" to ComponentType
-import { AlignerKpiReport, ComponentType } from "@/openapi";
+import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
 
-type CustomizationData = {};
+type CustomizationData = Record<string, unknown>;
 
 export interface CausalNetCustomizationData extends CustomizationData {
   layout: { id: string; x: number; y: number }[];
@@ -79,7 +79,7 @@ export class LayoutElement {
 }
 
 export class WorkspaceComponent {
-  constructor(init: {
+  constructor(init: AbstractComponent/*{
     id: string;
     name?: string;
     query: string;
@@ -88,7 +88,7 @@ export class WorkspaceComponent {
     data?: { type: ComponentType };
     layout?: LayoutElement;
     customizationData?: CustomizationData;
-  }) {
+  }*/) {
     Object.assign(this, init);
 
     // FIXME: customizations like this should be implemented using inheritance

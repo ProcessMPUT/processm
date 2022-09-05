@@ -108,7 +108,7 @@ export default class WorkspaceService extends BaseService {
   public async getComponentData(
     workspaceId: string,
     componentId: string
-  ): Promise<{}> {
+  ): Promise<unknown> {
     const response = await this.workspacesApi.getWorkspaceComponentData(
       this.currentOrganizationId,
       workspaceId,
