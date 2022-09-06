@@ -4,19 +4,10 @@
       class="svg-container"
       v-if="data != null"
   >
-    <svg
-        :viewBox="`0 0 ${contentWidth} ${contentHeight}`"
-        x="0"
-        y="0"
-        width="100%"
-        height="100%"
-        ref="svg"
-        class="svg-content"
-        :style="{ cursor: editMode == null ? 'auto' : 'crosshair' }"
-        preserveAspectRatio="xMidYMid meet"
-    >
-
-    </svg>
+    <petri-net-editor
+        :debug="false"
+        :run-layouter-on-start="true"
+    />
     <div class="node-details"/>
     <v-speed-dial
         v-if="componentMode == ComponentMode.Edit"
@@ -78,8 +69,9 @@
 import Vue from "vue";
 import {Component, Prop} from "vue-property-decorator";
 import {PetriNetComponentData} from "@/models/WorkspaceComponent";
+import {PetriNetEditor} from "petri-net-editor"
 
-@Component
+@Component({ components: { PetriNetEditor } })
 export default class PetriNetComponent extends Vue {
   @Prop({default: {}})
   readonly data!: { data: PetriNetComponentData };

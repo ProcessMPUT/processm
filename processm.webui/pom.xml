@@ -89,10 +89,11 @@
     </build>
 
     <dependencies>
-        <dependency>
-            <groupId>${parent.groupId}</groupId>
-            <artifactId>webui.petrinet</artifactId>
-            <version>${parent.version}</version>
-        </dependency>
+<!--        TODO: Does not build with this as dependency -->
+<!--        <dependency>-->
+<!--            <groupId>${parent.groupId}</groupId>-->
+<!--            <artifactId>webui.petrinet</artifactId>-->
+<!--            <version>${parent.version}</version>-->
+<!--        </dependency>-->
     </dependencies>
 </project>
