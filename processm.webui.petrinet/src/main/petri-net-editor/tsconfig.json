@@ -15,7 +15,6 @@
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "baseUrl": ".",
-    "newLine": "lf",
     "types": [
       "node",
       "vue"
@@ -25,14 +24,6 @@
         "src/*"
       ]
     },
-    "plugins": [
-      {
-        "transform": "@zerollup/ts-transform-paths",
-        "exclude": [
-          "*"
-        ]
-      }
-    ],
     "lib": [
       "esnext",
       "dom",
