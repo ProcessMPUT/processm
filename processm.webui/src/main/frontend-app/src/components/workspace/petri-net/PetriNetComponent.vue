@@ -34,7 +34,7 @@
           small
           color="green"
           elevation="0"
-          :outlined="editMode != EditMode.Addition"
+          :outlined="editMode !== EditMode.Addition"
           @click.stop="setEditMode(EditMode.Addition)"
       >
         <v-icon>add</v-icon>
@@ -45,7 +45,7 @@
           small
           color="red"
           elevation="0"
-          :outlined="editMode != EditMode.Deletion"
+          :outlined="editMode !== EditMode.Deletion"
           @click.stop="setEditMode(EditMode.Deletion)"
       >
         <v-icon>delete</v-icon>
@@ -70,14 +70,71 @@ import Vue from "vue";
 import {Component, Prop} from "vue-property-decorator";
 import {PetriNetComponentData} from "@/models/WorkspaceComponent";
 import {PetriNetEditor} from "petri-net-editor"
+import resize from "vue-resize-directive";
+import {ComponentMode} from "@/components/workspace/WorkspaceComponent.vue";
+import {
+  AdditionModeInputHandler,
+  DeletionModeInputHandler,
+  InteractiveModeInputHandler
+} from "@/components/workspace/causal-net/UserInputHandlers";
 
-@Component({ components: { PetriNetEditor } })
+enum EditMode {
+  Addition,
+  Deletion
+}
+
+@Component({
+  components: {PetriNetEditor},
+  directives: {
+    resize
+  }
+})
 export default class PetriNetComponent extends Vue {
+  ComponentMode = ComponentMode;
+  EditMode = EditMode;
+
   @Prop({default: {}})
   readonly data!: { data: PetriNetComponentData };
 
+  @Prop({ default: null })
+  readonly componentMode?: ComponentMode;
+
   mounted() {
     console.log(this.data);
+  }
+
+  private setEditMode(newMode: EditMode | null) {
+    // if (this.componentMode == ComponentMode.Edit) {
+    //   this.editMode = this.editMode != newMode ? newMode : null;
+    //
+    //   if (this.editMode == EditMode.Addition) {
+    //     this.userInputHandler = new AdditionModeInputHandler(this);
+    //   } else if (this.editMode == EditMode.Deletion) {
+    //     this.userInputHandler = new DeletionModeInputHandler(this);
+    //   } else {
+    //     this.userInputHandler = new InteractiveModeInputHandler(this);
+    //   }
+    // } else {
+    //   this.editMode = null;
+    //   this.userInputHandler =
+    //       this.componentMode == ComponentMode.Interactive
+    //           ? new InteractiveModeInputHandler(this)
+    //           : null;
+    // }
+  }
+
+  private onResize(element: Element) {
+    // const scalingFactor = this.calculateScalingFactor(
+    //     element.clientWidth,
+    //     element.clientHeight
+    // );
+    //
+    // this.scaleElements(scalingFactor);
+  }
+
+  private rearrangeNodes() {
+    // this.causalNet.recalculateLayout();
+    // this.simulation?.alphaTarget(0.3).restart();
   }
 }
 </script>
