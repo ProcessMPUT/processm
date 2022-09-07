@@ -61,6 +61,12 @@ const baseConfig = {
             babelHelpers: 'bundled',
         },
     },
+    onwarn: function ( message, warn ) {
+        if (message.code === 'CIRCULAR_DEPENDENCY') {
+            return;
+        }
+        warn(message);
+    }
 };
 
 // ESM/UMD/IIFE shared settings: externals
@@ -119,7 +125,6 @@ if (!argv.format || argv.format === 'es') {
     };
     buildFormats.push(esConfig);
 }
-
 
 if (!argv.format || argv.format === 'cjs') {
     const umdConfig = {
