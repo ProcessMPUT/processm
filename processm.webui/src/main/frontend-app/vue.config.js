@@ -7,9 +7,11 @@ module.exports = {
   lintOnSave: process.env.NODE_ENV !== "production",
   devServer: {
     port: 8081,
-    before(app) {
-      apiMocker(app, path.resolve("./api-mocker/api.js"));
-    },
+    // Use either the proxy to the actual backend or apiMocker below
+    proxy: "http://localhost:2080/",
+    // before(app) {
+    //   apiMocker(app, path.resolve("./api-mocker/api.js"));
+    // },
   },
 
   pluginOptions: {

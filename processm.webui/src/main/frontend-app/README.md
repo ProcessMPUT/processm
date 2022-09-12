@@ -17,14 +17,9 @@ npm install
 npm run generate-api-sources
 ```
 
-### Compiles and hot-reloads for development (with mocks rather than the actual services)
+### Compiles and hot-reloads for development (requires ProcessM backend run with processm.Main on localhost:2080)
 ```shell
 npm run serve
-```
-
-### Hot-reloads with actual services (ProcessM run using Main)
-```shell
-npm run build -- --dest ../../../target/classes/frontend-dist --mode development
 ```
 
 ### Compiles and minifies for production
@@ -46,7 +41,7 @@ npx prettier --write '**/*.ts'
 
 Preparing the front-end package for release doesn't require any extra components. You can execute the following without the need of installing development tools.
 
-### Prepares for hosting with processm.sevices
+### Prepares for hosting with processm.services
 
 Execute `mvn package` for `processm/processm.webui` module. Once it completed you can launch `processm.services`.
 
