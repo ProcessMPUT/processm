@@ -190,9 +190,11 @@
     "title": "Rejestracja konta",
     "organization-name": "Nazwa organizacji",
     "admin-email": "E-mail administratora",
+    "password": "Hasło",
     "register": "Zarejestruj",
     "validation": {
       "email-format": "Nieprawidłowy format adresu e-mail",
+      "password-format": "Hasło musi zawierać co najmniej jedną literę, jedną cyfrę i być długości co najmniej 4 znaków.",
       "organization-empty": "Nazwa organizacji nie może być pusta"
     },
     "error-box": {

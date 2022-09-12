@@ -14,12 +14,12 @@
         grow
       >
         <v-tab href="#users">
-          Users
+          {{ $t("users.users") }}
           <v-icon>group</v-icon>
         </v-tab>
 
         <v-tab href="#groups">
-          Groups
+          {{ $t("users.groups") }}
           <v-icon>group_work</v-icon>
         </v-tab>
       </v-tabs>
