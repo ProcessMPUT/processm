@@ -67,7 +67,7 @@ class AccountServiceTest : ServiceTestBase() {
         withCleanTables(Users, Organizations, UsersRolesInOrganizations, UserGroups) {
             every { groupServiceMock.attachUserToGroup(any(), any()) } just runs
 
-            accountService.createAccount("user@example.com", "Org1")
+            accountService.createAccount("user@example.com", "Org1", null, "pass")
 
             val organizationMember = UserRolesInOrganizations.all().first()
             assertEquals("user@example.com", organizationMember.user.email)
@@ -82,7 +82,7 @@ class AccountServiceTest : ServiceTestBase() {
 
         val exception =
             assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
-                accountService.createAccount("user@example.com", "Org1")
+                accountService.createAccount("user@example.com", "Org1", null, "pass")
             }
         assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
     }
@@ -94,7 +94,7 @@ class AccountServiceTest : ServiceTestBase() {
 
             val exception =
                 assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
-                    accountService.createAccount("user@example.com", "Org1")
+                    accountService.createAccount("user@example.com", "Org1", null, "pass")
                 }
             assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
         }
@@ -105,7 +105,7 @@ class AccountServiceTest : ServiceTestBase() {
 
         val exception =
             assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
-                accountService.createAccount("uSeR@eXaMpLe.com", "Org1")
+                accountService.createAccount("uSeR@eXaMpLe.com", "Org1", null, "pass")
             }
         assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
     }

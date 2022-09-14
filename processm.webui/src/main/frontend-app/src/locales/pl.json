@@ -51,10 +51,10 @@
     "add-automatic-process": {
       "title": "Dodaj automatyczny process",
       "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych",
-      "case-notion":"Identyfikator perspektywy biznesowej",
+      "case-notion": "Identyfikator perspektywy biznesowej",
       "select-data-connector": "Wybierz łącze danych",
       "case-notion-description": "dla każdego wpisu w {source} powiązanego z wpisem w {target}"
-  },
+    },
     "add-manual-query": {
       "title": "Dodaj ręcznie zapytanie",
       "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
@@ -139,9 +139,18 @@
     "change-password": "Zmień hasło"
   },
   "users": {
+    "exclude-member": "Usuń członka",
+    "groups": "Grupy",
+    "group": "Grupa",
+    "organizations": "Organizacje",
+    "owner": "Właściciel",
     "page-title": "Użytkownicy",
+    "reader": "Czytelnik",
+    "role": "Role",
     "users": "Użytkownicy",
-    "groups": "Grupy"
+    "user": "Użytkownik",
+    "writer": "Pisarz",
+    "you": "Ty"
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie {count} logów?"
@@ -278,6 +287,7 @@
     "testing": {
       "success": "Test udany",
       "failure": "Test nieudany"
-    }
+    },
+    "in": "w"
   }
 }

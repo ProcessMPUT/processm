@@ -9,6 +9,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.services.api.models.*
 import processm.services.logic.AccountService
@@ -47,6 +48,7 @@ fun Route.UsersApi() {
                             HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token))
                         )
                     }
+
                     call.request.authorization() != null -> {
                         val authorizationHeader =
                             call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
@@ -62,6 +64,7 @@ fun Route.UsersApi() {
                             AuthenticationResultMessageBody(AuthenticationResult(prolongedToken))
                         )
                     }
+
                     else -> {
                         throw ApiException("Either user credentials or authentication token needs to be provided")
                     }
@@ -77,7 +80,12 @@ fun Route.UsersApi() {
                     ?: throw ApiException("The provided account details cannot be parsed")
                 val locale = call.request.acceptLanguageItems().getOrNull(0)
 
-                accountService.createAccount(accountInfo.userEmail, accountInfo.organizationName, locale?.value)
+                accountService.createAccount(
+                    accountInfo.userEmail,
+                    accountInfo.organizationName,
+                    locale?.value,
+                    accountInfo.userPassword
+                )
 
                 logger.info("A new organization account for ${accountInfo.organizationName} has been successfully created")
                 call.respond(HttpStatusCode.Created)
@@ -93,7 +101,9 @@ fun Route.UsersApi() {
             call.respond(
                 HttpStatusCode.OK, UserAccountInfoMessageBody(
                     UserAccountInfo(
-                        userAccount.email, userAccount.locale
+                        id = userAccount.id,
+                        email = userAccount.email,
+                        locale = userAccount.locale
                     )
                 )
             )
@@ -149,9 +159,21 @@ fun Route.UsersApi() {
         }
 
         get<Paths.Users> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
+            val principal = call.authentication.principal<ApiUser>()!!
+            val email = call.request.queryParameters["email"]
+            val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
 
-            call.respond(HttpStatusCode.OK, UserInfoCollectionMessageBody(emptyArray()))
+            val users = accountService.getUsers(principal.userId, email, limit)
+            call.respond(
+                HttpStatusCode.OK,
+                UserAccountInfoCollectionMessageBody(users.mapToArray {
+                    UserAccountInfo(
+                        id = it.id,
+                        email = it.email,
+                        locale = it.locale
+                    )
+                })
+            )
         }
 
         delete<Paths.UserOut> { _ ->

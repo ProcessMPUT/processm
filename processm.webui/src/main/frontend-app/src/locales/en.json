@@ -141,9 +141,18 @@
     "change-password": "Change password"
   },
   "users": {
+    "exclude-member": "Exclude from organization",
+    "groups": "Groups",
+    "group": "Group",
+    "organizations": "Organizations",
+    "owner": "Owner",
     "page-title": "Users",
+    "reader": "Reader",
+    "role": "Role",
     "users": "Users",
-    "groups": "Groups"
+    "user": "User",
+    "writer": "Writer",
+    "you": "You"
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Do you want to permanently remove {count} logs?"
@@ -281,6 +290,7 @@
     "testing": {
       "success": "Test succeeded",
       "failure": "Test failed"
-    }
+    },
+    "in": "in"
   }
 }

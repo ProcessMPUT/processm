@@ -1,9 +1,7 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertAndGetId
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
@@ -41,7 +39,12 @@ class AccountService(private val groupService: GroupService) {
      * Creates new organization account and supervising user account.
      * Throws [ValidationException] if [organizationName] or [userEmail] is already in use.
      */
-    fun createAccount(userEmail: String, organizationName: String, accountLocale: String? = null): Unit =
+    fun createAccount(
+        userEmail: String,
+        organizationName: String,
+        accountLocale: String? = null,
+        pass: String
+    ): Unit =
         loggedScope { logger ->
             transaction(DBCache.getMainDBPool().database) {
                 val organizationsCount =
@@ -75,7 +78,7 @@ class AccountService(private val groupService: GroupService) {
                 }
                 val userId = Users.insertAndGetId {
                     it[email] = userEmail
-                    it[password] = calculatePasswordHash("pass")
+                    it[password] = calculatePasswordHash(pass)
                     it[locale] = accountLocale ?: defaultLocale.toString()
                     it[this.privateGroupId] = privateGroupId
                 }
@@ -159,6 +162,25 @@ class AccountService(private val groupService: GroupService) {
                 OrganizationMemberDto(user, Organization.wrapRow(it).toDto(), OrganizationRole.wrapRow(it).name)
             }
     }
+
+    /**
+     * Gets all users within the organizations associated with the [queryingUserId] (i.e., for security reasons, it does not
+     * return users from other organizations).
+     */
+    fun getUsers(queryingUserId: UUID, emailFilter: String? = null, limit: Int = 10) =
+        transaction(DBCache.getMainDBPool().database) {
+            val URIO = UsersRolesInOrganizations
+            val urio1 = URIO.alias("urio1")
+            val urio2 = URIO.alias("urio2")
+            urio1
+                .join(urio2, JoinType.INNER, urio1[URIO.organizationId], urio2[URIO.organizationId])
+                .join(Users, JoinType.INNER, urio2[URIO.userId], Users.id)
+                .select { urio1[URIO.userId] eq queryingUserId }
+                .andWhere { Users.email ilike "%${emailFilter}%" }
+                .withDistinct()
+                .limit(limit)
+                .map { User.wrapRow(it).toDto() }
+        }
 
     private fun getUserDao(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         User.findById(userId) ?: throw ValidationException(

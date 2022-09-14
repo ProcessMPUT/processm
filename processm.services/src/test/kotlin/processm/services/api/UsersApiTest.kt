@@ -225,7 +225,7 @@ class UsersApiTest : BaseApiTest() {
                 withSerializedBody(
                     AccountRegistrationInfoMessageBody(
                         AccountRegistrationInfo(
-                            "user@example.com", "OrgName1"
+                            "user@example.com", "pass", "OrgName1"
                         )
                     )
                 )
@@ -234,7 +234,7 @@ class UsersApiTest : BaseApiTest() {
             }
         }
 
-        verify { accountService.createAccount("user@example.com", "OrgName1") }
+        verify { accountService.createAccount("user@example.com", "OrgName1", null, pass = "pass") }
     }
 
     @Test
@@ -257,7 +257,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(
                         AccountRegistrationInfoMessageBody(
                             AccountRegistrationInfo(
-                                "user@example.com", "OrgName1"
+                                "user@example.com", "pass", "OrgName1"
                             )
                         )
                     )
@@ -267,7 +267,7 @@ class UsersApiTest : BaseApiTest() {
                 }
             }
 
-            verify { accountService.createAccount("user@example.com", "OrgName1") }
+            verify { accountService.createAccount("user@example.com", "OrgName1", null, "pass") }
         }
 
     @Test
@@ -284,7 +284,13 @@ class UsersApiTest : BaseApiTest() {
                 }
             }
 
-            verify(exactly = 0) { accountService.createAccount(userEmail = any(), organizationName = any()) }
+            verify(exactly = 0) {
+                accountService.createAccount(
+                    userEmail = any(),
+                    organizationName = any(),
+                    pass = any()
+                )
+            }
         }
 
     @Test
