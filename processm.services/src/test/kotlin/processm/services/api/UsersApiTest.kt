@@ -183,7 +183,7 @@ class UsersApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/users/me")) {
                     assertEquals(HttpStatusCode.OK, response.status())
                     val deserializedContent = response.deserializeContent<UserAccountInfoMessageBody>()
-                    assertEquals("user@example.com", deserializedContent.data.userEmail)
+                    assertEquals("user@example.com", deserializedContent.data.email)
                     assertEquals("en_US", deserializedContent.data.locale)
                 }
             }
@@ -215,7 +215,7 @@ class UsersApiTest : BaseApiTest() {
 
         every {
             accountService.createAccount(
-                "user@example.com", "OrgName1", accountLocale = any()
+                "user@example.com", "OrgName1", accountLocale = any(), pass = any()
             )
         } just Runs
 
@@ -244,7 +244,7 @@ class UsersApiTest : BaseApiTest() {
 
             every {
                 accountService.createAccount(
-                    "user@example.com", "OrgName1", accountLocale = any()
+                    "user@example.com", "OrgName1", accountLocale = any(), pass = any()
                 )
             } throws ValidationException(
                 ValidationException.Reason.ResourceAlreadyExists,
