@@ -1,0 +1,376 @@
+<template>
+  <div style="height: 100%">
+    <edit-place-dialog
+      v-if="isEditPlaceDialogVisible"
+      :place="selectedPlace"
+      @close="closeEditPlaceDialog"
+    />
+
+    <edit-transition-dialog
+      v-if="isEditTransitionDialogVisible"
+      :transition="selectedTransition"
+      @close="closeEditTransitionDialog"
+    />
+
+    <export-pnml-dialog
+      v-if="isExportPnmlDialogVisible"
+      :state="petriNetManager.state"
+      @close="closeExportPnmlDialog"
+    />
+
+    <v-container
+      fluid
+      pa-0
+      elevation-6
+      fill-width
+      style="z-index: 1"
+    >
+      <v-btn light
+             color="primary"
+             class="ma-2"
+             v-if="!isDebuggerEnabled"
+             @click="runLayouter">
+        Run layouter
+      </v-btn>
+      <v-btn light
+             color="primary"
+             class="ma-2"
+             v-if="!isDebuggerEnabled"
+             @click="runDebugger">
+        Run debugger
+      </v-btn>
+      <v-btn light
+             color="primary"
+             class="ma-2"
+             v-if="!isDebuggerEnabled"
+             type="file"
+             @click="selectPnmlFile">
+        Import PNML
+        <input ref="importInput"
+               hidden
+               type="file"
+               accept=".pnml"
+               @change="importPnml"
+        >
+      </v-btn>
+      <v-btn light
+             color="primary"
+             class="ma-2"
+             v-if="!isDebuggerEnabled"
+             type="file" v-on:click="() => isExportPnmlDialogVisible = true">
+        Export PNML
+      </v-btn>
+
+      <run-experiment-button
+        v-if="isRunExperimentButtonVisible && debug && !isDebuggerEnabled"
+        :layouter="layouter"
+        :petri-net-manager="petriNetManager"
+      />
+
+      <v-btn light
+             color="primary"
+             class="ma-2"
+             v-if="isDebuggerEnabled"
+             v-on:click="() => isDebuggerEnabled = false">
+        Stop debugger
+      </v-btn>
+    </v-container>
+
+    <PetriNetDebugger
+      v-if="isDebuggerEnabled"
+      :state="this.petriNetManager.state"
+      class="fill-height" />
+
+    <div v-show="!isDebuggerEnabled"
+         ref="canvasContainer"
+         class="fill-height">
+
+      <context-menu
+        v-show="!isDebuggerEnabled"
+        ref="contextMenu"
+        :items="this.contextMenuItems"
+        @expand="this.onContextMenuExpand"
+      />
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import * as d3 from "d3-selection";
+import Component from "vue-class-component";
+import Vue from "vue";
+import ContextMenu from "@/components/petri-net-editor/context-menu/ContextMenu.vue";
+import { Prop, PropSync } from "vue-property-decorator";
+import PetriNetDebugger from "@/components/petri-net-editor/petri-net-debugger/PetriNetDebugger.vue";
+import EditPlaceDialog from "@/components/petri-net-editor/edit-place-dialog/EditPlaceDialog.vue";
+import EditTransitionDialog from "@/components/petri-net-editor/edit-transition-dialog/EditTransitionDialog.vue";
+import ExportPnmlDialog from "@/components/petri-net-editor/export-pnml-dialog/ExportPnmlDialog.vue";
+import RunExperimentButton from "@/components/petri-net-editor/run-experiment-button/RunExperimentButton.vue";
+import { SvgPlace } from "./svg/SvgPlace";
+import { ArcDto, PlaceDto, TransitionDto } from "./Dto";
+import { ContextMenuItem } from "@/components/petri-net-editor/context-menu/ContextMenuItem";
+import { PetriNetSvgManager } from "@/components/petri-net-editor/svg/PetriNetSvgManager";
+import { Layouter } from "@/components/petri-net-editor/layouter/interfaces/Layouter";
+import { BlockLayouter } from "@/components/petri-net-editor/layouter/BlockLayouter";
+import { SvgTransition } from "@/components/petri-net-editor/svg/SvgTransition";
+import { PnmlSerializer } from "@/components/petri-net-editor/pnml/PnmlSerializer";
+import { v4 as uuidv4 } from "uuid";
+
+@Component({
+  name: "petri-net-editor",
+  components: {
+    RunExperimentButton,
+    ExportPnmlDialog,
+    EditTransitionDialog,
+    PetriNetDebugger,
+    EditPlaceDialog,
+    ContextMenu
+  }
+})
+export default class PetriNetEditor extends Vue {
+  private isEditPlaceDialogVisible: boolean = false;
+  private isEditTransitionDialogVisible: boolean = false;
+  private isExportPnmlDialogVisible: boolean = false;
+  private isDebuggerEnabled: boolean = false;
+
+  private isRunExperimentButtonVisible: boolean = false;
+
+  private selectedPlace!: SvgPlace;
+  private selectedTransition!: SvgTransition;
+
+  private targetIsPlaceOrTransition = false;
+  private targetIsDeletable = false;
+  private isSetTokenVisible = false;
+  private isSetWidthVisible = false;
+  private contextMenuTargetId = "";
+
+  @PropSync("places", { default: () => [] })
+  private _places!: PlaceDto[];
+
+  @PropSync("transitions", { default: () => [] })
+  private _transitions!: TransitionDto[];
+
+  @PropSync("arcs", { default: () => [] })
+  private _arcs!: ArcDto[];
+
+  @PropSync("showButtons", { default: () => false })
+  private _showButtons!: boolean;
+
+  @Prop()
+  private debug!: boolean;
+
+  @Prop()
+  private runLayouterOnStart!: boolean;
+
+  private contextMenuItems: ContextMenuItem[] = [];
+
+  private petriNetManager!: PetriNetSvgManager;
+
+  private layouter!: Layouter;
+
+  // noinspection JSUnusedGlobalSymbols
+  mounted() {
+    const svgId = uuidv4();
+
+    (this.$refs.canvasContainer as HTMLDivElement)
+      .insertAdjacentHTML("afterbegin", `
+        <svg
+          id="${svgId}"
+          height="100%"
+          width="100%"
+        >
+          <defs>
+            <marker
+              id="arrow"
+              markerHeight="25"
+              markerUnits="userSpaceOnUse"
+              markerWidth="25"
+              orient="auto-start-reverse"
+              refX="0"
+              refY="5"
+              viewBox="0 0 10 10"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" />
+            </marker>
+          </defs>
+
+          <g class="arcs"></g>
+          <g class="transitions"></g>
+          <g class="places"></g>
+        </svg>
+      `);
+
+    this.petriNetManager = new PetriNetSvgManager(d3.select(`#${svgId}`));
+    this.layouter = new BlockLayouter(this.debug);
+
+    this.isRunExperimentButtonVisible = true;
+
+    this._places.forEach(place => this.petriNetManager.createPlace({
+      x: 0,
+      y: 0,
+      text: place.text,
+      tokenCount: 0,
+      id: place.id,
+      type: place.type
+    }));
+    this._transitions.forEach(transition => this.petriNetManager.createTransition({
+      x: 0,
+      y: 0,
+      text: transition.text,
+      id: transition.id
+    }));
+    this._arcs.forEach(arc => this.petriNetManager.connect(arc.outElementId, arc.inElementId));
+
+    if (this.runLayouterOnStart) {
+      this.runLayouter();
+    }
+    this.petriNetManager.updateDimensions();
+  }
+
+  createPlace(): void {
+    const contextMenu = (this.$refs.contextMenu as Vue).$el as HTMLElement;
+
+    this.petriNetManager.createPlace({
+      x: contextMenu.offsetLeft,
+      y: contextMenu.offsetTop,
+      text: "New P"
+    });
+  }
+
+  createTransition(): void {
+    const contextMenu = (this.$refs.contextMenu as Vue).$el as HTMLElement;
+
+    this.petriNetManager.createTransition({
+      x: contextMenu.offsetLeft,
+      y: contextMenu.offsetTop,
+      text: "New T"
+    });
+  }
+
+  startConnect(): void {
+    this.petriNetManager.startConnect(this.contextMenuTargetId);
+  }
+
+  onContextMenuExpand(target: Element | null): void {
+    const isPlaceOrTransition =
+      target instanceof SVGCircleElement || target instanceof SVGRectElement;
+
+    this.targetIsPlaceOrTransition = isPlaceOrTransition;
+    this.targetIsDeletable = isPlaceOrTransition || target instanceof SVGLineElement;
+    this.isSetTokenVisible = target instanceof SVGCircleElement;
+    this.isSetWidthVisible = target instanceof SVGLineElement;
+    this.contextMenuTargetId =
+      isPlaceOrTransition || target instanceof SVGLineElement ? target.id : "";
+
+    this.contextMenuItems = this.createContextMenuItems();
+  }
+
+  showEditDialog() {
+    const element = this.petriNetManager.getElement(this.contextMenuTargetId);
+    if (element instanceof SvgPlace) {
+      this.selectedPlace = this.petriNetManager.getPlace(this.contextMenuTargetId);
+      this.isEditPlaceDialogVisible = true;
+    } else if (element instanceof SvgTransition) {
+      this.selectedTransition = this.petriNetManager.getTransition(this.contextMenuTargetId);
+      this.isEditTransitionDialogVisible = true;
+    }
+  }
+
+  closeEditPlaceDialog() {
+    this.closeDialog(() => this.isEditPlaceDialogVisible = false);
+  }
+
+  closeEditTransitionDialog() {
+    this.closeDialog(() => this.isEditTransitionDialogVisible = false);
+  }
+
+  closeExportPnmlDialog() {
+    this.closeDialog(() => this.isExportPnmlDialogVisible = false);
+  }
+
+  private closeDialog(callback: () => void) {
+    setTimeout(callback, 200);
+  }
+
+  runLayouter(): void {
+    const [isCorrect, message] = this.petriNetManager.state.isCorrectNet();
+
+    if (!isCorrect) {
+      alert(`Can't run layouter!\n${message}`);
+      return;
+    }
+
+    this.petriNetManager.state = this.layouter.run(this.petriNetManager.state);
+    this.petriNetManager.updateDimensions();
+  }
+
+  runDebugger(): void {
+    const [isCorrect, message] = this.petriNetManager.state.isCorrectNet();
+
+    if (!isCorrect) {
+      alert(message);
+      return;
+    }
+
+    this.isDebuggerEnabled = true;
+  }
+
+  selectPnmlFile(): void {
+    (this.$refs.importInput as HTMLElement).click();
+  }
+
+  importPnml(event: any): void {
+    const eventTarget = event.currentTarget! as HTMLInputElement;
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      const data: string = loadEvent.target!.result as string;
+      this.petriNetManager.state = PnmlSerializer.deserialize(data);
+      this.layouter.clearOverlay();
+    };
+
+    const file = event.target.files[0];
+    reader.readAsText(file);
+
+    eventTarget.value = "";
+  }
+
+  private createContextMenuItems(): ContextMenuItem[] {
+    return [
+      {
+        name: "Connect",
+        isVisible: this.targetIsPlaceOrTransition,
+        action: () => this.startConnect()
+      },
+      {
+        name: "Create place",
+        isVisible: this.contextMenuTargetId === "",
+        action: () => this.createPlace()
+      },
+      {
+        name: "Create transition",
+        isVisible: this.contextMenuTargetId === "",
+        action: () => this.createTransition()
+      },
+      {
+        name: "Edit",
+        isVisible: this.targetIsPlaceOrTransition,
+        action: () => this.showEditDialog()
+      },
+      {
+        name: "Delete",
+        isVisible: this.targetIsDeletable,
+        action: () => this.removeElementOrArc()
+      }
+    ];
+  }
+
+  private removeElementOrArc() {
+    if (this.petriNetManager.hasElement(this.contextMenuTargetId)) {
+      this.petriNetManager.removeElement(this.contextMenuTargetId);
+    } else {
+      this.petriNetManager.removeArc(this.contextMenuTargetId);
+    }
+  }
+}
+</script>

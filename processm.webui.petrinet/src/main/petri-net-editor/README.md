@@ -1,1 +1,0 @@
-# petri-net-editor
