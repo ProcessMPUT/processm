@@ -34,7 +34,7 @@ fun Route.OrganizationsApi() {
 
         get<Paths.Organization> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 
@@ -67,14 +67,14 @@ fun Route.OrganizationsApi() {
 
         get<Paths.Organizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         delete<Paths.Organization> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 

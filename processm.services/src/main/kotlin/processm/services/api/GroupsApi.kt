@@ -30,7 +30,7 @@ fun Route.GroupsApi() {
         route("/groups/{groupId}/members") {
             post {
                 call.authentication.principal<ApiUser>()
-
+                // TODO
                 call.respond(HttpStatusCode.NotImplemented)
             }
         }
@@ -38,7 +38,7 @@ fun Route.GroupsApi() {
         route("/groups") {
             post {
                 val principal = call.authentication.principal<ApiUser>()
-
+                // TODO
                 call.respond(HttpStatusCode.NotImplemented)
             }
         }
@@ -46,7 +46,7 @@ fun Route.GroupsApi() {
         route("/groups/{groupId}/subgroups") {
             post {
                 val principal = call.authentication.principal<ApiUser>()
-
+                // TODO
                 call.respond(HttpStatusCode.NotImplemented)
             }
         }
@@ -77,14 +77,14 @@ fun Route.GroupsApi() {
 
         get<Paths.GroupMembers> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         get<Paths.Groups> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 
@@ -105,28 +105,28 @@ fun Route.GroupsApi() {
 
         delete<Paths.Group> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         delete<Paths.GroupMember> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 
 
         delete<Paths.Subgroup> { _ ->
             val principal = call.authentication.principal<ApiUser>()
-
+            // TODO
             call.respond(HttpStatusCode.NotImplemented)
         }
 
         route("/groups/{groupId}") {
             put {
                 val principal = call.authentication.principal<ApiUser>()
-
+                // TODO
                 call.respond(HttpStatusCode.NotImplemented)
             }
         }
