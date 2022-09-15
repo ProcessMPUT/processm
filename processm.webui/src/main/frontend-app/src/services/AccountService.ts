@@ -9,7 +9,8 @@ export default class AccountService extends BaseService {
     const response = await this.usersApi.signUserIn(
       undefined,
       {
-        data: { login, password }
+        login: login,
+        password: password
       },
       { skipAuthRefresh: true }
     );
@@ -18,7 +19,7 @@ export default class AccountService extends BaseService {
       throw new Error(response.statusText);
     }
 
-    Vue.prototype.$sessionStorage.sessionToken = response.data.data.authorizationToken;
+    Vue.prototype.$sessionStorage.sessionToken = response.data.authorizationToken;
   }
 
   public async signOut() {
@@ -31,7 +32,9 @@ export default class AccountService extends BaseService {
 
   public async registerNewAccount(userEmail: string, organizationName: string, userPassword: string) {
     const response = await this.usersApi.createAccount({
-      data: { userEmail, organizationName, userPassword }
+      organizationName: organizationName,
+      userEmail: userEmail,
+      userPassword: userPassword
     });
 
     if (response.status != 201) {
@@ -46,14 +49,15 @@ export default class AccountService extends BaseService {
       throw new Error(response.statusText);
     }
 
-    const accountDetails = response.data.data;
+    const accountDetails = response.data;
 
     return (Vue.prototype.$sessionStorage.userInfo = new UserAccount(accountDetails.email, accountDetails.locale));
   }
 
   public async changePassword(currentPassword: string, newPassword: string) {
     const response = await this.usersApi.changeUserPassword({
-      data: { currentPassword, newPassword }
+      currentPassword: currentPassword,
+      newPassword: newPassword
     });
 
     if (response.status != 202) {
@@ -63,7 +67,7 @@ export default class AccountService extends BaseService {
 
   public async changeLocale(locale: string) {
     const response = await this.usersApi.changeUserLocale({
-      data: { locale }
+      locale: locale
     });
 
     if (response.status != 202) {
@@ -78,12 +82,12 @@ export default class AccountService extends BaseService {
       throw new Error(response.statusText);
     }
 
-    return (Vue.prototype.$sessionStorage.userOrganizations = response.data.data);
+    return (Vue.prototype.$sessionStorage.userOrganizations = response.data);
   }
 
   public async getUsers(email?: string, limit?: number): Promise<Array<UserAccountInfo>> {
     const response = await this.usersApi.getUsers(email, limit);
     if (response.status != 200) throw new Error(response.statusText);
-    return response.data.data;
+    return response.data;
   }
 }

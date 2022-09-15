@@ -44,6 +44,7 @@
                         <configuration>
                             <generatorName>kotlin-server</generatorName>
                             <generateModels>true</generateModels>
+                            <generateModelDocumentation>true</generateModelDocumentation>
                             <generateApis>false</generateApis>
                             <generateSupportingFiles>false</generateSupportingFiles>
                             <packageName>processm.services.api</packageName>
@@ -64,30 +65,6 @@
                         <configuration>
                             <generatorName>html2</generatorName>
                             <output>${project.build.directory}/classes/openapi</output>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- TODO: remove kotlin-maven-plugin; compiler configuration should be inherited -->
-            <plugin>
-                <artifactId>kotlin-maven-plugin</artifactId>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <version>${kotlin.version}</version>
-                <configuration>
-                    <jvmTarget>${kotlin.compiler.jvmTarget}</jvmTarget>
-                    <javacOptions/>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>compile</id>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <sourceDirs>
-                                <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
-                                <sourceDir>${project.build.directory}/generated-sources/openapi</sourceDir>
-                            </sourceDirs>
                         </configuration>
                     </execution>
                 </executions>
@@ -164,6 +141,48 @@
                     </replacements>
                 </configuration>
             </plugin>
+            <plugin>
+                <!--
+                Fix property names in model classes generated from api-spec.yaml
+                See https://github.com/OpenAPITools/openapi-generator/issues/11986 for the related bug in the OpenAPI generator
+                -->
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <configuration>
+                    <filesToInclude>
+                        ${project.build.directory}/generated-sources/openapi/src/main/kotlin/**/*.kt
+                    </filesToInclude>
+                    <replacements>
+                        <replacement>
+                            <token>propertySize</token>
+                            <value>size</value>
+                        </replacement>
+                        <replacement>
+                            <token>propertyEntries</token>
+                            <value>entries</value>
+                        </replacement>
+                        <replacement>
+                            <token>propertyKeys</token>
+                            <value>keys</value>
+                        </replacement>
+                        <replacement>
+                            <token>propertyValues</token>
+                            <value>values</value>
+                        </replacement>
+                    </replacements>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 

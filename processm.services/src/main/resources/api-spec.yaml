@@ -59,7 +59,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserAccountInfoCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserAccountInfo'
       security:
         - bearerAuth: [ ]
     post:
@@ -72,7 +74,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/AccountRegistrationInfoMessageBody'
+              $ref: '#/components/schemas/AccountRegistrationInfo'
         required: true
       responses:
         '201':
@@ -99,7 +101,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/UserCredentialsMessageBody'
+              $ref: '#/components/schemas/UserCredentials'
         required: false
       responses:
         '201':
@@ -107,7 +109,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/AuthenticationResultMessageBody'
+                $ref: '#/components/schemas/AuthenticationResult'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -136,7 +138,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserAccountInfoMessageBody'
+                $ref: '#/components/schemas/UserAccountInfo'
       security:
         - bearerAuth: [ ]
   /users/me/password:
@@ -150,7 +152,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/PasswordChangeMessageBody'
+              $ref: '#/components/schemas/PasswordChange'
         required: true
       responses:
         '200':
@@ -172,7 +174,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/LocaleChangeMessageBody'
+              $ref: '#/components/schemas/LocaleChange'
         required: true
       responses:
         '200':
@@ -195,7 +197,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserOrganizationCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserOrganization'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -220,7 +224,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataStoreCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataStore'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -237,7 +243,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataStoreMessageBody'
+              $ref: '#/components/schemas/DataStore'
         required: true
       responses:
         '201':
@@ -245,7 +251,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataStoreMessageBody'
+                $ref: '#/components/schemas/DataStore'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -279,7 +285,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataStoreMessageBody'
+                $ref: '#/components/schemas/DataStore'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -296,7 +302,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataStoreMessageBody'
+              $ref: '#/components/schemas/DataStore'
       responses:
         '204':
           description: Successful operation
@@ -347,7 +353,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataConnectorCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataConnector'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -364,7 +372,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataConnectorMessageBody'
+              $ref: '#/components/schemas/DataConnector'
         required: true
       responses:
         '201':
@@ -372,7 +380,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataConnectorMessageBody'
+                $ref: '#/components/schemas/DataConnector'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -412,7 +420,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataConnectorMessageBody'
+              $ref: '#/components/schemas/DataConnector'
       responses:
         '204':
           description: Successful operation
@@ -462,7 +470,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataConnectorMessageBody'
+              $ref: '#/components/schemas/DataConnector'
         required: true
       responses:
         '204':
@@ -507,7 +515,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/CaseNotionCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaseNotion'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -548,7 +558,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/CaseNotionMessageBody'
+                $ref: '#/components/schemas/CaseNotion'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -582,7 +592,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/EtlProcessCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbstractEtlProcess'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -599,7 +611,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/EtlProcessMessageBody'
+              $ref: '#/components/schemas/AbstractEtlProcess'
         required: true
       responses:
         '201':
@@ -607,7 +619,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/EtlProcessMessageBody'
+                $ref: '#/components/schemas/AbstractEtlProcess'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -647,7 +659,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/EtlProcessMessageBody'
+              $ref: '#/components/schemas/AbstractEtlProcess'
         required: true
       responses:
         '204':
@@ -753,7 +765,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/EtlProcessMessageBody'
+              $ref: '#/components/schemas/EtlProcess'
         required: true
       responses:
         '200':
@@ -761,7 +773,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/EtlProcessMessageBody'
+                $ref: '#/components/schemas/EtlProcess'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -788,7 +800,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workspace'
       security:
         - bearerAuth: [ ]
     post:
@@ -801,7 +815,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/WorkspaceMessageBody'
+              $ref: '#/components/schemas/Workspace'
         required: true
       responses:
         '201':
@@ -809,7 +823,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceMessageBody'
+                $ref: '#/components/schemas/Workspace'
         '403':
           $ref: '#/components/responses/Forbidden'
       security:
@@ -841,7 +855,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceMessageBody'
+                $ref: '#/components/schemas/Workspace'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -858,7 +872,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/WorkspaceMessageBody'
+              $ref: '#/components/schemas/Workspace'
         required: true
       responses:
         '204':
@@ -911,7 +925,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbstractComponent'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -953,7 +969,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentMessageBody'
+                $ref: '#/components/schemas/AbstractComponent'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -971,7 +987,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/ComponentMessageBody'
+              $ref: '#/components/schemas/AbstractComponent'
         required: true
       responses:
         '204':
@@ -994,7 +1010,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentMessageBody'
+                $ref: '#/components/schemas/AbstractComponent'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1036,7 +1052,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentDataMessageBody'
+                $ref: '#/components/schemas/AbstractComponentData'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1091,7 +1107,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
       security:
         - bearerAuth: [ ]
     post:
@@ -1104,7 +1122,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/GroupMessageBody'
+              $ref: '#/components/schemas/Group'
         required: true
       responses:
         '201':
@@ -1112,7 +1130,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupMessageBody'
+                $ref: '#/components/schemas/Group'
         '403':
           $ref: '#/components/responses/Forbidden'
       security:
@@ -1137,7 +1155,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupMessageBody'
+                $ref: '#/components/schemas/Group'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -1152,7 +1170,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/GroupMessageBody'
+              $ref: '#/components/schemas/Group'
         required: true
       responses:
         '204':
@@ -1197,7 +1215,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserInfo'
       security:
         - bearerAuth: [ ]
     post:
@@ -1273,7 +1293,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
       security:
         - bearerAuth: [ ]
     post:
@@ -1286,7 +1308,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/GroupMessageBody'
+              $ref: '#/components/schemas/Group'
         required: true
       responses:
         '201':
@@ -1341,7 +1363,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
       security:
         - bearerAuth: [ ]
     post:
@@ -1354,7 +1378,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/OrganizationMessageBody'
+              $ref: '#/components/schemas/Organization'
         required: true
       responses:
         '201':
@@ -1385,7 +1409,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationMessageBody'
+                $ref: '#/components/schemas/Organization'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -1400,7 +1424,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/OrganizationMessageBody'
+              $ref: '#/components/schemas/Organization'
         required: true
       responses:
         '204':
@@ -1445,7 +1469,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationMemberCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationMember'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -1526,7 +1552,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1569,7 +1597,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/QueryResultCollectionMessageBody'
+                type: array
+                items:
+                  type: object
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -1647,7 +1677,7 @@ components:
           type: boolean
           description: Switches modes of operation of certain components into demo mode (e.g., less secure).
           default: false
-    ErrorMessageBody:
+    Error:
       type: object
       required: [ error ]
       properties:
@@ -1674,12 +1704,6 @@ components:
           format: password
         organizationName:
           type: string
-    AccountRegistrationInfoMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/AccountRegistrationInfo'
     UserCredentials:
       type: object
       required: [ login, password ]
@@ -1689,12 +1713,6 @@ components:
         password:
           type: string
           format: password
-    UserCredentialsMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/UserCredentials'
     UserAccountInfo:
       type: object
       required: [ id, email, locale ]
@@ -1706,32 +1724,12 @@ components:
           type: string
         locale:
           type: string
-    UserAccountInfoMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/UserAccountInfo'
-    UserAccountInfoCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserAccountInfo'
     AuthenticationResult:
       type: object
       required: [ authorizationToken ]
       properties:
         authorizationToken:
           type: string
-    AuthenticationResultMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/AuthenticationResult'
     PasswordChange:
       type: object
       required: [ currentPassword, newPassword ]
@@ -1740,12 +1738,6 @@ components:
           type: string
         newPassword:
           type: string
-    PasswordChangeMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/PasswordChange'
     LocaleChange:
       type: object
       required: [ locale ]
@@ -1753,12 +1745,6 @@ components:
         locale:
           type: string
           description: New locale settings in ICU format
-    LocaleChangeMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/LocaleChange'
     UserInfo:
       type: object
       required: [ userEmail, organization, organizationRole ]
@@ -1776,14 +1762,6 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/OrganizationRole'
-    UserInfoCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserInfo'
     OrganizationMember:
       type: object
       required: [ id, username, organizationRole ]
@@ -1795,14 +1773,6 @@ components:
           type: string
         organizationRole:
           $ref: '#/components/schemas/OrganizationRole'
-    OrganizationMemberCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrganizationMember'
     UserOrganization:
       type: object
       required: [ id, name, organizationRole ]
@@ -1814,14 +1784,6 @@ components:
           type: string
         organizationRole:
           $ref: '#/components/schemas/OrganizationRole'
-    UserOrganizationCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserOrganization'
     DataStore:
       type: object
       required: [ name ]
@@ -1836,20 +1798,6 @@ components:
         createdAt:
           type: string
           format: date-time
-    DataStoreMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/DataStore'
-    DataStoreCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DataStore'
     DataConnector:
       type: object
       properties:
@@ -1866,20 +1814,6 @@ components:
           type: object
           additionalProperties:
             type: string
-    DataConnectorMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/DataConnector'
-    DataConnectorCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DataConnector'
     EtlProcessType:
       type: string
       enum: [ automatic, jdbc ]
@@ -1924,20 +1858,6 @@ components:
           format: date-time
         type:
           $ref: '#/components/schemas/EtlProcessType'
-    EtlProcessMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/AbstractEtlProcess'
-    EtlProcessCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AbstractEtlProcess'
     EtlProcessInfo:
       type: object
       required: [ logIdentityId ]
@@ -1969,12 +1889,6 @@ components:
       properties:
         isValid:
           type: boolean
-    DataConnectorConnectivityMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/DataConnectorConnectivity'
     Workspace:
       type: object
       required: [ name ]
@@ -1984,20 +1898,6 @@ components:
           format: uuid
         name:
           type: string
-    WorkspaceMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/Workspace'
-    WorkspaceCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Workspace'
     Component:
       type: object
       required: [ id, query, dataStore, type ]
@@ -2286,26 +2186,6 @@ components:
               $ref: '#/components/schemas/BPMNComponentData'
             customizationData:
               type: object
-    ComponentMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/AbstractComponent'
-    ComponentDataMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/AbstractComponentData'
-    ComponentCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AbstractComponent'
     Group:
       type: object
       required: [ name, groupRole, isImplicit, organizationId ]
@@ -2323,20 +2203,6 @@ components:
           format: uuid
         groupRole:
           $ref: '#/components/schemas/GroupRole'
-    GroupMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/Group'
-    GroupCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Group'
     Organization:
       type: object
       required: [ name, isPrivate ]
@@ -2352,28 +2218,6 @@ components:
         isPrivate:
           type: boolean
           description: Indicates whether the organization can be accessed by ancestral organizations members
-    OrganizationMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/Organization'
-    OrganizationCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Organization'
-    QueryResultCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            type: object
     CaseNotion:
       type: object
       required: [ classes, edges ]
@@ -2409,10 +2253,8 @@ components:
         lastEventExternalIdType:
           type: integer
         traceId:
-          type: object
           $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
         eventId:
-          type: object
           $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
         attributes:
           type: array
@@ -2426,57 +2268,43 @@ components:
           type: string
         target:
           type: string
-    CaseNotionCollectionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/CaseNotion'
-    CaseNotionMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/CaseNotion'
   responses:
     BadRequest:
       description: Invalid request body
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/Error'
     Unauthorized:
       description: The user is not authenticated
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/Error'
     Forbidden:
       description: The user is not authorized
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/Error'
     NotFound:
       description: The specified resource was not found
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/Error'
     Conflict:
-      description: The resource with the sepcified identifier already exists
+      description: The resource with the specified identifier already exists
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/Error'
     ServiceUnavailable:
       description: The server is not ready to handle the request
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/Error'
   securitySchemes:
     bearerAuth:
       type: http

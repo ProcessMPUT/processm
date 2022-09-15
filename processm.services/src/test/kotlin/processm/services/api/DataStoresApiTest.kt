@@ -86,11 +86,11 @@ class DataStoresApiTest : BaseApiTest() {
                         HttpMethod.Post,
                         "/api/organizations/$organizationId/data-stores/$dataStoreId/sampling-etl-processes/"
                     ) {
-                        withSerializedBody(EtlProcessMessageBody(process))
+                        withSerializedBody(process)
                     }
                 ) {
                     assertEquals(HttpStatusCode.Created, response.status())
-                    val cadaver = assertNotNull(response.deserializeContent<EtlProcessMessageBody>().data)
+                    val cadaver = assertNotNull(response.deserializeContent<AbstractEtlProcess>())
                     println(cadaver)
 
                     assertEquals(etlProcessId, cadaver.id)
@@ -115,7 +115,7 @@ class DataStoresApiTest : BaseApiTest() {
                     )
                 ) {
                     assertEquals(HttpStatusCode.OK, response.status())
-                    val cadaver = assertNotNull(response.deserializeContent<QueryResultCollectionMessageBody>().data)
+                    val cadaver = assertNotNull(response.deserializeContent<List<Any>>())
                     assertEquals(1, cadaver.size)
                     val map = cadaver[0]
                     assertIs<Map<String, String>>(map)

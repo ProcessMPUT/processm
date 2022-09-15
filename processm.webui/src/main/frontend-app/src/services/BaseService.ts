@@ -2,15 +2,7 @@ import Vue from "vue";
 import Router from "@/router";
 import { BaseAPI } from "@/openapi/base";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import {
-  ConfigApi,
-  Configuration,
-  DataStoresApi,
-  LogsApi,
-  OrganizationsApi,
-  UsersApi,
-  WorkspacesApi
-} from "@/openapi";
+import { ConfigApi, Configuration, DataStoresApi, LogsApi, OrganizationsApi, UsersApi, WorkspacesApi } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
 export default abstract class BaseService {
@@ -19,9 +11,7 @@ export default abstract class BaseService {
 
   constructor() {
     this.axiosInstance = axios.create();
-    createAuthRefreshInterceptor(this.axiosInstance, (error) =>
-      this.prolongExistingSession(error, this.usersApi)
-    );
+    createAuthRefreshInterceptor(this.axiosInstance, (error) => this.prolongExistingSession(error, this.usersApi));
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -32,18 +22,10 @@ export default abstract class BaseService {
   }
 
   protected getGenericClient<ApiClient extends BaseAPI>(
-    apiClientCtor: new (
-      configuration: Configuration,
-      basePath: string,
-      axios: AxiosInstance
-    ) => ApiClient
+    apiClientCtor: new (configuration: Configuration, basePath: string, axios: AxiosInstance) => ApiClient
   ): ApiClient {
     const token = Vue.prototype.$sessionStorage.sessionToken;
-    return new apiClientCtor(
-      { accessToken: token },
-      this.defaultApiPath,
-      this.axiosInstance
-    );
+    return new apiClientCtor({ accessToken: token }, this.defaultApiPath, this.axiosInstance);
   }
 
   protected get configApi() {
@@ -70,23 +52,18 @@ export default abstract class BaseService {
     return this.getGenericClient(LogsApi);
   }
 
-  private prolongExistingSession(
-    failedRequest: AxiosError<object>,
-    api: UsersApi
-  ): Promise<void> {
+  private prolongExistingSession(failedRequest: AxiosError<object>, api: UsersApi): Promise<void> {
     const expiredToken = Vue.prototype.$sessionStorage.sessionToken;
     const getAuthorizationHeaderValue = (token: string) => `Bearer ${token}`;
 
     return api
       .signUserIn(getAuthorizationHeaderValue(expiredToken))
       .then((tokenRefreshResponse) => {
-        const newToken = tokenRefreshResponse.data.data.authorizationToken;
+        const newToken = tokenRefreshResponse.data.authorizationToken;
         Vue.prototype.$sessionStorage.sessionToken = newToken;
 
         if (failedRequest.response != null) {
-          failedRequest.response.config.headers[
-            "Authorization"
-          ] = getAuthorizationHeaderValue(newToken);
+          failedRequest.response.config.headers["Authorization"] = getAuthorizationHeaderValue(newToken);
         }
         return Promise.resolve();
       })

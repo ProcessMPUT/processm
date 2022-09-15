@@ -25,7 +25,7 @@ fun Route.UsersApi() {
     route("/users/session") {
         post {
             loggedScope { logger ->
-                val credentials = call.receiveOrNull<UserCredentialsMessageBody>()?.data
+                val credentials = call.receiveOrNull<UserCredentials>()
 
                 when {
                     credentials != null -> {
@@ -45,7 +45,7 @@ fun Route.UsersApi() {
 
                         logger.debug("The user ${user.id} has successfully logged in")
                         call.respond(
-                            HttpStatusCode.Created, AuthenticationResultMessageBody(AuthenticationResult(token))
+                            HttpStatusCode.Created, AuthenticationResult(token)
                         )
                     }
 
@@ -61,7 +61,7 @@ fun Route.UsersApi() {
                         logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
                         call.respond(
                             HttpStatusCode.Created,
-                            AuthenticationResultMessageBody(AuthenticationResult(prolongedToken))
+                            AuthenticationResult(prolongedToken)
                         )
                     }
 
@@ -76,7 +76,7 @@ fun Route.UsersApi() {
     route("/users") {
         post {
             loggedScope { logger ->
-                val accountInfo = call.receiveOrNull<AccountRegistrationInfoMessageBody>()?.data
+                val accountInfo = call.receiveOrNull<AccountRegistrationInfo>()
                     ?: throw ApiException("The provided account details cannot be parsed")
                 val locale = call.request.acceptLanguageItems().getOrNull(0)
 
@@ -99,12 +99,11 @@ fun Route.UsersApi() {
             val userAccount = accountService.getAccountDetails(principal.userId)
 
             call.respond(
-                HttpStatusCode.OK, UserAccountInfoMessageBody(
-                    UserAccountInfo(
-                        id = userAccount.id,
-                        email = userAccount.email,
-                        locale = userAccount.locale
-                    )
+                HttpStatusCode.OK,
+                UserAccountInfo(
+                    id = userAccount.id,
+                    email = userAccount.email,
+                    locale = userAccount.locale
                 )
             )
         }
@@ -114,7 +113,7 @@ fun Route.UsersApi() {
                 patch {
                     loggedScope { logger ->
                         val principal = call.authentication.principal<ApiUser>()!!
-                        val passwordData = call.receiveOrNull<PasswordChangeMessageBody>()?.data
+                        val passwordData = call.receiveOrNull<PasswordChange>()
                             ?: throw ApiException("The provided password data cannot be parsed")
 
                         if (accountService.changePassword(
@@ -125,7 +124,7 @@ fun Route.UsersApi() {
                             call.respond(HttpStatusCode.OK)
                         } else {
                             call.respond(
-                                HttpStatusCode.Forbidden, ErrorMessageBody("The current password could not be changed")
+                                HttpStatusCode.Forbidden, Error("The current password could not be changed")
                             )
                         }
                     }
@@ -134,7 +133,7 @@ fun Route.UsersApi() {
             route("/locale") {
                 patch {
                     val principal = call.authentication.principal<ApiUser>()!!
-                    val localeData = call.receiveOrNull<LocaleChangeMessageBody>()?.data
+                    val localeData = call.receiveOrNull<LocaleChange>()
                         ?: throw ApiException("The provided locale data cannot be parsed")
 
                     accountService.changeLocale(principal.userId, localeData.locale)
@@ -155,7 +154,7 @@ fun Route.UsersApi() {
                 }
                 .toTypedArray()
 
-            call.respond(HttpStatusCode.OK, UserOrganizationCollectionMessageBody(userOrganizations))
+            call.respond(HttpStatusCode.OK, userOrganizations)
         }
 
         get<Paths.Users> { _ ->
@@ -166,13 +165,13 @@ fun Route.UsersApi() {
             val users = accountService.getUsers(principal.userId, email, limit)
             call.respond(
                 HttpStatusCode.OK,
-                UserAccountInfoCollectionMessageBody(users.mapToArray {
+                users.mapToArray {
                     UserAccountInfo(
                         id = it.id,
                         email = it.email,
                         locale = it.locale
                     )
-                })
+                }
             )
         }
 

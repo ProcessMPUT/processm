@@ -14,7 +14,10 @@ import processm.core.logging.loggedScope
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.WorkspaceDto
-import processm.services.api.models.*
+import processm.services.api.models.AbstractComponent
+import processm.services.api.models.LayoutCollectionMessageBody
+import processm.services.api.models.OrganizationRole
+import processm.services.api.models.Workspace
 import processm.services.logic.WorkspaceService
 import java.util.*
 
@@ -26,7 +29,7 @@ fun Route.WorkspacesApi() {
     authenticate {
         post<Paths.Workspaces> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
+            val workspace = call.receiveOrNull<Workspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(it.organizationId, OrganizationRole.writer)
@@ -37,7 +40,7 @@ fun Route.WorkspacesApi() {
 
             val workspaceId = workspaceService.createWorkspace(workspace.name, principal.userId, it.organizationId)
 
-            call.respond(HttpStatusCode.Created, WorkspaceMessageBody(Workspace(workspace.name, workspaceId)))
+            call.respond(HttpStatusCode.Created, Workspace(workspace.name, workspaceId))
         }
 
         delete<Paths.Workspace> { workspace ->
@@ -56,14 +59,14 @@ fun Route.WorkspacesApi() {
             val workspaces = workspaceService.getUserWorkspaces(principal.userId, workspace.organizationId)
                 .map { Workspace(it.name, it.id) }.toTypedArray()
 
-            call.respond(HttpStatusCode.OK, WorkspaceCollectionMessageBody(workspaces))
+            call.respond(HttpStatusCode.OK, workspaces)
         }
 
         put<Paths.Workspace> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(path.organizationId)
 
-            val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
+            val workspace = call.receiveOrNull<Workspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             workspaceService.updateWorkspace(
@@ -83,7 +86,7 @@ fun Route.WorkspacesApi() {
 
         put<Paths.WorkspaceComponent> { component ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspaceComponent = call.receiveOrNull<ComponentMessageBody>()?.data
+            val workspaceComponent = call.receiveOrNull<AbstractComponent>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
@@ -138,7 +141,7 @@ fun Route.WorkspacesApi() {
                     workspace.organizationId
                 ).mapToArray(WorkspaceComponent::toAbstractComponent)
 
-                call.respond(HttpStatusCode.OK, ComponentCollectionMessageBody(components))
+                call.respond(HttpStatusCode.OK, components)
             }
         }
 

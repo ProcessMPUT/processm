@@ -6,9 +6,9 @@ import io.mockk.mockk
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
-import processm.services.api.models.ErrorMessageBody
-import processm.services.api.models.GroupCollectionMessageBody
-import processm.services.api.models.OrganizationMemberCollectionMessageBody
+import processm.services.api.models.Error
+import processm.services.api.models.Group
+import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.AccountService
 import processm.services.logic.OrganizationService
@@ -74,7 +74,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 })
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/groups")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                val groups = assertNotNull(response.deserializeContent<GroupCollectionMessageBody>().data)
+                val groups = assertNotNull(response.deserializeContent<List<Group>>())
 
                 assertEquals(2, groups.count())
                 assertTrue { groups.any { it.id == groupId1 && it.name == "Group1" && it.isImplicit } }
@@ -92,7 +92,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/groups")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The user is not a member of the related organization")
                     )
                 }
@@ -120,7 +120,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/groups")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("Organization not found")
                     )
                 }
@@ -157,7 +157,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 })
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/members")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                val members = assertNotNull(response.deserializeContent<OrganizationMemberCollectionMessageBody>().data)
+                val members = assertNotNull(response.deserializeContent<List<OrganizationMember>>())
 
                 assertEquals(2, members.count())
                 assertTrue { members.any { it.id == memberId1 && it.username == "user1@example.com" && it.organizationRole == OrganizationRole.reader } }
@@ -175,7 +175,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/members")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The user is not a member of the related organization")
                     )
                 }

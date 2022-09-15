@@ -37,7 +37,7 @@ fun Route.DataStoresApi() {
     authenticate {
         post<Paths.DataStores> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val messageBody = call.receiveOrNull<DataStoreMessageBody>()?.data
+            val messageBody = call.receiveOrNull<DataStore>()
                 ?: throw ApiException("The provided data store data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
@@ -45,7 +45,7 @@ fun Route.DataStoresApi() {
             if (messageBody.name.isEmpty()) throw ApiException("Data store name needs to be specified")
             val ds =
                 dataStoreService.createDataStore(organizationId = pathParams.organizationId, name = messageBody.name)
-            call.respond(HttpStatusCode.Created, DataStoreMessageBody(DataStore(name = ds.name, id = ds.id.value)))
+            call.respond(HttpStatusCode.Created, DataStore(name = ds.name, id = ds.id.value))
         }
 
         get<Paths.DataStores> { pathParams ->
@@ -55,7 +55,7 @@ fun Route.DataStoresApi() {
                 DataStore(it.name, it.id, null, it.creationDate)
             }.toTypedArray()
 
-            call.respond(HttpStatusCode.OK, DataStoreCollectionMessageBody(dataStores))
+            call.respond(HttpStatusCode.OK, dataStores)
         }
 
         get<Paths.DataStore> { pathParams ->
@@ -65,13 +65,12 @@ fun Route.DataStoresApi() {
             val dataStore = dataStoreService.getDataStore(pathParams.dataStoreId)
 
             call.respond(
-                HttpStatusCode.OK, DataStoreMessageBody(
-                    DataStore(
-                        dataStore.name,
-                        dataStore.id,
-                        dataStoreSize.toInt(),
-                        dataStore.creationDate
-                    )
+                HttpStatusCode.OK,
+                DataStore(
+                    dataStore.name,
+                    dataStore.id,
+                    dataStoreSize.toInt(),
+                    dataStore.creationDate
                 )
             )
         }
@@ -97,7 +96,7 @@ fun Route.DataStoresApi() {
                 pathParams.dataStoreId,
                 OrganizationRoleDto.Owner
             )
-            val dataStore = call.receiveOrNull<DataStoreMessageBody>()?.data
+            val dataStore = call.receiveOrNull<DataStore>()
                 ?: throw ApiException("The provided data store data cannot be parsed")
             dataStoreService.renameDataStore(pathParams.dataStoreId, dataStore.name)
 
@@ -106,7 +105,7 @@ fun Route.DataStoresApi() {
 
         post<Paths.Logs> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
-
+            // TODO: access check?
             try {
                 val part = call.receiveMultipart().readPart()
 
@@ -126,6 +125,7 @@ fun Route.DataStoresApi() {
 
         get<Paths.Logs> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
+            // TODO: access check?
             val query = call.parameters["query"] ?: ""
             val accept = call.request.accept() ?: "application/json";
             val mime: ContentType
@@ -135,6 +135,7 @@ fun Route.DataStoresApi() {
                     mime = ContentType.Application.Json
                     formatter = logsService::queryDataStoreJSON
                 }
+
                 "application/zip" -> {
                     mime = ContentType.Application.Zip
                     formatter = logsService::queryDataStoreZIPXES
@@ -144,6 +145,7 @@ fun Route.DataStoresApi() {
                             .toString()
                     )
                 }
+
                 else -> throw ApiException("Unsupported content-type.")
             }
 
@@ -185,14 +187,14 @@ fun Route.DataStoresApi() {
                 )
             }
 
-            call.respond(HttpStatusCode.OK, DataConnectorCollectionMessageBody(dataConnectors))
+            call.respond(HttpStatusCode.OK, dataConnectors)
         }
 
         post<Paths.DataConnectors> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            val dataConnector = call.receiveOrNull<DataConnectorMessageBody>()?.data
+            val dataConnector = call.receiveOrNull<DataConnector>()
                 ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectorProperties =
                 dataConnector.properties ?: throw ApiException("Connector configuration is required")
@@ -208,13 +210,11 @@ fun Route.DataStoresApi() {
 
             call.respond(
                 HttpStatusCode.Created,
-                DataConnectorMessageBody(
-                    DataConnector(
-                        dataConnectorId,
-                        connectorName,
-                        lastConnectionStatus = null,
-                        lastConnectionStatusTimestamp = null
-                    )
+                DataConnector(
+                    dataConnectorId,
+                    connectorName,
+                    lastConnectionStatus = null,
+                    lastConnectionStatusTimestamp = null
                 )
             )
         }
@@ -240,7 +240,7 @@ fun Route.DataStoresApi() {
                 pathParams.dataStoreId,
                 OrganizationRoleDto.Owner
             )
-            val dataConnector = call.receiveOrNull<DataConnectorMessageBody>()?.data
+            val dataConnector = call.receiveOrNull<DataConnector>()
                 ?: throw ApiException("The provided data connector data cannot be parsed")
             dataStoreService.renameDataConnector(
                 pathParams.dataStoreId,
@@ -255,7 +255,7 @@ fun Route.DataStoresApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            val connectionProperties = call.receiveOrNull<DataConnectorMessageBody>()?.data?.properties
+            val connectionProperties = call.receiveOrNull<DataConnector>()?.properties
                 ?: throw ApiException("The provided data connector configuration cannot be parsed")
             val connectionString = connectionProperties[connectionStringPropertyName]
 
@@ -285,7 +285,7 @@ fun Route.DataStoresApi() {
 
             call.respond(
                 HttpStatusCode.OK,
-                CaseNotionCollectionMessageBody(caseNotionSuggestions)
+                caseNotionSuggestions
             )
         }
 
@@ -305,7 +305,7 @@ fun Route.DataStoresApi() {
 
             call.respond(
                 HttpStatusCode.OK,
-                CaseNotionMessageBody(caseNotionWithAllClasses)
+                caseNotionWithAllClasses
             )
         }
 
@@ -328,7 +328,7 @@ fun Route.DataStoresApi() {
 
             call.respond(
                 HttpStatusCode.OK,
-                EtlProcessCollectionMessageBody(etlProcesses)
+                etlProcesses
             )
         }
 
@@ -342,7 +342,7 @@ fun Route.DataStoresApi() {
                 OrganizationRoleDto.Owner,
                 OrganizationRoleDto.Writer
             )
-            val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
+            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             if (etlProcessData.dataConnectorId == null) throw ApiException("A data connector reference is required")
             if (etlProcessData.name.isNullOrBlank()) throw ApiException("A name for ETL process is required")
@@ -359,6 +359,7 @@ fun Route.DataStoresApi() {
                         relations
                     )
                 }
+
                 EtlProcessType.jdbc -> {
                     val configuration =
                         etlProcessData.configuration ?: throw ApiException("Empty ETL configuration is not supported")
@@ -369,18 +370,17 @@ fun Route.DataStoresApi() {
                         configuration
                     )
                 }
+
                 else -> throw ApiException("The provided ETL process type is not supported")
             }
 
             call.respond(
                 HttpStatusCode.Created,
-                EtlProcessMessageBody(
-                    AbstractEtlProcess(
-                        etlProcessId,
-                        etlProcessData.name,
-                        etlProcessData.dataConnectorId,
-                        type = etlProcessData.type
-                    )
+                AbstractEtlProcess(
+                    etlProcessId,
+                    etlProcessData.name,
+                    etlProcessData.dataConnectorId,
+                    type = etlProcessData.type
                 )
             )
         }
@@ -395,7 +395,7 @@ fun Route.DataStoresApi() {
                 OrganizationRoleDto.Owner,
                 OrganizationRoleDto.Writer
             )
-            val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
+            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             if (etlProcessData.isActive == null) throw ApiException("An activation status for ETL process is required")
             dataStoreService.changeEtlProcessActivationState(
@@ -407,15 +407,13 @@ fun Route.DataStoresApi() {
             call.respond(HttpStatusCode.NoContent)
             call.respond(
                 HttpStatusCode.Created,
-                EtlProcessMessageBody(
-                    AbstractEtlProcess(
-                        etlProcessData.id,
-                        etlProcessData.name,
-                        etlProcessData.dataConnectorId,
-                        etlProcessData.isActive,
-                        null,
-                        etlProcessData.type
-                    )
+                AbstractEtlProcess(
+                    etlProcessData.id,
+                    etlProcessData.name,
+                    etlProcessData.dataConnectorId,
+                    etlProcessData.isActive,
+                    null,
+                    etlProcessData.type
                 )
             )
         }
@@ -481,7 +479,7 @@ fun Route.DataStoresApi() {
                 OrganizationRoleDto.Owner
             )
             val nComponents = (pathParams.nComponents ?: defaultSampleSize).coerceAtMost(maxSampleSize)
-            val etlProcessData = call.receiveOrNull<EtlProcessMessageBody>()?.data
+            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
             val id = when (etlProcessData.type) {
                 EtlProcessType.jdbc -> {
@@ -496,20 +494,19 @@ fun Route.DataStoresApi() {
                         nComponents
                     )
                 }
+
                 else -> throw ApiException("The provided ETL process type is not supported")
             }
 
             call.respond(
                 HttpStatusCode.Created,
-                EtlProcessMessageBody(
-                    AbstractEtlProcess(
-                        id,
-                        etlProcessData.name,
-                        etlProcessData.dataConnectorId,
-                        etlProcessData.isActive,
-                        etlProcessData.lastExecutionTime,
-                        etlProcessData.type
-                    )
+                AbstractEtlProcess(
+                    id,
+                    etlProcessData.name,
+                    etlProcessData.dataConnectorId,
+                    etlProcessData.isActive,
+                    etlProcessData.lastExecutionTime,
+                    etlProcessData.type
                 )
             )
         }

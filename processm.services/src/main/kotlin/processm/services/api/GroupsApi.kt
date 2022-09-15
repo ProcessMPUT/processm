@@ -9,8 +9,6 @@ import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.dbmodels.models.OrganizationDto
 import processm.services.api.models.Group
-import processm.services.api.models.GroupCollectionMessageBody
-import processm.services.api.models.GroupMessageBody
 import processm.services.api.models.GroupRole
 import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
@@ -62,14 +60,12 @@ fun Route.GroupsApi() {
 
             call.respond(
                 HttpStatusCode.OK,
-                GroupMessageBody(
-                    Group(
-                        userGroup.name ?: "",
-                        userGroup.isImplicit,
-                        organization.id,
-                        GroupRole.reader,
-                        userGroup.id
-                    )
+                Group(
+                    userGroup.name ?: "",
+                    userGroup.isImplicit,
+                    organization.id,
+                    GroupRole.reader,
+                    userGroup.id
                 )
             )
         }
@@ -99,7 +95,7 @@ fun Route.GroupsApi() {
                 .map { Group(it.name ?: "", it.isImplicit, organization.id, GroupRole.reader, it.id) }
                 .toTypedArray()
 
-            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(groups))
+            call.respond(HttpStatusCode.OK, groups)
         }
 
 

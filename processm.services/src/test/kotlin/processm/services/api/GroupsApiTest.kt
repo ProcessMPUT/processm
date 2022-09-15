@@ -4,14 +4,13 @@ import io.ktor.http.*
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.TestInstance
-import org.koin.core.component.inject
-import org.koin.dsl.module
 import org.koin.test.mock.declareMock
-import processm.services.api.models.ErrorMessageBody
-import processm.services.api.models.GroupCollectionMessageBody
-import processm.services.api.models.GroupMessageBody
+import processm.services.api.models.Error
+import processm.services.api.models.Group
 import processm.services.api.models.OrganizationRole
-import processm.services.logic.*
+import processm.services.logic.GroupService
+import processm.services.logic.OrganizationService
+import processm.services.logic.ValidationException
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.Test
@@ -76,7 +75,7 @@ class GroupsApiTest : BaseApiTest() {
             )
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                val subgroups = assertNotNull(response.deserializeContent<GroupCollectionMessageBody>().data)
+                val subgroups = assertNotNull(response.deserializeContent<List<Group>>())
                 assertEquals(2, subgroups.count())
                 assertTrue { subgroups.any { it.id == subgroupId1 && it.name == "Subgroup1" } }
                 assertTrue { subgroups.any { it.id == subgroupId2 && it.name == "Subgroup2" } }
@@ -97,7 +96,7 @@ class GroupsApiTest : BaseApiTest() {
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
                 assertTrue(
-                    response.deserializeContent<ErrorMessageBody>().error
+                    response.deserializeContent<Error>().error
                         .contains("The specified group does not exist")
                 )
             }
@@ -120,7 +119,7 @@ class GroupsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The user is not a member of the related organization")
                     )
                 }
@@ -148,7 +147,7 @@ class GroupsApiTest : BaseApiTest() {
 
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                val group = assertNotNull(response.deserializeContent<GroupMessageBody>().data)
+                val group = assertNotNull(response.deserializeContent<Group>())
                 assertTrue { group.id == groupId && group.name == "Group1" && !group.isImplicit }
             }
         }
@@ -170,7 +169,7 @@ class GroupsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue {
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The user is not a member of the related organization")
                     }
                 }
@@ -197,7 +196,7 @@ class GroupsApiTest : BaseApiTest() {
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
                 assertTrue {
-                    response.deserializeContent<ErrorMessageBody>().error
+                    response.deserializeContent<Error>().error
                         .contains("The specified group does not exist")
                 }
             }

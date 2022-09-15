@@ -7,7 +7,10 @@ import io.ktor.server.locations.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import processm.services.api.models.*
+import processm.services.api.models.Group
+import processm.services.api.models.GroupRole
+import processm.services.api.models.OrganizationMember
+import processm.services.api.models.OrganizationRole
 import processm.services.logic.OrganizationService
 
 @KtorExperimentalLocationsAPI
@@ -48,7 +51,7 @@ fun Route.OrganizationsApi() {
                 .map { Group(it.name ?: "", it.isImplicit, organization.organizationId, GroupRole.reader, it.id) }
                 .toTypedArray()
 
-            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(organizationGroups))
+            call.respond(HttpStatusCode.OK, organizationGroups)
         }
 
 
@@ -61,7 +64,7 @@ fun Route.OrganizationsApi() {
                 .map { OrganizationMember(it.user.id, it.user.email, OrganizationRole.valueOf(it.role.roleName)) }
                 .toTypedArray()
 
-            call.respond(HttpStatusCode.OK, OrganizationMemberCollectionMessageBody(members))
+            call.respond(HttpStatusCode.OK, members)
         }
 
 
@@ -88,7 +91,7 @@ fun Route.OrganizationsApi() {
         route("/organizations/{organizationId}") {
             put {
                 val principal = call.authentication.principal<ApiUser>()
-
+                // TODO
                 call.respond(HttpStatusCode.NotImplemented)
             }
         }

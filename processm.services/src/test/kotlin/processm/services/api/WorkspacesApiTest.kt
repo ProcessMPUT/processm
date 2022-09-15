@@ -8,8 +8,6 @@ import io.mockk.just
 import io.mockk.mockk
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
-import org.koin.core.component.inject
-import org.koin.dsl.module
 import org.koin.test.mock.declareMock
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
@@ -17,12 +15,9 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponents
 import processm.services.api.models.*
-import processm.services.logic.GroupService
-import processm.services.logic.OrganizationService
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.time.Instant
-import java.time.temporal.TemporalUnit
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.*
@@ -66,7 +61,7 @@ class WorkspacesApiTest : BaseApiTest() {
             )
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/workspaces")) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                val workspaces = assertNotNull(response.deserializeContent<WorkspaceCollectionMessageBody>().data)
+                val workspaces = assertNotNull(response.deserializeContent<List<Workspace>>())
                 assertEquals(2, workspaces.count())
                 assertTrue { workspaces.any { it.id == workspaceId1 && it.name == "Workspace1" } }
                 assertTrue { workspaces.any { it.id == workspaceId2 && it.name == "Workspace2" } }
@@ -128,7 +123,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The user has insufficient permissions to access the related organization")
                     )
                 }
@@ -143,11 +138,11 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication(role = OrganizationRole.writer to organizationId) {
                 with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(WorkspaceMessageBody(Workspace("")))
+                    withSerializedBody(Workspace(""))
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("Workspace name needs to be specified when creating new workspace")
                     )
                 }
@@ -167,11 +162,11 @@ class WorkspacesApiTest : BaseApiTest() {
                 every { workspaceService.createWorkspace(workspaceName, userId, organizationId) } returns workspaceId
                 with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(WorkspaceMessageBody(Workspace(workspaceName)))
+                    withSerializedBody(Workspace(workspaceName))
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
-                    assertEquals(workspaceId, response.deserializeContent<WorkspaceMessageBody>().data.id)
-                    assertEquals(workspaceName, response.deserializeContent<WorkspaceMessageBody>().data.name)
+                    assertEquals(workspaceId, response.deserializeContent<Workspace>().id)
+                    assertEquals(workspaceName, response.deserializeContent<Workspace>().name)
                 }
             }
         }
@@ -184,11 +179,11 @@ class WorkspacesApiTest : BaseApiTest() {
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(WorkspaceMessageBody(Workspace("Workspace1")))
+                    withSerializedBody(Workspace("Workspace1"))
                 }) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The user has insufficient permissions to access the related organization")
                     )
                 }
@@ -204,7 +199,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces")) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The provided workspace data cannot be parsed")
                     )
                 }
@@ -223,7 +218,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<ErrorMessageBody>().error
+                        response.deserializeContent<Error>().error
                             .contains("The user is not a member of the related organization")
                     )
                 }
@@ -288,7 +283,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 )
             ) {
                 assertEquals(HttpStatusCode.OK, response.status())
-                val components = assertNotNull(response.deserializeContent<ComponentCollectionMessageBody>().data)
+                val components = assertNotNull(response.deserializeContent<List<AbstractComponent>>())
                 assertEquals(2, components.count())
                 assertEquals(componentId1, components[0].id)
                 assertEquals(componentId2, components[1].id)
@@ -383,15 +378,13 @@ class WorkspacesApiTest : BaseApiTest() {
                     ) {
                         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                         withSerializedBody(
-                            ComponentMessageBody(
-                                AbstractComponent(
-                                    id = componentId,
-                                    query = dataQuery,
-                                    dataStore = dataStore,
-                                    name = "Component1",
-                                    type = ComponentType.causalNet,
-                                    customizationData = null
-                                )
+                            AbstractComponent(
+                                id = componentId,
+                                query = dataQuery,
+                                dataStore = dataStore,
+                                name = "Component1",
+                                type = ComponentType.causalNet,
+                                customizationData = null
                             )
                         )
                     }) {
@@ -431,20 +424,18 @@ class WorkspacesApiTest : BaseApiTest() {
                 ) {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(
-                        ComponentMessageBody(
-                            AbstractComponent(
-                                id = componentId,
-                                query = dataQuery,
-                                dataStore = dataStore,
-                                name = "Component1",
-                                type = ComponentType.causalNet,
-                                customizationData = CausalNetComponentAllOfCustomizationData(
-                                    arrayOf(
-                                        CausalNetComponentAllOfCustomizationDataLayout(
-                                            id = "id1",
-                                            x = 10.toBigDecimal(),
-                                            y = 10.toBigDecimal()
-                                        )
+                        AbstractComponent(
+                            id = componentId,
+                            query = dataQuery,
+                            dataStore = dataStore,
+                            name = "Component1",
+                            type = ComponentType.causalNet,
+                            customizationData = CausalNetComponentAllOfCustomizationData(
+                                arrayOf(
+                                    CausalNetComponentAllOfCustomizationDataLayout(
+                                        id = "id1",
+                                        x = 10.toBigDecimal(),
+                                        y = 10.toBigDecimal()
                                     )
                                 )
                             )
