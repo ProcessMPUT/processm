@@ -1,6 +1,5 @@
 package processm.conformance.models.antialignments
 
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import processm.conformance.PetriNets
@@ -11,6 +10,7 @@ import processm.core.logging.loggedScope
 import processm.core.models.commons.ProcessModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -44,7 +44,7 @@ class TwoPhaseDFSPetriNetTests {
         val expectedCost = 3
         val expectedSize = 2
 
-        val exception = assertThrows<IllegalStateException> {
+        val exception = assertFailsWith<IllegalStateException> {
             test(PetriNets.fig2, table1, expectedCost, expectedModelMoves)
         }
 

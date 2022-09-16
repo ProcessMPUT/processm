@@ -1677,7 +1677,7 @@ components:
           type: boolean
           description: Switches modes of operation of certain components into demo mode (e.g., less secure).
           default: false
-    Error:
+    ErrorMessage:
       type: object
       required: [ error ]
       properties:
@@ -1858,6 +1858,8 @@ components:
           format: date-time
         type:
           $ref: '#/components/schemas/EtlProcessType'
+      discriminator:
+        propertyName: type
     EtlProcessInfo:
       type: object
       required: [ logIdentityId ]
@@ -1924,6 +1926,8 @@ components:
           format: date-time
         lastError:
           type: string
+      discriminator:
+        propertyName: type
     LayoutElement:
       type: object
       properties:
@@ -1968,6 +1972,8 @@ components:
       properties:
         type:
           $ref: '#/components/schemas/ComponentType'
+      discriminator:
+        propertyName: type
     AbstractComponentData:
       oneOf:
         - $ref: '#/components/schemas/KpiComponentData'
@@ -2274,37 +2280,37 @@ components:
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorMessage'
     Unauthorized:
       description: The user is not authenticated
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorMessage'
     Forbidden:
       description: The user is not authorized
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorMessage'
     NotFound:
       description: The specified resource was not found
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorMessage'
     Conflict:
       description: The resource with the specified identifier already exists
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorMessage'
     ServiceUnavailable:
       description: The server is not ready to handle the request
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorMessage'
   securitySchemes:
     bearerAuth:
       type: http

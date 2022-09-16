@@ -1,7 +1,6 @@
 package processm.conformance.models.alignments
 
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.assertThrows
 import processm.conformance.CausalNets
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
@@ -20,10 +19,7 @@ import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class CompositeAlignerPetriNetTests {
     companion object {
@@ -744,7 +740,7 @@ class CompositeAlignerPetriNetTests {
         val petri = model.toPetriNet()
         val aligner = CompositeAligner(petri, pool = pool)
         for ((i, trace) in log.traces.withIndex()) {
-            assertThrows<IllegalStateException> { aligner.align(trace, 1, TimeUnit.MILLISECONDS) }
+            assertFailsWith<IllegalStateException> { aligner.align(trace, 1, TimeUnit.MILLISECONDS) }
             assertNotNull(aligner.align(trace, 100, TimeUnit.SECONDS))
         }
     }

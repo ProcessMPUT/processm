@@ -1,11 +1,13 @@
 package processm
 
-import com.google.gson.Gson
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.gson.*
 import io.ktor.server.locations.*
 import kotlinx.coroutines.runBlocking
 import org.testcontainers.containers.PostgreSQLContainer
@@ -15,8 +17,11 @@ import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
 import processm.etl.PostgreSQLEnvironment
+import processm.services.LocalDateTimeTypeAdapter
+import processm.services.NonNullableTypeAdapterFactory
 import processm.services.api.Paths
 import processm.services.api.models.*
+import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
 import kotlin.reflect.full.findAnnotation
@@ -27,11 +32,24 @@ class ProcessMTestingEnvironment {
 
     var jdbcUrl: String? = null
         private set
-    private var token: String? = null
+    var token: String? = null
+        private set
     var currentOrganizationId: UUID? = null
     var currentDataStore: DataStore? = null
     var currentDataConnector: DataConnector? = null
     var currentEtlProcess: AbstractEtlProcess? = null
+
+    val client = HttpClient(CIO) {
+        expectSuccess = true
+        install(ContentNegotiation) {
+            // TODO: replace with kotlinx/serialization; this requires the OpenAPI generator to add kotlinx/serialization annotations; currently, this is not supported
+            gson(ContentType.Application.Json) {
+                // Correctly serialize/deserialize LocalDateTime
+                registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
+                registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
+            }
+        }
+    }
 
     // region Environment
 
@@ -103,6 +121,7 @@ class ProcessMTestingEnvironment {
             }
         } finally {
             ForkJoinPool.commonPool().shutdownNow()
+            client.close()
             if (sakilaEnv.isInitialized())
                 sakilaEnv.value.close()
         }
@@ -154,16 +173,12 @@ class ProcessMTestingEnvironment {
         block: suspend HttpResponse.() -> R
     ): R =
         runBlocking {
-            HttpClient(CIO) {
-                expectSuccess = true
-            }.use { client ->
-                val response = client.get(apiUrl(endpoint)) {
-                    token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
-                    if (prepare !== null)
-                        prepare()
-                }
-                return@runBlocking response.block()
+            val response = client.get(apiUrl(endpoint)) {
+                token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
+                if (prepare !== null)
+                    prepare()
             }
+            return@runBlocking response.block()
         }
 
     fun <R> delete(
@@ -171,33 +186,29 @@ class ProcessMTestingEnvironment {
         block: suspend HttpResponse.() -> R
     ): R =
         runBlocking {
-            HttpClient(CIO).use { client ->
-                val response = client.delete(apiUrl(endpoint)) {
-                    token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
-                }
-                return@runBlocking response.block()
+            val response = client.delete(apiUrl(endpoint)) {
+                token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
             }
+            return@runBlocking response.block()
         }
 
 
-    inline fun <reified Endpoint, T, R> post(data: T?, noinline block: suspend HttpResponse.() -> R): R =
+    inline fun <reified Endpoint, reified T, R> post(data: T?, noinline block: suspend HttpResponse.() -> R): R =
         post(format<Endpoint>(), data, block)
 
     inline fun <reified Endpoint, R> post(noinline block: suspend HttpResponse.() -> R): R =
-        post(format<Endpoint>(), null, block)
+        post<Any?, R>(format<Endpoint>(), null, block)
 
-    fun <T, R> post(endpoint: String, data: T?, block: suspend HttpResponse.() -> R): R =
+    inline fun <reified T, R> post(endpoint: String, data: T?, crossinline block: suspend HttpResponse.() -> R): R =
         runBlocking {
-            HttpClient(CIO).use { client ->
-                val response = client.post(apiUrl(endpoint)) {
-                    token?.let { token -> header(HttpHeaders.Authorization, "Bearer $token") }
-                    if (data !== null) {
-                        contentType(ContentType.Application.Json)
-                        setBody(Gson().toJson(data))
-                    }
+            val response = client.post(apiUrl(endpoint)) {
+                token?.let { bearerAuth(it) }
+                if (data !== null) {
+                    contentType(ContentType.Application.Json)
+                    setBody(data)
                 }
-                return@runBlocking response.block()
             }
+            return@runBlocking response.block()
         }
 
     // endregion
@@ -206,7 +217,7 @@ class ProcessMTestingEnvironment {
 
     val organizations: List<UserOrganization>
         get() = get<Paths.UserOrganizations, List<UserOrganization>> {
-            return@get deserialize<List<UserOrganization>>().toList()
+            return@get body<List<UserOrganization>>().toList()
         }
 
     fun registerUser(userEmail: String, organizationName: String) =
@@ -217,7 +228,7 @@ class ProcessMTestingEnvironment {
 
     fun login(login: String, password: String) =
         post("/users/session", UserCredentials(login, password)) {
-            token = deserialize<AuthenticationResult>().authorizationToken
+            token = body<AuthenticationResult>().authorizationToken
         }
 
     // endregion
@@ -226,7 +237,7 @@ class ProcessMTestingEnvironment {
 
     fun createDataStore(name: String) =
         post<Paths.DataStores, DataStore, DataStore>(DataStore(name)) {
-            val ds = deserialize<DataStore>()
+            val ds = body<DataStore>()
             assertEquals(name, ds.name)
             return@post ds
         }
@@ -235,16 +246,16 @@ class ProcessMTestingEnvironment {
         post<Paths.DataConnectors, DataConnector, DataConnector>(
             DataConnector(name = name, properties = properties)
         ) {
-            val dc = deserialize<DataConnector>()
+            val dc = body<DataConnector>()
             assertEquals(name, dc.name)
             return@post dc
         }
 
     fun pqlQuery(query: String) = get<Paths.Logs, Array<Any>>({
         parameter("query", query)
-        accept(ContentType.Application.Json)
+        //accept(ContentType.Application.Json)
     }) {
-        return@get deserialize<Array<Any>>()
+        return@get body<Array<Any>>()
     }
 
     fun deleteLog(logIdentityId: UUID) =

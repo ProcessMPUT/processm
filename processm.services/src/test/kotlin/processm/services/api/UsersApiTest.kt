@@ -5,7 +5,6 @@ import io.ktor.server.request.*
 import io.ktor.server.testing.*
 import io.mockk.*
 import org.awaitility.Awaitility.await
-import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
 import processm.dbmodels.models.UserDto
@@ -65,7 +64,7 @@ class UsersApiTest : BaseApiTest() {
             withSerializedBody(UserCredentials("user", "wrong_password"))
         }) {
             assertEquals(HttpStatusCode.Unauthorized, response.status())
-            assertTrue(response.deserializeContent<Error>().error.contains("Invalid username or password"))
+            assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Invalid username or password"))
         }
 
         verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
@@ -131,7 +130,7 @@ class UsersApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             with(handleRequest(HttpMethod.Post, "/api/users/session")) {
                 assertEquals(HttpStatusCode.BadRequest, response.status())
-                assertTrue(response.deserializeContent<Error>().error.contains("Either user credentials or authentication token needs to be provided"))
+                assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Either user credentials or authentication token needs to be provided"))
             }
         }
 
@@ -221,7 +220,7 @@ class UsersApiTest : BaseApiTest() {
         withAuthentication {
             with(handleRequest(HttpMethod.Get, "/api/users/me")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
-                assertTrue(response.deserializeContent<Error>().error.contains("Specified user account does not exist"))
+                assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Specified user account does not exist"))
             }
         }
 
@@ -278,7 +277,7 @@ class UsersApiTest : BaseApiTest() {
                     )
                 }) {
                     assertEquals(HttpStatusCode.Conflict, response.status())
-                    assertTrue(response.deserializeContent<Error>().error.contains("User and/or organization with specified name already exists"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("User and/or organization with specified name already exists"))
                 }
             }
 
@@ -295,7 +294,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<Error>().error.contains("The provided account details cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided account details cannot be parsed"))
                 }
             }
 
@@ -351,7 +350,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(PasswordChange("wrong_password", "new"))
                 }) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
-                    assertTrue(response.deserializeContent<Error>().error.contains("The current password could not be changed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The current password could not be changed"))
                 }
             }
 
@@ -372,7 +371,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<Error>().error.contains("The provided password data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided password data cannot be parsed"))
                 }
             }
 
@@ -420,7 +419,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(LocaleChange("eng_ENG"))
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<Error>().error.contains("The current locale could not be changed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The current locale could not be changed"))
                 }
             }
 
@@ -437,7 +436,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<Error>().error.contains("The provided locale data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided locale data cannot be parsed"))
                 }
             }
 

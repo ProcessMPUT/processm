@@ -130,7 +130,7 @@ fun Route.DataStoresApi() {
             val accept = call.request.accept() ?: "application/json";
             val mime: ContentType
             val formatter: (uuid: UUID, query: String) -> OutputStream.() -> Unit
-            when (accept) {
+            when (accept.split(',').first { it == "application/json" || it == "application/zip" }) {
                 "application/json" -> {
                     mime = ContentType.Application.Json
                     formatter = logsService::queryDataStoreJSON
@@ -146,7 +146,7 @@ fun Route.DataStoresApi() {
                     )
                 }
 
-                else -> throw ApiException("Unsupported content-type.")
+                else -> throw ApiException("Unsupported content-type: $accept.")
             }
 
             try {

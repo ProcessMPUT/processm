@@ -2,8 +2,6 @@ package processm.conformance.models.alignments.processtree
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
 import processm.conformance.ProcessTrees
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.CompositeAligner
@@ -12,9 +10,11 @@ import processm.core.log.hierarchical.Log
 import processm.core.models.processtree.ProcessTree
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.test.Ignore
+import kotlin.test.Test
 import kotlin.test.assertFalse
 
-@Disabled("These tests are intended for manual execution")
+@Ignore("These tests are intended for manual execution")
 class DecompositionAlignerPerformanceTests {
 
     companion object {

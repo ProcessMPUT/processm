@@ -1,6 +1,5 @@
 package processm.experimental.miners.causalnet.heuristicminer
 
-import org.junit.jupiter.api.Disabled
 import processm.core.helpers.mapToSet
 import processm.core.log.Helpers.event
 import processm.core.log.hierarchical.Log
@@ -14,6 +13,7 @@ import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
 import processm.miners.causalnet.heuristicminer.bindingproviders.hypothesisselector.MostGreedyHypothesisSelector
 import processm.miners.causalnet.heuristicminer.longdistance.NaiveLongDistanceDependencyMiner
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -86,7 +86,7 @@ class FromModelToLogAndBackAgain {
         b1 + d1 or b2 + d2 or b3 + d3 join e
     }
 
-    @Disabled("See #97")
+    @Ignore("See #97")
     @Test
     fun `Online - Naive - sequential counting`() {
         test(
@@ -118,7 +118,7 @@ class FromModelToLogAndBackAgain {
         d1 or d2 join e
     }
 
-    @Disabled("See #97")
+    @Ignore("See #97")
     @Test
     fun `Online - Naive - flexible heurisitc miner long-distance dependency example`() {
         test(

@@ -1,8 +1,5 @@
 package processm.services
 
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
 import io.ktor.http.*
 import io.ktor.serialization.gson.*
 import io.ktor.server.application.*
@@ -33,14 +30,7 @@ fun Application.apiModule() {
             // TODO: replace with kotlinx/serialization; this requires the OpenAPI generator to add kotlinx/serialization annotations; currently, this is not supported
             gson(ContentType.Application.Json) {
                 // Correctly serialize/deserialize LocalDateTime
-                registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
-                    override fun write(out: JsonWriter, value: LocalDateTime?) {
-                        out.value(value?.toString())
-                    }
-
-                    override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
-                })
-
+                registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
                 registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
             }
         }

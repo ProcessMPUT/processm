@@ -123,7 +123,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("The user has insufficient permissions to access the related organization")
                     )
                 }
@@ -142,7 +142,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("Workspace name needs to be specified when creating new workspace")
                     )
                 }
@@ -183,7 +183,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 }) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("The user has insufficient permissions to access the related organization")
                     )
                 }
@@ -199,7 +199,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces")) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("The provided workspace data cannot be parsed")
                     )
                 }
@@ -218,7 +218,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 ) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("The user is not a member of the related organization")
                     )
                 }

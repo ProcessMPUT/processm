@@ -1,6 +1,5 @@
 package processm.conformance.measures.precision
 
-import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.Trie
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.logFromString
@@ -10,6 +9,7 @@ import processm.core.models.commons.Activity
 import processm.core.models.processtree.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class PerfectPrecisionTest {
 
@@ -87,7 +87,7 @@ class PerfectPrecisionTest {
             a joins c
             b + c join d
         }
-        assertThrows<IllegalArgumentException> { PerfectPrecision(diamond1) }
+        assertFailsWith<IllegalArgumentException> { PerfectPrecision(diamond1) }
     }
 
 }

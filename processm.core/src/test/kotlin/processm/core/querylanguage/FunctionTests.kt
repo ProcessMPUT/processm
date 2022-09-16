@@ -1,8 +1,8 @@
 package processm.core.querylanguage
 
-import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class FunctionTests {
 
@@ -24,8 +24,8 @@ class FunctionTests {
 
     @Test
     fun invalidFunctionTest() {
-        assertThrows<IllegalArgumentException> { Function("XYZ", 0, 0) }
-        assertThrows<IllegalArgumentException> { Function("avg", 0, 0) }
-        assertThrows<IllegalArgumentException> { Function("year", 0, 0) }
+        assertFailsWith<IllegalArgumentException> { Function("XYZ", 0, 0) }
+        assertFailsWith<IllegalArgumentException> { Function("avg", 0, 0) }
+        assertFailsWith<IllegalArgumentException> { Function("year", 0, 0) }
     }
 }

@@ -64,7 +64,7 @@ class DataStoreService(private val producer: Producer) {
         return transaction(DBCache.getMainDBPool().database) {
             val dataStoreId = DataStores.insertAndGetId {
                 it[this.name] = name
-                it[this.creationDate] = CurrentDateTime()
+                it[this.creationDate] = CurrentDateTime
                 it[this.organizationId] = EntityID(organizationId, Organizations)
             }
             Migrator.migrate("${dataStoreId.value}")

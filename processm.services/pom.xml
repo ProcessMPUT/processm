@@ -47,6 +47,7 @@
                             <generateModelDocumentation>true</generateModelDocumentation>
                             <generateApis>false</generateApis>
                             <generateSupportingFiles>false</generateSupportingFiles>
+                            <library>ktor</library>
                             <packageName>processm.services.api</packageName>
                             <typeMappings>
                                 array=kotlin.Array,date-time=java.time.LocalDateTime,DateTime=java.time.LocalDateTime
@@ -199,6 +200,7 @@
             <groupId>${project.parent.groupId}</groupId>
             <artifactId>webui</artifactId>
             <version>${project.parent.version}</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>${project.parent.groupId}</groupId>

@@ -6,7 +6,7 @@ import io.mockk.mockk
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
-import processm.services.api.models.Error
+import processm.services.api.models.ErrorMessage
 import processm.services.api.models.Group
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
@@ -92,7 +92,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/groups")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("The user is not a member of the related organization")
                     )
                 }
@@ -120,7 +120,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/groups")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("Organization not found")
                     )
                 }
@@ -175,7 +175,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/members")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
                     assertTrue(
-                        response.deserializeContent<Error>().error
+                        response.deserializeContent<ErrorMessage>().error
                             .contains("The user is not a member of the related organization")
                     )
                 }

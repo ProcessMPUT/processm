@@ -124,7 +124,7 @@ fun Route.UsersApi() {
                             call.respond(HttpStatusCode.OK)
                         } else {
                             call.respond(
-                                HttpStatusCode.Forbidden, Error("The current password could not be changed")
+                                HttpStatusCode.Forbidden, ErrorMessage("The current password could not be changed")
                             )
                         }
                     }

@@ -2,7 +2,6 @@ package processm.enhancement.simulation
 
 import org.apache.commons.math3.distribution.ExponentialDistribution
 import org.apache.commons.math3.distribution.NormalDistribution
-import org.junit.jupiter.api.Test
 import processm.conformance.CausalNets
 import processm.conformance.PetriNets
 import processm.conformance.ProcessTrees
@@ -16,6 +15,7 @@ import processm.core.models.metadata.BasicMetadata.LEAD_TIME
 import processm.enhancement.resources.ApplyResourceBasedScheduling
 import processm.enhancement.resources.BasicResource
 import java.time.Duration
+import kotlin.test.Test
 
 class FullMarkovSimulationPipelineTest {
 

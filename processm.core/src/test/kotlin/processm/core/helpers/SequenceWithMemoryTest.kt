@@ -1,10 +1,6 @@
 package processm.core.helpers
 
-import org.junit.jupiter.api.assertThrows
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class SequenceWithMemoryTest {
 
@@ -81,7 +77,7 @@ class SequenceWithMemoryTest {
     @Test
     fun `throw IndexOutOfBoundsException for index exceeding size`() {
         val seq = sequenceOf<Int>(1, 2, 3, 4).asList()
-        assertThrows<IndexOutOfBoundsException> { seq[4] }
-        assertThrows<IndexOutOfBoundsException> { seq[4] } // cached
+        assertFailsWith<IndexOutOfBoundsException> { seq[4] }
+        assertFailsWith<IndexOutOfBoundsException> { seq[4] } // cached
     }
 }

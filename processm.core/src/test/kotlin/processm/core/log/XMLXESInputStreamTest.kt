@@ -1,6 +1,5 @@
 package processm.core.log
 
-import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
@@ -9,6 +8,7 @@ import processm.core.log.attribute.ListAttr
 import processm.core.log.attribute.value
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 
 internal class XMLXESInputStreamTest {
@@ -167,7 +167,7 @@ internal class XMLXESInputStreamTest {
         """.trimIndent().byteInputStream().use { stream ->
             val iterator = XMLXESInputStream(stream).iterator()
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 
@@ -189,7 +189,7 @@ internal class XMLXESInputStreamTest {
             // Skip Log structure
             assert(iterator.next() is Log)
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 
@@ -208,7 +208,7 @@ internal class XMLXESInputStreamTest {
         """.trimIndent().byteInputStream().use { stream ->
             val iterator = XMLXESInputStream(stream).iterator()
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 
@@ -228,7 +228,7 @@ internal class XMLXESInputStreamTest {
         """.trimIndent().byteInputStream().use { stream ->
             val iterator = XMLXESInputStream(stream).iterator()
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 
