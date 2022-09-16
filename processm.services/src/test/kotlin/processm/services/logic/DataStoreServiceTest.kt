@@ -7,6 +7,7 @@ import processm.core.communication.Producer
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.toFlatSequence
 import processm.dbmodels.etl.jdbc.ETLConfiguration
+import processm.dbmodels.models.DATA_CONNECTOR_TOPIC
 import processm.dbmodels.models.DataStores
 import processm.dbmodels.models.Organizations
 import processm.etl.jdbc.toXESInputStream
@@ -25,7 +26,9 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     @BeforeTest
     override fun setUp() {
         super.setUp()
-        producer = mockk()
+        producer = mockk {
+            every { produce(DATA_CONNECTOR_TOPIC, any()) } returns Unit
+        }
         dataStoreService = DataStoreService(producer)
     }
 
@@ -115,14 +118,16 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `creating data connector with connection string throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
-        assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", "connection string") }
-    }
+    fun `creating data connector with connection string throws if nonexistent data store`(): Unit =
+        withCleanTables(DataStores) {
+            assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", "connection string") }
+        }
 
     @Test
-    fun `creating data connector with connection properties throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
-        assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", emptyMap()) }
-    }
+    fun `creating data connector with connection properties throws if nonexistent data store`(): Unit =
+        withCleanTables(DataStores) {
+            assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", emptyMap()) }
+        }
 
     @Test
     fun `removing data connector throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
@@ -151,7 +156,14 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `creating automatic ETL process throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
-        assertDataStoreExistence { createAutomaticEtlProcess(UUID.randomUUID(), UUID.randomUUID(), "processName", emptyList()) }
+        assertDataStoreExistence {
+            createAutomaticEtlProcess(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "processName",
+                emptyList()
+            )
+        }
     }
 
     @Test
@@ -165,11 +177,12 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     fun assertDataStoreExistence(methodCall: DataStoreService.() -> Unit) {
-     val exception = assertFailsWith<ValidationException>("The specified data store does not exist or the user has insufficient permissions to it") {
-         methodCall(dataStoreService)
-     }
+        val exception =
+            assertFailsWith<ValidationException>("The specified data store does not exist or the user has insufficient permissions to it") {
+                methodCall(dataStoreService)
+            }
 
-     assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
     }
 
     @Test

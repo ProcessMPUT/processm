@@ -8,6 +8,8 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.OrganizationRoleDto
+import processm.dbmodels.models.UserDto
+import processm.dbmodels.models.UserGroupDto
 import processm.services.api.models.*
 import processm.services.logic.AccountService
 import processm.services.logic.ValidationException
@@ -17,7 +19,6 @@ import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.test.*
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UsersApiTest : BaseApiTest() {
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/users",
@@ -161,34 +162,52 @@ class UsersApiTest : BaseApiTest() {
 
     @Test
     fun `responds to users list request with 200 and users list`() = withConfiguredTestApplication {
-        withAuthentication {
+        val accountService = declareMock<AccountService>()
+
+        val uuid = UUID.randomUUID()
+        val email = "demo@example.com"
+        every { accountService.getUsers(uuid, null, any()) } returns listOf(
+            UserDto(
+                id = uuid,
+                email = email,
+                locale = "en_US",
+                privateGroup = UserGroupDto(UUID.randomUUID(), "email", true)
+            )
+        )
+
+        withAuthentication(uuid, email) {
             with(handleRequest(HttpMethod.Get, "/api/users")) {
                 assertEquals(HttpStatusCode.OK, response.status())
                 assertNotNull(response.deserializeContent<List<UserInfo>>())
             }
         }
+
+        verify { accountService.getUsers(uuid, null, any()) }
     }
 
     @Test
     fun `responds to current user details request with 200 and current user account details`() =
         withConfiguredTestApplication {
             val accountService = declareMock<AccountService>()
+            val uuid = UUID.randomUUID()
 
-            every { accountService.getAccountDetails(userId = any()) } returns mockk {
+            every { accountService.getAccountDetails(userId = uuid) } returns mockk {
+                every { id } returns uuid
                 every { email } returns "user@example.com"
                 every { locale } returns "en_US"
             }
 
-            withAuthentication {
+            withAuthentication(uuid) {
                 with(handleRequest(HttpMethod.Get, "/api/users/me")) {
                     assertEquals(HttpStatusCode.OK, response.status())
-                    val deserializedContent = response.deserializeContent<UserAccountInfo>()
-                    assertEquals("user@example.com", deserializedContent.email)
-                    assertEquals("en_US", deserializedContent.locale)
+                    val account = response.deserializeContent<UserAccountInfo>()
+                    assertEquals(uuid, account.id)
+                    assertEquals("user@example.com", account.email)
+                    assertEquals("en_US", account.locale)
                 }
             }
 
-            verify { accountService.getAccountDetails(userId = any()) }
+            verify { accountService.getAccountDetails(userId = uuid) }
         }
 
     @Test

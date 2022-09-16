@@ -1,10 +1,11 @@
 package processm.services.logic
 
-import io.mockk.*
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
 import processm.core.communication.Producer
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
@@ -18,8 +19,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
     private lateinit var accountService: AccountService
     private lateinit var workspaceService: WorkspaceService
 
-    @Before
-    @BeforeEach
+    @BeforeTest
     override fun setUp() {
         super.setUp()
         producer = mockk()

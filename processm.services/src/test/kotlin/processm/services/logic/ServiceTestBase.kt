@@ -1,19 +1,9 @@
 package processm.services.logic
 
 import io.mockk.MockKAnnotations
-import io.mockk.mockkClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.After
-import org.junit.Before
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.koin.core.context.startKoin
-import org.koin.core.context.stopKoin
-import org.koin.dsl.module
-import org.koin.test.KoinTest
-import org.koin.test.mock.MockProvider
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import processm.core.esb.Artemis
@@ -21,12 +11,12 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import java.time.LocalDateTime
 import java.util.*
+import kotlin.test.BeforeTest
 
 abstract class ServiceTestBase {
     // @Before causes the setUp() method to be called when running tests individually
     // @BeforeEach causes the setUp() method to be called before @ParameterizedTest tests
-    @Before
-    @BeforeEach
+    @BeforeTest
     open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
     }
@@ -44,7 +34,7 @@ abstract class ServiceTestBase {
 
         @JvmStatic
         @AfterAll
-        fun `unmock ETLConfiguration_notifyUsers`() {
+        fun `stop Artemis`() {
             artemis.stop()
         }
     }

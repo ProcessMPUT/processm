@@ -1,24 +1,16 @@
 package processm.services.logic
 
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
-import org.koin.core.component.inject
-import org.koin.dsl.module
 import processm.dbmodels.models.Organizations
 import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
 import processm.dbmodels.models.UsersRolesInOrganizations
 import java.util.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class OrganizationServiceTest : ServiceTestBase() {
     private lateinit var organizationService: OrganizationService
 
-    @Before
-    @BeforeEach
+    @BeforeTest
     override fun setUp() {
         super.setUp()
         organizationService = OrganizationService()

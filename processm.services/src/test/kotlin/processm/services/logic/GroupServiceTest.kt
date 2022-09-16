@@ -2,8 +2,6 @@ package processm.services.logic
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
 import processm.dbmodels.models.UserGroups
 import processm.dbmodels.models.Users
@@ -14,8 +12,7 @@ import kotlin.test.*
 class GroupServiceTest : ServiceTestBase() {
     private lateinit var groupService: GroupService
 
-    @Before
-    @BeforeEach
+    @BeforeTest
     override fun setUp() {
         super.setUp()
         groupService = GroupService()

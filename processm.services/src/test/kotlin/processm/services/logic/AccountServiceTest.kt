@@ -1,15 +1,10 @@
 package processm.services.logic
 
 import io.mockk.*
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.koin.core.component.inject
-import org.koin.dsl.module
-import org.koin.test.mock.declareMock
 import processm.dbmodels.models.*
 import java.util.*
 import kotlin.test.*
@@ -21,8 +16,7 @@ class AccountServiceTest : ServiceTestBase() {
     private lateinit var accountService: AccountService
     private lateinit var groupServiceMock: GroupService
 
-    @Before
-    @BeforeEach
+    @BeforeTest
     override fun setUp() {
         super.setUp()
         groupServiceMock = mockk()

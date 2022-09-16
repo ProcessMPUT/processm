@@ -206,18 +206,18 @@ class ProcessMTestingEnvironment {
 
     val organizations: List<UserOrganization>
         get() = get<Paths.UserOrganizations, List<UserOrganization>> {
-            return@get deserialize<UserOrganizationCollectionMessageBody>().data.toList()
+            return@get deserialize<List<UserOrganization>>().toList()
         }
 
     fun registerUser(userEmail: String, organizationName: String) =
         post(
             "/users",
-            mapOf("data" to mapOf("userEmail" to userEmail, "organizationName" to organizationName))
+            AccountRegistrationInfo(userEmail, "pass", organizationName)
         ) {}
 
     fun login(login: String, password: String) =
-        post("/users/session", mapOf("data" to mapOf("login" to login, "password" to password))) {
-            token = deserialize<AuthenticationResultMessageBody>().data.authorizationToken
+        post("/users/session", UserCredentials(login, password)) {
+            token = deserialize<AuthenticationResult>().authorizationToken
         }
 
     // endregion
@@ -225,17 +225,17 @@ class ProcessMTestingEnvironment {
     // region DataStoresApi
 
     fun createDataStore(name: String) =
-        post<Paths.DataStores, DataStoreMessageBody, DataStore>(DataStoreMessageBody(DataStore(name))) {
-            val ds = deserialize<DataStoreMessageBody>().data
+        post<Paths.DataStores, DataStore, DataStore>(DataStore(name)) {
+            val ds = deserialize<DataStore>()
             assertEquals(name, ds.name)
             return@post ds
         }
 
     fun createDataConnector(name: String, properties: Map<String, String>) =
-        post<Paths.DataConnectors, DataConnectorMessageBody, DataConnector>(
-            DataConnectorMessageBody(DataConnector(name = name, properties = properties))
+        post<Paths.DataConnectors, DataConnector, DataConnector>(
+            DataConnector(name = name, properties = properties)
         ) {
-            val dc = deserialize<DataConnectorMessageBody>().data
+            val dc = deserialize<DataConnector>()
             assertEquals(name, dc.name)
             return@post dc
         }
@@ -244,7 +244,7 @@ class ProcessMTestingEnvironment {
         parameter("query", query)
         accept(ContentType.Application.Json)
     }) {
-        return@get deserialize<QueryResultCollectionMessageBody>().data
+        return@get deserialize<Array<Any>>()
     }
 
     fun deleteLog(logIdentityId: UUID) =

@@ -39,7 +39,14 @@ class DataStoresApiTest : BaseApiTest() {
             val userId = UUID.randomUUID()
             val etlProcessId = UUID.randomUUID()
             val logIdentityId = UUID.randomUUID()
-            val cfg = mockk<JdbcEtlProcessConfiguration>(relaxed = true)
+            val cfg = JdbcEtlProcessConfiguration(
+                query = "",
+                enabled = false,
+                batch = false,
+                traceId = JdbcEtlColumnConfiguration("trace", "trace"),
+                eventId = JdbcEtlColumnConfiguration("event", "event"),
+                attributes = emptyArray(),
+            )
             val process = AbstractEtlProcess(
                 name = "name",
                 dataConnectorId = dataConnectorId,
@@ -47,12 +54,12 @@ class DataStoresApiTest : BaseApiTest() {
                 configuration = cfg
             )
 
-            val text = """{"data":[{"foo": "bar"}]}"""
+            val text = """[{"foo": "bar"}]"""
             val lastExecutionTime = Instant.now()
 
             withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
                 every {
-                    dataStoreService.createSamplingJdbcEtlProcess(dataStoreId, dataConnectorId, any(), cfg, any())
+                    dataStoreService.createSamplingJdbcEtlProcess(dataStoreId, dataConnectorId, any(), any(), any())
                 } returns etlProcessId andThenThrows IllegalStateException()
                 every {
                     dataStoreService.getEtlProcessInfo(dataStoreId, etlProcessId)
@@ -67,7 +74,7 @@ class DataStoresApiTest : BaseApiTest() {
                 } just Runs
                 every {
                     dataStoreService.removeEtlProcess(dataStoreId, etlProcessId)
-                } //returns true andThen false
+                } just Runs
                 every {
                     dataStoreService.assertUserHasSufficientPermissionToDataStore(
                         userId,

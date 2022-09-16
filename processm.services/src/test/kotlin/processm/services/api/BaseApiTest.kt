@@ -9,12 +9,8 @@ import com.google.gson.stream.JsonWriter
 import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
-import io.mockk.MockKAnnotations
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkClass
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
+import io.mockk.*
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.KoinTest
@@ -29,9 +25,12 @@ import java.time.LocalDateTime
 import java.util.*
 import java.util.stream.Stream
 import kotlin.reflect.KClass
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
     protected val gson: Gson = GsonBuilder()
         .registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
@@ -46,14 +45,16 @@ abstract class BaseApiTest : KoinTest {
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
     private val mocksMap = mutableMapOf<KClass<*>, Any>()
 
-    // @Before causes the setUp() method to be called when running tests individually
-    // @BeforeEach causes the setUp() method to be called before @ParameterizedTest tests
-    @Before
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
         // The resolved instances are cached, so every call to `declareMock` returns the same instance.
         MockProvider.register { mockedClass -> mocksMap.computeIfAbsent(mockedClass) { mockkClass(mockedClass) } }
+    }
+
+    @AfterTest
+    fun tearDown() {
+        clearAllMocks()
     }
 
     @ParameterizedTest
@@ -135,10 +136,10 @@ abstract class BaseApiTest : KoinTest {
             if (authenticationHeader == null) {
                 with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("""{"data":{"login":"$login","password":"$password"}}""")
+                    setBody("""{"login":"$login","password":"$password"}""")
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
-                    assertTrue(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))
+                    assertTrue(response.content!!.contains(AuthenticationResult::authorizationToken.name))
                     val token =
                         response.content?.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""")
                             ?.substringBefore('"')

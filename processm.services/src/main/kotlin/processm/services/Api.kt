@@ -30,7 +30,7 @@ fun Application.apiModule() {
         logger.info("Starting API module")
         install(DefaultHeaders)
         install(ContentNegotiation) {
-            // TODO: replace with kotlinx/serialization
+            // TODO: replace with kotlinx/serialization; this requires the OpenAPI generator to add kotlinx/serialization annotations; currently, this is not supported
             gson(ContentType.Application.Json) {
                 // Correctly serialize/deserialize LocalDateTime
                 registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
@@ -40,6 +40,8 @@ fun Application.apiModule() {
 
                     override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
                 })
+
+                registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
             }
         }
         install(AutoHeadResponse)
