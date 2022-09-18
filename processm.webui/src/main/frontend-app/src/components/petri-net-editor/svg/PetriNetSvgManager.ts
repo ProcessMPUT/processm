@@ -70,9 +70,6 @@ export class PetriNetSvgManager {
     const place = this._state.createPlace(options);
     this.svgPlaces.set(place.id, new SvgPlace(this.svg, this.eventBus, place));
 
-    console.log(place)
-    console.log(this.svg)
-
     return place.id;
   }
 
