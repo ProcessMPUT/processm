@@ -116,7 +116,9 @@
             <groupId>io.ktor</groupId>
             <artifactId>ktor-serialization-gson-jvm</artifactId>
             <version>${ktor.client.version}</version>
-            <scope>test</scope>
+            <!-- Although processm.launcher uses ktor-serialization-gson-jvm only in tests, processm.services requires
+            it at runtime. Setting scope: test here overrides the inherited from processm.services scope: compile -->
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
