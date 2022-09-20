@@ -20,8 +20,5 @@ class UsersInGroup(userId: EntityID<UUID>) : Entity<UUID>(userId) {
 
     val user by User referencedOn UsersInGroups.userId
     val group by UserGroup referencedOn UsersInGroups.groupId
-
-    fun toDto() = GroupMemberDto(user.toDto(), group.toDto())
 }
 
-data class GroupMemberDto(val user: UserDto, val group: UserGroupDto)

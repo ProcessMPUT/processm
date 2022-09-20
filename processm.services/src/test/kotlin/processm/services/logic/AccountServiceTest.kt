@@ -6,6 +6,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import processm.dbmodels.models.*
+import processm.services.api.models.OrganizationRole
 import java.util.*
 import kotlin.test.*
 
@@ -61,13 +62,11 @@ class AccountServiceTest : ServiceTestBase() {
         withCleanTables(Users, Organizations, UsersRolesInOrganizations, UserGroups) {
             every { groupServiceMock.attachUserToGroup(any(), any()) } just runs
 
-            accountService.createAccount("user@example.com", "Org1", null, "pass")
+            accountService.createUser("user@example.com", null, "pass")
 
-            val organizationMember = UserRolesInOrganizations.all().first()
-            assertEquals("user@example.com", organizationMember.user.email)
-            assertEquals("Org1", organizationMember.organization.name)
-            assertEquals(OrganizationRoleDto.Owner, organizationMember.role.name)
-            verify(exactly = 2) { groupServiceMock.attachUserToGroup(organizationMember.user.id.value, any()) }
+            val user = User.all().first()
+            assertEquals("user@example.com", user.email)
+            verify(exactly = 1) { groupServiceMock.attachUserToGroup(user.id.value, any()) }
         }
 
     @Test
@@ -75,31 +74,19 @@ class AccountServiceTest : ServiceTestBase() {
         createUser("user@example.com", correctPasswordHash)
 
         val exception =
-            assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
-                accountService.createAccount("user@example.com", "Org1", null, "pass")
+            assertFailsWith<ValidationException>("The user with the given email already exists.") {
+                accountService.createUser("user@example.com", null, "pass")
             }
         assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
     }
 
     @Test
-    fun `account registration throws if organization already registered`() =
-        withCleanTables(Users, Organizations, UserGroups) {
-            createOrganization(name = "Org1", isPrivate = true)
-
-            val exception =
-                assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
-                    accountService.createAccount("user@example.com", "Org1", null, "pass")
-                }
-            assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
-        }
-
-    @Test
-    fun `account registration is sensitive to user email case`() = withCleanTables(Users, Organizations) {
+    fun `account registration is insensitive to user email case`() = withCleanTables(Users, Organizations) {
         createUser("user@example.com", correctPasswordHash)
 
         val exception =
-            assertFailsWith<ValidationException>("User and/or organization with specified name already exists") {
-                accountService.createAccount("uSeR@eXaMpLe.com", "Org1", null, "pass")
+            assertFailsWith<ValidationException>("The user with the given email already exists.") {
+                accountService.createUser("uSeR@eXaMpLe.com", null, "pass")
             }
         assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
     }
@@ -189,14 +176,14 @@ class AccountServiceTest : ServiceTestBase() {
             val userId = createUser()
             val organizationId1 = createOrganization("Org1")
             val organizationId2 = createOrganization("Org2")
-            attachUserToOrganization(userId.value, organizationId1.value, OrganizationRoleDto.Reader)
-            attachUserToOrganization(userId.value, organizationId2.value, OrganizationRoleDto.Writer)
+            attachUserToOrganization(userId.value, organizationId1.value, OrganizationRole.reader)
+            attachUserToOrganization(userId.value, organizationId2.value, OrganizationRole.writer)
 
             val userRoles = assertDoesNotThrow { accountService.getRolesAssignedToUser(userId.value) }
 
             assertEquals(2, userRoles.count())
-            assertTrue { userRoles.any { it.organization.name == "Org1" && it.role == OrganizationRoleDto.Reader } }
-            assertTrue { userRoles.any { it.organization.name == "Org2" && it.role == OrganizationRoleDto.Writer } }
+            assertTrue { userRoles.any { it.organization.name == "Org1" && it.role == OrganizationRole.reader } }
+            assertTrue { userRoles.any { it.organization.name == "Org2" && it.role == OrganizationRole.writer } }
         }
 
     @Test

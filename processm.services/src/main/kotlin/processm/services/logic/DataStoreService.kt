@@ -26,6 +26,7 @@ import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
 import processm.services.api.models.JdbcEtlProcessConfiguration
+import processm.services.api.models.OrganizationRole
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
@@ -390,16 +391,24 @@ class DataStoreService(private val producer: Producer) {
     /**
      * Asserts that the specified [userId] has any of the specified [allowedOrganizationRoles] allowing for access to [dataStoreId].
      */
-    fun assertUserHasSufficientPermissionToDataStore(userId: UUID, dataStoreId: UUID, vararg allowedOrganizationRoles: OrganizationRoleDto)
-        = transaction(DBCache.getMainDBPool().database) {
-            DataStores
-                .innerJoin(Organizations)
-                .innerJoin(UsersRolesInOrganizations)
-                .innerJoin(OrganizationRoles)
-                .select { DataStores.id eq dataStoreId and
+    fun assertUserHasSufficientPermissionToDataStore(
+        userId: UUID,
+        dataStoreId: UUID,
+        vararg allowedOrganizationRoles: OrganizationRole
+    ) = transaction(DBCache.getMainDBPool().database) {
+        DataStores
+            .innerJoin(Organizations)
+            .innerJoin(UsersRolesInOrganizations)
+            .innerJoin(OrganizationRoles)
+            .select {
+                DataStores.id eq dataStoreId and
                         (UsersRolesInOrganizations.userId eq userId) and
-                        (UsersRolesInOrganizations.roleId inList allowedOrganizationRoles.map { OrganizationRoles.getIdByName(it) }) }.limit(1).any()
-                    || throw ValidationException(ValidationException.Reason.ResourceNotFound, "The specified user account and/or data store does not exist")
+                        (OrganizationRoles.name inList allowedOrganizationRoles.map { it.value })
+            }.limit(1).any()
+                || throw ValidationException(
+            ValidationException.Reason.ResourceNotFound,
+            "The specified user account and/or data store does not exist"
+        )
     }
 
     /**

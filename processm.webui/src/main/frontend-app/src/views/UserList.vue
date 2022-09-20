@@ -3,7 +3,7 @@
     :headers="[
       {
         text: $t('users.user'),
-        value: 'username',
+        value: 'email',
         filterable: true
       },
       {
@@ -34,8 +34,9 @@
           <v-card>
             <v-card-title>{{ $t("common.add-new") }}</v-card-title>
             <v-card-text>
-              <v-form v-model="isNewValid">
+              <v-form id="newForm" v-model="isNewValid" @submit.prevent="includeMember">
                 <combo-box-with-search :value.sync="newUser" :search="searchUsers"></combo-box-with-search>
+                <v-select v-model="newRole" :items="roles"></v-select>
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -44,7 +45,7 @@
                 {{ $t("common.cancel") }}
               </v-btn>
 
-              <v-btn color="primary darken-1" :disabled="!isNewValid" @click.stop="includeMember">
+              <v-btn :disabled="!isNewValid" color="primary darken-1" form="newForm" type="submit">
                 {{ $t("common.save") }}
               </v-btn>
             </v-card-actions>
@@ -53,9 +54,9 @@
       </v-toolbar>
     </template>
 
-    <template v-slot:item.username="{ item, index }">
-      {{ item.username }}
-      <v-chip small color="primary" v-if="members[index].username === $sessionStorage.userInfo.username">
+    <template v-slot:item.email="{ item, index }">
+      {{ item.email }}
+      <v-chip v-if="members[index].email === $sessionStorage.userInfo.username" color="primary" small>
         {{ $t("users.you") }}
       </v-chip>
     </template>
@@ -68,14 +69,14 @@
         v-model="members[index].organizationRole"
         :items="roles"
         hide-details="auto"
-        :disabled="members[index].username === $sessionStorage.userInfo.username"
+        :disabled="members[index].email === $sessionStorage.userInfo.username"
       ></v-select>
     </template>
 
     <template v-slot:item.actions="{ item, index }">
       <v-tooltip bottom>
         <template v-slot:activator="{ on, attrs }">
-          <v-btn icon color="primary" dark v-bind="attrs" v-on="on" :disabled="members[index].username === $sessionStorage.userInfo.username">
+          <v-btn :disabled="members[index].email === $sessionStorage.userInfo.username" color="primary" dark icon v-bind="attrs" v-on="on">
             <v-icon small @click="excludeMember(item)">delete_forever</v-icon>
           </v-btn>
         </template>
@@ -89,8 +90,7 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
-import OrganizationMember from "@/models/OrganizationMember";
-import { OrganizationRole } from "@/models/OrganizationRole";
+import { OrganizationMember, OrganizationRole } from "@/openapi/api";
 import ComboBoxWithSearch from "@/components/ComboBoxWithSearch.vue";
 import AccountService from "@/services/AccountService";
 import App from "@/App.vue";
@@ -110,6 +110,7 @@ export default class UserList extends Vue {
    */
   newDialog = false;
   newUser = "";
+  newRole = OrganizationRole.Reader;
   isNewValid = false;
 
   roles = [OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader];
@@ -132,8 +133,7 @@ export default class UserList extends Vue {
 
   async includeMember() {
     try {
-      // TODO
-      console.log("new", this.newUser);
+      await this.organizationService.addMember(this.organization.id, this.newUser, this.newRole);
       await this.loadMembers();
       this.newDialog = false;
     } catch (e) {
@@ -142,11 +142,19 @@ export default class UserList extends Vue {
   }
 
   async excludeMember(member: OrganizationMember) {
-    // TODO
+    try {
+      // TODO
+    } catch (e) {
+      this.app.error(e);
+    }
   }
 
   async updateRole(member: OrganizationMember) {
-    // TODO
+    try {
+      // TODO
+    } catch (e) {
+      this.app.error(e);
+    }
   }
 }
 </script>

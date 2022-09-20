@@ -3,9 +3,9 @@ package processm.services.api
 import io.ktor.http.*
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
-import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.Group
 import processm.services.api.models.OrganizationMember
@@ -70,7 +70,7 @@ class OrganizationsApiTest : BaseApiTest() {
                 mockk {
                     every { user.id } returns userId
                     every { organization.id } returns organizationId
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
+                    every { this@mockk.role } returns OrganizationRole.reader
                 })
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/groups")) {
                 assertEquals(HttpStatusCode.OK, response.status())
@@ -115,7 +115,7 @@ class OrganizationsApiTest : BaseApiTest() {
                     mockk {
                         every { user.id } returns UUID.randomUUID()
                         every { organization.id } returns removedOrganizationId
-                        every { this@mockk.role } returns OrganizationRoleDto.Reader
+                        every { this@mockk.role } returns OrganizationRole.reader
                     })
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/groups")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
@@ -137,31 +137,31 @@ class OrganizationsApiTest : BaseApiTest() {
         val memberId2 = UUID.randomUUID()
 
         withAuthentication(userId) {
-            every { organizationService.getOrganizationMembers(organizationId) } returns listOf(
+            every { organizationService.getMember(organizationId) } returns listOf(
                 mockk {
                     every { user.id } returns memberId1
                     every { user.email } returns "user1@example.com"
-                    every { role } returns OrganizationRoleDto.Reader
+                    every { role } returns OrganizationRole.reader
                 },
                 mockk {
                     every { user.id } returns memberId2
                     every { user.email } returns "user2@example.com"
-                    every { role } returns OrganizationRoleDto.Writer
+                    every { role } returns OrganizationRole.writer
                 }
             )
             every { accountService.getRolesAssignedToUser(userId) } returns listOf(
                 mockk {
                     every { user.id } returns userId
                     every { organization.id } returns organizationId
-                    every { this@mockk.role } returns OrganizationRoleDto.Reader
+                    every { this@mockk.role } returns OrganizationRole.reader
                 })
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/members")) {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val members = assertNotNull(response.deserializeContent<List<OrganizationMember>>())
 
                 assertEquals(2, members.count())
-                assertTrue { members.any { it.id == memberId1 && it.username == "user1@example.com" && it.organizationRole == OrganizationRole.reader } }
-                assertTrue { members.any { it.id == memberId2 && it.username == "user2@example.com" && it.organizationRole == OrganizationRole.writer } }
+                assertTrue { members.any { it.id == memberId1 && it.email == "user1@example.com" && it.organizationRole == OrganizationRole.reader } }
+                assertTrue { members.any { it.id == memberId2 && it.email == "user2@example.com" && it.organizationRole == OrganizationRole.writer } }
             }
         }
     }
@@ -190,7 +190,7 @@ class OrganizationsApiTest : BaseApiTest() {
             val removedOrganizationId = UUID.randomUUID()
 
             withAuthentication {
-                every { organizationService.getOrganizationMembers(removedOrganizationId) } throws ApiException(
+                every { organizationService.getMember(removedOrganizationId) } throws ApiException(
                     publicMessage = "",
                     responseCode = HttpStatusCode.NotFound
                 )
@@ -198,11 +198,35 @@ class OrganizationsApiTest : BaseApiTest() {
                     mockk {
                         every { user.id } returns UUID.randomUUID()
                         every { organization.id } returns removedOrganizationId
-                        every { this@mockk.role } returns OrganizationRoleDto.Reader
+                        every { this@mockk.role } returns OrganizationRole.reader
                     })
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/members")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())
                 }
             }
         }
+
+    @Test
+    fun `responds to addition of a new member with 201`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+
+        withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+            with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/members") {
+                withSerializedBody(
+                    OrganizationMember(
+                        email = "new@example.com",
+                        organizationRole = OrganizationRole.reader
+                    )
+                )
+            }) {
+                assertEquals(HttpStatusCode.Created, response.status())
+            }
+        }
+
+        verify(exactly = 1) {
+            organizationService.addMember(organizationId, "new@example.com", OrganizationRole.reader)
+        }
+    }
 }

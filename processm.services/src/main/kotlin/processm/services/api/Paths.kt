@@ -89,7 +89,7 @@ object Paths {
      * @param organizationId Organization ID
      */
     @Location("/organizations/{organizationId}/members")
-    class OrganizationMembers(val organizationId: UUID)
+    class OrganizationsOrganizationIdMembers(val organizationId: UUID)
 
     /**
      * Get members of the specified organization
@@ -244,7 +244,7 @@ object Paths {
      *
      */
     @Location("/users/session")
-    class UserOut
+    class UsersSession
 
     /**
      * Get, update or remove the specified workspace in the context of the specified organization

@@ -15,31 +15,30 @@ export default class AccountService extends BaseService {
       { skipAuthRefresh: true }
     );
 
-    if (response.status != 201) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 201, response.statusText);
 
     Vue.prototype.$sessionStorage.sessionToken = response.data.authorizationToken;
   }
 
   public async signOut() {
-    const response = await this.usersApi.signUserOut().finally(() => Vue.prototype.$sessionStorage.removeSession());
+    const response = await this.usersApi
+      .signUserOut({
+        validateStatus: (status: number) => status == 204 || status == 404
+      })
+      .finally(() => Vue.prototype.$sessionStorage.removeSession());
 
-    if (![204, 404].includes(response.status)) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 204 || response.status == 404, response.statusText);
   }
 
-  public async registerNewAccount(userEmail: string, organizationName: string, userPassword: string) {
+  public async registerNewAccount(userEmail: string, userPassword: string, newOrganization: boolean, organizationName?: string) {
     const response = await this.usersApi.createAccount({
-      organizationName: organizationName,
       userEmail: userEmail,
-      userPassword: userPassword
+      userPassword: userPassword,
+      newOrganization: newOrganization,
+      organizationName: organizationName
     });
 
-    if (response.status != 201) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 201, response.statusText);
   }
 
   public async getAccountDetails(): Promise<UserAccount> {
@@ -60,9 +59,7 @@ export default class AccountService extends BaseService {
       newPassword: newPassword
     });
 
-    if (response.status != 202) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 202, response.statusText);
   }
 
   public async changeLocale(locale: string) {
@@ -70,17 +67,13 @@ export default class AccountService extends BaseService {
       locale: locale
     });
 
-    if (response.status != 202) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 202, response.statusText);
   }
 
   public async getOrganizations(): Promise<UserOrganization[]> {
     const response = await this.usersApi.getUserOrganizations();
 
-    if (response.status != 200) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 200, response.statusText);
 
     return (Vue.prototype.$sessionStorage.userOrganizations = response.data);
   }

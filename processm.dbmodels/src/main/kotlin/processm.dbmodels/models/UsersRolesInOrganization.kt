@@ -16,14 +16,10 @@ object UsersRolesInOrganizations : IdTable<UUID>("users_roles_in_organizations")
         get() = userId
 }
 
-class UserRolesInOrganizations(userId: EntityID<UUID>) : Entity<UUID>(userId) {
-    companion object : EntityClass<UUID, UserRolesInOrganizations>(UsersRolesInOrganizations)
+class UserRoleInOrganization(userId: EntityID<UUID>) : Entity<UUID>(userId) {
+    companion object : EntityClass<UUID, UserRoleInOrganization>(UsersRolesInOrganizations)
 
-    val user by User referencedOn UsersRolesInOrganizations.userId
-    val organization by Organization referencedOn UsersRolesInOrganizations.organizationId
-    val role by OrganizationRole referencedOn UsersRolesInOrganizations.roleId
-
-    fun toDto() = OrganizationMemberDto(user.toDto(), organization.toDto(), role.name)
+    var user by User referencedOn UsersRolesInOrganizations.userId
+    var organization by Organization referencedOn UsersRolesInOrganizations.organizationId
+    var role by OrganizationRole referencedOn UsersRolesInOrganizations.roleId
 }
-
-data class OrganizationMemberDto(val user: UserDto, val organization: OrganizationDto, val role: OrganizationRoleDto)

@@ -184,35 +184,37 @@
     }
   },
   "login-form": {
-    "title": "Login form",
     "email": "E-mail",
-    "password": "Password",
+    "error-box": {
+      "failed": "Incorrect e-mail or password"
+    },
     "login": "Login",
+    "password": "Password",
     "register-account": "Register account",
+    "reset-password": "Reset password",
+    "title": "Login form",
     "validation": {
       "email-format": "The e-mail address must be valid",
       "password-empty": "The password cannot be empty"
-    },
-    "error-box": {
-      "failed": "Incorrect e-mail or password"
     }
   },
   "registration-form": {
-    "title": "Account registration",
-    "organization-name": "Organization name",
     "admin-email": "Administrator e-mail",
+    "error-box": {
+      "failed": "Incorrect e-mail address or organization name"
+    },
+    "new-organization": "Create new organization owned by new user",
+    "organization-name": "Organization name",
     "password": "Password",
     "register": "Register",
+    "success-box": {
+      "registered": "The account registration was successful"
+    },
+    "title": "Account registration",
     "validation": {
       "email-format": "The e-mail must be valid",
       "password-format": "The password must contain at least one letter, one digit, and be of length at least 4.",
       "organization-empty": "The organization name cannot be empty"
-    },
-    "error-box": {
-      "failed": "Incorrect e-mail address or organization name"
-    },
-    "success-box": {
-      "registered": "The account registration was successful"
     }
   },
   "xes-preview-dialog": {

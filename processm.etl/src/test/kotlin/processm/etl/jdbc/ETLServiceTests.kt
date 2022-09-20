@@ -211,7 +211,7 @@ OFFSET ?::bigint
                         sharedGroup = UserGroup.all().firstOrNull() ?: UserGroup.new {
                             isImplicit = true
                             groupRole = GroupRole.all().firstOrNull() ?: GroupRole.new {
-                                name = GroupRoleDto.Owner
+                                name = GroupRoleType.Owner
                             }
                         }
                     }

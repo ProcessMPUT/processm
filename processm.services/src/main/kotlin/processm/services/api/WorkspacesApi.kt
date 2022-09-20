@@ -13,11 +13,11 @@ import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
-import processm.dbmodels.models.WorkspaceDto
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.LayoutCollectionMessageBody
 import processm.services.api.models.OrganizationRole
 import processm.services.api.models.Workspace
+import processm.services.logic.WorkspaceDto
 import processm.services.logic.WorkspaceService
 import java.util.*
 

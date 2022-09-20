@@ -16,7 +16,7 @@ export default abstract class BaseService {
       (response) => response,
       (error) => {
         const response = error.response;
-        throw new Error(response?.data?.error ?? response?.statusText);
+        throw new Error(response?.data?.error ?? response?.statusText ?? error.message);
       }
     );
   }

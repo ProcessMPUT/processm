@@ -5,13 +5,14 @@ import io.ktor.server.request.*
 import io.ktor.server.testing.*
 import io.mockk.*
 import org.awaitility.Awaitility.await
+import org.jetbrains.exposed.dao.id.EntityID
 import org.koin.test.mock.declareMock
-import processm.dbmodels.models.OrganizationRoleDto
-import processm.dbmodels.models.UserDto
-import processm.dbmodels.models.UserGroupDto
+import processm.dbmodels.models.Organization
+import processm.dbmodels.models.Organizations
+import processm.dbmodels.models.User
+import processm.dbmodels.models.Users
 import processm.services.api.models.*
-import processm.services.logic.AccountService
-import processm.services.logic.ValidationException
+import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
 import kotlin.random.Random
@@ -39,7 +40,7 @@ class UsersApiTest : BaseApiTest() {
         every { accountService.getRolesAssignedToUser(userId = any()) } returns listOf(
             mockk {
                 every { organization.id } returns UUID.randomUUID()
-                every { this@mockk.role } returns OrganizationRoleDto.Owner
+                every { this@mockk.role } returns OrganizationRole.owner
             })
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
@@ -230,11 +231,27 @@ class UsersApiTest : BaseApiTest() {
     @Test
     fun `responds to successful account registration attempt with 201`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
+        val organizationService = declareMock<OrganizationService>()
+        val user = mockk<User> {
+            every { id } returns EntityID<UUID>(UUID.randomUUID(), Users)
+            every { email } returns "user@example.com"
+        }
+        val organization = mockk<Organization> {
+            every { id } returns EntityID<UUID>(UUID.randomUUID(), Organizations)
+            every { name } returns "OrgName1"
+        }
+        every {
+            accountService.createUser(
+                "user@example.com", accountLocale = any(), pass = any()
+            )
+        } returns user
 
         every {
-            accountService.createAccount(
-                "user@example.com", "OrgName1", accountLocale = any(), pass = any()
-            )
+            organizationService.createOrganization("OrgName1", true, null)
+        } returns organization
+
+        every {
+            organizationService.addMember(organization.id.value, user.id.value, OrganizationRole.owner)
         } just Runs
 
         withAuthentication {
@@ -242,7 +259,10 @@ class UsersApiTest : BaseApiTest() {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(
                     AccountRegistrationInfo(
-                        "user@example.com", "pass", "OrgName1"
+                        userEmail = "user@example.com",
+                        userPassword = "pass",
+                        newOrganization = true,
+                        organizationName = "OrgName1"
                     )
                 )
             }) {
@@ -250,7 +270,11 @@ class UsersApiTest : BaseApiTest() {
             }
         }
 
-        verify { accountService.createAccount("user@example.com", "OrgName1", null, pass = "pass") }
+        verify(exactly = 1) {
+            accountService.createUser("user@example.com", accountLocale = null, pass = "pass")
+            organizationService.createOrganization("OrgName1", isPrivate = true, parent = null)
+            organizationService.addMember(organization.id.value, user.id.value, OrganizationRole.owner)
+        }
     }
 
     @Test
@@ -259,12 +283,12 @@ class UsersApiTest : BaseApiTest() {
             val accountService = declareMock<AccountService>()
 
             every {
-                accountService.createAccount(
-                    "user@example.com", "OrgName1", accountLocale = any(), pass = any()
+                accountService.createUser(
+                    "user@example.com", accountLocale = any(), pass = any()
                 )
             } throws ValidationException(
                 ValidationException.Reason.ResourceAlreadyExists,
-                "User and/or organization with specified name already exists"
+                "User with specified name already exists"
             )
 
             withAuthentication {
@@ -272,22 +296,26 @@ class UsersApiTest : BaseApiTest() {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(
                         AccountRegistrationInfo(
-                            "user@example.com", "pass", "OrgName1"
+                            userEmail = "user@example.com",
+                            userPassword = "pass",
+                            newOrganization = true,
+                            organizationName = "OrgName1"
                         )
                     )
                 }) {
                     assertEquals(HttpStatusCode.Conflict, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("User and/or organization with specified name already exists"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("User with specified name already exists"))
                 }
             }
 
-            verify { accountService.createAccount("user@example.com", "OrgName1", null, "pass") }
+            verify { accountService.createUser("user@example.com", null, "pass") }
         }
 
     @Test
     fun `responds to account registration attempt with invalid data with 400 and error message`() =
         withConfiguredTestApplication {
             val accountService = declareMock<AccountService>()
+            val organizationService = declareMock<OrganizationService>()
             withAuthentication {
                 with(handleRequest(HttpMethod.Post, "/api/users") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -299,10 +327,18 @@ class UsersApiTest : BaseApiTest() {
             }
 
             verify(exactly = 0) {
-                accountService.createAccount(
+                accountService.createUser(
                     userEmail = any(),
-                    organizationName = any(),
-                    pass = any()
+                    pass = any(),
+                    accountLocale = any()
+                )
+            }
+
+            verify(exactly = 0) {
+                organizationService.createOrganization(
+                    name = any(),
+                    isPrivate = any(),
+                    parent = any()
                 )
             }
         }
@@ -454,7 +490,7 @@ class UsersApiTest : BaseApiTest() {
                         every { user.id } returns userId
                         every { organization.id } returns UUID.randomUUID()
                         every { organization.name } returns "Org1"
-                        every { role } returns OrganizationRoleDto.Writer
+                        every { role } returns OrganizationRole.writer
                     }
                 )
 

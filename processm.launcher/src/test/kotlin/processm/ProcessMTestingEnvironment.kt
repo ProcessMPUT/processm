@@ -223,7 +223,7 @@ class ProcessMTestingEnvironment {
     fun registerUser(userEmail: String, organizationName: String) =
         post(
             "/users",
-            AccountRegistrationInfo(userEmail, "pass", organizationName)
+            AccountRegistrationInfo(userEmail, "pass", true, organizationName)
         ) {}
 
     fun login(login: String, password: String) =
@@ -253,7 +253,6 @@ class ProcessMTestingEnvironment {
 
     fun pqlQuery(query: String) = get<Paths.Logs, Array<Any>>({
         parameter("query", query)
-        //accept(ContentType.Application.Json)
     }) {
         return@get body<Array<Any>>()
     }

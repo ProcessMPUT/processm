@@ -5,91 +5,101 @@ import io.ktor.http.auth.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.locations.*
+import io.ktor.server.locations.post
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
+import processm.core.persistence.connection.DBCache
 import processm.services.api.models.*
 import processm.services.logic.AccountService
+import processm.services.logic.OrganizationService
+import processm.services.logic.ValidationException
 import java.time.Duration
 import java.time.Instant
 
 fun Route.UsersApi() {
     val accountService by inject<AccountService>()
+    val organizationService by inject<OrganizationService>()
     val jwtIssuer = application.environment.config.property("ktor.jwt.issuer").getString()
     val jwtSecret = JwtAuthentication.getSecretKey(application.environment.config.config("ktor.jwt"))
     val jwtTokenTtl = Duration.parse(application.environment.config.property("ktor.jwt.tokenTtl").getString())
 
-    route("/users/session") {
-        post {
-            loggedScope { logger ->
-                val credentials = call.receiveOrNull<UserCredentials>()
+    post<Paths.UsersSession> {
+        loggedScope { logger ->
+            val credentials = call.receiveOrNull<UserCredentials>()
 
-                when {
-                    credentials != null -> {
-                        val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
-                            ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
-                        val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
-                            .map { it.organization.id to OrganizationRole.valueOf(it.role.roleName) }
-                            .toMap()
-                        val token = JwtAuthentication.createToken(
-                            user.id,
-                            user.email,
-                            userRolesInOrganizations,
-                            Instant.now().plus(jwtTokenTtl),
-                            jwtIssuer,
-                            jwtSecret
+            when {
+                credentials != null -> {
+                    val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
+                        ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
+                    val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
+                        .map { it.organization.id to it.role }
+                        .toMap()
+                    val token = JwtAuthentication.createToken(
+                        user.id,
+                        user.email,
+                        userRolesInOrganizations,
+                        Instant.now().plus(jwtTokenTtl),
+                        jwtIssuer,
+                        jwtSecret
+                    )
+
+                    logger.debug("The user ${user.id} has successfully logged in")
+                    call.respond(
+                        HttpStatusCode.Created, AuthenticationResult(token)
+                    )
+                }
+
+                call.request.authorization() != null -> {
+                    val authorizationHeader =
+                        call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
+                            "Invalid authorization token format", HttpStatusCode.Unauthorized
                         )
+                    val prolongedToken = JwtAuthentication.verifyAndProlongToken(
+                        authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl
+                    )
 
-                        logger.debug("The user ${user.id} has successfully logged in")
-                        call.respond(
-                            HttpStatusCode.Created, AuthenticationResult(token)
-                        )
-                    }
+                    logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
+                    call.respond(
+                        HttpStatusCode.Created,
+                        AuthenticationResult(prolongedToken)
+                    )
+                }
 
-                    call.request.authorization() != null -> {
-                        val authorizationHeader =
-                            call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
-                                "Invalid authorization token format", HttpStatusCode.Unauthorized
-                            )
-                        val prolongedToken = JwtAuthentication.verifyAndProlongToken(
-                            authorizationHeader.blob, jwtIssuer, jwtSecret, jwtTokenTtl
-                        )
-
-                        logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
-                        call.respond(
-                            HttpStatusCode.Created,
-                            AuthenticationResult(prolongedToken)
-                        )
-                    }
-
-                    else -> {
-                        throw ApiException("Either user credentials or authentication token needs to be provided")
-                    }
+                else -> {
+                    throw ApiException("Either user credentials or authentication token needs to be provided")
                 }
             }
         }
     }
 
-    route("/users") {
-        post {
-            loggedScope { logger ->
-                val accountInfo = call.receiveOrNull<AccountRegistrationInfo>()
-                    ?: throw ApiException("The provided account details cannot be parsed")
-                val locale = call.request.acceptLanguageItems().getOrNull(0)
+    post<Paths.Users> {
+        loggedScope { logger ->
+            val accountInfo = call.receiveOrNull<AccountRegistrationInfo>()
+                ?: throw ApiException("The provided account details cannot be parsed")
+            val locale = call.request.acceptLanguageItems().getOrNull(0)
 
-                accountService.createAccount(
-                    accountInfo.userEmail,
-                    accountInfo.organizationName,
-                    locale?.value,
-                    accountInfo.userPassword
+            with(accountInfo) {
+                (!newOrganization || !organizationName.isNullOrBlank()) || throw ValidationException(
+                    ValidationException.Reason.ResourceFormatInvalid,
+                    "Organization name must not be empty."
                 )
 
-                logger.info("A new organization account for ${accountInfo.organizationName} has been successfully created")
-                call.respond(HttpStatusCode.Created)
+                transaction(DBCache.getMainDBPool().database) {
+                    val user = accountService.createUser(userEmail, locale?.value, userPassword)
+                    if (newOrganization) {
+                        val organization = organizationService.createOrganization(organizationName!!, true)
+                        organizationService.addMember(organization.id.value, user.id.value, OrganizationRole.owner)
+                    }
+                }
             }
+
+            logger.info("A new user ${accountInfo.userEmail} is created")
+            call.respond(HttpStatusCode.Created)
         }
     }
 
@@ -149,7 +159,7 @@ fun Route.UsersApi() {
                     UserOrganization(
                         it.organization.id,
                         it.organization.name,
-                        OrganizationRole.valueOf(it.role.roleName)
+                        it.role
                     )
                 }
                 .toTypedArray()
@@ -175,7 +185,7 @@ fun Route.UsersApi() {
             )
         }
 
-        delete<Paths.UserOut> { _ ->
+        delete<Paths.UsersSession> { _ ->
             loggedScope { logger ->
                 val principal = call.authentication.principal<ApiUser>()!!
 

@@ -182,35 +182,37 @@
     }
   },
   "login-form": {
-    "title": "Panel logowania",
     "email": "E-mail",
-    "password": "Hasło",
+    "error-box": {
+      "failed": "Nieprawidłowy e-mail lub hasło"
+    },
     "login": "Zaloguj",
+    "password": "Hasło",
     "register-account": "Zarejestruj konto",
+    "reset-password": "Resetuj hasło",
+    "title": "Panel logowania",
     "validation": {
       "email-format": "Nieprawidłowy format adresu e-mail",
       "password-empty": "Hasło nie może być puste"
-    },
-    "error-box": {
-      "failed": "Nieprawidłowy e-mail lub hasło"
     }
   },
   "registration-form": {
-    "title": "Rejestracja konta",
-    "organization-name": "Nazwa organizacji",
     "admin-email": "E-mail administratora",
+    "error-box": {
+      "failed": "Nieprawidłowy adres e-mail lub nazwa organizacji"
+    },
+    "new-organization": "Utwórz nową organizację zarządzaną przez tego użytkownika",
+    "organization-name": "Nazwa organizacji",
     "password": "Hasło",
     "register": "Zarejestruj",
+    "success-box": {
+      "registered": "Rejestracja konta zakończona powodzeniem"
+    },
+    "title": "Rejestracja konta",
     "validation": {
       "email-format": "Nieprawidłowy format adresu e-mail",
       "password-format": "Hasło musi zawierać co najmniej jedną literę, jedną cyfrę i być długości co najmniej 4 znaków.",
       "organization-empty": "Nazwa organizacji nie może być pusta"
-    },
-    "error-box": {
-      "failed": "Nieprawidłowy adres e-mail lub nazwa organizacji"
-    },
-    "success-box": {
-      "registered": "Rejestracja konta zakończona powodzeniem"
     }
   },
   "xes-preview-dialog": {

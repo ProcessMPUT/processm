@@ -14,23 +14,14 @@ object OrganizationRoles : UUIDTable("organization_roles") {
 class OrganizationRole(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<OrganizationRole>(OrganizationRoles)
 
-    var name: OrganizationRoleDto by OrganizationRoles.name.transform({ it.roleName }, {
-        OrganizationRoleDto.byNameInDatabase(
-            it
-        )
-    })
+    var name: OrganizationRoleType by
+    OrganizationRoles.name.transform(OrganizationRoleType::value, OrganizationRoleType::byNameInDatabase)
 }
 
-fun OrganizationRoles.getIdByName(organizationRole: OrganizationRoleDto): EntityID<UUID> {
-    return OrganizationRole.find { name ilike organizationRole.roleName }.first().id
-}
+typealias OrganizationRoleType = GroupRoleType
 
-enum class OrganizationRoleDto(val roleName: String) {
-    Owner("owner"),
-    Writer("writer"),
-    Reader("reader");
-
-    companion object {
-        fun byNameInDatabase(nameInDatabase: String) = values().first { it.roleName == nameInDatabase }
-    }
-}
+/**
+ * The database object representing this role.
+ */
+val OrganizationRoleType.organizationRole: OrganizationRole
+    get() = OrganizationRole.find { OrganizationRoles.name ilike value }.first()

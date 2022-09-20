@@ -12,10 +12,5 @@ object Workspaces : UUIDTable("workspaces") {
 
 class Workspace(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<Workspace>(Workspaces)
-
     var name by Workspaces.name
-
-    fun toDto() = WorkspaceDto(id.value, name)
 }
-
-data class WorkspaceDto(val id: UUID, val name: String)

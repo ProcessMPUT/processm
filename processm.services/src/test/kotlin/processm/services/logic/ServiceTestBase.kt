@@ -9,6 +9,8 @@ import org.junit.jupiter.api.BeforeAll
 import processm.core.esb.Artemis
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import processm.services.api.models.GroupRole
+import processm.services.api.models.OrganizationRole
 import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.BeforeTest
@@ -51,7 +53,7 @@ abstract class ServiceTestBase {
         locale: String = "en_US",
         privateGroupId: UUID? = null
     ): EntityID<UUID> {
-        val groupId = privateGroupId ?: createGroup(groupRole = GroupRoleDto.Owner, isImplicit = true).value
+        val groupId = privateGroupId ?: createGroup(groupRole = GroupRole.owner, isImplicit = true).value
 
         val userId = Users.insertAndGetId {
             it[email] = userEmail
@@ -71,7 +73,7 @@ abstract class ServiceTestBase {
         parentOrganizationId: UUID? = null,
         sharedGroupId: UUID? = null
     ): EntityID<UUID> {
-        val groupId = sharedGroupId ?: createGroup(groupRole = GroupRoleDto.Reader, isImplicit = true).value
+        val groupId = sharedGroupId ?: createGroup(groupRole = GroupRole.reader, isImplicit = true).value
 
         return Organizations.insertAndGetId {
             it[this.name] = name
@@ -97,24 +99,24 @@ abstract class ServiceTestBase {
     protected fun Transaction.attachUserToOrganization(
         userId: UUID,
         organizationId: UUID,
-        organizationRole: OrganizationRoleDto = OrganizationRoleDto.Reader
+        organizationRole: OrganizationRole = OrganizationRole.reader
     ) =
         UsersRolesInOrganizations.insertAndGetId {
             it[UsersRolesInOrganizations.userId] = EntityID(userId, Users)
             it[UsersRolesInOrganizations.organizationId] = EntityID(organizationId, Organizations)
-            it[roleId] = OrganizationRoles.getIdByName(organizationRole)
+            it[roleId] = organizationRole.toDB().id
         }
 
     protected fun Transaction.createGroup(
         name: String = "Group1",
         parentGroupId: UUID? = null,
-        groupRole: GroupRoleDto = GroupRoleDto.Reader,
+        groupRole: GroupRole = GroupRole.reader,
         isImplicit: Boolean = false
     ) =
         UserGroups.insertAndGetId {
             it[this.name] = name
             it[this.parentGroupId] = if (parentGroupId != null) EntityID(parentGroupId, UserGroups) else null
-            it[this.groupRoleId] = GroupRoles.getIdByName(groupRole)
+            it[this.groupRoleId] = groupRole.toDB().id
             it[this.isImplicit] = isImplicit
         }
 

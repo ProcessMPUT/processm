@@ -1,7 +1,10 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.JoinType
+import org.jetbrains.exposed.sql.alias
+import org.jetbrains.exposed.sql.andWhere
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
@@ -36,65 +39,40 @@ class AccountService(private val groupService: GroupService) {
         }
 
     /**
-     * Creates new organization account and supervising user account.
-     * Throws [ValidationException] if [organizationName] or [userEmail] is already in use.
+     * Creates new account
      */
-    fun createAccount(
+    fun createUser(
         userEmail: String,
-        organizationName: String,
         accountLocale: String? = null,
         pass: String
-    ): Unit =
-        loggedScope { logger ->
-            transaction(DBCache.getMainDBPool().database) {
-                val organizationsCount =
-                    Organizations.select { Organizations.name eq organizationName }.limit(1).count()
-                val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
-
-                if (usersCount > 0 || organizationsCount > 0) {
-                    throw ValidationException(
-                        ValidationException.Reason.ResourceAlreadyExists,
-                        "The specified user and/or organization already exists"
-                    )
-                }
-                //TODO: registered accounts should be stored as "pending' until confirmed
-                // user password should be specified upon successful confirmation
-                // user creation should be moved to a separate method
-
-                // automatically created group for the particular user
-                val privateGroupId = UserGroups.insertAndGetId {
-                    it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Owner)
-                    it[isImplicit] = true
-                }
-                // automatically created group for all users
-                val sharedGroupId = UserGroups.insertAndGetId {
-                    it[groupRoleId] = GroupRoles.getIdByName(GroupRoleDto.Reader)
-                    it[isImplicit] = true
-                }
-                val organizationId = Organizations.insertAndGetId {
-                    it[name] = organizationName
-                    it[isPrivate] = false
-                    it[this.sharedGroupId] = sharedGroupId
-                }
-                val userId = Users.insertAndGetId {
-                    it[email] = userEmail
-                    it[password] = calculatePasswordHash(pass)
-                    it[locale] = accountLocale ?: defaultLocale.toString()
-                    it[this.privateGroupId] = privateGroupId
-                }
-
-                logger.debug("A new organization account has been created with organization $organizationId and user $userId")
-                // automatically created group for all users
-                // this should be eventually moved to a separate method together with the logic above
-                groupService.attachUserToGroup(userId.value, sharedGroupId.value)
-                groupService.attachUserToGroup(userId.value, privateGroupId.value)
-                UsersRolesInOrganizations.insert {
-                    it[this.userId] = userId
-                    it[this.organizationId] = organizationId
-                    it[roleId] = OrganizationRoles.getIdByName(OrganizationRoleDto.Owner)
-                }
+    ): User = loggedScope { logger ->
+        transaction(DBCache.getMainDBPool().database) {
+            val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
+            if (usersCount > 0) {
+                throw ValidationException(
+                    ValidationException.Reason.ResourceAlreadyExists,
+                    "The user with the given email already exists."
+                )
             }
+
+            // automatically created group for the particular user
+            val privateGroup = UserGroup.new {
+                groupRole = GroupRoleType.Owner.groupRole
+                isImplicit = true
+            }
+
+            val user = User.new {
+                this.email = userEmail
+                this.password = calculatePasswordHash(pass)
+                this.locale = accountLocale ?: defaultLocale.toString()
+                this.privateGroup = privateGroup
+            }
+
+            groupService.attachUserToGroup(user.id.value, privateGroup.id.value)
+
+            user
         }
+    }
 
     /**
      * Returns [UserDto] object for the user with the specified [userId].
@@ -147,9 +125,9 @@ class AccountService(private val groupService: GroupService) {
         // e.g. with getInheritedRoles(userId, organizationId) method.
         val user = getUserDao(userId).toDto()
 
-        // The following implementation purposefully does not use back-referencing UserRolesInOrganizations with specified userId.
+        // The following implementation purposefully does not use back-referencing UserRoleInOrganization with specified userId.
         // Exposed does not support DAOs with composite keys, hence only one column can be marked as the primary key.
-        // In case of UserRolesInOrganizations the column marked as primary key is userId,
+        // In case of UserRoleInOrganization the column marked as primary key is userId,
         // this would cause a collection of all organizations related to the same user to be a collection of DAOs
         // with the same ID (userId) and that is incorrect - exposed represents it as a collection of the same objects.
         UsersRolesInOrganizations
@@ -159,7 +137,7 @@ class AccountService(private val groupService: GroupService) {
                 UsersRolesInOrganizations.userId eq userId
             }
             .map {
-                OrganizationMemberDto(user, Organization.wrapRow(it).toDto(), OrganizationRole.wrapRow(it).name)
+                OrganizationMemberDto(user, Organization.wrapRow(it).toDto(), OrganizationRole.wrapRow(it).toApi())
             }
     }
 

@@ -16,11 +16,7 @@
                 v-model="username"
                 prepend-icon="person"
                 type="text"
-                :rules="[
-                  (v) =>
-                    /.+@.+\..+/.test(v) ||
-                    $t('login-form.validation.email-format')
-                ]"
+                :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
               ></v-text-field>
 
               <v-text-field
@@ -29,20 +25,15 @@
                 v-model="password"
                 prepend-icon="lock"
                 type="password"
-                :rules="[
-                  (v) => !!v || $t('login-form.validation.password-empty')
-                ]"
+                :rules="[(v) => !!v || $t('login-form.validation.password-empty')]"
                 @keypress.enter="authenticate"
               ></v-text-field>
               <v-layout justify-space-between>
-                <v-btn
-                  color="primary"
-                  text
-                  small
-                  to="register"
-                  v-if="!config.demoMode"
-                >
+                <v-btn v-if="!config.demoMode" color="primary" small text to="register">
                   {{ $t("login-form.register-account") }}
+                </v-btn>
+                <v-btn v-if="!config.demoMode" color="primary" small text to="reset-password">
+                  {{ $t("login-form.reset-password") }}
                 </v-btn>
                 <v-btn color="primary" @click.stop="authenticate">
                   {{ $t("login-form.login") }}
@@ -51,15 +42,9 @@
             </v-form>
           </v-card-text>
         </v-card>
-        <v-snackbar
-          color="error"
-          v-model="errorMessage"
-          :timeout="errorTimeout"
-        >
+        <v-snackbar v-model="errorMessage" :timeout="errorTimeout" color="error">
           {{ $t("login-form.error-box.failed") }}
-          <v-btn dark text @click="errorMessage = false">{{
-            $t("common.close")
-          }}</v-btn>
+          <v-btn dark text @click="errorMessage = false">{{ $t("common.close") }}</v-btn>
         </v-snackbar>
       </v-flex>
     </v-layout>
@@ -132,9 +117,7 @@ export default class Login extends Vue {
     } else {
       //TODO: user is not assigned to any organization
       //display the error on the global snackbar
-      console.error(
-        "Not implemented: the user is not associated with any organization."
-      );
+      console.error("Not implemented: the user is not associated with any organization.");
     }
   }
 }

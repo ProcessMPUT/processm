@@ -44,8 +44,8 @@ fun Application.apiModule() {
         install(Koin) {
             modules(module {
                 single { AccountService(get()) }
-                single { OrganizationService() }
                 single { GroupService() }
+                single { OrganizationService(get(), get()) }
                 single { WorkspaceService(get(), get()) }
                 single { DataStoreService(get()) }
                 single { LogsService(get()) }

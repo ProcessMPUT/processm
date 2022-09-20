@@ -1490,8 +1490,7 @@ paths:
         content:
           'application/json':
             schema:
-              description: Username
-              type: string
+              $ref: '#/components/schemas/OrganizationMember'
         required: true
       responses:
         '201':
@@ -1695,7 +1694,7 @@ components:
       enum: [ kpi, alignerKpi, causalNet, petriNet, bpmn ]
     AccountRegistrationInfo:
       type: object
-      required: [ userEmail, userPassword, organizationName ]
+      required: [ userEmail, userPassword, newOrganization ]
       properties:
         userEmail:
           type: string
@@ -1704,6 +1703,10 @@ components:
           format: password
         organizationName:
           type: string
+        newOrganization:
+          type: boolean
+          default: false
+          description: Controls whether the user becomes an owner of a new organization.
     UserCredentials:
       type: object
       required: [ login, password ]
@@ -1764,12 +1767,12 @@ components:
             $ref: '#/components/schemas/OrganizationRole'
     OrganizationMember:
       type: object
-      required: [ id, username, organizationRole ]
+      required: [ email, organizationRole ]
       properties:
         id:
           type: string
           format: uuid
-        username:
+        email:
           type: string
         organizationRole:
           $ref: '#/components/schemas/OrganizationRole'

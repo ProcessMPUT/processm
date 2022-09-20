@@ -13,13 +13,15 @@ class OrganizationServiceTest : ServiceTestBase() {
     @BeforeTest
     override fun setUp() {
         super.setUp()
-        organizationService = OrganizationService()
+        val groupService = GroupService()
+        val accountService = AccountService(groupService)
+        organizationService = OrganizationService(accountService, groupService)
     }
 
     @Test
     fun `getting organization members throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
         val exception = assertFailsWith<ValidationException>("The specified organization does not exist") {
-            organizationService.getOrganizationMembers(UUID.randomUUID())
+            organizationService.getMember(UUID.randomUUID())
         }
 
         assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
@@ -37,7 +39,7 @@ class OrganizationServiceTest : ServiceTestBase() {
             attachUserToOrganization(userId2.value, organizationId2.value)
             attachUserToOrganization(userId3.value, organizationId1.value)
 
-            val organizationMembers = organizationService.getOrganizationMembers(organizationId1.value)
+            val organizationMembers = organizationService.getMember(organizationId1.value)
 
             assertEquals(2, organizationMembers.count())
             assertTrue { organizationMembers.any { it.user.email == "user1@example.com" } }

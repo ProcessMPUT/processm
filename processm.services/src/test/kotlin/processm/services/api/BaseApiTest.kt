@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.KoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
-import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
@@ -32,15 +31,6 @@ import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
-    protected val gson: Gson = GsonBuilder()
-        .registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
-            override fun write(out: JsonWriter, value: LocalDateTime?) {
-                out.value(value?.toString())
-            }
-
-            override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
-        }).create()
-
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
     private val mocksMap = mutableMapOf<KClass<*>, Any>()
@@ -118,7 +108,7 @@ abstract class BaseApiTest : KoinTest {
                 listOf(mockk {
                     every { user.id } returns userId
                     every { organization.id } returns role.second
-                    every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.first.name)
+                    every { this@mockk.role } returns role.first
                 })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))

@@ -11,6 +11,7 @@ import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
+import processm.services.api.models.GroupRole
 import java.util.*
 import kotlin.test.*
 
@@ -81,7 +82,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces, Organizations,
         UserGroupWithWorkspaces, UsersInGroups
     ) {
-        val userGroupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val userGroupId = createGroup(groupRole = GroupRole.writer)
         val userId = createUser(privateGroupId = userGroupId.value)
         val workspaceId = createWorkspace("Workspace1")
         val organizationId = createOrganization()
@@ -97,7 +98,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces, Organizations,
         UserGroupWithWorkspaces, UsersInGroups
     ) {
-        val userGroupId = createGroup(groupRole = GroupRoleDto.Reader)
+        val userGroupId = createGroup(groupRole = GroupRole.reader)
         val userId = createUser(privateGroupId = userGroupId.value)
         val workspaceId = createWorkspace("Workspace1")
         val organizationId = createOrganization()
@@ -134,7 +135,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces
     ) {
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val groupId = createGroup(groupRole = GroupRole.writer)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId1 = createWorkspace("Workspace1")
         attachUserGroupToWorkspace(groupId.value, workspaceId1.value, organizationId.value)
@@ -161,7 +162,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces
     ) {
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val groupId = createGroup(groupRole = GroupRole.writer)
         val userId = createUser(privateGroupId = groupId.value)
         val dataStoreId = createDataStore(organizationId.value)
         val workspaceId = createWorkspace("Workspace1")
@@ -190,7 +191,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces
     ) {
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val groupId = createGroup(groupRole = GroupRole.writer)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
@@ -237,7 +238,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val oldComponentCustomizationData = """{"data":"new"}"""
         val oldDataQuery = "query"
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val groupId = createGroup(groupRole = GroupRole.writer)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
@@ -284,7 +285,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val oldComponentCustomizationData = """{"data":"new"}"""
         val oldDataQuery = "query"
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Reader)
+        val groupId = createGroup(groupRole = GroupRole.reader)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
@@ -326,7 +327,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val dataQuery = "query"
         val dataStore = UUID.randomUUID()
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val groupId = createGroup(groupRole = GroupRole.writer)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
@@ -362,7 +363,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces
     ) {
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Writer)
+        val groupId = createGroup(groupRole = GroupRole.writer)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         val componentId = createWorkspaceComponent(componentWorkspaceId = workspaceId.value)
@@ -389,7 +390,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces
     ) {
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Reader)
+        val groupId = createGroup(groupRole = GroupRole.reader)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         val componentId = createWorkspaceComponent(componentWorkspaceId = workspaceId.value)
@@ -416,7 +417,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         Workspaces
     ) {
         val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRoleDto.Reader)
+        val groupId = createGroup(groupRole = GroupRole.reader)
         val userId = createUser(privateGroupId = groupId.value)
         val workspaceId = createWorkspace("Workspace1")
         attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)

@@ -13,6 +13,7 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.miners.triggerEvent
+import processm.services.api.models.GroupRole
 import java.util.*
 
 class WorkspaceService(private val accountService: AccountService, private val producer: Producer) {
@@ -83,7 +84,7 @@ class WorkspaceService(private val accountService: AccountService, private val p
                 UserGroupWithWorkspaces.workspaceId eq workspaceId and
                         (UserGroupWithWorkspaces.organizationId eq organizationId) and
                         (UsersInGroups.userId eq userId) and
-                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
+                        (UserGroups.groupRoleId neq GroupRole.reader.toDB().id)
             }
             .limit(1)
             .any()
@@ -207,7 +208,7 @@ class WorkspaceService(private val accountService: AccountService, private val p
                         (UserGroupWithWorkspaces.workspaceId eq workspaceId) and
                         (UserGroupWithWorkspaces.organizationId eq organizationId) and
                         (UsersInGroups.userId eq userId) and
-                        (UserGroups.groupRoleId neq GroupRoles.getIdByName(GroupRoleDto.Reader))
+                        (UserGroups.groupRoleId neq GroupRole.reader.toDB().id)
             }
             .count() == layout.size.toLong()
 

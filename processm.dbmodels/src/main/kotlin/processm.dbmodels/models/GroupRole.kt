@@ -14,19 +14,21 @@ object GroupRoles : UUIDTable("group_roles") {
 class GroupRole(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<GroupRole>(GroupRoles)
 
-    var name: GroupRoleDto by GroupRoles.name.transform({ it.roleName }, { GroupRoleDto.byNameInDatabase(it) })
+    var name: GroupRoleType by GroupRoles.name.transform(GroupRoleType::value, GroupRoleType::byNameInDatabase)
 }
 
-fun GroupRoles.getIdByName(groupRole: GroupRoleDto): EntityID<UUID> {
-    return GroupRole.find { name ilike groupRole.roleName }.first().id
-}
-
-enum class GroupRoleDto(val roleName: String) {
+enum class GroupRoleType(val value: String) {
     Owner("owner"),
     Writer("writer"),
     Reader("reader");
 
     companion object {
-        fun byNameInDatabase(nameInDatabase: String) = values().first { it.roleName == nameInDatabase }
+        fun byNameInDatabase(nameInDatabase: String) = values().first { it.value == nameInDatabase }
     }
 }
+
+/**
+ * The database object representing this role.
+ */
+val GroupRoleType.groupRole: GroupRole
+    get() = GroupRole.find { GroupRoles.name ilike value }.first()

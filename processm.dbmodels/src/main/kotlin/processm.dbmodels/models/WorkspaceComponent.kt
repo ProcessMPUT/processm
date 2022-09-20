@@ -120,19 +120,6 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var userLastModified by WorkspaceComponents.userLastModified
     var dataLastModified by WorkspaceComponents.dataLastModified
     var lastError by WorkspaceComponents.lastError
-
-    fun toDto() = WorkspaceComponentDto(
-        id.value,
-        name,
-        query,
-        modelType,
-        modelId,
-        dataStoreId,
-        componentType,
-        data,
-        customizationData = customizationData,
-        layoutData = layoutData
-    )
 }
 
 enum class ComponentTypeDto(val typeName: String) {
@@ -160,16 +147,5 @@ enum class ModelTypeDto(val typeName: String) {
     }
 }
 
-data class WorkspaceComponentDto(
-    val id: UUID,
-    val name: String,
-    val query: String = "SELECT ...",
-    val modelType: ModelTypeDto?,
-    val modelId: Long?,
-    val dataStore: UUID,
-    val componentType: ComponentTypeDto,
-    val data: Any? = null,
-    val customizationData: String? = null,
-    val layoutData: String? = null
-)
+
 

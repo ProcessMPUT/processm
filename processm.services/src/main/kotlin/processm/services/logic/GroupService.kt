@@ -9,7 +9,10 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.models.*
+import processm.dbmodels.models.UserGroup
+import processm.dbmodels.models.UserGroups
+import processm.dbmodels.models.Users
+import processm.dbmodels.models.UsersInGroups
 import java.util.*
 
 class GroupService {
@@ -44,6 +47,12 @@ class GroupService {
                 }
             }
         }
+
+    fun detachUserFromGroup(userId: UUID, groupId: UUID): Unit = loggedScope { logger ->
+        transaction(DBCache.getMainDBPool().database) {
+            TODO()
+        }
+    }
 
     /**
      * Returns id of root group for the specified [groupId]. This is the same group that accumulates all users and user groups in a particular organization.

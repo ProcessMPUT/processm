@@ -21,8 +21,5 @@ class UserGroup(id: EntityID<UUID>) : UUIDEntity(id) {
     var groupRole by GroupRole referencedOn UserGroups.groupRoleId
     var isImplicit by UserGroups.isImplicit
     val childGroups by UserGroup optionalReferrersOn UserGroups.parentGroupId
-
-    fun toDto() = UserGroupDto(id.value, name, isImplicit)
 }
 
-data class UserGroupDto(val id: UUID, val name: String?, val isImplicit: Boolean)

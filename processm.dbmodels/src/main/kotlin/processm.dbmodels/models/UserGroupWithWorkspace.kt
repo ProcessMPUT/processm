@@ -28,12 +28,5 @@ class UserGroupWithWorkspace(userGroupId: EntityID<UUID>) : Entity<UUID>(userGro
     val userGroup by UserGroup referencedOn UserGroupWithWorkspaces.userGroupId
     val workspace by Workspace referencedOn UserGroupWithWorkspaces.workspaceId
     val organization by Organization referencedOn UserGroupWithWorkspaces.organizationId
-
-    fun toDto() = UserGroupWithWorkspaceDto(
-        userGroup.toDto(),
-        workspace.toDto(),
-        organization.toDto()
-    )
 }
 
-data class UserGroupWithWorkspaceDto(val userGroup: UserGroupDto, val workspace: WorkspaceDto, val organization: OrganizationDto)

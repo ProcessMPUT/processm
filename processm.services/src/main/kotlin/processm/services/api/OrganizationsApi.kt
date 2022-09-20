@@ -4,6 +4,9 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.locations.*
+import io.ktor.server.locations.post
+import io.ktor.server.locations.put
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
@@ -18,20 +21,25 @@ fun Route.OrganizationsApi() {
     val organizationService by inject<OrganizationService>()
 
     authenticate {
-        route("/organizations/{organizationId}/members") {
-            post {
-                val principal = call.authentication.principal<ApiUser>()
 
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+        post<Paths.OrganizationsOrganizationIdMembers> { organization ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(organization.organizationId, OrganizationRole.owner)
+            val member = call.receive<OrganizationMember>()
+
+            organizationService.addMember(
+                organization.organizationId,
+                member.email,
+                member.organizationRole
+            )
+
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
-        route("/organizations") {
-            post {
-                val principal = call.authentication.principal<ApiUser>()
-
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+        post<Paths.Organizations> {
+            val principal = call.authentication.principal<ApiUser>()
+            // TODO
+            call.respond(HttpStatusCode.NotImplemented)
         }
 
 
@@ -55,13 +63,19 @@ fun Route.OrganizationsApi() {
         }
 
 
-        get<Paths.OrganizationMembers> { organizationMembers ->
+        get<Paths.OrganizationsOrganizationIdMembers> { organizationMembers ->
             val principal = call.authentication.principal<ApiUser>()!!
 
             principal.ensureUserBelongsToOrganization(organizationMembers.organizationId)
 
-            val members = organizationService.getOrganizationMembers(organizationMembers.organizationId)
-                .map { OrganizationMember(it.user.id, it.user.email, OrganizationRole.valueOf(it.role.roleName)) }
+            val members = organizationService.getMember(organizationMembers.organizationId)
+                .map {
+                    OrganizationMember(
+                        id = it.user.id,
+                        email = it.user.email,
+                        organizationRole = it.role
+                    )
+                }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, members)
@@ -88,12 +102,10 @@ fun Route.OrganizationsApi() {
             call.respond(HttpStatusCode.NotImplemented)
         }
 
-        route("/organizations/{organizationId}") {
-            put {
-                val principal = call.authentication.principal<ApiUser>()
-                // TODO
-                call.respond(HttpStatusCode.NotImplemented)
-            }
+        put<Paths.Organization> {
+            val principal = call.authentication.principal<ApiUser>()
+            // TODO
+            call.respond(HttpStatusCode.NotImplemented)
         }
     }
 }

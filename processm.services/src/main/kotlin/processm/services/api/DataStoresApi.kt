@@ -14,7 +14,6 @@ import org.antlr.v4.runtime.RecognitionException
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.helpers.toLocalDateTime
-import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -81,7 +80,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             dataStoreService.removeDataStore(pathParams.dataStoreId)
 
@@ -94,7 +93,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             val dataStore = call.receiveOrNull<DataStore>()
                 ?: throw ApiException("The provided data store data cannot be parsed")
@@ -166,7 +165,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             logsService.removeLog(pathParams.dataStoreId, pathParams.identityId)
 
@@ -225,7 +224,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             dataStoreService.removeDataConnector(pathParams.dataStoreId, pathParams.dataConnectorId)
 
@@ -238,7 +237,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             val dataConnector = call.receiveOrNull<DataConnector>()
                 ?: throw ApiException("The provided data connector data cannot be parsed")
@@ -339,8 +338,8 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner,
-                OrganizationRoleDto.Writer
+                OrganizationRole.owner,
+                OrganizationRole.writer
             )
             val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
@@ -392,8 +391,8 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner,
-                OrganizationRoleDto.Writer
+                OrganizationRole.owner,
+                OrganizationRole.writer
             )
             val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
                 ?: throw ApiException("The provided ETL process definition cannot be parsed")
@@ -424,7 +423,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             try {
@@ -446,7 +445,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             dataStoreService.removeEtlProcess(pathParams.dataStoreId, pathParams.etlProcessId)
@@ -461,8 +460,8 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner,
-                OrganizationRoleDto.Writer
+                OrganizationRole.owner,
+                OrganizationRole.writer
             )
             logsService.enqueueXesExtractionFromMetaModel(pathParams.dataStoreId, pathParams.etlProcessId)
 
@@ -476,7 +475,7 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRoleDto.Owner
+                OrganizationRole.owner
             )
             val nComponents = (pathParams.nComponents ?: defaultSampleSize).coerceAtMost(maxSampleSize)
             val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
