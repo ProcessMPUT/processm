@@ -1,8 +1,8 @@
 <template>
   <div
+    v-if="data != null"
     v-resize:debounce.10="onResize"
     class="svg-container"
-    v-if="data != null"
   >
     <petri-net-editor
       :debug="false"
@@ -46,7 +46,7 @@ export default class PetriNetComponent extends Vue {
   readonly componentMode?: ComponentMode;
 
   private readonly showButtons: boolean =
-    this.componentMode === ComponentMode.Interactive;
+    this.componentMode === ComponentMode.Edit;
 
   private readonly enableDragging: boolean =
     this.componentMode === ComponentMode.Edit ||
