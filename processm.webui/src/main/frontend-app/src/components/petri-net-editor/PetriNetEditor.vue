@@ -96,11 +96,7 @@
     />
 
     <div v-show="!isDebuggerEnabled" class="fill-height">
-      <svg
-        ref="editorSvg"
-        height="100%"
-        width="100%"
-      >
+      <svg ref="editorSvg" height="100%" width="100%">
         <defs>
           <marker
             id="arrow"
@@ -213,10 +209,10 @@ export default class PetriNetEditor extends Vue {
 
     (this.$refs.editorSvg as HTMLElement).setAttribute("id", svgId);
 
-    this.petriNetManager = new PetriNetSvgManager(d3.select(`#${svgId}`));
-    if (!this.enableDragging) {
-      this.petriNetManager.disableDragging();
-    }
+    this.petriNetManager = new PetriNetSvgManager(
+      d3.select(`#${svgId}`),
+      this.enableDragging
+    );
 
     this.layouter = new BlockLayouter(this.debug);
 

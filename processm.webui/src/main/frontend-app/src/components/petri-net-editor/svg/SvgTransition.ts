@@ -11,7 +11,7 @@ import { PetriNetSvgElement } from "@/components/petri-net-editor/svg/PetriNetSv
 import { Transition } from "@/components/petri-net-editor/model/Transition";
 
 export class SvgTransition extends PetriNetSvgElement {
-  private readonly eventBus: EventBus;
+  private readonly eventBus: EventBus | null;
 
   readonly transitionModel: Transition;
 
@@ -22,11 +22,11 @@ export class SvgTransition extends PetriNetSvgElement {
   readonly width: number = 10;
   readonly isSilent: boolean = false;
 
-  private svgTextWidth: number = 0;
+  private svgTextWidth = 0;
   private readonly svgRectangle: SVGRectSelection;
   private readonly svgText: SVGTextSelection;
 
-  constructor(svg: SVGSelection, eventBus: EventBus, transition: Transition) {
+  constructor(svg: SVGSelection, eventBus: EventBus | null, transition: Transition) {
     super(transition);
     this.eventBus = eventBus;
     this.transitionModel = transition;
@@ -51,7 +51,9 @@ export class SvgTransition extends PetriNetSvgElement {
 
     this.text = !this.isSilent ? this.transitionModel.text : "τ";
 
-    this.initDragAndDrop();
+    if(this.eventBus != null) {
+      this.initDragAndDrop();
+    }
     this.updatePosition();
   }
 
@@ -139,7 +141,7 @@ export class SvgTransition extends PetriNetSvgElement {
   }
 
   private dragged(event: SVGDragEvent, dx: number, dy: number): void {
-    this.eventBus.emit(EventNames.ON_DRAG, this.transitionModel.id);
+    this.eventBus!.emit(EventNames.ON_DRAG, this.transitionModel.id);
     const boundingBox = this.svg.node()?.getBoundingClientRect();
     // TODO: Log some error
     if (boundingBox == null) {

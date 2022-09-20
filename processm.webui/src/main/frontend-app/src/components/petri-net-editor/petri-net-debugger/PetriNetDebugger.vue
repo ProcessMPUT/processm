@@ -61,18 +61,27 @@ export default class PetriNetDebugger extends Vue {
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {
-    this.petriNetManager = new PetriNetSvgManager(d3.select("#petri-net-debugger-svg"));
+    this.petriNetManager = new PetriNetSvgManager(
+      d3.select("#petri-net-debugger-svg"),
+      false
+    );
     this.petriNetManager.state = this._state;
     this.petriNetManager.updateDimensions();
-    this.petriNetManager.disableDragging();
 
     const places = this.petriNetManager.places;
 
-    const totalTokenCount = places.reduce((sum, place) => sum + place.tokenCount, 0);
+    const totalTokenCount = places.reduce(
+      (sum, place) => sum + place.tokenCount,
+      0
+    );
 
     for (const place of this.petriNetManager.places) {
-      const preTransitions = this.petriNetManager.state.getPreTransitions(place.placeModel);
-      const postTransitions = this.petriNetManager.state.getPostTransitions(place.placeModel);
+      const preTransitions = this.petriNetManager.state.getPreTransitions(
+        place.placeModel
+      );
+      const postTransitions = this.petriNetManager.state.getPostTransitions(
+        place.placeModel
+      );
       if (preTransitions.length == 0) {
         place.type = PlaceType.INITIAL;
       } else if (postTransitions.length == 0) {
@@ -86,20 +95,20 @@ export default class PetriNetDebugger extends Vue {
       for (const place of places) {
         place.tokenCount = 0;
       }
-      places.filter(place => place.placeModel.type == PlaceType.INITIAL)
-        .forEach(place => place.tokenCount = 1);
+      places
+        .filter((place) => place.placeModel.type == PlaceType.INITIAL)
+        .forEach((place) => (place.tokenCount = 1));
     }
 
-    d3.selectAll("#petri-net-debugger-svg *")
-      .on("mousedown.drag", null);
+    d3.selectAll("#petri-net-debugger-svg *").on("mousedown.drag", null);
 
     this.highlightInvokableTransitions();
   }
 
-
   onContextMenuExpand(target: Element | null): void {
     this.targetIsInvokable = target?.hasAttribute("invokable") ?? false;
-    this.targetIsBackwardInvokable = target?.hasAttribute("backwardsInvokable") ?? false;
+    this.targetIsBackwardInvokable =
+      target?.hasAttribute("backwardsInvokable") ?? false;
     this.contextMenuTargetId = target?.id ?? "";
 
     this.contextMenuItems = this.createContextMenuItems();
@@ -110,9 +119,15 @@ export default class PetriNetDebugger extends Vue {
       return;
     }
 
-    const transition = this.petriNetManager.getTransition(this.contextMenuTargetId);
-    const prePlaces = this.petriNetManager.state.getPrePlaces(transition.transitionModel);
-    const postPlaces = this.petriNetManager.state.getPostPlaces(transition.transitionModel);
+    const transition = this.petriNetManager.getTransition(
+      this.contextMenuTargetId
+    );
+    const prePlaces = this.petriNetManager.state.getPrePlaces(
+      transition.transitionModel
+    );
+    const postPlaces = this.petriNetManager.state.getPostPlaces(
+      transition.transitionModel
+    );
 
     for (const place of !backwards ? prePlaces : postPlaces) {
       this.petriNetManager.getPlace(place.id).tokenCount = place.tokenCount - 1;
@@ -130,11 +145,11 @@ export default class PetriNetDebugger extends Vue {
     for (const transition of transitions) {
       const isInvokable = this.petriNetManager.state
         .getPrePlaces(transition.transitionModel)
-        .every(place => place.tokenCount > 0);
+        .every((place) => place.tokenCount > 0);
 
       const isBackwardsInvokable = this.petriNetManager.state
         .getPostPlaces(transition.transitionModel)
-        .every(place => place.tokenCount > 0);
+        .every((place) => place.tokenCount > 0);
 
       transition.highlight = isInvokable || isBackwardsInvokable;
       transition.invokable = isInvokable;

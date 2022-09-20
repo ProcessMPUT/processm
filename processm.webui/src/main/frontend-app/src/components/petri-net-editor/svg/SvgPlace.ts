@@ -15,26 +15,26 @@ export class SvgPlace extends PetriNetSvgElement {
 
   readonly placeModel: Place;
 
-  private readonly eventBus: EventBus;
+  private readonly _eventBus: EventBus | null;
 
-  private readonly svg: SVGSelection;
-  private readonly svgGroup: SVGSelection;
-  private readonly svgCircle: SVGCircleSelection;
-  private readonly svgText: SVGTextSelection;
-  private readonly svgTokens: SVGCircleSelection[] = [];
-  private svgTokenText: SVGTextSelection | null = null;
+  private readonly _svg: SVGSelection;
+  private readonly _svgGroup: SVGSelection;
+  private readonly _svgCircle: SVGCircleSelection;
+  private readonly _svgText: SVGTextSelection;
+  private readonly _svgTokens: SVGCircleSelection[] = [];
+  private _svgTokenText: SVGTextSelection | null = null;
 
-  private svgTextWidth: number = 0;
+  private _svgTextWidth = 0;
 
-  constructor(svg: SVGSelection, eventBus: EventBus, place: Place) {
+  constructor(svg: SVGSelection, eventBus: EventBus | null, place: Place) {
     super(place);
-    this.eventBus = eventBus;
+    this._eventBus = eventBus;
     this.placeModel = place;
 
-    this.svg = svg;
-    this.svgGroup = svg.select(".places");
+    this._svg = svg;
+    this._svgGroup = svg.select(".places");
 
-    this.svgCircle = this.svgGroup
+    this._svgCircle = this._svgGroup
       .append("circle")
       .attr("id", this.placeModel.id)
       .attr("r", Place.RADIUS)
@@ -46,30 +46,32 @@ export class SvgPlace extends PetriNetSvgElement {
     this.type = this.placeModel.type;
     this.spawnTokens();
 
-    this.svgText = this.svgGroup
-      .insert("text", this.svgCircle.node()?.querySelector)
+    this._svgText = this._svgGroup
+      .insert("text", this._svgCircle.node()?.querySelector)
       .style("pointer-events", "none")
       .style("user-select", "none");
     this.text = this.placeModel.text;
 
-    this.initDragAndDrop();
+    if (this._eventBus != null) {
+      this.initDragAndDrop();
+    }
     this.updatePosition();
   }
 
   set text(text: string) {
     this.placeModel.text = text;
-    this.svgText.text(text);
+    this._svgText.text(text);
     // TODO: Remove later
     // this.svgText.text(this.placeModel.id);
 
-    const textBoundingBox = this.svgText.node()?.getBoundingClientRect();
-    this.svgTextWidth = textBoundingBox?.width ?? 0;
+    const textBoundingBox = this._svgText.node()?.getBoundingClientRect();
+    this._svgTextWidth = textBoundingBox?.width ?? 0;
 
     this.updateTextPosition();
   }
 
   get text(): string {
-    return this.svgText.text();
+    return this._svgText.text();
   }
 
   set tokenCount(tokenCount: number) {
@@ -101,7 +103,7 @@ export class SvgPlace extends PetriNetSvgElement {
         break;
     }
 
-    this.svgCircle.attr("fill", fillColor);
+    this._svgCircle.attr("fill", fillColor);
   }
 
   get type(): PlaceType {
@@ -109,14 +111,14 @@ export class SvgPlace extends PetriNetSvgElement {
   }
 
   delete(): void {
-    this.svgCircle.remove();
-    this.svgText.remove();
-    this.svgTokens.forEach((svgToken) => svgToken.remove());
-    this.svgTokenText?.remove();
+    this._svgCircle.remove();
+    this._svgText.remove();
+    this._svgTokens.forEach((svgToken) => svgToken.remove());
+    this._svgTokenText?.remove();
   }
 
   private updatePosition() {
-    this.svgCircle
+    this._svgCircle
       .attr("cx", this.placeModel.cx)
       .attr("cy", this.placeModel.cy);
     this.updateTokenPosition();
@@ -124,23 +126,23 @@ export class SvgPlace extends PetriNetSvgElement {
   }
 
   private updateTextPosition() {
-    this.svgText
-      .attr("x", this.placeModel.cx - this.svgTextWidth / 2)
+    this._svgText
+      .attr("x", this.placeModel.cx - this._svgTextWidth / 2)
       .attr("y", this.placeModel.cy - Place.RADIUS - 5);
   }
 
   private updateTokenPosition() {
-    if (this.svgTokenText != null) {
-      this.svgTokenText
+    if (this._svgTokenText != null) {
+      this._svgTokenText
         .attr("x", this.placeModel.cx - Place.RADIUS / 2)
         .attr("y", this.placeModel.cy + 5);
-    } else if (this.svgTokens.length === 1) {
-      this.svgTokens[0]
+    } else if (this._svgTokens.length === 1) {
+      this._svgTokens[0]
         .attr("cx", this.placeModel.cx)
         .attr("cy", this.placeModel.cy);
-    } else if (this.svgTokens.length >= 2) {
-      const angleIncrement = Math.PI / this.svgTokens.length;
-      this.svgTokens.forEach((token, i) => {
+    } else if (this._svgTokens.length >= 2) {
+      const angleIncrement = Math.PI / this._svgTokens.length;
+      this._svgTokens.forEach((token, i) => {
         const angle = i * angleIncrement * 2;
         token
           .attr("cx", this.placeModel.cx + (Math.sin(angle) * Place.RADIUS) / 2)
@@ -158,27 +160,27 @@ export class SvgPlace extends PetriNetSvgElement {
         ? Place.RADIUS / this.placeModel.tokenCount
         : Place.RADIUS / 3;
 
-    this.svgTokenText?.remove();
-    this.svgTokenText = null;
-    this.svgTokens.forEach((token) => {
+    this._svgTokenText?.remove();
+    this._svgTokenText = null;
+    this._svgTokens.forEach((token) => {
       token.remove();
     });
-    this.svgTokens.length = 0;
+    this._svgTokens.length = 0;
 
     if (
       this.placeModel.tokenCount > 0 &&
       this.placeModel.tokenCount <= SvgPlace.tokenDisplayLimit
     ) {
       for (let i = 0; i < this.placeModel.tokenCount; i++) {
-        const token = this.svgGroup
-          .insert("circle", this.svgCircle.node()?.querySelector)
+        const token = this._svgGroup
+          .insert("circle", this._svgCircle.node()?.querySelector)
           .attr("r", tokenRadius)
           .style("pointer-events", "none");
-        this.svgTokens.push(token);
+        this._svgTokens.push(token);
       }
     } else if (this.placeModel.tokenCount > SvgPlace.tokenDisplayLimit) {
-      this.svgTokenText = this.svgGroup
-        .insert("text", this.svgCircle.node()?.querySelector)
+      this._svgTokenText = this._svgGroup
+        .insert("text", this._svgCircle.node()?.querySelector)
         .text(this.placeModel.tokenCount)
         .attr("font-weight", "bold")
         .style("pointer-events", "none")
@@ -187,7 +189,7 @@ export class SvgPlace extends PetriNetSvgElement {
   }
 
   private initDragAndDrop() {
-    this.svgCircle.call(
+    this._svgCircle.call(
       drag<SVGCircleElement, unknown>()
         // TODO: fix false inspection error
         // @ts-ignore
@@ -197,7 +199,7 @@ export class SvgPlace extends PetriNetSvgElement {
   }
 
   private onDrag(event: SVGDragEvent) {
-    this.svgCircle.classed("dragging", true);
+    this._svgCircle.classed("dragging", true);
 
     const dx = event.x - this.placeModel.cx;
     const dy = event.y - this.placeModel.cy;
@@ -208,8 +210,8 @@ export class SvgPlace extends PetriNetSvgElement {
   }
 
   private dragged(event: SVGDragEvent, dx: number, dy: number) {
-    this.eventBus.emit(EventNames.ON_DRAG, this.placeModel.id);
-    const boundingBox = this.svg.node()?.getBoundingClientRect();
+    this._eventBus!.emit(EventNames.ON_DRAG, this.placeModel.id);
+    const boundingBox = this._svg.node()?.getBoundingClientRect();
     // TODO: Log some error
     if (boundingBox == null) {
       return;
@@ -233,6 +235,6 @@ export class SvgPlace extends PetriNetSvgElement {
   }
 
   private ended() {
-    this.svgCircle.classed("dragging", false);
+    this._svgCircle.classed("dragging", false);
   }
 }
