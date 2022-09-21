@@ -1,9 +1,5 @@
 <template>
-  <div
-    v-if="data != null"
-    v-resize:debounce.10="onResize"
-    class="svg-container"
-  >
+  <div v-if="data != null" v-resize:debounce.10="onResize">
     <petri-net-editor
       ref="editor"
       :debug="false"
@@ -26,11 +22,7 @@ import { PetriNetComponentData } from "@/models/WorkspaceComponent";
 import resize from "vue-resize-directive";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 import PetriNetEditor from "@/components/petri-net-editor/PetriNetEditor.vue";
-import {
-  ArcDto,
-  PlaceDto,
-  TransitionDto
-} from "@/components/petri-net-editor/Dto";
+import { ArcDto, PlaceDto, TransitionDto } from "@/components/petri-net-editor/Dto";
 import { PlaceType } from "@/components/petri-net-editor/model/Place";
 
 @Component({
@@ -130,6 +122,8 @@ export default class PetriNetComponent extends Vue {
   }
 
   private onResize(element: Element) {
+    this.$refs.editor.scale(element.clientWidth, element.clientHeight);
+
     // TODO: Implement
   }
 

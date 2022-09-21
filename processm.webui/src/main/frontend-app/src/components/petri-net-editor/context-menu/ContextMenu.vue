@@ -3,7 +3,8 @@
     light
     group
     class="elevation-6"
-    id="context-menu" ref="contextMenu"
+    id="context-menu"
+    ref="contextMenu"
   >
     <v-btn
       light
@@ -33,6 +34,10 @@ export default class ContextMenu extends Vue {
     return payload;
   }
 
+  $refs!: {
+    contextMenu: Vue;
+  };
+
   // noinspection JSUnusedGlobalSymbols
   mounted() {
     const scope = this.getScope();
@@ -43,8 +48,9 @@ export default class ContextMenu extends Vue {
     scope.addEventListener("click", (e: MouseEvent) => {
       // ? close the menu if the user clicks outside it
       if (
-        (e.target as Element).parentElement?.parentElement != contextMenu
-        && (e.target as Element).parentElement?.parentElement?.parentElement != contextMenu
+        (e.target as Element).parentElement?.parentElement != contextMenu &&
+        (e.target as Element).parentElement?.parentElement?.parentElement !=
+        contextMenu
       ) {
         contextMenu.classList.remove("visible");
       }
@@ -84,7 +90,7 @@ export default class ContextMenu extends Vue {
   }
 
   private getContextMenu(): HTMLElement {
-    return (this.$refs.contextMenu as Vue).$el as HTMLElement;
+    return this.$refs.contextMenu.$el as HTMLElement;
   }
 }
 </script>

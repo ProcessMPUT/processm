@@ -1,73 +1,83 @@
-import type { SVGLineSelection, SVGSelection } from '@/utils/Types';
-import { Arc } from '@/components/petri-net-editor/model/Arc';
-
+import type { SVGLineSelection, SVGSelection } from "@/utils/Types";
+import { Arc } from "@/components/petri-net-editor/model/Arc";
 
 export class SvgArc {
-    readonly model: Arc;
+  static readonly WIDTH = 4;
 
-    private readonly svgGroup: SVGSelection;
-    private readonly svgLine: SVGLineSelection;
+  readonly model: Arc;
 
-    private x1 = 0;
-    private y1 = 0;
-    private x2 = 0;
-    private y2 = 0;
+  private _scaleFactor = 1.0;
 
-    public width = 4;
+  private readonly _svgGroup: SVGSelection;
+  private readonly _svgLine: SVGLineSelection;
 
-    constructor(svg: SVGSelection, arc: Arc) {
-        this.model = arc;
+  private x1 = 0;
+  private y1 = 0;
+  private x2 = 0;
+  private y2 = 0;
 
-        this.svgGroup = svg.select('.arcs');
+  constructor(svg: SVGSelection, arc: Arc, scaleFactor: number) {
+    this.model = arc;
 
-        this.svgLine = SvgArc.createLine(this.svgGroup, 4)
-            .attr('id', this.model.id);
+    this._scaleFactor = scaleFactor;
+    this._svgGroup = svg.select(".arcs");
+
+    this._svgLine = SvgArc.createLine(
+      this._svgGroup,
+      SvgArc.WIDTH * this._scaleFactor
+    ).attr("id", this.model.id);
+  }
+
+  set scaleFactor(value: number) {
+    this._scaleFactor = value;
+    this._svgLine.attr("stroke-width", SvgArc.WIDTH * this._scaleFactor);
+  }
+
+  delete() {
+    this._svgLine.remove();
+  }
+
+  setOutPosition(x: number, y: number) {
+    x = SvgArc.makeNanSafe(x);
+    y = SvgArc.makeNanSafe(y);
+
+    this.x1 = x;
+    this.y1 = y;
+    this._svgLine.attr("x1", x).attr("y1", y);
+  }
+
+  getOutPosition(): [number, number] {
+    return [this.x1, this.y1];
+  }
+
+  setInPosition(x: number, y: number) {
+    x = SvgArc.makeNanSafe(x);
+    y = SvgArc.makeNanSafe(y);
+
+    this.x2 = x;
+    this.y2 = y;
+
+    this._svgLine.attr("x2", this.x2).attr("y2", this.y2);
+  }
+
+  getInPosition(): [number, number] {
+    return [this.x2, this.y2];
+  }
+
+  static createLine(scope: SVGSelection, width: number): SVGLineSelection {
+    return scope
+      .append("line")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width", width)
+      .attr("marker-end", "url(#arrow)");
+  }
+
+  private static makeNanSafe(value: number): number {
+    if (isNaN(value)) {
+      return 0;
     }
 
-    delete() {
-        this.svgLine.remove();
-    }
-
-    setOutPosition(x: number, y: number) {
-        x = SvgArc.makeNanSafe(x);
-        y = SvgArc.makeNanSafe(y);
-
-        this.x1 = x;
-        this.y1 = y;
-        this.svgLine.attr('x1', x).attr('y1', y);
-    }
-
-    getOutPosition(): [number, number] {
-        return [this.x1, this.y1];
-    }
-
-    setInPosition(x: number, y: number) {
-        x = SvgArc.makeNanSafe(x);
-        y = SvgArc.makeNanSafe(y);
-
-        this.x2 = x;
-        this.y2 = y;
-
-        this.svgLine.attr('x2', this.x2).attr('y2', this.y2);
-    }
-
-    getInPosition(): [number, number] {
-        return [this.x2, this.y2];
-    }
-
-    static createLine(scope: SVGSelection, width: number = 4): SVGLineSelection {
-        return scope.append('line')
-            .attr('fill', 'none')
-            .attr('stroke', 'black')
-            .attr('stroke-width', width)
-            .attr('marker-end', 'url(#arrow)');
-    }
-
-    private static makeNanSafe(value: number): number {
-        if (isNaN(value)) {
-            return 0;
-        }
-
-        return value;
-    }
+    return value;
+  }
 }

@@ -118,7 +118,7 @@
       </svg>
 
       <context-menu
-        v-show="!isDebuggerEnabled"
+        v-show="!isDebuggerEnabled && enableDragging"
         ref="contextMenu"
         :items="this.contextMenuItems"
         @expand="this.onContextMenuExpand"
@@ -206,11 +206,17 @@ export default class PetriNetEditor extends Vue {
 
   private layouter!: Layouter;
 
+  $refs!: {
+    importInput: HTMLInputElement;
+    contextMenu: ContextMenu;
+    editorSvg: HTMLElement;
+  };
+
   // noinspection JSUnusedGlobalSymbols
   mounted() {
     const svgId = `editor-${uuidv4()}`;
 
-    (this.$refs.editorSvg as HTMLElement).setAttribute("id", svgId);
+    this.$refs.editorSvg.setAttribute("id", svgId);
 
     this.petriNetManager = new PetriNetSvgManager(
       d3.select(`#${svgId}`),
@@ -250,6 +256,14 @@ export default class PetriNetEditor extends Vue {
     this.petriNetManager.updateDimensions();
   }
 
+  scale(width: number, height: number): void {
+    this.$refs.editorSvg
+      .setAttribute("viewBox", `0 0 ${width}px ${height}px`);
+
+    this.$refs.editorSvg
+      .setAttribute("preserveAspectRatio", "xMidYMid meet");
+  }
+
   getPetriNetJson(): {
     places: Place[];
     transitions: Transition[];
@@ -263,7 +277,7 @@ export default class PetriNetEditor extends Vue {
   }
 
   private createPlace(): void {
-    const contextMenu = (this.$refs.contextMenu as Vue).$el as HTMLElement;
+    const contextMenu = this.$refs.contextMenu.$el as HTMLElement;
 
     this.petriNetManager.createPlace({
       x: contextMenu.offsetLeft,
@@ -273,7 +287,7 @@ export default class PetriNetEditor extends Vue {
   }
 
   private createTransition(): void {
-    const contextMenu = (this.$refs.contextMenu as Vue).$el as HTMLElement;
+    const contextMenu = this.$refs.contextMenu.$el as HTMLElement;
 
     this.petriNetManager.createTransition({
       x: contextMenu.offsetLeft,
@@ -356,7 +370,7 @@ export default class PetriNetEditor extends Vue {
   }
 
   private selectPnmlFile(): void {
-    (this.$refs.importInput as HTMLElement).click();
+    this.$refs.importInput.click();
   }
 
   private importPnml(event: any): void {

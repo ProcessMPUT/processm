@@ -11,7 +11,7 @@ import { EventNames } from "@/components/petri-net-editor/PetriNetEditorConstant
 import { PetriNetSvgElement } from "@/components/petri-net-editor/svg/PetriNetSvgElement";
 
 export class SvgPlace extends PetriNetSvgElement {
-  static readonly tokenDisplayLimit = 7;
+  static readonly TOKEN_DISPLAY_LIMIT = 7;
 
   readonly placeModel: Place;
 
@@ -110,6 +110,15 @@ export class SvgPlace extends PetriNetSvgElement {
     return this.placeModel.type;
   }
 
+  set scaleFactor(value: number) {
+    this._scaleFactor = value;
+
+    this._svgCircle.attr("r", Place.RADIUS * this._scaleFactor);
+
+    this.spawnTokens();
+    this.updatePosition();
+  }
+
   delete(): void {
     this._svgCircle.remove();
     this._svgText.remove();
@@ -119,37 +128,46 @@ export class SvgPlace extends PetriNetSvgElement {
 
   private updatePosition() {
     this._svgCircle
-      .attr("cx", this.placeModel.cx)
-      .attr("cy", this.placeModel.cy);
+      .attr("cx", this.placeModel.cx * this._scaleFactor)
+      .attr("cy", this.placeModel.cy * this._scaleFactor);
     this.updateTokenPosition();
     this.updateTextPosition();
   }
 
   private updateTextPosition() {
+    const textX = this.placeModel.cx - this._svgTextWidth / 2;
+    const textY = this.placeModel.cy - Place.RADIUS - 5;
+
     this._svgText
-      .attr("x", this.placeModel.cx - this._svgTextWidth / 2)
-      .attr("y", this.placeModel.cy - Place.RADIUS - 5);
+      .attr("x", textX * this._scaleFactor)
+      .attr("y", textY * this._scaleFactor);
   }
 
   private updateTokenPosition() {
     if (this._svgTokenText != null) {
+      const tokenTextX = this.placeModel.cx - Place.RADIUS / 2;
+      const tokenTextY = this.placeModel.cy + 5;
+
       this._svgTokenText
-        .attr("x", this.placeModel.cx - Place.RADIUS / 2)
-        .attr("y", this.placeModel.cy + 5);
+        .attr("x", tokenTextX * this._scaleFactor)
+        .attr("y", tokenTextY * this._scaleFactor);
     } else if (this._svgTokens.length === 1) {
       this._svgTokens[0]
-        .attr("cx", this.placeModel.cx)
-        .attr("cy", this.placeModel.cy);
+        .attr("cx", this.placeModel.cx * this._scaleFactor)
+        .attr("cy", this.placeModel.cy * this._scaleFactor);
     } else if (this._svgTokens.length >= 2) {
       const angleIncrement = Math.PI / this._svgTokens.length;
       this._svgTokens.forEach((token, i) => {
         const angle = i * angleIncrement * 2;
+
+        const tokenX =
+          this.placeModel.cx + (Math.sin(angle) * Place.RADIUS) / 2;
+        const tokenY =
+          this.placeModel.cy + (Math.cos(angle) * Place.RADIUS) / 2;
+
         token
-          .attr("cx", this.placeModel.cx + (Math.sin(angle) * Place.RADIUS) / 2)
-          .attr(
-            "cy",
-            this.placeModel.cy + (Math.cos(angle) * Place.RADIUS) / 2
-          );
+          .attr("cx", tokenX * this._scaleFactor)
+          .attr("cy", tokenY * this._scaleFactor);
       });
     }
   }
@@ -162,29 +180,29 @@ export class SvgPlace extends PetriNetSvgElement {
 
     this._svgTokenText?.remove();
     this._svgTokenText = null;
-    this._svgTokens.forEach((token) => {
-      token.remove();
-    });
+    this._svgTokens.forEach((token) => token.remove());
     this._svgTokens.length = 0;
 
     if (
       this.placeModel.tokenCount > 0 &&
-      this.placeModel.tokenCount <= SvgPlace.tokenDisplayLimit
+      this.placeModel.tokenCount <= SvgPlace.TOKEN_DISPLAY_LIMIT
     ) {
       for (let i = 0; i < this.placeModel.tokenCount; i++) {
         const token = this._svgGroup
           .insert("circle", this._svgCircle.node()?.querySelector)
-          .attr("r", tokenRadius)
+          .attr("r", tokenRadius * this._scaleFactor)
           .style("pointer-events", "none");
         this._svgTokens.push(token);
       }
-    } else if (this.placeModel.tokenCount > SvgPlace.tokenDisplayLimit) {
+    } else if (this.placeModel.tokenCount > SvgPlace.TOKEN_DISPLAY_LIMIT) {
       this._svgTokenText = this._svgGroup
         .insert("text", this._svgCircle.node()?.querySelector)
         .text(this.placeModel.tokenCount)
         .attr("font-weight", "bold")
         .style("pointer-events", "none")
         .style("user-select", "none");
+
+      console.log(this._svgTokenText.style("font-size"));
     }
   }
 

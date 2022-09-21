@@ -26,7 +26,11 @@ export class SvgTransition extends PetriNetSvgElement {
   private readonly svgRectangle: SVGRectSelection;
   private readonly svgText: SVGTextSelection;
 
-  constructor(svg: SVGSelection, eventBus: EventBus | null, transition: Transition) {
+  constructor(
+    svg: SVGSelection,
+    eventBus: EventBus | null,
+    transition: Transition
+  ) {
     super(transition);
     this.eventBus = eventBus;
     this.transitionModel = transition;
@@ -51,7 +55,7 @@ export class SvgTransition extends PetriNetSvgElement {
 
     this.text = !this.isSilent ? this.transitionModel.text : "τ";
 
-    if(this.eventBus != null) {
+    if (this.eventBus != null) {
       this.initDragAndDrop();
     }
     this.updatePosition();
@@ -98,6 +102,16 @@ export class SvgTransition extends PetriNetSvgElement {
     );
   }
 
+  set scaleFactor(value: number) {
+    this._scaleFactor = value;
+
+    this.svgRectangle
+      .attr("width", this.width * this._scaleFactor)
+      .attr("height", this.height * this._scaleFactor);
+
+    this.updatePosition();
+  }
+
   delete(): void {
     this.svgRectangle.remove();
     this.svgText.remove();
@@ -105,18 +119,19 @@ export class SvgTransition extends PetriNetSvgElement {
 
   private updatePosition() {
     this.svgRectangle
-      .attr("x", this.transitionModel.x)
-      .attr("y", this.transitionModel.y);
+      .attr("x", this.transitionModel.x * this._scaleFactor)
+      .attr("y", this.transitionModel.y * this._scaleFactor);
     this.updateTextPosition();
   }
 
   private updateTextPosition() {
+    const textX =
+      this.transitionModel.x + this.width / 2 - this.svgTextWidth / 2;
+    const textY = this.transitionModel.y - 5;
+
     this.svgText
-      .attr(
-        "x",
-        this.transitionModel.x + this.width / 2 - this.svgTextWidth / 2
-      )
-      .attr("y", this.transitionModel.y - 5);
+      .attr("x", textX * this._scaleFactor)
+      .attr("y", textY * this._scaleFactor);
   }
 
   private initDragAndDrop() {

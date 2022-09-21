@@ -1,11 +1,15 @@
-import { PetriNetElement } from '@/components/petri-net-editor/model/PetriNetElement';
+import { PetriNetElement } from "@/components/petri-net-editor/model/PetriNetElement";
 
 export abstract class PetriNetSvgElement {
-    readonly model: PetriNetElement;
+  readonly model: PetriNetElement;
 
-    protected constructor(element: PetriNetElement) {
-        this.model = element;
-    }
+  protected _scaleFactor = 1;
 
-    abstract delete(): void;
+  protected constructor(element: PetriNetElement) {
+    this.model = element;
+  }
+
+  abstract delete(): void;
+
+  abstract set scaleFactor(value: number);
 }

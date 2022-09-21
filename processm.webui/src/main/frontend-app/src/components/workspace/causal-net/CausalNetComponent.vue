@@ -290,6 +290,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   public get componentWidth() {
     return (this.$refs.svg as Element).clientWidth;
   }
+
   public get linkToBeCreated() {
     return this.rootSvg().select("line.linkToBeCreated");
   }
