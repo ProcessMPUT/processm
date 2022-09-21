@@ -106,7 +106,7 @@ object Paths {
      * @param userId User ID
      */
     @Location("/organizations/{organizationId}/members/{userId}")
-    class OrganizationMember(val organizationId: UUID, val userId: UUID)
+    class OrganizationOrgIdMembersUserId(val organizationId: UUID, val userId: UUID)
 
     /**
      * Data stores assigned to [organizationId].

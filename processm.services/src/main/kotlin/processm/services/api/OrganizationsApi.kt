@@ -15,6 +15,7 @@ import processm.services.api.models.GroupRole
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.OrganizationService
+import processm.services.respondCreated
 
 @KtorExperimentalLocationsAPI
 fun Route.OrganizationsApi() {
@@ -27,13 +28,13 @@ fun Route.OrganizationsApi() {
             principal.ensureUserBelongsToOrganization(organization.organizationId, OrganizationRole.owner)
             val member = call.receive<OrganizationMember>()
 
-            organizationService.addMember(
+            val user = organizationService.addMember(
                 organization.organizationId,
                 member.email,
                 member.organizationRole
             )
 
-            call.respond(HttpStatusCode.NotImplemented)
+            call.respondCreated(Paths.OrganizationOrgIdMembersUserId(organization.organizationId, user.id.value), null)
         }
 
         post<Paths.Organizations> {
@@ -96,7 +97,7 @@ fun Route.OrganizationsApi() {
         }
 
 
-        delete<Paths.OrganizationMember> { _ ->
+        delete<Paths.OrganizationOrgIdMembersUserId> { _ ->
             val principal = call.authentication.principal<ApiUser>()
 
             call.respond(HttpStatusCode.NotImplemented)

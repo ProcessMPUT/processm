@@ -4,8 +4,11 @@ import io.ktor.http.*
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
+import processm.dbmodels.models.User
+import processm.dbmodels.models.Users
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.Group
 import processm.services.api.models.OrganizationMember
@@ -40,7 +43,6 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}",
-        HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
     )
 
@@ -207,12 +209,19 @@ class OrganizationsApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to addition of a new member with 201`() = withConfiguredTestApplication {
+    fun `responds to the addition of a new member with 201`() = withConfiguredTestApplication {
         val organizationService = declareMock<OrganizationService>()
         val organizationId = UUID.randomUUID()
         val userId = UUID.randomUUID()
 
         withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+
+            every {
+                organizationService.addMember(organizationId, "new@example.com", OrganizationRole.reader)
+            } returns mockk<User> {
+                every { id } returns EntityID(UUID.randomUUID(), Users)
+            }
+
             with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/members") {
                 withSerializedBody(
                     OrganizationMember(
@@ -227,6 +236,38 @@ class OrganizationsApiTest : BaseApiTest() {
 
         verify(exactly = 1) {
             organizationService.addMember(organizationId, "new@example.com", OrganizationRole.reader)
+        }
+    }
+
+    @Test
+    fun `responds to the addition of an existing member with 409`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val email = "user@example.com"
+
+        withAuthentication(userId = userId, login = email, role = OrganizationRole.owner to organizationId) {
+            every {
+                organizationService.addMember(organizationId, email, OrganizationRole.reader)
+            } throws ValidationException(
+                ValidationException.Reason.ResourceAlreadyExists,
+                "User already exists in the organization."
+            )
+
+            with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/members") {
+                withSerializedBody(
+                    OrganizationMember(
+                        email = email,
+                        organizationRole = OrganizationRole.reader
+                    )
+                )
+            }) {
+                assertEquals(HttpStatusCode.Conflict, response.status())
+            }
+        }
+
+        verify(exactly = 1) {
+            organizationService.addMember(organizationId, email, OrganizationRole.reader)
         }
     }
 }

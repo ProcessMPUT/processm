@@ -252,7 +252,7 @@ class UsersApiTest : BaseApiTest() {
 
         every {
             organizationService.addMember(organization.id.value, user.id.value, OrganizationRole.owner)
-        } just Runs
+        } returns user
 
         withAuthentication {
             with(handleRequest(HttpMethod.Post, "/api/users") {

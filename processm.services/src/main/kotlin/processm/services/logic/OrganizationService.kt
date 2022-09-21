@@ -32,11 +32,13 @@ class OrganizationService(
      * Creates a new account with random password if a user with the given email does not exist in the database.
      * @throws ValidationException if the user or the organization do not exist, or the user already belongs to the organization.
      */
-    fun addMember(organizationId: UUID, email: String, role: OrganizationRole): Unit =
-        transaction(DBCache.getMainDBPool().database) {
-            val userWithEmail = User.find { Users.email ilike email }.firstOrNull()
-                ?: accountService.createUser(email, pass = UUID.randomUUID().toString())
-            addMember(organizationId, userWithEmail.id.value, role)
+    fun addMember(organizationId: UUID, email: String, role: OrganizationRole): User =
+        loggedScope { logger ->
+            transaction(DBCache.getMainDBPool().database) {
+                val userWithEmail = User.find { Users.email ilike email }.firstOrNull()
+                    ?: accountService.createUser(email, pass = UUID.randomUUID().toString())
+                addMember(organizationId, userWithEmail.id.value, role)
+            }
         }
 
 
@@ -44,7 +46,7 @@ class OrganizationService(
      * Attaches user with [userId] to organization with [organizationId] and assigns this user with [role].
      * @throws ValidationException if the user or the organization do not exist, or the user already belongs to the organization.
      */
-    fun addMember(organizationId: UUID, userId: UUID, role: OrganizationRole) = loggedScope { logger ->
+    fun addMember(organizationId: UUID, userId: UUID, role: OrganizationRole): User = loggedScope { logger ->
         transaction(DBCache.getMainDBPool().database) {
             val organization = Organization.findById(organizationId) ?: throw ValidationException(
                 ValidationException.Reason.ResourceNotFound,
@@ -76,6 +78,8 @@ class OrganizationService(
             groupService.attachUserToGroup(userId, organization.sharedGroup.id.value)
 
             logger.debug("Added user ${user.id} to organization ${organization.id}.")
+
+            user
         }
     }
 
