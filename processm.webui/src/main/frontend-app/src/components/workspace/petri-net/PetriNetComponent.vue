@@ -5,6 +5,7 @@
     class="svg-container"
   >
     <petri-net-editor
+      ref="editor"
       :debug="false"
       :run-layouter-on-start="true"
       :show-buttons="showButtons"
@@ -20,7 +21,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Prop } from "vue-property-decorator";
+import { Component, Prop, Watch } from "vue-property-decorator";
 import { PetriNetComponentData } from "@/models/WorkspaceComponent";
 import resize from "vue-resize-directive";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
@@ -45,6 +46,13 @@ export default class PetriNetComponent extends Vue {
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
 
+  @Prop({ default: false })
+  readonly updateData = false;
+
+  $refs!: {
+    editor: PetriNetEditor;
+  };
+
   private readonly showButtons: boolean =
     this.componentMode === ComponentMode.Edit;
 
@@ -53,6 +61,7 @@ export default class PetriNetComponent extends Vue {
     this.componentMode === ComponentMode.Interactive;
 
   mounted() {
+    // TODO: How to read initial and final marking?
     console.log(this.data.data);
   }
 
@@ -122,6 +131,18 @@ export default class PetriNetComponent extends Vue {
 
   private onResize(element: Element) {
     // TODO: Implement
+  }
+
+  @Watch("updateData")
+  async saveJson() {
+    if (this.updateData) {
+      // eslint-disable-next-line
+      const rawData = this.$refs.editor.getPetriNetJson();
+
+      // TODO: Remap rawData to ProcessM data format
+      // const data = {};
+      // this.data.data.xml = data.xml;
+    }
   }
 }
 </script>

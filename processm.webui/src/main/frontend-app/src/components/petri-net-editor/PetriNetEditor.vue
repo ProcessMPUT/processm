@@ -132,7 +132,7 @@ import * as d3 from "d3-selection";
 import Component from "vue-class-component";
 import Vue from "vue";
 import ContextMenu from "@/components/petri-net-editor/context-menu/ContextMenu.vue";
-import { Prop, PropSync } from "vue-property-decorator";
+import { Prop } from "vue-property-decorator";
 import PetriNetDebugger from "@/components/petri-net-editor/petri-net-debugger/PetriNetDebugger.vue";
 import EditPlaceDialog from "@/components/petri-net-editor/edit-place-dialog/EditPlaceDialog.vue";
 import EditTransitionDialog from "@/components/petri-net-editor/edit-transition-dialog/EditTransitionDialog.vue";
@@ -147,6 +147,9 @@ import { BlockLayouter } from "@/components/petri-net-editor/layouter/BlockLayou
 import { SvgTransition } from "@/components/petri-net-editor/svg/SvgTransition";
 import { PnmlSerializer } from "@/components/petri-net-editor/pnml/PnmlSerializer";
 import { v4 as uuidv4 } from "uuid";
+import { Place } from "@/components/petri-net-editor/model/Place";
+import { Transition } from "@/components/petri-net-editor/model/Transition";
+import { Arc } from "@/components/petri-net-editor/model/Arc";
 
 @Component({
   name: "petri-net-editor",
@@ -247,7 +250,19 @@ export default class PetriNetEditor extends Vue {
     this.petriNetManager.updateDimensions();
   }
 
-  createPlace(): void {
+  getPetriNetJson(): {
+    places: Place[];
+    transitions: Transition[];
+    arcs: Arc[];
+  } {
+    return {
+      places: this.petriNetManager.state.places,
+      transitions: this.petriNetManager.state.transitions,
+      arcs: this.petriNetManager.state.arcs
+    };
+  }
+
+  private createPlace(): void {
     const contextMenu = (this.$refs.contextMenu as Vue).$el as HTMLElement;
 
     this.petriNetManager.createPlace({
@@ -257,7 +272,7 @@ export default class PetriNetEditor extends Vue {
     });
   }
 
-  createTransition(): void {
+  private createTransition(): void {
     const contextMenu = (this.$refs.contextMenu as Vue).$el as HTMLElement;
 
     this.petriNetManager.createTransition({
@@ -267,11 +282,11 @@ export default class PetriNetEditor extends Vue {
     });
   }
 
-  startConnect(): void {
+  private startConnect(): void {
     this.petriNetManager.startConnect(this.contextMenuTargetId);
   }
 
-  onContextMenuExpand(target: Element | null): void {
+  private onContextMenuExpand(target: Element | null): void {
     const isPlaceOrTransition =
       target instanceof SVGCircleElement || target instanceof SVGRectElement;
 
@@ -286,7 +301,7 @@ export default class PetriNetEditor extends Vue {
     this.contextMenuItems = this.createContextMenuItems();
   }
 
-  showEditDialog() {
+  private showEditDialog() {
     const element = this.petriNetManager.getElement(this.contextMenuTargetId);
     if (element instanceof SvgPlace) {
       this.selectedPlace = this.petriNetManager.getPlace(
@@ -301,15 +316,15 @@ export default class PetriNetEditor extends Vue {
     }
   }
 
-  closeEditPlaceDialog() {
+  private closeEditPlaceDialog() {
     this.closeDialog(() => (this.isEditPlaceDialogVisible = false));
   }
 
-  closeEditTransitionDialog() {
+  private closeEditTransitionDialog() {
     this.closeDialog(() => (this.isEditTransitionDialogVisible = false));
   }
 
-  closeExportPnmlDialog() {
+  private closeExportPnmlDialog() {
     this.closeDialog(() => (this.isExportPnmlDialogVisible = false));
   }
 
@@ -317,7 +332,7 @@ export default class PetriNetEditor extends Vue {
     setTimeout(callback, 200);
   }
 
-  runLayouter(): void {
+  private runLayouter(): void {
     const [isCorrect, message] = this.petriNetManager.state.isCorrectNet();
 
     if (!isCorrect) {
@@ -329,7 +344,7 @@ export default class PetriNetEditor extends Vue {
     this.petriNetManager.updateDimensions();
   }
 
-  runDebugger(): void {
+  private runDebugger(): void {
     const [isCorrect, message] = this.petriNetManager.state.isCorrectNet();
 
     if (!isCorrect) {
@@ -340,11 +355,11 @@ export default class PetriNetEditor extends Vue {
     this.isDebuggerEnabled = true;
   }
 
-  selectPnmlFile(): void {
+  private selectPnmlFile(): void {
     (this.$refs.importInput as HTMLElement).click();
   }
 
-  importPnml(event: any): void {
+  private importPnml(event: any): void {
     const eventTarget = event.currentTarget! as HTMLInputElement;
 
     const reader = new FileReader();
