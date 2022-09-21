@@ -88,28 +88,11 @@ export class SvgTransition extends PetriNetSvgElement {
   }
 
   set invokable(isInvokable: boolean) {
-    // TODO: fix false inspection error
-    // @ts-ignore
-    this.svgRectangle.attr("invokable", isInvokable ? 1 : null);
+    this.svgRectangle.attr("invokable", isInvokable ? 1 : 0);
   }
 
   set backwardsInvokable(isBackwardsInvokable: boolean) {
-    this.svgRectangle.attr(
-      "backwardsInvokable",
-      // TODO: fix false inspection error
-      // @ts-ignore
-      isBackwardsInvokable ? 1 : null
-    );
-  }
-
-  set scaleFactor(value: number) {
-    this._scaleFactor = value;
-
-    this.svgRectangle
-      .attr("width", this.width * this._scaleFactor)
-      .attr("height", this.height * this._scaleFactor);
-
-    this.updatePosition();
+    this.svgRectangle.attr("backwardsInvokable", isBackwardsInvokable ? 1 : 0);
   }
 
   delete(): void {
@@ -119,8 +102,8 @@ export class SvgTransition extends PetriNetSvgElement {
 
   private updatePosition() {
     this.svgRectangle
-      .attr("x", this.transitionModel.x * this._scaleFactor)
-      .attr("y", this.transitionModel.y * this._scaleFactor);
+      .attr("x", this.transitionModel.x)
+      .attr("y", this.transitionModel.y);
     this.updateTextPosition();
   }
 
@@ -129,9 +112,7 @@ export class SvgTransition extends PetriNetSvgElement {
       this.transitionModel.x + this.width / 2 - this.svgTextWidth / 2;
     const textY = this.transitionModel.y - 5;
 
-    this.svgText
-      .attr("x", textX * this._scaleFactor)
-      .attr("y", textY * this._scaleFactor);
+    this.svgText.attr("x", textX).attr("y", textY);
   }
 
   private initDragAndDrop() {

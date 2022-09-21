@@ -118,7 +118,8 @@
       </svg>
 
       <context-menu
-        v-show="!isDebuggerEnabled && enableDragging"
+        v-if="enableDragging"
+        v-show="!isDebuggerEnabled"
         ref="contextMenu"
         :items="this.contextMenuItems"
         @expand="this.onContextMenuExpand"
@@ -256,12 +257,19 @@ export default class PetriNetEditor extends Vue {
     this.petriNetManager.updateDimensions();
   }
 
-  scale(width: number, height: number): void {
-    this.$refs.editorSvg
-      .setAttribute("viewBox", `0 0 ${width}px ${height}px`);
+  scale(): void {
+    this.$refs.editorSvg.setAttribute(
+      "viewBox",
+      `0 0 ${this.petriNetManager.width + 10} ${
+        this.petriNetManager.height + 10
+      }`
+    );
 
-    this.$refs.editorSvg
-      .setAttribute("preserveAspectRatio", "xMidYMid meet");
+    this.$refs.editorSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+    this.$refs.editorSvg.style.removeProperty("min-width");
+
+    this.$refs.editorSvg.style.removeProperty("min-height");
   }
 
   getPetriNetJson(): {

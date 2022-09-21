@@ -32,8 +32,6 @@ export class PetriNetSvgManager {
 
   private readonly _draggingEnabled: boolean;
 
-  private _scaleFactor = 1.0;
-
   constructor(svg: SVGSelection, draggingEnabled: boolean) {
     this._svg = svg;
     this._state = new PetriNetState();
@@ -76,17 +74,22 @@ export class PetriNetSvgManager {
     return [...this._svgTransitions.values()];
   }
 
-  set scaleFactor(value: number) {
-    this._scaleFactor = value;
-
-    this.places.forEach((place) => (place.scaleFactor = this._scaleFactor));
-    this.transitions.forEach(
-      (transition) => (transition.scaleFactor = this._scaleFactor)
+  get width(): number {
+    return Math.max(
+      ...this._state.transitions.map(
+        (transition) => transition.x + Transition.WIDTH
+      ),
+      ...this._state.places.map((place) => place.cx + Place.RADIUS)
     );
-    [...this._svgArcs.values()].forEach((arc) => {
-      this.updateArcPosition(arc);
-      arc.scaleFactor = this._scaleFactor;
-    });
+  }
+
+  get height(): number {
+    return Math.max(
+      ...this._state.transitions.map(
+        (transition) => transition.y + Transition.HEIGHT
+      ),
+      ...this._state.places.map((place) => place.cy + Place.RADIUS)
+    );
   }
 
   createPlace(options: PlaceOptions): string {
@@ -112,7 +115,7 @@ export class PetriNetSvgManager {
   connect(outId: string, inId: string): void {
     const arc = this._state.createArc(outId, inId);
     if (arc != null) {
-      const svgArc = new SvgArc(this._svg, arc, this._scaleFactor);
+      const svgArc = new SvgArc(this._svg, arc);
       this._svgArcs.set(arc.id, svgArc);
       this.updateArcPosition(svgArc);
     }
@@ -138,7 +141,7 @@ export class PetriNetSvgManager {
       if (this._connectSvgLine == null) {
         this._connectSvgLine = SvgArc.createLine(
           this._svg.select(".arcs"),
-          SvgArc.WIDTH * this._scaleFactor
+          SvgArc.WIDTH
         )
           .attr("x1", x1)
           .attr("y1", y1);
@@ -208,18 +211,8 @@ export class PetriNetSvgManager {
   }
 
   updateDimensions(): void {
-    const width = Math.max(
-      ...this._state.transitions.map(
-        (transition) => transition.x + Transition.WIDTH
-      ),
-      ...this._state.places.map((place) => place.cx + Place.RADIUS)
-    );
-    const height = Math.max(
-      ...this._state.transitions.map(
-        (transition) => transition.y + Transition.HEIGHT
-      ),
-      ...this._state.places.map((place) => place.cy + Place.RADIUS)
-    );
+    const width = this.width;
+    const height = this.height;
 
     this._svg
       .style("min-width", `${width + 50}px`)
@@ -357,7 +350,7 @@ export class PetriNetSvgManager {
       newY2 = inElement.cy + (Place.RADIUS + 30) * angleCosine;
     }
 
-    arc.setInPosition(newX2 * this._scaleFactor, newY2 * this._scaleFactor);
+    arc.setInPosition(newX2, newY2);
   }
 
   private static calculateTransitionInPosition(
@@ -412,7 +405,7 @@ export class PetriNetSvgManager {
       newY1 = outElement.cy;
     }
 
-    arc.setOutPosition(newX1 * this._scaleFactor, newY1 * this._scaleFactor);
+    arc.setOutPosition(newX1, newY1);
   }
 
   private static calculateOffsetPosition(

@@ -6,8 +6,6 @@ export class SvgArc {
 
   readonly model: Arc;
 
-  private _scaleFactor = 1.0;
-
   private readonly _svgGroup: SVGSelection;
   private readonly _svgLine: SVGLineSelection;
 
@@ -16,21 +14,15 @@ export class SvgArc {
   private x2 = 0;
   private y2 = 0;
 
-  constructor(svg: SVGSelection, arc: Arc, scaleFactor: number) {
+  constructor(svg: SVGSelection, arc: Arc) {
     this.model = arc;
 
-    this._scaleFactor = scaleFactor;
     this._svgGroup = svg.select(".arcs");
 
-    this._svgLine = SvgArc.createLine(
-      this._svgGroup,
-      SvgArc.WIDTH * this._scaleFactor
-    ).attr("id", this.model.id);
-  }
-
-  set scaleFactor(value: number) {
-    this._scaleFactor = value;
-    this._svgLine.attr("stroke-width", SvgArc.WIDTH * this._scaleFactor);
+    this._svgLine = SvgArc.createLine(this._svgGroup, SvgArc.WIDTH).attr(
+      "id",
+      this.model.id
+    );
   }
 
   delete() {

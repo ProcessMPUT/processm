@@ -122,9 +122,7 @@ export default class PetriNetComponent extends Vue {
   }
 
   private onResize(element: Element) {
-    this.$refs.editor.scale(element.clientWidth, element.clientHeight);
-
-    // TODO: Implement
+    this.$refs.editor.scale();
   }
 
   @Watch("updateData")

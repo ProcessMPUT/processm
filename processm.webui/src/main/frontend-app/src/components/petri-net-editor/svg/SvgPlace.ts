@@ -110,15 +110,6 @@ export class SvgPlace extends PetriNetSvgElement {
     return this.placeModel.type;
   }
 
-  set scaleFactor(value: number) {
-    this._scaleFactor = value;
-
-    this._svgCircle.attr("r", Place.RADIUS * this._scaleFactor);
-
-    this.spawnTokens();
-    this.updatePosition();
-  }
-
   delete(): void {
     this._svgCircle.remove();
     this._svgText.remove();
@@ -128,8 +119,8 @@ export class SvgPlace extends PetriNetSvgElement {
 
   private updatePosition() {
     this._svgCircle
-      .attr("cx", this.placeModel.cx * this._scaleFactor)
-      .attr("cy", this.placeModel.cy * this._scaleFactor);
+      .attr("cx", this.placeModel.cx)
+      .attr("cy", this.placeModel.cy);
     this.updateTokenPosition();
     this.updateTextPosition();
   }
@@ -138,9 +129,7 @@ export class SvgPlace extends PetriNetSvgElement {
     const textX = this.placeModel.cx - this._svgTextWidth / 2;
     const textY = this.placeModel.cy - Place.RADIUS - 5;
 
-    this._svgText
-      .attr("x", textX * this._scaleFactor)
-      .attr("y", textY * this._scaleFactor);
+    this._svgText.attr("x", textX).attr("y", textY);
   }
 
   private updateTokenPosition() {
@@ -148,13 +137,11 @@ export class SvgPlace extends PetriNetSvgElement {
       const tokenTextX = this.placeModel.cx - Place.RADIUS / 2;
       const tokenTextY = this.placeModel.cy + 5;
 
-      this._svgTokenText
-        .attr("x", tokenTextX * this._scaleFactor)
-        .attr("y", tokenTextY * this._scaleFactor);
+      this._svgTokenText.attr("x", tokenTextX).attr("y", tokenTextY);
     } else if (this._svgTokens.length === 1) {
       this._svgTokens[0]
-        .attr("cx", this.placeModel.cx * this._scaleFactor)
-        .attr("cy", this.placeModel.cy * this._scaleFactor);
+        .attr("cx", this.placeModel.cx)
+        .attr("cy", this.placeModel.cy);
     } else if (this._svgTokens.length >= 2) {
       const angleIncrement = Math.PI / this._svgTokens.length;
       this._svgTokens.forEach((token, i) => {
@@ -165,9 +152,7 @@ export class SvgPlace extends PetriNetSvgElement {
         const tokenY =
           this.placeModel.cy + (Math.cos(angle) * Place.RADIUS) / 2;
 
-        token
-          .attr("cx", tokenX * this._scaleFactor)
-          .attr("cy", tokenY * this._scaleFactor);
+        token.attr("cx", tokenX).attr("cy", tokenY);
       });
     }
   }
@@ -190,7 +175,7 @@ export class SvgPlace extends PetriNetSvgElement {
       for (let i = 0; i < this.placeModel.tokenCount; i++) {
         const token = this._svgGroup
           .insert("circle", this._svgCircle.node()?.querySelector)
-          .attr("r", tokenRadius * this._scaleFactor)
+          .attr("r", tokenRadius)
           .style("pointer-events", "none");
         this._svgTokens.push(token);
       }
