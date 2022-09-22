@@ -16,10 +16,14 @@ import java.util.*
 
 @KtorExperimentalLocationsAPI
 object Paths {
+    /**
+     * Server-side-stored configuration for GUI.
+     */
     @Location("/config")
     class Config
+
     /**
-     * Get or remove the specified group
+     * Group
      *
      * @param groupId Group ID
      */
@@ -27,7 +31,7 @@ object Paths {
     class Group(val groupId: UUID)
 
     /**
-     * Get members of the specified group
+     * Members of the specified group
      *
      * @param groupId Group ID
      */
@@ -35,14 +39,14 @@ object Paths {
     class GroupMembers(val groupId: UUID)
 
     /**
-     * Get groups belonging to the current user&#39;s organization
+     * Groups og the current user&#39;s organization
      *
      */
     @Location("/groups")
     class Groups
 
     /**
-     * Get subgroups of the specified group
+     * Subgroups of the specified group
      *
      * @param groupId Group ID
      */
@@ -50,7 +54,7 @@ object Paths {
     class Subgroups(val groupId: UUID)
 
     /**
-     * Remove member from the specified group
+     * Mmber from the specified group
      *
      * @param groupId Group ID
      * @param userId User ID
@@ -59,7 +63,7 @@ object Paths {
     class GroupMember(val groupId: UUID, val userId: UUID)
 
     /**
-     * Remove the specified subgroup
+     * Subgroup of a group.
      *
      * @param groupId Group ID
      * @param subgroupId Subgroup ID
@@ -68,7 +72,7 @@ object Paths {
     class Subgroup(val groupId: UUID, val subgroupId: UUID)
 
     /**
-     * Get or remove the specified organization
+     * Organization.
      *
      * @param organizationId Organization ID
      */
@@ -76,7 +80,7 @@ object Paths {
     class Organization(val organizationId: UUID)
 
     /**
-     * Get groups associated with the specified organization
+     * Groups associated with the specified organization.
      *
      * @param organizationId Organization ID
      */
@@ -84,29 +88,27 @@ object Paths {
     class OrganizationGroups(val organizationId: UUID)
 
     /**
-     * Get members of the specified organization
+     * Members of the specified organization
      *
      * @param organizationId Organization ID
      */
     @Location("/organizations/{organizationId}/members")
-    class OrganizationsOrganizationIdMembers(val organizationId: UUID)
+    class OrganizationsOrgIdMembers(val organizationId: UUID)
 
     /**
-     * Get members of the specified organization
-     *
-     * @param organizationId Organization ID
+     * List of organizations
      */
     @Location("/organizations")
     class Organizations
 
     /**
-     * Remove member from the specified organization
+     * A member of the specified organization
      *
      * @param organizationId Organization ID
      * @param userId User ID
      */
     @Location("/organizations/{organizationId}/members/{userId}")
-    class OrganizationOrgIdMembersUserId(val organizationId: UUID, val userId: UUID)
+    class OrganizationsOrgIdMembersUserId(val organizationId: UUID, val userId: UUID)
 
     /**
      * Data stores assigned to [organizationId].

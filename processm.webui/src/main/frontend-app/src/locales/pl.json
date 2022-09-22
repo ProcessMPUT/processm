@@ -197,7 +197,7 @@
     }
   },
   "registration-form": {
-    "admin-email": "E-mail administratora",
+    "admin-email": "E-mail",
     "error-box": {
       "failed": "Nieprawidłowy adres e-mail lub nazwa organizacji"
     },
@@ -254,6 +254,7 @@
     "final": "Końcowe",
     "filename": "Nazwa pliku",
     "cancel": "Anuluj",
+    "email": "E-mail",
     "save": "Zapisz",
     "test": "Test",
     "rename": "Zmień nazwę",

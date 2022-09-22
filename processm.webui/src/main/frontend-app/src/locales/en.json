@@ -199,7 +199,7 @@
     }
   },
   "registration-form": {
-    "admin-email": "Administrator e-mail",
+    "admin-email": "E-mail",
     "error-box": {
       "failed": "Incorrect e-mail address or organization name"
     },
@@ -257,6 +257,7 @@
     "filename": "Filename",
     "cancel": "Cancel",
     "debug": "Debug",
+    "email": "E-mail",
     "save": "Save",
     "test": "Test",
     "rename": "Rename",

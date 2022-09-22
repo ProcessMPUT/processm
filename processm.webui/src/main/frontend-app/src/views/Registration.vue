@@ -2,17 +2,14 @@
   <v-container fluid fill-height>
     <v-layout align-center justify-center>
       <v-flex xs12 sm8 md4>
-        <v-card class="elevation-12">
+        <v-card class="elevation-12" min-width="470">
           <v-toolbar color="primary" dark flat>
             <v-toolbar-title>
               {{ $t("registration-form.title") }}
             </v-toolbar-title>
           </v-toolbar>
           <v-card-text>
-            <registration-form
-              @cancel="goToLogin"
-              @success="goToLogin"
-            ></registration-form>
+            <registration-form @cancel="goToLogin" @success="goToLogin"></registration-form>
           </v-card-text>
         </v-card>
       </v-flex>

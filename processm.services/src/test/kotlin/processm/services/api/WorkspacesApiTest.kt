@@ -15,6 +15,7 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponents
 import processm.services.api.models.*
+import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.time.Instant
@@ -510,7 +511,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         layoutData.mapValues { Gson().toJson(it.value) }
                     )
                 } throws ValidationException(
-                    ValidationException.Reason.ResourceNotFound,
+                    Reason.ResourceNotFound,
                     "The specified workspace does not exist or the user has insufficient permissions to it"
                 )
                 with(
@@ -571,7 +572,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         organizationId
                     )
                 } throws ValidationException(
-                    ValidationException.Reason.ResourceNotFound,
+                    Reason.ResourceNotFound,
                     "The specified workspace/component does not exist or the user has insufficient permissions to it"
                 )
                 with(

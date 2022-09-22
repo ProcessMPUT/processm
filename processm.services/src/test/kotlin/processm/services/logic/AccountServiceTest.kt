@@ -46,7 +46,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.verifyUsersCredentials("user2", correctPassword)
         }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -62,7 +62,7 @@ class AccountServiceTest : ServiceTestBase() {
         withCleanTables(Users, Organizations, UsersRolesInOrganizations, UserGroups) {
             every { groupServiceMock.attachUserToGroup(any(), any()) } just runs
 
-            accountService.createUser("user@example.com", null, "pass")
+            accountService.createUser("user@example.com", null, "passW0RD")
 
             val user = User.all().first()
             assertEquals("user@example.com", user.email)
@@ -75,9 +75,9 @@ class AccountServiceTest : ServiceTestBase() {
 
         val exception =
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
-                accountService.createUser("user@example.com", null, "pass")
+                accountService.createUser("user@example.com", null, "passW0RD")
             }
-        assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
+        assertEquals(Reason.ResourceAlreadyExists, exception.reason)
     }
 
     @Test
@@ -86,9 +86,9 @@ class AccountServiceTest : ServiceTestBase() {
 
         val exception =
             assertFailsWith<ValidationException>("The user with the given email already exists.") {
-                accountService.createUser("uSeR@eXaMpLe.com", null, "pass")
+                accountService.createUser("uSeR@eXaMpLe.com", null, "passW0RD")
             }
-        assertEquals(ValidationException.Reason.ResourceAlreadyExists, exception.reason)
+        assertEquals(Reason.ResourceAlreadyExists, exception.reason)
     }
 
     @Test
@@ -103,7 +103,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.getAccountDetails(userId = UUID.randomUUID())
         }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -113,7 +113,7 @@ class AccountServiceTest : ServiceTestBase() {
                 userId = UUID.randomUUID(), currentPassword = correctPassword, newPassword = "new_pass"
             )
         }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -147,7 +147,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException> {
             accountService.changeLocale(userId.value, unsupportedLocale)
         }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @ParameterizedTest
@@ -159,7 +159,7 @@ class AccountServiceTest : ServiceTestBase() {
             val exception = assertFailsWith<ValidationException> {
                 accountService.changeLocale(userId.value, unsupportedLocale)
             }
-            assertEquals(ValidationException.Reason.ResourceFormatInvalid, exception.reason)
+            assertEquals(Reason.ResourceFormatInvalid, exception.reason)
         }
 
     @Test
@@ -167,7 +167,7 @@ class AccountServiceTest : ServiceTestBase() {
         val exception = assertFailsWith<ValidationException>("Specified user account does not exist") {
             accountService.changeLocale(userId = UUID.randomUUID(), locale = "en_US")
         }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -192,6 +192,6 @@ class AccountServiceTest : ServiceTestBase() {
             val exception = assertFailsWith<ValidationException> {
                 accountService.getRolesAssignedToUser(userId = UUID.randomUUID())
             }
-            assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+            assertEquals(Reason.ResourceNotFound, exception.reason)
         }
 }

@@ -1,9 +1,7 @@
 package processm.services.api
 
 import io.ktor.http.*
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
@@ -15,6 +13,7 @@ import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.AccountService
 import processm.services.logic.OrganizationService
+import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import java.util.*
 import java.util.stream.Stream
@@ -34,7 +33,8 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/groups"
+        HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
+        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/groups",
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
@@ -43,7 +43,6 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}",
-        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
     )
 
     @Test
@@ -110,7 +109,7 @@ class OrganizationsApiTest : BaseApiTest() {
 
             withAuthentication {
                 every { organizationService.getOrganizationGroups(removedOrganizationId) } throws ValidationException(
-                    ValidationException.Reason.ResourceNotFound,
+                    Reason.ResourceNotFound,
                     userMessage = "Organization not found"
                 )
                 every { accountService.getRolesAssignedToUser(any()) } returns listOf(
@@ -250,7 +249,7 @@ class OrganizationsApiTest : BaseApiTest() {
             every {
                 organizationService.addMember(organizationId, email, OrganizationRole.reader)
             } throws ValidationException(
-                ValidationException.Reason.ResourceAlreadyExists,
+                Reason.ResourceAlreadyExists,
                 "User already exists in the organization."
             )
 
@@ -268,6 +267,149 @@ class OrganizationsApiTest : BaseApiTest() {
 
         verify(exactly = 1) {
             organizationService.addMember(organizationId, email, OrganizationRole.reader)
+        }
+    }
+
+    @Test
+    fun `responds to the deletion of a member with 204`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val memberToDelete = UUID.randomUUID()
+
+        withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+
+            every {
+                organizationService.removeMember(organizationId, memberToDelete)
+            } just runs
+
+            with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/members/$memberToDelete")) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
+            }
+        }
+
+        verify(exactly = 1) {
+            organizationService.removeMember(organizationId, memberToDelete)
+        }
+    }
+
+    @Test
+    fun `responds to the deletion of non-member member with 404`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val memberToDelete = UUID.randomUUID()
+
+        withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+
+            every {
+                organizationService.removeMember(organizationId, memberToDelete)
+            } throws ValidationException(Reason.ResourceNotFound, "User is not found.")
+
+            with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/members/$memberToDelete")) {
+                assertEquals(HttpStatusCode.NotFound, response.status())
+                val error = response.deserializeContent<ErrorMessage>()
+                assertEquals("User is not found.", error.error)
+            }
+        }
+
+        verify(exactly = 1) {
+            organizationService.removeMember(organizationId, memberToDelete)
+        }
+    }
+
+    @Test
+    fun `responds to the deletion of the current user with 422`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+
+        withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+            with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/members/$userId") {
+                withSerializedBody(OrganizationMember(organizationRole = OrganizationRole.writer))
+            }) {
+                assertEquals(HttpStatusCode.UnprocessableEntity, response.status())
+                val error = response.deserializeContent<ErrorMessage>()
+                assertEquals("Cannot delete the current user.", error.error)
+            }
+        }
+
+        verify(exactly = 0) {
+            organizationService.removeMember(any(), any())
+        }
+    }
+
+    @Test
+    fun `responds to the update of a member role with 204`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val memberToUpdate = UUID.randomUUID()
+
+        withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+
+            every {
+                organizationService.updateMember(organizationId, memberToUpdate, OrganizationRole.writer)
+            } just runs
+
+            with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/members/$memberToUpdate") {
+                withSerializedBody(OrganizationMember(organizationRole = OrganizationRole.writer))
+            }) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
+            }
+        }
+
+        verify(exactly = 1) {
+            organizationService.updateMember(organizationId, memberToUpdate, OrganizationRole.writer)
+        }
+    }
+
+    @Test
+    fun `responds to the update of a role of non-existing member with 404`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        val memberToUpdate = UUID.randomUUID()
+
+        withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+
+            every {
+                organizationService.updateMember(organizationId, memberToUpdate, OrganizationRole.writer)
+            } throws ValidationException(Reason.ResourceNotFound, "User is not found.")
+
+            with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/members/$memberToUpdate") {
+                withSerializedBody(OrganizationMember(organizationRole = OrganizationRole.writer))
+            }) {
+                assertEquals(HttpStatusCode.NotFound, response.status())
+                val error = response.deserializeContent<ErrorMessage>()
+                assertEquals("User is not found.", error.error)
+            }
+        }
+
+        verify(exactly = 1) {
+            organizationService.updateMember(organizationId, memberToUpdate, OrganizationRole.writer)
+        }
+    }
+
+    @Test
+    fun `responds to the update of a role of the current user with 422`() = withConfiguredTestApplication {
+        val organizationService = declareMock<OrganizationService>()
+        val organizationId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+
+        withAuthentication(userId = userId, role = OrganizationRole.owner to organizationId) {
+
+            with(handleRequest(HttpMethod.Patch, "/api/organizations/$organizationId/members/$userId") {
+                withSerializedBody(OrganizationMember(organizationRole = OrganizationRole.writer))
+            }) {
+                assertEquals(HttpStatusCode.UnprocessableEntity, response.status())
+                val error = response.deserializeContent<ErrorMessage>()
+                assertEquals("Cannot change role of the current user.", error.error)
+            }
+        }
+
+        verify(exactly = 0) {
+            organizationService.updateMember(any(), any(), any())
         }
     }
 }

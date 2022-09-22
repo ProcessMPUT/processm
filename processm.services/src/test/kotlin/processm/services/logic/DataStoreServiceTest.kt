@@ -69,7 +69,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
             dataStoreService.getDataStore(UUID.randomUUID())
         }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -182,7 +182,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
                 methodCall(dataStoreService)
             }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test

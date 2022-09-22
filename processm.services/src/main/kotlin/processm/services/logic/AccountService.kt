@@ -8,8 +8,10 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.ieq
 import processm.dbmodels.ilike
 import processm.dbmodels.models.*
+import processm.services.helpers.Patterns
 import java.util.*
 
 class AccountService(private val groupService: GroupService) {
@@ -25,12 +27,12 @@ class AccountService(private val groupService: GroupService) {
     fun verifyUsersCredentials(username: String, password: String) =
         loggedScope { logger ->
             transaction(DBCache.getMainDBPool().database) {
-                val user = User.find(Users.email ilike username).firstOrNull()
+                val user = User.find(Users.email ieq username).firstOrNull()
 
                 if (user == null) {
                     logger.debug("The specified username ${username} is unknown and cannot be verified")
                     throw ValidationException(
-                        ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
+                        Reason.ResourceNotFound, "The specified user account does not exist"
                     )
                 }
 
@@ -42,18 +44,26 @@ class AccountService(private val groupService: GroupService) {
      * Creates new account
      */
     fun createUser(
-        userEmail: String,
+        email: String,
         accountLocale: String? = null,
         pass: String
     ): User = loggedScope { logger ->
         transaction(DBCache.getMainDBPool().database) {
-            val usersCount = Users.select { Users.email ilike userEmail }.limit(1).count()
-            if (usersCount > 0) {
-                throw ValidationException(
-                    ValidationException.Reason.ResourceAlreadyExists,
-                    "The user with the given email already exists."
-                )
-            }
+            Patterns.email.matches(email) || throw ValidationException(
+                Reason.ResourceFormatInvalid,
+                "Invalid e-mail format: $email"
+            )
+
+            Patterns.password.matches(pass) || throw ValidationException(
+                Reason.ResourceFormatInvalid,
+                "Password should have 1 lowercase letter, 1 uppercase letter, 1 number, and be at least 8 characters long."
+            )
+
+            val usersCount = Users.select { Users.email ieq email }.limit(1).count()
+            usersCount == 0L || throw ValidationException(
+                Reason.ResourceAlreadyExists,
+                "The user with the given email already exists."
+            )
 
             // automatically created group for the particular user
             val privateGroup = UserGroup.new {
@@ -62,7 +72,7 @@ class AccountService(private val groupService: GroupService) {
             }
 
             val user = User.new {
-                this.email = userEmail
+                this.email = email
                 this.password = calculatePasswordHash(pass)
                 this.locale = accountLocale ?: defaultLocale.toString()
                 this.privateGroup = privateGroup
@@ -162,7 +172,7 @@ class AccountService(private val groupService: GroupService) {
 
     private fun getUserDao(userId: UUID) = transaction(DBCache.getMainDBPool().database) {
         User.findById(userId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "The specified user account does not exist"
+            Reason.ResourceNotFound, "The specified user account does not exist"
         )
     }
 
@@ -178,7 +188,7 @@ class AccountService(private val groupService: GroupService) {
             2 -> Locale(localeTags[0], localeTags[1])
             1 -> Locale(localeTags[0])
             else -> throw ValidationException(
-                ValidationException.Reason.ResourceFormatInvalid, "The provided locale string is in invalid format"
+                Reason.ResourceFormatInvalid, "The provided locale string is in invalid format"
             )
         }
 
@@ -187,7 +197,7 @@ class AccountService(private val groupService: GroupService) {
             localeObject.isO3Country
         } catch (e: MissingResourceException) {
             throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The current locale could not be changed: ${e.message.orEmpty()}"
             )
         }

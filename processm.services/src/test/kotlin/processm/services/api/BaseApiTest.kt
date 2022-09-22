@@ -1,11 +1,7 @@
 package processm.services.api
 
 import com.google.common.reflect.TypeToken
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
 import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
@@ -16,6 +12,8 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.KoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
+import processm.services.LocalDateTimeTypeAdapter
+import processm.services.NonNullableTypeAdapterFactory
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
@@ -31,6 +29,17 @@ import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
+    companion object {
+        val gson by lazy {
+            // TODO: replace GSON with kotlinx/serialization
+            val gsonBuilder = GsonBuilder()
+            // Correctly serialize/deserialize LocalDateTime
+            gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
+            gsonBuilder.registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
+            gsonBuilder.create()
+        }
+    }
+
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
     private val mocksMap = mutableMapOf<KClass<*>, Any>()
@@ -49,7 +58,7 @@ abstract class BaseApiTest : KoinTest {
 
     @ParameterizedTest
     @MethodSource("endpointsWithAuthentication")
-    fun `responds to not authenticated requests with 403`(requestEndpoint: Pair<HttpMethod, String>?) =
+    fun `responds to not authenticated requests with 401`(requestEndpoint: Pair<HttpMethod, String>?) =
         withConfiguredTestApplication {
             if (requestEndpoint == null) {
                 return@withConfiguredTestApplication
@@ -146,23 +155,12 @@ abstract class BaseApiTest : KoinTest {
         }
     }
 
-    protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T {
-        // TODO: replace GSON with kotlinx/serialization
-        val gsonBuilder = GsonBuilder()
-        // Correctly serialize/deserialize LocalDateTime
-        gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
-            override fun write(out: JsonWriter, value: LocalDateTime?) {
-                out.value(value?.toString())
-            }
-
-            override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
-        })
-        return gsonBuilder.create().fromJson(content, object : TypeToken<T>() {}.type)
-    }
+    protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T =
+        gson.fromJson(content, object : TypeToken<T>() {}.type)
 
     protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-        setBody(Gson().toJson(requestBody))
+        setBody(gson.toJson(requestBody))
     }
 
 }

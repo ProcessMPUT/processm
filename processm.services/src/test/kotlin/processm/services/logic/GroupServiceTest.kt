@@ -27,7 +27,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.attachUserToGroup(userId, groupId.value)
         }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -39,7 +39,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.attachUserToGroup(userId.value, groupId)
         }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -74,7 +74,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getGroup(UUID.randomUUID())
         }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -92,7 +92,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getSubgroups(UUID.randomUUID())
         }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -116,7 +116,7 @@ class GroupServiceTest : ServiceTestBase() {
             groupService.getRootGroupId(UUID.randomUUID())
         }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test

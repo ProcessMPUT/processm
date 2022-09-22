@@ -2,7 +2,7 @@
   <v-container fluid fill-height>
     <v-layout align-center justify-center>
       <v-flex xs12 sm8 md4>
-        <v-card class="elevation-12">
+        <v-card class="elevation-12" min-width="470">
           <v-toolbar color="primary" dark flat>
             <v-toolbar-title>{{ $t("login-form.title") }}</v-toolbar-title>
           </v-toolbar>
@@ -10,9 +10,9 @@
             <v-alert type="info" text v-if="config.loginMessage !== ''">
               {{ config.loginMessage }}
             </v-alert>
-            <v-form v-model="isValidForm" ref="loginForm">
+            <v-form id="loginForm" ref="loginForm" v-model="isValidForm" @submit.prevent="authenticate">
               <v-text-field
-                :label="$t('login-form.email')"
+                :label="$t('common.email')"
                 v-model="username"
                 prepend-icon="person"
                 type="text"
@@ -28,14 +28,15 @@
                 :rules="[(v) => !!v || $t('login-form.validation.password-empty')]"
                 @keypress.enter="authenticate"
               ></v-text-field>
-              <v-layout justify-space-between>
-                <v-btn v-if="!config.demoMode" color="primary" small text to="register">
+              <v-layout>
+                <v-btn v-if="!config.demoMode" color="primary" text to="register">
                   {{ $t("login-form.register-account") }}
                 </v-btn>
-                <v-btn v-if="!config.demoMode" color="primary" small text to="reset-password">
+                <v-btn v-if="!config.demoMode" color="primary" text to="reset-password">
                   {{ $t("login-form.reset-password") }}
                 </v-btn>
-                <v-btn color="primary" @click.stop="authenticate">
+                <v-spacer></v-spacer>
+                <v-btn color="primary" form="loginForm" type="submit">
                   {{ $t("login-form.login") }}
                 </v-btn>
               </v-layout>

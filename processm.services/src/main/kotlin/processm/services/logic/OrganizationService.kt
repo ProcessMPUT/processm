@@ -7,7 +7,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.debug
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.ilike
+import processm.dbmodels.ieq
 import processm.dbmodels.models.*
 import processm.services.api.models.OrganizationRole
 import java.util.*
@@ -35,8 +35,9 @@ class OrganizationService(
     fun addMember(organizationId: UUID, email: String, role: OrganizationRole): User =
         loggedScope { logger ->
             transaction(DBCache.getMainDBPool().database) {
-                val userWithEmail = User.find { Users.email ilike email }.firstOrNull()
-                    ?: accountService.createUser(email, pass = UUID.randomUUID().toString())
+                assert(User.count(Users.email ieq email) in 0..1)
+                val userWithEmail = User.find { Users.email ieq email }.firstOrNull()
+                    ?: accountService.createUser(email, pass = "G3n3rAt3d!${UUID.randomUUID()}")
                 addMember(organizationId, userWithEmail.id.value, role)
             }
         }
@@ -48,25 +49,14 @@ class OrganizationService(
      */
     fun addMember(organizationId: UUID, userId: UUID, role: OrganizationRole): User = loggedScope { logger ->
         transaction(DBCache.getMainDBPool().database) {
-            val organization = Organization.findById(organizationId) ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "Organization does not exist."
-            )
+            val organization = Organization.findById(organizationId)
+                .validateNotNull(Reason.ResourceNotFound, "Organization does not exist.")
 
-            val user = User.findById(userId) ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "User does not exists."
-            )
+            val user = User.findById(userId).validateNotNull(Reason.ResourceNotFound, "User does not exists.")
 
-            val urio = UserRoleInOrganization.find {
+            UserRoleInOrganization.find {
                 (UsersRolesInOrganizations.userId eq user.id) and (UsersRolesInOrganizations.organizationId eq organization.id)
-            }.firstOrNull()
-            if (urio !== null) {
-                throw ValidationException(
-                    ValidationException.Reason.ResourceAlreadyExists,
-                    "User already exists in the organization."
-                )
-            }
+            }.firstOrNull().validate(null, Reason.ResourceAlreadyExists, "User already exists in the organization.")
 
             UserRoleInOrganization.new {
                 this.user = user
@@ -83,29 +73,33 @@ class OrganizationService(
         }
     }
 
+    fun updateMember(organizationId: UUID, userId: UUID, role: OrganizationRole): Unit =
+        loggedScope { logger ->
+            transaction(DBCache.getMainDBPool().database) {
+                val member = UserRoleInOrganization.find {
+                    (UsersRolesInOrganizations.organizationId eq organizationId) and (UsersRolesInOrganizations.userId eq userId)
+                }.firstOrNull()
+                    .validateNotNull(Reason.ResourceNotFound) { "User $userId is not found in organization $organizationId." }
+                member.role = role.toDB()
+
+                logger.debug("Updated user $userId in organization $organizationId.")
+            }
+        }
+
     fun removeMember(organizationId: UUID, userId: UUID) = loggedScope { logger ->
         transaction(DBCache.getMainDBPool().database) {
-            val organization = Organization.findById(organizationId) ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "Organization does not exist."
-            )
+            val organization = Organization.findById(organizationId)
+                .validateNotNull(Reason.ResourceNotFound, "Organization does not exist.")
 
-            val user = User.findById(userId) ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "User does not exists."
-            )
+            User.findById(userId).validateNotNull(Reason.ResourceNotFound, "User does not exists.")
 
-            val deleted = UsersRolesInOrganizations.deleteWhere {
+            UsersRolesInOrganizations.deleteWhere {
                 (UsersRolesInOrganizations.userId eq userId) and (UsersRolesInOrganizations.organizationId eq organizationId)
-            }
+            }.validateNot(0, Reason.ResourceNotFound) { "User $userId is not found in organizations $organizationId." }
+
             groupService.detachUserFromGroup(userId, organization.sharedGroup.id.value)
 
-            if (deleted == 0) {
-                throw ValidationException(
-                    ValidationException.Reason.ResourceNotFound,
-                    "User $userId is not found in organizations $organizationId."
-                )
-            }
+            logger.debug { "Removed member $userId from organization $organizationId." }
         }
     }
 
@@ -125,9 +119,9 @@ class OrganizationService(
      */
     fun getOrganizationBySharedGroupId(sharedGroupId: UUID) = transaction(DBCache.getMainDBPool().database) {
         val organization = Organizations.select { Organizations.sharedGroupId eq sharedGroupId }.firstOrNull()
-            ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "The specified shared group id is not assigned to any organization"
+            .validateNotNull(
+                Reason.ResourceNotFound,
+                "The shared group $sharedGroupId is not assigned to any organization."
             )
 
         return@transaction Organization.wrapRow(organization).toDto()
@@ -138,6 +132,8 @@ class OrganizationService(
      */
     fun createOrganization(name: String, isPrivate: Boolean, parent: UUID? = null): Organization =
         loggedScope { logger ->
+            name.isNotBlank().validate(Reason.ResourceFormatInvalid, "Name must not be blank or empty.")
+
             transaction(DBCache.getMainDBPool().database) {
                 // automatically created group for all users
                 val sharedGroup = UserGroup.new {
@@ -152,15 +148,14 @@ class OrganizationService(
                     this.sharedGroup = sharedGroup
                 }
 
-                logger.debug { "Organization $name with id ${org.id.value} is created" }
+                logger.debug { "Created organization $name with id ${org.id.value}" }
 
                 org
             }
         }
 
     private fun getOrganizationDao(organizationId: UUID) = transaction(DBCache.getMainDBPool().database) {
-        Organization.findById(organizationId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "The specified organization does not exist"
-        )
+        Organization.findById(organizationId)
+            .validateNotNull(Reason.ResourceNotFound, "The organization $organizationId does not exist.")
     }
 }

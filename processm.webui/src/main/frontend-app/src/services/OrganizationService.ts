@@ -11,4 +11,13 @@ export default class OrganizationService extends BaseService {
     const member = { email: email, organizationRole: role };
     await this.organizationsApi.addOrganizationMember(organizationId, member);
   }
+
+  public async updateRole(organizationId: string, userId: string, role: OrganizationRole): Promise<void> {
+    const member = { organizationRole: role };
+    await this.organizationsApi.updateOrganizationMember(organizationId, userId, member);
+  }
+
+  public async removeMember(organizationId: string, userId: string): Promise<void> {
+    await this.organizationsApi.removeOrganizationMember(organizationId, userId);
+  }
 }

@@ -42,7 +42,7 @@ class GroupService {
                 } catch (e: ExposedSQLException) {
                     logger.debug("The non-existing userId $userId or groupId $groupId was specified")
                     throw ValidationException(
-                        ValidationException.Reason.ResourceNotFound, "The specified user or group does not exist"
+                        Reason.ResourceNotFound, "The specified user or group does not exist"
                     )
                 }
             }
@@ -73,7 +73,7 @@ class GroupService {
 
         if (parentGroup == null) {
             throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The specified group does not exist"
             )
         }
@@ -101,7 +101,7 @@ class GroupService {
 
     private fun getGroupDao(groupId: UUID) = transaction(DBCache.getMainDBPool().database) {
         UserGroup.findById(groupId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "The specified group does not exist"
+            Reason.ResourceNotFound, "The specified group does not exist"
         )
     }
 }

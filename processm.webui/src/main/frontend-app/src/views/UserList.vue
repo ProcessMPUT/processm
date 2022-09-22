@@ -34,9 +34,14 @@
           <v-card>
             <v-card-title>{{ $t("common.add-new") }}</v-card-title>
             <v-card-text>
-              <v-form id="newForm" v-model="isNewValid" @submit.prevent="includeMember">
-                <combo-box-with-search :value.sync="newUser" :search="searchUsers"></combo-box-with-search>
-                <v-select v-model="newRole" :items="roles"></v-select>
+              <v-form id="newForm" v-model="isNewValid" @submit.prevent="addMember">
+                <combo-box-with-search
+                  :label="$t('common.email')"
+                  :rules="[(v) => /^([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6})*$/.test(v) || $t('registration-form.validation.email-format')]"
+                  :search="searchUsers"
+                  :value.sync="newUser"
+                ></combo-box-with-search>
+                <v-select v-model="newRole" :items="roles" :label="$t('users.role')"></v-select>
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -77,7 +82,7 @@
       <v-tooltip bottom>
         <template v-slot:activator="{ on, attrs }">
           <v-btn :disabled="members[index].email === $sessionStorage.userInfo.username" color="primary" dark icon v-bind="attrs" v-on="on">
-            <v-icon small @click="excludeMember(item)">delete_forever</v-icon>
+            <v-icon small @click="removeMember(item)">delete_forever</v-icon>
           </v-btn>
         </template>
         <span>{{ $t("users.exclude-member") }}</span>
@@ -88,7 +93,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Inject } from "vue-property-decorator";
+import { Component, Inject, Watch } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
 import { OrganizationMember, OrganizationRole } from "@/openapi/api";
 import ComboBoxWithSearch from "@/components/ComboBoxWithSearch.vue";
@@ -116,14 +121,23 @@ export default class UserList extends Vue {
   roles = [OrganizationRole.Owner, OrganizationRole.Writer, OrganizationRole.Reader];
   organization = this.$sessionStorage.currentOrganization;
 
+  async mounted() {
+    await this.loadMembers();
+  }
+
   async loadMembers() {
     this.loading = true;
     this.members = await this.organizationService.getOrganizationMembers(this.organization.id);
     this.loading = false;
   }
 
-  async mounted() {
-    await this.loadMembers();
+  @Watch("newDialog")
+  resetNewDialog() {
+    if (this.newDialog) {
+      this.newUser = "";
+      this.newRole = OrganizationRole.Reader;
+      this.isNewValid = false;
+    }
   }
 
   async searchUsers(value: string): Promise<Array<string>> {
@@ -131,8 +145,10 @@ export default class UserList extends Vue {
     return Promise.resolve(list.map((a) => a.email));
   }
 
-  async includeMember() {
+  async addMember() {
     try {
+      console.assert(this.newUser != "", "newUser: " + this.newUser);
+      console.debug("adding member ", this.newUser);
       await this.organizationService.addMember(this.organization.id, this.newUser, this.newRole);
       await this.loadMembers();
       this.newDialog = false;
@@ -141,9 +157,11 @@ export default class UserList extends Vue {
     }
   }
 
-  async excludeMember(member: OrganizationMember) {
+  async removeMember(member: OrganizationMember) {
     try {
-      // TODO
+      console.assert(member.id !== undefined);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      await this.organizationService.removeMember(this.organization.id, member.id!);
     } catch (e) {
       this.app.error(e);
     }
@@ -151,7 +169,9 @@ export default class UserList extends Vue {
 
   async updateRole(member: OrganizationMember) {
     try {
-      // TODO
+      console.assert(member.id !== undefined);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      await this.organizationService.updateRole(this.organization.id, member.id!, member.organizationRole);
     } catch (e) {
       this.app.error(e);
     }

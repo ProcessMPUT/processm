@@ -11,6 +11,22 @@ ILikeOp(expr1: Expression<*>, expr2: Expression<*>) : ComparisonOp(expr1, expr2,
 infix fun <T : String?> ExpressionWithColumnType<T>.ilike(pattern: String): Op<Boolean> =
     ILikeOp(this, QueryParameter(pattern, columnType))
 
+internal class IEq<T : String?>(expr1: Expression<T>, expr2: Expression<T>) :
+    ComparisonOp(LowerCase<T>(expr1), LowerCase<T>(expr2), "=")
+
+/**
+ * Equals ignore case for string-like expressions.
+ */
+infix fun <T : String?> Expression<T>.ieq(other: Expression<T>): Op<Boolean> =
+    IEq(this, other)
+
+/**
+ * Equals ignore case for string-like expressions.
+ */
+infix fun <T : String?> Expression<T>.ieq(other: T): Op<Boolean> =
+    IEq(this, QueryParameter(other, TextColumnType()))
+
+
 /**
  * Executes [action] on the given entity just after it was committed. [action] does not run on rollback.
  */

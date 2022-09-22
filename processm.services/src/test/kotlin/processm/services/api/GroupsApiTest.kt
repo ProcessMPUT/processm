@@ -10,6 +10,7 @@ import processm.services.api.models.Group
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
+import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import java.util.*
 import java.util.stream.Stream
@@ -90,7 +91,7 @@ class GroupsApiTest : BaseApiTest() {
 
         withAuthentication {
             every { groupService.getRootGroupId(groupId) } throws ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The specified group does not exist"
             )
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
@@ -190,7 +191,7 @@ class GroupsApiTest : BaseApiTest() {
                 every { id } returns organizationId
             }
             every { groupService.getGroup(groupId) } throws ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The specified group does not exist"
             )
             with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {

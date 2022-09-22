@@ -136,27 +136,64 @@ class UsersApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to request with malformed token with 400`() = withConfiguredTestApplication {
+    fun `responds to request with invalid token with 401`() = withConfiguredTestApplication {
         var currentToken: String? = null
 
         withAuthentication {
             with(handleRequest(HttpMethod.Get, "/api/users")) {
                 assertNotEquals(HttpStatusCode.Unauthorized, response.status())
-                currentToken = request.header(HttpHeaders.Authorization)
+                currentToken = request.header(HttpHeaders.Authorization)!!.substringAfter(' ')
             }
         }
         val randomizedToken = StringBuilder(assertNotNull(currentToken))
 
+        // make this test deterministic
+        val rand = Random(0)
+        val validChars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
         do {
-            repeat(20) {
-                randomizedToken[Random.nextInt(randomizedToken.indices)] = ('A'..'z').random()
-            }
+            randomizedToken[rand.nextInt(randomizedToken.indices)] = validChars.random(rand)
         } while (randomizedToken.toString() == currentToken)
 
         with(handleRequest(HttpMethod.Get, "/api/users") {
             addHeader(HttpHeaders.Authorization, "Bearer $randomizedToken")
         }) {
+            // This test used to return 400 BadRequest because of malformed Authorization header and/or token.
+            // The correct response is to response with 401 Unauthorized
+            assertEquals(HttpStatusCode.Unauthorized, response.status())
+        }
+    }
+
+    @Test
+    fun `responds to request with invalid Authorization header with 400`() = withConfiguredTestApplication {
+        withAuthentication {
+            with(handleRequest(HttpMethod.Get, "/api/users")) {
+                assertNotEquals(HttpStatusCode.Unauthorized, response.status())
+            }
+        }
+
+        with(handleRequest(HttpMethod.Get, "/api/users") {
+            addHeader(HttpHeaders.Authorization, "Bearer <just<invalid#token&s=symbols")
+        }) {
             assertEquals(HttpStatusCode.BadRequest, response.status())
+        }
+    }
+
+    @Test
+    fun `responds to request with invalid Authorization method with 401`() = withConfiguredTestApplication {
+        val login = "user@example.com"
+        val password = "passW0RD"
+        withAuthentication(login = login, password = password) {
+            with(handleRequest(HttpMethod.Get, "/api/users")) {
+                assertNotEquals(HttpStatusCode.Unauthorized, response.status())
+            }
+        }
+
+        with(handleRequest(HttpMethod.Get, "/api/users") {
+            val credentials = Base64.getEncoder().encodeToString("$login:$password".toByteArray())
+            assertEquals("dXNlckBleGFtcGxlLmNvbTpwYXNzVzBSRA==", credentials)
+            addHeader(HttpHeaders.Authorization, "Basic $credentials")
+        }) {
+            assertEquals(HttpStatusCode.Unauthorized, response.status())
         }
     }
 
@@ -215,7 +252,7 @@ class UsersApiTest : BaseApiTest() {
         val accountService = declareMock<AccountService>()
 
         every { accountService.getAccountDetails(userId = any()) } throws ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
+            Reason.ResourceNotFound, "Specified user account does not exist"
         )
 
         withAuthentication {
@@ -287,7 +324,7 @@ class UsersApiTest : BaseApiTest() {
                     "user@example.com", accountLocale = any(), pass = any()
                 )
             } throws ValidationException(
-                ValidationException.Reason.ResourceAlreadyExists,
+                Reason.ResourceAlreadyExists,
                 "User with specified name already exists"
             )
 
@@ -328,7 +365,7 @@ class UsersApiTest : BaseApiTest() {
 
             verify(exactly = 0) {
                 accountService.createUser(
-                    userEmail = any(),
+                    email = any(),
                     pass = any(),
                     accountLocale = any()
                 )
@@ -419,7 +456,7 @@ class UsersApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to successful locale change with 200`() = withConfiguredTestApplication {
+    fun `responds to successful locale change with 204`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
 
         every { accountService.changeLocale(userId = any(), locale = "pl_PL") } just runs
@@ -429,7 +466,7 @@ class UsersApiTest : BaseApiTest() {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(LocaleChange("pl_PL"))
             }) {
-                assertEquals(HttpStatusCode.OK, response.status())
+                assertEquals(HttpStatusCode.NoContent, response.status())
             }
         }
 
@@ -446,7 +483,7 @@ class UsersApiTest : BaseApiTest() {
                     userId = any(), locale = "eng_ENG"
                 )
             } throws ValidationException(
-                ValidationException.Reason.ResourceFormatInvalid, "The current locale could not be changed"
+                Reason.ResourceFormatInvalid, "The current locale could not be changed"
             )
 
             withAuthentication {

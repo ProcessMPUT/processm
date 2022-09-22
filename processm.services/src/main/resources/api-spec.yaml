@@ -1517,6 +1517,25 @@ paths:
         schema:
           type: string
           format: uuid
+    patch:
+      tags:
+        - organizations
+      summary: Changes member attributes
+      operationId: updateOrganizationMember
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/OrganizationMember"
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
     delete:
       tags:
         - organizations
@@ -1767,7 +1786,7 @@ components:
             $ref: '#/components/schemas/OrganizationRole'
     OrganizationMember:
       type: object
-      required: [ email, organizationRole ]
+      required: [ organizationRole ]
       properties:
         id:
           type: string

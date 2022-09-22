@@ -2,7 +2,7 @@
   <v-container fill-height fluid>
     <v-layout align-center justify-center>
       <v-flex md4 sm8 xs12>
-        <v-card class="elevation-12">
+        <v-card class="elevation-12" min-width="470">
           <v-toolbar color="primary" dark flat>
             <v-toolbar-title>{{ $t("reset-password.title") }}</v-toolbar-title>
           </v-toolbar>
@@ -10,19 +10,23 @@
             <v-form ref="resetForm" v-model="isValidForm" @submit.prevent="reset">
               <v-text-field
                 v-model="username"
-                :label="$t('login-form.email')"
+                :label="$t('common.email')"
                 :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
                 prepend-icon="person"
                 type="text"
               ></v-text-field>
             </v-form>
           </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="secondary" text @click="cancel">
+              {{ $t("common.cancel") }}
+            </v-btn>
+            <v-btn :disabled="!isValidForm" color="primary" form="resetForm" type="submit">
+              {{ $t("reset-pasword.reset") }}
+            </v-btn>
+          </v-card-actions>
         </v-card>
-        <v-card-actions>
-          <v-btn :disabled="!isValidForm" color="primary" form="resetForm" type="submit">
-            {{ $t("login-form.login") }}
-          </v-btn>
-        </v-card-actions>
       </v-flex>
     </v-layout>
   </v-container>
@@ -37,6 +41,10 @@ import App from "@/App.vue";
 export default class ResetPassword extends Vue {
   @Inject() app!: App;
   isValidForm = false;
+
+  cancel() {
+    this.$router.push({ name: "login" });
+  }
 
   async reset() {
     try {

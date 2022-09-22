@@ -163,11 +163,11 @@ class LogsService(private val producer: Producer) {
                 .slice(EtlProcessesMetadata.name, DataConnectors.dataModelId)
                 .select { EtlProcessesMetadata.id eq etlProcessId }
                 .firstOrNull() ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The specified ETL process and/or data store does not exist"
             )
             val dataModelId = etlProcessDetails[DataConnectors.dataModelId]?.value ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The specified ETL process and/or data store has no data model"
             )
             val etlProcessName = etlProcessDetails[EtlProcessesMetadata.name]

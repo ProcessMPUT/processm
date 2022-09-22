@@ -10,20 +10,23 @@ data class ApiUser(private val claims: Map<String, Claim>) : Principal {
 
     val userId: UUID =
         UUID.fromString(claims["userId"]?.asString() ?: throw ApiException("Token should contain 'userId' field"))
-    val username: String = claims["username"]?.asString()
-        ?: throw ApiException("Token should contain 'username' field")
-    val organizations: Map<UUID, OrganizationRole> = claims["organizations"]?.asString()?.split(',')?.map {
-            val (organizationId, organizationRole) = it.split(':')
-            return@map UUID.fromString(organizationId) to OrganizationRole.valueOf(organizationRole)
-        }?.toMap()
+    val username: String = claims["username"]?.asString() ?: throw ApiException("Token should contain 'username' field")
+    val organizations: Map<UUID, OrganizationRole> = claims["organizations"]?.asString()?.split(',')?.mapNotNull {
+        if (it.isEmpty())
+            return@mapNotNull null
+        val (organizationId, organizationRole) = it.split(':')
+        return@mapNotNull UUID.fromString(organizationId) to OrganizationRole.valueOf(organizationRole)
+    }?.toMap()
         ?: throw ApiException("Token should contain 'organizations' field")
 }
 
 internal fun ApiUser.ensureUserBelongsToOrganization(organizationId: UUID, organizationRole: OrganizationRole? = null) {
     if (!organizations.containsKey(organizationId)) {
         throw ApiException("The user is not a member of the related organization", HttpStatusCode.Forbidden)
-    }
-    else if (organizationRole != null && organizations[organizationId]?.ordinal ?: -1 > organizationRole.ordinal) {
-        throw ApiException("The user has insufficient permissions to access the related organization", HttpStatusCode.Forbidden)
+    } else if (organizationRole != null && organizations[organizationId]?.ordinal ?: -1 > organizationRole.ordinal) {
+        throw ApiException(
+            "The user has insufficient permissions to access the related organization",
+            HttpStatusCode.Forbidden
+        )
     }
 }

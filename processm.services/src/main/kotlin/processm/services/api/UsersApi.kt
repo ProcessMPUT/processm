@@ -17,6 +17,7 @@ import processm.core.persistence.connection.DBCache
 import processm.services.api.models.*
 import processm.services.logic.AccountService
 import processm.services.logic.OrganizationService
+import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import java.time.Duration
 import java.time.Instant
@@ -85,7 +86,7 @@ fun Route.UsersApi() {
 
             with(accountInfo) {
                 (!newOrganization || !organizationName.isNullOrBlank()) || throw ValidationException(
-                    ValidationException.Reason.ResourceFormatInvalid,
+                    Reason.ResourceFormatInvalid,
                     "Organization name must not be empty."
                 )
 
@@ -147,7 +148,7 @@ fun Route.UsersApi() {
                         ?: throw ApiException("The provided locale data cannot be parsed")
 
                     accountService.changeLocale(principal.userId, localeData.locale)
-                    call.respond(HttpStatusCode.OK)
+                    call.respond(HttpStatusCode.NoContent)
                 }
             }
         }

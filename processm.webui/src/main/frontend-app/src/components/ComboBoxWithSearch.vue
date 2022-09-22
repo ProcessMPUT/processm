@@ -1,10 +1,12 @@
 <template>
   <v-combobox
     v-model="valueInternal"
+    :label="label"
     :loading="loading"
     :items="items"
     :search-input.sync="searchInternal"
     cache-items
+    :rules="rules"
     @change="$emit('update:value', valueInternal)"
   ></v-combobox>
 </template>
@@ -18,13 +20,17 @@ export default class ComboBoxWithSearch extends Vue {
   /**
    * The selected value.
    */
-  @Prop()
-  value = "";
+  @Prop({ default: "" })
+  value!: string;
   /**
    * The callback function to search for items.
    */
   @Prop()
   search!: (value: string) => Array<string>;
+  @Prop()
+  label?: string;
+  @Prop()
+  rules?: [];
 
   valueInternal = this.value;
   searchInternal = "";

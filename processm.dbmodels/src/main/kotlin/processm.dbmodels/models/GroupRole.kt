@@ -4,7 +4,7 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
-import processm.dbmodels.ilike
+import processm.dbmodels.ieq
 import java.util.*
 
 object GroupRoles : UUIDTable("group_roles") {
@@ -31,4 +31,4 @@ enum class GroupRoleType(val value: String) {
  * The database object representing this role.
  */
 val GroupRoleType.groupRole: GroupRole
-    get() = GroupRole.find { GroupRoles.name ilike value }.first()
+    get() = GroupRole.find { GroupRoles.name ieq value }.first()

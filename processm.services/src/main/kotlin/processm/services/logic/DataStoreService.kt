@@ -384,8 +384,12 @@ class DataStoreService(private val producer: Producer) {
      * Asserts that the specified [dataStoreId] is attached to [organizationId].
      */
     fun assertDataStoreBelongsToOrganization(organizationId: UUID, dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
-        DataStores.select { DataStores.organizationId eq organizationId and(DataStores.id eq dataStoreId) }.limit(1).any()
-                || throw ValidationException(ValidationException.Reason.ResourceNotFound, "The specified organization and/or data store does not exist")
+        DataStores.select { DataStores.organizationId eq organizationId and (DataStores.id eq dataStoreId) }.limit(1)
+            .any()
+                || throw ValidationException(
+            Reason.ResourceNotFound,
+            "The specified organization and/or data store does not exist"
+        )
     }
 
     /**
@@ -406,7 +410,7 @@ class DataStoreService(private val producer: Producer) {
                         (OrganizationRoles.name inList allowedOrganizationRoles.map { it.value })
             }.limit(1).any()
                 || throw ValidationException(
-            ValidationException.Reason.ResourceNotFound,
+            Reason.ResourceNotFound,
             "The specified user account and/or data store does not exist"
         )
     }
@@ -416,7 +420,8 @@ class DataStoreService(private val producer: Producer) {
      */
     private fun getById(dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
         return@transaction DataStore.findById(dataStoreId) ?: throw ValidationException(
-            ValidationException.Reason.ResourceNotFound, "The specified data store does not exist or the user has insufficient permissions to it"
+            Reason.ResourceNotFound,
+            "The specified data store does not exist or the user has insufficient permissions to it"
         )
     }
 

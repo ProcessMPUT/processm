@@ -4,7 +4,7 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
-import processm.dbmodels.ilike
+import processm.dbmodels.ieq
 import java.util.*
 
 object OrganizationRoles : UUIDTable("organization_roles") {
@@ -24,4 +24,4 @@ typealias OrganizationRoleType = GroupRoleType
  * The database object representing this role.
  */
 val OrganizationRoleType.organizationRole: OrganizationRole
-    get() = OrganizationRole.find { OrganizationRoles.name ilike value }.first()
+    get() = OrganizationRole.find { OrganizationRoles.name ieq value }.first()

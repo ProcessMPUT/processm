@@ -5,7 +5,7 @@
       v-model="userEmail"
       prepend-icon="person"
       type="text"
-      :rules="[(v) => /.+@.+\..+/.test(v) || $t('registration-form.validation.email-format')]"
+      :rules="[(v) => /^([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6})*$/.test(v) || $t('registration-form.validation.email-format')]"
     ></v-text-field>
 
     <v-text-field
@@ -13,7 +13,7 @@
       v-model="userPassword"
       prepend-icon="password"
       type="password"
-      :rules="[(v) => (v.length >= 4 && /\d/.test(v) && /[a-zA-Z]/.test(v)) || $t('registration-form.validation.password-format')]"
+      :rules="[(v) => /(?=(.*[0-9]))((?=.*[A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z]))^.{8,}$/.test(v) || $t('registration-form.validation.password-format')]"
     ></v-text-field>
 
     <v-checkbox v-model="newOrganization" :label="$t('registration-form.new-organization')"></v-checkbox>
@@ -60,7 +60,7 @@ export default class RegistrationForm extends Vue {
     }
 
     try {
-      await this.accountService.registerNewAccount(this.userEmail, this.organizationName, this.userPassword);
+      await this.accountService.registerNewAccount(this.userEmail, this.userPassword, this.newOrganization, this.organizationName);
       this.app.info(this.$t("registration-form.success-box.registered").toString());
       this.$emit("success");
     } catch (error) {

@@ -67,7 +67,7 @@ export default class AccountService extends BaseService {
       locale: locale
     });
 
-    console.assert(response.status == 202, response.statusText);
+    console.assert(response.status == 204, response.statusText);
   }
 
   public async getOrganizations(): Promise<UserOrganization[]> {

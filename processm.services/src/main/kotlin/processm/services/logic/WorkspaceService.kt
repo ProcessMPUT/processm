@@ -91,7 +91,7 @@ class WorkspaceService(private val accountService: AccountService, private val p
 
         if (!hasPermission) {
             throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The specified workspace does not exist or the user has insufficient permissions to use it."
             )
         }
@@ -148,16 +148,16 @@ class WorkspaceService(private val accountService: AccountService, private val p
         }
 
         if (name.isNullOrBlank())
-            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing name.")
+            throw ValidationException(Reason.ResourceFormatInvalid, "Missing name.")
 
         if (query.isNullOrBlank())
-            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing query.")
+            throw ValidationException(Reason.ResourceFormatInvalid, "Missing query.")
 
         if (dataStore == null)
-            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing data store.")
+            throw ValidationException(Reason.ResourceFormatInvalid, "Missing data store.")
 
         if (componentType == null)
-            throw ValidationException(ValidationException.Reason.ResourceFormatInvalid, "Missing component type.")
+            throw ValidationException(Reason.ResourceFormatInvalid, "Missing component type.")
 
         addComponent(
             workspaceComponentId,
@@ -214,7 +214,7 @@ class WorkspaceService(private val accountService: AccountService, private val p
 
         if (!canBeUpdated) {
             throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
+                Reason.ResourceNotFound,
                 "The specified workspace does not exist or the user has insufficient permissions to it"
             )
         }

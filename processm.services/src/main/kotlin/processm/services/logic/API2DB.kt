@@ -1,6 +1,6 @@
 package processm.services.logic
 
-import processm.dbmodels.ilike
+import processm.dbmodels.ieq
 import processm.dbmodels.models.*
 import java.util.*
 
@@ -15,7 +15,7 @@ fun OrganizationRole.toApi(): ApiOrganizationRole = when (this.name) {
 }
 
 fun ApiOrganizationRole.toDB(): OrganizationRole =
-    OrganizationRole.find { OrganizationRoles.name ilike this@toDB.name }.first()
+    OrganizationRole.find { OrganizationRoles.name ieq this@toDB.name }.first()
 
 fun GroupRole.toApi(): ApiGroupRole = when (this.name) {
     GroupRoleType.Owner -> ApiGroupRole.owner
@@ -24,7 +24,7 @@ fun GroupRole.toApi(): ApiGroupRole = when (this.name) {
 }
 
 fun ApiGroupRole.toDB(): GroupRole =
-    GroupRole.find { GroupRoles.name ilike this@toDB.name }.first()
+    GroupRole.find { GroupRoles.name ieq this@toDB.name }.first()
 
 // TODO: drop these nonsense-layer classes below:
 data class OrganizationMemberDto(val user: UserDto, val organization: OrganizationDto, val role: ApiOrganizationRole)

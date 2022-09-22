@@ -108,7 +108,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
                 workspaceService.removeWorkspace(workspaceId.value, userId.value, organizationId.value)
             }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
     }
 
@@ -124,7 +124,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
                 workspaceService.removeWorkspace(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
             }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
     }
 
@@ -311,7 +311,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
                     customizationData = null
                 )
             }
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
@@ -402,7 +402,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
                 )
             }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
         assertTrue {
             WorkspaceComponents.select {
                 WorkspaceComponents.id eq componentId
@@ -429,6 +429,6 @@ class WorkspaceServiceTest : ServiceTestBase() {
                 )
             }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 }
