@@ -20,52 +20,52 @@
 
     <v-container
       v-if="showButtons"
-      fluid
-      pa-0
       elevation-6
       fill-width
+      fluid
+      pa-0
       style="z-index: 1"
     >
       <v-btn
-        light
-        color="primary"
-        class="ma-2"
         v-if="!isDebuggerEnabled"
+        class="ma-2"
+        color="primary"
+        light
         @click="runLayouter"
       >
-        Run layouter
-      </v-btn>
+        Run layouter</v-btn
+      >
       <v-btn
-        light
-        color="primary"
-        class="ma-2"
         v-if="!isDebuggerEnabled"
+        class="ma-2"
+        color="primary"
+        light
         @click="runDebugger"
       >
-        Run debugger
-      </v-btn>
+        Run debugger</v-btn
+      >
       <v-btn
-        light
-        color="primary"
-        class="ma-2"
         v-if="!isDebuggerEnabled"
+        class="ma-2"
+        color="primary"
+        light
         type="file"
         @click="selectPnmlFile"
       >
         Import PNML
         <input
           ref="importInput"
+          accept=".pnml"
           hidden
           type="file"
-          accept=".pnml"
           @change="importPnml"
         />
       </v-btn>
       <v-btn
-        light
-        color="primary"
-        class="ma-2"
         v-if="!isDebuggerEnabled"
+        class="ma-2"
+        color="primary"
+        light
         type="file"
         v-on:click="() => (isExportPnmlDialogVisible = true)"
       >
@@ -79,10 +79,10 @@
       />
 
       <v-btn
-        light
-        color="primary"
-        class="ma-2"
         v-if="isDebuggerEnabled"
+        class="ma-2"
+        color="primary"
+        light
         v-on:click="() => (isDebuggerEnabled = false)"
       >
         Stop debugger
@@ -118,7 +118,7 @@
       </svg>
 
       <context-menu
-        v-if="enableDragging"
+        v-if="showButtons"
         v-show="!isDebuggerEnabled"
         ref="contextMenu"
         :items="this.contextMenuItems"
