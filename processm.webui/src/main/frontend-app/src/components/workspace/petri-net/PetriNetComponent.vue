@@ -131,7 +131,7 @@ export default class PetriNetComponent extends Vue {
       // eslint-disable-next-line
       const rawData = this.$refs.editor.getPetriNetJson();
 
-      // TODO: Remap rawData to ProcessM data format
+      // TODO: #160 Remap rawData to ProcessM data format
       // const data = {};
       // this.data.data.xml = data.xml;
     }
