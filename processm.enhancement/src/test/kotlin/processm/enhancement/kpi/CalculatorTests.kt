@@ -1,14 +1,21 @@
 package processm.enhancement.kpi
 
+import processm.conformance.ProcessTrees
+import processm.conformance.measures.precision.causalnet.times
 import processm.core.DBTestHelper
+import processm.core.log.Helpers.assertDoubleEquals
+import processm.core.log.Helpers.event
+import processm.core.log.Helpers.trace
 import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
+import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.petrinet
 import processm.core.querylanguage.Query
 import java.util.*
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -195,126 +202,288 @@ class CalculatorTests {
     }
 
     @Test
-    fun `time per activity on the mainstream model`() {
+    fun `time per activity on the mainstream model - CNet`() =
+        `time per activity on the mainstream model`(mainstreamCNet)
+
+    @Test
+    fun `time per activity on the mainstream model - PetriNet`() =
+        `time per activity on the mainstream model`(mainstreamPetriNet)
+
+    @Test
+    fun `time per activity on the mainstream model - ProcessTree`() =
+        `time per activity on the mainstream model`(ProcessTrees.journalReviewMainstreamProcessTree)
+
+    private fun `time per activity on the mainstream model`(model: ProcessModel) {
         val log = q(
             "select t:*, e:name, e:instance, sum(e:total), max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance"
         )
-        for (model in listOf(mainstreamPetriNet, mainstreamCNet)) {
-            val calculator = Calculator(model)
-            val report = calculator.calculate(log)
+        val calculator = Calculator(model)
+        val report = calculator.calculate(log)
 
-            val traceCostTotal = report.traceKPI[COST_TOTAL]!!
-            println("trace cost:total: $traceCostTotal")
-            assertEquals(50, traceCostTotal.raw.size)
-            assertEquals(11.0, traceCostTotal.min)
-            assertEquals(20.0, traceCostTotal.median)
-            assertEquals(47.0, traceCostTotal.max)
+        val traceCostTotal = report.traceKPI[COST_TOTAL]!!
+        println("trace cost:total: $traceCostTotal")
+        assertEquals(50, traceCostTotal.raw.size)
+        assertEquals(11.0, traceCostTotal.min)
+        assertEquals(20.0, traceCostTotal.median)
+        assertEquals(47.0, traceCostTotal.max)
 
-            val eventServiceTime = report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")
-            assertEquals(11 + 1 /*null*/, eventServiceTime.size)
-            println("Service times for activities:")
-            for ((activity, kpi) in eventServiceTime) {
-                println("$activity: $kpi")
+        val eventServiceTime = report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")
+        assertEquals(11 + 1 /*null*/, eventServiceTime.size)
+        println("Service times for activities:")
+        for ((activity, kpi) in eventServiceTime) {
+            println("$activity: $kpi")
+        }
+
+        with(model.activities) {
+            // missing activities
+            assertTrue(eventServiceTime.keys.none { it?.name == "invite additional reviewer" })
+            assertTrue(eventServiceTime.keys.none { it?.name == "get review X" })
+            assertTrue(eventServiceTime.keys.none { it?.name == "time-out X" })
+            assertEquals(0.0, eventServiceTime[null]!!.min)
+            assertEquals(0.0, eventServiceTime[null]!!.median)
+            assertEquals(11.0, eventServiceTime[null]!!.max)
+            assertEquals(798, eventServiceTime[null]!!.raw.size)
+
+            // instant activities
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 3" }]!!.max)
+
+            // longer activities [times in days]
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.max)
+            assertEquals(101, eventServiceTime[first { it.name == "invite reviewers" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "decide" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "decide" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "decide" }]!!.max)
+            assertEquals(100, eventServiceTime[first { it.name == "decide" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "accept" }]!!.min)
+            assertEquals(1.0, eventServiceTime[first { it.name == "accept" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "accept" }]!!.max)
+            assertEquals(45, eventServiceTime[first { it.name == "accept" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "reject" }]!!.min)
+            assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
+            assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
+            assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+        }
+
+        with(report.inboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+            with(entries.single { it.key.source.name == "decide" && it.key.target.name == "accept" }.value) {
+                assertEquals(0.0, min)
+                assertEquals(1.0, median)
+                assertEquals(12.0, max)
+                assertEquals(45, count)
             }
-
-            with(model.activities) {
-                // missing activities
-                assertTrue(eventServiceTime.keys.none { it?.name == "invite additional reviewer" })
-                assertTrue(eventServiceTime.keys.none { it?.name == "get review X" })
-                assertTrue(eventServiceTime.keys.none { it?.name == "time-out X" })
-                assertEquals(0.0, eventServiceTime[null]!!.min)
-                assertEquals(0.0, eventServiceTime[null]!!.median)
-                assertEquals(11.0, eventServiceTime[null]!!.max)
-                assertEquals(798, eventServiceTime[null]!!.raw.size)
-
-                // instant activities
-                assertEquals(0.0, eventServiceTime[first { it.name == "get review 1" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "get review 2" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "get review 3" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "time-out 1" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "time-out 2" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "time-out 3" }]!!.max)
-
-                // longer activities [times in days]
-                assertEquals(0.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.min)
-                assertEquals(3.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.median)
-                assertEquals(12.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.max)
-                assertEquals(101, eventServiceTime[first { it.name == "invite reviewers" }]!!.raw.size)
-                assertEquals(0.0, eventServiceTime[first { it.name == "decide" }]!!.min)
-                assertEquals(3.0, eventServiceTime[first { it.name == "decide" }]!!.median)
-                assertEquals(12.0, eventServiceTime[first { it.name == "decide" }]!!.max)
-                assertEquals(100, eventServiceTime[first { it.name == "decide" }]!!.raw.size)
-                assertEquals(0.0, eventServiceTime[first { it.name == "accept" }]!!.min)
-                assertEquals(1.0, eventServiceTime[first { it.name == "accept" }]!!.median)
-                assertEquals(12.0, eventServiceTime[first { it.name == "accept" }]!!.max)
-                assertEquals(45, eventServiceTime[first { it.name == "accept" }]!!.raw.size)
-                assertEquals(0.0, eventServiceTime[first { it.name == "reject" }]!!.min)
-                assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
-                assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
-                assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+            with(entries.single { it.key.source.name == "decide" && it.key.target.name == "reject" }.value) {
+                assertEquals(0.0, min)
+                assertEquals(4.0, median)
+                assertEquals(9.0, max)
+                assertEquals(55, count)
+            }
+        }
+        with(report.outboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+            with(entries.single { it.key.source.name == "decide" && it.key.target.name == "accept" }.value) {
+                assertEquals(0.0, min)
+                assertDoubleEquals(3.0, average)
+                assertEquals(12.0, max)
+                assertEquals(45, count)
+            }
+            with(entries.single { it.key.source.name == "decide" && it.key.target.name == "reject" }.value) {
+                assertEquals(0.0, min)
+                assertDoubleEquals(2.672, average)
+                assertEquals(5.0, max)
+                assertEquals(55, count)
             }
         }
     }
 
     @Test
-    fun `time per activity on the perfect model`() {
+    fun `time per activity on the perfect model - CNet`() =
+        `time per activity on the perfect model`(perfectCNet)
+
+    @Test
+    fun `time per activity on the perfect model - PetriNet`() =
+        `time per activity on the perfect model`(perfectPetriNet)
+
+    @Test
+    fun `time per activity on the perfect model - ProcessTree`() =
+        `time per activity on the perfect model`(ProcessTrees.journalReviewPerfectProcessTree)
+
+    private fun `time per activity on the perfect model`(model: ProcessModel) {
         val log = q(
             "select t:*, e:name, e:instance, sum(e:total), max(e:timestamp)-min(e:timestamp) where l:id=$logUUID group by e:name, e:instance"
         )
-        for (model in listOf(perfectPetriNet, perfectCNet)) {
-            val calculator = Calculator(model)
-            val report = calculator.calculate(log)
+        val calculator = Calculator(model)
+        val report = calculator.calculate(log)
 
-            val traceCostTotal = report.traceKPI[COST_TOTAL]!!
-            println("trace cost:total: $traceCostTotal")
-            assertEquals(50, traceCostTotal.raw.size)
-            assertEquals(11.0, traceCostTotal.min)
-            assertEquals(20.0, traceCostTotal.median)
-            assertEquals(47.0, traceCostTotal.max)
+        val traceCostTotal = report.traceKPI[COST_TOTAL]!!
+        println("trace cost:total: $traceCostTotal")
+        assertEquals(50, traceCostTotal.raw.size)
+        assertEquals(11.0, traceCostTotal.min)
+        assertEquals(20.0, traceCostTotal.median)
+        assertEquals(47.0, traceCostTotal.max)
 
-            val eventServiceTime = report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")
-            assertEquals(14, eventServiceTime.size)
-            println("Service times for activities:")
-            for ((activity, kpi) in eventServiceTime) {
-                println("$activity: $kpi")
+        val eventServiceTime = report.eventKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")
+        assertEquals(14, eventServiceTime.size)
+        println("Service times for activities:")
+        for ((activity, kpi) in eventServiceTime) {
+            println("$activity: $kpi")
+        }
+
+        with(model.activities) {
+            // instant activities
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "get review X" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 1" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 2" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out 3" }]!!.max)
+            assertEquals(0.0, eventServiceTime[first { it.name == "time-out X" }]!!.max)
+
+            // longer activities [times in days]
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.max)
+            assertEquals(101, eventServiceTime[first { it.name == "invite reviewers" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "decide" }]!!.min)
+            assertEquals(3.0, eventServiceTime[first { it.name == "decide" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "decide" }]!!.max)
+            assertEquals(100, eventServiceTime[first { it.name == "decide" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.min)
+            assertEquals(2.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.median)
+            assertEquals(11.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.max)
+            assertEquals(399, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "accept" }]!!.min)
+            assertEquals(1.0, eventServiceTime[first { it.name == "accept" }]!!.median)
+            assertEquals(12.0, eventServiceTime[first { it.name == "accept" }]!!.max)
+            assertEquals(45, eventServiceTime[first { it.name == "accept" }]!!.raw.size)
+            assertEquals(0.0, eventServiceTime[first { it.name == "reject" }]!!.min)
+            assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
+            assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
+            assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+        }
+
+        with(report.inboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
+                assertEquals(0.0, max)
+                assertEquals(198, count)
             }
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
+                assertEquals(0.0, max)
+                assertEquals(201, count)
+            }
+        }
 
-            with(model.activities) {
-                // instant activities
-                assertEquals(0.0, eventServiceTime[first { it.name == "get review 1" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "get review 2" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "get review 3" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "get review X" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "time-out 1" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "time-out 2" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "time-out 3" }]!!.max)
-                assertEquals(0.0, eventServiceTime[first { it.name == "time-out X" }]!!.max)
-
-                // longer activities [times in days]
-                assertEquals(0.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.min)
-                assertEquals(3.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.median)
-                assertEquals(12.0, eventServiceTime[first { it.name == "invite reviewers" }]!!.max)
-                assertEquals(101, eventServiceTime[first { it.name == "invite reviewers" }]!!.raw.size)
-                assertEquals(0.0, eventServiceTime[first { it.name == "decide" }]!!.min)
-                assertEquals(3.0, eventServiceTime[first { it.name == "decide" }]!!.median)
-                assertEquals(12.0, eventServiceTime[first { it.name == "decide" }]!!.max)
-                assertEquals(100, eventServiceTime[first { it.name == "decide" }]!!.raw.size)
-                assertEquals(0.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.min)
-                assertEquals(2.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.median)
-                assertEquals(11.0, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.max)
-                assertEquals(399, eventServiceTime[first { it.name == "invite additional reviewer" }]!!.raw.size)
-                assertEquals(0.0, eventServiceTime[first { it.name == "accept" }]!!.min)
-                assertEquals(1.0, eventServiceTime[first { it.name == "accept" }]!!.median)
-                assertEquals(12.0, eventServiceTime[first { it.name == "accept" }]!!.max)
-                assertEquals(45, eventServiceTime[first { it.name == "accept" }]!!.raw.size)
-                assertEquals(0.0, eventServiceTime[first { it.name == "reject" }]!!.min)
-                assertEquals(4.0, eventServiceTime[first { it.name == "reject" }]!!.median)
-                assertEquals(9.0, eventServiceTime[first { it.name == "reject" }]!!.max)
-                assertEquals(55, eventServiceTime[first { it.name == "reject" }]!!.raw.size)
+        with(report.outboundArcKPI.getRow("max(event:time:timestamp) - min(event:time:timestamp)")) {
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "time-out X" }.value) {
+                assertEquals(0.0, min)
+                assertDoubleEquals(2.167, average)
+                assertEquals(5.0, max)
+                assertEquals(198, count)
+            }
+            with(entries.single { it.key.source.name == "invite additional reviewer" && it.key.target.name == "get review X" }.value) {
+                assertEquals(0.0, min)
+                assertDoubleEquals(2.383, average)
+                assertEquals(11.0, max)
+                assertEquals(201, count)
             }
         }
     }
 
     private fun q(pql: String): Log =
         DBHierarchicalXESInputStream(dbName, Query(pql), false).first()
+
+
+    @Test
+    fun `two parallel tasks in a process tree`() {
+        val log = Log(
+            traces =
+            trace(event("a", "time" to 1), event("b", "time" to 2), event("c", "time" to 10)).times(10) +
+                    trace(event("b", "time" to 3), event("a", "time" to 2), event("c", "time" to 20)).times(10)
+        )
+        val report = Calculator(ProcessTrees.twoParallelTasksAndSingleFollower).calculate(log)
+        with(report.inboundArcKPI.getRow("time").entries) {
+            with(single { it.key.source.name == "a" && it.key.target.name == "c" }.value) {
+                assertEquals(20, count)
+            }
+            with(single { it.key.source.name == "b" && it.key.target.name == "c" }.value) {
+                assertEquals(20, count)
+            }
+        }
+        with(report.outboundArcKPI.getRow("time").entries) {
+            with(single { it.key.source.name == "a" && it.key.target.name == "c" }.value) {
+                assertEquals(20, count)
+                assertDoubleEquals(1.5, average)
+            }
+            with(single { it.key.source.name == "b" && it.key.target.name == "c" }.value) {
+                assertEquals(20, count)
+                assertDoubleEquals(2.5, average)
+            }
+        }
+
+    }
+
+    @Test
+    fun `loop with a repeated activity`() {
+        val log = Log(
+            traces =
+            sequenceOf(
+                trace(
+                    event("a", "time" to 1),
+                    event("c", "time" to 10),
+                    event("b", "time" to 2),
+                    event("a", "time" to 1)
+                )
+            )
+        )
+        val report = Calculator(ProcessTrees.loopWithRepeatedActivityInRedo).calculate(log)
+        with(report.inboundArcKPI.getRow("time").entries.single { it.key.source.name == "c" && it.key.target.name == "a" }.value) {
+            assertEquals(1, count)
+        }
+        with(report.outboundArcKPI.getRow("time").entries.single { it.key.source.name == "c" && it.key.target.name == "a" }.value) {
+            assertEquals(1, count)
+        }
+    }
+
+    @Test
+    @Ignore("This test is known to fail. See the discussion in the documentation of [Calculator.ProcessTreeArcKPIHandler]")
+    fun `cunning loop`() {
+        val log = Log(
+            traces =
+            sequenceOf(
+                trace(
+                    event("a", "time" to 1),
+                    event("b", "time" to 10),
+                    event("c", "time" to 2),
+                    event("a", "time" to 1)
+                )
+            )
+        )
+        val report = Calculator(ProcessTrees.loopWithPossibilityOfRepeatedActivity).calculate(log)
+        assertTrue { report.inboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
+        assertTrue { report.outboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
+    }
+
+    @Test
+    fun `straightforward loop`() {
+        val log = Log(
+            traces =
+            sequenceOf(
+                trace(
+                    event("a", "time" to 1),
+                    event("b", "time" to 10),
+                    event("c", "time" to 2),
+                    event("a", "time" to 1)
+                )
+            )
+        )
+        val report = Calculator(ProcessTrees.loopWithSequenceAndExclusiveInRedo).calculate(log)
+        assertTrue { report.inboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
+        assertTrue { report.outboundArcKPI.getRow("time").entries.none { it.key.source.name == "b" && it.key.target.name == "a" } }
+    }
 }

@@ -269,4 +269,19 @@ class DoublingMap2DTest {
         m["B", 5] = 5.0
         assertEquals(listOf(2.0, 3.0, 5.0, 5.0), m.values.sorted().toList())
     }
+
+    @Test
+    fun mapValuesNotNull() {
+        val m = DoublingMap2D<String, Int, Double>()
+        m["A", 1] = 2.0
+        m["A", 2] = 3.0
+        m["B", 4] = 5.0
+        m["B", 5] = 5.0
+        val mapped = m.mapValuesNotNull { _, _, v -> if (v in 2.5..3.5) null else v * 2 }
+        val m2 = DoublingMap2D<String, Int, Double>()
+        m2["A", 1] = 4.0
+        m2["B", 4] = 10.0
+        m2["B", 5] = 10.0
+        assertEquals(m2, mapped)
+    }
 }
