@@ -1,28 +1,16 @@
 <template>
-  <v-dialog
-    v-model="visible"
-    max-width="300px"
-    @input="closeDialog"
-  >
+  <v-dialog v-model="visible" max-width="300px" @input="closeDialog">
     <v-card>
       <v-card-title>Export PNML</v-card-title>
       <v-card-text>
         <v-form>
-          <v-text-field
-            label="Filename"
-            min="4"
-            v-model="filename"
-          />
+          <v-text-field v-model="filename" label="Filename" min="4" />
         </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="secondary" text @click="closeDialog">
-          Cancel
-        </v-btn>
-        <v-btn color="primary" text @click="this.export">
-          Save
-        </v-btn>
+        <v-btn color="secondary" text @click="closeDialog"> Cancel</v-btn>
+        <v-btn color="primary" text @click="this.export"> Save</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -46,8 +34,7 @@ export default class ExportPnmlDialog extends Vue {
   private state!: PetriNetState;
 
   @Emit()
-  close() {
-  }
+  close() {}
 
   closeDialog() {
     this.visible = false;

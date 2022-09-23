@@ -1,65 +1,73 @@
-import { ReductionFinder } from '@/components/petri-net-editor/layouter/interfaces/ReductionFinder';
-import { PetriNetState } from '@/components/petri-net-editor/model/PetriNetState';
-import { Reduction } from '@/components/petri-net-editor/layouter/interfaces/Reduction';
-import { ShortLoopReduction } from '@/components/petri-net-editor/layouter/reductions/ShortLoopReduction';
+import { ReductionFinder } from "@/components/petri-net-editor/layouter/interfaces/ReductionFinder";
+import { PetriNetState } from "@/components/petri-net-editor/model/PetriNetState";
+import { Reduction } from "@/components/petri-net-editor/layouter/interfaces/Reduction";
+import { ShortLoopReduction } from "@/components/petri-net-editor/layouter/reductions/ShortLoopReduction";
 
 export class ShortLoopReductionFinder implements ReductionFinder {
-    find(state: PetriNetState): [Reduction | null, number] {
-        let reduction: ShortLoopReduction | null;
-        reduction = this.findReduciblePlace(state);
+  find(state: PetriNetState): [Reduction | null, number] {
+    let reduction: ShortLoopReduction | null;
+    reduction = this.findReduciblePlace(state);
 
-        if (reduction == null) {
-            reduction = this.findReducibleTransition(state);
-        }
-
-        return [reduction, reduction != null ? reduction.getScore(state) : 0.0];
+    if (reduction == null) {
+      reduction = this.findReducibleTransition(state);
     }
 
-    getMaxScore(): number {
-        return ShortLoopReduction.MAX_SCORE;
+    return [reduction, reduction != null ? reduction.getScore(state) : 0.0];
+  }
+
+  getMaxScore(): number {
+    return ShortLoopReduction.MAX_SCORE;
+  }
+
+  private findReduciblePlace(state: PetriNetState): ShortLoopReduction | null {
+    for (const placeToReduce of state.places) {
+      const postTransitions = state.getPostTransitions(placeToReduce);
+      if (postTransitions.length != 1) {
+        continue;
+      }
+
+      const transitionCandidate = postTransitions.find((transition) => {
+        return (
+          state
+            .getPostPlaces(transition)
+            .find((place) => place == placeToReduce) != undefined
+        );
+      });
+
+      if (transitionCandidate == undefined) {
+        continue;
+      }
+
+      return new ShortLoopReduction(placeToReduce, transitionCandidate);
     }
 
-    private findReduciblePlace(state: PetriNetState): ShortLoopReduction | null {
-        for (const placeToReduce of state.places) {
-            const postTransitions = state.getPostTransitions(placeToReduce);
-            if (postTransitions.length != 1) {
-                continue;
-            }
+    return null;
+  }
 
-            const transitionCandidate = postTransitions.find(transition => {
-                return state.getPostPlaces(transition)
-                    .find(place => place == placeToReduce) != undefined;
-            });
+  private findReducibleTransition(
+    state: PetriNetState
+  ): ShortLoopReduction | null {
+    for (const transitionToReduce of state.transitions) {
+      const postPlaces = state.getPostPlaces(transitionToReduce);
+      if (postPlaces.length != 1) {
+        continue;
+      }
 
-            if (transitionCandidate == undefined) {
-                continue;
-            }
+      const placeCandidate = postPlaces.find((place) => {
+        return (
+          state
+            .getPostTransitions(place)
+            .find((transition) => transition == transitionToReduce) != undefined
+        );
+      });
 
-            return new ShortLoopReduction(placeToReduce, transitionCandidate);
-        }
+      if (placeCandidate == undefined) {
+        continue;
+      }
 
-        return null;
+      return new ShortLoopReduction(placeCandidate, transitionToReduce);
     }
 
-    private findReducibleTransition(state: PetriNetState): ShortLoopReduction | null {
-        for (const transitionToReduce of state.transitions) {
-            const postPlaces = state.getPostPlaces(transitionToReduce);
-            if (postPlaces.length != 1) {
-                continue;
-            }
-
-            const placeCandidate = postPlaces.find(place => {
-                return state.getPostTransitions(place)
-                    .find(transition => transition == transitionToReduce) != undefined;
-            });
-
-            if (placeCandidate == undefined) {
-                continue;
-            }
-
-            return new ShortLoopReduction(placeCandidate, transitionToReduce);
-        }
-
-        return null;
-    }
+    return null;
+  }
 }

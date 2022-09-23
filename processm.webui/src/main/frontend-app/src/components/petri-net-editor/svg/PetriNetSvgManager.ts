@@ -25,11 +25,8 @@ export class PetriNetSvgManager {
     SvgTransition
   >();
   private _svgArcs: Map<string, SvgArc> = new Map<string, SvgArc>();
-
-  private _state: PetriNetState;
   private readonly _svg: SVGSelection;
   private _connectSvgLine: SVGLineSelection | null = null;
-
   private readonly _draggingEnabled: boolean;
 
   constructor(svg: SVGSelection, draggingEnabled: boolean) {
@@ -43,6 +40,8 @@ export class PetriNetSvgManager {
       this.enableDragging();
     }
   }
+
+  private _state: PetriNetState;
 
   get state(): PetriNetState {
     return this._state;
@@ -90,6 +89,63 @@ export class PetriNetSvgManager {
       ),
       ...this._state.places.map((place) => place.cy + Place.RADIUS)
     );
+  }
+
+  private static calculateTransitionInPosition(
+    arc: SvgArc,
+    inElement: Transition
+  ): [number, number] {
+    const [arcX1, arcY1] = arc.getOutPosition();
+
+    let newX2 = arcX1;
+    let newY2 = arcY1;
+    let cornerX: number | null = null;
+    let cornerY: number | null = null;
+
+    if (arcX1 <= inElement.x) {
+      cornerX = inElement.x;
+    } else if (arcX1 >= inElement.x + Transition.WIDTH) {
+      cornerX = inElement.x + Transition.WIDTH;
+    }
+
+    if (arcY1 <= inElement.y) {
+      cornerY = inElement.y;
+    } else if (arcY1 >= inElement.y + Transition.HEIGHT) {
+      cornerY = inElement.y + Transition.HEIGHT;
+    }
+
+    if (cornerX != null && cornerY != null) {
+      [newX2, newY2] = PetriNetSvgManager.calculateOffsetPosition(
+        arcX1,
+        arcY1,
+        cornerX,
+        cornerY,
+        30
+      );
+    } else if (cornerX != null) {
+      newX2 = arcX1 <= cornerX ? cornerX - 30 : cornerX + 30;
+    } else if (cornerY != null) {
+      newY2 = arcY1 <= cornerY ? cornerY - 30 : cornerY + 30;
+    }
+
+    return [newX2, newY2];
+  }
+
+  private static calculateOffsetPosition(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    offset: number
+  ): [number, number] {
+    const a = x1 - x2;
+    const b = y1 - y2;
+    const c = Math.hypot(a, b);
+
+    const angleSine = a / c;
+    const angleCosine = b / c;
+
+    return [x2 + 30 * angleSine, y2 + offset * angleCosine];
   }
 
   createPlace(options: PlaceOptions): string {
@@ -219,15 +275,6 @@ export class PetriNetSvgManager {
       .style("min-height", `${height + 50}px`);
   }
 
-  private enableDragging(): void {
-    this._eventBus!.on(EventNames.ON_DRAG, (elementId) => {
-      this._state.getElementArcs(elementId as string).forEach((arc) => {
-        const svgArc = this._svgArcs.get(arc.id)!;
-        this.updateArcPosition(svgArc);
-      });
-    });
-  }
-
   getNumberOfIntersectingArcs(): number {
     let result = 0;
 
@@ -274,6 +321,15 @@ export class PetriNetSvgManager {
         .reduce((sum, numberOfBlocks) => sum + numberOfBlocks, 0) /
       blocks.length
     );
+  }
+
+  private enableDragging(): void {
+    this._eventBus!.on(EventNames.ON_DRAG, (elementId) => {
+      this._state.getElementArcs(elementId as string).forEach((arc) => {
+        const svgArc = this._svgArcs.get(arc.id)!;
+        this.updateArcPosition(svgArc);
+      });
+    });
   }
 
   private getHierarchyDepthRec(block: Block): number {
@@ -353,46 +409,6 @@ export class PetriNetSvgManager {
     arc.setInPosition(newX2, newY2);
   }
 
-  private static calculateTransitionInPosition(
-    arc: SvgArc,
-    inElement: Transition
-  ): [number, number] {
-    const [arcX1, arcY1] = arc.getOutPosition();
-
-    let newX2 = arcX1;
-    let newY2 = arcY1;
-    let cornerX: number | null = null;
-    let cornerY: number | null = null;
-
-    if (arcX1 <= inElement.x) {
-      cornerX = inElement.x;
-    } else if (arcX1 >= inElement.x + Transition.WIDTH) {
-      cornerX = inElement.x + Transition.WIDTH;
-    }
-
-    if (arcY1 <= inElement.y) {
-      cornerY = inElement.y;
-    } else if (arcY1 >= inElement.y + Transition.HEIGHT) {
-      cornerY = inElement.y + Transition.HEIGHT;
-    }
-
-    if (cornerX != null && cornerY != null) {
-      [newX2, newY2] = PetriNetSvgManager.calculateOffsetPosition(
-        arcX1,
-        arcY1,
-        cornerX,
-        cornerY,
-        30
-      );
-    } else if (cornerX != null) {
-      newX2 = arcX1 <= cornerX ? cornerX - 30 : cornerX + 30;
-    } else if (cornerY != null) {
-      newY2 = arcY1 <= cornerY ? cornerY - 30 : cornerY + 30;
-    }
-
-    return [newX2, newY2];
-  }
-
   private updateOutPosition(arc: SvgArc, outElement: PetriNetElement): void {
     let newX1 = 0;
     let newY1 = 0;
@@ -406,22 +422,5 @@ export class PetriNetSvgManager {
     }
 
     arc.setOutPosition(newX1, newY1);
-  }
-
-  private static calculateOffsetPosition(
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    offset: number
-  ): [number, number] {
-    const a = x1 - x2;
-    const b = y1 - y2;
-    const c = Math.hypot(a, b);
-
-    const angleSine = a / c;
-    const angleCosine = b / c;
-
-    return [x2 + 30 * angleSine, y2 + offset * angleCosine];
   }
 }

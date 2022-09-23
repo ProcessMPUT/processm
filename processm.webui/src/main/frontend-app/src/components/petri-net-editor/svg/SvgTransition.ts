@@ -11,17 +11,13 @@ import { PetriNetSvgElement } from "@/components/petri-net-editor/svg/PetriNetSv
 import { Transition } from "@/components/petri-net-editor/model/Transition";
 
 export class SvgTransition extends PetriNetSvgElement {
-  private readonly eventBus: EventBus | null;
-
   readonly transitionModel: Transition;
-
-  private readonly svg: SVGSelection;
-  private readonly svgGroup: SVGSelection;
-
   readonly height: number = 50;
   readonly width: number = 10;
   readonly isSilent: boolean = false;
-
+  private readonly eventBus: EventBus | null;
+  private readonly svg: SVGSelection;
+  private readonly svgGroup: SVGSelection;
   private svgTextWidth = 0;
   private readonly svgRectangle: SVGRectSelection;
   private readonly svgText: SVGTextSelection;
@@ -61,6 +57,10 @@ export class SvgTransition extends PetriNetSvgElement {
     this.updatePosition();
   }
 
+  get text(): string {
+    return this.svgText.text();
+  }
+
   set text(text: string) {
     this.transitionModel.text = text;
     this.svgText.text(text);
@@ -69,10 +69,6 @@ export class SvgTransition extends PetriNetSvgElement {
     this.svgTextWidth = textBoundingBox?.width ?? 0;
 
     this.updateTextPosition();
-  }
-
-  get text(): string {
-    return this.svgText.text();
   }
 
   set highlight(isHighlighted: boolean) {

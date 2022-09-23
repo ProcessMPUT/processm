@@ -4,10 +4,7 @@ import {
   TransitionDto
 } from "@/components/petri-net-editor/Dto";
 import { Transition } from "@/components/petri-net-editor/model/Transition";
-import {
-  Place,
-  PlaceType
-} from "@/components/petri-net-editor/model/Place";
+import { Place, PlaceType } from "@/components/petri-net-editor/model/Place";
 import { Arc } from "@/components/petri-net-editor/model/Arc";
 import { PetriNetState } from "@/components/petri-net-editor/model/PetriNetState";
 

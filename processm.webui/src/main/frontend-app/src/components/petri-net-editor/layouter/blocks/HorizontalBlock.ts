@@ -3,8 +3,8 @@ import { SVGRectSelection, SVGSelection } from "@/utils/Types";
 import { Position } from "@/components/petri-net-editor/layouter/interfaces/Position";
 
 export class HorizontalBlock extends Block {
-  private _svgBlock: SVGRectSelection | null = null;
   readonly _isReversed: boolean;
+  private _svgBlock: SVGRectSelection | null = null;
 
   constructor(
     block1: Block,
@@ -17,6 +17,10 @@ export class HorizontalBlock extends Block {
     this._isReversed = isReversed;
 
     this.calculatePositions();
+  }
+
+  get numberOfLayers(): number {
+    return this.blocks.reduce((sum, block) => sum + block.numberOfLayers, 0);
   }
 
   render(svg: SVGSelection): void {
@@ -55,20 +59,6 @@ export class HorizontalBlock extends Block {
     });
   }
 
-  get numberOfLayers(): number {
-    return this.blocks.reduce((sum, block) => sum + block.numberOfLayers, 0);
-  }
-
-  private updateDimensions() {
-    const blocksLeftToRight = this.blocks.slice().sort((a, b) => a.x - b.x);
-
-    this.width = !this._isReversed
-      ? blocksLeftToRight[2].x + blocksLeftToRight[2].width
-      : Math.abs(blocksLeftToRight[0].x);
-
-    this.height = Math.max(...this.blocks.map((block) => block.height));
-  }
-
   protected calculatePositions(): void {
     const maxHeight = Math.max(...this.blocks.map((block) => block.height));
 
@@ -87,5 +77,15 @@ export class HorizontalBlock extends Block {
     });
 
     this.updateDimensions();
+  }
+
+  private updateDimensions() {
+    const blocksLeftToRight = this.blocks.slice().sort((a, b) => a.x - b.x);
+
+    this.width = !this._isReversed
+      ? blocksLeftToRight[2].x + blocksLeftToRight[2].width
+      : Math.abs(blocksLeftToRight[0].x);
+
+    this.height = Math.max(...this.blocks.map((block) => block.height));
   }
 }

@@ -22,17 +22,19 @@ export class NodeBlock extends Block {
     this.element = element;
   }
 
-  render(_: SVGSelection): void {}
+  get numberOfLayers(): number {
+    return 1;
+  }
 
-  delete(): void {}
+  render(_: SVGSelection): void {
+  }
+
+  delete(): void {
+  }
 
   applyLayout(position: Position): void {
     this.absoluteX = position.x;
     this.absoluteY = position.y;
-  }
-
-  get numberOfLayers(): number {
-    return 1;
   }
 
   protected calculatePositions(): void {}

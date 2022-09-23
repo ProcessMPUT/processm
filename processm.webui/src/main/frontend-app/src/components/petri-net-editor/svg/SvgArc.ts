@@ -25,6 +25,23 @@ export class SvgArc {
     );
   }
 
+  static createLine(scope: SVGSelection, width: number): SVGLineSelection {
+    return scope
+      .append("line")
+      .attr("fill", "none")
+      .attr("stroke", "black")
+      .attr("stroke-width", width)
+      .attr("marker-end", "url(#arrow)");
+  }
+
+  private static makeNanSafe(value: number): number {
+    if (isNaN(value)) {
+      return 0;
+    }
+
+    return value;
+  }
+
   delete() {
     this._svgLine.remove();
   }
@@ -54,22 +71,5 @@ export class SvgArc {
 
   getInPosition(): [number, number] {
     return [this.x2, this.y2];
-  }
-
-  static createLine(scope: SVGSelection, width: number): SVGLineSelection {
-    return scope
-      .append("line")
-      .attr("fill", "none")
-      .attr("stroke", "black")
-      .attr("stroke-width", width)
-      .attr("marker-end", "url(#arrow)");
-  }
-
-  private static makeNanSafe(value: number): number {
-    if (isNaN(value)) {
-      return 0;
-    }
-
-    return value;
   }
 }

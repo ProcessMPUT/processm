@@ -1,16 +1,16 @@
 <template>
   <v-btn-toggle
-    light
-    group
-    class="elevation-6"
     id="context-menu"
     ref="contextMenu"
+    class="elevation-6"
+    group
+    light
   >
     <v-btn
-      light
       v-for="(item, index) in _items"
       v-if="item.isVisible"
       :key="item.name"
+      light
       v-on:click="() => performButtonAction(index)"
     >
       {{ item.name }}
@@ -28,15 +28,14 @@ import { ContextMenuItem } from "@/components/petri-net-editor/context-menu/Cont
 export default class ContextMenu extends Vue {
   @PropSync("items", { default: () => [] })
   _items!: ContextMenuItem[];
+  $refs!: {
+    contextMenu: Vue;
+  };
 
   @Emit()
   expand(payload: Element) {
     return payload;
   }
-
-  $refs!: {
-    contextMenu: Vue;
-  };
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {
@@ -50,7 +49,7 @@ export default class ContextMenu extends Vue {
       if (
         (e.target as Element).parentElement?.parentElement != contextMenu &&
         (e.target as Element).parentElement?.parentElement?.parentElement !=
-        contextMenu
+          contextMenu
       ) {
         contextMenu.classList.remove("visible");
       }

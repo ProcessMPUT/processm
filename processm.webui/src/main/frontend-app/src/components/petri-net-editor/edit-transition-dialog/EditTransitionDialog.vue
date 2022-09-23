@@ -1,25 +1,15 @@
 <template>
-  <v-dialog
-    v-model="visible"
-    max-width="300px"
-    @input="closeDialog"
-  >
+  <v-dialog v-model="visible" max-width="300px" @input="closeDialog">
     <v-card>
       <v-card-title>Edit</v-card-title>
       <v-card-text>
         <v-form>
-          <v-text-field
-            label="Name"
-            type="text"
-            v-model="text"
-          />
+          <v-text-field v-model="text" label="Name" type="text" />
         </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="secondary" text @click="closeDialog">
-          Cancel
-        </v-btn>
+        <v-btn color="secondary" text @click="closeDialog"> Cancel</v-btn>
         <v-btn color="primary" text @click="this.saveDialogChanges">
           Save
         </v-btn>
@@ -44,8 +34,7 @@ export default class EditTransitionDialog extends Vue {
   private transition!: SvgTransition;
 
   @Emit()
-  close() {
-  }
+  close() {}
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {

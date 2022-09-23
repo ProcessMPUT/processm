@@ -22,16 +22,6 @@ export class Place extends PetriNetElement {
   cy: number = Place.RADIUS;
   type: PlaceType = PlaceType.NORMAL;
 
-  protected _tokenCount = 0;
-
-  static fromOptions(options: PlaceOptions): Place {
-    const id = options.id ?? uuidv4();
-    const tokenCount = options.tokenCount ?? 0;
-    const type = options.type ?? PlaceType.NORMAL;
-
-    return new Place(id, options.x, options.y, options.text, tokenCount, type);
-  }
-
   private constructor(
     id: string,
     x: number,
@@ -58,6 +48,8 @@ export class Place extends PetriNetElement {
     }
   }
 
+  protected _tokenCount = 0;
+
   get tokenCount(): number {
     return this._tokenCount;
   }
@@ -68,6 +60,14 @@ export class Place extends PetriNetElement {
     }
 
     this._tokenCount = tokenCount;
+  }
+
+  static fromOptions(options: PlaceOptions): Place {
+    const id = options.id ?? uuidv4();
+    const tokenCount = options.tokenCount ?? 0;
+    const type = options.type ?? PlaceType.NORMAL;
+
+    return new Place(id, options.x, options.y, options.text, tokenCount, type);
   }
 
   getOptions(): PlaceOptions {

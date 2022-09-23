@@ -1,3 +1,3 @@
 export class EventNames {
-    static readonly ON_DRAG = 'petri-net-element-drag';
+  static readonly ON_DRAG = "petri-net-element-drag";
 }

@@ -1,17 +1,20 @@
 <template>
-  <v-btn light
-         color="primary"
-         class="ma-2"
-         type="file"
-         @click="selectExperimentFiles">
+  <v-btn
+    class="ma-2"
+    color="primary"
+    light
+    type="file"
+    @click="selectExperimentFiles"
+  >
     Run experiment
-    <input ref="importExperimentInput"
-           hidden
-           type="file"
-           accept=".pnml"
-           @change="runExperiment"
-           multiple
-    >
+    <input
+      ref="importExperimentInput"
+      accept=".pnml"
+      hidden
+      multiple
+      type="file"
+      @change="runExperiment"
+    />
   </v-btn>
 </template>
 
@@ -45,25 +48,29 @@ export default class RunExperimentButton extends Vue {
     for (let i = 0; i < files.length; i++) {
       const file = files.item(i)!;
 
-      const fileContent = await new Promise(resolve => {
+      const fileContent = (await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.readAsText(file);
-      }) as string;
+      })) as string;
 
       const filename = file.name.replace(".pnml", "");
 
       this._petriNetManager.state = PnmlSerializer.deserialize(fileContent);
       this._layouter.clearOverlay();
-      this._petriNetManager.state = this._layouter.run(this._petriNetManager.state);
+      this._petriNetManager.state = this._layouter.run(
+        this._petriNetManager.state
+      );
 
       const metrics = this.calculateMetrics();
       zip.file(`${filename}_metrics.json`, JSON.stringify(metrics));
-      const svgWithBlocks = document.getElementById("petri-net-editor-svg")!.outerHTML;
+      const svgWithBlocks = document.getElementById("petri-net-editor-svg")!
+        .outerHTML;
       zip.file(`${filename}_with_blocks.svg`, svgWithBlocks);
 
       this._layouter.clearOverlay();
-      const svgWithoutBlocks = document.getElementById("petri-net-editor-svg")!.outerHTML;
+      const svgWithoutBlocks = document.getElementById("petri-net-editor-svg")!
+        .outerHTML;
       zip.file(`${filename}_without_blocks.svg`, svgWithoutBlocks);
     }
 
@@ -81,6 +88,5 @@ export default class RunExperimentButton extends Vue {
       branchingFactor: this._petriNetManager.getBranchingFactor()
     };
   }
-
 }
 </script>

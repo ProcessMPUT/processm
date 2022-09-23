@@ -33,8 +33,8 @@
         light
         @click="runLayouter"
       >
-        Run layouter</v-btn
-      >
+        Run layouter
+      </v-btn>
       <v-btn
         v-if="!isDebuggerEnabled"
         class="ma-2"
@@ -42,8 +42,8 @@
         light
         @click="runDebugger"
       >
-        Run debugger</v-btn
-      >
+        Run debugger
+      </v-btn>
       <v-btn
         v-if="!isDebuggerEnabled"
         class="ma-2"
@@ -164,54 +164,40 @@ import { Arc } from "@/components/petri-net-editor/model/Arc";
   }
 })
 export default class PetriNetEditor extends Vue {
-  private isEditPlaceDialogVisible = false;
-  private isEditTransitionDialogVisible = false;
-  private isExportPnmlDialogVisible = false;
-  private isDebuggerEnabled = false;
-
-  private isRunExperimentButtonVisible = false;
-
-  private selectedPlace!: SvgPlace;
-  private selectedTransition!: SvgTransition;
-
-  private targetIsPlaceOrTransition = false;
-  private targetIsDeletable = false;
-  private isSetTokenVisible = false;
-  private isSetWidthVisible = false;
-  private contextMenuTargetId = "";
-
-  @Prop()
-  private places!: PlaceDto[];
-
-  @Prop()
-  private transitions!: TransitionDto[];
-
-  @Prop()
-  private arcs!: ArcDto[];
-
-  @Prop()
-  private showButtons!: boolean;
-
-  @Prop()
-  private enableDragging!: boolean;
-
-  @Prop()
-  private debug!: boolean;
-
-  @Prop()
-  private runLayouterOnStart!: boolean;
-
-  private contextMenuItems: ContextMenuItem[] = [];
-
-  private petriNetManager!: PetriNetSvgManager;
-
-  private layouter!: Layouter;
-
   $refs!: {
     importInput: HTMLInputElement;
     contextMenu: ContextMenu;
     editorSvg: HTMLElement;
   };
+  private isEditPlaceDialogVisible = false;
+  private isEditTransitionDialogVisible = false;
+  private isExportPnmlDialogVisible = false;
+  private isDebuggerEnabled = false;
+  private isRunExperimentButtonVisible = false;
+  private selectedPlace!: SvgPlace;
+  private selectedTransition!: SvgTransition;
+  private targetIsPlaceOrTransition = false;
+  private targetIsDeletable = false;
+  private isSetTokenVisible = false;
+  private isSetWidthVisible = false;
+  private contextMenuTargetId = "";
+  @Prop()
+  private places!: PlaceDto[];
+  @Prop()
+  private transitions!: TransitionDto[];
+  @Prop()
+  private arcs!: ArcDto[];
+  @Prop()
+  private showButtons!: boolean;
+  @Prop()
+  private enableDragging!: boolean;
+  @Prop()
+  private debug!: boolean;
+  @Prop()
+  private runLayouterOnStart!: boolean;
+  private contextMenuItems: ContextMenuItem[] = [];
+  private petriNetManager!: PetriNetSvgManager;
+  private layouter!: Layouter;
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {

@@ -1,6 +1,6 @@
 export interface ContextMenuItem {
-    name: string;
-    isVisible: boolean;
+  name: string;
+  isVisible: boolean;
 
-    action(): void;
+  action(): void;
 }

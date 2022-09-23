@@ -13,6 +13,10 @@ export class VerticalBlock extends Block {
     this.calculatePositions();
   }
 
+  get numberOfLayers(): number {
+    return Math.max(...this.blocks.map((block) => block.numberOfLayers));
+  }
+
   render(svg: SVGSelection): void {
     this._svgBlock = svg
       .append("rect")
@@ -26,7 +30,7 @@ export class VerticalBlock extends Block {
       .attr("fill", "none")
       .style("filter", "drop-shadow(1px 3px 4px rgb(0 0 0 / 0.3))");
 
-    this.blocks.forEach(block => block.render(svg));
+    this.blocks.forEach((block) => block.render(svg));
   }
 
   delete(): void {
@@ -37,7 +41,7 @@ export class VerticalBlock extends Block {
     this.absoluteX = position.x;
     this.absoluteY = position.y;
 
-    this.blocks.forEach(block => {
+    this.blocks.forEach((block) => {
       block.applyLayout({
         x: position.x + block.x,
         y: position.y + block.y
@@ -45,23 +49,11 @@ export class VerticalBlock extends Block {
     });
   }
 
-  get numberOfLayers(): number {
-    return Math.max(...this.blocks.map(block => block.numberOfLayers));
-  }
-
-  private updateDimensions() {
-    const topBlock = this.blocks[0];
-    const bottomBlock = this.blocks[1];
-
-    this.width = Math.max(topBlock.width, bottomBlock.width);
-    this.height = bottomBlock.y + bottomBlock.height;
-  }
-
   protected calculatePositions(): void {
     const topBlock = this.blocks[0];
     const bottomBlock = this.blocks[1];
 
-    const maxWidth = Math.max(...this.blocks.map(block => block.width));
+    const maxWidth = Math.max(...this.blocks.map((block) => block.width));
 
     topBlock.x = (maxWidth - topBlock.width) / 2;
     topBlock.y = 0;
@@ -70,5 +62,13 @@ export class VerticalBlock extends Block {
     bottomBlock.y = topBlock.height + 100;
 
     this.updateDimensions();
+  }
+
+  private updateDimensions() {
+    const topBlock = this.blocks[0];
+    const bottomBlock = this.blocks[1];
+
+    this.width = Math.max(topBlock.width, bottomBlock.width);
+    this.height = bottomBlock.y + bottomBlock.height;
   }
 }

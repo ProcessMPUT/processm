@@ -58,6 +58,10 @@ export class SvgPlace extends PetriNetSvgElement {
     this.updatePosition();
   }
 
+  get text(): string {
+    return this._svgText.text();
+  }
+
   set text(text: string) {
     this.placeModel.text = text;
     this._svgText.text(text);
@@ -70,8 +74,8 @@ export class SvgPlace extends PetriNetSvgElement {
     this.updateTextPosition();
   }
 
-  get text(): string {
-    return this._svgText.text();
+  get tokenCount(): number {
+    return this.placeModel.tokenCount;
   }
 
   set tokenCount(tokenCount: number) {
@@ -84,8 +88,8 @@ export class SvgPlace extends PetriNetSvgElement {
     this.updateTokenPosition();
   }
 
-  get tokenCount(): number {
-    return this.placeModel.tokenCount;
+  get type(): PlaceType {
+    return this.placeModel.type;
   }
 
   set type(placeType: PlaceType) {
@@ -104,10 +108,6 @@ export class SvgPlace extends PetriNetSvgElement {
     }
 
     this._svgCircle.attr("fill", fillColor);
-  }
-
-  get type(): PlaceType {
-    return this.placeModel.type;
   }
 
   delete(): void {

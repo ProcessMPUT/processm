@@ -3,8 +3,8 @@
     <svg
       id="petri-net-debugger-svg"
       height="100%"
-      width="100%"
       style="background-color: white"
+      width="100%"
     >
       <defs>
         <marker
