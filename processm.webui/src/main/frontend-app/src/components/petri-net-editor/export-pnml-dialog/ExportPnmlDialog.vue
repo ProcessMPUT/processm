@@ -1,16 +1,20 @@
 <template>
   <v-dialog v-model="visible" max-width="300px" @input="closeDialog">
     <v-card>
-      <v-card-title>Export PNML</v-card-title>
+      <v-card-title>{{ $t("petri-net.export-pnml") }}</v-card-title>
       <v-card-text>
         <v-form>
-          <v-text-field v-model="filename" label="Filename" min="4" />
+          <v-text-field v-model="filename" :label="$t('common.filename')" min="4" />
         </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="secondary" text @click="closeDialog"> Cancel</v-btn>
-        <v-btn color="primary" text @click="this.export"> Save</v-btn>
+        <v-btn color="secondary" text @click="closeDialog">
+          {{ $t("common.cancel") }}
+        </v-btn>
+        <v-btn color="primary" text @click="this.export">
+          {{ $t("common.save") }}
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

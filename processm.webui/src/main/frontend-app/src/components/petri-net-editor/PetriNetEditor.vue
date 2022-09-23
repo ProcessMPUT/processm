@@ -33,7 +33,7 @@
         light
         @click="runLayouter"
       >
-        Run layouter
+        {{ $t("common.calculate-layout") }}
       </v-btn>
       <v-btn
         v-if="!isDebuggerEnabled"
@@ -42,7 +42,7 @@
         light
         @click="runDebugger"
       >
-        Run debugger
+        {{ $t("common.debug") }}
       </v-btn>
       <v-btn
         v-if="!isDebuggerEnabled"
@@ -52,7 +52,7 @@
         type="file"
         @click="selectPnmlFile"
       >
-        Import PNML
+        {{ $t("petri-net.pnml.import") }}
         <input
           ref="importInput"
           accept=".pnml"
@@ -69,7 +69,7 @@
         type="file"
         v-on:click="() => (isExportPnmlDialogVisible = true)"
       >
-        Export PNML
+        {{ $t("petri-net.pnml.export") }}
       </v-btn>
 
       <run-experiment-button
@@ -271,22 +271,22 @@ export default class PetriNetEditor extends Vue {
   }
 
   private createPlace(): void {
-    const contextMenu = this.$refs.contextMenu.$el as HTMLElement;
-
+    const scale = this.petriNetManager.scale;
+    const rect = this.$refs.editorSvg.getBoundingClientRect()
     this.petriNetManager.createPlace({
-      x: contextMenu.offsetLeft,
-      y: contextMenu.offsetTop,
-      text: "New P"
+      x: (this.$refs.contextMenu.x - rect.x) / scale,
+      y: (this.$refs.contextMenu.y - rect.y) / scale,
+      text: this.$t("petri-net.new.place").toString()
     });
   }
 
   private createTransition(): void {
-    const contextMenu = this.$refs.contextMenu.$el as HTMLElement;
-
+    const scale = this.petriNetManager.scale;
+    const rect = this.$refs.editorSvg.getBoundingClientRect()
     this.petriNetManager.createTransition({
-      x: contextMenu.offsetLeft,
-      y: contextMenu.offsetTop,
-      text: "New T"
+      x: (this.$refs.contextMenu.x - rect.x) / scale,
+      y: (this.$refs.contextMenu.y - rect.y) / scale,
+      text: this.$t("petri-net.new.transition").toString()
     });
   }
 
@@ -386,27 +386,27 @@ export default class PetriNetEditor extends Vue {
   private createContextMenuItems(): ContextMenuItem[] {
     return [
       {
-        name: "Connect",
+        name: this.$t("petri-net.connect").toString(),
         isVisible: this.targetIsPlaceOrTransition,
         action: () => this.startConnect()
       },
       {
-        name: "Create place",
+        name: this.$t("petri-net.create.place").toString(),
         isVisible: this.contextMenuTargetId === "",
         action: () => this.createPlace()
       },
       {
-        name: "Create transition",
+        name: this.$t("petri-net.create.transition").toString(),
         isVisible: this.contextMenuTargetId === "",
         action: () => this.createTransition()
       },
       {
-        name: "Edit",
+        name: this.$t("common.edit").toString(),
         isVisible: this.targetIsPlaceOrTransition,
         action: () => this.showEditDialog()
       },
       {
-        name: "Delete",
+        name: this.$t("common.remove").toString(),
         isVisible: this.targetIsDeletable,
         action: () => this.removeElementOrArc()
       }

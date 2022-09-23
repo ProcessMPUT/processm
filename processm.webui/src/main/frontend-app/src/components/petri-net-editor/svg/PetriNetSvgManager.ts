@@ -91,6 +91,14 @@ export class PetriNetSvgManager {
     );
   }
 
+  get scale(): number {
+    /* eslint-disable @typescript-eslint/ban-ts-comment */
+    // @ts-ignore
+    const computed = window.getComputedStyle(this._svg.node());
+    const actualWidth = parseFloat(computed.getPropertyValue("width"));
+    return actualWidth / this.width;
+  }
+
   private static calculateTransitionInPosition(
     arc: SvgArc,
     inElement: Transition
@@ -204,8 +212,8 @@ export class PetriNetSvgManager {
           .attr("y1", y1);
       }
 
-      this._connectSvgLine.attr("x2", event.offsetX);
-      this._connectSvgLine.attr("y2", event.offsetY);
+      this._connectSvgLine.attr("x2", event.offsetX / this.scale);
+      this._connectSvgLine.attr("y2", event.offsetY / this.scale);
     });
 
     // TODO: fix false inspection error

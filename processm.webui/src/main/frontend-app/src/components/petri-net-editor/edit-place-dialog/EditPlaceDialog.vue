@@ -4,23 +4,23 @@
       <v-card-title>Edit</v-card-title>
       <v-card-text>
         <v-form>
-          <v-text-field v-model="text" label="Name" type="text" />
+          <v-text-field v-model="text" :label="$t('common.name')" type="text" />
           <v-text-field
             v-model="tokenCount"
-            label="Token count"
+            :label="$t('petri-net.token-count')"
             min="0"
             type="number"
           />
           <v-checkbox
-            v-model="isPlaceFinal"
-            label="Initial"
+            v-model="isPlaceInitial"
+            :label="$t('common.initial')"
             @click="
               isPlaceInitial && isPlaceFinal ? (isPlaceFinal = false) : null
             "
           />
           <v-checkbox
             v-model="isPlaceFinal"
-            label="Final"
+            :label="$t('common.final')"
             @click="
               isPlaceInitial && isPlaceFinal ? (isPlaceInitial = false) : null
             "
@@ -30,9 +30,11 @@
 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="secondary" text @click="this.closeDialog"> Cancel</v-btn>
+        <v-btn color="secondary" text @click="this.closeDialog">
+          {{ $t("common.cancel") }}
+        </v-btn>
         <v-btn color="primary" text @click="this.saveDialogChanges">
-          Save
+          {{ $t("common.save") }}
         </v-btn>
       </v-card-actions>
     </v-card>

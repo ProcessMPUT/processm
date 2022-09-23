@@ -1,20 +1,22 @@
 <template>
-  <v-btn-toggle
+  <v-menu
     id="context-menu"
     ref="contextMenu"
-    class="elevation-6"
-    group
-    light
+    v-model="visible"
+    :position-x="x"
+    :position-y="y"
   >
-    <v-btn
-      v-for="item in visibleItems"
-      :key="item.name"
-      light
-      v-on:click="() => performButtonAction(item)"
-    >
-      {{ item.name }}
-    </v-btn>
-  </v-btn-toggle>
+    <v-list>
+      <v-list-item
+        v-for="item in visibleItems"
+        :key="item.name"
+        light
+        v-on:click="() => performButtonAction(item)"
+      >
+        <v-list-item-title>{{ item.name }}</v-list-item-title>
+      </v-list-item>
+    </v-list>
+  </v-menu>
 </template>
 
 <script lang="ts">
@@ -30,6 +32,10 @@ export default class ContextMenu extends Vue {
   $refs!: {
     contextMenu: Vue;
   };
+  private visible: boolean = false;
+
+  x: number = 0;
+  y: number = 0;
 
   private get visibleItems(): ContextMenuItem[] {
     return this._items.filter((item) => item.isVisible);
@@ -54,7 +60,7 @@ export default class ContextMenu extends Vue {
         (e.target as Element).parentElement?.parentElement?.parentElement !=
           contextMenu
       ) {
-        contextMenu.classList.remove("visible");
+        this.visible = false;
       }
     });
   }
@@ -75,20 +81,16 @@ export default class ContextMenu extends Vue {
       this.$emit("expand", event.target);
     }
 
-    const contextMenu = this.getContextMenu();
+    this.x = event.clientX;
+    this.y = event.clientY;
 
-    contextMenu.style.top = `${event.offsetY}px`;
-    contextMenu.style.left = `${event.offsetX}px`;
-
-    setTimeout(() => {
-      contextMenu.classList.add("visible");
-    });
+    this.visible = true;
   }
 
   performButtonAction(item: ContextMenuItem) {
     const contextMenu = this.getContextMenu();
     contextMenu.classList.remove("visible");
-   item.action();
+    item.action();
   }
 
   private getContextMenu(): HTMLElement {
@@ -97,20 +99,3 @@ export default class ContextMenu extends Vue {
 }
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-#context-menu {
-  position: absolute;
-  background: white;
-
-  transform: scale(0);
-  transform-origin: top left;
-  transition: transform 50ms ease-in-out;
-}
-
-/*noinspection CssUnusedSymbol*/
-#context-menu.visible {
-  transform: scale(1);
-  transition: transform 200ms ease-in-out;
-}
-</style>

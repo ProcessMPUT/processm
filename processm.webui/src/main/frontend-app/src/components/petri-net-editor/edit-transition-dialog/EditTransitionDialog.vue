@@ -1,17 +1,19 @@
 <template>
   <v-dialog v-model="visible" max-width="300px" @input="closeDialog">
     <v-card>
-      <v-card-title>Edit</v-card-title>
+      <v-card-title>{{ $t("common.edit") }}</v-card-title>
       <v-card-text>
         <v-form>
-          <v-text-field v-model="text" label="Name" type="text" />
+          <v-text-field v-model="text" :label="$t('common.name')" type="text" />
         </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="secondary" text @click="closeDialog"> Cancel</v-btn>
+        <v-btn color="secondary" text @click="closeDialog">
+          {{ $t("common.cancel") }}
+        </v-btn>
         <v-btn color="primary" text @click="this.saveDialogChanges">
-          Save
+          {{ $t("common.save") }}
         </v-btn>
       </v-card-actions>
     </v-card>

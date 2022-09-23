@@ -217,7 +217,29 @@
     "log-identity-id": "Log identity:id",
     "errors": "Błędy"
   },
+  "petri-net": {
+    "connect": "Połącz",
+    "create": {
+      "place": "Utwórz miejsce",
+      "transition": "Utwórz tranzycję"
+    },
+    "pnml": {
+      "import": "Importuj PNML",
+      "export": "Eksportuj PNML"
+    },
+    "fire": "Uruchom",
+    "fire-backwards": "Uruchom wstecz",
+    "new": {
+      "place": "Nowe miejsce",
+      "transition": "Nowa tranzycja"
+    },
+    "token-count": "Liczba tokenów"
+  },
   "common": {
+    "calculate-layout": "Oblicz układ",
+    "initial": "Początkowe",
+    "final": "Końcowe",
+    "filename": "Nazwa pliku",
     "cancel": "Anuluj",
     "save": "Zapisz",
     "test": "Test",

@@ -106,9 +106,9 @@ export default class PetriNetDebugger extends Vue {
   }
 
   onContextMenuExpand(target: Element | null): void {
-    this.targetIsInvokable = target?.hasAttribute("invokable") ?? false;
+    this.targetIsInvokable = target?.getAttribute("invokable") === "1";
     this.targetIsBackwardInvokable =
-      target?.hasAttribute("backwardsInvokable") ?? false;
+      target?.getAttribute("backwardsInvokable") === "1";
     this.contextMenuTargetId = target?.id ?? "";
 
     this.contextMenuItems = this.createContextMenuItems();
@@ -160,12 +160,12 @@ export default class PetriNetDebugger extends Vue {
   private createContextMenuItems(): ContextMenuItem[] {
     return [
       {
-        name: "Fire",
+        name: this.$t("petri-net.fire").toString(),
         isVisible: this.targetIsInvokable,
         action: () => this.fireTransition(false)
       },
       {
-        name: "Fire backwards",
+        name: this.$t("petri-net.fire-backwards").toString(),
         isVisible: this.targetIsBackwardInvokable,
         action: () => this.fireTransition(true)
       }
