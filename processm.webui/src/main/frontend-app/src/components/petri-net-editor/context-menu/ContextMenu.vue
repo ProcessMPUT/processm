@@ -7,11 +7,10 @@
     light
   >
     <v-btn
-      v-for="(item, index) in _items"
-      v-if="item.isVisible"
+      v-for="item in visibleItems"
       :key="item.name"
       light
-      v-on:click="() => performButtonAction(index)"
+      v-on:click="() => performButtonAction(item)"
     >
       {{ item.name }}
     </v-btn>
@@ -31,6 +30,10 @@ export default class ContextMenu extends Vue {
   $refs!: {
     contextMenu: Vue;
   };
+
+  private get visibleItems(): ContextMenuItem[] {
+    return this._items.filter((item) => item.isVisible);
+  }
 
   @Emit()
   expand(payload: Element) {
@@ -82,10 +85,10 @@ export default class ContextMenu extends Vue {
     });
   }
 
-  performButtonAction(itemIndex: number) {
+  performButtonAction(item: ContextMenuItem) {
     const contextMenu = this.getContextMenu();
     contextMenu.classList.remove("visible");
-    this._items[itemIndex].action();
+   item.action();
   }
 
   private getContextMenu(): HTMLElement {

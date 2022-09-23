@@ -40,7 +40,7 @@ export class AbstractionReduction implements Reduction {
     ) {
       bestPlace = this._postPlaces[0];
     } else {
-      let bestValue: number = Infinity;
+      let bestValue = Infinity;
       for (const place of this._postPlaces) {
         const preTransitions = state.getPreTransitions(place);
 

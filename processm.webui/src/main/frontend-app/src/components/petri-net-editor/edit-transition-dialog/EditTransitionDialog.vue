@@ -34,7 +34,9 @@ export default class EditTransitionDialog extends Vue {
   private transition!: SvgTransition;
 
   @Emit()
-  close() {}
+  close() {
+    /* just empty */
+  }
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {

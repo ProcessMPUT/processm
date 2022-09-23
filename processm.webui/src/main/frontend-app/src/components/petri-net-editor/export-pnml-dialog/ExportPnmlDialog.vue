@@ -34,7 +34,9 @@ export default class ExportPnmlDialog extends Vue {
   private state!: PetriNetState;
 
   @Emit()
-  close() {}
+  close() {
+    /* just empty */
+  }
 
   closeDialog() {
     this.visible = false;

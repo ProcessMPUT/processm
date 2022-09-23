@@ -27,9 +27,11 @@ export class NodeBlock extends Block {
   }
 
   render(_: SVGSelection): void {
+    /* just empty */
   }
 
   delete(): void {
+    /* just empty */
   }
 
   applyLayout(position: Position): void {
@@ -37,5 +39,7 @@ export class NodeBlock extends Block {
     this.absoluteY = position.y;
   }
 
-  protected calculatePositions(): void {}
+  protected calculatePositions(): void {
+    /* just empty */
+  }
 }

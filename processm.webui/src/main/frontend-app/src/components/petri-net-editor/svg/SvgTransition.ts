@@ -115,6 +115,7 @@ export class SvgTransition extends PetriNetSvgElement {
     this.svgRectangle.call(
       drag<SVGRectElement, unknown>()
         // TODO: fix false inspection error
+        /* eslint-disable @typescript-eslint/ban-ts-comment */
         // @ts-ignore
         .on("start", (event: SVGDragEvent) => this.onDrag(event))
         .on("end", () => this.ended())

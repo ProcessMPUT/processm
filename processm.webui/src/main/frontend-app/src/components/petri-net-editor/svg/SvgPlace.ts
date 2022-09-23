@@ -195,6 +195,7 @@ export class SvgPlace extends PetriNetSvgElement {
     this._svgCircle.call(
       drag<SVGCircleElement, unknown>()
         // TODO: fix false inspection error
+        /* eslint-disable @typescript-eslint/ban-ts-comment */
         // @ts-ignore
         .on("start", (event: SVGDragEvent) => this.onDrag(event))
         .on("end", () => this.ended())
@@ -208,6 +209,7 @@ export class SvgPlace extends PetriNetSvgElement {
     const dy = event.y - this.placeModel.cy;
 
     // TODO: fix false inspection error
+    /* eslint-disable @typescript-eslint/ban-ts-comment */
     // @ts-ignore
     event.on("drag", (event: SVGDragEvent) => this.dragged(event, dx, dy));
   }

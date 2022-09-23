@@ -34,7 +34,7 @@ export class BlockLayouter implements Layouter {
   }
 
   public run(state: PetriNetState): PetriNetState {
-    let reducedState = state.clone();
+    const reducedState = state.clone();
     reducedState.resetLayoutMap();
 
     this._blocks.forEach((block) => block.delete());

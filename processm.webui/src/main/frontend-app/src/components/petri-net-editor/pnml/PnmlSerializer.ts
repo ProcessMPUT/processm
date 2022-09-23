@@ -90,7 +90,7 @@ export class PnmlSerializer {
         .getElementsByTagName("initialMarking")[0]
         .getElementsByTagName("text")[0].textContent!;
 
-      let typeElement = pnmlPlace.getElementsByTagName("type")[0];
+      const typeElement = pnmlPlace.getElementsByTagName("type")[0];
       let placeType: PlaceType | null = null;
       if (typeElement) {
         placeType = parseInt(typeElement.textContent!);

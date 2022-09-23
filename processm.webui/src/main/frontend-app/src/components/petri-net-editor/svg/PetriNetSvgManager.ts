@@ -192,6 +192,7 @@ export class PetriNetSvgManager {
     }
 
     // TODO: fix false inspection error
+    /* eslint-disable @typescript-eslint/ban-ts-comment */
     // @ts-ignore
     this._svg.on("mousemove", (event: MouseEvent) => {
       if (this._connectSvgLine == null) {
@@ -208,6 +209,7 @@ export class PetriNetSvgManager {
     });
 
     // TODO: fix false inspection error
+    /* eslint-disable @typescript-eslint/ban-ts-comment */
     // @ts-ignore
     this._svg.on("click", (event: MouseEvent) => {
       const target = event.target as Element;

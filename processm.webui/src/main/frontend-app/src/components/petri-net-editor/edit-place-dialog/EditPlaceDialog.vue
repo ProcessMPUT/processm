@@ -59,7 +59,9 @@ export default class EditPlaceDialog extends Vue {
   private place!: SvgPlace;
 
   @Emit()
-  close() {}
+  close() {
+    /* just empty */
+  }
 
   // noinspection JSUnusedGlobalSymbols
   mounted() {
