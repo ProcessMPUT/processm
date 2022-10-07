@@ -53,15 +53,13 @@ export default class PetriNetComponent extends Vue {
     this.componentMode === ComponentMode.Interactive;
 
   mounted() {
-    // TODO: How to read initial and final marking?
-    console.log(this.data.data);
   }
 
   private getPlacesAsDto(): PlaceDto[] {
     const places = this.data.data.places?.map((place) => {
       return {
         id: place.id,
-        // TODO: Missing attribute
+        // TODO: Missing `text` attribute in place data from server
         text: "",
         type: this.getPlaceType(place),
         tokenCount: this.getPlaceType(place) == PlaceType.INITIAL ? 1 : 0
@@ -74,7 +72,7 @@ export default class PetriNetComponent extends Vue {
   private getTransitionsAsDto(): TransitionDto[] {
     const transitions = this.data.data.transitions?.map((transition) => {
       return {
-        // TODO: Missing attribute
+        // TODO: Missing `id` attribute in transition data from server
         id: transition.name,
         text: transition.name,
         isSilent: transition.isSilent
@@ -89,14 +87,14 @@ export default class PetriNetComponent extends Vue {
       const inArcs = transition.inPlaces.map((inPlace: any) => {
         return {
           outElementId: inPlace.id,
-          // TODO: Replace with id
+          // TODO: Replace with id, when `id` attribute added to transitions downloaded from server
           inElementId: transition.name
         } as ArcDto;
       });
 
       const outArcs = transition.outPlaces.map((outPlace: any) => {
         return {
-          // TODO: Replace with id
+          // TODO: Replace with id, when `id` attribute added to transitions downloaded from server
           outElementId: transition.name,
           inElementId: outPlace.id
         } as ArcDto;
@@ -105,7 +103,6 @@ export default class PetriNetComponent extends Vue {
       return [...inArcs, ...outArcs];
     });
 
-    console.log(arcs);
     return arcs ?? [];
   }
 

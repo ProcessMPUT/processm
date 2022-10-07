@@ -92,13 +92,11 @@ export class AbstractionReduction implements Reduction {
       return this._score;
     }
 
-    // TODO: Should this be done also for _postPlaces?
     if (this._preTransitions.length == 0 && this._postPlaces.length == 0) {
       this._score = 0.0;
       return this._score;
     }
 
-    // TODO: Verify if this normalizing factor works correctly
     let scoreDivisor: number =
       this._preTransitions.length + this._postPlaces.length;
     if (this._preTransitions.length != 0 && this._postPlaces.length != 0) {

@@ -97,7 +97,6 @@ export class WorkspaceComponent {
         break;
       }
       case ComponentType.PetriNet: {
-        // TODO: Implement
         this.data = new PetriNetComponentData(init.data ?? {});
         break;
       }

@@ -65,8 +65,6 @@ export class SvgPlace extends PetriNetSvgElement {
   set text(text: string) {
     this.placeModel.text = text;
     this._svgText.text(text);
-    // TODO: Remove later
-    // this.svgText.text(this.placeModel.id);
 
     const textBoundingBox = this._svgText.node()?.getBoundingClientRect();
     this._svgTextWidth = textBoundingBox?.width ?? 0;
@@ -143,9 +141,9 @@ export class SvgPlace extends PetriNetSvgElement {
         .attr("cx", this.placeModel.cx)
         .attr("cy", this.placeModel.cy);
     } else if (this._svgTokens.length >= 2) {
-      const angleIncrement = Math.PI / this._svgTokens.length;
+      const angleIncrement = 2 * Math.PI / this._svgTokens.length;
       this._svgTokens.forEach((token, i) => {
-        const angle = i * angleIncrement * 2;
+        const angle = i * angleIncrement;
 
         const tokenX =
           this.placeModel.cx + (Math.sin(angle) * Place.RADIUS) / 2;
