@@ -72,12 +72,6 @@
         {{ $t("petri-net.pnml.export") }}
       </v-btn>
 
-      <run-experiment-button
-        v-if="isRunExperimentButtonVisible && debug && !isDebuggerEnabled"
-        :layouter="layouter"
-        :petri-net-manager="petriNetManager"
-      />
-
       <v-btn
         v-if="isDebuggerEnabled"
         class="ma-2"
@@ -138,7 +132,6 @@ import PetriNetDebugger from "@/components/petri-net-editor/petri-net-debugger/P
 import EditPlaceDialog from "@/components/petri-net-editor/edit-place-dialog/EditPlaceDialog.vue";
 import EditTransitionDialog from "@/components/petri-net-editor/edit-transition-dialog/EditTransitionDialog.vue";
 import ExportPnmlDialog from "@/components/petri-net-editor/export-pnml-dialog/ExportPnmlDialog.vue";
-import RunExperimentButton from "@/components/petri-net-editor/run-experiment-button/RunExperimentButton.vue";
 import { SvgPlace } from "./svg/SvgPlace";
 import { ArcDto, PlaceDto, TransitionDto } from "./Dto";
 import { ContextMenuItem } from "@/components/petri-net-editor/context-menu/ContextMenuItem";
@@ -155,7 +148,6 @@ import { Arc } from "@/components/petri-net-editor/model/Arc";
 @Component({
   name: "petri-net-editor",
   components: {
-    RunExperimentButton,
     ExportPnmlDialog,
     EditTransitionDialog,
     PetriNetDebugger,
@@ -211,8 +203,6 @@ export default class PetriNetEditor extends Vue {
     );
 
     this.layouter = new BlockLayouter(this.debug);
-
-    this.isRunExperimentButtonVisible = true;
 
     this.places.forEach((place) =>
       this.petriNetManager.createPlace({
