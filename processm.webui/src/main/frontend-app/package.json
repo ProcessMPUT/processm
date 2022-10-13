@@ -11,20 +11,10 @@
     "test": "jest"
   },
   "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "ts",
-      "json",
-      "vue"
-    ],
-    "transform": {
-      ".*\\.(vue)$": "@vue/vue2-jest",
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testURL": "http://localhost/",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     },
+    "preset": "ts-jest",
     "testEnvironment": "jsdom"
   },
   "dependencies": {

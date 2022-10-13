@@ -16,7 +16,7 @@ export class PnmlSerializer {
             <pnml>
                 <net id="" type="http://www.pnml.org/version-2009/grammar/ptnet">
                     <name>
-                        <text>${name}</text>
+                        <text></text>
                     </name>
                     <page id="page1"></page>
                 </net>
@@ -24,6 +24,7 @@ export class PnmlSerializer {
         `,
       "text/xml"
     );
+    pnmlDoc.querySelector("pnml > net > name > text")!.textContent = name;
     const page: Element = pnmlDoc.getElementsByTagName("page")[0];
 
     PnmlSerializer.appendTransitions(page, state.transitions);
@@ -125,63 +126,72 @@ export class PnmlSerializer {
     transitions: Transition[]
   ): void {
     for (const transition of transitions) {
-      const transitionElement = `
-                <transition id="${transition.id}">
+      const transitionElement = page.ownerDocument.createElement("transition")
+      transitionElement.innerHTML += `
                     <name>
-                        <text>${transition.text}</text>
+                        <text></text>
                         <graphics>
                           <offset x="0" y="0"/>
                         </graphics>
                     </name>
                     <graphics>
-                        <position x="${transition.x}" y="${transition.y}"/>
+                        <position/>
                     </graphics>
-                </transition>
             `;
+      transitionElement.setAttribute("id", transition.id)
+      transitionElement.querySelector("name > text")!.textContent = transition.text
+      transitionElement.querySelector("graphics > position")!.setAttribute("x", transition.x.toString())
+      transitionElement.querySelector("graphics > position")!.setAttribute("y", transition.y.toString())
 
-      page.innerHTML += transitionElement;
+      page.appendChild(transitionElement)
     }
   }
 
   private static appendPlaces(page: Element, places: Place[]): void {
     for (const place of places) {
-      const placeElement = `
-                 <place id="${place.id}">
+      const placeElement = page.ownerDocument.createElement("place")
+      placeElement.innerHTML += `
                     <name>
-                         <text>${place.text}</text>
+                         <text></text>
                          <graphics>
                               <offset x="0" y="0"/>
                          </graphics>
                     </name>
                     <graphics>
-                         <position x="${place.cx}" y="${place.cy}"/>
+                         <position/>
                     </graphics>
                     <initialMarking>
-                         <text>${place.tokenCount}</text>
+                         <text></text>
                     </initialMarking>
                     <toolspecific tool="processm" version="1.0">
                         <type>${place.type}</type>
                     </toolspecific>
-                 </place>
             `;
+      placeElement.setAttribute("id", place.id)
+      placeElement.querySelector("name > text")!.textContent = place.text
+      placeElement.querySelector("graphics > position")!.setAttribute("x", place.cx.toString())
+      placeElement.querySelector("graphics > position")!.setAttribute("y", place.cy.toString())
+      placeElement.querySelector("initialMarking")!.querySelector("text")!.textContent = place.tokenCount.toString()
+      placeElement.querySelector("toolspecific > type")!.textContent = place.type.toString()
 
-      page.innerHTML += placeElement;
+      page.appendChild(placeElement)
     }
   }
 
   private static appendArcs(page: Element, arcs: Arc[]): void {
     for (const arc of arcs) {
-      const arcElement = `
-                <arc id="${arc.id}"
-                    source="${arc.outElementId}" target="${arc.inElementId}">
+      const arcElement = page.ownerDocument.createElement("arc")
+          arcElement.innerHTML = `
                     <inscription>
                          <text></text>
                     </inscription>
                     <graphics/>
-                </arc>
             `;
+      arcElement.setAttribute("id", arc.id)
+      arcElement.setAttribute("source", arc.outElementId)
+      arcElement.setAttribute("target", arc.inElementId)
 
-      page.innerHTML += arcElement;
+      page.appendChild(arcElement)
     }
   }
 }
