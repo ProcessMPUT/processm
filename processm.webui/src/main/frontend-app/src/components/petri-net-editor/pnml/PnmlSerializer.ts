@@ -3,10 +3,28 @@ import {
   PlaceDto,
   TransitionDto
 } from "@/components/petri-net-editor/Dto";
-import { Transition } from "@/components/petri-net-editor/model/Transition";
-import { Place, PlaceType } from "@/components/petri-net-editor/model/Place";
-import { Arc } from "@/components/petri-net-editor/model/Arc";
-import { PetriNetState } from "@/components/petri-net-editor/model/PetriNetState";
+import {Transition} from "@/components/petri-net-editor/model/Transition";
+import {Place, PlaceType} from "@/components/petri-net-editor/model/Place";
+import {Arc} from "@/components/petri-net-editor/model/Arc";
+import {PetriNetState} from "@/components/petri-net-editor/model/PetriNetState";
+
+
+function getFirstElementByTagName(element: Element | null, qualifiedName: string): Element | null {
+  if (element == null)
+    return null
+  const list = element.getElementsByTagName(qualifiedName)
+  if (list.length >= 1)
+    return list[0]
+  else
+    return null
+}
+
+function safeParseInt(text: string | null | undefined): number | null {
+  if (text == null)
+    return null
+  else
+    return parseInt(text)
+}
 
 export class PnmlSerializer {
   static serialize(state: PetriNetState, name: string): string {
@@ -49,7 +67,7 @@ export class PnmlSerializer {
         x: place.x ?? 0,
         y: place.y ?? 0,
         text: place.text,
-        tokenCount: 0,
+        tokenCount: place.tokenCount ?? 0,
         id: place.id,
         type: place.type
       })
@@ -72,38 +90,33 @@ export class PnmlSerializer {
   private static deserializeTransitions(pnmlDoc: Document): TransitionDto[] {
     const transitions = [];
     for (const pnmlTransition of pnmlDoc.getElementsByTagName("transition")) {
-      const position = pnmlTransition.getElementsByTagName("position")[0];
+      const position = getFirstElementByTagName(pnmlTransition,"position");
       transitions.push({
         id: pnmlTransition.getAttribute("id"),
-        text: pnmlTransition.getElementsByTagName("text")[0].textContent,
-        x: parseInt(position.getAttribute("x")!),
-        y: parseInt(position.getAttribute("y")!)
+        text: getFirstElementByTagName(pnmlTransition,"text")?.textContent ?? "",
+        x: safeParseInt(position?.getAttribute("x")),
+        y: safeParseInt(position?.getAttribute("y"))
       } as TransitionDto);
     }
     return transitions;
   }
 
+
   private static deserializePlaces(pnmlDoc: Document): PlaceDto[] {
     const places = [];
     for (const pnmlPlace of pnmlDoc.getElementsByTagName("place")) {
-      const position = pnmlPlace.getElementsByTagName("position")[0];
-      const initialMarking = pnmlPlace
-        .getElementsByTagName("initialMarking")[0]
-        .getElementsByTagName("text")[0].textContent!;
+      const position = getFirstElementByTagName(pnmlPlace, "position");
+      const initialMarking = getFirstElementByTagName(getFirstElementByTagName(pnmlPlace, "initialMarking"), "text")?.textContent
 
-      const typeElement = pnmlPlace.getElementsByTagName("type")[0];
-      let placeType: PlaceType | null = null;
-      if (typeElement) {
-        placeType = parseInt(typeElement.textContent!);
-      }
+      const placeType: PlaceType | null = safeParseInt(getFirstElementByTagName(pnmlPlace, "type")?.textContent)
 
       places.push({
         id: pnmlPlace.getAttribute("id"),
-        text: pnmlPlace.getElementsByTagName("text")[0].textContent,
-        x: parseInt(position.getAttribute("x")!),
-        y: parseInt(position.getAttribute("y")!),
+        text: getFirstElementByTagName(pnmlPlace,"text")?.textContent ?? "",
+        x: safeParseInt(position?.getAttribute("x")),
+        y: safeParseInt(position?.getAttribute("y")),
         type: placeType,
-        tokenCount: parseInt(initialMarking)
+        tokenCount: safeParseInt(initialMarking)
       } as PlaceDto);
     }
     return places;
@@ -181,7 +194,7 @@ export class PnmlSerializer {
   private static appendArcs(page: Element, arcs: Arc[]): void {
     for (const arc of arcs) {
       const arcElement = page.ownerDocument.createElement("arc")
-          arcElement.innerHTML = `
+      arcElement.innerHTML = `
                     <inscription>
                          <text></text>
                     </inscription>
