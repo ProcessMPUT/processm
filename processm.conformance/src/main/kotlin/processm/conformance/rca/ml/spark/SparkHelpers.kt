@@ -15,7 +15,7 @@ object SparkHelpers {
     private const val LABEL_METADATA = "label"
 
     fun PropositionalSparseDataset.toSpark(): Dataset<Row> {
-        val spark = SparkSession.builder().master("local").appName(Brand.name).orCreate
+        val spark = getSparkSession()
         val rows = map { row ->
             val values = features.map {
                 val v = row[it] ?: it.default
@@ -54,4 +54,6 @@ object SparkHelpers {
 
     fun Dataset<Row>.hasMissingValues(columnName: String): Boolean =
         select(sum(col(columnName).isNull.cast(DataTypes.IntegerType))).first().getAs<Long>(0) > 0
+
+    fun getSparkSession(): SparkSession = SparkSession.builder().master("local").appName(Brand.name).orCreate
 }

@@ -325,7 +325,5 @@ class Calculator(
      */
     fun calculate(log: Log): Report = calculate(sequenceOf(log))
 
-    private fun Attribute<*>.isNumeric(): Boolean = this is IntAttr || this is RealAttr
-    private fun Attribute<*>.toDouble(): Double = (this.value as Number).toDouble()
 }
 

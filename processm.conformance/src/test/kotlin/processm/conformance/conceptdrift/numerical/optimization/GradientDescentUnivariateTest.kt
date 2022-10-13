@@ -1,5 +1,5 @@
 package processm.conformance.conceptdrift.numerical.optimization
 
-class GradientDescentTest : OptimizerTest() {
+class GradientDescentUnivariateTest : OptimizerTest() {
     override fun instance(): Optimizer = GradientDescent()
 }

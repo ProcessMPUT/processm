@@ -12,6 +12,7 @@ import processm.core.models.commons.Activity
 import processm.core.verifiers.CausalNetVerifier
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 object Helpers {
@@ -62,9 +63,13 @@ object Helpers {
     operator fun Trace.times(n: Int): Sequence<Trace> = (0 until n).asSequence().map { this@times }
 
     // http://realtimecollisiondetection.net/blog/?p=89
-    fun assertDoubleEquals(expected: Double, actual: Double, prec: Double = 1e-3) =
-        assertTrue(
-            abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
-            "Expected: $expected, actual: $actual, prec: $prec"
-        )
+    fun assertDoubleEquals(expected: Double?, actual: Double?, prec: Double = 1e-3) {
+        if (expected != null && actual != null)
+            assertTrue(
+                abs(expected - actual) <= prec * max(max(1.0, abs(expected)), abs(actual)),
+                "Expected: $expected, actual: $actual, prec: $prec"
+            )
+        else
+            assertEquals(expected, actual)
+    }
 }
