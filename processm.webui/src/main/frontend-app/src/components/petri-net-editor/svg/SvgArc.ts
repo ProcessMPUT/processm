@@ -35,11 +35,10 @@ export class SvgArc {
   }
 
   private static makeNanSafe(value: number): number {
-    if (isNaN(value)) {
+    if(isFinite(value))
+      return value
+    else
       return 0;
-    }
-
-    return value;
   }
 
   delete() {
