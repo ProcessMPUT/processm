@@ -5,11 +5,11 @@ import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
 import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
+import processm.core.log.attribute.IntAttr
 import processm.core.log.attribute.ListAttr
+import processm.core.log.attribute.RealAttr
 import processm.core.log.attribute.value
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertSame
+import kotlin.test.*
 
 internal class XMLXESInputStreamTest {
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -27,6 +27,13 @@ internal class XMLXESInputStreamTest {
                 <string key="conceptowy:name" value="__INVALID__"/>
                 <string key="org:group" value="__INVALID__"/>
                 <date key="time:timestamp" value="1970-01-01T01:00:00.000+01:00"/>
+                <list key="globalListKey">
+                    <int key="intInsideListKey" value="25" />
+                    <values>
+                        <float key="__UNKNOWN__" value="123.617"/>
+                        <int key="__NEW__" value="456"/>
+                    </values>
+                </list>
             </global>
             <classifier name="Event Name" keys="conceptowy:name"/>
             <classifier scope="trace" name="Department Classifier" keys="org:group"/>
@@ -128,7 +135,7 @@ internal class XMLXESInputStreamTest {
 
             val receivedLog: Log = iterator.next() as Log
 
-            assertEquals(receivedLog.eventGlobals.size, 4)
+            assertEquals(receivedLog.eventGlobals.size, 5)
 
             assertEquals(receivedLog.eventGlobals.getValue("conceptowy:name").value, "__INVALID__")
             assertEquals(receivedLog.eventGlobals.getValue(LIFECYCLE_TRANSITION).value, "complete")
@@ -137,6 +144,27 @@ internal class XMLXESInputStreamTest {
                 receivedLog.eventGlobals.getValue(TIME_TIMESTAMP).value,
                 "1970-01-01T01:00:00.000+01:00".parseISO8601()
             )
+            with(receivedLog.eventGlobals.getValue("globalListKey")) {
+                assertIs<ListAttr>(this)
+                assertEquals(1, children.size)
+                with(children["intInsideListKey"]) {
+                    assertNotNull(this)
+                    assertIs<IntAttr>(this)
+                    assertEquals("intInsideListKey", key)
+                    assertEquals(25, value)
+                }
+                assertEquals(2, value.size)
+                with(value[0]) {
+                    assertIs<RealAttr>(this)
+                    assertEquals("__UNKNOWN__", key)
+                    assertEquals(123.617, value)
+                }
+                with(value[1]) {
+                    assertIs<IntAttr>(this)
+                    assertEquals("__NEW__", key)
+                    assertEquals(456, value)
+                }
+            }
         }
     }
 
