@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
 import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
@@ -7,7 +8,8 @@ import kotlin.reflect.KClass
 /**
  * The base class for the attribute compliant with the XES standard.
  */
-abstract class Attribute<T>(key: String) {
+abstract class Attribute<T>(key: String, parentStorage:AttributeMap<Attribute<*>>) {
+
     companion object {
         /**
          * Stores a generally understood name for a log/trace/event.
@@ -108,21 +110,25 @@ abstract class Attribute<T>(key: String) {
         const val XES_FEATURES = "xes:features"
     }
 
-    private var childrenInternal: MutableMap<String, Attribute<*>>? = null
+    //TODO Czy obiekt ma sie sam rejestrowac w storage czy to jest tylko childrenInternal?
+    //TODO Ale jeżeli nie będzie się sam rejestrował to jak zapewnić poprawność konstrukcji obiektów?
+    //TODO Jeżeli będzie, to i tak - jak zapewnić poprawność? Może jakoś inaczej dodawać dzieci? Albo je wytwarzać inaczej?
+    //TODO Co z listami? Jak one maja byc obslugiwane? Miec odrebny storage?
+
+    val childrenInternal: AttributeMap<Attribute<*>> = parentStorage.children(key)
 
     /**
      * Gets the child attribute. This is a shortcut call equivalent to `children.get(key)`.
      */
-    operator fun get(key: String): Attribute<*>? = childrenInternal?.get(key)
+    operator fun get(key: String): Attribute<*>? = childrenInternal[key]
 
 
     /**
      * Sets the child attribute
      */
     internal operator fun set(key: String, child: Attribute<*>) {
-        if (childrenInternal === null)
-            childrenInternal = HashMap()
-        childrenInternal!![key] = child
+        require(child.childrenInternal == childrenInternal.children(key))
+        childrenInternal[key] = child
     }
 
     /**
@@ -168,9 +174,9 @@ abstract class Attribute<T>(key: String) {
      * Deep equals - should be equals AND each attribute in children also the same
      */
     fun deepEquals(other: Attribute<*>?): Boolean {
-        return this == other && this.childrenInternal?.size == other.childrenInternal?.size && this.childrenInternal?.all {
-            it.value.deepEquals(other.childrenInternal?.get(it.key))
-        } ?: true
+        return this == other && this.childrenInternal.size == other.childrenInternal.size && this.childrenInternal.all {
+            it.value.deepEquals(other.childrenInternal[it.key])
+        }
     }
 
     override fun hashCode(): Int {

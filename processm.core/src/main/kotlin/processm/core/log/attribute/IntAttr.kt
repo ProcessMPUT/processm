@@ -1,11 +1,14 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
+
 /**
  * Integer number attribute
  *
  * Tag inside XES file: <int>
  */
-class IntAttr(key: String, val value: Long) : Attribute<Long>(key) {
+class IntAttr(key: String, val value: Long, parentStorage: AttributeMap<Attribute<*>>) :
+    Attribute<Long>(key, parentStorage) {
     override fun getValue(): Long = this.value
     override val xesTag: String
         get() = "int"

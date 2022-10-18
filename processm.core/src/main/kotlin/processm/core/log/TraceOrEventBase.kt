@@ -4,7 +4,7 @@ import processm.core.log.attribute.Attribute
 import java.util.*
 
 abstract class TraceOrEventBase(
-    attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
 ) : XESComponent(attributesInternal) {
     /**
      * Standard attribute based on concept:name

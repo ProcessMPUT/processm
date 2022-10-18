@@ -1,5 +1,6 @@
 package processm.core.log.hierarchical
 
+import processm.core.log.AttributeMap
 import processm.core.log.Event
 import processm.core.log.XESComponent
 import processm.core.log.XESInputStream
@@ -11,7 +12,7 @@ import processm.core.log.Trace as BaseTrace
  */
 class Trace(
     events: Sequence<Event> = emptySequence(),
-    attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
 ) : BaseTrace(attributesInternal) {
     /**
      * A lazy sequence of events in this trace.

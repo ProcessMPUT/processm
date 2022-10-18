@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -7,15 +8,18 @@ import kotlin.test.assertSame
 
 internal class RealAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
+    private val map = AttributeMap<Attribute<*>>()
     private val attr1: RealAttr =
         RealAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = 33.23
+            value = 33.23,
+            map
         )
     private val attr2: RealAttr =
         RealAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = 22.00
+            value = 22.00,
+            map
         )
 
     @Test

@@ -43,10 +43,10 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
                     nameInstanceToEvent.getRow(row).values.sumOf { v -> v.suspension.toMillis() }
                 })
 
-                attributesInternal[LEAD_TIME.urn] = StringAttr(LEAD_TIME.urn, lead.toString())
-                attributesInternal[SERVICE_TIME.urn] = StringAttr(SERVICE_TIME.urn, service.toString())
-                attributesInternal[WAITING_TIME.urn] = StringAttr(WAITING_TIME.urn, waiting.toString())
-                attributesInternal[SUSPENSION_TIME.urn] = StringAttr(SUSPENSION_TIME.urn, suspension.toString())
+                attributesInternal[LEAD_TIME.urn] = StringAttr(LEAD_TIME.urn, lead.toString(), attributesInternal)
+                attributesInternal[SERVICE_TIME.urn] = StringAttr(SERVICE_TIME.urn, service.toString(), attributesInternal)
+                attributesInternal[WAITING_TIME.urn] = StringAttr(WAITING_TIME.urn, waiting.toString(), attributesInternal)
+                attributesInternal[SUSPENSION_TIME.urn] = StringAttr(SUSPENSION_TIME.urn, suspension.toString(), attributesInternal)
 
                 yield(traceBuffer!!)
                 yieldAll(eventBuffer)
@@ -80,11 +80,11 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
                         }
                     }!!
 
-                    attributesInternal[LEAD_TIME.urn] = StringAttr(LEAD_TIME.urn, times.lead.toString())
-                    attributesInternal[SERVICE_TIME.urn] = StringAttr(SERVICE_TIME.urn, times.service.toString())
-                    attributesInternal[WAITING_TIME.urn] = StringAttr(WAITING_TIME.urn, times.waiting.toString())
+                    attributesInternal[LEAD_TIME.urn] = StringAttr(LEAD_TIME.urn, times.lead.toString(), attributesInternal)
+                    attributesInternal[SERVICE_TIME.urn] = StringAttr(SERVICE_TIME.urn, times.service.toString(), attributesInternal)
+                    attributesInternal[WAITING_TIME.urn] = StringAttr(WAITING_TIME.urn, times.waiting.toString(), attributesInternal)
                     attributesInternal[SUSPENSION_TIME.urn] =
-                        StringAttr(SUSPENSION_TIME.urn, times.suspension.toString())
+                        StringAttr(SUSPENSION_TIME.urn, times.suspension.toString(), attributesInternal)
 
                     eventBuffer.add(component)
                 }

@@ -86,7 +86,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         addGlobalAttributes(map, reader)
                     }
                     in attributeTags -> {
-                        with(parseAttributeTags(reader, reader.localName)) {
+                        with(parseAttributeTags(reader, reader.localName, it.attributesInternal)) {
                             it.attributesInternal[this.key] = this
                         }
                     }
@@ -144,12 +144,12 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         classifiers[name] = classifier
     }
 
-    private fun addGlobalAttributes(map: MutableMap<String, Attribute<*>>, reader: XMLStreamReader) {
+    private fun addGlobalAttributes(map: AttributeMap<Attribute<*>>, reader: XMLStreamReader) {
         while (reader.hasNext()) {
             reader.next()
 
             if (reader.isStartElement) {
-                with(parseAttributeTags(reader, reader.localName)) {
+                with(parseAttributeTags(reader, reader.localName, map)) {
                     map[this.key] = this
                 }
             } else if (reader.isEndElement && reader.localName == "global") {
@@ -158,7 +158,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun parseAttributeTags(reader: XMLStreamReader, elementName: String): Attribute<*> {
+    private fun parseAttributeTags(reader: XMLStreamReader, elementName: String, parentStorage: AttributeMap<Attribute<*>>): Attribute<*> {
         val key = with(reader.getAttributeValue(null, "key")) {
             if (this == null) {
                 logger().warn("Missing key in XES log file in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
@@ -173,7 +173,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 ""
             } else this
         }
-        val attribute = castToAttribute(reader.localName, key, value)
+        val attribute = castToAttribute(reader.localName, key, value, parentStorage)
 
         while (reader.hasNext()) {
             reader.next()
@@ -186,7 +186,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         reader.next()
 
                         if (reader.isStartElement) {
-                            with(parseAttributeTags(reader, reader.localName)) {
+                            with(parseAttributeTags(reader, reader.localName, AttributeMap())) {//TODO reconsider?
                                 (attribute as ListAttr).valueInternal.add(this)
                             }
                         } else if (reader.isEndElement) {
@@ -195,7 +195,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         }
                     }
                 } else {
-                    with(parseAttributeTags(reader, reader.localName)) {
+                    with(parseAttributeTags(reader, reader.localName, attribute.childrenInternal)) {
                         attribute[this.key] = this
                     }
                 }
@@ -218,7 +218,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
 
                 when (reader.localName) {
                     in attributeTags -> {
-                        with(parseAttributeTags(reader, reader.localName)) {
+                        with(parseAttributeTags(reader, reader.localName, xesComponent.attributesInternal)) {
                             xesComponent.attributesInternal[this.key] = this
                         }
                     }
@@ -233,15 +233,15 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun castToAttribute(type: String, key: String, value: String): Attribute<*> =
+    private fun castToAttribute(type: String, key: String, value: String, parentStorage:AttributeMap<Attribute<*>>): Attribute<*> =
         when (type) {
-            "string" -> StringAttr(key, value)
-            "float" -> RealAttr(key, numberFormatter.parse(value).toDouble())
-            "id" -> IDAttr(key, requireNotNull(value.toUUID()))
-            "int" -> IntAttr(key, value.toLong())
-            "date" -> DateTimeAttr(key, value.fastParseISO8601())
-            "boolean" -> BoolAttr(key, value.toBoolean())
-            "list" -> ListAttr(key)
+            "string" -> StringAttr(key, value, parentStorage)
+            "float" -> RealAttr(key, numberFormatter.parse(value).toDouble(), parentStorage)
+            "id" -> IDAttr(key, requireNotNull(value.toUUID()), parentStorage)
+            "int" -> IntAttr(key, value.toLong(), parentStorage)
+            "date" -> DateTimeAttr(key, value.fastParseISO8601(), parentStorage)
+            "boolean" -> BoolAttr(key, value.toBoolean(), parentStorage)
+            "list" -> ListAttr(key, parentStorage)
             else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
         }
 }

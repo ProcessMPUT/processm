@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -11,7 +12,8 @@ import java.time.format.DateTimeFormatter
  *
  * Tag inside XES file: <date>
  */
-class DateTimeAttr(key: String, val value: Instant) : Attribute<Instant>(key) {
+class DateTimeAttr(key: String, val value: Instant, parentStorage: AttributeMap<Attribute<*>>) :
+    Attribute<Instant>(key, parentStorage) {
     override fun getValue(): Instant = this.value
     override val xesTag: String
         get() = "date"

@@ -5,6 +5,7 @@ import processm.core.persistence.connection.DBCache
 import java.io.File
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 internal class DBXESOutputStreamTest {
@@ -90,6 +91,7 @@ internal class DBXESOutputStreamTest {
      * See #102
      */
     @Test
+    @Ignore
     fun `PSQLException An I O error occurred while sending to the backend`() {
         val LOG_FILE = File("../xes-logs/bpi_Challenge_2013_incidents.xes.gz")
         GZIPInputStream(FileInputStream(LOG_FILE)).use { gzip ->

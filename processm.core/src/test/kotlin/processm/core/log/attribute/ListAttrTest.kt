@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -7,8 +8,9 @@ import kotlin.test.assertSame
 
 internal class ListAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
-    private val attr1 = ListAttr(key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""))
-    private val attr2 = ListAttr(key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""))
+    private val map = AttributeMap<Attribute<*>>()
+    private val attr1 = ListAttr(key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""), parentStorage = map)
+    private val attr2 = ListAttr(key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""), parentStorage = map)
 
     @Test
     fun `Field key as String intern() field to reduce memory usage - value and reference are the same`() {

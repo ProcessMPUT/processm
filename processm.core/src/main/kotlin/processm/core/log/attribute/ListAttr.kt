@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -10,7 +11,8 @@ import kotlin.collections.ArrayList
  *
  * Tag inside XES file: <list>
  */
-class ListAttr(key: String) : Attribute<List<Attribute<*>>>(key) {
+class ListAttr(key: String, parentStorage: AttributeMap<Attribute<*>>) :
+    Attribute<List<Attribute<*>>>(key, parentStorage) {
     internal val valueInternal: MutableList<Attribute<*>> = ArrayList()
     val value: List<Attribute<*>> = Collections.unmodifiableList(valueInternal)
     override fun getValue(): List<Attribute<*>> = this.value

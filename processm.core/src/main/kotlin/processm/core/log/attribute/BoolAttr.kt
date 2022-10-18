@@ -1,11 +1,14 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
+
 /**
  * Boolean attribute
  *
  * Tag inside XES file: <boolean>
  */
-class BoolAttr(key: String, val value: Boolean) : Attribute<Boolean>(key) {
+class BoolAttr(key: String, val value: Boolean, parentStorage: AttributeMap<Attribute<*>>) :
+    Attribute<Boolean>(key, parentStorage) {
     override fun getValue(): Boolean = this.value
     override val xesTag: String
         get() = "boolean"

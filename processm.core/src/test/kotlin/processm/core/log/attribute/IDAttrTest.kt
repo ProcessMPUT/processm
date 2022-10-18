@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import processm.core.log.AttributeMap
 import java.util.*
 import kotlin.random.Random
 import kotlin.test.Test
@@ -8,15 +9,18 @@ import kotlin.test.assertSame
 
 internal class IDAttrTest {
     private val allowedStringCharacters = ('0'..'z').toList().toTypedArray()
+    private val map = AttributeMap<Attribute<*>>()
     private val attr1: IDAttr =
         IDAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = UUID.randomUUID()
+            value = UUID.randomUUID(),
+            map
         )
     private val attr2: IDAttr =
         IDAttr(
             key = (1..5).map { allowedStringCharacters.random(Random(100)) }.joinToString(""),
-            value = UUID.randomUUID()
+            value = UUID.randomUUID(),
+            map
         )
 
     @Test

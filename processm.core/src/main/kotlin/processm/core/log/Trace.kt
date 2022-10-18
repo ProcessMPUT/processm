@@ -17,7 +17,7 @@ import java.util.*
  * Captures the trace component from the XES metadata structure.
  */
 open class Trace(
-    attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
 ) : TraceOrEventBase(attributesInternal) {
     /**
      * Event stream special tag - true if trace is fake and log contains only events (no trace)

@@ -23,7 +23,7 @@ import java.util.*
  * Captures the event component from the XES metadata structure.
  */
 open class Event(
-    attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
 ) : TraceOrEventBase(attributesInternal) {
     /**
      * Standard attribute based on concept:instance

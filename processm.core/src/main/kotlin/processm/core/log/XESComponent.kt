@@ -13,7 +13,7 @@ import java.util.*
  * @property attributesInternal A backing mutable field for [attributes].
  */
 abstract class XESComponent(
-    internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    internal val attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
 ) {
     /**
      * Standard attribute based on concept:name
@@ -77,10 +77,10 @@ abstract class XESComponent(
     fun <T> setCustomAttribute(
         stdVal: T?,
         stdName: String,
-        ctor: (key: String, value: T) -> Attribute<T>,
+        ctor: (key: String, value: T, storage: AttributeMap<Attribute<*>>) -> Attribute<T>,
         nameMap: Map<String, String> = emptyMap()
     ) {
         stdVal ?: return
-        attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { ctor(it, stdVal) }
+        attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { ctor(it, stdVal, attributesInternal) }
     }
 }

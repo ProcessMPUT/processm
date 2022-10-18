@@ -77,8 +77,8 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
                             }
                         }
 
-                        val attributes = HashMap(component.attributes)
-                        attributes[CONCEPT_INSTANCE] = StringAttr(CONCEPT_INSTANCE, conceptInstance.toString())
+                        val attributes = AttributeMap(component.attributes)
+                        attributes[CONCEPT_INSTANCE] = StringAttr(CONCEPT_INSTANCE, conceptInstance.toString(), attributes)
                         val event = Event(attributes)
                         event.setStandardAttributes(nameMap)
                         yield(event)
