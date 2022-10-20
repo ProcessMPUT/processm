@@ -85,9 +85,7 @@ class DBHierarchicalXESInputStreamTests {
             AppendingDBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
                 out.write(log.first())
                 out.write(log.first().traces.first())
-                out.write(Event(MutableAttributeMap().also {
-                    it[CONCEPT_NAME] = "Z"
-                }))
+                out.write(Event(mutableAttributeMapOf(CONCEPT_NAME to "Z")))
             }
 
             // implementation should ensure that phantom reads do not occur

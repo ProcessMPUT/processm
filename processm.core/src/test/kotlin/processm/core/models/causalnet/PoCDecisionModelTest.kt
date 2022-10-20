@@ -6,6 +6,7 @@ import processm.core.log.AttributeMap
 import processm.core.log.Event
 import processm.core.log.MutableAttributeMap
 import processm.core.log.hierarchical.Trace
+import processm.core.log.mutableAttributeMapOf
 import kotlin.test.Test
 
 class PoCDecisionModelTest {
@@ -16,9 +17,7 @@ class PoCDecisionModelTest {
         val e = mockk<Event>()
         every { e.conceptName } returns name
         every { e.lifecycleTransition } returns null
-        every { e.attributes } returns MutableAttributeMap().also {
-            it[featureName] = feature
-        }
+        every { e.attributes } returns mutableAttributeMapOf(featureName to feature)
         return e
     }
 

@@ -39,23 +39,23 @@ class InferTimesTests {
         HoneyBadgerHierarchicalXESInputStream(
             InferTimes(
                 sequenceOf(
-                    Log(MutableAttributeMap().also { it[LIFECYCLE_MODEL] = "bpaf" }),
+                    Log(mutableAttributeMapOf(LIFECYCLE_MODEL to "bpaf")),
                     Trace(),
                     Event(
-                        MutableAttributeMap().also {
-                            it[CONCEPT_NAME] = "A"
-                            it[CONCEPT_INSTANCE] = "1"
-                            it[LIFECYCLE_STATE] = "Open.Running.InProgress"
-                            it[TIME_TIMESTAMP] = "2022-07-05T16:27:00.00Z".fastParseISO8601()
-                        }
+                        mutableAttributeMapOf(
+                            CONCEPT_NAME to "A",
+                            CONCEPT_INSTANCE to "1",
+                            LIFECYCLE_STATE to "Open.Running.InProgress",
+                            TIME_TIMESTAMP to "2022-07-05T16:27:00.00Z".fastParseISO8601()
+                        )
                     ),
                     Event(
-                        MutableAttributeMap().also {
-                            it[CONCEPT_NAME] = "A"
-                            it[CONCEPT_INSTANCE] = "1"
-                            it[LIFECYCLE_STATE] = "Closed.Completed"
-                            it[TIME_TIMESTAMP] = "2022-07-05T16:30:00.00Z".fastParseISO8601()
-                        }
+                        mutableAttributeMapOf(
+                            CONCEPT_NAME to "A",
+                            CONCEPT_INSTANCE to "1",
+                            LIFECYCLE_STATE to "Closed.Completed",
+                            TIME_TIMESTAMP to "2022-07-05T16:30:00.00Z".fastParseISO8601()
+                        )
                     )
                 )
             )

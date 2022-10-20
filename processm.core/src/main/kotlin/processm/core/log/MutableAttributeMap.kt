@@ -161,3 +161,7 @@ fun AttributeMap.deepCopyTo(destination: MutableAttributeMap) {
     for (key in childrenKeys)
         children(key).deepCopyTo(destination.children(key))
 }
+
+fun attributeMapOf(vararg pairs: Pair<String, Any?>): AttributeMap = mutableAttributeMapOf(*pairs)
+fun mutableAttributeMapOf(vararg pairs: Pair<String, Any?>): MutableAttributeMap =
+    MutableAttributeMap().apply { pairs.forEach { (k, v) -> set(k, v) } }
