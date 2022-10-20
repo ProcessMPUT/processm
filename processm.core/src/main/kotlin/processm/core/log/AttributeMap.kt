@@ -4,6 +4,10 @@ import processm.core.helpers.mapToSet
 import processm.core.log.attribute.Attribute
 import java.util.*
 
+/**
+ * Attention! [get] throws if the key is not in the map instead of returning `null`.
+ * Similarily, [computeIfAbsent] assigns `null` instead of ignoring it
+ */
 class AttributeMap<V>(
     val flat: SortedMap<String, V> = TreeMap(),
     private val commonPrefix: String = ""
@@ -16,6 +20,7 @@ class AttributeMap<V>(
     private data class MyEntry<V>(override val key: String, override val value: V) : Map.Entry<String, V>
 
     companion object {
+        //TODO revisit values, possibly ensure that keys supplied by the user don't use character above these two
         const val EMPTY_KEY = "\uc07f"
         const val SEPARATOR = "\uc080"
     }
@@ -42,9 +47,9 @@ class AttributeMap<V>(
 
     operator fun set(key: String, value: V) = set(listOf(key), value)
 
-    override operator fun get(key: String): V? = flat[valueKey(key)]
+    override operator fun get(key: String): V? = flat.getValue(valueKey(key))
 
-    operator fun get(key: List<String>): V? = flat[valueKey(key)]
+    operator fun get(key: List<String>): V? = flat.getValue(valueKey(key))
 
     fun children(key: String): AttributeMap<V> = children(listOf(key))
 
@@ -71,8 +76,15 @@ class AttributeMap<V>(
 
     override fun containsKey(key: String): Boolean = top.containsKey(valueKey(key))
 
-    fun computeIfAbsent(key: String, ctor: (key: String) -> V?): V? =
-        flat.computeIfAbsent(valueKey(key), ctor)
+    fun computeIfAbsent(key: String, ctor: (key: String) -> V?): V? {
+        val completeKey = valueKey(key)
+        return if (!flat.containsKey(completeKey)) {
+            val value = ctor(key)
+            flat[key] = value
+            value
+        } else
+            flat[key]
+    }
 
     override fun equals(other: Any?): Boolean {
         if (other is AttributeMap<*>) {

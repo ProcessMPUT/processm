@@ -1,5 +1,6 @@
 package processm.core.log
 
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.*
 import kotlin.test.Test
 
@@ -114,7 +115,7 @@ class AttributeMapTest {
         for (value in listOf(1, 2, 3, 4, 6, 11, 7, 8, 12, 13, 14, 16, 17, 18))
             assertFalse { submap.containsValue(value) }
         assertEquals(23, submap["x"])
-        assertNull(submap["d"])
+        assertThrows<NoSuchElementException> { submap["d"] }
     }
 
     @Test
@@ -128,8 +129,8 @@ class AttributeMapTest {
             assertFalse { submap.containsKey(key.toString()) }
         for (value in listOf(1, 2, 3, 4, 6, 11, 7, 8, 12, 13, 14, 16, 17, 18, 23))
             assertFalse { submap.containsValue(value) }
-        assertNull(submap["x"])
-        assertNull(submap["d"])
+        assertThrows<NoSuchElementException> { submap["x"] }
+        assertThrows<NoSuchElementException> { submap["d"] }
     }
 
     @Test
@@ -148,7 +149,7 @@ class AttributeMapTest {
 
     @Test
     fun `secondary constructor and equals with a map of other type`() {
-        val base = mapOf("a" to 1, "b" to 2)
+        val base = mapOf<String, Int?>("a" to 1, "b" to 2)
         val map = AttributeMap(base)
         assertEquals(base, map)
         assertEquals(map, base)
@@ -175,5 +176,44 @@ class AttributeMapTest {
             assertEquals(4, value)
         }
         assertEquals(0, map.children("").children("").children("").children("").size)
+    }
+
+    @Test
+    fun `handling null`() {
+        val map = AttributeMap<Any?>()
+        map["a"] = 1
+        assertEquals(1, map["a"])
+        assertThrows<NoSuchElementException> { map["b"] }
+        assertThrows<NoSuchElementException> { map["c"] }
+        assertFalse { map.containsValue(null) }
+        map["b"] = null
+        assertEquals(1, map["a"])
+        assertNull(map["b"])
+        assertThrows<NoSuchElementException> { map["c"] }
+        assertTrue { map.containsValue(null) }
+    }
+
+    @Test
+    fun `compute if absent`() {
+        val map = AttributeMap<Any?>()
+        assertThrows<NoSuchElementException> { map["a"] }
+        assertThrows<NoSuchElementException> { map["b"] }
+        assertThrows<NoSuchElementException> { map["c"] }
+        map.computeIfAbsent("a") { 1 }
+        assertEquals(1, map["a"])
+        assertThrows<NoSuchElementException> { map["b"] }
+        assertThrows<NoSuchElementException> { map["c"] }
+        map.computeIfAbsent("a") { null }
+        assertEquals(1, map["a"])
+        assertThrows<NoSuchElementException> { map["b"] }
+        assertThrows<NoSuchElementException> { map["c"] }
+        map.computeIfAbsent("b") { null }
+        assertEquals(1, map["a"])
+        assertNull(map["b"])
+        assertThrows<NoSuchElementException> { map["c"] }
+        map.computeIfAbsent("b") { 1 }
+        assertEquals(1, map["a"])
+        assertNull(map["b"])
+        assertThrows<NoSuchElementException> { map["c"] }
     }
 }
