@@ -11,7 +11,7 @@ import processm.core.log.Log as BaseLog
  */
 class Log(
     traces: Sequence<Trace> = emptySequence(),
-    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
+    attributesInternal: AttributeMap = AttributeMap()
 ) : BaseLog(attributesInternal) {
     /**
      * A lazy sequence of trace in this log.

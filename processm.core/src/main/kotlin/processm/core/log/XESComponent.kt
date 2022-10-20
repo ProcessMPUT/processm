@@ -13,7 +13,7 @@ import java.util.*
  * @property attributesInternal A backing mutable field for [attributes].
  */
 abstract class XESComponent(
-    internal val attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
+    internal val attributesInternal: AttributeMap = AttributeMap()
 ) {
     /**
      * Standard attribute based on concept:name
@@ -42,8 +42,8 @@ abstract class XESComponent(
     /**
      * Collection of all attributes associated with this element.
      */
-    val attributes: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(attributesInternal)
+    val attributes: AttributeMap
+        get() = attributesInternal  //TODO unmodifiable view
 
     /**
      * Call this function at the end of constructor in all derived non-abstract classes.
@@ -59,7 +59,8 @@ abstract class XESComponent(
      * @return The value of the attribute.
      * @throws IllegalArgumentException if the attribute with the given name does not exist.
      */
-    operator fun get(attributeName: String): Any? = requireNotNull(attributesInternal[attributeName]).value
+    //TODO How to distinguish between null as in "no key" and null as in NullAttr
+    operator fun get(attributeName: String): Any? = attributesInternal[attributeName]
 
     /**
      * Sets the values of the standard attributes based on the custom attributes and the name map from the standard
@@ -77,10 +78,9 @@ abstract class XESComponent(
     fun <T> setCustomAttribute(
         stdVal: T?,
         stdName: String,
-        ctor: (key: String, value: T, storage: AttributeMap<Attribute<*>>) -> Attribute<T>,
         nameMap: Map<String, String> = emptyMap()
     ) {
         stdVal ?: return
-        attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { ctor(it, stdVal, attributesInternal) }
+        attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { stdVal }
     }
 }

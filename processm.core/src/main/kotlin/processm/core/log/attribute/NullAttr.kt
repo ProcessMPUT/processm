@@ -6,7 +6,8 @@ import processm.core.log.AttributeMap
  * A dummy null attribute for use wherever the attribute has no value (and type). This may be a case for an expression
  * returned from a PQL [processm.core.querylanguage.Query].
  */
-class NullAttr(key: String, parentStorage: AttributeMap<Attribute<*>>) : Attribute<Any?>(key, parentStorage) {
+@Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
+class NullAttr(key: String, parentStorage: AttributeMap) : Attribute<Any?>(key, parentStorage) {
     override fun getValue(): Any? = null
 
     override val xesTag: String
@@ -14,5 +15,6 @@ class NullAttr(key: String, parentStorage: AttributeMap<Attribute<*>>) : Attribu
 
     override fun hashCode(): Int = key.hashCode()
 
+    @Suppress("DEPRECATION_ERROR")
     override fun equals(other: Any?): Boolean = other is NullAttr && other.key == this.key
 }

@@ -7,7 +7,8 @@ import processm.core.log.AttributeMap
  *
  * Tag inside XES file: <string>
  */
-class StringAttr(key: String, val value: String, parentStorage: AttributeMap<Attribute<*>>) :
+@Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
+class StringAttr(key: String, val value: String, parentStorage: AttributeMap) :
     Attribute<String>(key, parentStorage) {
     override fun getValue(): String = this.value
     override val xesTag: String

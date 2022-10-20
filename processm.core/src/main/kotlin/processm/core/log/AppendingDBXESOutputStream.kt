@@ -2,6 +2,7 @@ package processm.core.log
 
 import processm.core.log.attribute.*
 import java.sql.Connection
+import java.time.Instant
 import java.util.*
 
 /**
@@ -110,7 +111,7 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
                     check(lastTraceIndex >= 0) { "Trace must precede event in the queue." }
                     ++lastEventIndex
                     writeEventData(component, eventSql, lastTraceIndex)
-                    writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes.values, attrSql)
+                    writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes, attrSql)
                 }
                 is Trace -> {
                     if (traceInsertionSql.params.size + eventSql.params.size + attrSql.params.size >= paramSoftLimit) {
@@ -121,7 +122,7 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
                     if (component.identityId !== null)
                         traceIdentityIds.add(component.identityId.toString())
                     writeTraceData(component, traceInsertionSql)
-                    writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes.values, attrSql)
+                    writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes, attrSql)
                 }
                 else -> throw UnsupportedOperationException("Unexpected $component.")
             }
@@ -171,7 +172,7 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
         destinationTable: String,
         rootTempTable: String,
         rootIndex: Int,
-        attributes: Collection<Attribute<*>>,
+        attributes: AttributeMap,
         to: SQL,
         extraColumns: Map<String, String> = emptyMap()
     ) {
@@ -179,7 +180,7 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
             return
 
         fun addAttributes(
-            attributes: Iterable<Attribute<*>>,
+            attributes: List<AttributeMap>,
             parentTableNumber: Int = 0,
             parentRowIndex: Int = 0,
             topMost: Boolean = true,
@@ -212,24 +213,26 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
             }
             with(to) {
                 var first = true
-                for (attribute in attributes) {
-                    sql.append("(?,'${attribute.xesTag}'")
-                    if (first)
-                        sql.append("::attribute_type")
-                    sql.append(',')
-                    params.addLast(attribute.key)
-                    writeTypedAttribute(attribute, StringAttr::class, to, first)
-                    writeTypedAttribute(attribute, IDAttr::class, to, first)
-                    writeTypedAttribute(attribute, DateTimeAttr::class, to, first)
-                    writeTypedAttribute(attribute, IntAttr::class, to, first)
-                    writeTypedAttribute(attribute, BoolAttr::class, to, first)
-                    writeTypedAttribute(attribute, RealAttr::class, to, first)
-                    sql.append(inList)
-                    if (first) {
-                        sql.append("::boolean")
-                        first = false
+                for (attributeMap in attributes) {
+                    for (attribute in attributeMap) {
+                        sql.append("(?,'${attribute.value.xesTag}'")
+                        if (first)
+                            sql.append("::attribute_type")
+                        sql.append(',')
+                        params.addLast(attribute.key)
+                        writeTypedAttribute(attribute.value, String::class, to, first)
+                        writeTypedAttribute(attribute.value, UUID::class, to, first)
+                        writeTypedAttribute(attribute.value, Instant::class, to, first)
+                        writeTypedAttribute(attribute.value, Long::class, to, first)
+                        writeTypedAttribute(attribute.value, Boolean::class, to, first)
+                        writeTypedAttribute(attribute.value, Double::class, to, first)
+                        sql.append(inList)
+                        if (first) {
+                            sql.append("::boolean")
+                            first = false
+                        }
+                        sql.append("),")
                     }
-                    sql.append("),")
                 }
                 assert(!first)
             }
@@ -243,17 +246,24 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
             }
 
             // Handle children and lists
-            for ((index, attribute) in attributes.withIndex()) {
-                // Advance to children
-                if (attribute.children.isNotEmpty())
-                    addAttributes(attribute.children.values, myTableNumber, index, false)
+            var index = 0
+            for (attributeMap in attributes) {
+                for (attribute in attributeMap) {
+                    val (key, value) = attribute
+                    val children = attributeMap.children(key)
+                    // Advance to children
+                    if (children.isNotEmpty())
+                        addAttributes(listOf(children), myTableNumber, index, false)
 
-                // Handle list
-                if (attribute is ListAttr && attribute.value.isNotEmpty())
-                    addAttributes(attribute.value, myTableNumber, index, false, true)
+                    // Handle list
+                    if (value is List<*> && value.isNotEmpty()) {
+                        addAttributes(value as List<AttributeMap>, myTableNumber, index, false, true)
+                    }
+                    index++
+                }
             }
         }
 
-        addAttributes(attributes)
+        addAttributes(listOf(attributes))
     }
 }

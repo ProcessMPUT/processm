@@ -11,7 +11,8 @@ import java.util.*
  *
  * Tag inside XES file: <id>
  */
-class IDAttr(key: String, val value: UUID, parentStorage: AttributeMap<Attribute<*>>) :
+@Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
+class IDAttr(key: String, val value: UUID, parentStorage: AttributeMap) :
     Attribute<UUID>(key, parentStorage) {
     override fun getValue() = this.value
     override val xesTag: String

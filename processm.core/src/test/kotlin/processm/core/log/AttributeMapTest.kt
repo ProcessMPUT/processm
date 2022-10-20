@@ -6,25 +6,25 @@ import kotlin.test.Test
 
 class AttributeMapTest {
 
-    private lateinit var map: AttributeMap<Int>
+    private lateinit var map: AttributeMap
 
-    private fun create(): AttributeMap<Int> {
-        val map = AttributeMap<Int>()
-        map["a"] = 1
-        map[listOf("a", "b")] = 2
-        map[listOf("a", "b", "c")] = 3
-        map[listOf("a", "b", "c", "x")] = 23
-        map[listOf("a", "b", "d")] = 4
-        map[listOf("a", "e")] = 6
-        map[listOf("a", "e", "f")] = 7
-        map[listOf("a", "e", "g")] = 8
-        map["h"] = 11
-        map[listOf("h", "i")] = 12
-        map[listOf("h", "i", "j")] = 13
-        map[listOf("h", "i", "k")] = 14
-        map[listOf("h", "l")] = 16
-        map[listOf("h", "l", "m")] = 17
-        map[listOf("h", "n")] = 18
+    private fun create(): AttributeMap {
+        val map = AttributeMap()
+        map["a"] = 1L
+        map[listOf("a", "b")] = 2L
+        map[listOf("a", "b", "c")] = 3L
+        map[listOf("a", "b", "c", "x")] = 23L
+        map[listOf("a", "b", "d")] = 4L
+        map[listOf("a", "e")] = 6L
+        map[listOf("a", "e", "f")] = 7L
+        map[listOf("a", "e", "g")] = 8L
+        map["h"] = 11L
+        map[listOf("h", "i")] = 12L
+        map[listOf("h", "i", "j")] = 13L
+        map[listOf("h", "i", "k")] = 14L
+        map[listOf("h", "l")] = 16L
+        map[listOf("h", "l", "m")] = 17L
+        map[listOf("h", "n")] = 18L
         return map
     }
 
@@ -41,12 +41,12 @@ class AttributeMapTest {
         assertTrue { map.containsKey("h") }
         for (key in "bcdefgijklmnx")
             assertFalse { map.containsKey(key.toString()) }
-        assertTrue { map.containsValue(1) }
-        assertTrue { map.containsValue(11) }
-        for (value in listOf(2, 3, 23, 4, 6, 7, 8, 12, 13, 14, 16, 17, 18))
+        assertTrue { map.containsValue(1L) }
+        assertTrue { map.containsValue(11L) }
+        for (value in listOf(2L, 3L, 23L, 4L, 6L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L))
             assertFalse { map.containsValue(value) }
-        assertEquals(1, map["a"])
-        assertEquals(11, map["h"])
+        assertEquals(1L, map["a"])
+        assertEquals(11L, map["h"])
     }
 
     @Test
@@ -58,12 +58,12 @@ class AttributeMapTest {
         assertTrue { submap.containsKey("e") }
         for (key in "ahcdfghijklmnx")
             assertFalse { submap.containsKey(key.toString()) }
-        assertTrue { submap.containsValue(2) }
-        assertTrue { submap.containsValue(6) }
-        for (value in listOf(1, 3, 23, 4, 11, 7, 8, 12, 13, 14, 16, 17, 18))
+        assertTrue { submap.containsValue(2L) }
+        assertTrue { submap.containsValue(6L) }
+        for (value in listOf(1L, 3L, 23L, 4L, 11L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L))
             assertFalse { submap.containsValue(value) }
-        assertEquals(2, submap["b"])
-        assertEquals(6, submap["e"])
+        assertEquals(2L, submap["b"])
+        assertEquals(6L, submap["e"])
     }
 
     @Test
@@ -76,12 +76,12 @@ class AttributeMapTest {
         assertTrue { submap.containsKey("d") }
         for (key in "ahbefghijklmnx")
             assertFalse { submap.containsKey(key.toString()) }
-        assertTrue { submap.containsValue(3) }
-        assertTrue { submap.containsValue(4) }
-        for (value in listOf(1, 2, 23, 6, 11, 7, 8, 12, 13, 14, 16, 17, 18))
+        assertTrue { submap.containsValue(3L) }
+        assertTrue { submap.containsValue(4L) }
+        for (value in listOf(1L, 2L, 23L, 6L, 11L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L))
             assertFalse { submap.containsValue(value) }
-        assertEquals(3, submap["c"])
-        assertEquals(4, submap["d"])
+        assertEquals(3L, submap["c"])
+        assertEquals(4L, submap["d"])
     }
 
     @Test
@@ -94,12 +94,12 @@ class AttributeMapTest {
         assertTrue { submap.containsKey("d") }
         for (key in "ahbefghijklmnx")
             assertFalse { submap.containsKey(key.toString()) }
-        assertTrue { submap.containsValue(3) }
-        assertTrue { submap.containsValue(4) }
-        for (value in listOf(1, 2, 23, 6, 11, 7, 8, 12, 13, 14, 16, 17, 18))
+        assertTrue { submap.containsValue(3L) }
+        assertTrue { submap.containsValue(4L) }
+        for (value in listOf(1L, 2L, 23L, 6L, 11L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L))
             assertFalse { submap.containsValue(value) }
-        assertEquals(3, submap["c"])
-        assertEquals(4, submap["d"])
+        assertEquals(3L, submap["c"])
+        assertEquals(4L, submap["d"])
     }
 
     @Test
@@ -111,10 +111,10 @@ class AttributeMapTest {
         assertTrue { submap.containsKey("x") }
         for (key in "ahbefghijklmncd")
             assertFalse { submap.containsKey(key.toString()) }
-        assertTrue { submap.containsValue(23) }
-        for (value in listOf(1, 2, 3, 4, 6, 11, 7, 8, 12, 13, 14, 16, 17, 18))
+        assertTrue { submap.containsValue(23L) }
+        for (value in listOf(1L, 2L, 3L, 4L, 6L, 11L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L))
             assertFalse { submap.containsValue(value) }
-        assertEquals(23, submap["x"])
+        assertEquals(23L, submap["x"])
         assertThrows<NoSuchElementException> { submap["d"] }
     }
 
@@ -127,7 +127,7 @@ class AttributeMapTest {
         assertTrue { submap.isEmpty() }
         for (key in "ahbefghijklmncdx")
             assertFalse { submap.containsKey(key.toString()) }
-        for (value in listOf(1, 2, 3, 4, 6, 11, 7, 8, 12, 13, 14, 16, 17, 18, 23))
+        for (value in listOf(1L, 2L, 3L, 4L, 6L, 11L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L, 23L))
             assertFalse { submap.containsValue(value) }
         assertThrows<NoSuchElementException> { submap["x"] }
         assertThrows<NoSuchElementException> { submap["d"] }
@@ -135,9 +135,9 @@ class AttributeMapTest {
 
     @Test
     fun `list get`() {
-        assertEquals(3, map[listOf("a", "b", "c")])
-        assertEquals(23, map[listOf("a", "b", "c", "x")])
-        assertEquals(4, map[listOf("a", "b", "d")])
+        assertEquals(3L, map[listOf("a", "b", "c")])
+        assertEquals(23L, map[listOf("a", "b", "c", "x")])
+        assertEquals(4L, map[listOf("a", "b", "d")])
     }
 
     @Test
@@ -149,7 +149,7 @@ class AttributeMapTest {
 
     @Test
     fun `secondary constructor and equals with a map of other type`() {
-        val base = mapOf<String, Int?>("a" to 1, "b" to 2)
+        val base = mapOf<String, Any?>("a" to 1L, "b" to 2L)
         val map = AttributeMap(base)
         assertEquals(base, map)
         assertEquals(map, base)
@@ -157,37 +157,37 @@ class AttributeMapTest {
 
     @Test
     fun `empty key`() {
-        val map = AttributeMap<Int>()
-        map[""] = 1
-        map.children("")[""] = 2
-        map["a"] = 3
-        map[listOf("", "", "", "")] = 4
+        val map = AttributeMap()
+        map[""] = 1L
+        map.children("")[""] = 2L
+        map["a"] = 3L
+        map[listOf("", "", "", "")] = 4L
         assertEquals(2, map.size)
         assertEquals(setOf("", "a"), map.keys)
         assertEquals(1, map.children("").size)
         with(map.children("").entries.single()) {
             assertEquals("", key)
-            assertEquals(2, value)
+            assertEquals(2L, value)
         }
         assertEquals(0, map.children("").children("").size)
         assertEquals(1, map.children("").children("").children("").size)
         with(map.children("").children("").children("").entries.single()) {
             assertEquals("", key)
-            assertEquals(4, value)
+            assertEquals(4L, value)
         }
         assertEquals(0, map.children("").children("").children("").children("").size)
     }
 
     @Test
     fun `handling null`() {
-        val map = AttributeMap<Any?>()
-        map["a"] = 1
-        assertEquals(1, map["a"])
+        val map = AttributeMap()
+        map["a"] = 1L
+        assertEquals(1L, map["a"])
         assertThrows<NoSuchElementException> { map["b"] }
         assertThrows<NoSuchElementException> { map["c"] }
         assertFalse { map.containsValue(null) }
         map["b"] = null
-        assertEquals(1, map["a"])
+        assertEquals(1L, map["a"])
         assertNull(map["b"])
         assertThrows<NoSuchElementException> { map["c"] }
         assertTrue { map.containsValue(null) }
@@ -195,24 +195,24 @@ class AttributeMapTest {
 
     @Test
     fun `compute if absent`() {
-        val map = AttributeMap<Any?>()
+        val map = AttributeMap()
         assertThrows<NoSuchElementException> { map["a"] }
         assertThrows<NoSuchElementException> { map["b"] }
         assertThrows<NoSuchElementException> { map["c"] }
-        map.computeIfAbsent("a") { 1 }
-        assertEquals(1, map["a"])
+        map.computeIfAbsent("a") { 1L }
+        assertEquals(1L, map["a"])
         assertThrows<NoSuchElementException> { map["b"] }
         assertThrows<NoSuchElementException> { map["c"] }
         map.computeIfAbsent("a") { null }
-        assertEquals(1, map["a"])
+        assertEquals(1L, map["a"])
         assertThrows<NoSuchElementException> { map["b"] }
         assertThrows<NoSuchElementException> { map["c"] }
         map.computeIfAbsent("b") { null }
-        assertEquals(1, map["a"])
+        assertEquals(1L, map["a"])
         assertNull(map["b"])
         assertThrows<NoSuchElementException> { map["c"] }
-        map.computeIfAbsent("b") { 1 }
-        assertEquals(1, map["a"])
+        map.computeIfAbsent("b") { 1L }
+        assertEquals(1L, map["a"])
         assertNull(map["b"])
         assertThrows<NoSuchElementException> { map["c"] }
     }

@@ -11,7 +11,8 @@ import kotlin.collections.ArrayList
  *
  * Tag inside XES file: <list>
  */
-class ListAttr(key: String, parentStorage: AttributeMap<Attribute<*>>) :
+@Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
+class ListAttr(key: String, parentStorage: AttributeMap) :
     Attribute<List<Attribute<*>>>(key, parentStorage) {
     internal val valueInternal: MutableList<Attribute<*>> = ArrayList()
     val value: List<Attribute<*>> = Collections.unmodifiableList(valueInternal)

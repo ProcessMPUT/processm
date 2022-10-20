@@ -7,7 +7,8 @@ import processm.core.log.AttributeMap
  *
  * Tag inside XES file: <boolean>
  */
-class BoolAttr(key: String, val value: Boolean, parentStorage: AttributeMap<Attribute<*>>) :
+@Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
+class BoolAttr(key: String, val value: Boolean, parentStorage: AttributeMap) :
     Attribute<Boolean>(key, parentStorage) {
     override fun getValue(): Boolean = this.value
     override val xesTag: String

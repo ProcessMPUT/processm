@@ -3,7 +3,6 @@ package processm.core.log
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.StringAttr
 import processm.core.models.commons.Activity
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNetInstance
@@ -78,7 +77,7 @@ class InferConceptInstanceFromStandardLifecycle(val base: XESInputStream) : XESI
                         }
 
                         val attributes = AttributeMap(component.attributes)
-                        attributes[CONCEPT_INSTANCE] = StringAttr(CONCEPT_INSTANCE, conceptInstance.toString(), attributes)
+                        attributes[CONCEPT_INSTANCE] = conceptInstance.toString()
                         val event = Event(attributes)
                         event.setStandardAttributes(nameMap)
                         yield(event)

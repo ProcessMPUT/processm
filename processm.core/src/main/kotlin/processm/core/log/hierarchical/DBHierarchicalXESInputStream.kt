@@ -305,8 +305,7 @@ class DBHierarchicalXESInputStream(
                 "trace" -> log.traceGlobalsInternal
                 else -> throw IllegalStateException("Illegal scope $scope for the global.")
             }
-            val attribute = readRecordsIntoAttributes(resultSet, map)
-            map[attribute.key] = attribute
+            readRecordsIntoAttributes(resultSet, map)
         }
     }
 
@@ -326,27 +325,25 @@ class DBHierarchicalXESInputStream(
             component.attributesInternal.computeIfAbsent(colName) {
                 when (val colType = metadata.getColumnType(colIndex)) {
                     Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
-                        resultSet.getString(colIndex)?.let { StringAttr(colName, it, component.attributesInternal) }
+                        resultSet.getString(colIndex)
 
                     Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
-                        resultSet.getLongOrNull(colIndex)?.let { IntAttr(colName, it, component.attributesInternal) }
+                        resultSet.getLongOrNull(colIndex)
 
                     Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
-                        resultSet.getDoubleOrNull(colIndex)?.let { RealAttr(colName, it, component.attributesInternal) }
+                        resultSet.getDoubleOrNull(colIndex)
 
                     Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE ->
-                        resultSet.getTimestamp(colIndex, gmtCalendar)
-                            ?.let { DateTimeAttr(colName, it.toInstant(), component.attributesInternal) }
+                        resultSet.getTimestamp(colIndex, gmtCalendar)?.toInstant()
 
                     Types.BIT, Types.BOOLEAN ->
                         resultSet.getBooleanOrNull(colIndex)
-                            ?.let { BoolAttr(colName, it, component.attributesInternal) }
 
                     Types.NULL ->
-                        NullAttr(colName, component.attributesInternal)
+                        null
 
                     else -> throw UnsupportedOperationException("Unsupported expression type $colType for expression $colName.")
-                } ?: NullAttr(colName, component.attributesInternal)
+                }
             }
         }
 
@@ -434,9 +431,7 @@ class DBHierarchicalXESInputStream(
             resultSet.next()
 
         while (!resultSet.isEnded && getElementId(resultSet) == elementId) {
-            with(readRecordsIntoAttributes(resultSet, component.attributesInternal)) {
-                component.attributesInternal[this.key] = this
-            }
+            readRecordsIntoAttributes(resultSet, component.attributesInternal)
         }
 
         component.setStandardAttributes(nameMap)
@@ -444,54 +439,48 @@ class DBHierarchicalXESInputStream(
 
     private fun readRecordsIntoAttributes(
         resultSet: ResultSet,
-        parentStorage: AttributeMap<Attribute<*>>
-    ): Attribute<*> {
-        val attr = attributeFromRecord(resultSet.getString("key"), resultSet, parentStorage)
+        parentStorage: AttributeMap
+    ) {
+        val key = resultSet.getString("key")
+        val attr = attributeFromRecord(resultSet)
         val attrId = resultSet.getLong("id")
 
+        parentStorage[key] = attr
+
         if (!resultSet.next())
-            return attr
+            return
 
         if (resultSet.getLong("parent_id") != attrId) {
-            return attr
+            return
         } else {
             do {
                 val isInsideList = resultSet.getBoolean("in_list_attr")
-                val storage = if(isInsideList) AttributeMap() else attr.childrenInternal    //TODO reconsider
-                with(readRecordsIntoAttributes(resultSet, storage)) {
-                    if (isInsideList) {
-                        assert(attr is ListAttr)
-                        (attr as ListAttr).valueInternal.add(this)
-                    } else {
-                        attr[this.key] = this
-                    }
+                val storage = if (isInsideList) AttributeMap() else parentStorage.children(key)
+                readRecordsIntoAttributes(resultSet, storage)
+                if (isInsideList) {
+                    assert(attr is MutableList<*>)
+                    (attr as MutableList<AttributeMap>).add(storage)
                 }
             } while (!resultSet.isEnded && resultSet.getLong("parent_id") == attrId)
         }
-
-        return attr
     }
 
-    private fun attributeFromRecord(
-        key: String,
-        record: ResultSet,
-        parentStorage: AttributeMap<Attribute<*>>
-    ): Attribute<*> {
+    private fun attributeFromRecord(record: ResultSet): Any {
         with(record) {
             val type = getString("type")!!
             assert(type.length >= 2)
             return when (type[0]) {
-                's' -> StringAttr(key, getString("string_value"), parentStorage)
-                'f' -> RealAttr(key, getDouble("real_value"), parentStorage)
+                's' -> getString("string_value")
+                'f' -> getDouble("real_value")
                 'i' -> when (type[1]) {
-                    'n' -> IntAttr(key, getLong("int_value"), parentStorage)
-                    'd' -> IDAttr(key, getString("uuid_value").toUUID()!!, parentStorage)
+                    'n' -> getLong("int_value")
+                    'd' -> getString("uuid_value").toUUID()!!
                     else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
                 }
 
-                'd' -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant(), parentStorage)
-                'b' -> BoolAttr(key, getBoolean("bool_value"), parentStorage)
-                'l' -> ListAttr(key, parentStorage)
+                'd' -> getTimestamp("date_value", gmtCalendar).toInstant()
+                'b' -> getBoolean("bool_value")
+                'l' -> ArrayList<Any>()
                 else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
             }
         }

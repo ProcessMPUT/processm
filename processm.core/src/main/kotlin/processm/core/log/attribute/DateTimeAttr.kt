@@ -12,7 +12,8 @@ import java.time.format.DateTimeFormatter
  *
  * Tag inside XES file: <date>
  */
-class DateTimeAttr(key: String, val value: Instant, parentStorage: AttributeMap<Attribute<*>>) :
+@Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
+class DateTimeAttr(key: String, val value: Instant, parentStorage: AttributeMap) :
     Attribute<Instant>(key, parentStorage) {
     override fun getValue(): Instant = this.value
     override val xesTag: String

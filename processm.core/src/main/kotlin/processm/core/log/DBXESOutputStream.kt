@@ -76,6 +76,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
 
                 queue.add(component)
             }
+
             is Trace -> {
                 if (queue.size >= batchSize)
                     flushQueue(false)
@@ -86,6 +87,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 queue.add(component)
                 sawTrace = true
             }
+
             is Log -> {
                 flushQueue(true) // flush events and traces from the previous log
                 sawTrace = false // we must not refer to a trace from the previous log
@@ -95,11 +97,12 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 writeExtensions(component.extensions.values, sql)
                 writeClassifiers(Scope.Event, component.eventClassifiers.values, sql)
                 writeClassifiers(Scope.Trace, component.traceClassifiers.values, sql)
-                writeGlobals("event", component.eventGlobals.values, sql)
-                writeGlobals("trace", component.traceGlobals.values, sql)
-                writeAttributes("LOGS_ATTRIBUTES", "log", 0, component.attributes.values, sql)
+                writeGlobals("event", component.eventGlobals, sql)
+                writeGlobals("trace", component.traceGlobals, sql)
+                writeAttributes("LOGS_ATTRIBUTES", "log", 0, component.attributes, sql)
                 logId = sql.executeQuery("log").toInt()
             }
+
             else ->
                 throw IllegalArgumentException("Unsupported XESComponent found. Expected 'Log', 'Trace' or 'Event' but received ${component.javaClass}")
         }
@@ -168,8 +171,9 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                     check(lastTraceIndex >= 0) { "Trace must precede event in the queue." }
                     ++lastEventIndex
                     writeEventData(component, eventSql, lastTraceIndex)
-                    writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes.values, attrSql)
+                    writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes, attrSql)
                 }
+
                 is Trace -> {
                     if (traceSql.params.size + eventSql.params.size + attrSql.params.size >= paramSoftLimit) {
                         // #102: if the total number of parameters in an SQL query is too large, then DO NOT start new trace
@@ -177,8 +181,9 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                     }
                     ++lastTraceIndex
                     writeTraceData(component, traceSql)
-                    writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes.values, attrSql)
+                    writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes, attrSql)
                 }
+
                 else -> throw UnsupportedOperationException("Unexpected $component.")
             }
         }
@@ -281,7 +286,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         destinationTable: String,
         rootTempTable: String,
         rootIndex: Int,
-        attributes: Collection<Attribute<*>>,
+        attributes: AttributeMap,
         to: SQL,
         extraColumns: Map<String, String> = emptyMap()
     ) {
@@ -289,7 +294,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
             return
 
         fun addAttributes(
-            attributes: Iterable<Attribute<*>>,
+            attributes: List<AttributeMap>,
             parentTableNumber: Int = 0,
             parentRowIndex: Int = 0,
             topMost: Boolean = true,
@@ -322,24 +327,26 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
             }
             with(to) {
                 var first = true
-                for (attribute in attributes) {
-                    sql.append("(?,'${attribute.xesTag}'")
-                    if (first)
-                        sql.append("::attribute_type")
-                    sql.append(',')
-                    params.addLast(attribute.key)
-                    writeTypedAttribute(attribute, StringAttr::class, to, first)
-                    writeTypedAttribute(attribute, IDAttr::class, to, first)
-                    writeTypedAttribute(attribute, DateTimeAttr::class, to, first)
-                    writeTypedAttribute(attribute, IntAttr::class, to, first)
-                    writeTypedAttribute(attribute, BoolAttr::class, to, first)
-                    writeTypedAttribute(attribute, RealAttr::class, to, first)
-                    sql.append(inList)
-                    if (first) {
-                        sql.append("::boolean")
-                        first = false
+                for (attributeMap in attributes) {
+                    for (attribute in attributeMap) {
+                        sql.append("(?,'${attribute.value.xesTag}'")
+                        if (first)
+                            sql.append("::attribute_type")
+                        sql.append(',')
+                        params.addLast(attribute.key)
+                        writeTypedAttribute(attribute.value, String::class, to, first)
+                        writeTypedAttribute(attribute.value, UUID::class, to, first)
+                        writeTypedAttribute(attribute.value, Instant::class, to, first)
+                        writeTypedAttribute(attribute.value, Long::class, to, first)
+                        writeTypedAttribute(attribute.value, Boolean::class, to, first)
+                        writeTypedAttribute(attribute.value, Double::class, to, first)
+                        sql.append(inList)
+                        if (first) {
+                            sql.append("::boolean")
+                            first = false
+                        }
+                        sql.append("),")
                     }
-                    sql.append("),")
                 }
                 assert(!first)
             }
@@ -351,40 +358,47 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
             }
 
             // Handle children and lists
-            for ((index, attribute) in attributes.withIndex()) {
-                // Advance to children
-                if (attribute.children.isNotEmpty())
-                    addAttributes(attribute.children.values, myTableNumber, index, false)
+            var index = 0
+            for (attributeMap in attributes) {
+                for (attribute in attributeMap) {
+                    val (key, value) = attribute
+                    val children = attributeMap.children(key)
+                    // Advance to children
+                    if (children.isNotEmpty())
+                        addAttributes(listOf(children), myTableNumber, index, false)
 
-                // Handle list
-                if (attribute is ListAttr && attribute.value.isNotEmpty())
-                    addAttributes(attribute.value, myTableNumber, index, false, true)
+                    // Handle list
+                    if (value is List<*> && value.isNotEmpty()) {
+                        addAttributes(value as List<AttributeMap>, myTableNumber, index, false, true)
+                    }
+                    index++
+                }
             }
         }
 
-        addAttributes(attributes)
+        addAttributes(listOf(attributes))
     }
 
-    protected fun writeTypedAttribute(attribute: Attribute<*>, type: KClass<*>, to: SQL, writeCast: Boolean) {
+    protected fun writeTypedAttribute(attribute: Any?, type: KClass<*>, to: SQL, writeCast: Boolean) {
         val cast = if (writeCast) {
             when (type) {
-                StringAttr::class -> ""
-                IDAttr::class -> "::uuid"
-                DateTimeAttr::class -> "::timestamptz"
-                IntAttr::class -> "::bigint"
-                BoolAttr::class -> "::boolean"
-                RealAttr::class -> "::double precision"
+                String::class -> ""
+                UUID::class -> "::uuid"
+                Instant::class -> "::timestamptz"
+                Long::class -> "::bigint"
+                Boolean::class -> "::boolean"
+                Double::class -> "::double precision"
                 else -> throw UnsupportedOperationException("Unknown attribute type $type.")
             }
         } else ""
         if (type.isInstance(attribute)) {
             when (type) {
-                IntAttr::class, BoolAttr::class -> to.sql.append("${attribute.value}$cast,")
-                IDAttr::class -> to.sql.append("'${attribute.value}'$cast,")
-                DateTimeAttr::class -> to.sql.append("'${ISO8601.format(attribute.value as Instant)}'$cast,")
+                Long::class, Boolean::class -> to.sql.append("${attribute}$cast,")
+                UUID::class -> to.sql.append("'${attribute}'$cast,")
+                Instant::class -> to.sql.append("'${ISO8601.format(attribute as Instant)}'$cast,")
                 else -> {
                     to.sql.append("?$cast,")
-                    to.params.addLast(attribute.value)
+                    to.params.addLast(attribute)
                 }
             }
         } else {
@@ -439,7 +453,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         to.sql.append(") c(scope,name,keys))")
     }
 
-    private fun writeGlobals(scope: String, globals: Collection<Attribute<*>>, to: SQL) =
+    private fun writeGlobals(scope: String, globals: AttributeMap, to: SQL) =
         writeAttributes("GLOBALS", "log", 0, globals, to, mapOf("scope" to scope))
 
     protected fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {

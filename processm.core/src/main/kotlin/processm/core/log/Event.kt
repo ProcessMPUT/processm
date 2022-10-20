@@ -23,7 +23,7 @@ import java.util.*
  * Captures the event component from the XES metadata structure.
  */
 open class Event(
-    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
+    attributesInternal: AttributeMap = AttributeMap()
 ) : TraceOrEventBase(attributesInternal) {
     /**
      * Standard attribute based on concept:instance
@@ -92,43 +92,43 @@ open class Event(
     override fun hashCode(): Int = attributesInternal.hashCode()
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap[CONCEPT_NAME]]?.getValue()?.toString()
-        conceptInstance = attributesInternal[nameMap[CONCEPT_INSTANCE]]?.getValue()?.toString()
+        conceptName = attributesInternal.getOrNull(nameMap[CONCEPT_NAME])?.toString()
+        conceptInstance = attributesInternal.getOrNull(nameMap[CONCEPT_INSTANCE])?.toString()
 
-        costTotal = attributesInternal[nameMap[COST_TOTAL]]?.getValue()
+        costTotal = attributesInternal.getOrNull(nameMap[COST_TOTAL])
             ?.let { it as? Double ?: it.toString().toDoubleOrNull() }
-        costCurrency = attributesInternal[nameMap[COST_CURRENCY]]?.getValue()?.toString()
+        costCurrency = attributesInternal.getOrNull(nameMap[COST_CURRENCY])?.toString()
 
-        identityId = attributesInternal[nameMap[IDENTITY_ID]]?.getValue()
+        identityId = attributesInternal.getOrNull(nameMap[IDENTITY_ID])
             ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
 
-        lifecycleState = attributesInternal[nameMap[LIFECYCLE_STATE]]?.getValue()?.toString()
-        lifecycleTransition = attributesInternal[nameMap[LIFECYCLE_TRANSITION]]?.getValue()?.toString()
+        lifecycleState = attributesInternal.getOrNull(nameMap[LIFECYCLE_STATE])?.toString()
+        lifecycleTransition = attributesInternal.getOrNull(nameMap[LIFECYCLE_TRANSITION])?.toString()
 
-        orgRole = attributesInternal[nameMap[ORG_ROLE]]?.getValue()?.toString()
-        orgGroup = attributesInternal[nameMap[ORG_GROUP]]?.getValue()?.toString()
-        orgResource = attributesInternal[nameMap[ORG_RESOURCE]]?.getValue()?.toString()
+        orgRole = attributesInternal.getOrNull(nameMap[ORG_ROLE])?.toString()
+        orgGroup = attributesInternal.getOrNull(nameMap[ORG_GROUP])?.toString()
+        orgResource = attributesInternal.getOrNull(nameMap[ORG_RESOURCE])?.toString()
 
-        timeTimestamp = attributesInternal[nameMap[TIME_TIMESTAMP]]?.getValue()
+        timeTimestamp = attributesInternal.getOrNull(nameMap[TIME_TIMESTAMP])
             ?.let { it as? Instant ?: runCatching { it.toString().parseISO8601() }.getOrNull() }
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {
-        setCustomAttribute(conceptName, CONCEPT_NAME, ::StringAttr, nameMap)
-        setCustomAttribute(conceptInstance, CONCEPT_INSTANCE, ::StringAttr, nameMap)
+        setCustomAttribute(conceptName, CONCEPT_NAME,  nameMap)
+        setCustomAttribute(conceptInstance, CONCEPT_INSTANCE,  nameMap)
 
-        setCustomAttribute(costTotal, COST_TOTAL, ::RealAttr, nameMap)
-        setCustomAttribute(costCurrency, COST_CURRENCY, ::StringAttr, nameMap)
+        setCustomAttribute(costTotal, COST_TOTAL,  nameMap)
+        setCustomAttribute(costCurrency, COST_CURRENCY,  nameMap)
 
-        setCustomAttribute(identityId, IDENTITY_ID, ::IDAttr, nameMap)
+        setCustomAttribute(identityId, IDENTITY_ID,  nameMap)
 
-        setCustomAttribute(lifecycleState, LIFECYCLE_STATE, ::StringAttr, nameMap)
-        setCustomAttribute(lifecycleTransition, LIFECYCLE_TRANSITION, ::StringAttr, nameMap)
+        setCustomAttribute(lifecycleState, LIFECYCLE_STATE,  nameMap)
+        setCustomAttribute(lifecycleTransition, LIFECYCLE_TRANSITION,  nameMap)
 
-        setCustomAttribute(orgRole, ORG_ROLE, ::StringAttr, nameMap)
-        setCustomAttribute(orgGroup, ORG_GROUP, ::StringAttr, nameMap)
-        setCustomAttribute(orgResource, ORG_RESOURCE, ::StringAttr, nameMap)
+        setCustomAttribute(orgRole, ORG_ROLE,  nameMap)
+        setCustomAttribute(orgGroup, ORG_GROUP,  nameMap)
+        setCustomAttribute(orgResource, ORG_RESOURCE,  nameMap)
 
-        setCustomAttribute(timeTimestamp, TIME_TIMESTAMP, ::DateTimeAttr, nameMap)
+        setCustomAttribute(timeTimestamp, TIME_TIMESTAMP,  nameMap)
     }
 }

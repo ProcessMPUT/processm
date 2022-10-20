@@ -1,12 +1,9 @@
 package processm.core.log
 
 import processm.core.helpers.toUUID
-import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
 import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.StringAttr
 import java.util.*
 
 /**
@@ -15,10 +12,10 @@ import java.util.*
  * Captures the log component from the XES metadata structure.
  */
 open class Log(
-    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap(),
+    attributesInternal: AttributeMap = AttributeMap(),
     internal val extensionsInternal: MutableMap<String, Extension> = HashMap(),
-    internal val traceGlobalsInternal: AttributeMap<Attribute<*>> = AttributeMap(),
-    internal val eventGlobalsInternal: AttributeMap<Attribute<*>> = AttributeMap(),
+    internal val traceGlobalsInternal: AttributeMap = AttributeMap(),
+    internal val eventGlobalsInternal: AttributeMap = AttributeMap(),
     internal val traceClassifiersInternal: MutableMap<String, Classifier> = HashMap(),
     internal val eventClassifiersInternal: MutableMap<String, Classifier> = HashMap()
 ) : XESComponent(attributesInternal) {
@@ -31,14 +28,14 @@ open class Log(
     /**
      * Global trace attributes for the log.
      */
-    val traceGlobals: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(traceGlobalsInternal)
+    val traceGlobals:AttributeMap
+        get() = traceGlobalsInternal    //TODO unmodifiable view
 
     /**
      * Global event attributes for the log.
      */
-    val eventGlobals: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(eventGlobalsInternal)
+    val eventGlobals: AttributeMap
+        get() = eventGlobalsInternal //TODO unmodifiable view
 
     /**
      * Trace classifiers for the log.
@@ -118,15 +115,15 @@ open class Log(
     )
 
     override fun setStandardAttributes(nameMap: Map<String, String>) {
-        conceptName = attributesInternal[nameMap[CONCEPT_NAME]]?.getValue()?.toString()
-        identityId = attributesInternal[nameMap[IDENTITY_ID]]?.getValue()
+        conceptName = attributesInternal.getOrNull(nameMap[CONCEPT_NAME])?.toString()
+        identityId = attributesInternal.getOrNull(nameMap[IDENTITY_ID])
             ?.let { it as? UUID ?: runCatching { it.toString().toUUID() }.getOrNull() }
-        lifecycleModel = attributesInternal[nameMap[LIFECYCLE_MODEL]]?.getValue()?.toString()
+        lifecycleModel = attributesInternal.getOrNull(nameMap[LIFECYCLE_MODEL])?.toString()
     }
 
     override fun setCustomAttributes(nameMap: Map<String, String>) {
-        setCustomAttribute(conceptName, CONCEPT_NAME, ::StringAttr, nameMap)
-        setCustomAttribute(identityId, IDENTITY_ID, ::IDAttr, nameMap)
-        setCustomAttribute(lifecycleModel, LIFECYCLE_MODEL, ::StringAttr, nameMap)
+        setCustomAttribute(conceptName, CONCEPT_NAME, nameMap)
+        setCustomAttribute(identityId, IDENTITY_ID, nameMap)
+        setCustomAttribute(lifecycleModel, LIFECYCLE_MODEL, nameMap)
     }
 }

@@ -12,7 +12,7 @@ import processm.core.log.Trace as BaseTrace
  */
 class Trace(
     events: Sequence<Event> = emptySequence(),
-    attributesInternal: AttributeMap<Attribute<*>> = AttributeMap()
+    attributesInternal: AttributeMap = AttributeMap()
 ) : BaseTrace(attributesInternal) {
     /**
      * A lazy sequence of events in this trace.

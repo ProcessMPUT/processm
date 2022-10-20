@@ -1,11 +1,8 @@
 package processm.core.log
 
 import processm.core.DBTestHelper
-import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
@@ -24,41 +21,41 @@ class AppendingDBXESOutputStreamTest {
         val trace2UUID = UUID.randomUUID()
         val trace3UUID = UUID.randomUUID()
 
-        val log = Log(AttributeMap<Attribute<*>>().also { it[IDENTITY_ID] = IDAttr(IDENTITY_ID, logUUID, it) })
-        val trace1 = Trace(AttributeMap<Attribute<*>>().also { it[IDENTITY_ID] = IDAttr(IDENTITY_ID, trace1UUID, it) })
-        val trace2 = Trace(AttributeMap<Attribute<*>>().also { it[IDENTITY_ID] = IDAttr(IDENTITY_ID, trace2UUID, it) })
-        val trace3 = Trace(AttributeMap<Attribute<*>>().also { it[IDENTITY_ID] = IDAttr(IDENTITY_ID, trace3UUID, it) })
+        val log = Log(AttributeMap().also { it[IDENTITY_ID] = logUUID })
+        val trace1 = Trace(AttributeMap().also { it[IDENTITY_ID] = trace1UUID })
+        val trace2 = Trace(AttributeMap().also { it[IDENTITY_ID] = trace2UUID })
+        val trace3 = Trace(AttributeMap().also { it[IDENTITY_ID] = trace3UUID })
 
         val events1 = sequenceOf(
-            Event(AttributeMap<Attribute<*>>().also {
-                it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "create order", it)
+            Event(AttributeMap().also {
+                it[CONCEPT_NAME] = "create order"
             }),
-            Event(AttributeMap<Attribute<*>>().also {
-                it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "issue invoice", it)
+            Event(AttributeMap().also {
+                it[CONCEPT_NAME] = "issue invoice"
             }),
-            Event(AttributeMap<Attribute<*>>().also { it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "pay", it) }),
-            Event(AttributeMap<Attribute<*>>().also { it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "deliver", it) }),
+            Event(AttributeMap().also { it[CONCEPT_NAME] = "pay" }),
+            Event(AttributeMap().also { it[CONCEPT_NAME] = "deliver" }),
         )
 
         val events2 = sequenceOf(
-            Event(AttributeMap<Attribute<*>>().also {
-                it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "create order", it)
+            Event(AttributeMap().also {
+                it[CONCEPT_NAME] = "create order"
             }),
-            Event(AttributeMap<Attribute<*>>().also { it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "backorder", it) }),
-            Event(AttributeMap<Attribute<*>>().also {
-                it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "issue invoice", it)
+            Event(AttributeMap().also { it[CONCEPT_NAME] = "backorder" }),
+            Event(AttributeMap().also {
+                it[CONCEPT_NAME] = "issue invoice"
             }),
-            Event(AttributeMap<Attribute<*>>().also { it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "pay", it) }),
-            Event(AttributeMap<Attribute<*>>().also { it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "deliver", it) }),
-            Event(AttributeMap<Attribute<*>>().also { it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "complaint", it) }),
+            Event(AttributeMap().also { it[CONCEPT_NAME] = "pay" }),
+            Event(AttributeMap().also { it[CONCEPT_NAME] = "deliver" }),
+            Event(AttributeMap().also { it[CONCEPT_NAME] = "complaint" }),
         )
 
         val events3 = sequenceOf(
-            Event(AttributeMap<Attribute<*>>().also {
-                it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "create order", it)
+            Event(AttributeMap().also {
+                it[CONCEPT_NAME] = "create order"
             }),
-            Event(AttributeMap<Attribute<*>>().also {
-                it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "change quantity", it)
+            Event(AttributeMap().also {
+                it[CONCEPT_NAME] = "change quantity"
             }),
         )
 

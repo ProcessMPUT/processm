@@ -2,18 +2,19 @@ package processm.core.log
 
 import processm.core.helpers.mapToSet
 import processm.core.log.attribute.Attribute
+import java.time.Instant
 import java.util.*
 
 /**
  * Attention! [get] throws if the key is not in the map instead of returning `null`.
  * Similarily, [computeIfAbsent] assigns `null` instead of ignoring it
  */
-class AttributeMap<V>(
-    val flat: SortedMap<String, V> = TreeMap(),
+class AttributeMap(
+    val flat: SortedMap<String, Any?> = TreeMap(),
     private val commonPrefix: String = ""
-) : Map<String, V> {
+) : Map<String, Any?> {
 
-    constructor(map: Map<String, V>) : this() {
+    constructor(map: Map<String, *>) : this() {
         map.entries.forEach { this[it.key] = it.value }
     }
 
@@ -41,53 +42,54 @@ class AttributeMap<V>(
         return key.substring(commonPrefix.length)
     }
 
-    operator fun set(key: List<String>, value: V) {
+    operator fun set(key: List<String>, value: Any?) {
+        require(value.isAllowedAttributeValue())
         flat[valueKey(key)] = value
     }
 
-    operator fun set(key: String, value: V) = set(listOf(key), value)
+    operator fun set(key: String, value: Any?) = set(listOf(key), value)
 
-    override operator fun get(key: String): V? = flat.getValue(valueKey(key))
+    override operator fun get(key: String): Any? = flat.getValue(valueKey(key))
 
-    operator fun get(key: List<String>): V? = flat.getValue(valueKey(key))
+    fun getOrNull(key: String?): Any? = if (key !== null) flat[valueKey(key)] else null
 
-    fun children(key: String): AttributeMap<V> = children(listOf(key))
+    operator fun get(key: List<String>): Any? = flat.getValue(valueKey(key))
 
-    fun children(key: List<String>): AttributeMap<V> {
+    fun children(key: String): AttributeMap = children(listOf(key))
+
+    fun children(key: List<String>): AttributeMap {
         require(key.isNotEmpty())
         val s = childrenKey(key)
         return AttributeMap(flat.subMap(s, s + SEPARATOR + SEPARATOR), s)
     }
 
-    private val top: Map<String, V> by lazy { flat.subMap(commonPrefix, commonPrefix + SEPARATOR) }
+    private val top: Map<String, Any?> by lazy { flat.subMap(commonPrefix, commonPrefix + SEPARATOR) }
 
-    override val entries: Set<Map.Entry<String, V>>
+    override val entries: Set<Map.Entry<String, Any?>>
         get() = top.entries.mapToSet { MyEntry(strip(it.key), it.value) }
     override val keys: Set<String>
         get() = top.keys.mapToSet(::strip)
     override val size: Int
         get() = top.size
-    override val values: Collection<V>
+    override val values: Collection<Any?>
         get() = top.values
 
     override fun isEmpty(): Boolean = top.isEmpty()
 
-    override fun containsValue(value: V): Boolean = top.containsValue(value)
+    override fun containsValue(value: Any?): Boolean = top.containsValue(value)
 
     override fun containsKey(key: String): Boolean = top.containsKey(valueKey(key))
 
-    fun computeIfAbsent(key: String, ctor: (key: String) -> V?): V? {
-        val completeKey = valueKey(key)
-        return if (!flat.containsKey(completeKey)) {
+    fun computeIfAbsent(key: String, ctor: (key: String) -> Any?): Any? =
+        if (!containsKey(key)) {
             val value = ctor(key)
-            flat[key] = value
+            set(key, value)
             value
         } else
-            flat[key]
-    }
+            get(key)
 
     override fun equals(other: Any?): Boolean {
-        if (other is AttributeMap<*>) {
+        if (other is AttributeMap) {
             return this.flat == other.flat
         }
         if (other is Map<*, *>) {

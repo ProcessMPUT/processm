@@ -16,14 +16,14 @@ class AggregateConceptInstanceToSingleEventTest {
     @Test
     fun sequence() {
         val trace = listOf(
-            event("a", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "start"),
-            event("a", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "end"),
-            event("b", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "start"),
-            event("b", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "end"),
-            event("a", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "start"),
-            event("a", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
-            event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "start"),
-            event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
+            event("a", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "start"),
+            event("a", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "end"),
+            event("b", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "start"),
+            event("b", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "end"),
+            event("a", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "start"),
+            event("a", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "end"),
+            event("b", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "start"),
+            event("b", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "end"),
         )
         val log = HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence())))
         val stream = AggregateConceptInstanceToSingleEvent(sequenceOf(log).toFlatSequence()).iterator()
@@ -39,14 +39,14 @@ class AggregateConceptInstanceToSingleEventTest {
     @Test
     fun `interleaving - last`() {
         val trace = listOf(
-            event("a", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "start"),
-            event("b", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "start"),
-            event("a", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "start"),
-            event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "start"),
-            event("a", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "end"),
-            event("b", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "end"),
-            event("a", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
-            event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
+            event("a", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "start"),
+            event("b", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "start"),
+            event("a", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "start"),
+            event("b", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "start"),
+            event("a", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "end"),
+            event("b", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "end"),
+            event("a", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "end"),
+            event("b", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "end"),
         )
         val log = HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence())))
         val stream = AggregateConceptInstanceToSingleEvent(sequenceOf(log).toFlatSequence()).iterator()
@@ -62,14 +62,14 @@ class AggregateConceptInstanceToSingleEventTest {
     @Test
     fun `interleaving - first`() {
         val trace = listOf(
-            event("a", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "start"),
-            event("b", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "start"),
-            event("a", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "start"),
-            event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "start"),
-            event("a", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "end"),
-            event("b", CONCEPT_INSTANCE to 1, LIFECYCLE_TRANSITION to "end"),
-            event("a", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
-            event("b", CONCEPT_INSTANCE to 2, LIFECYCLE_TRANSITION to "end"),
+            event("a", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "start"),
+            event("b", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "start"),
+            event("a", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "start"),
+            event("b", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "start"),
+            event("a", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "end"),
+            event("b", CONCEPT_INSTANCE to 1L, LIFECYCLE_TRANSITION to "end"),
+            event("a", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "end"),
+            event("b", CONCEPT_INSTANCE to 2L, LIFECYCLE_TRANSITION to "end"),
         )
         val log = HierarchicalLog(sequenceOf(HierarchicalTrace(trace.asSequence())))
         val stream = AggregateConceptInstanceToSingleEvent(

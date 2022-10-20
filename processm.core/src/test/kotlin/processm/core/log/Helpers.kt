@@ -29,22 +29,13 @@ object Helpers {
         return Log(tmp.asSequence().map { seq -> Trace(seq.asSequence().map { event(it.activity) }) })
     }
 
-    private fun wrap(key: String, value: Any, parentStorage: AttributeMap<Attribute<*>>): Attribute<*> = when (value) {
-        is Boolean -> BoolAttr(key, value, parentStorage)
-        is String -> StringAttr(key, value, parentStorage)
-        is Int -> IntAttr(key, value.toLong(), parentStorage)
-        is Long -> IntAttr(key, value, parentStorage)
-        is Double -> RealAttr(key, value, parentStorage)
-        is Float -> RealAttr(key, value.toDouble(), parentStorage)
-        else -> throw IllegalArgumentException("A value of the type ${value::class} is not supported")
-    }
-
     fun event(name: String, vararg attrs: Pair<String, Any>): Event = Event().apply {
-        attributesInternal[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, name, attributesInternal)
-        attributesInternal[LIFECYCLE_TRANSITION] = StringAttr(LIFECYCLE_TRANSITION, "complete", attributesInternal)
-        attributesInternal[CONCEPT_INSTANCE] = NullAttr(CONCEPT_INSTANCE, attributesInternal)
+        attributesInternal[CONCEPT_NAME] = name
+        attributesInternal[LIFECYCLE_TRANSITION] = "complete"
+        //TODO
+        //attributesInternal[CONCEPT_INSTANCE] = NullAttr(CONCEPT_INSTANCE, attributesInternal)
         for ((key, value) in attrs)
-            attributesInternal[key] = wrap(key, value, attributesInternal)
+            attributesInternal[key] = value
         setStandardAttributes(identityMap())
     }
 

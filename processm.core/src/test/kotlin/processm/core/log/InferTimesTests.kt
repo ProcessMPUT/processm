@@ -2,14 +2,11 @@ package processm.core.log
 
 import processm.core.DBTestHelper
 import processm.core.helpers.fastParseISO8601
-import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
 import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
 import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.DateTimeAttr
-import processm.core.log.attribute.StringAttr
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -42,22 +39,22 @@ class InferTimesTests {
         HoneyBadgerHierarchicalXESInputStream(
             InferTimes(
                 sequenceOf(
-                    Log(AttributeMap<Attribute<*>>().also{it[LIFECYCLE_MODEL] = StringAttr(LIFECYCLE_MODEL, "bpaf",it)}),
+                    Log(AttributeMap().also { it[LIFECYCLE_MODEL] = "bpaf" }),
                     Trace(),
                     Event(
-                        AttributeMap<Attribute<*>>().also {
-                            it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "A", it)
-                            it[CONCEPT_INSTANCE] = StringAttr(CONCEPT_INSTANCE, "1", it)
-                            it[LIFECYCLE_STATE] = StringAttr(LIFECYCLE_STATE, "Open.Running.InProgress", it)
-                            it[TIME_TIMESTAMP] = DateTimeAttr(TIME_TIMESTAMP, "2022-07-05T16:27:00.00Z".fastParseISO8601(), it)
+                        AttributeMap().also {
+                            it[CONCEPT_NAME] = "A"
+                            it[CONCEPT_INSTANCE] = "1"
+                            it[LIFECYCLE_STATE] = "Open.Running.InProgress"
+                            it[TIME_TIMESTAMP] = "2022-07-05T16:27:00.00Z".fastParseISO8601()
                         }
                     ),
                     Event(
-                        AttributeMap<Attribute<*>>().also {
-                            it[CONCEPT_NAME ] = StringAttr(CONCEPT_NAME, "A", it)
-                            it[CONCEPT_INSTANCE ] = StringAttr(CONCEPT_INSTANCE, "1", it)
-                            it[LIFECYCLE_STATE ] = StringAttr(LIFECYCLE_STATE, "Closed.Completed", it)
-                            it[TIME_TIMESTAMP ] = DateTimeAttr(TIME_TIMESTAMP, "2022-07-05T16:30:00.00Z".fastParseISO8601(), it)
+                        AttributeMap().also {
+                            it[CONCEPT_NAME] = "A"
+                            it[CONCEPT_INSTANCE] = "1"
+                            it[LIFECYCLE_STATE] = "Closed.Completed"
+                            it[TIME_TIMESTAMP] = "2022-07-05T16:30:00.00Z".fastParseISO8601()
                         }
                     )
                 )

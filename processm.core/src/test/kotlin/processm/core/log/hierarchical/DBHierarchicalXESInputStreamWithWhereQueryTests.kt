@@ -4,8 +4,7 @@ import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
 import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
-import processm.core.log.attribute.StringAttr
-import processm.core.log.attribute.value
+import processm.core.log.valueToString
 import java.time.DayOfWeek
 import java.util.*
 import kotlin.test.*
@@ -21,8 +20,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -71,8 +70,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -122,8 +121,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -176,8 +175,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -223,8 +222,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -270,8 +269,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -319,8 +318,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -359,8 +358,8 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -392,7 +391,7 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
 
         for (trace in log.traces) {
             assertNotNull(trace.costTotal)
-            assertNotNull(trace.attributes[COST_TOTAL]?.value)
+            assertNotNull(trace.attributes[COST_TOTAL])
         }
     }
 
@@ -410,7 +409,7 @@ class DBHierarchicalXESInputStreamWithWhereQueryTests : DBHierarchicalXESInputSt
 
 
         for (trace in log.traces) {
-            assertNotNull(trace.attributes["Diagnosis"]?.value)
+            assertNotNull(trace.attributes["Diagnosis"])
             assertFalse(trace.attributes["Diagnosis"]?.valueToString().isNullOrBlank())
         }
     }

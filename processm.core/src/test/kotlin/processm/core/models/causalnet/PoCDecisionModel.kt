@@ -38,7 +38,7 @@ class PoCDecisionModel(val featureName: String) : DecisionLearner<Row, Sequence<
                 if (!dec.decisionPoint.isRealDecision)
                     continue
                 val event = events[pos / 2]
-                val feature = event.attributes[featureName]?.getValue()
+                val feature = event.attributes[featureName]
                 stumps.getOrPut(dec.decisionPoint, { Stump() }).train(feature, dec.binding)
             }
         }
@@ -53,7 +53,7 @@ class PoCDecisionModel(val featureName: String) : DecisionLearner<Row, Sequence<
                 check(dec is BindingDecision)
                 val event = events[pos / 2]
                 if (dec.decisionPoint.isRealDecision) {
-                    val feature = event.attributes[featureName]?.getValue()
+                    val feature = event.attributes[featureName]
                     val dist =
                         stumps.getOrPut(dec.decisionPoint, { Stump<Any?, Binding?>() }).distribution(feature)
                     val sum = dist.values.sum()

@@ -8,7 +8,7 @@ import kotlin.reflect.KClass
 /**
  * The base class for the attribute compliant with the XES standard.
  */
-abstract class Attribute<T>(key: String, parentStorage:AttributeMap<Attribute<*>>) {
+abstract class Attribute<T>(key: String, parentStorage: AttributeMap) {
 
     companion object {
         /**
@@ -115,12 +115,12 @@ abstract class Attribute<T>(key: String, parentStorage:AttributeMap<Attribute<*>
     //TODO Jeżeli będzie, to i tak - jak zapewnić poprawność? Może jakoś inaczej dodawać dzieci? Albo je wytwarzać inaczej?
     //TODO Co z listami? Jak one maja byc obslugiwane? Miec odrebny storage?
 
-    val childrenInternal: AttributeMap<Attribute<*>> = parentStorage.children(key)
+    val childrenInternal: AttributeMap = parentStorage.children(key)
 
     /**
      * Gets the child attribute. This is a shortcut call equivalent to `children.get(key)`.
      */
-    operator fun get(key: String): Attribute<*>? = childrenInternal[key]
+    operator fun get(key: String): Attribute<*>? = childrenInternal[key] as Attribute<*>
 
 
     /**
@@ -151,7 +151,7 @@ abstract class Attribute<T>(key: String, parentStorage:AttributeMap<Attribute<*>
      * Used as getter based on the internal representation of children
      */
     val children: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(childrenInternal ?: emptyMap())
+        get() = Collections.unmodifiableMap(childrenInternal ?: emptyMap()) as Map<String, Attribute<*>>
 
     /**
      * Tag in XES standard
@@ -191,12 +191,29 @@ abstract class Attribute<T>(key: String, parentStorage:AttributeMap<Attribute<*>
 val Attribute<*>.value: Any?
     get() = this.getValue()
 
+fun Any?.deepEquals(other: Any?): Boolean {
+    if (this === null)
+        return other === null
+    if (this is Boolean || this is Instant || this is UUID || this is Long || this is Double || this is String) {
+        return this == other
+    }
+    if (this is AttributeMap && other is AttributeMap) {
+        return this.flat == other.flat && this.flat.entries.all { (k, v) -> v.deepEquals(other[k]) }
+    }
+    if (this is List<*> && other is List<*>) {
+        return this.size == other.size && this.withIndex().all { (idx, v) -> v.deepEquals(other[idx]) }
+    }
+    return false
+}
+
+@Deprecated(message = "Getting rid of it", level = DeprecationLevel.ERROR)
 fun Map<String, Attribute<*>>.deepEquals(other: Map<String, Attribute<*>>): Boolean =
     this == other && this.all { it.value.deepEquals(other[it.key]) }
 
 /**
  * Returns `KClass` corresponding to the value of the attribute
  */
+@Suppress("DEPRECATION_ERROR")
 val Attribute<*>.valueType: KClass<*>
     get() = when (this) {
         is BoolAttr -> Boolean::class

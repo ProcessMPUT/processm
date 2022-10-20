@@ -4,9 +4,7 @@ import org.junit.jupiter.api.BeforeAll
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.hierarchicalCompare
 import processm.core.log.*
-import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.StringAttr
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.util.*
@@ -87,8 +85,8 @@ class DBHierarchicalXESInputStreamTests {
             AppendingDBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
                 out.write(log.first())
                 out.write(log.first().traces.first())
-                out.write(Event(AttributeMap<Attribute<*>>().also {
-                    it[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, "Z", it)
+                out.write(Event(AttributeMap().also {
+                    it[CONCEPT_NAME] = "Z"
                 }))
             }
 

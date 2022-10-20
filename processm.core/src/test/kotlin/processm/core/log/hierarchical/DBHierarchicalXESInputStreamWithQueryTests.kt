@@ -2,8 +2,6 @@ package processm.core.log.hierarchical
 
 import processm.core.DBTestHelper.dbName
 import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.RealAttr
-import processm.core.log.attribute.value
 import processm.core.querylanguage.Query
 import java.time.Instant
 import kotlin.math.max
@@ -66,7 +64,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
             for (event in trace.events) {
                 assertTrue(event.conceptName in eventNames)
                 assertEquals(1, event.attributes.count())
-                assertEquals(CONCEPT_NAME, event.attributes.values.first().key)
+                assertEquals(CONCEPT_NAME, event.attributes.keys.first())
 
                 standardAndAllAttributesMatch(log, event)
             }
@@ -164,7 +162,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                 assertNull(event.costCurrency)
                 assertNull(event.costTotal)
 
-                assertTrue((event.attributes["sum(event:cost:total)"] as RealAttr).value >= 1.0)
+                assertTrue(event.attributes["sum(event:cost:total)"] as Double >= 1.0)
             }
         }
     }
@@ -185,7 +183,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
             val event = trace.events.first()
             assertTrue(event.count >= 1)
-            assertTrue((event.attributes["sum(event:cost:total)"]!!.value as Double) in (1.0 * event.count)..(1.08 * event.count + 1e-6))
+            assertTrue((event.attributes["sum(event:cost:total)"] as Double) in (1.0 * event.count)..(1.08 * event.count + 1e-6))
         }
     }
 
@@ -205,7 +203,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
             for (event in trace.events) {
                 assertTrue(event.count >= 1)
-                assertTrue((event.attributes["sum(event:cost:total)"]!!.value as Double) in (1.0 * event.count)..(1.08 * event.count))
+                assertTrue((event.attributes["sum(event:cost:total)"] as Double) in (1.0 * event.count)..(1.08 * event.count))
             }
         }
     }
@@ -244,7 +242,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
                 assertTrue(event.orgResource in orgResources)
                 assertNull(event.timeTimestamp)
                 assertEquals(1, event.attributes.size)
-                assertTrue(event.attributes["org:resource"]!!.value in orgResources)
+                assertTrue(event.attributes["org:resource"] in orgResources)
             }
         }
     }
@@ -259,7 +257,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
             val trace = log.traces.first()
             assertEquals(1, trace.attributes.size)
-            assertEquals("JournalReview", trace.attributes["trace:min(log:concept:name)"]!!.value)
+            assertEquals("JournalReview", trace.attributes["trace:min(log:concept:name)"])
         }
     }
 
@@ -299,9 +297,9 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
             assertNull(event.orgResource)
             assertNull(event.timeTimestamp)
             assertEquals(3, event.attributes.size)
-            assertTrue((event.attributes["avg(event:cost:total)"]!!.value as Double) in 1.0..1.08)
-            assertTrue(begin.isBefore(event.attributes["min(event:time:timestamp)"]!!.value as Instant))
-            assertTrue(end.isAfter(event.attributes["max(event:time:timestamp)"]!!.value as Instant))
+            assertTrue((event.attributes["avg(event:cost:total)"] as Double) in 1.0..1.08)
+            assertTrue(begin.isBefore(event.attributes["min(event:time:timestamp)"] as Instant))
+            assertTrue(end.isAfter(event.attributes["max(event:time:timestamp)"] as Instant))
         }
     }
 
@@ -351,9 +349,9 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         assertNull(log.conceptName)
         assertNull(log.lifecycleModel)
         assertNull(log.identityId)
-        assertTrue((log.attributes["avg(^^event:cost:total)"]!!.value as Double) in 1.0..1.08)
-        assertTrue(begin.isBefore(log.attributes["min(^^event:time:timestamp)"]!!.value as Instant))
-        assertTrue(end.isAfter(log.attributes["max(^^event:time:timestamp)"]!!.value as Instant))
+        assertTrue((log.attributes["avg(^^event:cost:total)"] as Double) in 1.0..1.08)
+        assertTrue(begin.isBefore(log.attributes["min(^^event:time:timestamp)"] as Instant))
+        assertTrue(end.isAfter(log.attributes["max(^^event:time:timestamp)"] as Instant))
         standardAndAllAttributesMatch(log, log)
 
         assertEquals(101, log.traces.count())
@@ -465,7 +463,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         var lastTimestamp = begin
         for (trace in log.traces) {
             val minTimestamp =
-                trace.events.minOfOrNull { it.attributes["min(event:time:timestamp)"]!!.value as Instant }!!
+                trace.events.minOfOrNull { it.attributes["min(event:time:timestamp)"] as Instant }!!
             assertTrue(!lastTimestamp.isAfter(minTimestamp))
 
             lastTimestamp = minTimestamp
@@ -562,13 +560,13 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         assertEquals("JournalReview", log.conceptName)
         assertNull(log.lifecycleModel)
         assertNull(log.identityId)
-        assertEquals("JournalReview", log.attributes[CONCEPT_NAME]!!.value as String)
+        assertEquals("JournalReview", log.attributes[CONCEPT_NAME] as String)
         standardAndAllAttributesMatch(log, log)
 
         assertEquals(97, log.traces.count())
 
         for (trace in log.traces) {
-            assertEquals(trace.attributes["count(trace:concept:name)"]!!.value as Long, trace.count.toLong())
+            assertEquals(trace.attributes["count(trace:concept:name)"] as Long, trace.count.toLong())
         }
 
         for (trace in log.traces.drop(3)) {
@@ -585,7 +583,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
         fun validate(validTraces: List<List<String>>, logTraces: Sequence<Trace>, count: Int) {
             for (logTrace in logTraces) {
-                assertEquals(count.toLong(), logTrace.attributes["count(trace:concept:name)"]!!.value)
+                assertEquals(count.toLong(), logTrace.attributes["count(trace:concept:name)"])
             }
             for (validTrace in validTraces) {
                 assertTrue(
@@ -632,8 +630,8 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         assertEquals(log1.traces.count(), log2.traces.count())
         for ((trace1, trace2) in log1.traces zip log2.traces) {
             assertEquals(
-                trace1.attributes["count(trace:concept:name)"]!!.value as Long,
-                trace2.attributes["count(trace:concept:name)"]!!.value as Long
+                trace1.attributes["count(trace:concept:name)"] as Long,
+                trace2.attributes["count(trace:concept:name)"] as Long
             )
         }
     }
@@ -657,13 +655,13 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         assertEquals("JournalReview", log.conceptName)
         assertNull(log.lifecycleModel)
         assertNull(log.identityId)
-        assertEquals("JournalReview", log.attributes[CONCEPT_NAME]!!.value as String)
+        assertEquals("JournalReview", log.attributes[CONCEPT_NAME] as String)
         standardAndAllAttributesMatch(log, log)
 
         assertEquals(101, log.traces.count())
 
         for (trace in log.traces) {
-            assertEquals(trace.attributes["count(trace:concept:name)"]!!.value as Long, trace.count.toLong())
+            assertEquals(trace.attributes["count(trace:concept:name)"] as Long, trace.count.toLong())
             assertEquals(1, trace.count)
         }
     }
@@ -738,11 +736,11 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
         for (trace in log.traces) {
             assertNotNull(trace.conceptName)
-            assertNotNull(trace.attributes[CONCEPT_NAME]?.value)
-            assertEquals(trace.conceptName, trace.attributes[CONCEPT_NAME]?.value)
-            assertNotNull(trace.attributes["min(^event:time:timestamp)"]?.value)
-            assertNotNull(trace.attributes["max(^event:time:timestamp)"]?.value)
-            assertNotNull(trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"]?.value)
+            assertNotNull(trace.attributes[CONCEPT_NAME])
+            assertEquals(trace.conceptName, trace.attributes[CONCEPT_NAME])
+            assertNotNull(trace.attributes["min(^event:time:timestamp)"])
+            assertNotNull(trace.attributes["max(^event:time:timestamp)"])
+            assertNotNull(trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"])
         }
     }
 
@@ -766,7 +764,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
         var lastDuration: Double = Double.MAX_VALUE
         for (trace in log.traces) {
-            val duration = trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"]!!.value as Double
+            val duration = trace.attributes["max(^event:time:timestamp) - min(^event:time:timestamp)"] as Double
             assertTrue(duration <= lastDuration)
             lastDuration = duration
         }
@@ -778,9 +776,9 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
     @Test
     fun multiScopeImplicitGroupBy() {
         val stream = q("select count(l:name), count(^t:name), count(^^e:name) where l:id=$journal").first()
-        assertEquals(1L, stream.attributes["count(log:concept:name)"]!!.value)
-        assertEquals(101L, stream.attributes["count(^trace:concept:name)"]!!.value)
-        assertEquals(2298L, stream.attributes["count(^^event:concept:name)"]!!.value)
+        assertEquals(1L, stream.attributes["count(log:concept:name)"])
+        assertEquals(101L, stream.attributes["count(^trace:concept:name)"])
+        assertEquals(2298L, stream.attributes["count(^^event:concept:name)"])
     }
 
     @Test
@@ -845,14 +843,16 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         val log = stream.first()
         val attribute = log.attributes["meta_concept:named_events_total"]!!
 
-        assertEquals(150291L, attribute.value)
-        assertEquals(624, attribute.children.size)
+        assertEquals(150291L, attribute)
+        with(log.attributes.children("meta_concept:named_events_total")) {
+            assertEquals(624, this.size)
 
-        assertEquals(23L, attribute.children["haptoglobine"]!!.value)
-        assertEquals(24L, attribute.children["ijzer"]!!.value)
-        assertEquals(27L, attribute.children["bekken"]!!.value)
-        assertEquals(2L, attribute.children["cortisol"]!!.value)
-        assertEquals(9L, attribute.children["ammoniak"]!!.value)
+            assertEquals(23L, this["haptoglobine"])
+            assertEquals(24L, this["ijzer"])
+            assertEquals(27L, this["bekken"])
+            assertEquals(2L, this["cortisol"])
+            assertEquals(9L, this["ammoniak"])
+        }
     }
 
     /**
@@ -866,13 +866,15 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
         val log = stream.first()
         val attribute = log.attributes["meta_concept:named_events_total"]!!
 
-        assertEquals(150291L, attribute.value)
-        assertTrue(attribute.children.isEmpty())
+        assertEquals(150291L, attribute)
+        with(log.attributes.children("meta_concept:named_events_total")) {
+            assertTrue(this.isEmpty())
 
-        assertFalse("haptoglobine" in attribute.children)
-        assertFalse("ijzer" in attribute.children)
-        assertFalse("bekken" in attribute.children)
-        assertFalse("cortisol" in attribute.children)
-        assertFalse("ammoniak" in attribute.children)
+            assertFalse("haptoglobine" in this)
+            assertFalse("ijzer" in this)
+            assertFalse("bekken" in this)
+            assertFalse("cortisol" in this)
+            assertFalse("ammoniak" in this)
+        }
     }
 }
