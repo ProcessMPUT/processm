@@ -13,7 +13,7 @@ import java.util.*
  * @property attributesInternal A backing mutable field for [attributes].
  */
 abstract class XESComponent(
-    internal val attributesInternal: AttributeMap = AttributeMap()
+    internal val attributesInternal: MutableAttributeMap = MutableAttributeMap()
 ) {
     /**
      * Standard attribute based on concept:name
@@ -43,7 +43,7 @@ abstract class XESComponent(
      * Collection of all attributes associated with this element.
      */
     val attributes: AttributeMap
-        get() = attributesInternal  //TODO unmodifiable view
+        get() = attributesInternal.unmodifiableView()
 
     /**
      * Call this function at the end of constructor in all derived non-abstract classes.

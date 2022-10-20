@@ -85,7 +85,7 @@ class DBHierarchicalXESInputStreamTests {
             AppendingDBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
                 out.write(log.first())
                 out.write(log.first().traces.first())
-                out.write(Event(AttributeMap().also {
+                out.write(Event(MutableAttributeMap().also {
                     it[CONCEPT_NAME] = "Z"
                 }))
             }

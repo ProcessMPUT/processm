@@ -1,6 +1,7 @@
 package processm.core.log.attribute
 
 import processm.core.log.AttributeMap
+import processm.core.log.MutableAttributeMap
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -12,7 +13,7 @@ import kotlin.collections.ArrayList
  * Tag inside XES file: <list>
  */
 @Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
-class ListAttr(key: String, parentStorage: AttributeMap) :
+class ListAttr(key: String, parentStorage: MutableAttributeMap) :
     Attribute<List<Attribute<*>>>(key, parentStorage) {
     internal val valueInternal: MutableList<Attribute<*>> = ArrayList()
     val value: List<Attribute<*>> = Collections.unmodifiableList(valueInternal)

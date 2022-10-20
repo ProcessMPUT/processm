@@ -142,7 +142,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         classifiers[name] = classifier
     }
 
-    private fun addGlobalAttributes(map: AttributeMap, reader: XMLStreamReader) {
+    private fun addGlobalAttributes(map: MutableAttributeMap, reader: XMLStreamReader) {
         while (reader.hasNext()) {
             reader.next()
 
@@ -154,7 +154,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun parseAttributeTags(reader: XMLStreamReader, elementName: String, parentStorage: AttributeMap): Any {
+    private fun parseAttributeTags(reader: XMLStreamReader, elementName: String, parentStorage: MutableAttributeMap): Any {
         val key = with(reader.getAttributeValue(null, "key")) {
             if (this == null) {
                 logger().warn("Missing key in XES log file in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
@@ -183,7 +183,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         reader.next()
 
                         if (reader.isStartElement) {
-                            val storage = AttributeMap()   //TODO reconsider?
+                            val storage = MutableAttributeMap()
                             parseAttributeTags(reader, reader.localName, storage)
                             (attribute as MutableList<AttributeMap>).add(storage)
                         } else if (reader.isEndElement) {

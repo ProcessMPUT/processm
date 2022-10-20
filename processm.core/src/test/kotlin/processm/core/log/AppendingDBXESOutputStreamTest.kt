@@ -21,40 +21,40 @@ class AppendingDBXESOutputStreamTest {
         val trace2UUID = UUID.randomUUID()
         val trace3UUID = UUID.randomUUID()
 
-        val log = Log(AttributeMap().also { it[IDENTITY_ID] = logUUID })
-        val trace1 = Trace(AttributeMap().also { it[IDENTITY_ID] = trace1UUID })
-        val trace2 = Trace(AttributeMap().also { it[IDENTITY_ID] = trace2UUID })
-        val trace3 = Trace(AttributeMap().also { it[IDENTITY_ID] = trace3UUID })
+        val log = Log(MutableAttributeMap().also { it[IDENTITY_ID] = logUUID })
+        val trace1 = Trace(MutableAttributeMap().also { it[IDENTITY_ID] = trace1UUID })
+        val trace2 = Trace(MutableAttributeMap().also { it[IDENTITY_ID] = trace2UUID })
+        val trace3 = Trace(MutableAttributeMap().also { it[IDENTITY_ID] = trace3UUID })
 
         val events1 = sequenceOf(
-            Event(AttributeMap().also {
+            Event(MutableAttributeMap().also {
                 it[CONCEPT_NAME] = "create order"
             }),
-            Event(AttributeMap().also {
+            Event(MutableAttributeMap().also {
                 it[CONCEPT_NAME] = "issue invoice"
             }),
-            Event(AttributeMap().also { it[CONCEPT_NAME] = "pay" }),
-            Event(AttributeMap().also { it[CONCEPT_NAME] = "deliver" }),
+            Event(MutableAttributeMap().also { it[CONCEPT_NAME] = "pay" }),
+            Event(MutableAttributeMap().also { it[CONCEPT_NAME] = "deliver" }),
         )
 
         val events2 = sequenceOf(
-            Event(AttributeMap().also {
+            Event(MutableAttributeMap().also {
                 it[CONCEPT_NAME] = "create order"
             }),
-            Event(AttributeMap().also { it[CONCEPT_NAME] = "backorder" }),
-            Event(AttributeMap().also {
+            Event(MutableAttributeMap().also { it[CONCEPT_NAME] = "backorder" }),
+            Event(MutableAttributeMap().also {
                 it[CONCEPT_NAME] = "issue invoice"
             }),
-            Event(AttributeMap().also { it[CONCEPT_NAME] = "pay" }),
-            Event(AttributeMap().also { it[CONCEPT_NAME] = "deliver" }),
-            Event(AttributeMap().also { it[CONCEPT_NAME] = "complaint" }),
+            Event(MutableAttributeMap().also { it[CONCEPT_NAME] = "pay" }),
+            Event(MutableAttributeMap().also { it[CONCEPT_NAME] = "deliver" }),
+            Event(MutableAttributeMap().also { it[CONCEPT_NAME] = "complaint" }),
         )
 
         val events3 = sequenceOf(
-            Event(AttributeMap().also {
+            Event(MutableAttributeMap().also {
                 it[CONCEPT_NAME] = "create order"
             }),
-            Event(AttributeMap().also {
+            Event(MutableAttributeMap().also {
                 it[CONCEPT_NAME] = "change quantity"
             }),
         )

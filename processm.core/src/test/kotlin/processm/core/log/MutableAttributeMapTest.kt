@@ -4,12 +4,12 @@ import org.junit.jupiter.api.assertThrows
 import kotlin.test.*
 import kotlin.test.Test
 
-class AttributeMapTest {
+class MutableAttributeMapTest {
 
-    private lateinit var map: AttributeMap
+    private lateinit var map: MutableAttributeMap
 
-    private fun create(): AttributeMap {
-        val map = AttributeMap()
+    private fun create(): MutableAttributeMap {
+        val map = MutableAttributeMap()
         map["a"] = 1L
         map[listOf("a", "b")] = 2L
         map[listOf("a", "b", "c")] = 3L
@@ -19,7 +19,6 @@ class AttributeMapTest {
         map[listOf("a", "e", "f")] = 7L
         map[listOf("a", "e", "g")] = 8L
         map["h"] = 11L
-        map[listOf("h", "i")] = 12L
         map[listOf("h", "i", "j")] = 13L
         map[listOf("h", "i", "k")] = 14L
         map[listOf("h", "l")] = 16L
@@ -31,6 +30,12 @@ class AttributeMapTest {
     @BeforeTest
     fun setup() {
         map = create()
+    }
+
+    @Test
+    fun childrenKeys() {
+        assertEquals(setOf("a", "h"), map.childrenKeys)
+        assertEquals(setOf("i", "l"), map.children("h").childrenKeys)
     }
 
     @Test
@@ -150,14 +155,14 @@ class AttributeMapTest {
     @Test
     fun `secondary constructor and equals with a map of other type`() {
         val base = mapOf<String, Any?>("a" to 1L, "b" to 2L)
-        val map = AttributeMap(base)
+        val map = MutableAttributeMap(base)
         assertEquals(base, map)
         assertEquals(map, base)
     }
 
     @Test
     fun `empty key`() {
-        val map = AttributeMap()
+        val map = MutableAttributeMap()
         map[""] = 1L
         map.children("")[""] = 2L
         map["a"] = 3L
@@ -180,7 +185,7 @@ class AttributeMapTest {
 
     @Test
     fun `handling null`() {
-        val map = AttributeMap()
+        val map = MutableAttributeMap()
         map["a"] = 1L
         assertEquals(1L, map["a"])
         assertThrows<NoSuchElementException> { map["b"] }
@@ -195,7 +200,7 @@ class AttributeMapTest {
 
     @Test
     fun `compute if absent`() {
-        val map = AttributeMap()
+        val map = MutableAttributeMap()
         assertThrows<NoSuchElementException> { map["a"] }
         assertThrows<NoSuchElementException> { map["b"] }
         assertThrows<NoSuchElementException> { map["c"] }
@@ -215,5 +220,11 @@ class AttributeMapTest {
         assertEquals(1L, map["a"])
         assertNull(map["b"])
         assertThrows<NoSuchElementException> { map["c"] }
+    }
+
+    @Test
+    fun deepCopy() {
+        val other = MutableAttributeMap(map)
+        assertEquals(map, other)
     }
 }

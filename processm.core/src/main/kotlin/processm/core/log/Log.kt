@@ -12,10 +12,10 @@ import java.util.*
  * Captures the log component from the XES metadata structure.
  */
 open class Log(
-    attributesInternal: AttributeMap = AttributeMap(),
+    attributesInternal: MutableAttributeMap = MutableAttributeMap(),
     internal val extensionsInternal: MutableMap<String, Extension> = HashMap(),
-    internal val traceGlobalsInternal: AttributeMap = AttributeMap(),
-    internal val eventGlobalsInternal: AttributeMap = AttributeMap(),
+    internal val traceGlobalsInternal: MutableAttributeMap = MutableAttributeMap(),
+    internal val eventGlobalsInternal: MutableAttributeMap = MutableAttributeMap(),
     internal val traceClassifiersInternal: MutableMap<String, Classifier> = HashMap(),
     internal val eventClassifiersInternal: MutableMap<String, Classifier> = HashMap()
 ) : XESComponent(attributesInternal) {
@@ -29,13 +29,13 @@ open class Log(
      * Global trace attributes for the log.
      */
     val traceGlobals:AttributeMap
-        get() = traceGlobalsInternal    //TODO unmodifiable view
+        get() = traceGlobalsInternal.unmodifiableView()
 
     /**
      * Global event attributes for the log.
      */
     val eventGlobals: AttributeMap
-        get() = eventGlobalsInternal //TODO unmodifiable view
+        get() = eventGlobalsInternal.unmodifiableView()
 
     /**
      * Trace classifiers for the log.

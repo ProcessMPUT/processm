@@ -1,6 +1,7 @@
 package processm.core.log.attribute
 
 import processm.core.log.AttributeMap
+import processm.core.log.MutableAttributeMap
 import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
@@ -8,7 +9,7 @@ import kotlin.reflect.KClass
 /**
  * The base class for the attribute compliant with the XES standard.
  */
-abstract class Attribute<T>(key: String, parentStorage: AttributeMap) {
+abstract class Attribute<T>(key: String, parentStorage: MutableAttributeMap) {
 
     companion object {
         /**
@@ -115,7 +116,7 @@ abstract class Attribute<T>(key: String, parentStorage: AttributeMap) {
     //TODO Jeżeli będzie, to i tak - jak zapewnić poprawność? Może jakoś inaczej dodawać dzieci? Albo je wytwarzać inaczej?
     //TODO Co z listami? Jak one maja byc obslugiwane? Miec odrebny storage?
 
-    val childrenInternal: AttributeMap = parentStorage.children(key)
+    val childrenInternal: MutableAttributeMap = parentStorage.children(key)
 
     /**
      * Gets the child attribute. This is a shortcut call equivalent to `children.get(key)`.
@@ -197,12 +198,14 @@ fun Any?.deepEquals(other: Any?): Boolean {
     if (this is Boolean || this is Instant || this is UUID || this is Long || this is Double || this is String) {
         return this == other
     }
-    if (this is AttributeMap && other is AttributeMap) {
+    if (this is MutableAttributeMap && other is MutableAttributeMap) {
         return this.flat == other.flat && this.flat.entries.all { (k, v) -> v.deepEquals(other[k]) }
     }
     if (this is List<*> && other is List<*>) {
         return this.size == other.size && this.withIndex().all { (idx, v) -> v.deepEquals(other[idx]) }
     }
+    if(this is AttributeMap && other is AttributeMap)
+        TODO()
     return false
 }
 

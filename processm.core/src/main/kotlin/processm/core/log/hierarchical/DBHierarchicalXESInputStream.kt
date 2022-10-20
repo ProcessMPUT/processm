@@ -439,7 +439,7 @@ class DBHierarchicalXESInputStream(
 
     private fun readRecordsIntoAttributes(
         resultSet: ResultSet,
-        parentStorage: AttributeMap
+        parentStorage: MutableAttributeMap
     ) {
         val key = resultSet.getString("key")
         val attr = attributeFromRecord(resultSet)
@@ -455,7 +455,7 @@ class DBHierarchicalXESInputStream(
         } else {
             do {
                 val isInsideList = resultSet.getBoolean("in_list_attr")
-                val storage = if (isInsideList) AttributeMap() else parentStorage.children(key)
+                val storage = if (isInsideList) MutableAttributeMap() else parentStorage.children(key)
                 readRecordsIntoAttributes(resultSet, storage)
                 if (isInsideList) {
                     assert(attr is MutableList<*>)

@@ -1,6 +1,7 @@
 package processm.core.log.attribute
 
 import processm.core.log.AttributeMap
+import processm.core.log.MutableAttributeMap
 import java.util.*
 
 /**
@@ -12,7 +13,7 @@ import java.util.*
  * Tag inside XES file: <id>
  */
 @Deprecated(message="Getting rid of it", level=DeprecationLevel.ERROR)
-class IDAttr(key: String, val value: UUID, parentStorage: AttributeMap) :
+class IDAttr(key: String, val value: UUID, parentStorage: MutableAttributeMap) :
     Attribute<UUID>(key, parentStorage) {
     override fun getValue() = this.value
     override val xesTag: String
