@@ -106,21 +106,16 @@ class MutableAttributeMap(
 
     private val top: MutableMap<String, Any?> by lazy { flat.subMap(commonPrefix, commonPrefix + SEPARATOR) }
 
-    private class RewritingIterator<T>(val baseIterator: MutableIterator<T>, val from: (T) -> T) :
-        MutableIterator<T> by baseIterator {
+    private class RewritingIterator<T>(val baseIterator: Iterator<T>, val from: (T) -> T) :
+        Iterator<T> by baseIterator {
         override fun next(): T = from(baseIterator.next())
     }
 
-    private class RewritingMutableSet<E>(val base: MutableSet<E>, val from: (E) -> E, val to: (E) -> E) :
-        MutableSet<E> {
-        override fun add(element: E): Boolean = base.add(to(element))
-
-        override fun addAll(elements: Collection<E>): Boolean = base.addAll(elements.map(to))
+    private class RewritingSet<E>(val base: Set<E>, val from: (E) -> E, val to: (E) -> E) :
+        Set<E> {
 
         override val size: Int
             get() = base.size
-
-        override fun clear() = base.clear()
 
         override fun isEmpty(): Boolean = base.isEmpty()
 
@@ -128,13 +123,7 @@ class MutableAttributeMap(
 
         override fun contains(element: E): Boolean = base.contains(to(element))
 
-        override fun iterator(): MutableIterator<E> = RewritingIterator(base.iterator(), from)
-
-        override fun retainAll(elements: Collection<E>): Boolean = base.retainAll(elements.mapToSet(to))
-
-        override fun removeAll(elements: Collection<E>): Boolean = base.removeAll(elements.mapToSet(to))
-
-        override fun remove(element: E): Boolean = base.remove(to(element))
+        override fun iterator(): Iterator<E> = RewritingIterator(base.iterator(), from)
 
     }
 
@@ -144,13 +133,13 @@ class MutableAttributeMap(
             get() = from(base.key)
     }
 
-    override val entries: MutableSet<MutableMap.MutableEntry<String, Any?>>
-        get() = RewritingMutableSet(top.entries, { RewritingEntry(it, ::strip) }, { (it as RewritingEntry).base })
-    override val keys: MutableSet<String>
-        get() = RewritingMutableSet(top.keys, ::strip) { commonPrefix + it }
+    override val entries: Set<Map.Entry<String, Any?>>
+        get() = RewritingSet(top.entries, { RewritingEntry(it, ::strip) }, { (it as RewritingEntry).base })
+    override val keys: Set<String>
+        get() = RewritingSet(top.keys, ::strip) { commonPrefix + it }
     override val size: Int
         get() = top.size
-    override val values: MutableCollection<Any?>
+    override val values: Collection<Any?>
         get() = top.values
 
     override fun isEmpty(): Boolean = top.isEmpty()
