@@ -6,7 +6,7 @@ import processm.core.DBTestHelper
 import processm.core.log.Helpers.assertDoubleEquals
 import processm.core.log.Helpers.event
 import processm.core.log.Helpers.trace
-import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.Node
@@ -403,8 +403,8 @@ class CalculatorTests {
     fun `two parallel tasks in a process tree`() {
         val log = Log(
             traces =
-            trace(event("a", "time" to 1), event("b", "time" to 2), event("c", "time" to 10)).times(10) +
-                    trace(event("b", "time" to 3), event("a", "time" to 2), event("c", "time" to 20)).times(10)
+            trace(event("a", "time" to 1L), event("b", "time" to 2L), event("c", "time" to 10L)).times(10) +
+                    trace(event("b", "time" to 3L), event("a", "time" to 2L), event("c", "time" to 20L)).times(10)
         )
         val report = Calculator(ProcessTrees.twoParallelTasksAndSingleFollower).calculate(log)
         with(report.inboundArcKPI.getRow("time").entries) {
@@ -434,10 +434,10 @@ class CalculatorTests {
             traces =
             sequenceOf(
                 trace(
-                    event("a", "time" to 1),
-                    event("c", "time" to 10),
-                    event("b", "time" to 2),
-                    event("a", "time" to 1)
+                    event("a", "time" to 1L),
+                    event("c", "time" to 10L),
+                    event("b", "time" to 2L),
+                    event("a", "time" to 1L)
                 )
             )
         )
@@ -475,10 +475,10 @@ class CalculatorTests {
             traces =
             sequenceOf(
                 trace(
-                    event("a", "time" to 1),
-                    event("b", "time" to 10),
-                    event("c", "time" to 2),
-                    event("a", "time" to 1)
+                    event("a", "time" to 1L),
+                    event("b", "time" to 10L),
+                    event("c", "time" to 2L),
+                    event("a", "time" to 1L)
                 )
             )
         )

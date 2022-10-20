@@ -5,7 +5,7 @@ import processm.core.helpers.forceToUUID
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.*
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
+import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.logging.logger
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
@@ -142,25 +142,25 @@ fun ETLConfiguration.toXESInputStream(): XESInputStream {
                         while (rs.next()) {
                             val attributes = toAttributes(rs, columnMap)
                             val traceId =
-                                requireNotNull(attributes[traceIdAttrDesc.target]?.value) { "Trace id is not set in an event." }
+                                requireNotNull(attributes.getOrNull(traceIdAttrDesc.target)) { "Trace id is not set in an event." }
                             val eventId =
-                                requireNotNull(attributes[eventIdAttrDesc.target]?.value) { "Event id is not set in an event." }
+                                requireNotNull(attributes.getOrNull(eventIdAttrDesc.target)) { "Event id is not set in an event." }
 
                             // yield log if this is the first event
                             if (lastLog === null) {
-                                lastLog = Log(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, logIdentityId)))
+                                lastLog = Log(mutableAttributeMapOf(IDENTITY_ID to logIdentityId))
                                 yield(lastLog to null)
                             }
 
                             // yield trace if changed
                             val traceIdentityId = traceId.forceToUUID()!!
                             if (lastTrace?.identityId != traceIdentityId) {
-                                lastTrace = Trace(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, traceIdentityId)))
+                                lastTrace = Trace(mutableAttributeMapOf(IDENTITY_ID to traceIdentityId))
                                 yield(lastTrace to null)
                             }
 
                             // yield event
-                            attributes.computeIfAbsent(IDENTITY_ID) { IDAttr(IDENTITY_ID, eventId.forceToUUID()!!) }
+                            attributes.computeIfAbsent(IDENTITY_ID) { eventId.forceToUUID()!! }
                             yield(Event(attributes) to eventId)
                         }
                     }
@@ -196,26 +196,33 @@ private fun getAttributeType(rs: ResultSet, attributeMap: ETLColumnToAttributeMa
 }
 
 private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttributeMap>) =
-    HashMap<String, Attribute<*>>().apply {
+    MutableAttributeMap().apply {
         val metadata = rs.metaData
         for (colIndex in 1..metadata.columnCount) {
             val colName = metadata.getColumnName(colIndex)
             val attrName = columnMap[colName]?.target ?: colName
             val attr = when (val colType = metadata.getColumnType(colIndex)) {
                 Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
-                    rs.getString(colIndex)?.let { StringAttr(attrName, it) }
+                    rs.getString(colIndex)
+
                 Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
-                    IntAttr(attrName, rs.getLong(colIndex))
+                    rs.getLong(colIndex)
+
                 Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
-                    RealAttr(attrName, rs.getDouble(colIndex))
+                    rs.getDouble(colIndex)
+
                 Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE, OracleTypes.TIMESTAMPLTZ ->
-                    rs.getTimestamp(colIndex, gmtCalendar)?.let { DateTimeAttr(attrName, it.toInstant()) }
+                    rs.getTimestamp(colIndex, gmtCalendar)?.toInstant()
+
                 Types.BIT, Types.BOOLEAN ->
-                    BoolAttr(attrName, rs.getBoolean(colIndex))
+                    rs.getBoolean(colIndex)
+
                 Types.NULL ->
-                    NullAttr(attrName)
+                    null
+
                 Types.OTHER ->
-                    IDAttr(attrName, rs.getObject(colIndex).forceToUUID()!!)
+                    rs.getObject(colIndex).forceToUUID()!!
+
                 else -> throw UnsupportedOperationException("Unsupported value type $colType for expression $colName.")
             }
             if (!rs.wasNull() && attr !== null)
@@ -238,14 +245,17 @@ private class EventIdCmp(private val type: Int?) : Comparator<String> {
         return when (type) {
             Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
                 o1.toLong().compareTo(o2.toLong())
+
             Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
                 o1.toDouble().compareTo(o2.toDouble())
+
             null, Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
                 try {
                     o1.toUUID()!!.compareTo(o2.toUUID())
                 } catch (_: IllegalArgumentException) {
                     o1.compareTo(o2)
                 }
+
             else -> throw UnsupportedOperationException("Unsupported value type $type for expression eventId.")
         }
     }
@@ -256,10 +266,13 @@ private fun castToSQLType(value: String?, type: Int?): Any? {
     return when (type) {
         null, Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
             value
+
         Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
             value?.toLong()
+
         Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
             value?.toDouble()
+
         else -> throw UnsupportedOperationException("Unsupported value type $type for expression eventId.")
     }
 }

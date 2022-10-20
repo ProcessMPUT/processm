@@ -1,8 +1,8 @@
 package processm.core.log
 
 import processm.core.log.Helpers.event
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.hierarchical.toFlatSequence
 import kotlin.test.Test
 import kotlin.test.assertEquals

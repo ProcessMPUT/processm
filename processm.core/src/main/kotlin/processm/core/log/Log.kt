@@ -1,9 +1,9 @@
 package processm.core.log
 
 import processm.core.helpers.toUUID
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
 import java.util.*
 
 /**

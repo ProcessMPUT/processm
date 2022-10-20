@@ -3,7 +3,7 @@ package processm.core.log.hierarchical
 import processm.core.helpers.mapToSet
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
-import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.log.valueToString
 import java.time.DayOfWeek
 import java.util.*

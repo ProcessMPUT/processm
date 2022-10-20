@@ -32,7 +32,7 @@ class PredictorTest {
             predictor.startTrace()
             for (event in trace.events) {
                 predictor.predict(event).forEach { (k, v) ->
-                    val ground = event.attributes[k]?.toDouble()
+                    val ground = (event.attributes.getOrNull(k) as Number?)?.toDouble()
                     if (ground !== null) {
                         sse.compute(k) { _, oldv -> (ground - v).pow(2) + (oldv ?: 0.0) }
                         n.inc(k)

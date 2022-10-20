@@ -9,7 +9,6 @@ import org.quartz.*
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.helpers.toUUID
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
@@ -91,7 +90,7 @@ class LogKPIService : AbstractJobService(
                     require(first.size == 1) { "The query must return exactly one log." }
                     require(first[0].attributes.size == 1) { "The query must return exactly one attribute." }
 
-                    component.data = first[0].attributes.values.first().value.toString()
+                    component.data = first[0].attributes.values.first().toString()
                     component.dataLastModified = Instant.now()
                     component.lastError = null
                 } catch (e: Exception) {

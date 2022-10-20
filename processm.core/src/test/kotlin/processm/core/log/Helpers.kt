@@ -2,9 +2,9 @@ package processm.core.log
 
 import processm.core.helpers.identityMap
 import processm.core.log.attribute.*
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet

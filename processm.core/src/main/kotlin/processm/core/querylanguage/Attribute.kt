@@ -1,20 +1,20 @@
 package processm.core.querylanguage
 
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
-import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
-import processm.core.log.attribute.Attribute.Companion.DB_ID
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
-import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
-import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.Attribute.Companion.XES_FEATURES
-import processm.core.log.attribute.Attribute.Companion.XES_VERSION
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.COST_CURRENCY
+import processm.core.log.attribute.Attribute.COST_TOTAL
+import processm.core.log.attribute.Attribute.DB_ID
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.ORG_GROUP
+import processm.core.log.attribute.Attribute.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.ORG_ROLE
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.Attribute.XES_FEATURES
+import processm.core.log.attribute.Attribute.XES_VERSION
 import java.util.*
 
 /**

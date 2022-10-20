@@ -2,11 +2,11 @@ package processm.core.log
 
 import processm.core.DBTestHelper
 import processm.core.helpers.fastParseISO8601
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing

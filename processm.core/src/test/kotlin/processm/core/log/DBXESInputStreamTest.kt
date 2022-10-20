@@ -2,9 +2,9 @@ package processm.core.log
 
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.parseISO8601
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.ORG_GROUP
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import kotlin.test.*

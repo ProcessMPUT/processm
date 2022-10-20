@@ -1,8 +1,6 @@
 package processm.core.log
 
 import processm.core.helpers.identityMap
-import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.value
 import java.util.*
 
 /**

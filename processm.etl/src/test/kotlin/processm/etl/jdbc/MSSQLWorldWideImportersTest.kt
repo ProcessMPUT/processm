@@ -6,7 +6,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.*
 import processm.core.DBTestHelper
 import processm.core.log.*
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
@@ -284,9 +283,9 @@ order by "trace_rank" desc, "event_id" desc
         )
 
         var log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(1099L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(8900L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(1099L, log.traces.first().attributes["count(trace:identity:id)"] )
+        assertEquals(8900L, log.traces.first().events.first().attributes["count(event:identity:id)"] )
 
         logger.info("Importing the next $partSize XES components...")
         // import the remaining components
@@ -307,9 +306,9 @@ order by "trace_rank" desc, "event_id" desc
             Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
         )
         log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(2229L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(17768L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(2229L, log.traces.first().attributes["count(trace:identity:id)"] )
+        assertEquals(17768L, log.traces.first().events.first().attributes["count(event:identity:id)"] )
     }
 
     @Test

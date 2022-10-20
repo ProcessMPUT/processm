@@ -4,7 +4,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.*
 import processm.core.DBTestHelper
 import processm.core.log.AppendingDBXESOutputStream
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
@@ -158,11 +157,11 @@ ORDER BY ${columnQuot}event_id${columnQuot}
         )
 
         val log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"] )
         assertEquals(
             expectedNumberOfEvents,
-            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+            log.traces.first().events.first().attributes["count(event:identity:id)"] 
         )
 
         logger.info("Verifying contents...")

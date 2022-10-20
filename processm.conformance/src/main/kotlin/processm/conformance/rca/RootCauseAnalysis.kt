@@ -3,10 +3,7 @@ package processm.conformance.rca
 import processm.conformance.models.alignments.Alignment
 import processm.conformance.rca.ml.DecisionTreeModel
 import processm.conformance.rca.ml.spark.SparkDecisionTreeClassifier
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.ListAttr
-import processm.core.log.attribute.value
-import processm.core.log.attribute.valueType
+import java.util.*
 
 
 data class RootCauseAnalysisDataSet(val positive: List<Alignment>, val negative: List<Alignment>)
@@ -31,7 +28,7 @@ class PropositionalSparseDataset(base: List<Map<Feature, Any>>) : List<Map<Featu
  * 2. [AnyNamedEventFeature] with the value `true`
  * 3. [AnyEventFeature] with the value `true`
  *
- * [ListAttr] are ignored as there's no obvious way to incorporate them and [IDAttr] are ignored on purpose as useless
+ * [List]s are ignored as there's no obvious way to incorporate them and [UUID]s are ignored on purpose as useless
  */
 fun Alignment.propositionalize(): HashMap<Feature, Any> {
     val ctr = HashMap<String?, Int>()
@@ -43,12 +40,12 @@ fun Alignment.propositionalize(): HashMap<Feature, Any> {
                 return@compute (v ?: 0) + 1
             }!!
             for ((k, v) in e.attributes) {
-                if (v is IDAttr)
+                if (v is UUID)
                     continue    //IDs are not useful in machine learning
-                if (v is ListAttr)
+                if (v is List<*>)
                     continue //TODO Currently I see no clear advantage in coming up with a way to support ListAttrs and this is not exactly obvious
-                v.value?.let {
-                    result[EventFeature(e.conceptName, occurrences, k, v.valueType)] = it
+                v?.let {
+                    result[EventFeature(e.conceptName, occurrences, k, v::class)] = it
                     result[AnyNamedEventFeature(e.conceptName, k, it)] = true
                     result[AnyEventFeature(k, it)] = true
                 }

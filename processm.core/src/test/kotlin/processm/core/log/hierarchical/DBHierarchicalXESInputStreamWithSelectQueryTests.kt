@@ -4,8 +4,8 @@ import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.implies
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.abs

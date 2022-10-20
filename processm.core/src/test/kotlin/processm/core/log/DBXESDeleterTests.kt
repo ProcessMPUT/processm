@@ -2,7 +2,6 @@ package processm.core.log
 
 import org.junit.jupiter.api.Tag
 import processm.core.DBTestHelper
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
