@@ -123,7 +123,7 @@ class MarkovSimulation(
                             ).apply {
                                 val prevId = precedingActivities[activity]?.identityId
                                 if (prevId !== null)
-                                    put(Attribute.CAUSE, prevId)
+                                    set(Attribute.CAUSE, prevId)
                             }
                         )
                         events.add(lastEvent)

@@ -1,6 +1,7 @@
 package processm.core.log
 
 import processm.core.helpers.mapToSet
+import java.time.Instant
 import java.util.*
 
 /**
@@ -10,7 +11,7 @@ import java.util.*
 class MutableAttributeMap(
     val flat: SortedMap<String, Any?> = TreeMap(),
     private val commonPrefix: String = ""
-) : MutableMap<String, Any?>, AttributeMap {
+) : AttributeMap {
 
     companion object {
         //TODO revisit values, possibly ensure that keys supplied by the user don't use character above these two
@@ -42,12 +43,43 @@ class MutableAttributeMap(
         return key.substring(commonPrefix.length)
     }
 
-    operator fun set(key: List<String>, value: Any?) {
+    internal operator fun set(key: List<String>, value: Any?) {
         require(value.isAllowedAttributeValue())
         flat[valueKey(key)] = value
     }
 
-    operator fun set(key: String, value: Any?) = set(listOf(key), value)
+    internal operator fun set(key: String, value: Any?) {
+        require(value.isAllowedAttributeValue())
+        flat[valueKey(key)] = value
+    }
+
+    operator fun set(key: String, value: String?) {
+        flat[valueKey(key)] = value
+    }
+
+    operator fun set(key: String, value: Long) {
+        flat[valueKey(key)] = value
+    }
+
+    operator fun set(key: String, value: Double) {
+        flat[valueKey(key)] = value
+    }
+
+    operator fun set(key: String, value: Instant) {
+        flat[valueKey(key)] = value
+    }
+
+    operator fun set(key: String, value: UUID) {
+        flat[valueKey(key)] = value
+    }
+
+    operator fun set(key: String, value: Boolean) {
+        flat[valueKey(key)] = value
+    }
+
+    operator fun set(key: String, value: List<AttributeMap>) {
+        flat[valueKey(key)] = value
+    }
 
     override operator fun get(key: String): Any? = flat.getValue(valueKey(key))
 
@@ -121,15 +153,7 @@ class MutableAttributeMap(
     override val values: MutableCollection<Any?>
         get() = top.values
 
-    override fun clear() = top.clear()
-
     override fun isEmpty(): Boolean = top.isEmpty()
-    override fun remove(key: String): Any? = top.remove(valueKey(key))
-
-    override fun putAll(from: Map<out String, Any?>) = from.entries.forEach { top[valueKey(it.key)] = it.value }
-
-    override fun put(key: String, value: Any?): Any? = top.put(valueKey(key), value)
-
     override fun containsValue(value: Any?): Boolean = top.containsValue(value)
 
     override fun containsKey(key: String): Boolean = top.containsKey(valueKey(key))
