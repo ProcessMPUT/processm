@@ -2,6 +2,7 @@ package processm.core.log.hierarchical
 
 import processm.core.helpers.NestableAutoCloseable
 import processm.core.helpers.mapToArray
+import processm.core.log.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.Attribute.DB_ID
 import processm.core.logging.enter
 import processm.core.logging.exit
@@ -296,6 +297,9 @@ internal class TranslatedQuery(
     private fun whereAttributes(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
         with(sql.query) {
             append(" WHERE parent_id IS NULL ")
+
+            if(!readNestedAttributes)
+                append("AND NOT starts_with(key, '$SEPARATOR') ")
 
             if (pql.selectAll[scope]!!)
                 return@with

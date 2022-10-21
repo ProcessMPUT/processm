@@ -328,7 +328,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
             with(to) {
                 var first = true
                 for (attributeMap in attributes) {
-                    for (attribute in attributeMap) {
+                    for (attribute in attributeMap.flat) {
                         sql.append("(?,'${attribute.value.xesTag}'")
                         if (first)
                             sql.append("::attribute_type")
@@ -360,12 +360,8 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
             // Handle children and lists
             var index = 0
             for (attributeMap in attributes) {
-                for (attribute in attributeMap) {
+                for (attribute in attributeMap.flat) {
                     val (key, value) = attribute
-                    val children = attributeMap.children(key)
-                    // Advance to children
-                    if (children.isNotEmpty())
-                        addAttributes(listOf(children), myTableNumber, index, false)
 
                     // Handle list
                     if (value is List<*> && value.isNotEmpty()) {

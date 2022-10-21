@@ -1,6 +1,8 @@
 package processm.core.log
 
 import processm.core.helpers.mapToSet
+import processm.core.log.AttributeMap.Companion.EMPTY_KEY
+import processm.core.log.AttributeMap.Companion.SEPARATOR
 import java.time.Instant
 import java.util.*
 
@@ -9,15 +11,9 @@ import java.util.*
  * Similarily, [computeIfAbsent] assigns `null` instead of ignoring it
  */
 class MutableAttributeMap(
-    val flat: SortedMap<String, Any?> = TreeMap(),
+    override val flat: SortedMap<String, Any?> = TreeMap(),
     private val commonPrefix: String = ""
 ) : AttributeMap {
-
-    companion object {
-        //TODO revisit values, possibly ensure that keys supplied by the user don't use character above these two
-        const val EMPTY_KEY = "\uc07f"
-        const val SEPARATOR = "\uc080"
-    }
 
     constructor(map: AttributeMap) : this() {
         map.deepCopyTo(this)

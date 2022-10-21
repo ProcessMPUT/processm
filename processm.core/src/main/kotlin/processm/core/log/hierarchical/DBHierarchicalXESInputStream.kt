@@ -445,7 +445,7 @@ class DBHierarchicalXESInputStream(
         val attr = attributeFromRecord(resultSet)
         val attrId = resultSet.getLong("id")
 
-        parentStorage[key] = attr
+        parentStorage.flat[key] = attr
 
         if (!resultSet.next())
             return
