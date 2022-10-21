@@ -88,7 +88,7 @@ class MutableAttributeMap(
             val prefix = commonPrefix + SEPARATOR
             return flat.subMap(prefix, prefix + SEPARATOR).keys.mapToSet {
                 val end = it.indexOf(SEPARATOR, prefix.length)
-                it.substring(prefix.length, end)
+                it.substring(prefix.length, end).replace(EMPTY_KEY, "")
             }
         }
 

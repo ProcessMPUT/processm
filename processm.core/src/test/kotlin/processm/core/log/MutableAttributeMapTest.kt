@@ -169,12 +169,15 @@ class MutableAttributeMapTest {
         map[listOf("", "", "", "")] = 4L
         assertEquals(2, map.size)
         assertEquals(setOf("", "a"), map.keys)
+        assertEquals(setOf(""), map.childrenKeys)
         assertEquals(1, map.children("").size)
         with(map.children("").entries.single()) {
             assertEquals("", key)
             assertEquals(2L, value)
         }
+        assertEquals(setOf(""), map.children("").childrenKeys)
         assertEquals(0, map.children("").children("").size)
+        assertEquals(setOf(""), map.children("").children("").childrenKeys)
         assertEquals(1, map.children("").children("").children("").size)
         with(map.children("").children("").children("").entries.single()) {
             assertEquals("", key)
