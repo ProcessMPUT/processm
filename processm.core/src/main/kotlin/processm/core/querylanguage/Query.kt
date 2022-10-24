@@ -26,17 +26,6 @@ class Query(val query: String) {
 
     // region parser
     private val errorListener: ErrorListener = ErrorListener()
-    private val stream: CodePointCharStream = CharStreams.fromString(query)
-    private val lexer: QLLexer = QLLexer(stream)
-    private val tokens: CommonTokenStream = CommonTokenStream(lexer)
-    private val parser: QLParser = QLParser(tokens)
-
-    init {
-        lexer.removeErrorListeners()
-        lexer.addErrorListener(errorListener)
-        parser.removeErrorListeners()
-        parser.addErrorListener(errorListener)
-    }
     // endregion
 
     // region data model
@@ -205,15 +194,25 @@ class Query(val query: String) {
     val offset: Map<Scope, Long> = Collections.unmodifiableMap(_offset)
     // endregion
 
+    // region actual parsing
     init {
+        val stream: CodePointCharStream = CharStreams.fromString(query)
+        val lexer = QLLexer(stream)
+        val tokens = CommonTokenStream(lexer)
+        lexer.removeErrorListeners()
+        lexer.addErrorListener(errorListener)
+        val parser = QLParser(tokens)
+        parser.removeErrorListeners()
+        parser.addErrorListener(errorListener)
         val tree = parser.query()
         val walker = ParseTreeWalker()
-        walker.walk(Listener(), tree)
+        walker.walk(Listener(tokens), tree)
         validateSelectAll()
         validateGroupByAttributes()
         if (errorListener.error !== null)
             throw errorListener.error!!
     }
+    // endregion
 
     /**
      * Sets the limits on the numbers of [log]s, [trace]s, and [event]s returned by this query. For query containing a
@@ -419,7 +418,7 @@ class Query(val query: String) {
     override fun toString(): String = query
 
 
-    private inner class Listener : QLParserBaseListener() {
+    private inner class Listener(val tokens: CommonTokenStream) : QLParserBaseListener() {
         override fun exitSelect_all_implicit(ctx: QLParser.Select_all_implicitContext?) {
             _isImplicitSelectAll[Scope.Log] = true
             _isImplicitSelectAll[Scope.Trace] = true
