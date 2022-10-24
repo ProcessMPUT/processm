@@ -20,7 +20,6 @@ val Any?.xesTag
     }
 
 fun Any?.valueToString(): String = when (this) {
-    null -> "null"    //TODO verify
     is Instant -> DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC).format(this)
     is List<*> -> throw IllegalArgumentException("Cannot convert list to string")
     else -> this.toString()

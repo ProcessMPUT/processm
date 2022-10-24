@@ -6,9 +6,14 @@ package processm.core.log.attribute
 interface AttributeMap : Map<String, Any?> {
 
     companion object {
-        //TODO revisit values, possibly ensure that keys supplied by the user don't use character above these two
-        const val EMPTY_KEY = "\uc07f"
-        const val SEPARATOR = "\uc080"
+        //this is not a valid unicode character hence it should not occur in an attribute name. Neither is '\ufffe'
+        private const val SEPARATOR_CHAR = '\uffff'
+        const val SEPARATOR = SEPARATOR_CHAR.toString()
+        const val EMPTY_KEY = (SEPARATOR_CHAR - 1).toString()
+
+        init {
+            assert(EMPTY_KEY == "\ufffe")
+        }
     }
 
     val flat: Map<String, Any?>

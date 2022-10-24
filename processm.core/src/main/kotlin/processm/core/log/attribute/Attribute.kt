@@ -113,13 +113,12 @@ fun Any?.deepEquals(other: Any?): Boolean {
     if (this is Boolean || this is Instant || this is UUID || this is Long || this is Double || this is String) {
         return this == other
     }
-    if (this is MutableAttributeMap && other is MutableAttributeMap) {
-        return this.flat == other.flat && this.flat.entries.all { (k, v) -> v.deepEquals(other[k]) }
+    if (this is AttributeMap) {
+        return other is AttributeMap && this.flat == other.flat && this.flat.entries.all { (k, v) -> v.deepEquals(other[k]) }
     }
-    if (this is List<*> && other is List<*>) {
-        return this.size == other.size && this.withIndex().all { (idx, v) -> v.deepEquals(other[idx]) }
+    if (this is List<*>) {
+        return other is List<*> && this.size == other.size &&
+                this.withIndex().all { (idx, v) -> v.deepEquals(other[idx]) }
     }
-    if (this is AttributeMap && other is AttributeMap)
-        TODO()
     return false
 }

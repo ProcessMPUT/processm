@@ -60,7 +60,6 @@ abstract class XESComponent(
      * @return The value of the attribute.
      * @throws IllegalArgumentException if the attribute with the given name does not exist.
      */
-    //TODO How to distinguish between null as in "no key" and null as in NullAttr
     operator fun get(attributeName: String): Any? = attributesInternal[attributeName]
 
     /**
