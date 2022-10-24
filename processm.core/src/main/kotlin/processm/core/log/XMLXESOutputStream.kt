@@ -1,6 +1,7 @@
 package processm.core.log
 
 import processm.core.Brand
+import processm.core.log.attribute.AttributeMap
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter

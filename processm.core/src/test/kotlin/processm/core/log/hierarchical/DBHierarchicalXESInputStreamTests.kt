@@ -5,6 +5,7 @@ import processm.core.DBTestHelper.dbName
 import processm.core.helpers.hierarchicalCompare
 import processm.core.log.*
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.util.*

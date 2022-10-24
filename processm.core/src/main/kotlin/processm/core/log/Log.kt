@@ -4,6 +4,9 @@ import processm.core.helpers.toUUID
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
+import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.MutableAttributeMap
+import processm.core.log.attribute.unmodifiableView
 import java.util.*
 
 /**
@@ -28,7 +31,7 @@ open class Log(
     /**
      * Global trace attributes for the log.
      */
-    val traceGlobals:AttributeMap
+    val traceGlobals: AttributeMap
         get() = traceGlobalsInternal.unmodifiableView()
 
     /**

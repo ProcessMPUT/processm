@@ -3,7 +3,8 @@ package processm.core.log
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.fastParseISO8601
 import processm.core.helpers.toUUID
-import processm.core.log.attribute.*
+import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.MutableAttributeMap
 import processm.core.logging.logger
 import java.io.InputStream
 import java.text.NumberFormat
@@ -70,8 +71,10 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 when (reader.localName) {
                     "extension" ->
                         addExtensionToLogElement(it, reader)
+
                     "classifier" ->
                         addClassifierToLogElement(it, reader)
+
                     "global" -> {
                         // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
                         // Scope is optional, default 'event'
@@ -85,9 +88,11 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
 
                         addGlobalAttributes(map, reader)
                     }
+
                     in attributeTags -> {
                         parseAttributeTags(reader, reader.localName, it.attributesInternal)
                     }
+
                     else -> {
                         throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
@@ -154,7 +159,11 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun parseAttributeTags(reader: XMLStreamReader, elementName: String, parentStorage: MutableAttributeMap): Any {
+    private fun parseAttributeTags(
+        reader: XMLStreamReader,
+        elementName: String,
+        parentStorage: MutableAttributeMap
+    ): ArrayList<AttributeMap>? {
         val key = with(reader.getAttributeValue(null, "key")) {
             if (this == null) {
                 logger().warn("Missing key in XES log file in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
@@ -169,8 +178,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 ""
             } else this
         }
-        val attribute = castToAttribute(reader.localName, key, value)
-        parentStorage[key] = attribute
+        val attribute = castToAttribute(reader.localName, key, value, parentStorage)
 
         while (reader.hasNext()) {
             reader.next()
@@ -185,7 +193,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                         if (reader.isStartElement) {
                             val storage = MutableAttributeMap()
                             parseAttributeTags(reader, reader.localName, storage)
-                            (attribute as MutableList<AttributeMap>).add(storage)
+                            checkNotNull(attribute).add(storage)
                         } else if (reader.isEndElement) {
                             assert(reader.localName == "values")
                             break
@@ -226,15 +234,27 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun castToAttribute(type: String, key: String, value: String): Any =
+    private fun castToAttribute(
+        type: String,
+        key: String,
+        value: String,
+        storage: MutableAttributeMap
+    ): ArrayList<AttributeMap>? {
         when (type) {
-            "string" -> value
-            "float" -> numberFormatter.parse(value).toDouble()
-            "id" -> requireNotNull(value.toUUID())
-            "int" -> value.toLong()
-            "date" -> value.fastParseISO8601()
-            "boolean" -> value.toBoolean()
-            "list" -> ArrayList<Any>()
+            "string" -> storage[key] = value
+            "float" -> storage[key] = numberFormatter.parse(value).toDouble()
+            "id" -> storage[key] = requireNotNull(value.toUUID())
+            "int" -> storage[key] = value.toLong()
+            "date" -> storage[key] = value.fastParseISO8601()
+            "boolean" -> storage[key] = value.toBoolean()
+            "list" -> {
+                val list = ArrayList<AttributeMap>()
+                storage[key] = list
+                return list
+            }
+
             else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
         }
+        return null
+    }
 }

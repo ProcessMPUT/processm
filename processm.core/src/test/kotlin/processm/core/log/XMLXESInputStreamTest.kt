@@ -5,6 +5,7 @@ import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.ORG_GROUP
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.AttributeMap
 import kotlin.test.*
 
 internal class XMLXESInputStreamTest {

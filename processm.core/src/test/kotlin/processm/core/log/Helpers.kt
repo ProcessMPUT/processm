@@ -29,13 +29,10 @@ object Helpers {
         return Log(tmp.asSequence().map { seq -> Trace(seq.asSequence().map { event(it.activity) }) })
     }
 
-    fun event(name: String, vararg attrs: Pair<String, Any>): Event = Event().apply {
-        attributesInternal[CONCEPT_NAME] = name
-        attributesInternal[LIFECYCLE_TRANSITION] = "complete"
-        //TODO
-        //attributesInternal[CONCEPT_INSTANCE] = NullAttr(CONCEPT_INSTANCE, attributesInternal)
-        for ((key, value) in attrs)
-            attributesInternal[key] = value
+    fun event(name: String, vararg attrs: Pair<String, Any>): Event = Event(mutableAttributeMapOf(*attrs)).apply {
+        attributesInternal.computeIfAbsent(CONCEPT_NAME) { name }
+        attributesInternal.computeIfAbsent(LIFECYCLE_TRANSITION) { "complete" }
+        attributesInternal.computeIfAbsent(CONCEPT_INSTANCE) { null }
         setStandardAttributes(identityMap())
     }
 

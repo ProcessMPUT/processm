@@ -3,6 +3,7 @@ package processm.core.log
 import processm.core.DBTestHelper
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache

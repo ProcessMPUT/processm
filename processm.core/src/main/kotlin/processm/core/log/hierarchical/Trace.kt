@@ -1,7 +1,9 @@
 package processm.core.log.hierarchical
 
-import processm.core.log.*
-import processm.core.log.attribute.Attribute
+import processm.core.log.Event
+import processm.core.log.XESComponent
+import processm.core.log.XESInputStream
+import processm.core.log.attribute.MutableAttributeMap
 import processm.core.log.Trace as BaseTrace
 
 /**

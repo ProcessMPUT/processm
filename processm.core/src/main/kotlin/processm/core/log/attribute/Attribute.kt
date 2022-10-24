@@ -1,10 +1,7 @@
 package processm.core.log.attribute
 
-import processm.core.log.AttributeMap
-import processm.core.log.MutableAttributeMap
 import java.time.Instant
 import java.util.*
-import kotlin.reflect.KClass
 
 /**
  * The base class for the attribute compliant with the XES standard.

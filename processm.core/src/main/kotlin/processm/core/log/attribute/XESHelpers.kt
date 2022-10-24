@@ -1,5 +1,6 @@
 package processm.core.log
 
+import processm.core.log.attribute.AttributeMap
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter

@@ -7,6 +7,7 @@ import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
 import processm.core.log.attribute.Attribute.LIFECYCLE_STATE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing

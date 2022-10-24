@@ -2,11 +2,9 @@ package processm.core.models.causalnet
 
 import io.mockk.every
 import io.mockk.mockk
-import processm.core.log.AttributeMap
 import processm.core.log.Event
-import processm.core.log.MutableAttributeMap
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.Trace
-import processm.core.log.mutableAttributeMapOf
 import kotlin.test.Test
 
 class PoCDecisionModelTest {

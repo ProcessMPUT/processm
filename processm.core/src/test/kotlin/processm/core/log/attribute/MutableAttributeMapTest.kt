@@ -1,4 +1,4 @@
-package processm.core.log
+package processm.core.log.attribute
 
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.*
@@ -7,6 +7,20 @@ import kotlin.test.Test
 class MutableAttributeMapTest {
 
     private lateinit var map: MutableAttributeMap
+
+    private operator fun MutableAttributeMap.set(path: List<String>, value: Long) {
+        var map = this
+        for (key in path.subList(0, path.size - 1))
+            map = map.children(key)
+        map[path.last()] = value
+    }
+
+    private fun MutableAttributeMap.children(path: List<String>): MutableAttributeMap {
+        var map = this
+        for (key in path)
+            map = map.children(key)
+        return map
+    }
 
     private fun create(): MutableAttributeMap {
         val map = MutableAttributeMap()
@@ -136,13 +150,6 @@ class MutableAttributeMapTest {
             assertFalse { submap.containsValue(value) }
         assertThrows<NoSuchElementException> { submap["x"] }
         assertThrows<NoSuchElementException> { submap["d"] }
-    }
-
-    @Test
-    fun `list get`() {
-        assertEquals(3L, map[listOf("a", "b", "c")])
-        assertEquals(23L, map[listOf("a", "b", "c", "x")])
-        assertEquals(4L, map[listOf("a", "b", "d")])
     }
 
     @Test

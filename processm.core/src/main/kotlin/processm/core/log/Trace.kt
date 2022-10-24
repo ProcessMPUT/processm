@@ -5,6 +5,7 @@ import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.COST_CURRENCY
 import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.MutableAttributeMap
 import java.util.*
 
 /**

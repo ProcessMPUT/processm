@@ -1,7 +1,7 @@
 package processm.core.log.hierarchical
 
 import processm.core.DBTestHelper.dbName
-import processm.core.log.AttributeMap.Companion.SEPARATOR
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.querylanguage.Query
 import java.time.Instant

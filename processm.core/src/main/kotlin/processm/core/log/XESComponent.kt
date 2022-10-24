@@ -1,6 +1,9 @@
 package processm.core.log
 
 import processm.core.helpers.identityMap
+import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.MutableAttributeMap
+import processm.core.log.attribute.unmodifiableView
 import java.util.*
 
 /**
