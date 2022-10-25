@@ -6,6 +6,7 @@ import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
+import processm.core.models.petrinet.petrinet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
@@ -114,6 +115,35 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     type = ComponentType.bpmn,
                     xml = javaClass.classLoader.getResourceAsStream("bpmn-mock/pizza-collaboration.bpmn")
                         .bufferedReader().readText() // FIXME: replace the mock with actual implementation
+                )
+            }
+            ComponentTypeDto.PetriNet -> {
+                // TODO: Create network mock (check FitnessTest.kt)
+                val petriNet = petrinet {
+                    P tout "a"
+                    P tin "a" * "f" tout "b" * "c"
+                    P tin "a" * "f" tout "d"
+                    P tin "b" * "c" tout "e"
+                    P tin "d" tout "e"
+                    P tin "e" tout "g" * "h" * "f"
+                    P tin "g" * "h"
+                }
+                val componentDataTransitions = petriNet.transitions.mapToArray {
+                    PetriNetComponentDataAllOfTransitions(
+                        it.name,
+                        it.isSilent,
+                        it.inPlaces.toTypedArray(),
+                        it.outPlaces.toTypedArray()
+                    )
+                }
+                petriNet.transitions.toTypedArray()
+
+                PetriNetComponentData(
+                    type = ComponentType.petriNet,
+                    initialMarking = petriNet.initialMarking,
+                    finalMarking = petriNet.finalMarking,
+                    places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id) },
+                    transitions = componentDataTransitions
                 )
             }
             else -> TODO("Data conversion is not implemented for type $componentType.")

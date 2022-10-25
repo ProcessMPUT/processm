@@ -36,11 +36,11 @@ export default class DuplicateKeysJsonParser {
     "classifier",
     "extension"
   ]);
-  private rootElement: [] | {} | null = null;
+  private rootElement: [] | unknown | null = null;
   private unassignedKeysStack = new Stack<string>();
   private processedElementsStack = new Stack<
-    | Array<{} | string | boolean | null>
-    | { [_: string]: [] | {} | string | boolean | null }
+    | Array<unknown | string | boolean | null>
+    | { [_: string]: [] | unknown | string | boolean | null }
   >();
   private firstError: Error | null = null;
 
@@ -75,7 +75,7 @@ export default class DuplicateKeysJsonParser {
         } else {
           const lastKey = this.unassignedKeysStack.pop();
           if (this.keysWithArrayValue.has(lastKey)) {
-            const parentProperty = (parentElement[lastKey] as Array<{}>) ?? [];
+            const parentProperty = (parentElement[lastKey] as Array<unknown>) ?? [];
 
             parentProperty.push(newObject);
             parentElement[lastKey] = parentProperty;
@@ -101,7 +101,7 @@ export default class DuplicateKeysJsonParser {
     };
 
     this.parser.onopenarray = () => {
-      let newObject = new Array<{}>();
+      let newObject = new Array<unknown>();
 
       if (this.processedElementsStack.isEmpty) {
         this.rootElement = newObject;
@@ -117,7 +117,7 @@ export default class DuplicateKeysJsonParser {
             if (prevObject == null) {
               parentElement[lastKey] = newObject;
             } else {
-              newObject = prevObject as Array<{}>;
+              newObject = prevObject as Array<unknown>;
             }
           } else {
             parentElement[lastKey] = newObject;

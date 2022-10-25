@@ -91,6 +91,6 @@ export default class UserGroupList extends Vue {
     }
   ];
 
-  async fetchUsers() {}
+  async fetchUsers() { /*TODO: not implemented*/ }
 }
 </script>
