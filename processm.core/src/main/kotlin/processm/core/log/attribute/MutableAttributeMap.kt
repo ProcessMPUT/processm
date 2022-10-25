@@ -29,35 +29,35 @@ open class MutableAttributeMap(
 
     private operator fun set(key: String, value: Any?) {
         require(value.isAllowedAttributeValue())
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     open operator fun set(key: String, value: String?) {
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     open operator fun set(key: String, value: Long) {
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     open operator fun set(key: String, value: Double) {
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     open operator fun set(key: String, value: Instant) {
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     open operator fun set(key: String, value: UUID) {
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     open operator fun set(key: String, value: Boolean) {
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     open operator fun set(key: String, value: List<AttributeMap>) {
-        flat[key.intern()] = value
+        flat[key] = value
     }
 
     override operator fun get(key: String): Any? = flat.getValue(key)

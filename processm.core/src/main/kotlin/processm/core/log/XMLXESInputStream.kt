@@ -29,6 +29,8 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
     private var lastSeenElement: String? = null
 
+    private val intern = HashMap<String, String>()
+
     /**
      * Maps standard names of attributes into custom names in the XES document being read.
      */
@@ -240,16 +242,17 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         value: String,
         storage: MutableAttributeMap
     ): ArrayList<AttributeMap>? {
+        val internedKey = intern.computeIfAbsent(key) {it}
         when (type) {
-            "string" -> storage[key] = value
-            "float" -> storage[key] = numberFormatter.parse(value).toDouble()
-            "id" -> storage[key] = requireNotNull(value.toUUID())
-            "int" -> storage[key] = value.toLong()
-            "date" -> storage[key] = value.fastParseISO8601()
-            "boolean" -> storage[key] = value.toBoolean()
+            "string" -> storage[internedKey] = value
+            "float" -> storage[internedKey] = numberFormatter.parse(value).toDouble()
+            "id" -> storage[internedKey] = requireNotNull(value.toUUID())
+            "int" -> storage[internedKey] = value.toLong()
+            "date" -> storage[internedKey] = value.fastParseISO8601()
+            "boolean" -> storage[internedKey] = value.toBoolean()
             "list" -> {
                 val list = ArrayList<AttributeMap>()
-                storage[key] = list
+                storage[internedKey] = list
                 return list
             }
 
