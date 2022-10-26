@@ -7,73 +7,79 @@ import java.util.*
 
 
 internal class MutableAttributeMapWithPrefix(
-    flat: SortedMap<String, Any?> = TreeMap(),
-    private val commonPrefix: String
+    flat: SortedMap<CharSequence, Any?> = TreeMap(),
+    private val commonPrefix: CharSequence
 ) : MutableAttributeMap(flat) {
 
-    private fun valueKey(key: String): String = commonPrefix + key
+    private fun valueKey(key: CharSequence): CharSequence = LazyString(commonPrefix, key)
 
-    private fun childrenKey(key: String): String =
-        commonPrefix + AttributeMap.SEPARATOR + key.ifEmpty { AttributeMap.EMPTY_KEY } + AttributeMap.SEPARATOR
+    private fun childrenKey(key: CharSequence): CharSequence =
+        LazyString(commonPrefix, AttributeMap.SEPARATOR, key.ifEmpty { AttributeMap.EMPTY_KEY }, AttributeMap.SEPARATOR)
 
-    private fun strip(key: String): String {
+    private fun strip(key: CharSequence): CharSequence {
+        //TODO optymalizacja zeby lazystring potrafil efektywnie odcinac swoje prefiksy
         assert(key.length >= commonPrefix.length)
-        assert(key.substring(0, commonPrefix.length) == commonPrefix)
+        assert(key.substring(0, commonPrefix.length) == commonPrefix.toString()) {"LHS: '${key.substring(0, commonPrefix.length)}' RHS: '$commonPrefix'"}
         return key.substring(commonPrefix.length)
     }
 
-    private operator fun set(key: String, value: Any?) {
+    private operator fun set(key: CharSequence, value: Any?) {
         require(value.isAllowedAttributeValue())
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: String?) {
+    override operator fun set(key: CharSequence, value: String?) {
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: Long) {
+    override operator fun set(key: CharSequence, value: Long) {
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: Double) {
+    override operator fun set(key: CharSequence, value: Double) {
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: Instant) {
+    override operator fun set(key: CharSequence, value: Instant) {
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: UUID) {
+    override operator fun set(key: CharSequence, value: UUID) {
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: Boolean) {
+    override operator fun set(key: CharSequence, value: Boolean) {
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: List<AttributeMap>) {
+    override operator fun set(key: CharSequence, value: List<AttributeMap>) {
         flat[valueKey(key)] = value
     }
 
-    override operator fun get(key: String): Any? = flat.getValue(valueKey(key))
+    override operator fun get(key: CharSequence): Any? = flat.getValue(valueKey(key))
 
-    override fun getOrNull(key: String?): Any? = if (key !== null) flat[valueKey(key)] else null
-    override val childrenKeys: Set<String>
+    override fun getOrNull(key: CharSequence?): Any? = if (key !== null) flat[valueKey(key)] else null
+    override val childrenKeys: Set<CharSequence>
         get() {
-            val prefix = commonPrefix + AttributeMap.SEPARATOR
-            return flat.subMap(prefix, prefix + AttributeMap.SEPARATOR).keys.mapToSet {
+            val prefix = LazyString(commonPrefix, AttributeMap.SEPARATOR)
+            return flat.subMap(prefix, LazyString(prefix, AttributeMap.SEPARATOR)).keys.mapToSet {
                 val end = it.indexOf(AttributeMap.SEPARATOR, prefix.length)
                 it.substring(prefix.length, end).replace(AttributeMap.EMPTY_KEY, "")
             }
         }
 
-    override fun children(key: String): MutableAttributeMap {
+    override fun children(key: CharSequence): MutableAttributeMap {
         val s = childrenKey(key)
-        return MutableAttributeMapWithPrefix(flat.subMap(s, s + AttributeMap.SEPARATOR + AttributeMap.SEPARATOR), s)
+        return MutableAttributeMapWithPrefix(
+            flat.subMap(
+                s,
+                LazyString(s, AttributeMap.SEPARATOR, AttributeMap.SEPARATOR)
+            ), s
+        )
     }
 
-    override val top: MutableMap<String, Any?>
-        get() = flat.subMap(commonPrefix, commonPrefix + AttributeMap.SEPARATOR)
+    override val top: MutableMap<CharSequence, Any?>
+        get() = flat.subMap(commonPrefix, LazyString(commonPrefix, AttributeMap.SEPARATOR))
 
     private class RewritingIterator<T>(val baseIterator: Iterator<T>, val from: (T) -> T) :
         Iterator<T> by baseIterator {
@@ -96,17 +102,20 @@ internal class MutableAttributeMapWithPrefix(
 
     }
 
-    private class RewritingEntry<V>(val base: MutableMap.MutableEntry<String, V>, val from: (String) -> String) :
-        MutableMap.MutableEntry<String, V> by base {
-        override val key: String
+    private class RewritingEntry<V>(
+        val base: MutableMap.MutableEntry<CharSequence, V>,
+        val from: (CharSequence) -> CharSequence
+    ) :
+        MutableMap.MutableEntry<CharSequence, V> by base {
+        override val key: CharSequence
             get() = from(base.key)
     }
 
-    override val entries: Set<Map.Entry<String, Any?>>
+    override val entries: Set<Map.Entry<CharSequence, Any?>>
         get() = RewritingSet(top.entries, { RewritingEntry(it, ::strip) }, { (it as RewritingEntry).base })
-    override val keys: Set<String>
-        get() = RewritingSet(top.keys, ::strip) { commonPrefix + it }
+    override val keys: Set<CharSequence>
+        get() = RewritingSet(top.keys, ::strip) { LazyString(commonPrefix, it) }
 
-    override fun containsKey(key: String): Boolean = top.containsKey(valueKey(key))
+    override fun containsKey(key: CharSequence): Boolean = top.containsKey(valueKey(key))
 
 }

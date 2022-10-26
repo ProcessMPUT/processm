@@ -161,7 +161,7 @@ class XMLXESOutputStream(
      */
     private fun writeAttributes(attributes: AttributeMap) {
         for ((key, value) in attributes.entries.let { if (sortAttributesByType) it.sortedBy { (k, _) -> k.xesTag } else it })
-            writeAttribute(key, value, attributes.children(key))
+            writeAttribute(key.toString(), value, attributes.children(key))
     }
 
     /**
@@ -173,7 +173,7 @@ class XMLXESOutputStream(
             output.writeAttribute("scope", scope)
 
             for ((key, global) in globals.entries) {
-                writeAttribute(key, global, globals.children(key))
+                writeAttribute(key.toString(), global, globals.children(key))
             }
 
             output.writeEndElement()

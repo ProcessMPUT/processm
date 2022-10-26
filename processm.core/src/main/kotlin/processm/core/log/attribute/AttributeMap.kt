@@ -3,7 +3,7 @@ package processm.core.log.attribute
 /**
  * Attention! [get] throws if the key is not in the map instead of returning `null`.
  */
-interface AttributeMap : Map<String, Any?> {
+interface AttributeMap : Map<CharSequence, Any?> {
 
     companion object {
         //this is not a valid unicode character hence it should not occur in an attribute name. Neither is '\ufffe'
@@ -16,10 +16,10 @@ interface AttributeMap : Map<String, Any?> {
         }
     }
 
-    val flat: Map<String, Any?>
+    val flat: Map<out CharSequence, Any?>
 
-    fun getOrNull(key: String?): Any?
+    fun getOrNull(key: CharSequence?): Any?
 
-    val childrenKeys: Set<String>
-    fun children(key: String): AttributeMap
+    val childrenKeys: Set<CharSequence>
+    fun children(key: CharSequence): AttributeMap
 }

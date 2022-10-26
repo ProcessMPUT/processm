@@ -5,11 +5,11 @@ import java.util.*
 
 class UnmodifiableAttributeMap(private val base: AttributeMap) : AttributeMap by base {
 
-    override fun children(key: String): AttributeMap = UnmodifiableAttributeMap(base.children(key))
+    override fun children(key: CharSequence): AttributeMap = UnmodifiableAttributeMap(base.children(key))
 
-    override val entries: Set<Map.Entry<String, Any?>>
+    override val entries: Set<Map.Entry<CharSequence, Any?>>
         get() = Collections.unmodifiableSet(base.entries)
-    override val keys: Set<String>
+    override val keys: Set<CharSequence>
         get() = Collections.unmodifiableSet(base.keys)
     override val values: Collection<Any?>
         get() = Collections.unmodifiableCollection(base.values)

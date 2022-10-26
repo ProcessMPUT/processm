@@ -63,7 +63,7 @@ open class DBHierarchicalXESInputStreamWithQueryTestsBase {
         // This is because XESInputStream implementations are required to only map custom attributes to standard attributes
         // but not otherwise.
         fun cmp(standard: Any?, standardName: String) =
-            assertTrue(!component.attributes.containsKey(nameMap[standardName]) || standard == component.attributes[nameMap[standardName]])
+            assertTrue(!component.attributes.containsKey(nameMap[standardName]!!) || standard == component.attributes[nameMap[standardName]!!])
 
         cmp(component.conceptName, CONCEPT_NAME)
         cmp(component.identityId, IDENTITY_ID)
