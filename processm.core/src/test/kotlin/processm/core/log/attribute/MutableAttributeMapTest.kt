@@ -163,8 +163,8 @@ class MutableAttributeMapTest {
     fun `secondary constructor and equals with a map of other type`() {
         val base = mapOf<String, Any?>("a" to 1L, "b" to 2L)
         val map = MutableAttributeMap(base)
-        assertEquals(base as Map<CharSequence, Any?>, map)
-        assertEquals(map as Map<CharSequence, Any?>, base)
+        assertEquals(base, map)
+        assertEquals(map, base)
     }
 
     @Test
