@@ -293,86 +293,60 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         if (attributes.isEmpty())
             return
 
-        fun addAttributes(
-            attributes: List<AttributeMap>,
-            parentTableNumber: Int = 0,
-            parentRowIndex: Int = 0,
-            topMost: Boolean = true,
-            inList: Boolean? = null
-        ) {
-            // This function preserves the order of attributes on each level of the tree but does not preserve the order
-            // between the levels. This is enough to preserve the order of list attribute. It cannot use the (straightforward)
-            // depth-first-search algorithm, as writable common table extensions in PostgreSQL are evaluated concurrently.
-            // From https://www.postgresql.org/docs/current/queries-with.html:
-            // The sub-statements in WITH are executed concurrently with each other and with the main query. Therefore,
-            // when using data-modifying statements in WITH, the order in which the specified updates actually happen is
-            // unpredictable. All the statements are executed with the same snapshot (see Chapter 13), so they cannot
-            // “see” one another's effects on the target tables. This alleviates the effects of the unpredictability of
-            // the actual order of row updates, and means that RETURNING data is the only way to communicate changes
-            // between different WITH sub-statements and the main query.
-            val myTableNumber = ++to.attrSeq
-            with(to.sql) {
-                append(", attributes$myTableNumber AS (")
-                append(
-                    "INSERT INTO $destinationTable(${rootTempTable}_id, key, type, " +
-                            "string_value, uuid_value, date_value, int_value, bool_value, real_value, " +
-                            "parent_id, in_list_attr${extraColumns.keys.join()}) "
-                )
-                append(
-                    "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
-                            "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
-                            "${if (topMost) "NULL" else "(SELECT id FROM attributes$parentTableNumber ORDER BY id LIMIT 1 OFFSET $parentRowIndex)"}, " +
-                            "a.in_list_attr${extraColumns.values.join { "'$it'" }} FROM (VALUES "
-                )
-            }
-            with(to) {
-                var first = true
-                for (attributeMap in attributes) {
-                    for (attribute in attributeMap.flat) {
-                        sql.append("(?,'${attribute.value.xesTag}'")
-                        if (first)
-                            sql.append("::attribute_type")
-                        sql.append(',')
-                        params.addLast(attribute.key)
-                        writeTypedAttribute(attribute.value, String::class, to, first)
-                        writeTypedAttribute(attribute.value, UUID::class, to, first)
-                        writeTypedAttribute(attribute.value, Instant::class, to, first)
-                        writeTypedAttribute(attribute.value, Long::class, to, first)
-                        writeTypedAttribute(attribute.value, Boolean::class, to, first)
-                        writeTypedAttribute(attribute.value, Double::class, to, first)
-                        sql.append(inList)
-                        if (first) {
-                            sql.append("::boolean")
-                            first = false
-                        }
-                        sql.append("),")
-                    }
+        // This function preserves the order of attributes on each level of the tree but does not preserve the order
+        // between the levels. This is enough to preserve the order of list attribute. It cannot use the (straightforward)
+        // depth-first-search algorithm, as writable common table extensions in PostgreSQL are evaluated concurrently.
+        // From https://www.postgresql.org/docs/current/queries-with.html:
+        // The sub-statements in WITH are executed concurrently with each other and with the main query. Therefore,
+        // when using data-modifying statements in WITH, the order in which the specified updates actually happen is
+        // unpredictable. All the statements are executed with the same snapshot (see Chapter 13), so they cannot
+        // “see” one another's effects on the target tables. This alleviates the effects of the unpredictability of
+        // the actual order of row updates, and means that RETURNING data is the only way to communicate changes
+        // between different WITH sub-statements and the main query.
+        val myTableNumber = ++to.attrSeq
+        with(to.sql) {
+            append(", attributes$myTableNumber AS (")
+            append(
+                "INSERT INTO $destinationTable(${rootTempTable}_id, key, type, " +
+                        "string_value, uuid_value, date_value, int_value, bool_value, real_value, " +
+                        "parent_id, in_list_attr${extraColumns.keys.join()}) "
+            )
+            append(
+                "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
+                        "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
+                        "NULL, " +
+                        "a.in_list_attr${extraColumns.values.join { "'$it'" }} FROM (VALUES "
+            )
+        }
+        with(to) {
+            var first = true
+            for (attribute in attributes.flat) {
+                sql.append("(?,'${attribute.value.xesTag}'")
+                if (first)
+                    sql.append("::attribute_type")
+                sql.append(',')
+                params.addLast(attribute.key)
+                writeTypedAttribute(attribute.value, String::class, to, first)
+                writeTypedAttribute(attribute.value, UUID::class, to, first)
+                writeTypedAttribute(attribute.value, Instant::class, to, first)
+                writeTypedAttribute(attribute.value, Long::class, to, first)
+                writeTypedAttribute(attribute.value, Boolean::class, to, first)
+                writeTypedAttribute(attribute.value, Double::class, to, first)
+                sql.append(null as Boolean?)    //inList
+                if (first) {
+                    sql.append("::boolean")
+                    first = false
                 }
-                assert(!first)
+                sql.append("),")
             }
-
-            with(to.sql) {
-                deleteCharAt(length - 1)
-                append(") a(key,type,string_value,uuid_value,date_value,int_value,bool_value,real_value,in_list_attr) ")
-                append("RETURNING id)")
-            }
-
-            // Handle children and lists
-            var index = 0
-            for (attributeMap in attributes) {
-                for (attribute in attributeMap.flat) {
-                    val (key, value) = attribute
-
-                    // Handle list
-                    if (value is List<*> && value.isNotEmpty()) {
-                        addAttributes(value as List<AttributeMap>, myTableNumber, index, false, true)
-                    }
-                    index++
-                }
-            }
+            assert(!first)
         }
 
-        addAttributes(listOf(attributes))
+        with(to.sql) {
+            deleteCharAt(length - 1)
+            append(") a(key,type,string_value,uuid_value,date_value,int_value,bool_value,real_value,in_list_attr) ")
+            append("RETURNING id)")
+        }
     }
 
     protected fun writeTypedAttribute(attribute: Any?, type: KClass<*>, to: SQL, writeCast: Boolean) {

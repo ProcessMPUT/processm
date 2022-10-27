@@ -130,9 +130,8 @@ class XMLXESOutputStream(
                 output.writeAttribute("value", value.valueToString())
                 writeAttributes(children)
             } else {
-                assert(value is List<*>)
                 writeAttributes(children)
-                writeListAttributes(value as List<AttributeMap>)
+                writeListAttributes(children.asList())
             }
 
             output.writeEndElement()

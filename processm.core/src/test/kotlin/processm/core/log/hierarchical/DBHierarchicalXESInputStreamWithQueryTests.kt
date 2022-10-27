@@ -3,6 +3,7 @@ package processm.core.log.hierarchical
 import processm.core.DBTestHelper.dbName
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.querylanguage.Query
 import java.time.Instant
 import kotlin.math.max
@@ -881,7 +882,7 @@ class DBHierarchicalXESInputStreamWithQueryTests : DBHierarchicalXESInputStreamW
 
     @Test
     fun `where on a nested attribute`() {
-        val stream = DBHierarchicalXESInputStream(dbName, Query("where (l:id=$hospital or l:id=$journal) and [l:${SEPARATOR}meta_org:group_events_average${SEPARATOR}Maternity ward]='0.016' limit l:1, t:1, e:1"), true)
+        val stream = DBHierarchicalXESInputStream(dbName, Query("where (l:id=$hospital or l:id=$journal) and [l:${SEPARATOR}${STRING_MARKER}meta_org:group_events_average${SEPARATOR}Maternity ward]='0.016' limit l:1, t:1, e:1"), true)
         val log = stream.first()
         assertEquals(1.728, log.attributes.children("meta_org:group_events_average")["Pathology"])
     }

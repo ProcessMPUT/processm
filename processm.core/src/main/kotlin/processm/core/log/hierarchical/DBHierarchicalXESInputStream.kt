@@ -17,6 +17,7 @@ import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.attribute.Attribute.XES_FEATURES
 import processm.core.log.attribute.Attribute.XES_VERSION
+import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -450,17 +451,16 @@ class DBHierarchicalXESInputStream(
         if (!resultSet.next())
             return
 
+        var ctr = 0
         if (resultSet.getLong("parent_id") != attrId) {
             return
         } else {
             do {
                 val isInsideList = resultSet.getBoolean("in_list_attr")
-                val storage = if (isInsideList) MutableAttributeMap() else parentStorage.children(key)
+                var storage = parentStorage.children(key)
+                if (isInsideList)
+                    storage = storage.children(ctr++)
                 readRecordsIntoAttributes(resultSet, storage)
-                if (isInsideList) {
-                    assert(attr is MutableList<*>)
-                    (attr as MutableList<AttributeMap>).add(storage)
-                }
             } while (!resultSet.isEnded && resultSet.getLong("parent_id") == attrId)
         }
     }
@@ -480,7 +480,7 @@ class DBHierarchicalXESInputStream(
 
                 'd' -> getTimestamp("date_value", gmtCalendar).toInstant()
                 'b' -> getBoolean("bool_value")
-                'l' -> ArrayList<Any>()
+                'l' -> LIST_TAG
                 else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
             }
         }

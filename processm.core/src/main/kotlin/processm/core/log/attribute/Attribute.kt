@@ -110,15 +110,11 @@ object Attribute {
 fun Any?.deepEquals(other: Any?): Boolean {
     if (this === null)
         return other === null
-    if (this is Boolean || this is Instant || this is UUID || this is Long || this is Double || this is String) {
+    if (this is Boolean || this is Instant || this is UUID || this is Long || this is Double || this is String || this is Tag) {
         return this == other
     }
     if (this is AttributeMap) {
         return other is AttributeMap && this.flat == other.flat && this.flat.entries.all { (k, v) -> v.deepEquals(other[k]) }
-    }
-    if (this is List<*>) {
-        return other is List<*> && this.size == other.size &&
-                this.withIndex().all { (idx, v) -> v.deepEquals(other[idx]) }
     }
     return false
 }

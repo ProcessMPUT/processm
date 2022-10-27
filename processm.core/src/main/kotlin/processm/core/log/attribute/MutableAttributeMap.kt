@@ -1,8 +1,9 @@
 package processm.core.log.attribute
 
 import processm.core.helpers.mapToSet
-import processm.core.log.attribute.AttributeMap.Companion.EMPTY_KEY
+import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
+import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.log.isAllowedAttributeValue
 import java.time.Instant
 import java.util.*
@@ -23,8 +24,11 @@ open class MutableAttributeMap(
         map.entries.forEach { this[it.key] = it.value }
     }
 
-    private fun childrenKey(key: String): String =
-        SEPARATOR + key.ifEmpty { EMPTY_KEY } + SEPARATOR
+    protected open fun childrenKey(key: String): String =
+        SEPARATOR + STRING_MARKER + key + SEPARATOR
+
+    protected open fun childrenKey(key: Int): String =
+        SEPARATOR + INT_MARKER + key + SEPARATOR
 
 
     private operator fun set(key: String, value: Any?) {
@@ -56,23 +60,34 @@ open class MutableAttributeMap(
         flat[key] = value
     }
 
-    open operator fun set(key: String, value: List<AttributeMap>) {
+    open operator fun set(key: String, value: Tag) {
         flat[key] = value
     }
 
     override operator fun get(key: String): Any? = flat.getValue(key)
 
     override fun getOrNull(key: String?): Any? = if (key !== null) flat[key] else null
-    override val childrenKeys: Set<String>
-        get() {
-            val prefix = SEPARATOR
-            return flat.subMap(prefix, prefix + SEPARATOR).keys.mapToSet {
-                val end = it.indexOf(SEPARATOR, prefix.length)
-                it.substring(prefix.length, end).replace(EMPTY_KEY, "")
-            }
+
+    protected fun childrenKeys(prefix: String): Set<Any> = flat.subMap(prefix, prefix + SEPARATOR).keys.mapToSet {
+        val end = it.indexOf(SEPARATOR, prefix.length)
+        val s = it.substring(prefix.length, end)
+        if (s[0] == STRING_MARKER)
+            s.substring(1, s.length)
+        else {
+            assert(s[0] == INT_MARKER)
+            s.substring(1, s.length).toInt()
         }
+    }
+
+    override val childrenKeys: Set<Any>
+        get() = childrenKeys(SEPARATOR)
 
     override fun children(key: String): MutableAttributeMap {
+        val s = childrenKey(key)
+        return MutableAttributeMapWithPrefix(flat.subMap(s, s + SEPARATOR + SEPARATOR), s)
+    }
+
+    override fun children(key: Int): MutableAttributeMap {
         val s = childrenKey(key)
         return MutableAttributeMapWithPrefix(flat.subMap(s, s + SEPARATOR + SEPARATOR), s)
     }
@@ -130,7 +145,6 @@ fun mutableAttributeMapOf(vararg pairs: Pair<String, Any?>): MutableAttributeMap
                 is String -> set(k, v)
                 is Long -> set(k, v)
                 is Double -> set(k, v)
-                is List<*> -> set(k, v as List<AttributeMap>)
                 is Instant -> set(k, v)
                 is UUID -> set(k, v)
                 is Boolean -> set(k, v)

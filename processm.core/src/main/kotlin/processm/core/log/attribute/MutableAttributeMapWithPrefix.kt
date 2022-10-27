@@ -1,20 +1,24 @@
 package processm.core.log.attribute
 
-import processm.core.helpers.mapToSet
+import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
+import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.log.isAllowedAttributeValue
 import java.time.Instant
 import java.util.*
 
 
 internal class MutableAttributeMapWithPrefix(
-    flat: SortedMap<String, Any?> = TreeMap(),
+    flat: SortedMap<String, Any?>,
     private val commonPrefix: String
 ) : MutableAttributeMap(flat) {
 
     private fun valueKey(key: String): String = commonPrefix + key
 
-    private fun childrenKey(key: String): String =
-        commonPrefix + AttributeMap.SEPARATOR + key.ifEmpty { AttributeMap.EMPTY_KEY } + AttributeMap.SEPARATOR
+    override fun childrenKey(key: String): String =
+        commonPrefix + AttributeMap.SEPARATOR + STRING_MARKER + key + AttributeMap.SEPARATOR
+
+    override fun childrenKey(key: Int): String =
+        commonPrefix + AttributeMap.SEPARATOR + INT_MARKER + key + AttributeMap.SEPARATOR
 
     private fun strip(key: String): String {
         assert(key.length >= commonPrefix.length)
@@ -51,26 +55,15 @@ internal class MutableAttributeMapWithPrefix(
         flat[valueKey(key)] = value
     }
 
-    override operator fun set(key: String, value: List<AttributeMap>) {
+    override operator fun set(key: String, value: Tag) {
         flat[valueKey(key)] = value
     }
 
     override operator fun get(key: String): Any? = flat.getValue(valueKey(key))
 
     override fun getOrNull(key: String?): Any? = if (key !== null) flat[valueKey(key)] else null
-    override val childrenKeys: Set<String>
-        get() {
-            val prefix = commonPrefix + AttributeMap.SEPARATOR
-            return flat.subMap(prefix, prefix + AttributeMap.SEPARATOR).keys.mapToSet {
-                val end = it.indexOf(AttributeMap.SEPARATOR, prefix.length)
-                it.substring(prefix.length, end).replace(AttributeMap.EMPTY_KEY, "")
-            }
-        }
-
-    override fun children(key: String): MutableAttributeMap {
-        val s = childrenKey(key)
-        return MutableAttributeMapWithPrefix(flat.subMap(s, s + AttributeMap.SEPARATOR + AttributeMap.SEPARATOR), s)
-    }
+    override val childrenKeys: Set<Any>
+        get() = childrenKeys(commonPrefix + AttributeMap.SEPARATOR)
 
     override val top: MutableMap<String, Any?>
         get() = flat.subMap(commonPrefix, commonPrefix + AttributeMap.SEPARATOR)

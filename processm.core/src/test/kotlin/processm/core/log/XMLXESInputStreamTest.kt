@@ -141,7 +141,7 @@ internal class XMLXESInputStreamTest {
                 receivedLog.eventGlobals.getValue(TIME_TIMESTAMP),
                 "1970-01-01T01:00:00.000+01:00".parseISO8601()
             )
-            with(receivedLog.eventGlobals.getValue("globalListKey") as List<AttributeMap>) {
+            with(receivedLog.eventGlobals.children("globalListKey").asList() as List<AttributeMap>) {
                 val children = receivedLog.eventGlobals.children("globalListKey")
                 assertEquals(1, children.size)
                 assertEquals(25L, children["intInsideListKey"])
@@ -263,7 +263,7 @@ internal class XMLXESInputStreamTest {
             val iterator = XMLXESInputStream(stream).iterator()
 
             val receivedLog: Log = iterator.next() as Log
-            val listAttr = receivedLog.attributes.getValue("listKey") as List<AttributeMap>
+            val listAttr = receivedLog.attributes.children("listKey").asList()
 
             assertEquals(22L, receivedLog.attributes.children("listKey").getValue("intInsideListKey"))
 

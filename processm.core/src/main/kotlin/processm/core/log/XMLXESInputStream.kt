@@ -3,7 +3,7 @@ package processm.core.log
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.fastParseISO8601
 import processm.core.helpers.toUUID
-import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
 import processm.core.log.attribute.MutableAttributeMap
 import processm.core.logging.logger
 import java.io.InputStream
@@ -165,7 +165,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         reader: XMLStreamReader,
         elementName: String,
         parentStorage: MutableAttributeMap
-    ): ArrayList<AttributeMap>? {
+    ) {
         val key = with(reader.getAttributeValue(null, "key")) {
             if (this == null) {
                 logger().warn("Missing key in XES log file in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
@@ -189,13 +189,13 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 break
             } else if (reader.isStartElement) {
                 if (reader.localName == "values") {
+                    var ctr = 0
+                    val list = parentStorage.children(key)
                     while (reader.hasNext()) {
                         reader.next()
 
                         if (reader.isStartElement) {
-                            val storage = MutableAttributeMap()
-                            parseAttributeTags(reader, reader.localName, storage)
-                            checkNotNull(attribute).add(storage)
+                            parseAttributeTags(reader, reader.localName, list.children(ctr++))
                         } else if (reader.isEndElement) {
                             assert(reader.localName == "values")
                             break
@@ -206,8 +206,6 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 }
             }
         }
-
-        return attribute
     }
 
     private fun parseTraceOrEventTag(reader: XMLStreamReader, xesComponent: XESComponent) {
@@ -241,8 +239,8 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         key: String,
         value: String,
         storage: MutableAttributeMap
-    ): ArrayList<AttributeMap>? {
-        val internedKey = intern.computeIfAbsent(key) {it}
+    ) {
+        val internedKey = intern.computeIfAbsent(key) { it }
         when (type) {
             "string" -> storage[internedKey] = value
             "float" -> storage[internedKey] = numberFormatter.parse(value).toDouble()
@@ -250,14 +248,9 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             "int" -> storage[internedKey] = value.toLong()
             "date" -> storage[internedKey] = value.fastParseISO8601()
             "boolean" -> storage[internedKey] = value.toBoolean()
-            "list" -> {
-                val list = ArrayList<AttributeMap>()
-                storage[internedKey] = list
-                return list
-            }
+            "list" -> storage[internedKey] = LIST_TAG
 
             else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
         }
-        return null
     }
 }

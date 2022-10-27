@@ -263,8 +263,6 @@ internal class TranslatedQuery(
         val attrTable = table ?: (scope.toString() + "s_attributes")
         with(it.query) {
             append("WITH ")
-            if (readNestedAttributes)
-                append("RECURSIVE ")
             append("tmp AS (")
             selectAttributes(scope, attrTable, extraColumns, it)
             append(", ARRAY[ids.ord, $attrTable.id] AS path")
@@ -272,13 +270,6 @@ internal class TranslatedQuery(
             append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
             it.params.add(idPlaceholder)
             whereAttributes(scope, it, logId)
-            if (readNestedAttributes) {
-                append(" UNION ALL ")
-                selectAttributes(scope, attrTable, extraColumns, it)
-                append(", path || $attrTable.id")
-                append(" FROM $attrTable")
-                append(" JOIN tmp ON $attrTable.parent_id=tmp.id AND $attrTable.parent_id IS NOT NULL")
-            }
             append(") ")
             selectAttributes(scope, "tmp", extraColumns, it)
             append(" FROM tmp")

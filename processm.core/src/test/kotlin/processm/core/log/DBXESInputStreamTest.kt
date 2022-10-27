@@ -150,7 +150,7 @@ internal class DBXESInputStreamTest {
                     assertEquals(size, 1)
                     assertEquals(getValue("intInsideListKey"), 12L)
                 }
-                with(getValue("listKey") as List<*>) {
+                with(children("listKey").asList()) {
                     assertEquals(this.size, 2)
                     assertIs<AttributeMap>(this[0])
                     assertIs<AttributeMap>(this[1])
