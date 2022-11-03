@@ -279,15 +279,15 @@ internal class TranslatedQuery(
 
     private fun selectAttributes(scope: Scope, table: String, extraColumns: Set<String>, sql: MutableSQLQuery) {
         sql.query.append(
-            """SELECT $table.id, $table.${scope}_id, $table.parent_id, $table.type, $table.key,
-            $table.string_value, $table.uuid_value, $table.date_value, $table.int_value, $table.bool_value, $table.real_value, $table.in_list_attr
+            """SELECT $table.id, $table.${scope}_id, $table.type, $table.key,
+            $table.string_value, $table.uuid_value, $table.date_value, $table.int_value, $table.bool_value, $table.real_value
             ${extraColumns.join { "$table.$it" }}"""
         )
     }
 
     private fun whereAttributes(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
         with(sql.query) {
-            append(" WHERE parent_id IS NULL ")
+            append(" WHERE 1=1 ")
 
             if(!readNestedAttributes)
                 append("AND NOT starts_with(key, '$SEPARATOR') ")
@@ -472,8 +472,8 @@ internal class TranslatedQuery(
 
     private fun selectGroupAttributes(scope: Scope, sql: MutableSQLQuery) {
         sql.query.append(
-            """SELECT DISTINCT ON(ids.ord, a.key) ids.ord AS id, ids.ord+? AS ${scope}_id, NULL AS parent_id, 
-            a.type, a.key, a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, a.in_list_attr"""
+            """SELECT DISTINCT ON(ids.ord, a.key) ids.ord AS id, ids.ord+? AS ${scope}_id, 
+            a.type, a.key, a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value"""
         )
         sql.params.add(idOffsetPlaceholder)
     }

@@ -308,14 +308,13 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
             append(", attributes$myTableNumber AS (")
             append(
                 "INSERT INTO $destinationTable(${rootTempTable}_id, key, type, " +
-                        "string_value, uuid_value, date_value, int_value, bool_value, real_value, " +
-                        "parent_id, in_list_attr${extraColumns.keys.join()}) "
+                        "string_value, uuid_value, date_value, int_value, bool_value, real_value" +
+                        "${extraColumns.keys.join()}) "
             )
             append(
                 "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
-                        "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
-                        "NULL, " +
-                        "a.in_list_attr${extraColumns.values.join { "'$it'" }} FROM (VALUES "
+                        "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value" +
+                        "${extraColumns.values.join { "'$it'" }} FROM (VALUES "
             )
         }
         with(to) {
@@ -332,11 +331,9 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 writeTypedAttribute(attribute.value, Long::class, to, first)
                 writeTypedAttribute(attribute.value, Boolean::class, to, first)
                 writeTypedAttribute(attribute.value, Double::class, to, first)
-                sql.append(null as Boolean?)    //inList
-                if (first) {
-                    sql.append("::boolean")
+                sql.deleteCharAt(sql.length - 1)
+                if (first)
                     first = false
-                }
                 sql.append("),")
             }
             assert(!first)
@@ -344,7 +341,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
 
         with(to.sql) {
             deleteCharAt(length - 1)
-            append(") a(key,type,string_value,uuid_value,date_value,int_value,bool_value,real_value,in_list_attr) ")
+            append(") a(key,type,string_value,uuid_value,date_value,int_value,bool_value,real_value) ")
             append("RETURNING id)")
         }
     }

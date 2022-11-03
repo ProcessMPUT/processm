@@ -444,25 +444,9 @@ class DBHierarchicalXESInputStream(
     ) {
         val key = resultSet.getString("key")
         val attr = attributeFromRecord(resultSet)
-        val attrId = resultSet.getLong("id")
 
         parentStorage.flat[key] = attr
-
-        if (!resultSet.next())
-            return
-
-        var ctr = 0
-        if (resultSet.getLong("parent_id") != attrId) {
-            return
-        } else {
-            do {
-                val isInsideList = resultSet.getBoolean("in_list_attr")
-                var storage = parentStorage.children(key)
-                if (isInsideList)
-                    storage = storage.children(ctr++)
-                readRecordsIntoAttributes(resultSet, storage)
-            } while (!resultSet.isEnded && resultSet.getLong("parent_id") == attrId)
-        }
+        resultSet.next()
     }
 
     private fun attributeFromRecord(record: ResultSet): Any {
