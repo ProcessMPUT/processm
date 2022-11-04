@@ -8,10 +8,12 @@ import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.ORG_GROUP
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.attribute.AttributeMap
+import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import kotlin.test.*
 import java.io.File
+import java.util.*
+import kotlin.test.*
 
 internal class DBXESInputStreamTest {
     private val content: String = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -270,10 +272,23 @@ internal class DBXESInputStreamTest {
         assertFalse(stream.hasNext())
     }
 
+    @Ignore("This test is slow and `reading a log with over 65536 traces all at once` should test exactly the same thing in 1/100 of the time")
     @Test
     @Tag("slow")
     fun `too many parameters while reading Hospital_Billing-Event_Log from DB`() {
         val uuid = DBTestHelper.loadLog(File("../xes-logs/Hospital_Billing-Event_Log.xes.gz"))
+        DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
+    }
+
+    @Test
+    fun `reading a log with over 65536 traces all at once`() {
+        val traces = List(65537) { processm.core.log.hierarchical.Trace(sequenceOf(Event())) }
+        val log = processm.core.log.hierarchical.Log(traces.asSequence())
+        val uuid = UUID.randomUUID()
+        log.identityId = uuid
+        DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
+            output.write(log.toFlatSequence())
+        }
         DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
     }
 
