@@ -51,7 +51,47 @@ internal class MutableSQLQuery {
     val scopes: MutableSet<ScopeWithMetadata> = HashSet()
 }
 
-internal fun Collection<SQLQuery>.executeMany(connection: Connection, vararg params: List<Any>): List<ResultSet> {
+internal fun List<SQLQuery>.executeMany(connection: Connection, vararg params: List<Any>): List<ResultSet> {
+    fun handleBatch(first: Int, endExclusive: Int, result: MutableList<ResultSet>) {
+        val queriesBatch = this.subList(first, endExclusive)
+        val paramsBatch = if (params.size < first) emptyArray()
+        else params.sliceArray(first until endExclusive.coerceAtMost(params.size))
+        queriesBatch.executeManyNoSplitting(connection, result, paramsBatch)
+    }
+
+    val nParams =
+        this.withIndex().map { (index, query) -> (if (index >= params.size) query.params else params[index]).size }
+    val limit = 65535
+    require(nParams.all { it <= limit }) { "Cannot handle a single query with at least $limit parameters due to the limitations of PostgreSQL" }
+    if (nParams.sum() < limit) {
+        val result = ArrayList<ResultSet>(this.size)
+        this.executeManyNoSplitting(connection, result, params)
+        return result
+    }
+
+    var sumSoFar = 0
+    var start = 0
+    val result = ArrayList<ResultSet>(this.size)
+    for ((index, n) in nParams.withIndex()) {
+        if (sumSoFar + n >= limit) {
+            assert(start < index)
+            handleBatch(start, index, result)
+            start = index
+            sumSoFar = n
+        } else
+            sumSoFar += n
+    }
+    assert(sumSoFar < limit)
+    handleBatch(start, nParams.size, result)
+    assert(this.size == result.size)
+    return result
+}
+
+private fun Collection<SQLQuery>.executeManyNoSplitting(
+    connection: Connection,
+    result: MutableList<ResultSet>,
+    params: Array<out List<Any>>
+) {
     val ts = System.currentTimeMillis()
 
     val sql = StringBuilder()
@@ -74,18 +114,13 @@ internal fun Collection<SQLQuery>.executeMany(connection: Connection, vararg par
 
     statement.execute()
 
-    val result = ArrayList<ResultSet>(this.size)
     do {
         result.add(statement.resultSet)
     } while (statement.getMoreResults(Statement.KEEP_CURRENT_RESULT))
-
-    assert(result.size == this.size)
 
     SQLQuery.logger.trace {
         val elapsed = System.currentTimeMillis() - ts
         if (elapsed >= 500) "Long-running query executed in ${elapsed}ms: $sql $params"
         else null
     }
-
-    return result
 }

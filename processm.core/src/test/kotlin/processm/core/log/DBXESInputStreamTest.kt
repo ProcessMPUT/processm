@@ -272,7 +272,7 @@ internal class DBXESInputStreamTest {
         assertFalse(stream.hasNext())
     }
 
-    @Ignore("This test is slow and `reading a log with over 65536 traces all at once` should test exactly the same thing in 1/100 of the time")
+    @Ignore("This test is slow and `reading a log with over 65536 traces all at once` should test exactly the same thing")
     @Test
     @Tag("slow")
     fun `too many parameters while reading Hospital_Billing-Event_Log from DB`() {
@@ -280,6 +280,7 @@ internal class DBXESInputStreamTest {
         DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
     }
 
+    @Tag("slow")
     @Test
     fun `reading a log with over 65536 traces all at once`() {
         val traces = List(65537) { processm.core.log.hierarchical.Trace(sequenceOf(Event())) }
@@ -289,7 +290,8 @@ internal class DBXESInputStreamTest {
         DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
             output.write(log.toFlatSequence())
         }
-        DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
+        val actual = DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
+        assertEquals(2 * 65537 + 1, actual) // log + 65537 traces, each with a single event
     }
 
     private fun setUp(): Int {
