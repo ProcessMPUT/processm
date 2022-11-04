@@ -1,5 +1,6 @@
 package processm.core.log.hierarchical
 
+import org.postgresql.PGStatement
 import org.slf4j.Logger
 import processm.core.logging.logger
 import processm.core.logging.trace
@@ -87,7 +88,35 @@ internal fun List<SQLQuery>.executeMany(connection: Connection, vararg params: L
     return result
 }
 
-private fun Collection<SQLQuery>.executeManyNoSplitting(
+internal fun List<SQLQuery>.executeMultipleTimes(connection: Connection, process: (Int, ResultSet) -> Boolean) {
+    assert(all { this[0].query == it.query })
+    this[0].executeMultipleTimes(connection, this.map(SQLQuery::params), process)
+}
+
+internal fun SQLQuery.executeMultipleTimes(
+    connection: Connection,
+    params: List<List<Any>>,
+    process: (Int, ResultSet) -> Boolean
+) {
+    val ts = System.currentTimeMillis()
+    connection.prepareStatement(query, Statement.NO_GENERATED_KEYS).use { statement ->
+        // Force using server-side prepared statement from the first query execution. Based on https://access.crunchydata.com/documentation/pgjdbc/42.2.8/server-prepare.html
+        statement.unwrap(PGStatement::class.java).prepareThreshold = 1
+        for (index in params.indices) {
+            for ((i, p) in params[index].withIndex())
+                statement.setObject(i + 1, p)
+            if (!statement.executeQuery().use { process(index, it) })
+                break
+        }
+        SQLQuery.logger.trace {
+            val elapsed = System.currentTimeMillis() - ts
+            if (elapsed >= 500) "Long-running query executed ${params.size} times in ${elapsed}ms: $query"
+            else null
+        }
+    }
+}
+
+private fun List<SQLQuery>.executeManyNoSplitting(
     connection: Connection,
     result: MutableList<ResultSet>,
     params: Array<out List<Any>>

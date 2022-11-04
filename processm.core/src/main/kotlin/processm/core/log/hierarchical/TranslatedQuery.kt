@@ -104,7 +104,11 @@ internal class TranslatedQuery(
         with(sql.query) {
             // filter by trace id and log id if necessary
             when (scope) {
-                Scope.Event -> append(" WHERE e.trace_id=$traceId")
+                Scope.Event -> {
+                    append(" WHERE e.trace_id=?")
+                    sql.params.add(traceId!!)
+                }
+
                 Scope.Trace -> append(" WHERE t.log_id=$logId")
                 Scope.Log -> Unit
             }
@@ -1092,9 +1096,14 @@ internal class TranslatedQuery(
                         // Initialize all sibling RegularTraceEntries together
                         val queries = parent.traces!!.values.map { it.queryIds }
                         connection.use {
-                            val results = queries.executeMany(it)
+                            val events = ArrayList<ArrayList<Long>>()
+                            queries.executeMultipleTimes(it) { index, result ->
+                                assert(index == events.size)
+                                events.add(result.toIdList { it.getLong(1) })
+                                true
+                            }
                             for ((index, trace) in parent.traces!!.values.withIndex()) {
-                                trace.events = results[index].toIdList { it.getLong(1) }
+                                trace.events = events[index]
                             }
                         }
                         assert(field !== null)
