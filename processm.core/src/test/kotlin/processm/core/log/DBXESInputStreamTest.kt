@@ -1,5 +1,7 @@
 package processm.core.log
 
+import org.junit.jupiter.api.Tag
+import processm.core.DBTestHelper
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
@@ -9,6 +11,7 @@ import processm.core.log.attribute.AttributeMap
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import kotlin.test.*
+import java.io.File
 
 internal class DBXESInputStreamTest {
     private val content: String = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -265,6 +268,13 @@ internal class DBXESInputStreamTest {
         val stream = DBXESInputStream(dbName, Query(missingLogId)).iterator()
 
         assertFalse(stream.hasNext())
+    }
+
+    @Test
+    @Tag("slow")
+    fun `too many parameters while reading Hospital_Billing-Event_Log from DB`() {
+        val uuid = DBTestHelper.loadLog(File("../xes-logs/Hospital_Billing-Event_Log.xes.gz"))
+        DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
     }
 
     private fun setUp(): Int {
