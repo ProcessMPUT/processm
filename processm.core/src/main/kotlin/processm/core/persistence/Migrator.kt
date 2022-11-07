@@ -71,6 +71,14 @@ object Migrator {
         }
     }
 
+    private fun jdbc2libpq(jdbc: String): String {
+        // https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNSTRING
+        if (jdbc.startsWith("jdbc:postgres"))   // The URI scheme designator can be either postgresql:// or postgres://.
+            return jdbc.substring(5)
+        else
+            throw IllegalArgumentException("Cannot deal with '$jdbc'")
+    }
+
     private fun ensureDatabaseExists(dataStoreDBName: String) {
         loggedScope { logger ->
             logger.debug("Create datastore database if required")
@@ -78,8 +86,9 @@ object Migrator {
             require(dataStoreDBName.isUUID()) { "Datastore DB should be named with UUID." }
 
             DriverManager.getConnection(dbConfig.baseConnectionURL).use { connection ->
-                connection.prepareStatement("SELECT * FROM create_database(?);").use {
+                connection.prepareStatement("SELECT * FROM create_database(?, ?);").use {
                     it.setString(1, dataStoreDBName)
+                    it.setString(2, jdbc2libpq(dbConfig.baseConnectionURL))
                     it.executeQuery().use { result ->
                         require(result.next()) { "Database cannot be created" }
                         require(result.getBoolean("create_database")) { "Database cannot be created" }
