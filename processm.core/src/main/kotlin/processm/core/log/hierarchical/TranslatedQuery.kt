@@ -266,17 +266,21 @@ internal class TranslatedQuery(
 
         val attrTable = table ?: (scope.toString() + "s_attributes")
         with(it.query) {
+            // While the following looks redundant, it seems to be much more efficient than integrating JOIN directly into the subquery
+            // and in turn passing idPlaceholder only once, and getting rid of the outer query altogether.
+            // From the execution plans it seems to me that Postgres performs full nested-loop join, which seems a bit expensive in this case.
             append("WITH ")
             append("tmp AS (")
             selectAttributes(scope, attrTable, extraColumns, it)
-            append(", ARRAY[ids.ord, $attrTable.id] AS path")
             append(" FROM $attrTable")
-            append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
-            it.params.add(idPlaceholder)
             whereAttributes(scope, it, logId)
+            append(" AND ${scope}_id=ANY(?)")
+            it.params.add(idPlaceholder)
             append(") ")
             selectAttributes(scope, "tmp", extraColumns, it)
             append(" FROM tmp")
+            append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, path) ON ${scope}_id=ids.id")
+            it.params.add(idPlaceholder)
             orderByAttributes(it)
         }
     }
