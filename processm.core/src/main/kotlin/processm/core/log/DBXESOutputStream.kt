@@ -1,8 +1,11 @@
 package processm.core.log
 
-import processm.core.log.attribute.*
+import org.postgresql.PGConnection
+import org.postgresql.copy.PGCopyOutputStream
+import processm.core.log.attribute.AttributeMap
 import processm.core.logging.loggedScope
 import processm.core.querylanguage.Scope
+import java.io.PrintStream
 import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Instant
@@ -27,6 +30,14 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
 
         private val tagStartChars = ('a'..'z') + ('A'..'Z') + ('_')
         private val tagChars = ('0'..'9') + tagStartChars
+
+        @JvmStatic
+        protected fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
+            for (item in this@join) {
+                append(", ")
+                append(transform(item))
+            }
+        }
     }
 
     /**
@@ -97,10 +108,15 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 writeExtensions(component.extensions.values, sql)
                 writeClassifiers(Scope.Event, component.eventClassifiers.values, sql)
                 writeClassifiers(Scope.Trace, component.traceClassifiers.values, sql)
-                writeGlobals("event", component.eventGlobals, sql)
-                writeGlobals("trace", component.traceGlobals, sql)
-                writeAttributes("LOGS_ATTRIBUTES", "log", 0, component.attributes, sql)
                 logId = sql.executeQuery("log").toInt()
+                writeGlobals("event", component.eventGlobals)?.execute(connection, listOf(logId!!.toLong()))
+                writeGlobals("trace", component.traceGlobals)?.execute(connection, listOf(logId!!.toLong()))
+                if (component.attributes.isNotEmpty()) {
+                    with(Copy("LOGS_ATTRIBUTES", "log")) {
+                        writeAttributes(0, component.attributes, this)
+                        execute(connection, listOf(logId!!.toLong()))
+                    }
+                }
             }
 
             else ->
@@ -151,7 +167,8 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
 
         val traceSql = SQL()
         val eventSql = SQL()
-        val attrSql = SQL()
+        val traceAttrCopy = Copy("TRACES_ATTRIBUTES", "trace")
+        val eventAttrCopy = Copy("EVENTS_ATTRIBUTES", "event")
 
         with(traceSql.sql) {
             append("WITH trace AS (")
@@ -171,17 +188,17 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                     check(lastTraceIndex >= 0) { "Trace must precede event in the queue." }
                     ++lastEventIndex
                     writeEventData(component, eventSql, lastTraceIndex)
-                    writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes, attrSql)
+                    writeAttributes(lastEventIndex, component.attributes, eventAttrCopy)
                 }
 
                 is Trace -> {
-                    if (traceSql.params.size + eventSql.params.size + attrSql.params.size >= paramSoftLimit) {
+                    if (traceSql.params.size + eventSql.params.size >= paramSoftLimit) {
                         // #102: if the total number of parameters in an SQL query is too large, then DO NOT start new trace
                         break
                     }
                     ++lastTraceIndex
                     writeTraceData(component, traceSql)
-                    writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes, attrSql)
+                    writeAttributes(lastTraceIndex, component.attributes, traceAttrCopy)
                 }
 
                 else -> throw UnsupportedOperationException("Unexpected $component.")
@@ -206,9 +223,23 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 params.addAll(eventSql.params)
             }
 
-            sql.append(attrSql.sql)
-            params.addAll(attrSql.params)
-            execute()
+            sql.append(" SELECT id, 0 as type FROM event UNION ALL SELECT id, 1 as type FROM trace")
+            val eventIds = ArrayList<Long>()
+            val traceIds = ArrayList<Long>()
+            executeQuery { rs ->
+                while (rs.next()) {
+                    val type = rs.getLong(2)
+                    val id = rs.getLong(1)
+                    when (type) {
+                        0L -> eventIds.add(id)
+                        1L -> traceIds.add(id)
+                    }
+                }
+            }
+            check(eventIds.size == lastEventIndex + 1) { "Write unsuccessful." }
+            check(traceIds.size == lastTraceIndex + 1) { "Write unsuccessful." }
+            eventAttrCopy.execute(connection, eventIds)
+            traceAttrCopy.execute(connection, traceIds)
         }
 
         clearQueue(lastEventIndex, lastTraceIndex, force)
@@ -282,67 +313,141 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         }
     }
 
+    /**
+     * A wrapper around Postgres's COPY FROM STDIN handling escaping and mapping indexes to real IDs
+     */
+    private class Copy(val destination: String, extraColumnValues: Collection<String>) {
+
+
+        constructor(
+            destinationTable: String,
+            rootTempTable: String,
+            extraColumns: Map<String, String> = emptyMap()
+        ) : this(
+            "$destinationTable (${rootTempTable}_id, type, key, string_value, uuid_value, date_value, int_value, bool_value, real_value ${extraColumns.keys.join()})",
+            extraColumns.values
+        )
+
+        companion object {
+            //TODO these two are current defaults, but maybe they should be passed in the query in order to make the query more robust?
+            const val NULL = "\\N"
+            const val DELIMITER = '\t'
+        }
+
+        val data = ArrayList<Pair<Int, String>>()
+
+        private var current = StringBuilder()
+        private val suffix: String
+
+        init {
+            if (extraColumnValues.isNotEmpty()) {
+                extraColumnValues.forEach(::addInternal)
+                suffix = current.toString()
+                current.clear()
+            } else
+                suffix = ""
+        }
+
+        private fun addInternal(text: String?) = with(current) {
+            append(DELIMITER)
+            if (text !== null)
+                append(text)
+            else
+                append(NULL)
+        }
+
+        private fun addInternal(text: StringBuilder?) = with(current) {
+            append(DELIMITER)
+            if (text !== null)
+                append(text)
+            else
+                append(NULL)
+        }
+
+        fun add(value: String?) {
+            //While this seems expensive, all my tries on making it more efficient by considering multiple characters at once and using StringBuilder failed
+            //I hypothesise that most of these characters don't occur in most of the strings, so replace can short-circuit and return the same string
+            addInternal(
+                value
+                    ?.replace("\\", "\\\\")
+                    ?.replace("\b", "\\b")
+                    ?.replace("\u000c", "\\f")
+                    ?.replace("\n", "\\n")
+                    ?.replace("\r", "\\r")
+                    ?.replace("\t", "\\t")
+                    ?.replace("\u000b", "\\v")
+            )
+        }
+
+        //TODO can any other datatype yield one of the special characters?
+
+        fun add(value: UUID?) {
+            addInternal(value?.toString())
+        }
+
+        fun add(value: Instant?) {
+            if (value !== null)
+                addInternal(ISO8601.format(value))
+            else
+                addInternal(null as String?)
+        }
+
+        fun add(value: Long?) {
+            addInternal(value?.toString())
+        }
+
+        fun add(value: Boolean?) {
+            addInternal(value?.toString())   //TODO verify
+        }
+
+        fun add(value: Double?) {
+            addInternal(value?.toString())   //TODO verify
+        }
+
+        fun flushRow(rootIndex: Int) {
+            data.add(rootIndex to current.toString())
+            current.clear()
+        }
+
+        fun execute(connection: Connection, ids: List<Long>) {
+            if (data.isEmpty())
+                return
+            val sql =
+                "COPY $destination FROM STDIN"
+            val pgConnection = connection.unwrap(PGConnection::class.java)
+            PGCopyOutputStream(pgConnection, sql).use {
+                PrintStream(it).use { out ->
+                    for ((idx, row) in data) {
+                        out.print(ids[idx])
+                        out.print(row)
+                        out.println(suffix)
+                    }
+                }
+            }
+        }
+
+    }
+
+
     private fun writeAttributes(
-        destinationTable: String,
-        rootTempTable: String,
         rootIndex: Int,
         attributes: AttributeMap,
-        to: SQL,
-        extraColumns: Map<String, String> = emptyMap()
+        to: Copy,
     ) {
         if (attributes.isEmpty())
             return
-
-        // This function preserves the order of attributes on each level of the tree but does not preserve the order
-        // between the levels. This is enough to preserve the order of list attribute. It cannot use the (straightforward)
-        // depth-first-search algorithm, as writable common table extensions in PostgreSQL are evaluated concurrently.
-        // From https://www.postgresql.org/docs/current/queries-with.html:
-        // The sub-statements in WITH are executed concurrently with each other and with the main query. Therefore,
-        // when using data-modifying statements in WITH, the order in which the specified updates actually happen is
-        // unpredictable. All the statements are executed with the same snapshot (see Chapter 13), so they cannot
-        // “see” one another's effects on the target tables. This alleviates the effects of the unpredictability of
-        // the actual order of row updates, and means that RETURNING data is the only way to communicate changes
-        // between different WITH sub-statements and the main query.
-        val myTableNumber = ++to.attrSeq
-        with(to.sql) {
-            append(", attributes$myTableNumber AS (")
-            append(
-                "INSERT INTO $destinationTable(${rootTempTable}_id, key, type, " +
-                        "string_value, uuid_value, date_value, int_value, bool_value, real_value" +
-                        "${extraColumns.keys.join()}) "
-            )
-            append(
-                "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
-                        "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value" +
-                        "${extraColumns.values.join { "'$it'" }} FROM (VALUES "
-            )
-        }
         with(to) {
-            var first = true
             for (attribute in attributes.flat) {
-                sql.append("(?,'${attribute.value.xesTag}'")
-                if (first)
-                    sql.append("::attribute_type")
-                sql.append(',')
-                params.addLast(attribute.key)
-                writeTypedAttribute(attribute.value, String::class, to, first)
-                writeTypedAttribute(attribute.value, UUID::class, to, first)
-                writeTypedAttribute(attribute.value, Instant::class, to, first)
-                writeTypedAttribute(attribute.value, Long::class, to, first)
-                writeTypedAttribute(attribute.value, Boolean::class, to, first)
-                writeTypedAttribute(attribute.value, Double::class, to, first)
-                sql.deleteCharAt(sql.length - 1)
-                if (first)
-                    first = false
-                sql.append("),")
+                add(attribute.value.xesTag)
+                add(attribute.key)
+                add(attribute.value as? String)
+                add(attribute.value as? UUID)
+                add(attribute.value as? Instant)
+                add(attribute.value as? Long)
+                add(attribute.value as? Boolean)
+                add(attribute.value as? Double)
+                flushRow(rootIndex)
             }
-            assert(!first)
-        }
-
-        with(to.sql) {
-            deleteCharAt(length - 1)
-            append(") a(key,type,string_value,uuid_value,date_value,int_value,bool_value,real_value) ")
-            append("RETURNING id)")
         }
     }
 
@@ -420,15 +525,12 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         to.sql.append(") c(scope,name,keys))")
     }
 
-    private fun writeGlobals(scope: String, globals: AttributeMap, to: SQL) =
-        writeAttributes("GLOBALS", "log", 0, globals, to, mapOf("scope" to scope))
-
-    protected fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
-        for (item in this@join) {
-            append(", ")
-            append(transform(item))
-        }
-    }
+    private fun writeGlobals(scope: String, globals: AttributeMap): Copy? =
+        if (globals.isNotEmpty())
+            Copy("GLOBALS", "log", mapOf("scope" to scope)).apply {
+                writeAttributes(0, globals, this)
+            }
+        else null
 
     protected inner class SQL {
         var attrSeq: Int = 0
@@ -446,6 +548,22 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                     check(r.next()) { "Write unsuccessful." }
                     return@executeQuery r.getLong(1)
                 }
+            }
+        }
+
+        /**
+         * [use] is responsible for verifying whether there is a correct number of rows and throwing an exception otherwise
+         */
+        fun <T> executeQuery(use: (ResultSet) -> T): T {
+            inlineParamsOverLimit()
+            connection.prepareStatement("$sql").use {
+                for ((i, obj) in params.withIndex()) {
+                    if (obj is Array<*>)
+                        it.setArray(i + 1, connection.createArrayOf("text", obj))
+                    else
+                        it.setObject(i + 1, obj)
+                }
+                return it.executeQuery().use(use)
             }
         }
 
