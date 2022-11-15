@@ -11,13 +11,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import processm.core.helpers.mapToArray
 import processm.services.api.models.Group
-import processm.services.api.models.GroupRole
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
-import processm.services.logic.OrganizationService
-import processm.services.logic.Reason
-import processm.services.logic.validateNot
+import processm.services.logic.*
 import processm.services.respondCreated
 
 @KtorExperimentalLocationsAPI
@@ -60,19 +58,15 @@ fun Route.OrganizationsApi() {
         // region Organization members
         get<Paths.OrganizationsOrgIdMembers> { params ->
             val principal = call.authentication.principal<ApiUser>()!!
-
             principal.ensureUserBelongsToOrganization(params.organizationId)
 
-            val members = organizationService.getMember(params.organizationId)
-                .map {
-                    OrganizationMember(
-                        id = it.user.id,
-                        email = it.user.email,
-                        organizationRole = it.role
-                    )
-                }
-                .toTypedArray()
-
+            val members = organizationService.getMembers(params.organizationId).mapToArray {
+                OrganizationMember(
+                    id = it.user.id.value,
+                    email = it.user.email,
+                    organizationRole = it.role.toApi()
+                )
+            }
             call.respond(HttpStatusCode.OK, members)
         }
 
@@ -84,7 +78,7 @@ fun Route.OrganizationsApi() {
             val user = organizationService.addMember(
                 params.organizationId,
                 requireNotNull(member.email),
-                member.organizationRole
+                member.organizationRole.toRoleType()
             )
 
             call.respondCreated(Paths.OrganizationsOrgIdMembersUserId(params.organizationId, user.id.value))
@@ -100,7 +94,7 @@ fun Route.OrganizationsApi() {
                 Reason.UnprocessableResource,
                 "Cannot change role of the current user."
             )
-            organizationService.updateMember(params.organizationId, params.userId, member.organizationRole)
+            organizationService.updateMember(params.organizationId, params.userId, member.organizationRole.toRoleType())
 
             call.respond(HttpStatusCode.NoContent)
         }
@@ -123,7 +117,7 @@ fun Route.OrganizationsApi() {
             principal.ensureUserBelongsToOrganization(organization.organizationId)
 
             val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
-                .map { Group(it.name ?: "", it.isImplicit, organization.organizationId, GroupRole.reader, it.id) }
+                .map { Group(it.name ?: "", it.isImplicit, organization.organizationId, it.id.value) }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, organizationGroups)

@@ -46,7 +46,8 @@ fun Application.apiModule() {
                 single { AccountService(get()) }
                 single { GroupService() }
                 single { OrganizationService(get(), get()) }
-                single { WorkspaceService(get(), get()) }
+                single { ACLService() }
+                single { WorkspaceService(get(), get(), get()) }
                 single { DataStoreService(get()) }
                 single { LogsService(get()) }
                 single { Producer() }

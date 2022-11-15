@@ -15,6 +15,7 @@ import processm.core.helpers.mapToSet
 import processm.core.helpers.toUUID
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import processm.etl.tracker.DebeziumChangeTracker
 import java.util.*
@@ -109,8 +110,8 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     private fun initializeDataTrackers() {
-        val dataStores = transaction(DBCache.getMainDBPool().database) {
-            return@transaction DataStores.selectAll().mapToSet {
+        val dataStores = transactionMain {
+            return@transactionMain DataStores.selectAll().mapToSet {
                 it[DataStores.id].value
             }
         }
@@ -119,7 +120,7 @@ class MetaModelDebeziumWatchingService : Service {
             transaction(DBCache.get("$dataStoreId").database) {
                 DataConnectors
                     .selectAll()
-                    .forEach dataConnectorsLoop@ { dataConnectorResultRow ->
+                    .forEach dataConnectorsLoop@{ dataConnectorResultRow ->
                         val dataConnectorId = dataConnectorResultRow[DataConnectors.id].value
 
                         try {

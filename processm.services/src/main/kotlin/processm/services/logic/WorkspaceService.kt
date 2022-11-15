@@ -1,58 +1,75 @@
 package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insertAndGetId
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
-import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.communication.Producer
-import processm.core.persistence.connection.DBCache
+import processm.core.logging.loggedScope
+import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
+import processm.dbmodels.urn
 import processm.miners.triggerEvent
-import processm.services.api.models.GroupRole
 import java.util.*
 
-class WorkspaceService(private val accountService: AccountService, private val producer: Producer) {
+class WorkspaceService(
+    private val accountService: AccountService,
+    private val aclService: ACLService,
+    private val producer: Producer
+) {
     /**
      * Returns all user workspaces for the specified [userId] in the context of the specified [organizationId].
      */
-    fun getUserWorkspaces(userId: UUID, organizationId: UUID) = transaction(DBCache.getMainDBPool().database) {
-        Workspace.wrapRows(UserGroups
-            .innerJoin(UsersInGroups)
-            .innerJoin(UserGroupWithWorkspaces)
-            .innerJoin(Workspaces)
-            .slice(Workspaces.columns)
-            .select { UsersInGroups.userId eq userId and (UserGroupWithWorkspaces.organizationId eq organizationId) })
-            .map { it.toDto() }
-    }
+    fun getUserWorkspaces(userId: UUID, organizationId: UUID): List<Workspace> =
+        transactionMain {
+            Workspace.wrapRows(
+                Groups
+                    .innerJoin(UsersInGroups)
+                    .crossJoin(Workspaces)
+                    .join(AccessControlList, JoinType.INNER, AccessControlList.group_id, Groups.id)
+                    .select {
+                        (UsersInGroups.userId eq userId) and
+                                ((Groups.isImplicit eq true) or (Groups.organizationId eq organizationId)) and
+                                (AccessControlList.urn.column eq concat(
+                                    stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
+                                    Workspaces.id
+                                )) and
+                                (AccessControlList.role_id neq RoleType.None.role.id)
 
-    /**
-     * Creates new workspace with [workspaceName] in the context of specified [organizationId] and assigns it to private group of the specified [userId].
-     */
-    fun createWorkspace(workspaceName: String, userId: UUID, organizationId: UUID) =
-        transaction(DBCache.getMainDBPool().database) {
-            val user = accountService.getAccountDetails(userId)
-            val privateGroupId = user.privateGroup.id
-            val workspaceId = Workspaces.insertAndGetId {
-                it[this.name] = workspaceName
-            }
-
-            UserGroupWithWorkspaces.insertAndGetId {
-                it[this.workspaceId] = workspaceId
-                it[userGroupId] = EntityID(privateGroupId, UserGroups)
-                it[this.organizationId] = EntityID(organizationId, Organizations)
-            }
-
-            return@transaction workspaceId.value
+                    }
+            ).toList()
         }
 
-    fun updateWorkspace(userId: UUID, organizationId: UUID, workspace: WorkspaceDto) =
-        transaction(DBCache.getMainDBPool().database) {
-            hasPermissionToEdit(workspace.id, organizationId, userId)
+    /**
+     * Creates new workspace with the given [name] within the given [organizationId] and assigns it to private group of
+     * the specified [userId].
+     */
+    fun create(name: String, userId: UUID, organizationId: UUID): UUID =
+        transactionMain {
+            name.isNotBlank().validate(Reason.ResourceFormatInvalid) { "Workspace name must not be blank." }
+
+            val user = accountService.getUser(userId)
+            val sharedGroup = Group.find {
+                (Groups.isShared eq true) and (Groups.organizationId eq organizationId)
+            }.first()
+
+            val workspace = Workspace.new {
+                this.name = name
+            }
+
+            // Add ACL entry for the user being the owner
+            aclService.addEntry(workspace.urn, user.privateGroup.id.value, RoleType.Owner)
+
+            // Add ACL entry for the organization just to connect the workspace with the organization
+            aclService.addEntry(workspace.urn, sharedGroup.id.value, RoleType.None)
+
+            return@transactionMain workspace.id.value
+        }
+
+    fun update(userId: UUID, organizationId: UUID, workspace: ApiWorkspace) =
+        transactionMain {
+            workspace.id.validateNotNull { "Workspace id must not be null." }
+            aclService.checkAccess(userId, organizationId, Workspaces, workspace.id, RoleType.Writer)
 
             with(Workspace[workspace.id]) {
                 name = workspace.name
@@ -61,62 +78,44 @@ class WorkspaceService(private val accountService: AccountService, private val p
 
     /**
      * Removes the specified [workspaceId].
-     * Throws [ValidationException] if the specified [userId] has insufficient permissions or the [workspaceId] doesn't exist.
      */
-    fun removeWorkspace(workspaceId: UUID, userId: UUID, organizationId: UUID) =
-        transaction(DBCache.getMainDBPool().database) {
-            hasPermissionToEdit(workspaceId, organizationId, userId)
+    fun remove(workspaceId: UUID, userId: UUID, organizationId: UUID): Unit = loggedScope { logger ->
+        transactionMain {
+            aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Owner)
+
+            WorkspaceComponents.deleteWhere {
+                WorkspaceComponents.workspaceId eq workspaceId
+            }
 
             Workspaces.deleteWhere {
                 Workspaces.id eq workspaceId
-            } > 0
-        }
+            }.validate(1, Reason.ResourceNotFound) { "Workspace is not found." }
 
-    private fun hasPermissionToEdit(
-        workspaceId: UUID,
-        organizationId: UUID,
-        userId: UUID
-    ) {
-        val hasPermission = UsersInGroups
-            .innerJoin(UserGroups)
-            .innerJoin(UserGroupWithWorkspaces)
-            .select {
-                UserGroupWithWorkspaces.workspaceId eq workspaceId and
-                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
-                        (UsersInGroups.userId eq userId) and
-                        (UserGroups.groupRoleId neq GroupRole.reader.toDB().id)
+            try {
+                aclService.removeEntries(Workspaces, workspaceId)
+            } catch (e: ValidationException) {
+                logger.debug("Suppressed exception", e)
             }
-            .limit(1)
-            .any()
-
-        if (!hasPermission) {
-            throw ValidationException(
-                Reason.ResourceNotFound,
-                "The specified workspace does not exist or the user has insufficient permissions to use it."
-            )
         }
     }
 
     /**
      * Returns all components in the specified [workspaceId].
      */
-    fun getWorkspaceComponents(workspaceId: UUID, userId: UUID, organizationId: UUID): List<WorkspaceComponent> =
-        transaction(DBCache.getMainDBPool().database) {
-            WorkspaceComponent.wrapRows(
-                WorkspaceComponents
-                    .innerJoin(Workspaces)
-                    .innerJoin(UserGroupWithWorkspaces)
-                    .innerJoin(UserGroups)
-                    .innerJoin(UsersInGroups)
-                    .select(WorkspaceComponents.workspaceId eq workspaceId and (UserGroupWithWorkspaces.organizationId eq organizationId) and (UsersInGroups.userId eq userId))
-            ).toList()
+    fun getComponents(workspaceId: UUID, userId: UUID, organizationId: UUID): List<WorkspaceComponent> =
+        transactionMain {
+            aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
+
+            WorkspaceComponent.find {
+                WorkspaceComponents.workspaceId eq workspaceId
+            }.toList()
         }
 
     /**
      * Adds or updates the specified [workspaceComponentId]. If particular parameter: [name], [componentType], [customizationData] is not specified, then it's not added/updated.
      * Throws [ValidationException] if the specified [userId] has insufficient permissions.
      */
-    fun addOrUpdateWorkspaceComponent(
+    fun addOrUpdateComponent(
         workspaceComponentId: UUID,
         workspaceId: UUID,
         userId: UUID,
@@ -127,15 +126,16 @@ class WorkspaceService(private val accountService: AccountService, private val p
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
         layoutData: String? = null
-    ): Unit = transaction(DBCache.getMainDBPool().database) {
-        hasPermissionToEdit(workspaceId, organizationId, userId)
+    ): Unit = transactionMain {
+        aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
 
         val componentAlreadyExists = WorkspaceComponents
             .select { WorkspaceComponents.id eq workspaceComponentId }
-            .limit(1).any()
+            .limit(1)
+            .any()
 
         if (componentAlreadyExists) {
-            return@transaction updateComponent(
+            return@transactionMain updateComponent(
                 workspaceComponentId,
                 workspaceId,
                 name,
@@ -147,23 +147,16 @@ class WorkspaceService(private val accountService: AccountService, private val p
             )
         }
 
-        if (name.isNullOrBlank())
-            throw ValidationException(Reason.ResourceFormatInvalid, "Missing name.")
-
-        if (query.isNullOrBlank())
-            throw ValidationException(Reason.ResourceFormatInvalid, "Missing query.")
-
-        if (dataStore == null)
-            throw ValidationException(Reason.ResourceFormatInvalid, "Missing data store.")
-
-        if (componentType == null)
-            throw ValidationException(Reason.ResourceFormatInvalid, "Missing component type.")
+        name.isNullOrBlank().validateNot { "Missing name." }
+        query.isNullOrBlank().validateNot { "Missing query. " }
+        dataStore.validateNotNull { "Missing data store. " }
+        componentType.validateNotNull { "Missing component type. " }
 
         addComponent(
             workspaceComponentId,
             workspaceId,
-            name,
-            query,
+            name!!,
+            query!!,
             dataStore,
             componentType,
             customizationData,
@@ -175,49 +168,30 @@ class WorkspaceService(private val accountService: AccountService, private val p
      * Removes the specified [workspaceComponentId].s
      * Throws [ValidationException] if the specified [userId] has insufficient permissions or [workspaceComponentId] doesn't exist.
      */
-    fun removeWorkspaceComponent(
+    fun removeComponent(
         workspaceComponentId: UUID,
         workspaceId: UUID,
         userId: UUID,
         organizationId: UUID,
-    ) = transaction(DBCache.getMainDBPool().database) {
-        hasPermissionToEdit(workspaceId, organizationId, userId)
+    ): Unit = transactionMain {
+        aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
 
         WorkspaceComponents.deleteWhere {
             WorkspaceComponents.id eq workspaceComponentId
-        } > 0
+        }.validate(1, Reason.ResourceNotFound) { "Workspace is not found." }
     }
 
     /**
      * Update layout information related to the specified components inside [workspaceId].
      * Throws [ValidationException] if the specified [userId] has insufficient permissions or a component doesn't exist.
      */
-    fun updateWorkspaceLayout(
+    fun updateLayout(
         workspaceId: UUID,
         userId: UUID,
         organizationId: UUID,
         layout: Map<UUID, String>
-    ): Unit = transaction(DBCache.getMainDBPool().database) {
-        val canBeUpdated = UsersInGroups
-            .innerJoin(UserGroups)
-            .innerJoin(UserGroupWithWorkspaces)
-            .innerJoin(Workspaces)
-            .innerJoin(WorkspaceComponents)
-            .select {
-                WorkspaceComponents.id inList layout.keys and
-                        (UserGroupWithWorkspaces.workspaceId eq workspaceId) and
-                        (UserGroupWithWorkspaces.organizationId eq organizationId) and
-                        (UsersInGroups.userId eq userId) and
-                        (UserGroups.groupRoleId neq GroupRole.reader.toDB().id)
-            }
-            .count() == layout.size.toLong()
-
-        if (!canBeUpdated) {
-            throw ValidationException(
-                Reason.ResourceNotFound,
-                "The specified workspace does not exist or the user has insufficient permissions to it"
-            )
-        }
+    ): Unit = transactionMain {
+        aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
 
         BatchUpdateStatement(WorkspaceComponents).apply {
             layout.forEach { (componentId, layoutData) ->

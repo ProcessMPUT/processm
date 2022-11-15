@@ -7,21 +7,21 @@ import io.ktor.server.locations.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import processm.dbmodels.models.OrganizationDto
 import processm.services.api.models.Group
-import processm.services.api.models.GroupRole
+import processm.services.api.models.Organization
 import processm.services.logic.GroupService
 import processm.services.logic.OrganizationService
+import processm.services.logic.toApi
 import java.util.*
 
 fun Route.GroupsApi() {
     val groupService by inject<GroupService>()
     val organizationService by inject<OrganizationService>()
 
-    fun getOrganizationRelatedToGroup(groupId: UUID): OrganizationDto {
+    fun getOrganizationRelatedToGroup(groupId: UUID): Organization {
         val rootGroupId = groupService.getRootGroupId(groupId)
 
-        return organizationService.getOrganizationBySharedGroupId(rootGroupId)
+        return organizationService.getOrganizationBySharedGroupId(rootGroupId).toApi()
     }
 
     authenticate {
@@ -54,7 +54,7 @@ fun Route.GroupsApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             val organization = getOrganizationRelatedToGroup(group.groupId)
 
-            principal.ensureUserBelongsToOrganization(organization.id)
+            principal.ensureUserBelongsToOrganization(organization.id!!)
 
             val userGroup = groupService.getGroup(group.groupId)
 
@@ -64,8 +64,7 @@ fun Route.GroupsApi() {
                     userGroup.name ?: "",
                     userGroup.isImplicit,
                     organization.id,
-                    GroupRole.reader,
-                    userGroup.id
+                    userGroup.id.value
                 )
             )
         }
@@ -89,10 +88,10 @@ fun Route.GroupsApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             val organization = getOrganizationRelatedToGroup(subgroups.groupId)
 
-            principal.ensureUserBelongsToOrganization(organization.id)
+            principal.ensureUserBelongsToOrganization(organization.id!!)
 
             val groups = groupService.getSubgroups(subgroups.groupId)
-                .map { Group(it.name ?: "", it.isImplicit, organization.id, GroupRole.reader, it.id) }
+                .map { Group(it.name ?: "", it.isImplicit, organization.id, it.id.value) }
                 .toTypedArray()
 
             call.respond(HttpStatusCode.OK, groups)

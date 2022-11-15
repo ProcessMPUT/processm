@@ -3,8 +3,11 @@ package processm.services.api
 import io.ktor.http.*
 import io.mockk.every
 import io.mockk.mockk
+import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
+import processm.dbmodels.models.Groups
+import processm.dbmodels.models.Organizations
 import processm.services.api.models.ErrorMessage
 import processm.services.api.models.Group
 import processm.services.api.models.OrganizationRole
@@ -60,16 +63,18 @@ class GroupsApiTest : BaseApiTest() {
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every { groupService.getRootGroupId(groupId) } returns rootGroupId
             every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
-                every { id } returns organizationId
+                every { id } returns EntityID(organizationId, Organizations)
+                every { name } returns "org1"
+                every { isPrivate } returns false
             }
             every { groupService.getSubgroups(groupId) } returns listOf(
                 mockk {
-                    every { id } returns subgroupId1
+                    every { id } returns EntityID(subgroupId1, Groups)
                     every { name } returns "Subgroup1"
                     every { isImplicit } returns true
                 },
                 mockk {
-                    every { id } returns subgroupId2
+                    every { id } returns EntityID(subgroupId2, Groups)
                     every { name } returns "Subgroup2"
                     every { isImplicit } returns false
                 }
@@ -115,7 +120,9 @@ class GroupsApiTest : BaseApiTest() {
             withAuthentication {
                 every { groupService.getRootGroupId(groupId) } returns rootGroupId
                 every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
-                    every { id } returns UUID.randomUUID()
+                    every { id } returns EntityID(UUID.randomUUID(), Organizations)
+                    every { name } returns "org1"
+                    every { isPrivate } returns false
                 }
                 with(handleRequest(HttpMethod.Get, "/api/groups/$groupId/subgroups")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -138,10 +145,12 @@ class GroupsApiTest : BaseApiTest() {
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every { groupService.getRootGroupId(groupId) } returns rootGroupId
             every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
-                every { id } returns organizationId
+                every { id } returns EntityID(organizationId, Organizations)
+                every { name } returns "org1"
+                every { isPrivate } returns false
             }
             every { groupService.getGroup(groupId) } returns mockk {
-                every { id } returns groupId
+                every { id } returns EntityID(groupId, Groups)
                 every { name } returns "Group1"
                 every { isImplicit } returns false
             }
@@ -165,7 +174,9 @@ class GroupsApiTest : BaseApiTest() {
             withAuthentication {
                 every { groupService.getRootGroupId(groupId) } returns rootGroupId
                 every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
-                    every { id } returns UUID.randomUUID()
+                    every { id } returns EntityID(UUID.randomUUID(), Organizations)
+                    every { name } returns "org1"
+                    every { isPrivate } returns false
                 }
                 with(handleRequest(HttpMethod.Get, "/api/groups/$groupId")) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
@@ -188,7 +199,9 @@ class GroupsApiTest : BaseApiTest() {
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every { groupService.getRootGroupId(groupId) } returns rootGroupId
             every { organizationService.getOrganizationBySharedGroupId(rootGroupId) } returns mockk {
-                every { id } returns organizationId
+                every { id } returns EntityID(organizationId, Organizations)
+                every { name } returns "org1"
+                every { isPrivate } returns false
             }
             every { groupService.getGroup(groupId) } throws ValidationException(
                 Reason.ResourceNotFound,

@@ -13,6 +13,7 @@ import processm.core.communication.Producer
 import processm.core.logging.loggedScope
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.*
@@ -37,9 +38,9 @@ class DataStoreService(private val producer: Producer) {
      * Returns all data stores for the specified [organizationId].
      */
     fun allByOrganizationId(organizationId: UUID): List<DataStoreDto> {
-        return transaction(DBCache.getMainDBPool().database) {
+        return transactionMain {
             val query = DataStores.select { DataStores.organizationId eq organizationId }
-            return@transaction DataStore.wrapRows(query).map { it.toDto() }
+            return@transactionMain DataStore.wrapRows(query).map { it.toDto() }
         }
     }
 
@@ -49,11 +50,11 @@ class DataStoreService(private val producer: Producer) {
     fun getDataStore(dataStoreId: UUID) = getById(dataStoreId).toDto()
 
     fun getDatabaseSize(databaseName: String): Long {
-        return transaction(DBCache.getMainDBPool().database) {
+        return transactionMain {
             connection.prepareStatement("SELECT pg_database_size(?)", false).run {
                 fillParameters(listOf(VarCharColumnType() to databaseName))
                 val result = executeQuery()
-                return@transaction if (result.next()) result.getLong("pg_database_size") else 0
+                return@transactionMain if (result.next()) result.getLong("pg_database_size") else 0
             }
         }
     }
@@ -62,14 +63,14 @@ class DataStoreService(private val producer: Producer) {
      * Creates new data store named [name] and assigned to the specified [organizationId].
      */
     fun createDataStore(organizationId: UUID, name: String): DataStore {
-        return transaction(DBCache.getMainDBPool().database) {
+        return transactionMain {
             val dataStoreId = DataStores.insertAndGetId {
                 it[this.name] = name
                 it[this.creationDate] = CurrentDateTime
                 it[this.organizationId] = EntityID(organizationId, Organizations)
             }
             Migrator.migrate("${dataStoreId.value}")
-            return@transaction getById(dataStoreId.value)
+            return@transactionMain getById(dataStoreId.value)
         }
     }
 
@@ -77,7 +78,7 @@ class DataStoreService(private val producer: Producer) {
      * Removes the data store specified by the [dataStoreId].
      */
     fun removeDataStore(dataStoreId: UUID): Boolean {
-        return transaction(DBCache.getMainDBPool().database) {
+        return transactionMain {
             connection.autoCommit = true
             SchemaUtils.dropDatabase("\"$dataStoreId\"")
             val dataStoreRemoved = DataStores.deleteWhere {
@@ -85,7 +86,7 @@ class DataStoreService(private val producer: Producer) {
             } > 0
             connection.autoCommit = false
 
-            return@transaction dataStoreRemoved
+            return@transactionMain dataStoreRemoved
         }
     }
 
@@ -93,8 +94,8 @@ class DataStoreService(private val producer: Producer) {
      * Renames the data store specified by [dataStoreId] to [newName].
      */
     fun renameDataStore(dataStoreId: UUID, newName: String) =
-        transaction(DBCache.getMainDBPool().database) {
-            DataStores.update ({ DataStores.id eq dataStoreId }) {
+        transactionMain {
+            DataStores.update({ DataStores.id eq dataStoreId }) {
                 it[name] = newName
             } > 0
         }
@@ -383,7 +384,7 @@ class DataStoreService(private val producer: Producer) {
     /**
      * Asserts that the specified [dataStoreId] is attached to [organizationId].
      */
-    fun assertDataStoreBelongsToOrganization(organizationId: UUID, dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
+    fun assertDataStoreBelongsToOrganization(organizationId: UUID, dataStoreId: UUID) = transactionMain {
         DataStores.select { DataStores.organizationId eq organizationId and (DataStores.id eq dataStoreId) }.limit(1)
             .any()
                 || throw ValidationException(
@@ -399,15 +400,15 @@ class DataStoreService(private val producer: Producer) {
         userId: UUID,
         dataStoreId: UUID,
         vararg allowedOrganizationRoles: OrganizationRole
-    ) = transaction(DBCache.getMainDBPool().database) {
+    ) = transactionMain {
         DataStores
             .innerJoin(Organizations)
             .innerJoin(UsersRolesInOrganizations)
-            .innerJoin(OrganizationRoles)
+            .innerJoin(Roles)
             .select {
                 DataStores.id eq dataStoreId and
                         (UsersRolesInOrganizations.userId eq userId) and
-                        (OrganizationRoles.name inList allowedOrganizationRoles.map { it.value })
+                        (Roles.name inList allowedOrganizationRoles.map { it.value })
             }.limit(1).any()
                 || throw ValidationException(
             Reason.ResourceNotFound,
@@ -418,8 +419,8 @@ class DataStoreService(private val producer: Producer) {
     /**
      * Returns data store struct by its identifier.
      */
-    private fun getById(dataStoreId: UUID) = transaction(DBCache.getMainDBPool().database) {
-        return@transaction DataStore.findById(dataStoreId) ?: throw ValidationException(
+    private fun getById(dataStoreId: UUID) = transactionMain {
+        return@transactionMain DataStore.findById(dataStoreId) ?: throw ValidationException(
             Reason.ResourceNotFound,
             "The specified data store does not exist or the user has insufficient permissions to it"
         )

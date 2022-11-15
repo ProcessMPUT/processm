@@ -16,7 +16,7 @@ object Users : UUIDTable("users") {
     /**
      * A single-member group for storing private workspaces.
      */
-    val privateGroupId = reference("private_group_id", UserGroups)
+    val privateGroupId = reference("private_group_id", Groups)
 }
 
 class User(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -28,10 +28,11 @@ class User(id: EntityID<UUID>) : UUIDEntity(id) {
     var password by Users.password
     var locale by Users.locale
     var organizations by Organization via UsersRolesInOrganizations
+    val rolesInOrganizations by UserRoleInOrganization referrersOn UsersRolesInOrganizations.userId
 
     // do not declare the following until exposed supports DAO with composite key
     // val rolesInOrganizations by UserRoleInOrganization referrersOn UsersRolesInOrganizations.userId
-    var privateGroup by UserGroup referencedOn Users.privateGroupId
+    var privateGroup by Group referencedOn Users.privateGroupId
 }
 
 

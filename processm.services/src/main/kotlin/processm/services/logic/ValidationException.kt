@@ -61,6 +61,11 @@ inline fun <T : Any> T?.validate(
 ): T? =
     validate(other, reason) { message }
 
+inline fun Boolean.validateNot(
+    reason: Reason = Reason.ResourceFormatInvalid,
+    lazyMessage: () -> Any
+) = validate(false, reason, lazyMessage)
+
 inline fun <T : Any> T?.validateNot(
     other: T?,
     reason: Reason = Reason.ResourceFormatInvalid,

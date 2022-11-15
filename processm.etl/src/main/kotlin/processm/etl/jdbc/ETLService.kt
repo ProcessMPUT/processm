@@ -15,6 +15,7 @@ import processm.core.helpers.toUUID
 import processm.core.log.AppendingDBXESOutputStream
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStores
 
@@ -33,7 +34,7 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
 
     override fun loadJobs(): List<Pair<JobDetail, Trigger>> = loggedScope { logger ->
         logger.debug("Loading ETL configurations from datastores...")
-        val datastores = transaction(DBCache.getMainDBPool().database) {
+        val datastores = transactionMain {
             DataStores.slice(DataStores.id).selectAll().map { it[DataStores.id].value.toString() }
         }
 

@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.StatementInterceptor
 import org.jetbrains.exposed.sql.transactions.TransactionManager
+import processm.core.models.metadata.URN
 
 internal class
 ILikeOp(expr1: Expression<*>, expr2: Expression<*>) : ComparisonOp(expr1, expr2, "ILIKE")
@@ -37,3 +38,10 @@ fun <T : Comparable<T>> Entity<T>.afterCommit(action: Entity<T>.() -> Unit) {
         }
     })
 }
+
+/**
+ * Universal Resource Name (URN) for the corresponding database row.
+ * Intended for the use in access control lists.
+ */
+val Entity<*>.urn: URN
+    get() = URN("urn:processm:db/${this.id.table.tableName}/${id.value}")

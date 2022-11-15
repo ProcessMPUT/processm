@@ -1,8 +1,7 @@
 import Vue from "vue";
 import UserAccount from "@/models/UserAccount";
 import BaseService from "./BaseService";
-import UserOrganization from "@/models/UserOrganization";
-import { UserAccountInfo } from "@/openapi";
+import { Organization, UserAccountInfo } from "@/openapi";
 
 export default class AccountService extends BaseService {
   public async signIn(login: string, password: string) {
@@ -70,7 +69,7 @@ export default class AccountService extends BaseService {
     console.assert(response.status == 204, response.statusText);
   }
 
-  public async getOrganizations(): Promise<UserOrganization[]> {
+  public async getUserOrganizations(): Promise<Organization[]> {
     const response = await this.usersApi.getUserOrganizations();
 
     console.assert(response.status == 200, response.statusText);

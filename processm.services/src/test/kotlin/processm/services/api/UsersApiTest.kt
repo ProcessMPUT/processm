@@ -7,10 +7,8 @@ import io.mockk.*
 import org.awaitility.Awaitility.await
 import org.jetbrains.exposed.dao.id.EntityID
 import org.koin.test.mock.declareMock
+import processm.dbmodels.models.*
 import processm.dbmodels.models.Organization
-import processm.dbmodels.models.Organizations
-import processm.dbmodels.models.User
-import processm.dbmodels.models.Users
 import processm.services.api.models.*
 import processm.services.logic.*
 import java.util.*
@@ -37,11 +35,11 @@ class UsersApiTest : BaseApiTest() {
             every { id } returns UUID.randomUUID()
             every { email } returns "user@example.com"
         }
-        every { accountService.getRolesAssignedToUser(userId = any()) } returns listOf(
-            mockk {
-                every { organization.id } returns UUID.randomUUID()
-                every { this@mockk.role } returns OrganizationRole.owner
-            })
+        every { accountService.getRolesAssignedToUser(userId = any()) } returns
+                listOf(mockk {
+                    every { organization.id } returns EntityID(UUID.randomUUID(), Organizations)
+                    every { role } returns RoleType.Owner.role
+                })
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -204,13 +202,16 @@ class UsersApiTest : BaseApiTest() {
         val uuid = UUID.randomUUID()
         val email = "demo@example.com"
         every { accountService.getUsers(uuid, null, any()) } returns listOf(
-            UserDto(
-                id = uuid,
-                email = email,
-                locale = "en_US",
-                privateGroup = UserGroupDto(UUID.randomUUID(), "email", true)
-            )
-        )
+            mockk {
+                every { id } returns EntityID(uuid, Users)
+                every { this@mockk.email } returns email
+                every { locale } returns "en_US"
+                every { privateGroup } returns mockk {
+                    every { id } returns EntityID(UUID.randomUUID(), Groups)
+                    every { name } returns "email"
+                    every { isImplicit } returns true
+                }
+            })
 
         withAuthentication(uuid, email) {
             with(handleRequest(HttpMethod.Get, "/api/users")) {
@@ -228,8 +229,8 @@ class UsersApiTest : BaseApiTest() {
             val accountService = declareMock<AccountService>()
             val uuid = UUID.randomUUID()
 
-            every { accountService.getAccountDetails(userId = uuid) } returns mockk {
-                every { id } returns uuid
+            every { accountService.getUser(userId = uuid) } returns mockk {
+                every { id } returns EntityID(uuid, Users)
                 every { email } returns "user@example.com"
                 every { locale } returns "en_US"
             }
@@ -244,26 +245,27 @@ class UsersApiTest : BaseApiTest() {
                 }
             }
 
-            verify { accountService.getAccountDetails(userId = uuid) }
+            verify { accountService.getUser(userId = uuid) }
         }
 
     @Test
-    fun `responds to non-existing user details request with 404 and error message`() = withConfiguredTestApplication {
-        val accountService = declareMock<AccountService>()
+    fun `responds to non-existing user details request with 404 and error message`() =
+        withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
 
-        every { accountService.getAccountDetails(userId = any()) } throws ValidationException(
-            Reason.ResourceNotFound, "Specified user account does not exist"
-        )
+            every { accountService.getUser(userId = any()) } throws ValidationException(
+                Reason.ResourceNotFound, "Specified user account does not exist"
+            )
 
-        withAuthentication {
-            with(handleRequest(HttpMethod.Get, "/api/users/me")) {
-                assertEquals(HttpStatusCode.NotFound, response.status())
-                assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Specified user account does not exist"))
+            withAuthentication {
+                with(handleRequest(HttpMethod.Get, "/api/users/me")) {
+                    assertEquals(HttpStatusCode.NotFound, response.status())
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Specified user account does not exist"))
+                }
             }
-        }
 
-        verify { accountService.getAccountDetails(userId = any()) }
-    }
+            verify { accountService.getUser(userId = any()) }
+        }
 
     @Test
     fun `responds to successful account registration attempt with 201`() = withConfiguredTestApplication {
@@ -278,17 +280,17 @@ class UsersApiTest : BaseApiTest() {
             every { name } returns "OrgName1"
         }
         every {
-            accountService.createUser(
+            accountService.create(
                 "user@example.com", accountLocale = any(), pass = any()
             )
         } returns user
 
         every {
-            organizationService.createOrganization("OrgName1", true, null)
+            organizationService.create("OrgName1", true, null)
         } returns organization
 
         every {
-            organizationService.addMember(organization.id.value, user.id.value, OrganizationRole.owner)
+            organizationService.addMember(organization.id.value, user.id.value, RoleType.Owner)
         } returns user
 
         withAuthentication {
@@ -308,9 +310,9 @@ class UsersApiTest : BaseApiTest() {
         }
 
         verify(exactly = 1) {
-            accountService.createUser("user@example.com", accountLocale = null, pass = "pass")
-            organizationService.createOrganization("OrgName1", isPrivate = true, parent = null)
-            organizationService.addMember(organization.id.value, user.id.value, OrganizationRole.owner)
+            accountService.create("user@example.com", accountLocale = null, pass = "pass")
+            organizationService.create("OrgName1", isPrivate = true, parent = null)
+            organizationService.addMember(organization.id.value, user.id.value, RoleType.Owner)
         }
     }
 
@@ -320,7 +322,7 @@ class UsersApiTest : BaseApiTest() {
             val accountService = declareMock<AccountService>()
 
             every {
-                accountService.createUser(
+                accountService.create(
                     "user@example.com", accountLocale = any(), pass = any()
                 )
             } throws ValidationException(
@@ -345,7 +347,7 @@ class UsersApiTest : BaseApiTest() {
                 }
             }
 
-            verify { accountService.createUser("user@example.com", null, "pass") }
+            verify { accountService.create("user@example.com", null, "pass") }
         }
 
     @Test
@@ -364,7 +366,7 @@ class UsersApiTest : BaseApiTest() {
             }
 
             verify(exactly = 0) {
-                accountService.createUser(
+                accountService.create(
                     email = any(),
                     pass = any(),
                     accountLocale = any()
@@ -372,7 +374,7 @@ class UsersApiTest : BaseApiTest() {
             }
 
             verify(exactly = 0) {
-                organizationService.createOrganization(
+                organizationService.create(
                     name = any(),
                     isPrivate = any(),
                     parent = any()
@@ -522,32 +524,35 @@ class UsersApiTest : BaseApiTest() {
             val accountService = declareMock<AccountService>()
             val userId = UUID.randomUUID()
             withAuthentication(userId) {
-                every { accountService.getRolesAssignedToUser(userId) } returns listOf(
-                    mockk {
-                        every { user.id } returns userId
-                        every { organization.id } returns UUID.randomUUID()
-                        every { organization.name } returns "Org1"
-                        every { role } returns OrganizationRole.writer
-                    }
-                )
+                every { accountService.getRolesAssignedToUser(userId) } returns
+                        listOf(mockk {
+                            every { user.id } returns EntityID(userId, Users)
+                            every { organization.id } returns EntityID(UUID.randomUUID(), Organizations)
+                            every { organization.name } returns "Org1"
+                            every { organization.isPrivate } returns false
+                            every { role } returns RoleType.Writer.role
+                        })
 
                 with(handleRequest(HttpMethod.Get, "/api/users/me/organizations")) {
                     assertEquals(HttpStatusCode.OK, response.status())
-                    val deserializedContent = response.deserializeContent<List<UserOrganization>>()
+                    val deserializedContent =
+                        response.deserializeContent<List<ApiOrganization>>()
                     assertEquals(1, deserializedContent.count())
-                    assertTrue { deserializedContent.any { it.name == "Org1" && it.organizationRole == OrganizationRole.writer } }
+                    assertTrue {
+                        deserializedContent.any { it.name == "Org1" }
+                    }
+                }
+
+                verify { accountService.getRolesAssignedToUser(userId = any()) }
+            }
+
+            @Test
+            fun `responds to user session termination attempt with 204`() = withConfiguredTestApplication {
+                withAuthentication {
+                    with(handleRequest(HttpMethod.Delete, "/api/users/session")) {
+                        assertEquals(HttpStatusCode.NoContent, response.status())
+                    }
                 }
             }
-
-            verify { accountService.getRolesAssignedToUser(userId = any()) }
         }
-
-    @Test
-    fun `responds to user session termination attempt with 204`() = withConfiguredTestApplication {
-        withAuthentication {
-            with(handleRequest(HttpMethod.Delete, "/api/users/session")) {
-                assertEquals(HttpStatusCode.NoContent, response.status())
-            }
-        }
-    }
 }

@@ -12,5 +12,6 @@ object Workspaces : UUIDTable("workspaces") {
 
 class Workspace(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<Workspace>(Workspaces)
+
     var name by Workspaces.name
 }

@@ -215,9 +215,9 @@ class ProcessMTestingEnvironment {
 
     // region UsersApi
 
-    val organizations: List<UserOrganization>
-        get() = get<Paths.UserOrganizations, List<UserOrganization>> {
-            return@get body<List<UserOrganization>>().toList()
+    val organizations: List<Organization>
+        get() = get<Paths.UserOrganizations, List<Organization>> {
+            return@get body<List<Organization>>().toList()
         }
 
     fun registerUser(userEmail: String, organizationName: String) =

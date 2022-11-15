@@ -2,10 +2,7 @@ package processm.services.api
 
 import com.google.gson.Gson
 import io.ktor.http.*
-import io.mockk.Runs
-import io.mockk.every
-import io.mockk.just
-import io.mockk.mockk
+import io.mockk.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
@@ -14,6 +11,7 @@ import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponents
+import processm.dbmodels.models.Workspaces
 import processm.services.api.models.*
 import processm.services.logic.Reason
 import processm.services.logic.ValidationException
@@ -52,11 +50,11 @@ class WorkspacesApiTest : BaseApiTest() {
         withAuthentication(userId) {
             every { workspaceService.getUserWorkspaces(userId, organizationId) } returns listOf(
                 mockk {
-                    every { id } returns workspaceId1
+                    every { id } returns EntityID(workspaceId1, Workspaces)
                     every { name } returns "Workspace1"
                 },
                 mockk {
-                    every { id } returns workspaceId2
+                    every { id } returns EntityID(workspaceId2, Workspaces)
                     every { name } returns "Workspace2"
                 }
             )
@@ -78,12 +76,12 @@ class WorkspacesApiTest : BaseApiTest() {
 
         withAuthentication(role = OrganizationRole.writer to organizationId) {
             every {
-                workspaceService.removeWorkspace(
+                workspaceService.remove(
                     workspaceId,
                     userId = any(),
                     organizationId = organizationId
                 )
-            } returns true
+            } just runs
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NoContent, response.status())
             }
@@ -98,12 +96,12 @@ class WorkspacesApiTest : BaseApiTest() {
 
         withAuthentication(role = OrganizationRole.writer to organizationId) {
             every {
-                workspaceService.removeWorkspace(
+                workspaceService.remove(
                     workspaceId,
                     userId = any(),
                     organizationId = organizationId
                 )
-            } returns false
+            } throws ValidationException(Reason.ResourceNotFound, "Workspace is not found")
             with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId/workspaces/$workspaceId")) {
                 assertEquals(HttpStatusCode.NotFound, response.status())
             }
@@ -160,7 +158,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val workspaceName = "Workspace1"
 
             withAuthentication(userId, role = OrganizationRole.writer to organizationId) {
-                every { workspaceService.createWorkspace(workspaceName, userId, organizationId) } returns workspaceId
+                every { workspaceService.create(workspaceName, userId, organizationId) } returns workspaceId
                 with(handleRequest(HttpMethod.Post, "/api/organizations/$organizationId/workspaces") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Workspace(workspaceName))
@@ -241,7 +239,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {
-                workspaceService.getWorkspaceComponents(
+                workspaceService.getComponents(
                     workspaceId,
                     userId = any(),
                     organizationId = organizationId
@@ -306,7 +304,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {
-                workspaceService.getWorkspaceComponents(
+                workspaceService.getComponents(
                     workspaceId,
                     userId = any(),
                     organizationId = organizationId
@@ -360,7 +358,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
-                    workspaceService.addOrUpdateWorkspaceComponent(
+                    workspaceService.addOrUpdateComponent(
                         componentId,
                         workspaceId,
                         any(),
@@ -406,7 +404,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
         withAuthentication(role = OrganizationRole.reader to organizationId) {
             every {
-                workspaceService.addOrUpdateWorkspaceComponent(
+                workspaceService.addOrUpdateComponent(
                     componentId,
                     workspaceId,
                     any(),
@@ -466,7 +464,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
-                    workspaceService.updateWorkspaceLayout(
+                    workspaceService.updateLayout(
                         workspaceId,
                         any(),
                         organizationId,
@@ -504,7 +502,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
-                    workspaceService.updateWorkspaceLayout(
+                    workspaceService.updateLayout(
                         workspaceId,
                         any(),
                         organizationId,
@@ -537,13 +535,13 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
-                    workspaceService.removeWorkspaceComponent(
+                    workspaceService.removeComponent(
                         componentId,
                         workspaceId,
                         any(),
                         organizationId
                     )
-                } returns true
+                } just runs
                 with(
                     handleRequest(
                         HttpMethod.Delete,
@@ -565,7 +563,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
             withAuthentication(role = OrganizationRole.reader to organizationId) {
                 every {
-                    workspaceService.removeWorkspaceComponent(
+                    workspaceService.removeComponent(
                         componentId,
                         workspaceId,
                         any(),

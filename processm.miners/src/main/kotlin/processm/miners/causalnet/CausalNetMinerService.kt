@@ -4,7 +4,6 @@ import jakarta.jms.MapMessage
 import jakarta.jms.Message
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.quartz.*
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
@@ -13,6 +12,7 @@ import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import processm.miners.causalnet.onlineminer.OnlineMiner
@@ -32,7 +32,7 @@ class CausalNetMinerService : AbstractJobService(
         get() = "Causal net"
 
     override fun loadJobs(): List<Pair<JobDetail, Trigger>> = loggedScope {
-        val components = transaction(DBCache.getMainDBPool().database) {
+        val components = transactionMain {
             WorkspaceComponents.slice(WorkspaceComponents.id).select {
                 WorkspaceComponents.componentType eq ComponentTypeDto.CausalNet.toString() and WorkspaceComponents.data.isNull()
             }.map { it[WorkspaceComponents.id].value }
@@ -75,11 +75,11 @@ class CausalNetMinerService : AbstractJobService(
             val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
             logger.debug("Calculating Causal net for component $id...")
-            transaction(DBCache.getMainDBPool().database) {
+            transactionMain {
                 val component = WorkspaceComponent.findById(id)
                 if (component === null) {
                     logger.error("Component with id $id is not found.")
-                    return@transaction
+                    return@transactionMain
                 }
 
                 // TODO: store the entire history of models in the component.data field
@@ -118,11 +118,11 @@ class CausalNetMinerService : AbstractJobService(
 
             logger.debug("Deleting Causal net for component $id...")
 
-            transaction(DBCache.getMainDBPool().database) {
+            transactionMain {
                 val component = WorkspaceComponent.findById(id)
                 if (component === null) {
                     logger.error("Component with id $id is not found.")
-                    return@transaction
+                    return@transactionMain
                 }
 
                 try {

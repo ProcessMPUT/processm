@@ -6,18 +6,23 @@ import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.mockk.*
+import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.KoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
+import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.Organizations
+import processm.dbmodels.models.Users
 import processm.services.LocalDateTimeTypeAdapter
 import processm.services.NonNullableTypeAdapterFactory
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
+import processm.services.logic.toDB
 import java.time.LocalDateTime
 import java.util.*
 import java.util.stream.Stream
@@ -115,9 +120,9 @@ abstract class BaseApiTest : KoinTest {
         }
         every { accountService.getRolesAssignedToUser(userId) } returns
                 listOf(mockk {
-                    every { user.id } returns userId
-                    every { organization.id } returns role.second
-                    every { this@mockk.role } returns role.first
+                    every { user.id } returns EntityID(userId, Users)
+                    every { organization.id } returns EntityID(role.second, Organizations)
+                    every { this@mockk.role } returns transactionMain { role.first.toDB() }
                 })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))

@@ -2,127 +2,113 @@ package processm.services.logic
 
 import io.mockk.every
 import io.mockk.just
-import io.mockk.mockk
 import io.mockk.runs
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import processm.core.communication.Producer
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
-import processm.services.api.models.GroupRole
 import java.util.*
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class WorkspaceServiceTest : ServiceTestBase() {
-    private lateinit var producer: Producer
-    private lateinit var accountService: AccountService
-    private lateinit var workspaceService: WorkspaceService
-
-    @BeforeTest
-    override fun setUp() {
-        super.setUp()
-        producer = mockk()
-        accountService = mockk()
-        workspaceService = WorkspaceService(accountService, producer)
-    }
-
     @Test
     fun `returns all user workspaces in the organization`(): Unit = withCleanTables(
-        Users, UserGroups,
-        Workspaces, Organizations,
-        UserGroupWithWorkspaces, UsersInGroups
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val userGroupId = createGroup()
-        val otherUserGroupId = createGroup()
-        val userId = createUser(privateGroupId = userGroupId.value)
-        val workspaceId1 = createWorkspace("Workspace1")
-        val workspaceId2 = createWorkspace("Workspace2")
-        val workspaceId3 = createWorkspace("Workspace3")
-        val workspaceId4 = createWorkspace("Workspace4")
-        val organizationId = createOrganization()
-        attachUserGroupToWorkspace(userGroupId.value, workspaceId1.value, organizationId.value)
-        attachUserGroupToWorkspace(userGroupId.value, workspaceId2.value)
-        attachUserGroupToWorkspace(userGroupId.value, workspaceId3.value, organizationId.value)
-        attachUserGroupToWorkspace(otherUserGroupId.value, workspaceId4.value, organizationId.value)
+        val organization = createOrganization(name = "Org1")
+        val userId = createUser(organizationId = organization.id.value).id.value
+        val userId2 = createUser(userEmail = "user2@example.com", organizationId = organization.id.value).id.value
+        val otherGroupId = createGroup("some group", organizationId = organization.id.value).value
+        groupService.attachUserToGroup(userId, otherGroupId)
+        // owner
+        val workspace1 = createWorkspace("Workspace1", userId = userId, organizationId = organization.id.value)
+        // ACL-based access through shared group
+        val workspace2 = createWorkspace("Workspace2", userId = userId2, organizationId = organization.id.value)
+        // ACL-based access through other group
+        val workspace3 = createWorkspace("Workspace3", userId = userId2, organizationId = organization.id.value)
+        // no access
+        val workspace4 = createWorkspace("Workspace4", userId = userId2, organizationId = organization.id.value)
 
-        val userWorkspaces = workspaceService.getUserWorkspaces(userId.value, organizationId.value)
+        // use ACL service to set permission to workspace2
+        aclService.updateEntry(Workspaces, workspace2, organization.sharedGroup.id.value, RoleType.Reader)
+        // use ACL service to set permission to workspace3
+        aclService.addEntry(Workspaces, workspace3, otherGroupId, RoleType.Reader)
 
-        assertEquals(2, userWorkspaces.size)
+        val userWorkspaces = workspaceService.getUserWorkspaces(userId, organization.id.value)
+
+        assertEquals(3, userWorkspaces.size)
         assertTrue { userWorkspaces.any { it.name == "Workspace1" } }
+        assertTrue { userWorkspaces.any { it.name == "Workspace2" } }
         assertTrue { userWorkspaces.any { it.name == "Workspace3" } }
     }
 
     @Test
-    fun `successful user workspace creation returns`(): Unit = withCleanTables(
-        Users, UserGroups,
-        Workspaces, Organizations,
-        UserGroupWithWorkspaces, UsersInGroups
+    fun `successful workspace creation returns`(): Unit = withCleanTables(
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        Workspaces
     ) {
-        val userGroupId = createGroup()
-        val userId = createUser(privateGroupId = userGroupId.value)
-        val organizationId = createOrganization()
-        every { accountService.getAccountDetails(userId.value) } returns mockk {
-            every { privateGroup.id } returns userGroupId.value
-        }
+        val user = accountService.create("user@example.com", pass = "P@ssw0rd!")
+        val org = organizationService.create("Org1", false)
+        val workspaceId = workspaceService.create("Workspace1", user.id.value, org.id.value)
 
-        val workspaceId = workspaceService.createWorkspace("Workspace1", userId.value, organizationId.value)
-
-        assertTrue { Workspaces.select { Workspaces.id eq workspaceId and (Workspaces.name eq "Workspace1") }.any() }
-        assertTrue {
-            UserGroupWithWorkspaces.select { UserGroupWithWorkspaces.workspaceId eq workspaceId and (UserGroupWithWorkspaces.userGroupId eq userGroupId) and (UserGroupWithWorkspaces.organizationId eq organizationId) }
-                .any()
-        }
+        val workspaces = workspaceService.getUserWorkspaces(user.id.value, org.id.value)
+        assertEquals(1, workspaces.size)
+        assertEquals(workspaceId, workspaces[0].id.value)
     }
 
     @Test
-    fun `successful user workspace removal returns true`(): Unit = withCleanTables(
-        Users, UserGroups,
-        Workspaces, Organizations,
-        UserGroupWithWorkspaces, UsersInGroups
+    fun `successful workspace removal returns true`(): Unit = withCleanTables(
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        Workspaces
     ) {
-        val userGroupId = createGroup(groupRole = GroupRole.writer)
-        val userId = createUser(privateGroupId = userGroupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        val organizationId = createOrganization()
-        attachUserGroupToWorkspace(userGroupId.value, workspaceId.value, organizationId.value)
+        val user = accountService.create("user@example.com", pass = "P@ssw0rd!")
+        val org = organizationService.create("Org1", false)
+        val workspaceId = workspaceService.create("Workspace1", user.id.value, org.id.value)
 
-        assertTrue { workspaceService.removeWorkspace(workspaceId.value, userId.value, organizationId.value) }
-        assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.empty() }
+        workspaceService.remove(workspaceId, user.id.value, org.id.value)
+
+        val workspaces = workspaceService.getUserWorkspaces(user.id.value, org.id.value)
+        assertEquals(0, workspaces.size)
     }
 
     @Test
     fun `user workspace removal fails if user has insufficient permissions`(): Unit = withCleanTables(
-        Users, UserGroups,
-        Workspaces, Organizations,
-        UserGroupWithWorkspaces, UsersInGroups
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val userGroupId = createGroup(groupRole = GroupRole.reader)
-        val userId = createUser(privateGroupId = userGroupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        val organizationId = createOrganization()
-        attachUserGroupToWorkspace(userGroupId.value, workspaceId.value, organizationId.value)
+        val user = createUser()
+        val organizationId = createOrganization().id.value
+        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
+        val workspaceId2 = createWorkspace("Workspace2", user.id.value, organizationId)
+        aclService.updateEntry(Workspaces, workspaceId2, user.privateGroup.id.value, RoleType.Reader)
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
-                workspaceService.removeWorkspace(workspaceId.value, userId.value, organizationId.value)
+                workspaceService.remove(workspaceId2, user.id.value, organizationId)
             }
         assertEquals(Reason.ResourceNotFound, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
+        assertTrue { Workspaces.select { Workspaces.id eq workspaceId2 }.any() }
     }
 
     @Test
     fun `user workspace removal fails if workspace does not exist`(): Unit = withCleanTables(
-        Users, UserGroups,
-        Workspaces, Organizations,
-        UserGroupWithWorkspaces, UsersInGroups
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val workspaceId = createWorkspace("Workspace1")
+        val user = createUser()
+        val organizationId = createOrganization().id.value
+        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace does not exist or the user has insufficient permissions to it") {
-                workspaceService.removeWorkspace(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
+                workspaceService.remove(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
             }
         assertEquals(Reason.ResourceNotFound, exception.reason)
         assertTrue { Workspaces.select { Workspaces.id eq workspaceId }.any() }
@@ -130,25 +116,19 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `returns all user workspace components`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.writer)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId1 = createWorkspace("Workspace1")
-        attachUserGroupToWorkspace(groupId.value, workspaceId1.value, organizationId.value)
-        val workspaceId2 = createWorkspace("Workspace2")
-        val componentId1 =
-            createWorkspaceComponent("Component1", workspaceId1.value, componentType = ComponentTypeDto.Kpi)
-        val componentId2 =
-            createWorkspaceComponent("Component2", workspaceId2.value, componentType = ComponentTypeDto.Kpi)
-        val componentId3 =
-            createWorkspaceComponent("Component3", workspaceId1.value, componentType = ComponentTypeDto.Kpi)
+        val organizationId = createOrganization().id.value
+        val user = createUser()
+        val user2 = createUser(userEmail = "user2@example.com")
+        val workspaceId1 = createWorkspace("Workspace1", user.id.value, organizationId)
+        val workspaceId2 = createWorkspace("Workspace2", user2.id.value, organizationId)
+        val componentId1 = createWorkspaceComponent("Component1", workspaceId1, componentType = ComponentTypeDto.Kpi)
+        val componentId2 = createWorkspaceComponent("Component2", workspaceId2, componentType = ComponentTypeDto.Kpi)
+        val componentId3 = createWorkspaceComponent("Component3", workspaceId1, componentType = ComponentTypeDto.Kpi)
 
-        val workspaceComponents =
-            workspaceService.getWorkspaceComponents(workspaceId1.value, userId.value, organizationId.value)
+        val workspaceComponents = workspaceService.getComponents(workspaceId1, user.id.value, organizationId)
 
         assertEquals(2, workspaceComponents.size)
         assertTrue { workspaceComponents.any { it.id.value == componentId1.value } }
@@ -157,28 +137,24 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `returns all user workspace components including invalid`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.writer)
-        val userId = createUser(privateGroupId = groupId.value)
-        val dataStoreId = createDataStore(organizationId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        val componentId = DBSerializer.insert(DBCache.get(dataStoreId.value.toString()).database, MutableCausalNet())
-        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val organizationId = createOrganization().id.value
+        val user = createUser()
+        val dataStoreId = createDataStore(organizationId).value
+        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
+        val componentId = DBSerializer.insert(DBCache.get(dataStoreId.toString()).database, MutableCausalNet())
         val componentWithInvalidData =
-            createWorkspaceComponent("Cmp1", workspaceId.value, componentType = ComponentTypeDto.CausalNet, data = "-1")
+            createWorkspaceComponent("Cmp1", workspaceId, componentType = ComponentTypeDto.CausalNet, data = "-1")
         val componentWithExistingId = createWorkspaceComponent(
             "Component2",
-            workspaceId.value,
+            workspaceId,
             componentType = ComponentTypeDto.CausalNet,
             data = componentId.toString()
         )
 
-        val workspaceComponents =
-            workspaceService.getWorkspaceComponents(workspaceId.value, userId.value, organizationId.value)
+        val workspaceComponents = workspaceService.getComponents(workspaceId, user.id.value, organizationId)
 
         assertEquals(2, workspaceComponents.size)
         assertTrue { workspaceComponents.any { it.id.value == componentWithExistingId.value } }
@@ -186,17 +162,14 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `successful workspace component update returns`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.writer)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val organizationId = createOrganization().id.value
+        val user = createUser()
+        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
         val componentId =
-            createWorkspaceComponent("Component1", workspaceId.value, componentType = ComponentTypeDto.CausalNet)
+            createWorkspaceComponent("Component1", workspaceId, componentType = ComponentTypeDto.CausalNet)
         val newComponentName = "newName"
         val newComponentType = ComponentTypeDto.Kpi
         val newComponentCustomizationData = """{"data":"new"}"""
@@ -204,11 +177,11 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val newDataStore = UUID.randomUUID()
         every { producer.produce(any(), any()) } just runs
 
-        workspaceService.addOrUpdateWorkspaceComponent(
+        workspaceService.addOrUpdateComponent(
             componentId.value,
-            workspaceId.value,
-            userId.value,
-            organizationId.value,
+            workspaceId,
+            user.id.value,
+            organizationId,
             newComponentName,
             newDataQuery,
             newDataStore,
@@ -229,33 +202,30 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `skips workspace component field update if new value is null`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
         val oldComponentName = "oldName"
         val oldComponentType = ComponentTypeDto.Kpi
         val oldComponentCustomizationData = """{"data":"new"}"""
         val oldDataQuery = "query"
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.writer)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val organizationId = createOrganization().id.value
+        val userId = createUser().id.value
+        val workspaceId = createWorkspace("Workspace1", userId, organizationId)
         val componentId = createWorkspaceComponent(
             oldComponentName,
-            workspaceId.value,
+            workspaceId,
             query = oldDataQuery,
             componentType = oldComponentType,
             customizationData = oldComponentCustomizationData
         )
         every { producer.produce(any(), any()) } just runs
 
-        workspaceService.addOrUpdateWorkspaceComponent(
+        workspaceService.addOrUpdateComponent(
             componentId.value,
-            workspaceId.value,
-            userId.value,
-            organizationId.value,
+            workspaceId,
+            userId,
+            organizationId,
             name = null,
             query = null,
             dataStore = null,
@@ -276,22 +246,21 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `workspace component field update fails if user has insufficient permissions`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
         val oldComponentName = "oldName"
         val oldComponentType = ComponentTypeDto.Kpi
         val oldComponentCustomizationData = """{"data":"new"}"""
         val oldDataQuery = "query"
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.reader)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val organizationId = createOrganization().id.value
+        val user = createUser()
+        val user2 = createUser(userEmail = "user2@example.com")
+        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
+        aclService.addEntry(Workspaces, workspaceId, user2.privateGroup.id.value, RoleType.Reader)
         val componentId = createWorkspaceComponent(
             oldComponentName,
-            workspaceId.value,
+            workspaceId,
             query = oldDataQuery,
             componentType = oldComponentType,
             customizationData = oldComponentCustomizationData
@@ -299,11 +268,11 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
-                workspaceService.addOrUpdateWorkspaceComponent(
+                workspaceService.addOrUpdateComponent(
                     componentId.value,
-                    workspaceId.value,
-                    userId.value,
-                    organizationId.value,
+                    workspaceId,
+                    user2.id.value,
+                    organizationId,
                     name = null,
                     query = null,
                     dataStore = null,
@@ -316,9 +285,8 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `creates workspace component if the component does not exist`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
         val componentId = UUID.randomUUID();
         val componentName = "oldName"
@@ -326,18 +294,16 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val componentCustomizationData = """{"data":"new"}"""
         val dataQuery = "query"
         val dataStore = UUID.randomUUID()
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.writer)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val organizationId = createOrganization().id.value
+        val userId = createUser().id.value
+        val workspaceId = createWorkspace("Workspace1", userId, organizationId)
         every { producer.produce(any(), any()) } just runs
 
-        workspaceService.addOrUpdateWorkspaceComponent(
+        workspaceService.addOrUpdateComponent(
             componentId,
-            workspaceId.value,
-            userId.value,
-            organizationId.value,
+            workspaceId,
+            userId,
+            organizationId,
             name = componentName,
             query = dataQuery,
             dataStore = dataStore,
@@ -358,22 +324,19 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `removes workspace component if the component exists`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.writer)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        val componentId = createWorkspaceComponent(componentWorkspaceId = workspaceId.value)
-        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val organizationId = createOrganization().id.value
+        val userId = createUser().id.value
+        val workspaceId = createWorkspace("Workspace1", userId, organizationId)
+        val componentId = createWorkspaceComponent(workspaceId = workspaceId)
 
-        workspaceService.removeWorkspaceComponent(
+        workspaceService.removeComponent(
             componentId.value,
-            workspaceId.value,
-            userId.value,
-            organizationId.value
+            workspaceId,
+            userId,
+            organizationId
         )
 
         assertTrue {
@@ -385,21 +348,19 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `component removal fails if user has insufficient permissions`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.reader)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        val componentId = createWorkspaceComponent(componentWorkspaceId = workspaceId.value)
+        val organizationId = createOrganization().id.value
+        val user = createUser()
+        val user2 = createUser(userEmail = "user2@example.com")
+        val workspaceId = createWorkspace("Workspace1", user.id.value, organizationId)
+        aclService.addEntry(Workspaces, workspaceId, user2.privateGroup.id.value, RoleType.Reader)
+        val componentId = createWorkspaceComponent(workspaceId = workspaceId)
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
-                workspaceService.removeWorkspaceComponent(
-                    componentId.value, workspaceId.value, userId.value, organizationId.value
-                )
+                workspaceService.removeComponent(componentId.value, workspaceId, user2.id.value, organizationId)
             }
 
         assertEquals(Reason.ResourceNotFound, exception.reason)
@@ -412,20 +373,17 @@ class WorkspaceServiceTest : ServiceTestBase() {
 
     @Test
     fun `component removal fails if the component does not exist`(): Unit = withCleanTables(
-        Organizations, Users, UserGroups, UsersInGroups,
-        WorkspaceComponents,
-        Workspaces
+        AccessControlList, UsersInGroups, Users, Groups, Organizations,
+        WorkspaceComponents, Workspaces
     ) {
-        val organizationId = createOrganization()
-        val groupId = createGroup(groupRole = GroupRole.reader)
-        val userId = createUser(privateGroupId = groupId.value)
-        val workspaceId = createWorkspace("Workspace1")
-        attachUserGroupToWorkspace(groupId.value, workspaceId.value, organizationId.value)
+        val organizationId = createOrganization().id.value
+        val userId = createUser().id.value
+        val workspaceId = createWorkspace("Workspace1", userId, organizationId)
 
         val exception =
             assertFailsWith<ValidationException>("The specified workspace component does not exist or the user has insufficient permissions to it") {
-                workspaceService.removeWorkspaceComponent(
-                    UUID.randomUUID(), workspaceId.value, userId.value, organizationId.value
+                workspaceService.removeComponent(
+                    UUID.randomUUID(), workspaceId, userId, organizationId
                 )
             }
 

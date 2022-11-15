@@ -199,7 +199,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UserOrganization'
+                  $ref: '#/components/schemas/Organization'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -1095,11 +1095,19 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /groups:
+  /organizations/{organizationId}/groups:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
     get:
       tags:
         - groups
-      summary: Get groups belonging to the current user's organization
+      summary: Get groups belonging to the organization
       operationId: getGroups
       responses:
         '200':
@@ -1115,7 +1123,7 @@ paths:
     post:
       tags:
         - groups
-      summary: Create user group
+      summary: Create group
       operationId: createGroup
       requestBody:
         description: Group details
@@ -1131,12 +1139,23 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/Group'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /groups/{groupId}:
+  /organizations/{organizationId}/groups/{groupId}:
     parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
       - name: groupId
         in: path
         description: Group ID
@@ -1156,6 +1175,10 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/Group'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
@@ -1175,6 +1198,8 @@ paths:
       responses:
         '204':
           description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1184,19 +1209,28 @@ paths:
     delete:
       tags:
         - groups
-      summary: Remove user group
+      summary: Remove group
       operationId: removeGroup
       responses:
         '204':
           description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /groups/{groupId}/members:
+  /organizations/{organizationId}/groups/{groupId}/members:
     parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
       - name: groupId
         in: path
         description: Group ID
@@ -1237,14 +1271,23 @@ paths:
       responses:
         '201':
           description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
-  /groups/{groupId}/members/{userId}:
+  /organizations/{organizationId}/groups/{groupId}/members/{userId}:
     parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
       - name: groupId
         in: path
         description: Group ID
@@ -1267,84 +1310,8 @@ paths:
       responses:
         '204':
           description: Successful operation
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      security:
-        - bearerAuth: [ ]
-  /groups/{groupId}/subgroups:
-    parameters:
-      - name: groupId
-        in: path
-        description: Group ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      tags:
-        - groups
-      summary: Get subgroups of the specified group
-      operationId: getSubgroups
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            'application/json':
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Group'
-      security:
-        - bearerAuth: [ ]
-    post:
-      tags:
-        - groups
-      summary: Create new subgroup
-      operationId: createSubgroup
-      requestBody:
-        description: Subgroup details
-        content:
-          'application/json':
-            schema:
-              $ref: '#/components/schemas/Group'
-        required: true
-      responses:
-        '201':
-          description: Successful operation
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-      security:
-        - bearerAuth: [ ]
-  /groups/{groupId}/subgroups/{subgroupId}:
-    parameters:
-      - name: groupId
-        in: path
-        description: Group ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: subgroupId
-        in: path
-        description: Subgroup ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-    delete:
-      tags:
-        - groups
-      summary: Remove the specified subgroup
-      operationId: removeSubgroup
-      responses:
-        '204':
-          description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1534,6 +1501,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
       security:
         - bearerAuth: [ ]
     delete:
@@ -1548,35 +1517,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-      security:
-        - bearerAuth: [ ]
-  /organizations/{organizationId}/groups:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      tags:
-        - organizations
-      summary: Get groups associated with the specified organization
-      operationId: getOrganizationGroups
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            'application/json':
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Group'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
       security:
         - bearerAuth: [ ]
   /data-stores/{dataStoreId}/logs:
@@ -1704,10 +1646,7 @@ components:
           type: string
     OrganizationRole:
       type: string
-      enum: [ owner, writer, reader ]
-    GroupRole:
-      type: string
-      enum: [ owner, writer, reader ]
+      enum: [ owner, writer, reader, none ]
     ComponentType:
       type: string
       enum: [ kpi, alignerKpi, causalNet, petriNet, bpmn ]
@@ -1769,7 +1708,7 @@ components:
           description: New locale settings in ICU format
     UserInfo:
       type: object
-      required: [ userEmail, organization, organizationRole ]
+      required: [ userEmail, organization, role ]
       properties:
         id:
           type: string
@@ -1792,17 +1731,6 @@ components:
           type: string
           format: uuid
         email:
-          type: string
-        organizationRole:
-          $ref: '#/components/schemas/OrganizationRole'
-    UserOrganization:
-      type: object
-      required: [ id, name, organizationRole ]
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
           type: string
         organizationRole:
           $ref: '#/components/schemas/OrganizationRole'
@@ -2216,7 +2144,7 @@ components:
               type: object
     Group:
       type: object
-      required: [ name, groupRole, isImplicit, organizationId ]
+      required: [ name, isImplicit, organizationId ]
       properties:
         id:
           type: string
@@ -2229,8 +2157,6 @@ components:
         organizationId:
           type: string
           format: uuid
-        groupRole:
-          $ref: '#/components/schemas/GroupRole'
     Organization:
       type: object
       required: [ name, isPrivate ]
@@ -2317,6 +2243,12 @@ components:
             $ref: '#/components/schemas/ErrorMessage'
     NotFound:
       description: The specified resource was not found
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    UnprocessableEntity:
+      description: The request is syntactically valid but semantically invalid and cannot be processed.
       content:
         'application/json':
           schema:

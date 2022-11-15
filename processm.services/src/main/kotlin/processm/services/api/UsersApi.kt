@@ -9,16 +9,13 @@ import io.ktor.server.locations.post
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
-import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.RoleType
 import processm.services.api.models.*
-import processm.services.logic.AccountService
-import processm.services.logic.OrganizationService
-import processm.services.logic.Reason
-import processm.services.logic.ValidationException
+import processm.services.logic.*
 import java.time.Duration
 import java.time.Instant
 
@@ -38,7 +35,7 @@ fun Route.UsersApi() {
                     val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
                         ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
                     val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
-                        .map { it.organization.id to it.role }
+                        .map { it.organization.id.value to it.role.toApi() }
                         .toMap()
                     val token = JwtAuthentication.createToken(
                         user.id,
@@ -90,11 +87,11 @@ fun Route.UsersApi() {
                     "Organization name must not be empty."
                 )
 
-                transaction(DBCache.getMainDBPool().database) {
-                    val user = accountService.createUser(userEmail, locale?.value, userPassword)
+                transactionMain {
+                    val user = accountService.create(userEmail, locale?.value, userPassword)
                     if (newOrganization) {
-                        val organization = organizationService.createOrganization(organizationName!!, true)
-                        organizationService.addMember(organization.id.value, user.id.value, OrganizationRole.owner)
+                        val organization = organizationService.create(organizationName!!, true)
+                        organizationService.addMember(organization.id.value, user.id.value, RoleType.Owner)
                     }
                 }
             }
@@ -107,12 +104,12 @@ fun Route.UsersApi() {
     authenticate {
         get<Paths.UserAccountDetails> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val userAccount = accountService.getAccountDetails(principal.userId)
+            val userAccount = accountService.getUser(principal.userId)
 
             call.respond(
                 HttpStatusCode.OK,
                 UserAccountInfo(
-                    id = userAccount.id,
+                    id = userAccount.id.value,
                     email = userAccount.email,
                     locale = userAccount.locale
                 )
@@ -155,15 +152,8 @@ fun Route.UsersApi() {
 
         get<Paths.UserOrganizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val userOrganizations = accountService.getRolesAssignedToUser(principal.userId)
-                .map {
-                    UserOrganization(
-                        it.organization.id,
-                        it.organization.name,
-                        it.role
-                    )
-                }
-                .toTypedArray()
+            val userOrganizations =
+                accountService.getRolesAssignedToUser(principal.userId).mapToArray { it.organization.toApi() }
 
             call.respond(HttpStatusCode.OK, userOrganizations)
         }
@@ -178,7 +168,7 @@ fun Route.UsersApi() {
                 HttpStatusCode.OK,
                 users.mapToArray {
                     UserAccountInfo(
-                        id = it.id,
+                        id = it.id.value,
                         email = it.email,
                         locale = it.locale
                     )

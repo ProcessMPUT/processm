@@ -1,53 +1,48 @@
 package processm.services.logic
 
-import processm.dbmodels.models.Organizations
-import processm.dbmodels.models.UserGroups
-import processm.dbmodels.models.Users
-import processm.dbmodels.models.UsersRolesInOrganizations
+import processm.dbmodels.models.*
 import java.util.*
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class OrganizationServiceTest : ServiceTestBase() {
-    private lateinit var organizationService: OrganizationService
-
-    @BeforeTest
-    override fun setUp() {
-        super.setUp()
-        val groupService = GroupService()
-        val accountService = AccountService(groupService)
-        organizationService = OrganizationService(accountService, groupService)
-    }
-
     @Test
-    fun `getting organization members throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
+    fun `getting organization members throws if nonexistent organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val exception = assertFailsWith<ValidationException>("The specified organization does not exist") {
-            organizationService.getMember(UUID.randomUUID())
+            organizationService.getMembers(UUID.randomUUID())
         }
 
         assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
-    fun `returns all members attached to organization`(): Unit =
-        withCleanTables(Organizations, Users, UsersRolesInOrganizations) {
-            val organizationId1 = createOrganization()
-            val organizationId2 = createOrganization()
-            val userId1 = createUser("user1@example.com")
-            val userId2 = createUser("user2@example.com")
-            val userId3 = createUser("user3@example.com")
-            attachUserToOrganization(userId1.value, organizationId1.value)
-            attachUserToOrganization(userId2.value, organizationId2.value)
-            attachUserToOrganization(userId3.value, organizationId1.value)
+    fun `returns all members attached to organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations, Users, UsersRolesInOrganizations
+    ) {
+        val organization1 = createOrganization().id.value
+        val organization2 = createOrganization().id.value
+        val userId1 = createUser("user1@example.com").id.value
+        val userId2 = createUser("user2@example.com").id.value
+        val userId3 = createUser("user3@example.com").id.value
+        attachUserToOrganization(userId1, organization1)
+        attachUserToOrganization(userId2, organization2)
+        attachUserToOrganization(userId3, organization1)
 
-            val organizationMembers = organizationService.getMember(organizationId1.value)
+        val organizationMembers = organizationService.getMembers(organization1)
 
-            assertEquals(2, organizationMembers.count())
-            assertTrue { organizationMembers.any { it.user.email == "user1@example.com" } }
-            assertTrue { organizationMembers.any { it.user.email == "user3@example.com" } }
-        }
+        assertEquals(2, organizationMembers.count())
+        assertTrue { organizationMembers.any { it.user.email == "user1@example.com" } }
+        assertTrue { organizationMembers.any { it.user.email == "user3@example.com" } }
+    }
 
     @Test
-    fun `getting organization groups throws if nonexistent organization`(): Unit = withCleanTables(Organizations) {
+    fun `getting organization groups throws if nonexistent organization`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val exception = assertFailsWith<ValidationException>("The specified organization does not exist") {
             organizationService.getOrganizationGroups(UUID.randomUUID())
         }
@@ -56,30 +51,38 @@ class OrganizationServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `returns all groups related to organization`(): Unit = withCleanTables(UserGroups) {
-        val groupId1 = createGroup()
-        val groupId2 = createGroup()
-        val organizationId1 = createOrganization(sharedGroupId = groupId1.value)
-        createOrganization(sharedGroupId = groupId2.value)
+    fun `returns all groups related to organization`(): Unit = withCleanTables(AccessControlList, Groups) {
+        val organization1 = createOrganization()
+        val organization2 = createOrganization()
+        val groupId1 = createGroup(organizationId = organization2.id.value)
+        val groupId2 = createGroup(organizationId = organization2.id.value)
 
-        val organizationGroups = organizationService.getOrganizationGroups(organizationId1.value)
-        assertEquals(1, organizationGroups.count())
-        assertTrue { organizationGroups.any { it.id == groupId1.value } }
+        val organization1Groups = organizationService.getOrganizationGroups(organization1.id.value)
+        assertEquals(1, organization1Groups.count())
+        assertTrue { organization1Groups.any { it.id == organization1.sharedGroup.id } }
+
+        val organization2Groups = organizationService.getOrganizationGroups(organization2.id.value)
+        assertEquals(3, organization2Groups.count())
+        assertTrue { organization2Groups.any { it.id == organization2.sharedGroup.id } }
+        assertTrue { organization2Groups.any { it.id == groupId1 } }
+        assertTrue { organization2Groups.any { it.id == groupId2 } }
     }
 
     @Test
-    fun `returns organization related to to shared group`(): Unit = withCleanTables(Organizations, UserGroups) {
-        val groupId1 = createGroup()
-        val groupId2 = createGroup()
-        val organizationId = createOrganization(sharedGroupId = groupId1.value)
-        createOrganization(sharedGroupId = groupId2.value)
+    fun `returns organization related to to shared group`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val organizationId = createOrganization()
+        createOrganization()
 
-        val organization = organizationService.getOrganizationBySharedGroupId(groupId1.value)
-        assertEquals(organizationId.value, organization.id)
+        val organization = organizationService.getOrganizationBySharedGroupId(organizationId.sharedGroup.id.value)
+        assertEquals(organizationId.id, organization.id)
     }
 
     @Test
-    fun `getting organization groups throws if nonexistent shared group`(): Unit = withCleanTables(Organizations) {
+    fun `getting organization groups throws if nonexistent shared group`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
         val exception =
             assertFailsWith<ValidationException>("The specified shared group id is not assigned to any organization") {
                 organizationService.getOrganizationBySharedGroupId(UUID.randomUUID())
