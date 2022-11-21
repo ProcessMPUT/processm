@@ -223,7 +223,7 @@ class ProcessMTestingEnvironment {
     fun registerUser(userEmail: String, organizationName: String) =
         post(
             "/users",
-            AccountRegistrationInfo(userEmail, "pass", true, organizationName)
+            AccountRegistrationInfo(userEmail, "P@ssw0rd!", true, organizationName)
         ) {}
 
     fun login(login: String, password: String) =

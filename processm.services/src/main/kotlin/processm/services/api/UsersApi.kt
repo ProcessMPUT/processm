@@ -32,27 +32,29 @@ fun Route.UsersApi() {
 
             when {
                 credentials != null -> {
-                    val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
-                        ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
-                    val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
-                        .map { it.organization.id.value to it.role.toApi() }
-                        .toMap()
-                    val token = JwtAuthentication.createToken(
-                        user.id,
-                        user.email,
-                        userRolesInOrganizations,
-                        Instant.now().plus(jwtTokenTtl),
-                        jwtIssuer,
-                        jwtSecret
-                    )
+                    val token = transactionMain {
+                        val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
+                            ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
+                        val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
+                            .map { it.organization.id.value to it.role.toApi() }
+                            .toMap()
+                        val token = JwtAuthentication.createToken(
+                            user.id,
+                            user.email,
+                            userRolesInOrganizations,
+                            Instant.now().plus(jwtTokenTtl),
+                            jwtIssuer,
+                            jwtSecret
+                        )
 
-                    logger.debug("The user ${user.id} has successfully logged in")
-                    call.respond(
-                        HttpStatusCode.Created, AuthenticationResult(token)
-                    )
+                        logger.debug("The user ${user.id} has successfully logged in")
+
+                        token
+                    }
+                    call.respond(HttpStatusCode.Created, AuthenticationResult(token))
                 }
 
-                call.request.authorization() != null -> {
+                call.request.authorization() !== null -> {
                     val authorizationHeader =
                         call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single ?: throw ApiException(
                             "Invalid authorization token format", HttpStatusCode.Unauthorized
@@ -62,15 +64,10 @@ fun Route.UsersApi() {
                     )
 
                     logger.debug("A session token ${authorizationHeader.blob} has been successfully prolonged to $prolongedToken")
-                    call.respond(
-                        HttpStatusCode.Created,
-                        AuthenticationResult(prolongedToken)
-                    )
+                    call.respond(HttpStatusCode.Created, AuthenticationResult(prolongedToken))
                 }
 
-                else -> {
-                    throw ApiException("Either user credentials or authentication token needs to be provided")
-                }
+                else -> throw ApiException("Either user credentials or authentication token needs to be provided")
             }
         }
     }
@@ -152,8 +149,9 @@ fun Route.UsersApi() {
 
         get<Paths.UserOrganizations> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val userOrganizations =
+            val userOrganizations = transactionMain {
                 accountService.getRolesAssignedToUser(principal.userId).mapToArray { it.organization.toApi() }
+            }
 
             call.respond(HttpStatusCode.OK, userOrganizations)
         }

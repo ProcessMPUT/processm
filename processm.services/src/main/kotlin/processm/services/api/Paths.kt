@@ -93,7 +93,7 @@ object Paths {
      * @param organizationId Organization ID
      */
     @Location("/organizations/{organizationId}/members")
-    class OrganizationsOrgIdMembers(val organizationId: UUID)
+    class OrganizationMembers(val organizationId: UUID)
 
     /**
      * List of organizations
@@ -108,7 +108,7 @@ object Paths {
      * @param userId User ID
      */
     @Location("/organizations/{organizationId}/members/{userId}")
-    class OrganizationsOrgIdMembersUserId(val organizationId: UUID, val userId: UUID)
+    class OrganizationMember(val organizationId: UUID, val userId: UUID)
 
     /**
      * Data stores assigned to [organizationId].

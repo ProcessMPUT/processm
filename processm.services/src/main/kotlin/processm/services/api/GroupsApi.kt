@@ -55,7 +55,7 @@ fun Route.GroupsApi() = loggedScope { logger ->
                 organizationId = path.organizationId
             )
 
-            call.respondCreated("/organizations/{organizationId}/groups/${group.id.value}")
+            call.respondCreated(Paths.Group(path.organizationId, group.id.value))
         }
 
         get<Paths.Group> { group ->
@@ -122,7 +122,7 @@ fun Route.GroupsApi() = loggedScope { logger ->
             val newMemberId = call.receiveOrNull<String>().validateNotNull { "Invalid user id." }.toUUID()!!
             groupService.attachUserToGroup(newMemberId, path.groupId)
 
-            call.respondCreated("/organizations/${path.organizationId}/groups/${path.groupId}/members/${newMemberId}")
+            call.respondCreated(Paths.GroupMember(path.organizationId, path.groupId, newMemberId))
         }
 
         delete<Paths.GroupMember> { path ->

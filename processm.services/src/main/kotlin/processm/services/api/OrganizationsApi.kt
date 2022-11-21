@@ -24,38 +24,61 @@ fun Route.OrganizationsApi() {
     authenticate {
         // region Organizations
         get<Paths.Organizations> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
-            // TODO
+            val principal = call.authentication.principal<ApiUser>()!!
+            // TODO: access control: who can see organizations? What can see a particular user?
+
             call.respond(HttpStatusCode.NotImplemented)
         }
 
-        post<Paths.Organizations> {
-            val principal = call.authentication.principal<ApiUser>()
-            // TODO
-            call.respond(HttpStatusCode.NotImplemented)
+        post<Paths.Organizations> { _ ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            val newOrganization = call.receive<ApiOrganization>()
+
+            val newOrg = organizationService.create(
+                name = newOrganization.name,
+                isPrivate = newOrganization.isPrivate,
+                ownerUserId = principal.userId
+            )
+
+            call.respondCreated(Paths.Organization(newOrg.id.value))
         }
 
-        get<Paths.Organization> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
-            // TODO
-            call.respond(HttpStatusCode.NotImplemented)
+        get<Paths.Organization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.reader)
+
+            val organization = organizationService.get(path.organizationId)
+
+            call.respond(HttpStatusCode.OK, organization.toApi())
         }
 
-        delete<Paths.Organization> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
-            // TODO
-            call.respond(HttpStatusCode.NotImplemented)
+        delete<Paths.Organization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.owner)
+
+            organizationService.remove(path.organizationId)
+
+            call.respond(HttpStatusCode.NoContent)
         }
 
-        put<Paths.Organization> {
-            val principal = call.authentication.principal<ApiUser>()
-            // TODO
-            call.respond(HttpStatusCode.NotImplemented)
+        put<Paths.Organization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
+
+            val newOrg = call.receive<ApiOrganization>()
+
+            organizationService.update(path.organizationId) {
+                this.name = newOrg.name
+                this.isPrivate = newOrg.isPrivate
+                // TODO: currently, we do not support change of other attributes
+            }
+
+            call.respond(HttpStatusCode.NoContent)
         }
         // end region
 
         // region Organization members
-        get<Paths.OrganizationsOrgIdMembers> { params ->
+        get<Paths.OrganizationMembers> { params ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(params.organizationId)
 
@@ -69,7 +92,7 @@ fun Route.OrganizationsApi() {
             call.respond(HttpStatusCode.OK, members)
         }
 
-        post<Paths.OrganizationsOrgIdMembers> { params ->
+        post<Paths.OrganizationMembers> { params ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
             val member = call.receive<OrganizationMember>()
@@ -80,10 +103,10 @@ fun Route.OrganizationsApi() {
                 member.organizationRole.toRoleType()
             )
 
-            call.respondCreated(Paths.OrganizationsOrgIdMembersUserId(params.organizationId, user.id.value))
+            call.respondCreated(Paths.OrganizationMember(params.organizationId, user.id.value))
         }
 
-        patch<Paths.OrganizationsOrgIdMembersUserId> { params ->
+        patch<Paths.OrganizationMember> { params ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
             val member = call.receive<OrganizationMember>()
@@ -98,7 +121,7 @@ fun Route.OrganizationsApi() {
             call.respond(HttpStatusCode.NoContent)
         }
 
-        delete<Paths.OrganizationsOrgIdMembersUserId> { params ->
+        delete<Paths.OrganizationMember> { params ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
 

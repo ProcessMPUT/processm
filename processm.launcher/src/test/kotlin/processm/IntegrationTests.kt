@@ -41,7 +41,7 @@ class IntegrationTests {
         val query = "An incorrect query"
         ProcessMTestingEnvironment().withFreshDatabase().run {
             registerUser("test@example.com", "some organization")
-            login("test@example.com", "pass")
+            login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
             currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
@@ -135,7 +135,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
         ProcessMTestingEnvironment().withFreshDatabase().run {
             registerUser("test@example.com", "some organization")
-            login("test@example.com", "pass")
+            login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
             currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to sakilaJdbcUrl))

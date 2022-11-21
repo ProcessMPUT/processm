@@ -1,6 +1,8 @@
 package processm.services.api
 
 import io.ktor.http.*
+import io.ktor.server.auth.*
+import io.ktor.server.request.*
 import io.mockk.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
@@ -32,11 +34,7 @@ class OrganizationsApiTest : BaseApiTest() {
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
-        HttpMethod.Get to "/api/organizations",
-        HttpMethod.Post to "/api/organizations",
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}",
-        HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}",
-        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}"
+        HttpMethod.Get to "/api/organizations"
     )
 
     @Test
@@ -324,4 +322,189 @@ class OrganizationsApiTest : BaseApiTest() {
             organizationService.updateMember(any(), any(), any())
         }
     }
+
+    @Test
+    fun `responds with 201 to the creation of an organization`() = withConfiguredTestApplication {
+        val ownerId = UUID.randomUUID()
+        val organizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { create("my org", false, ownerUserId = ownerId) } returns mockk {
+                every { id } returns EntityID(organizationId, Organizations)
+            }
+        }
+        withAuthentication(userId = ownerId) {
+            with(handleRequest(HttpMethod.Post, "/api/organizations") {
+                withSerializedBody(ApiOrganization(name = "my org", isPrivate = false))
+            }) {
+                assertEquals(HttpStatusCode.Created, response.status())
+                val uri = response.headers["Location"]
+                assertNotNull(uri)
+                assertEquals(organizationId.toString(), uri.substringAfterLast('/'))
+
+                verify(exactly = 1) { organizationService.create("my org", false, ownerUserId = ownerId) }
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 200 to the organization`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { get(organizationId) } returns mockk {
+                every { id } returns EntityID(organizationId, Organizations)
+                every { name } returns "my org"
+                every { isPrivate } returns false
+                every { parentOrganization } returns null
+            }
+        }
+        withAuthentication(role = OrganizationRole.reader to organizationId) {
+            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+                val org = response.deserializeContent<ApiOrganization>()
+                assertEquals(organizationId, org.id)
+                assertEquals("my org", org.name)
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 403 to the nonexistent organization`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { get(organizationId) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+        }
+        withAuthentication {
+            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId")) {
+                // As we require an authenticated user and the user sees only the organizations he/she belongs to,
+                // we cannot distinguish between 403 and 404. Since the organization does not exist, it cannot be
+                // included in the user's authentication token, and so we return 403.
+                assertEquals(HttpStatusCode.Forbidden, response.status())
+                verify(exactly = 0) { organizationService.get(organizationId) }
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 403 to the organization that the caller has insufficient rights`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val organizationService = declareMock<OrganizationService> {
+                every { get(organizationId) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+            }
+            withAuthentication(role = OrganizationRole.none to organizationId) {
+                with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId")) {
+                    // As we require an authenticated user and the user sees only the organizations he/she belongs to,
+                    // we cannot distinguish between 403 and 404. Since the organization does not exist, it cannot be
+                    // included in the user's authentication token, and so we return 403.
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+                    verify(exactly = 0) { organizationService.get(organizationId) }
+                }
+            }
+        }
+
+    @Test
+    fun `responds with 200 to the update of an organization`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { update(organizationId, any()) } just runs
+        }
+        withAuthentication(role = OrganizationRole.writer to organizationId) {
+            with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId") {
+                withSerializedBody(
+                    ApiOrganization(
+                        name = "new name",
+                        isPrivate = false
+                    )
+                )
+            }) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
+
+                verify(exactly = 1) { organizationService.update(organizationId, any()) }
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 404 to the update of a nonexistent organization`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { update(organizationId, any()) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+        }
+        withAuthentication(role = OrganizationRole.writer to organizationId) {
+            with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId") {
+                withSerializedBody(
+                    ApiOrganization(
+                        name = "new name",
+                        isPrivate = false
+                    )
+                )
+            }) {
+                assertEquals(HttpStatusCode.NotFound, response.status())
+
+                verify(exactly = 1) { organizationService.update(organizationId, any()) }
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 403 to the update of an organization if the caller has insufficient rights`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val organizationService = declareMock<OrganizationService> {
+                every { update(organizationId, any()) } just runs
+            }
+            withAuthentication(role = OrganizationRole.reader to organizationId) {
+                with(handleRequest(HttpMethod.Put, "/api/organizations/$organizationId")) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+
+                    verify(exactly = 0) { organizationService.update(organizationId, any()) }
+                }
+            }
+        }
+
+    @Test
+    fun `responds with 200 to the deletion of an organization`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { remove(organizationId) } just runs
+        }
+        withAuthentication(role = OrganizationRole.owner to organizationId) {
+            with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId")) {
+                assertEquals(HttpStatusCode.NoContent, response.status())
+
+                verify(exactly = 1) { organizationService.remove(organizationId) }
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 404 to the deletion of an nonexistent organization`() = withConfiguredTestApplication {
+        val organizationId = UUID.randomUUID()
+        val organizationService = declareMock<OrganizationService> {
+            every { remove(organizationId) } throws ValidationException(Reason.ResourceNotFound, "Not found.")
+        }
+        withAuthentication(role = OrganizationRole.owner to organizationId) {
+            with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId")) {
+                assertEquals(HttpStatusCode.NotFound, response.status())
+
+                verify(exactly = 1) { organizationService.remove(organizationId) }
+            }
+        }
+    }
+
+    @Test
+    fun `responds with 403 to the deletion of an organization if the caller has insufficient rights`() =
+        withConfiguredTestApplication {
+            val organizationId = UUID.randomUUID()
+            val organizationService = declareMock<OrganizationService> {
+                every { remove(organizationId) } just runs
+            }
+            withAuthentication(role = OrganizationRole.writer to organizationId) {
+                with(handleRequest(HttpMethod.Delete, "/api/organizations/$organizationId")) {
+                    assertEquals(HttpStatusCode.Forbidden, response.status())
+
+                    verify(exactly = 0) { organizationService.remove(organizationId) }
+                }
+            }
+        }
 }

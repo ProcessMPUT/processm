@@ -139,7 +139,7 @@ class OrganizationService(
     /**
      * Creates a new organization with the given [name]. The organization name may be not unique.
      */
-    fun create(name: String, isPrivate: Boolean, parent: UUID? = null): Organization =
+    fun create(name: String, isPrivate: Boolean, parent: UUID? = null, ownerUserId: UUID? = null): Organization =
         loggedScope { logger ->
             name.isNotBlank().validate(Reason.ResourceFormatInvalid, "Name must not be blank or empty.")
 
@@ -152,6 +152,9 @@ class OrganizationService(
 
                 // automatically created group for all users
                 groupService.create(name, isShared = true, organizationId = org.id.value)
+
+                if (ownerUserId !== null)
+                    addMember(org.id.value, ownerUserId, RoleType.Owner)
 
                 logger.debug { "Created organization $name with id ${org.id.value}" }
 
