@@ -35,5 +35,6 @@ class Group(id: EntityID<UUID>) : UUIDEntity(id) {
     var isImplicit by Groups.isImplicit
     var isShared by Groups.isShared
     val childGroups by Group optionalReferrersOn Groups.parentGroupId
+    val members by User via UsersInGroups
 }
 

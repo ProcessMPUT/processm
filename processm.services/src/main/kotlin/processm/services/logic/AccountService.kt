@@ -65,7 +65,7 @@ class AccountService(private val groupService: GroupService) {
             )
 
             // automatically created group for the particular user // name group after username
-            val privateGroup = groupService.create(email, isImplicit = true)
+            val privateGroup = groupService.create(email, organizationId = null)
 
             val user = User.new {
                 this.email = email
@@ -119,7 +119,7 @@ class AccountService(private val groupService: GroupService) {
      * Deletes a user completely from the system. To detach a user from an organization, user [OrganizationService.removeMember].
      * @throws ValidationException if the user is not found.
      */
-    fun removeUser(userId: UUID): Unit = transactionMain {
+    fun remove(userId: UUID): Unit = transactionMain {
         Users.deleteWhere {
             Users.id eq userId
         }.validate(1, Reason.ResourceNotFound) { "User is not found." }

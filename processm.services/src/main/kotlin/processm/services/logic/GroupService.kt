@@ -17,7 +17,6 @@ class GroupService {
     fun attachUserToGroup(userId: UUID, groupId: UUID): Unit =
         loggedScope { logger ->
             transactionMain {
-                // FIXME: access control: who can attach/detach users to/from groups?
                 val userInGroup =
                     UsersInGroups.select { UsersInGroups.userId eq userId and (UsersInGroups.groupId eq groupId) }
                         .limit(1)
@@ -44,7 +43,6 @@ class GroupService {
 
     fun detachUserFromGroup(userId: UUID, groupId: UUID): Unit = loggedScope { logger ->
         transactionMain {
-            // FIXME: access control: who can attach/detach users to/from groups?
             UsersInGroups.deleteWhere {
                 (UsersInGroups.userId eq userId) and (UsersInGroups.groupId eq groupId)
             }.validate(1, Reason.ResourceNotFound) { "The specified user or group is not found." }
@@ -102,9 +100,9 @@ class GroupService {
         name: String,
         parent: UUID? = null,
         organizationId: UUID? = null,
-        isImplicit: Boolean = false,
         isShared: Boolean = false
     ): Group = transactionMain {
+        val isImplicit = organizationId === null
         Group.new {
             this.name = name
             this.parentGroup = parent?.let { getGroup(parent) }

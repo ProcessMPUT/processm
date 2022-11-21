@@ -151,7 +151,7 @@ class OrganizationService(
                 }
 
                 // automatically created group for all users
-                groupService.create(name, isShared = true, isImplicit = false, organizationId = org.id.value)
+                groupService.create(name, isShared = true, organizationId = org.id.value)
 
                 logger.debug { "Created organization $name with id ${org.id.value}" }
 
@@ -160,12 +160,10 @@ class OrganizationService(
         }
 
     fun update(id: UUID, update: (Organization.() -> Unit)): Unit = transactionMain {
-        // FIXME: access control: who can update an organization?
         getOrganization(id).update()
     }
 
     fun remove(id: UUID): Unit = transactionMain {
-        // FIXME: access control: who can delete an organization?
         Organizations.deleteWhere {
             Organizations.id eq id
         }
@@ -173,6 +171,10 @@ class OrganizationService(
         Groups.deleteWhere {
             (Groups.organizationId eq id) and (Groups.isImplicit eq true)
         }
+    }
+
+    fun get(organizationId: UUID): Organization = transactionMain {
+        getOrganization(organizationId)
     }
 
     private fun Transaction.getOrganization(organizationId: UUID): Organization =

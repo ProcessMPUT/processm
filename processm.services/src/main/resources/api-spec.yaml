@@ -2144,7 +2144,7 @@ components:
               type: object
     Group:
       type: object
-      required: [ name, isImplicit, organizationId ]
+      required: [ name ]
       properties:
         id:
           type: string
@@ -2154,6 +2154,9 @@ components:
         isImplicit:
           type: boolean
           description: Indicates whether the group was explicitly created by a user or implicitly created by the system (default groups)
+        isShared:
+          type: boolean
+          description: Indicated whether the group is shared by all organization members.
         organizationId:
           type: string
           format: uuid

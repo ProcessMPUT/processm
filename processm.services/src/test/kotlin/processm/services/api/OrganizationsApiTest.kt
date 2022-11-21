@@ -7,7 +7,6 @@ import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.dbmodels.models.*
 import processm.services.api.models.ErrorMessage
-import processm.services.api.models.Group
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.*
@@ -29,8 +28,7 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/members",
         HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
-        HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}",
-        HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/groups",
+        HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
     )
 
     override fun endpointsWithNoImplementation() = Stream.of(
@@ -38,91 +36,8 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Post to "/api/organizations",
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}",
         HttpMethod.Put to "/api/organizations/${UUID.randomUUID()}",
-        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}",
+        HttpMethod.Delete to "/api/organizations/${UUID.randomUUID()}"
     )
-
-    @Test
-    fun `responds to organization groups request with 200 and groups list`() = withConfiguredTestApplication {
-        val organizationService = declareMock<OrganizationService>()
-        val accountService = declareMock<AccountService>()
-        val organizationId = UUID.randomUUID()
-        val userId = UUID.randomUUID()
-        val groupId1 = UUID.randomUUID()
-        val groupId2 = UUID.randomUUID()
-
-        withAuthentication(userId) {
-            every { organizationService.getOrganizationGroups(organizationId) } returns listOf(
-                mockk {
-                    every { id } returns EntityID(groupId1, Groups)
-                    every { name } returns "Group1"
-                    every { isImplicit } returns true
-                },
-                mockk {
-                    every { id } returns EntityID(groupId2, Groups)
-                    every { name } returns "Group2"
-                    every { isImplicit } returns false
-                }
-            )
-            every { accountService.getRolesAssignedToUser(userId) } returns
-                    listOf(mockk {
-                        every { user.id } returns EntityID(userId, Users)
-                        every { organization.id } returns EntityID(organizationId, Organizations)
-                        every { this@mockk.role } returns RoleType.Reader.role
-                    })
-            with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/groups")) {
-                assertEquals(HttpStatusCode.OK, response.status())
-                val groups = assertNotNull(response.deserializeContent<List<Group>>())
-
-                assertEquals(2, groups.count())
-                assertTrue { groups.any { it.id == groupId1 && it.name == "Group1" && it.isImplicit } }
-                assertTrue { groups.any { it.id == groupId2 && it.name == "Group2" && !it.isImplicit } }
-            }
-        }
-    }
-
-    @Test
-    fun `responds to random organization groups list request with 403 and error message`() =
-        withConfiguredTestApplication {
-            val unknownOrganizationId = UUID.randomUUID()
-
-            withAuthentication {
-                with(handleRequest(HttpMethod.Get, "/api/organizations/$unknownOrganizationId/groups")) {
-                    assertEquals(HttpStatusCode.Forbidden, response.status())
-                    assertTrue(
-                        response.deserializeContent<ErrorMessage>().error
-                            .contains("The user is not a member of the related organization")
-                    )
-                }
-            }
-        }
-
-    @Test
-    fun `responds to groups list of recently removed organization request with 404 and error message`() =
-        withConfiguredTestApplication {
-            val organizationService = declareMock<OrganizationService>()
-            val accountService = declareMock<AccountService>()
-            val removedOrganizationId = UUID.randomUUID()
-
-            withAuthentication {
-                every { organizationService.getOrganizationGroups(removedOrganizationId) } throws ValidationException(
-                    Reason.ResourceNotFound,
-                    userMessage = "Organization not found"
-                )
-                every { accountService.getRolesAssignedToUser(any()) } returns
-                        listOf(mockk {
-                            every { user.id } returns EntityID(UUID.randomUUID(), Users)
-                            every { organization.id } returns EntityID(removedOrganizationId, Organizations)
-                            every { this@mockk.role } returns RoleType.Reader.role
-                        })
-                with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/groups")) {
-                    assertEquals(HttpStatusCode.NotFound, response.status())
-                    assertTrue(
-                        response.deserializeContent<ErrorMessage>().error
-                            .contains("Organization not found")
-                    )
-                }
-            }
-        }
 
     @Test
     fun `responds to organization members request with 200 and members list`() = withConfiguredTestApplication {

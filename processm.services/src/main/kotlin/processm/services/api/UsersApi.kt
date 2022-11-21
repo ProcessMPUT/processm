@@ -158,7 +158,7 @@ fun Route.UsersApi() {
             call.respond(HttpStatusCode.OK, userOrganizations)
         }
 
-        get<Paths.Users> { _ ->
+        get<Paths.Users> { user ->
             val principal = call.authentication.principal<ApiUser>()!!
             val email = call.request.queryParameters["email"]
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10

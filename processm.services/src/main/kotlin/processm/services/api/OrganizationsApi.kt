@@ -12,7 +12,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
-import processm.services.api.models.Group
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.*
@@ -117,8 +116,7 @@ fun Route.OrganizationsApi() {
             principal.ensureUserBelongsToOrganization(organization.organizationId)
 
             val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
-                .map { Group(it.name ?: "", it.isImplicit, organization.organizationId, it.id.value) }
-                .toTypedArray()
+                .mapToArray { it.toApi() }
 
             call.respond(HttpStatusCode.OK, organizationGroups)
         }

@@ -27,31 +27,31 @@ object Paths {
      *
      * @param groupId Group ID
      */
-    @Location("/groups/{groupId}")
-    class Group(val groupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}")
+    class Group(val organizationId: UUID, val groupId: UUID)
 
     /**
      * Members of the specified group
      *
      * @param groupId Group ID
      */
-    @Location("/groups/{groupId}/members")
-    class GroupMembers(val groupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/members")
+    class GroupMembers(val organizationId: UUID, val groupId: UUID)
 
     /**
      * Groups og the current user&#39;s organization
      *
      */
-    @Location("/groups")
-    class Groups
+    @Location("/organizations/{organizationId}/groups")
+    class Groups(val organizationId: UUID)
 
     /**
      * Subgroups of the specified group
      *
      * @param groupId Group ID
      */
-    @Location("/groups/{groupId}/subgroups")
-    class Subgroups(val groupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/subgroups")
+    class Subgroups(val organizationId: UUID, val groupId: UUID)
 
     /**
      * Mmber from the specified group
@@ -59,8 +59,8 @@ object Paths {
      * @param groupId Group ID
      * @param userId User ID
      */
-    @Location("/groups/{groupId}/members/{userId}")
-    class GroupMember(val groupId: UUID, val userId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/members/{userId}")
+    class GroupMember(val organizationId: UUID, val groupId: UUID, val userId: UUID)
 
     /**
      * Subgroup of a group.
@@ -68,8 +68,8 @@ object Paths {
      * @param groupId Group ID
      * @param subgroupId Subgroup ID
      */
-    @Location("/groups/{groupId}/subgroups/{subgroupId}")
-    class Subgroup(val groupId: UUID, val subgroupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/subgroups/{subgroupId}")
+    class Subgroup(val organizationId: UUID, val groupId: UUID, val subgroupId: UUID)
 
     /**
      * Organization.

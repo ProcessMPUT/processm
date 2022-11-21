@@ -9,6 +9,7 @@ typealias ApiOrganization = processm.services.api.models.Organization
 typealias ApiRole = processm.services.api.models.OrganizationRole
 typealias ApiOrganizationMember = processm.services.api.models.OrganizationMember
 typealias ApiWorkspace = processm.services.api.models.Workspace
+typealias ApiGroup = processm.services.api.models.Group
 
 fun Role.toApi(): ApiRole = when (this.name) {
     RoleType.Owner -> ApiRole.owner
@@ -38,16 +39,20 @@ fun Workspace.toApi(): ApiWorkspace = ApiWorkspace(
     name = name
 )
 
+fun Group.toApi() = ApiGroup(
+    id = id.value,
+    name = name ?: "(no name)",
+    organizationId = organizationId?.id?.value,
+    isImplicit = isImplicit,
+    isShared = isShared
+)
+
 // TODO: drop these nonsense-layer classes below:
 
-data class UserDto(val id: UUID, val email: String, val locale: String, val privateGroup: UserGroupDto)
+data class UserDto(val id: UUID, val email: String, val locale: String, val privateGroup: ApiGroup)
 
-fun User.toDto() = UserDto(id.value, email, locale, privateGroup.toDto())
+fun User.toDto() = UserDto(id.value, email, locale, privateGroup.toApi())
 
-data class UserGroupDto(val id: UUID, val name: String?, val isImplicit: Boolean)
+data class GroupMemberDto(val user: UserDto, val group: ApiGroup)
 
-fun Group.toDto() = UserGroupDto(id.value, name, isImplicit)
-
-data class GroupMemberDto(val user: UserDto, val group: UserGroupDto)
-
-fun UsersInGroup.toDto() = GroupMemberDto(user.toDto(), group.toDto())
+fun UsersInGroup.toDto() = GroupMemberDto(user.toDto(), group.toApi())
