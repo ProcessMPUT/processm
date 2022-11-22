@@ -73,7 +73,7 @@ export default class BPMNComponent extends Vue {
   mounted() {
     const container = this.$refs.container;
 
-    const _options = Object.assign({ container: container }, this.options);
+    const _options = Object.assign({ container: container as object }, this.options);
     let ctor;
     if (this.componentMode != ComponentMode.Edit) ctor = Viewer;
     else ctor = Modeler;

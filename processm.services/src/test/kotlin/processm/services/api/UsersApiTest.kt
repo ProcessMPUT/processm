@@ -271,8 +271,9 @@ class UsersApiTest : BaseApiTest() {
     fun `responds to successful account registration attempt with 201`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
         val organizationService = declareMock<OrganizationService>()
+        val userId = UUID.randomUUID()
         val user = mockk<User> {
-            every { id } returns EntityID<UUID>(UUID.randomUUID(), Users)
+            every { id } returns EntityID<UUID>(userId, Users)
             every { email } returns "user@example.com"
         }
         val organization = mockk<Organization> {
@@ -286,12 +287,8 @@ class UsersApiTest : BaseApiTest() {
         } returns user
 
         every {
-            organizationService.create("OrgName1", true, null)
+            organizationService.create("OrgName1", true, null, userId)
         } returns organization
-
-        every {
-            organizationService.addMember(organization.id.value, user.id.value, RoleType.Owner)
-        } returns user
 
         withAuthentication {
             with(handleRequest(HttpMethod.Post, "/api/users") {
@@ -299,7 +296,7 @@ class UsersApiTest : BaseApiTest() {
                 withSerializedBody(
                     AccountRegistrationInfo(
                         userEmail = "user@example.com",
-                        userPassword = "pass",
+                        userPassword = "P@ssw0rd",
                         newOrganization = true,
                         organizationName = "OrgName1"
                     )
@@ -310,9 +307,8 @@ class UsersApiTest : BaseApiTest() {
         }
 
         verify(exactly = 1) {
-            accountService.create("user@example.com", accountLocale = null, pass = "pass")
-            organizationService.create("OrgName1", isPrivate = true, parent = null)
-            organizationService.addMember(organization.id.value, user.id.value, RoleType.Owner)
+            accountService.create("user@example.com", accountLocale = null, pass = "P@ssw0rd")
+            organizationService.create("OrgName1", isPrivate = true, parent = null, ownerUserId = userId)
         }
     }
 

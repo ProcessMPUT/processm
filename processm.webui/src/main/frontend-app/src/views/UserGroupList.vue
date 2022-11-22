@@ -1,22 +1,17 @@
 <template>
-  <v-treeview
-    :items="items"
-    :load-children="fetchUsers"
-    dense
-    open-on-click
-  ></v-treeview>
+  <v-treeview :items="items" :load-children="fetchUsers" dense open-on-click></v-treeview>
 </template>
 
 <script lang="ts">
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
-import OrganizationMember from "@/models/OrganizationMember";
+import { UserInfo } from "@/openapi";
 
 @Component
 export default class UserGroupList extends Vue {
   @Inject() organizationService!: OrganizationService;
-  organizationMembers: Array<OrganizationMember> = [];
+  organizationMembers: Array<UserInfo> = [];
   loading = true;
   items = [
     {
@@ -91,6 +86,8 @@ export default class UserGroupList extends Vue {
     }
   ];
 
-  async fetchUsers() { /*TODO: not implemented*/ }
+  async fetchUsers() {
+    /*TODO: not implemented*/
+  }
 }
 </script>

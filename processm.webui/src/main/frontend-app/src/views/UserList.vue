@@ -129,7 +129,7 @@ export default class UserList extends Vue {
 
   async loadMembers() {
     this.loading = true;
-    this.members = await this.organizationService.getOrganizationMembers(this.organization.id);
+    this.members = await this.organizationService.getOrganizationMembers(this.organization.id!);
     this.loading = false;
   }
 
@@ -153,7 +153,7 @@ export default class UserList extends Vue {
       try {
         console.assert(this.newUser != "", "newUser: " + this.newUser);
         console.debug("adding member ", this.newUser);
-        await this.organizationService.addMember(this.organization.id, this.newUser, this.newRole);
+        await this.organizationService.addMember(this.organization.id!, this.newUser, this.newRole);
         await this.loadMembers();
         this.newDialog = false;
         this.app.info(this.$t("users.member-included").toString());
@@ -167,7 +167,7 @@ export default class UserList extends Vue {
     try {
       console.assert(member.id !== undefined);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await this.organizationService.removeMember(this.organization.id, member.id!);
+      await this.organizationService.removeMember(this.organization.id!, member.id!);
       this.members = this.members.filter((item) => item != member);
       this.app.info(this.$t("users.member-excluded").toString());
     } catch (e) {
@@ -179,7 +179,7 @@ export default class UserList extends Vue {
     try {
       console.assert(member.id !== undefined);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await this.organizationService.updateRole(this.organization.id, member.id!, member.organizationRole);
+      await this.organizationService.updateRole(this.organization.id!, member.id!, member.organizationRole);
     } catch (e) {
       this.app.error(e);
     }
