@@ -23,7 +23,7 @@ class AccountService(private val groupService: GroupService) {
      * Verifies that [username] with the specified [password] exists and returns the [UserDto] object.
      * Throws [ValidationException] if the specified [username] doesn't exist.
      */
-    fun verifyUsersCredentials(username: String, password: String) =
+    fun verifyUsersCredentials(username: String, password: String): User? =
         loggedScope { logger ->
             transactionMain {
                 val user = User.find(Users.email ieq username).firstOrNull()
@@ -35,7 +35,7 @@ class AccountService(private val groupService: GroupService) {
                     )
                 }
 
-                return@transactionMain if (verifyPassword(password, user.password)) user.toDto() else null
+                return@transactionMain if (verifyPassword(password, user.password)) user else null
             }
         }
 

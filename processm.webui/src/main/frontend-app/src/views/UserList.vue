@@ -25,7 +25,7 @@
       <v-toolbar flat>
         <v-toolbar-title> {{ $t("users.users") }} {{ $t("common.in") }} {{ organization.name }}</v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-dialog v-model="newDialog" max-width="600px">
+        <v-dialog v-model="newDialog" max-width="600px" @input.capture="resetNewDialog">
           <template v-slot:activator="{ on, attrs }">
             <v-btn v-bind="attrs" v-on="on" color="primary">
               {{ $t("common.add-new") }}
@@ -34,7 +34,7 @@
           <v-card>
             <v-card-title>{{ $t("common.add-new") }}</v-card-title>
             <v-card-text>
-              <v-form id="newForm" v-model="isNewValid" @submit.prevent="addMember">
+              <v-form id="newForm" ref="newForm" v-model="isNewValid" @submit.prevent="addMember">
                 <combo-box-with-search
                   :label="$t('common.email')"
                   :rules="[(v) => /^([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6})*$/.test(v) || $t('registration-form.validation.email-format')]"
@@ -46,7 +46,7 @@
             </v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="primary darken-1" text @click.stop="newDialog = false">
+              <v-btn color="primary darken-1" text @click="newDialog = false">
                 {{ $t("common.cancel") }}
               </v-btn>
 
@@ -75,6 +75,7 @@
         :items="roles"
         hide-details="auto"
         :disabled="members[index].email === $sessionStorage.userInfo.username"
+        @input="updateRole(item)"
       ></v-select>
     </template>
 
@@ -93,12 +94,13 @@
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Inject, Watch } from "vue-property-decorator";
+import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
 import { OrganizationMember, OrganizationRole } from "@/openapi/api";
 import ComboBoxWithSearch from "@/components/ComboBoxWithSearch.vue";
 import AccountService from "@/services/AccountService";
 import App from "@/App.vue";
+import { waitForRepaint } from "@/utils/waitForRepaint";
 
 @Component({
   components: { ComboBoxWithSearch }
@@ -131,13 +133,11 @@ export default class UserList extends Vue {
     this.loading = false;
   }
 
-  @Watch("newDialog")
   resetNewDialog() {
-    if (this.newDialog) {
-      this.newUser = "";
-      this.newRole = OrganizationRole.Reader;
-      this.isNewValid = false;
-    }
+    console.log("resetNewDialog()", this.newDialog);
+    this.newUser = "";
+    this.newRole = OrganizationRole.Reader;
+    //this.isNewValid = false;
   }
 
   async searchUsers(value: string): Promise<Array<string>> {
@@ -146,15 +146,21 @@ export default class UserList extends Vue {
   }
 
   async addMember() {
-    try {
-      console.assert(this.newUser != "", "newUser: " + this.newUser);
-      console.debug("adding member ", this.newUser);
-      await this.organizationService.addMember(this.organization.id, this.newUser, this.newRole);
-      await this.loadMembers();
-      this.newDialog = false;
-    } catch (e) {
-      this.app.error(e);
-    }
+    // we have to wait for the blur event on the combo box
+    // https://stackoverflow.com/a/63899307/1016631
+    ((this.$refs.newForm as Vue).$el as HTMLElement).focus();
+    await waitForRepaint(async () => {
+      try {
+        console.assert(this.newUser != "", "newUser: " + this.newUser);
+        console.debug("adding member ", this.newUser);
+        await this.organizationService.addMember(this.organization.id, this.newUser, this.newRole);
+        await this.loadMembers();
+        this.newDialog = false;
+        this.app.info(this.$t("users.member-included").toString());
+      } catch (e) {
+        this.app.error(e);
+      }
+    });
   }
 
   async removeMember(member: OrganizationMember) {
@@ -162,6 +168,8 @@ export default class UserList extends Vue {
       console.assert(member.id !== undefined);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       await this.organizationService.removeMember(this.organization.id, member.id!);
+      this.members = this.members.filter((item) => item != member);
+      this.app.info(this.$t("users.member-excluded").toString());
     } catch (e) {
       this.app.error(e);
     }

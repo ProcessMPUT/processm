@@ -1,7 +1,7 @@
 import _Vue from "vue";
 import VueSession from "vue-session";
 import UserAccount from "@/models/UserAccount";
-import UserOrganization from "@/models/UserOrganization";
+import { Organization } from "@/openapi";
 
 class SessionStorage {
   static install(Vue: typeof _Vue, options = {}) {
@@ -38,11 +38,11 @@ class SessionStorage {
     this.session.set(this.UserInfoKey, userInfo);
   }
 
-  static get userOrganizations(): UserOrganization[] {
+  static get userOrganizations(): Organization[] {
     return this.session.get(this.UserOrganizationsKey);
   }
 
-  static set userOrganizations(userOrganizations: UserOrganization[]) {
+  static set userOrganizations(userOrganizations: Organization[]) {
     this.session.set(this.UserOrganizationsKey, userOrganizations);
   }
 
@@ -54,7 +54,7 @@ class SessionStorage {
     this.session.set(this.CurrentOrganizationIndexKey, organizationIndex);
   }
 
-  static get currentOrganization(): UserOrganization {
+  static get currentOrganization(): Organization {
     return this.userOrganizations[this.currentOrganizationIndex];
   }
 

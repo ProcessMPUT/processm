@@ -32,7 +32,7 @@ class UsersApiTest : BaseApiTest() {
     fun `responds to successful authentication with 201 and token`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials("user@example.com", "pass") } returns mockk {
-            every { id } returns UUID.randomUUID()
+            every { id } returns EntityID(UUID.randomUUID(), Users)
             every { email } returns "user@example.com"
         }
         every { accountService.getRolesAssignedToUser(userId = any()) } returns

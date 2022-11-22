@@ -7,7 +7,7 @@
     :search-input.sync="searchInternal"
     cache-items
     :rules="rules"
-    @change="$emit('update:value', valueInternal)"
+    @input="$emit('update:value', valueInternal)"
   ></v-combobox>
 </template>
 
@@ -41,6 +41,11 @@ export default class ComboBoxWithSearch extends Vue {
    */
   items: Array<string> = [];
 
+  @Watch("value")
+  updateValue(value: string) {
+    this.valueInternal = value;
+  }
+
   @Watch("searchInternal")
   async searchUpdate(value: string) {
     this.loading = true;
@@ -52,5 +57,3 @@ export default class ComboBoxWithSearch extends Vue {
   }
 }
 </script>
-
-<style scoped></style>

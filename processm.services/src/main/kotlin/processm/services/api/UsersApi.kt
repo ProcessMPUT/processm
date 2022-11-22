@@ -13,7 +13,6 @@ import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
-import processm.dbmodels.models.RoleType
 import processm.services.api.models.*
 import processm.services.logic.*
 import java.time.Duration
@@ -35,11 +34,11 @@ fun Route.UsersApi() {
                     val token = transactionMain {
                         val user = accountService.verifyUsersCredentials(credentials.login, credentials.password)
                             ?: throw ApiException("Invalid username or password", HttpStatusCode.Unauthorized)
-                        val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id)
+                        val userRolesInOrganizations = accountService.getRolesAssignedToUser(user.id.value)
                             .map { it.organization.id.value to it.role.toApi() }
                             .toMap()
                         val token = JwtAuthentication.createToken(
-                            user.id,
+                            user.id.value,
                             user.email,
                             userRolesInOrganizations,
                             Instant.now().plus(jwtTokenTtl),
@@ -47,7 +46,7 @@ fun Route.UsersApi() {
                             jwtSecret
                         )
 
-                        logger.debug("The user ${user.id} has successfully logged in")
+                        logger.debug("The user ${user.id.value} has successfully logged in")
 
                         token
                     }
@@ -87,8 +86,11 @@ fun Route.UsersApi() {
                 transactionMain {
                     val user = accountService.create(userEmail, locale?.value, userPassword)
                     if (newOrganization) {
-                        val organization = organizationService.create(organizationName!!, true)
-                        organizationService.addMember(organization.id.value, user.id.value, RoleType.Owner)
+                        val organization = organizationService.create(
+                            organizationName!!,
+                            true,
+                            ownerUserId = user.id.value
+                        )
                     }
                 }
             }

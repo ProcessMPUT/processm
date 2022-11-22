@@ -139,9 +139,11 @@
     "change-password": "Zmień hasło"
   },
   "users": {
-    "exclude-member": "Usuń członka",
+    "exclude-member": "Usuń członka z organizacji",
     "groups": "Grupy",
     "group": "Grupa",
+    "member-included": "Dodano członka do organizacji",
+    "member-excluded": "Usunięto członka z organizacji",
     "organizations": "Organizacje",
     "owner": "Właściciel",
     "page-title": "Użytkownicy",

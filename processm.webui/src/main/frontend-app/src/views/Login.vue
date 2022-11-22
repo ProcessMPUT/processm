@@ -56,9 +56,8 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import AccountService from "@/services/AccountService";
-import UserOrganization from "@/models/UserOrganization";
 import ConfigService from "@/services/ConfigService";
-import { Config } from "@/openapi";
+import { Config, Organization } from "@/openapi";
 
 @Component
 export default class Login extends Vue {
@@ -90,7 +89,7 @@ export default class Login extends Vue {
       await this.accountService.signIn(this.username, this.password);
       const { language } = await this.accountService.getAccountDetails();
       this.setLanguage(language);
-      const organizations = await this.accountService.getOrganizations();
+      const organizations = await this.accountService.getUserOrganizations();
       this.setCurrentOrganization(organizations);
       this.$router.push({ name: "home" });
     } catch (error) {
@@ -105,11 +104,11 @@ export default class Login extends Vue {
     }
   }
 
-  setCurrentOrganization(userOrganizations: UserOrganization[]) {
+  setCurrentOrganization(userOrganizations: Organization[]) {
     if (userOrganizations.length > 1) {
       //TODO: the current user is associated with more than one organization,
-      //display a modal which allows the user to chooose the organization context
-      this.$sessionStorage.currentOrganizationIndex = 0; // temporary: always choose the first organization
+      //display a modal which allows the user to choose the organization context
+      this.$sessionStorage.currentOrganizationIndex = 0; // FIXME: temporary: always choose the first organization
       console.error(
         `Not implemented: the current user is associated with ${userOrganizations.length} organizations; the first one was automatically selected.`
       );

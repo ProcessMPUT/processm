@@ -115,7 +115,7 @@ abstract class BaseApiTest : KoinTest {
     ) {
         val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
-            every { id } returns userId
+            every { id } returns EntityID(userId, Users)
             every { email } returns login
         }
         every { accountService.getRolesAssignedToUser(userId) } returns

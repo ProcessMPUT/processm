@@ -12,6 +12,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
+import processm.core.persistence.connection.transactionMain
 import processm.services.api.models.OrganizationMember
 import processm.services.api.models.OrganizationRole
 import processm.services.logic.*
@@ -82,12 +83,14 @@ fun Route.OrganizationsApi() {
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(params.organizationId)
 
-            val members = organizationService.getMembers(params.organizationId).mapToArray {
-                OrganizationMember(
-                    id = it.user.id.value,
-                    email = it.user.email,
-                    organizationRole = it.role.toApi()
-                )
+            val members = transactionMain {
+                organizationService.getMembers(params.organizationId).mapToArray {
+                    OrganizationMember(
+                        id = it.user.id.value,
+                        email = it.user.email,
+                        organizationRole = it.role.toApi()
+                    )
+                }
             }
             call.respond(HttpStatusCode.OK, members)
         }

@@ -3,7 +3,6 @@ package processm.services.logic
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.ieq
 import processm.dbmodels.models.*
-import java.util.*
 
 typealias ApiOrganization = processm.services.api.models.Organization
 typealias ApiRole = processm.services.api.models.OrganizationRole
@@ -47,12 +46,3 @@ fun Group.toApi() = ApiGroup(
     isShared = isShared
 )
 
-// TODO: drop these nonsense-layer classes below:
-
-data class UserDto(val id: UUID, val email: String, val locale: String, val privateGroup: ApiGroup)
-
-fun User.toDto() = UserDto(id.value, email, locale, privateGroup.toApi())
-
-data class GroupMemberDto(val user: UserDto, val group: ApiGroup)
-
-fun UsersInGroup.toDto() = GroupMemberDto(user.toDto(), group.toApi())
