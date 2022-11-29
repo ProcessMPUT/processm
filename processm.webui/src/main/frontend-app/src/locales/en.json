@@ -215,7 +215,7 @@
     "title": "Account registration",
     "validation": {
       "email-format": "The e-mail must be valid",
-      "password-format": "The password must contain at least one letter, one digit, and be of length at least 4.",
+      "password-format": "The password must contain at least one lower-case letter, one upper-case letter, one digit, and be of length at least 8.",
       "organization-empty": "The organization name cannot be empty"
     }
   },

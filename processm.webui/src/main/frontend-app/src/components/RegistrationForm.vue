@@ -13,7 +13,7 @@
       v-model="userPassword"
       prepend-icon="password"
       type="password"
-      :rules="[(v) => /(?=(.*[0-9]))((?=.*[A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z]))^.{8,}$/.test(v) || $t('registration-form.validation.password-format')]"
+      :rules="[(v) => /(?=(.*?[0-9]))(?=.*?[A-Z])(?=.*?[a-z])^.{8,}?$/.test(v) || $t('registration-form.validation.password-format')]"
     ></v-text-field>
 
     <v-checkbox v-model="newOrganization" :label="$t('registration-form.new-organization')"></v-checkbox>

@@ -213,7 +213,7 @@
     "title": "Rejestracja konta",
     "validation": {
       "email-format": "Nieprawidłowy format adresu e-mail",
-      "password-format": "Hasło musi zawierać co najmniej jedną literę, jedną cyfrę i być długości co najmniej 4 znaków.",
+      "password-format": "Hasło musi zawierać co najmniej jedną małą literę, jedną wielką literę, jedną cyfrę i być długości co najmniej 8 znaków.",
       "organization-empty": "Nazwa organizacji nie może być pusta"
     }
   },
