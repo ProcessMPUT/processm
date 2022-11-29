@@ -10,5 +10,5 @@ object Patterns {
     /**
      * Should have 1 lowercase letter, 1 uppercase letter, 1 number, and be at least 8 characters long
      */
-    val password = Regex("(?=(.*[0-9]))((?=.*[A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z]))^.{8,}\$")
+    val password = Regex("(?=(.*?[0-9]))(?=.*?[A-Z])(?=.*?[a-z])^.{8,}?$")
 }

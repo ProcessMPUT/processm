@@ -25,4 +25,19 @@ class PatternsTest {
         assertFalse(Patterns.email.matches("@example.com"))
         assertFalse(Patterns.email.matches("user@example.com?subject=xxx"))
     }
+
+    @Test
+    fun `valid password`() {
+        assertTrue(Patterns.password.matches("P@ssw0rd"))
+        assertTrue(Patterns.password.matches("ABCD3FGHijKLMN"))
+    }
+
+    @Test
+    fun `invalid password`() {
+        assertFalse(Patterns.password.matches(""))
+        assertFalse(Patterns.password.matches("Aa1"))
+        assertFalse(Patterns.password.matches("!@#$%^&*()"))
+        assertFalse(Patterns.password.matches("password"))
+        assertFalse(Patterns.password.matches("\b\b\b\b\b\b\b\b"))
+    }
 }
