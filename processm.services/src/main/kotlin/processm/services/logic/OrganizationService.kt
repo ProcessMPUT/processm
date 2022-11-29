@@ -96,8 +96,10 @@ class OrganizationService(
                 (UsersRolesInOrganizations.userId eq userId) and (UsersRolesInOrganizations.organizationId eq organizationId)
             }.validateNot(0, Reason.ResourceNotFound) { "User $userId is not found in organizations $organizationId." }
 
-            groupService.detachUserFromGroup(userId, organization.sharedGroup.id.value)
-
+            // detach the user from all groups in this organization
+            UsersInGroups.deleteWhere {
+                (UsersInGroups.userId eq userId) and (UsersInGroups.groupId inSubQuery Groups.select { Groups.organizationId eq organizationId })
+            }
             logger.debug { "Removed member $userId from organization $organizationId." }
         }
     }
