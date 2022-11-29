@@ -8,6 +8,7 @@ class PatternsTest {
         assertTrue(Patterns.email.matches("user@example.com"))
         assertTrue(Patterns.email.matches("tpawlak@cs.put.poznan.pl"))
         assertTrue(Patterns.email.matches("account+label@gmail.com"))
+        assertTrue(Patterns.email.matches("uSeR@eXaMpLe.com"))
     }
 
     @Test
