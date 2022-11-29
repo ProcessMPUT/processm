@@ -7,13 +7,13 @@ class PatternsTest {
     fun `valid email`() {
         assertTrue(Patterns.email.matches("user@example.com"))
         assertTrue(Patterns.email.matches("tpawlak@cs.put.poznan.pl"))
+        assertTrue(Patterns.email.matches("account+label@gmail.com"))
     }
 
     @Test
     @Ignore("not implemented and no plans to implement yes")
     fun `unsupported valid email`() {
         assertTrue(Patterns.email.matches("root@localhost"))
-        assertTrue(Patterns.email.matches("account+label@gmail.com"))
     }
 
     @Test
