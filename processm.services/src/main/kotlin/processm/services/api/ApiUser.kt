@@ -20,10 +20,18 @@ data class ApiUser(private val claims: Map<String, Claim>) : Principal {
         ?: throw ApiException("Token should contain 'organizations' field")
 }
 
-internal fun ApiUser.ensureUserBelongsToOrganization(organizationId: UUID, organizationRole: OrganizationRole? = null) {
+/**
+ * Authorizes [this] user in the extent that it belongs to the [organizationId] and have at least [organizationRole].
+ *
+ * @throws ApiException if the user is not authorized.
+ */
+internal fun ApiUser.ensureUserBelongsToOrganization(
+    organizationId: UUID,
+    organizationRole: OrganizationRole = OrganizationRole.reader
+) {
     if (!organizations.containsKey(organizationId)) {
         throw ApiException("The user is not a member of the related organization", HttpStatusCode.Forbidden)
-    } else if (organizationRole != null && organizations[organizationId]?.ordinal ?: -1 > organizationRole.ordinal) {
+    } else if ((organizations[organizationId]?.ordinal ?: -1) > organizationRole.ordinal) {
         throw ApiException(
             "The user has insufficient permissions to access the related organization",
             HttpStatusCode.Forbidden
