@@ -29,9 +29,6 @@ class User(id: EntityID<UUID>) : UUIDEntity(id) {
     var locale by Users.locale
     var organizations by Organization via UsersRolesInOrganizations
     val rolesInOrganizations by UserRoleInOrganization referrersOn UsersRolesInOrganizations.userId
-
-    // do not declare the following until exposed supports DAO with composite key
-    // val rolesInOrganizations by UserRoleInOrganization referrersOn UsersRolesInOrganizations.userId
     var privateGroup by Group referencedOn Users.privateGroupId
 }
 
