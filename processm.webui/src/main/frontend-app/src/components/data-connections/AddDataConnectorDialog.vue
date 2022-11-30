@@ -7,9 +7,7 @@
       <v-card-text>
         <v-expansion-panels accordion mandatory v-model="configMode">
           <v-expansion-panel>
-            <v-expansion-panel-header>{{
-              $t("add-data-connector-dialog.use-connection-string")
-            }}</v-expansion-panel-header>
+            <v-expansion-panel-header>{{ $t("add-data-connector-dialog.use-connection-string") }} </v-expansion-panel-header>
             <v-expansion-panel-content>
               <v-form ref="connectionStringForm" lazy-validation>
                 <v-text-field
@@ -29,9 +27,7 @@
             </v-expansion-panel-content>
           </v-expansion-panel>
           <v-expansion-panel>
-            <v-expansion-panel-header>{{
-              $t("add-data-connector-dialog.specify-connection-properties")
-            }}</v-expansion-panel-header>
+            <v-expansion-panel-header>{{ $t("add-data-connector-dialog.specify-connection-properties") }} </v-expansion-panel-header>
             <v-expansion-panel-content>
               <v-form ref="connectionPropertiesForm" lazy-validation>
                 <v-text-field
@@ -48,11 +44,7 @@
                   required
                 ></v-select>
 
-                <component
-                  v-if="connectionProperties['connection-type']"
-                  :is="connectionTypeComponent"
-                  v-model="connectionProperties"
-                ></component>
+                <component :is="connectionTypeComponent" v-if="connectionProperties['connection-type']" v-model="connectionProperties"></component>
               </v-form>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -66,22 +58,11 @@
           {{ $t("common.cancel") }}
         </v-btn>
 
-        <v-btn
-          :color="testConnectionButtonColor"
-          :outlined="connectionTestResult != null"
-          :loading="isTestingConnection"
-          text
-          @click.stop="testConnection"
-        >
+        <v-btn :color="testConnectionButtonColor" :loading="isTestingConnection" :outlined="connectionTestResult != null" text @click.stop="testConnection">
           {{ $t("add-data-connector-dialog.test-connection") }}
         </v-btn>
 
-        <v-btn
-          color="primary"
-          text
-          @click.stop="createDataConnector"
-          :loading="isSubmitting"
-        >
+        <v-btn :loading="isSubmitting" color="primary" text @click.stop="createDataConnector">
           {{ $t("common.save") }}
         </v-btn>
       </v-card-actions>
@@ -105,10 +86,7 @@ import MySqlConnectionConfiguration from "@/components/data-connections/MySqlCon
 import OracleDatabaseConnectionConfiguration from "@/components/data-connections/OracleDatabaseConnectionConfiguration.vue";
 import Db2ConnectionConfiguration from "@/components/data-connections/Db2ConnectionConfiguration.vue";
 import DataStoreService from "@/services/DataStoreService";
-import {
-  connectionStringFormatRule,
-  notEmptyRule
-} from "@/utils/FormValidationRules";
+import { connectionStringFormatRule, notEmptyRule } from "@/utils/FormValidationRules";
 import App from "@/App.vue";
 
 enum ConfigurationMode {
@@ -133,12 +111,7 @@ export default class AddDataConnectorDialog extends Vue {
   @Prop()
   readonly dataStoreId?: string;
 
-  constructor() {
-    super();
-    this.connectionProperties["connection-type"] = Object.keys(
-      ConnectionType
-    )[0];
-  }
+  connectionNameRules = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
 
   connectionName = "";
   connectionProperties: Record<string, string> = {};
@@ -146,31 +119,15 @@ export default class AddDataConnectorDialog extends Vue {
   isTestingConnection = false;
   isSubmitting = false;
   connectionTestResult: boolean | null = null;
-  connectionNameRules = [
-    (v: string) =>
-      notEmptyRule(
-        v,
-        this.$t(
-          "add-data-connector-dialog.validation.non-empty-field"
-        ).toString()
-      )
-  ];
   connectionStringRules = [
-    (v: string) =>
-      notEmptyRule(
-        v,
-        this.$t(
-          "add-data-connector-dialog.validation.non-empty-field"
-        ).toString()
-      ),
-    (v: string) =>
-      connectionStringFormatRule(
-        v,
-        this.$t(
-          "add-data-connector-dialog.validation.connection-string-format"
-        ).toString()
-      )
+    (v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString()),
+    (v: string) => connectionStringFormatRule(v, this.$t("add-data-connector-dialog.validation.connection-string-format").toString())
   ];
+
+  constructor() {
+    super();
+    this.connectionProperties["connection-type"] = Object.keys(ConnectionType)[0];
+  }
 
   get availableConnectionTypes() {
     return Object.entries(ConnectionType).map(([type, name]) => {
@@ -196,10 +153,7 @@ export default class AddDataConnectorDialog extends Vue {
   }
 
   async createDataConnector() {
-    if (this.dataStoreId == null)
-      return this.app.error(
-        this.$t("data-stores.data-store-not-found").toString()
-      );
+    if (this.dataStoreId == null) return this.app.error(this.$t("data-stores.data-store-not-found").toString());
     if (!this.validateForm()) throw new Error("The provided data is invalid");
 
     try {
@@ -207,9 +161,7 @@ export default class AddDataConnectorDialog extends Vue {
       const dataConnector = await this.dataStoreService.createDataConnector(
         this.dataStoreId,
         this.connectionName,
-        this.configMode == ConfigurationMode.ConnectionString
-          ? this.connectionString
-          : this.connectionProperties
+        this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.connectionProperties
       );
       this.app.success(`${this.$t("common.saving.success")}`);
       this.$emit("submitted", dataConnector);
@@ -222,35 +174,28 @@ export default class AddDataConnectorDialog extends Vue {
   }
 
   async testConnection() {
-    if (this.dataStoreId == null) throw new Error("DataStoreId is not defined");
-    if (!this.validateForm()) throw new Error("The provided data is invalid");
-
     try {
       this.isTestingConnection = true;
+
+      if (this.dataStoreId == null) throw new Error("DataStoreId is not defined");
+      if (!this.validateForm()) throw new Error("The provided data is invalid");
+
       await this.dataStoreService.testDataConnector(
         this.dataStoreId,
-        this.configMode == ConfigurationMode.ConnectionString
-          ? this.connectionString
-          : this.connectionProperties
+        this.configMode == ConfigurationMode.ConnectionString ? this.connectionString : this.connectionProperties
       );
       this.connectionTestResult = true;
-      this.app.success(
-        `${this.$t("add-data-connector-dialog.testing.success")}`
-      );
+      this.app.success(`${this.$t("add-data-connector-dialog.testing.success")}`);
     } catch (e) {
       this.connectionTestResult = null;
-      this.app.error(
-        `${this.$t("add-data-connector-dialog.testing.failure")}: ${e.message}`
-      );
+      this.app.error(`${this.$t("add-data-connector-dialog.testing.failure")}: ${e.message}`);
     } finally {
       this.isTestingConnection = false;
     }
   }
 
   private validateForm() {
-    return this.configMode == ConfigurationMode.ConnectionString
-      ? this.validateConnectionStringForm()
-      : this.validateConnectionPropertiesForm();
+    return this.configMode == ConfigurationMode.ConnectionString ? this.validateConnectionStringForm() : this.validateConnectionPropertiesForm();
   }
 
   private validateConnectionStringForm() {

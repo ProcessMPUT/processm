@@ -16,59 +16,63 @@ import java.util.*
 
 @KtorExperimentalLocationsAPI
 object Paths {
+    /**
+     * Server-side-stored configuration for GUI.
+     */
     @Location("/config")
     class Config
+
     /**
-     * Get or remove the specified group
+     * Group
      *
      * @param groupId Group ID
      */
-    @Location("/groups/{groupId}")
-    class Group(val groupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}")
+    class Group(val organizationId: UUID, val groupId: UUID)
 
     /**
-     * Get members of the specified group
+     * Members of the specified group
      *
      * @param groupId Group ID
      */
-    @Location("/groups/{groupId}/members")
-    class GroupMembers(val groupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/members")
+    class GroupMembers(val organizationId: UUID, val groupId: UUID)
 
     /**
-     * Get groups belonging to the current user&#39;s organization
+     * Groups og the current user&#39;s organization
      *
      */
-    @Location("/groups")
-    class Groups
+    @Location("/organizations/{organizationId}/groups")
+    class Groups(val organizationId: UUID)
 
     /**
-     * Get subgroups of the specified group
+     * Subgroups of the specified group
      *
      * @param groupId Group ID
      */
-    @Location("/groups/{groupId}/subgroups")
-    class Subgroups(val groupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/subgroups")
+    class Subgroups(val organizationId: UUID, val groupId: UUID)
 
     /**
-     * Remove member from the specified group
+     * Mmber from the specified group
      *
      * @param groupId Group ID
      * @param userId User ID
      */
-    @Location("/groups/{groupId}/members/{userId}")
-    class GroupMember(val groupId: UUID, val userId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/members/{userId}")
+    class GroupMember(val organizationId: UUID, val groupId: UUID, val userId: UUID)
 
     /**
-     * Remove the specified subgroup
+     * Subgroup of a group.
      *
      * @param groupId Group ID
      * @param subgroupId Subgroup ID
      */
-    @Location("/groups/{groupId}/subgroups/{subgroupId}")
-    class Subgroup(val groupId: UUID, val subgroupId: UUID)
+    @Location("/organizations/{organizationId}/groups/{groupId}/subgroups/{subgroupId}")
+    class Subgroup(val organizationId: UUID, val groupId: UUID, val subgroupId: UUID)
 
     /**
-     * Get or remove the specified organization
+     * Organization.
      *
      * @param organizationId Organization ID
      */
@@ -76,7 +80,7 @@ object Paths {
     class Organization(val organizationId: UUID)
 
     /**
-     * Get groups associated with the specified organization
+     * Groups associated with the specified organization.
      *
      * @param organizationId Organization ID
      */
@@ -84,7 +88,7 @@ object Paths {
     class OrganizationGroups(val organizationId: UUID)
 
     /**
-     * Get members of the specified organization
+     * Members of the specified organization
      *
      * @param organizationId Organization ID
      */
@@ -92,15 +96,13 @@ object Paths {
     class OrganizationMembers(val organizationId: UUID)
 
     /**
-     * Get members of the specified organization
-     *
-     * @param organizationId Organization ID
+     * List of organizations
      */
     @Location("/organizations")
     class Organizations
 
     /**
-     * Remove member from the specified organization
+     * A member of the specified organization
      *
      * @param organizationId Organization ID
      * @param userId User ID
@@ -244,7 +246,7 @@ object Paths {
      *
      */
     @Location("/users/session")
-    class UserOut
+    class UsersSession
 
     /**
      * Get, update or remove the specified workspace in the context of the specified organization

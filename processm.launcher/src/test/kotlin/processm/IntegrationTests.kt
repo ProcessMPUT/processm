@@ -1,28 +1,14 @@
 package processm
 
-import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
 import io.ktor.server.locations.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.assertThrows
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
 import processm.services.api.models.*
-import java.time.LocalDateTime
 import kotlin.test.*
-
-fun HttpResponse.assertContentType(expected: ContentType) =
-    assertTrue(
-        contentType()?.match(expected) == true,
-        "Unexpected content type: `${contentType()}'. Expected: `$expected'"
-    )
 
 /**
  * Ducktyping for raw results of JSON deserialization. Anything indexed with a string is assumed to be a map, and anything
@@ -46,21 +32,6 @@ object ducktyping {
     }
 }
 
-suspend inline fun <reified T> HttpResponse.deserialize(): T {
-    assertContentType(ContentType.Application.Json)
-    // TODO: replace GSON with kotlinx/serialization
-    val gsonBuilder = GsonBuilder()
-    // Correctly serialize/deserialize LocalDateTime
-    gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
-        override fun write(out: JsonWriter, value: LocalDateTime?) {
-            out.value(value?.toString())
-        }
-
-        override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
-    })
-    return gsonBuilder.create().fromJson(body<String>(), T::class.java)
-}
-
 @OptIn(KtorExperimentalLocationsAPI::class)
 class IntegrationTests {
 
@@ -70,7 +41,7 @@ class IntegrationTests {
         val query = "An incorrect query"
         ProcessMTestingEnvironment().withFreshDatabase().run {
             registerUser("test@example.com", "some organization")
-            login("test@example.com", "pass")
+            login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
             currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to jdbcUrl!!))
@@ -88,11 +59,10 @@ class IntegrationTests {
                     lastEventExternalId = "0"
                 )
             )
-            val samplingEtlProcess = post<Paths.SamplingEtlProcess, EtlProcessMessageBody, AbstractEtlProcess>(
-                EtlProcessMessageBody(initialDefinition)
-            ) {
-                return@post deserialize<EtlProcessMessageBody>().data
-            }
+            val samplingEtlProcess =
+                post<Paths.SamplingEtlProcess, AbstractEtlProcess, AbstractEtlProcess>(initialDefinition) {
+                    return@post body<AbstractEtlProcess>()
+                }
             assertEquals(samplingEtlProcessName, samplingEtlProcess.name)
             assertEquals(currentDataConnector?.id, samplingEtlProcess.dataConnectorId)
             assertNotNull(samplingEtlProcess.id)
@@ -103,7 +73,7 @@ class IntegrationTests {
                 for (i in 0..10) {
                     delay(1000)
                     val info = get<Paths.EtlProcess, EtlProcessInfo> {
-                        return@get deserialize<EtlProcessInfo>()
+                        return@get body<EtlProcessInfo>()
                     }
                     if (!info.errors.isNullOrEmpty())
                         return@runBlocking info
@@ -119,7 +89,7 @@ class IntegrationTests {
             }
 
             deleteCurrentEtlProcess()
-            assertThrows<ClientRequestException> {
+            assertFailsWith<ClientRequestException> {
                 get<Paths.EtlProcess, Unit> {}
             }
         }
@@ -165,7 +135,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
         ProcessMTestingEnvironment().withFreshDatabase().run {
             registerUser("test@example.com", "some organization")
-            login("test@example.com", "pass")
+            login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id
             currentDataStore = createDataStore("datastore")
             currentDataConnector = createDataConnector("dc1", mapOf("connection-string" to sakilaJdbcUrl))
@@ -185,11 +155,10 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 )
             )
 
-            val samplingEtlProcess = post<Paths.SamplingEtlProcess, EtlProcessMessageBody, AbstractEtlProcess>(
-                EtlProcessMessageBody(initialDefinition)
-            ) {
-                return@post deserialize<EtlProcessMessageBody>().data
-            }
+            val samplingEtlProcess =
+                post<Paths.SamplingEtlProcess, AbstractEtlProcess, AbstractEtlProcess>(initialDefinition) {
+                    return@post body<AbstractEtlProcess>()
+                }
             assertEquals(samplingEtlProcessName, samplingEtlProcess.name)
             assertEquals(currentDataConnector?.id, samplingEtlProcess.dataConnectorId)
             assertNotNull(samplingEtlProcess.id)
@@ -198,7 +167,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             val info = runBlocking {
                 for (i in 0..10) {
                     val info = get<Paths.EtlProcess, EtlProcessInfo> {
-                        return@get deserialize<EtlProcessInfo>()
+                        return@get body<EtlProcessInfo>()
                     }
                     if (info.lastExecutionTime !== null)
                         return@runBlocking info
@@ -226,7 +195,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
 
             deleteCurrentEtlProcess()
-            assertThrows<ClientRequestException> {
+            assertFailsWith<ClientRequestException> {
                 get<Paths.EtlProcess, Unit> {}
             }
         }

@@ -169,6 +169,7 @@
                                 <sourceDir>${project.basedir}/src/main/java</sourceDir>
                                 <sourceDir>${project.basedir}/target/generated-sources/antlr4</sourceDir>
                                 <sourceDir>${project.basedir}/target/generated-sources/xjc</sourceDir>
+                                <sourceDir>${project.basedir}/target/generated-sources/openapi/src/main</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -187,7 +188,7 @@
                 </executions>
                 <configuration>
                     <args>
-                        <arg>-Xopt-in=kotlin.RequiresOptIn</arg>
+                        <arg>-opt-in=kotlin.RequiresOptIn</arg>
                     </args>
                     <compilerPlugins>
                         <plugin>kotlinx-serialization</plugin>

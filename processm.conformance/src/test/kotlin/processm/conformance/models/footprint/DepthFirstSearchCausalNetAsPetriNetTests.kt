@@ -1,6 +1,5 @@
 package processm.conformance.models.footprint
 
-import org.junit.jupiter.api.Disabled
 import processm.conformance.CausalNets.azFlower
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
@@ -12,6 +11,7 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.converters.toPetriNet
 import kotlin.math.absoluteValue
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -166,7 +166,7 @@ class DepthFirstSearchCausalNetAsPetriNetTests {
         assertEquals(1.0 - 438.0 / (30.0 * 30.0), model.precision)
     }
 
-    @Disabled("Intended for manual execution due to high resource requirements")
+    @Ignore("Intended for manual execution due to high resource requirements")
     @Test
     fun `Parallel decisions in loop with many splits C-net non-conforming log`() {
         val activities1 = "ABCDEFGHIJKLM".map { Node(it.toString()) }

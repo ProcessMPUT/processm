@@ -1,6 +1,5 @@
 package processm.conformance.models.footprint
 
-import org.junit.jupiter.api.Test
 import processm.conformance.ProcessTrees.azFlower
 import processm.conformance.ProcessTrees.fig727
 import processm.conformance.ProcessTrees.fig729
@@ -8,6 +7,7 @@ import processm.conformance.ProcessTrees.parallelDecisionsInLoop
 import processm.conformance.ProcessTrees.parallelFlowers
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.toFlatSequence
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class DepthFirstSearchProcessTreeTests {

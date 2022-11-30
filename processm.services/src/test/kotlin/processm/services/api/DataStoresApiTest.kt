@@ -4,11 +4,9 @@ import io.ktor.http.*
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
-import io.mockk.mockk
 import org.junit.jupiter.api.TestInstance
 import org.koin.test.mock.declareMock
 import processm.core.helpers.toLocalDateTime
-import processm.dbmodels.models.OrganizationRoleDto
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -39,7 +37,14 @@ class DataStoresApiTest : BaseApiTest() {
             val userId = UUID.randomUUID()
             val etlProcessId = UUID.randomUUID()
             val logIdentityId = UUID.randomUUID()
-            val cfg = mockk<JdbcEtlProcessConfiguration>(relaxed = true)
+            val cfg = JdbcEtlProcessConfiguration(
+                query = "",
+                enabled = false,
+                batch = false,
+                traceId = JdbcEtlColumnConfiguration("trace", "trace"),
+                eventId = JdbcEtlColumnConfiguration("event", "event"),
+                attributes = emptyArray(),
+            )
             val process = AbstractEtlProcess(
                 name = "name",
                 dataConnectorId = dataConnectorId,
@@ -47,12 +52,12 @@ class DataStoresApiTest : BaseApiTest() {
                 configuration = cfg
             )
 
-            val text = """{"data":[{"foo": "bar"}]}"""
+            val text = """[{"foo": "bar"}]"""
             val lastExecutionTime = Instant.now()
 
             withAuthentication(userId, role = OrganizationRole.owner to organizationId) {
                 every {
-                    dataStoreService.createSamplingJdbcEtlProcess(dataStoreId, dataConnectorId, any(), cfg, any())
+                    dataStoreService.createSamplingJdbcEtlProcess(dataStoreId, dataConnectorId, any(), any(), any())
                 } returns etlProcessId andThenThrows IllegalStateException()
                 every {
                     dataStoreService.getEtlProcessInfo(dataStoreId, etlProcessId)
@@ -67,12 +72,12 @@ class DataStoresApiTest : BaseApiTest() {
                 } just Runs
                 every {
                     dataStoreService.removeEtlProcess(dataStoreId, etlProcessId)
-                } //returns true andThen false
+                } just Runs
                 every {
                     dataStoreService.assertUserHasSufficientPermissionToDataStore(
                         userId,
                         dataStoreId,
-                        OrganizationRoleDto.Owner
+                        OrganizationRole.owner
                     )
                 } returns true
                 every {
@@ -86,11 +91,11 @@ class DataStoresApiTest : BaseApiTest() {
                         HttpMethod.Post,
                         "/api/organizations/$organizationId/data-stores/$dataStoreId/sampling-etl-processes/"
                     ) {
-                        withSerializedBody(EtlProcessMessageBody(process))
+                        withSerializedBody(process)
                     }
                 ) {
                     assertEquals(HttpStatusCode.Created, response.status())
-                    val cadaver = assertNotNull(response.deserializeContent<EtlProcessMessageBody>().data)
+                    val cadaver = assertNotNull(response.deserializeContent<AbstractEtlProcess>())
                     println(cadaver)
 
                     assertEquals(etlProcessId, cadaver.id)
@@ -115,7 +120,7 @@ class DataStoresApiTest : BaseApiTest() {
                     )
                 ) {
                     assertEquals(HttpStatusCode.OK, response.status())
-                    val cadaver = assertNotNull(response.deserializeContent<QueryResultCollectionMessageBody>().data)
+                    val cadaver = assertNotNull(response.deserializeContent<List<Any>>())
                     assertEquals(1, cadaver.size)
                     val map = cadaver[0]
                     assertIs<Map<String, String>>(map)

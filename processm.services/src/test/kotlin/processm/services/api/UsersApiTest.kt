@@ -5,19 +5,18 @@ import io.ktor.server.request.*
 import io.ktor.server.testing.*
 import io.mockk.*
 import org.awaitility.Awaitility.await
-import org.junit.jupiter.api.TestInstance
+import org.jetbrains.exposed.dao.id.EntityID
 import org.koin.test.mock.declareMock
-import processm.dbmodels.models.OrganizationRoleDto
+import processm.dbmodels.models.*
+import processm.dbmodels.models.Organization
 import processm.services.api.models.*
-import processm.services.logic.AccountService
-import processm.services.logic.ValidationException
+import processm.services.logic.*
 import java.util.*
 import java.util.stream.Stream
 import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.test.*
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UsersApiTest : BaseApiTest() {
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/users",
@@ -33,21 +32,21 @@ class UsersApiTest : BaseApiTest() {
     fun `responds to successful authentication with 201 and token`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials("user@example.com", "pass") } returns mockk {
-            every { id } returns UUID.randomUUID()
+            every { id } returns EntityID(UUID.randomUUID(), Users)
             every { email } returns "user@example.com"
         }
-        every { accountService.getRolesAssignedToUser(userId = any()) } returns listOf(
-            mockk {
-                every { organization.id } returns UUID.randomUUID()
-                every { this@mockk.role } returns OrganizationRoleDto.Owner
-            })
+        every { accountService.getRolesAssignedToUser(userId = any()) } returns
+                listOf(mockk {
+                    every { organization.id } returns EntityID(UUID.randomUUID(), Organizations)
+                    every { role } returns RoleType.Owner.role
+                })
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            withSerializedBody(UserCredentialsMessageBody(UserCredentials("user@example.com", "pass")))
+            withSerializedBody(UserCredentials("user@example.com", "pass"))
         }) {
             assertEquals(HttpStatusCode.Created, response.status())
-            assertTrue(response.deserializeContent<AuthenticationResultMessageBody>().data.authorizationToken.isNotBlank())
+            assertTrue(response.deserializeContent<AuthenticationResult>().authorizationToken.isNotBlank())
         }
 
         verify { accountService.verifyUsersCredentials("user@example.com", "pass") }
@@ -61,10 +60,10 @@ class UsersApiTest : BaseApiTest() {
 
         with(handleRequest(HttpMethod.Post, "/api/users/session") {
             addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            withSerializedBody(UserCredentialsMessageBody(UserCredentials("user", "wrong_password")))
+            withSerializedBody(UserCredentials("user", "wrong_password"))
         }) {
             assertEquals(HttpStatusCode.Unauthorized, response.status())
-            assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("Invalid username or password"))
+            assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Invalid username or password"))
         }
 
         verify { accountService.verifyUsersCredentials(username = any(), password = any()) }
@@ -112,7 +111,7 @@ class UsersApiTest : BaseApiTest() {
                 with(handleRequest(HttpMethod.Post, "/api/users/session")) {
                     assertEquals(HttpStatusCode.Created, response.status())
                     renewedToken =
-                        assertNotNull(response.deserializeContent<AuthenticationResultMessageBody>().data.authorizationToken)
+                        assertNotNull(response.deserializeContent<AuthenticationResult>().authorizationToken)
                 }
             }
 
@@ -130,103 +129,176 @@ class UsersApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             with(handleRequest(HttpMethod.Post, "/api/users/session")) {
                 assertEquals(HttpStatusCode.BadRequest, response.status())
-                assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("Either user credentials or authentication token needs to be provided"))
+                assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Either user credentials or authentication token needs to be provided"))
             }
         }
 
     @Test
-    fun `responds to request with malformed token with 400`() = withConfiguredTestApplication {
+    fun `responds to request with invalid token with 401`() = withConfiguredTestApplication {
         var currentToken: String? = null
 
         withAuthentication {
             with(handleRequest(HttpMethod.Get, "/api/users")) {
                 assertNotEquals(HttpStatusCode.Unauthorized, response.status())
-                currentToken = request.header(HttpHeaders.Authorization)
+                currentToken = request.header(HttpHeaders.Authorization)!!.substringAfter(' ')
             }
         }
         val randomizedToken = StringBuilder(assertNotNull(currentToken))
 
+        // make this test deterministic
+        val rand = Random(0)
+        val validChars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
         do {
-            repeat(20) {
-                randomizedToken[Random.nextInt(randomizedToken.indices)] = ('A'..'z').random()
-            }
+            randomizedToken[rand.nextInt(randomizedToken.indices)] = validChars.random(rand)
         } while (randomizedToken.toString() == currentToken)
 
         with(handleRequest(HttpMethod.Get, "/api/users") {
             addHeader(HttpHeaders.Authorization, "Bearer $randomizedToken")
+        }) {
+            // This test used to return 400 BadRequest because of malformed Authorization header and/or token.
+            // The correct response is to response with 401 Unauthorized
+            assertEquals(HttpStatusCode.Unauthorized, response.status())
+        }
+    }
+
+    @Test
+    fun `responds to request with invalid Authorization header with 400`() = withConfiguredTestApplication {
+        withAuthentication {
+            with(handleRequest(HttpMethod.Get, "/api/users")) {
+                assertNotEquals(HttpStatusCode.Unauthorized, response.status())
+            }
+        }
+
+        with(handleRequest(HttpMethod.Get, "/api/users") {
+            addHeader(HttpHeaders.Authorization, "Bearer <just<invalid#token&s=symbols")
         }) {
             assertEquals(HttpStatusCode.BadRequest, response.status())
         }
     }
 
     @Test
-    fun `responds to users list request with 200 and users list`() = withConfiguredTestApplication {
-        withAuthentication {
+    fun `responds to request with invalid Authorization method with 401`() = withConfiguredTestApplication {
+        val login = "user@example.com"
+        val password = "passW0RD"
+        withAuthentication(login = login, password = password) {
             with(handleRequest(HttpMethod.Get, "/api/users")) {
-                assertEquals(HttpStatusCode.OK, response.status())
-                assertNotNull(response.deserializeContent<UserInfoCollectionMessageBody>().data)
+                assertNotEquals(HttpStatusCode.Unauthorized, response.status())
             }
         }
+
+        with(handleRequest(HttpMethod.Get, "/api/users") {
+            val credentials = Base64.getEncoder().encodeToString("$login:$password".toByteArray())
+            assertEquals("dXNlckBleGFtcGxlLmNvbTpwYXNzVzBSRA==", credentials)
+            addHeader(HttpHeaders.Authorization, "Basic $credentials")
+        }) {
+            assertEquals(HttpStatusCode.Unauthorized, response.status())
+        }
+    }
+
+    @Test
+    fun `responds to users list request with 200 and users list`() = withConfiguredTestApplication {
+        val accountService = declareMock<AccountService>()
+
+        val uuid = UUID.randomUUID()
+        val email = "demo@example.com"
+        every { accountService.getUsers(uuid, null, any()) } returns listOf(
+            mockk {
+                every { id } returns EntityID(uuid, Users)
+                every { this@mockk.email } returns email
+                every { locale } returns "en_US"
+                every { privateGroup } returns mockk {
+                    every { id } returns EntityID(UUID.randomUUID(), Groups)
+                    every { name } returns "email"
+                    every { isImplicit } returns true
+                }
+            })
+
+        withAuthentication(uuid, email) {
+            with(handleRequest(HttpMethod.Get, "/api/users")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+                assertNotNull(response.deserializeContent<List<UserInfo>>())
+            }
+        }
+
+        verify { accountService.getUsers(uuid, null, any()) }
     }
 
     @Test
     fun `responds to current user details request with 200 and current user account details`() =
         withConfiguredTestApplication {
             val accountService = declareMock<AccountService>()
+            val uuid = UUID.randomUUID()
 
-            every { accountService.getAccountDetails(userId = any()) } returns mockk {
+            every { accountService.getUser(userId = uuid) } returns mockk {
+                every { id } returns EntityID(uuid, Users)
                 every { email } returns "user@example.com"
                 every { locale } returns "en_US"
             }
 
-            withAuthentication {
+            withAuthentication(uuid) {
                 with(handleRequest(HttpMethod.Get, "/api/users/me")) {
                     assertEquals(HttpStatusCode.OK, response.status())
-                    val deserializedContent = response.deserializeContent<UserAccountInfoMessageBody>()
-                    assertEquals("user@example.com", deserializedContent.data.userEmail)
-                    assertEquals("en_US", deserializedContent.data.locale)
+                    val account = response.deserializeContent<UserAccountInfo>()
+                    assertEquals(uuid, account.id)
+                    assertEquals("user@example.com", account.email)
+                    assertEquals("en_US", account.locale)
                 }
             }
 
-            verify { accountService.getAccountDetails(userId = any()) }
+            verify { accountService.getUser(userId = uuid) }
         }
 
     @Test
-    fun `responds to non-existing user details request with 404 and error message`() = withConfiguredTestApplication {
-        val accountService = declareMock<AccountService>()
+    fun `responds to non-existing user details request with 404 and error message`() =
+        withConfiguredTestApplication {
+            val accountService = declareMock<AccountService>()
 
-        every { accountService.getAccountDetails(userId = any()) } throws ValidationException(
-            ValidationException.Reason.ResourceNotFound, "Specified user account does not exist"
-        )
+            every { accountService.getUser(userId = any()) } throws ValidationException(
+                Reason.ResourceNotFound, "Specified user account does not exist"
+            )
 
-        withAuthentication {
-            with(handleRequest(HttpMethod.Get, "/api/users/me")) {
-                assertEquals(HttpStatusCode.NotFound, response.status())
-                assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("Specified user account does not exist"))
+            withAuthentication {
+                with(handleRequest(HttpMethod.Get, "/api/users/me")) {
+                    assertEquals(HttpStatusCode.NotFound, response.status())
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("Specified user account does not exist"))
+                }
             }
-        }
 
-        verify { accountService.getAccountDetails(userId = any()) }
-    }
+            verify { accountService.getUser(userId = any()) }
+        }
 
     @Test
     fun `responds to successful account registration attempt with 201`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
+        val organizationService = declareMock<OrganizationService>()
+        val userId = UUID.randomUUID()
+        val user = mockk<User> {
+            every { id } returns EntityID<UUID>(userId, Users)
+            every { email } returns "user@example.com"
+        }
+        val organization = mockk<Organization> {
+            every { id } returns EntityID<UUID>(UUID.randomUUID(), Organizations)
+            every { name } returns "OrgName1"
+        }
+        every {
+            accountService.create(
+                "user@example.com", accountLocale = any(), pass = any()
+            )
+        } returns user
 
         every {
-            accountService.createAccount(
-                "user@example.com", "OrgName1", accountLocale = any()
-            )
-        } just Runs
+            organizationService.create("OrgName1", true, null, userId)
+        } returns organization
 
         withAuthentication {
             with(handleRequest(HttpMethod.Post, "/api/users") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 withSerializedBody(
-                    AccountRegistrationInfoMessageBody(
-                        AccountRegistrationInfo(
-                            "user@example.com", "OrgName1"
-                        )
+                    AccountRegistrationInfo(
+                        userEmail = "user@example.com",
+                        userPassword = "P@ssw0rd",
+                        newOrganization = true,
+                        organizationName = "OrgName1"
                     )
                 )
             }) {
@@ -234,7 +306,10 @@ class UsersApiTest : BaseApiTest() {
             }
         }
 
-        verify { accountService.createAccount("user@example.com", "OrgName1") }
+        verify(exactly = 1) {
+            accountService.create("user@example.com", accountLocale = null, pass = "P@ssw0rd")
+            organizationService.create("OrgName1", isPrivate = true, parent = null, ownerUserId = userId)
+        }
     }
 
     @Test
@@ -243,48 +318,64 @@ class UsersApiTest : BaseApiTest() {
             val accountService = declareMock<AccountService>()
 
             every {
-                accountService.createAccount(
-                    "user@example.com", "OrgName1", accountLocale = any()
+                accountService.create(
+                    "user@example.com", accountLocale = any(), pass = any()
                 )
             } throws ValidationException(
-                ValidationException.Reason.ResourceAlreadyExists,
-                "User and/or organization with specified name already exists"
+                Reason.ResourceAlreadyExists,
+                "User with specified name already exists"
             )
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Post, "/api/users") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(
-                        AccountRegistrationInfoMessageBody(
-                            AccountRegistrationInfo(
-                                "user@example.com", "OrgName1"
-                            )
+                        AccountRegistrationInfo(
+                            userEmail = "user@example.com",
+                            userPassword = "pass",
+                            newOrganization = true,
+                            organizationName = "OrgName1"
                         )
                     )
                 }) {
                     assertEquals(HttpStatusCode.Conflict, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("User and/or organization with specified name already exists"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("User with specified name already exists"))
                 }
             }
 
-            verify { accountService.createAccount("user@example.com", "OrgName1") }
+            verify { accountService.create("user@example.com", null, "pass") }
         }
 
     @Test
     fun `responds to account registration attempt with invalid data with 400 and error message`() =
         withConfiguredTestApplication {
             val accountService = declareMock<AccountService>()
+            val organizationService = declareMock<OrganizationService>()
             withAuthentication {
                 with(handleRequest(HttpMethod.Post, "/api/users") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("The provided account details cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided account details cannot be parsed"))
                 }
             }
 
-            verify(exactly = 0) { accountService.createAccount(userEmail = any(), organizationName = any()) }
+            verify(exactly = 0) {
+                accountService.create(
+                    email = any(),
+                    pass = any(),
+                    accountLocale = any()
+                )
+            }
+
+            verify(exactly = 0) {
+                organizationService.create(
+                    name = any(),
+                    isPrivate = any(),
+                    parent = any()
+                )
+            }
         }
 
     @Test
@@ -300,7 +391,7 @@ class UsersApiTest : BaseApiTest() {
         withAuthentication {
             with(handleRequest(HttpMethod.Patch, "/api/users/me/password") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                withSerializedBody(PasswordChangeMessageBody(PasswordChange("current", "new")))
+                withSerializedBody(PasswordChange("current", "new"))
             }) {
                 assertEquals(HttpStatusCode.OK, response.status())
             }
@@ -327,10 +418,10 @@ class UsersApiTest : BaseApiTest() {
             withAuthentication {
                 with(handleRequest(HttpMethod.Patch, "/api/users/me/password") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(PasswordChangeMessageBody(PasswordChange("wrong_password", "new")))
+                    withSerializedBody(PasswordChange("wrong_password", "new"))
                 }) {
                     assertEquals(HttpStatusCode.Forbidden, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("The current password could not be changed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The current password could not be changed"))
                 }
             }
 
@@ -351,7 +442,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("The provided password data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided password data cannot be parsed"))
                 }
             }
 
@@ -363,7 +454,7 @@ class UsersApiTest : BaseApiTest() {
         }
 
     @Test
-    fun `responds to successful locale change with 200`() = withConfiguredTestApplication {
+    fun `responds to successful locale change with 204`() = withConfiguredTestApplication {
         val accountService = declareMock<AccountService>()
 
         every { accountService.changeLocale(userId = any(), locale = "pl_PL") } just runs
@@ -371,9 +462,9 @@ class UsersApiTest : BaseApiTest() {
         withAuthentication {
             with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
                 addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                withSerializedBody(LocaleChangeMessageBody(LocaleChange("pl_PL")))
+                withSerializedBody(LocaleChange("pl_PL"))
             }) {
-                assertEquals(HttpStatusCode.OK, response.status())
+                assertEquals(HttpStatusCode.NoContent, response.status())
             }
         }
 
@@ -390,16 +481,16 @@ class UsersApiTest : BaseApiTest() {
                     userId = any(), locale = "eng_ENG"
                 )
             } throws ValidationException(
-                ValidationException.Reason.ResourceFormatInvalid, "The current locale could not be changed"
+                Reason.ResourceFormatInvalid, "The current locale could not be changed"
             )
 
             withAuthentication {
                 with(handleRequest(HttpMethod.Patch, "/api/users/me/locale") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    withSerializedBody(LocaleChangeMessageBody(LocaleChange("eng_ENG")))
+                    withSerializedBody(LocaleChange("eng_ENG"))
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("The current locale could not be changed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The current locale could not be changed"))
                 }
             }
 
@@ -416,7 +507,7 @@ class UsersApiTest : BaseApiTest() {
                     withSerializedBody(Object())
                 }) {
                     assertEquals(HttpStatusCode.BadRequest, response.status())
-                    assertTrue(response.deserializeContent<ErrorMessageBody>().error.contains("The provided locale data cannot be parsed"))
+                    assertTrue(response.deserializeContent<ErrorMessage>().error.contains("The provided locale data cannot be parsed"))
                 }
             }
 
@@ -429,32 +520,35 @@ class UsersApiTest : BaseApiTest() {
             val accountService = declareMock<AccountService>()
             val userId = UUID.randomUUID()
             withAuthentication(userId) {
-                every { accountService.getRolesAssignedToUser(userId) } returns listOf(
-                    mockk {
-                        every { user.id } returns userId
-                        every { organization.id } returns UUID.randomUUID()
-                        every { organization.name } returns "Org1"
-                        every { role } returns OrganizationRoleDto.Writer
-                    }
-                )
+                every { accountService.getRolesAssignedToUser(userId) } returns
+                        listOf(mockk {
+                            every { user.id } returns EntityID(userId, Users)
+                            every { organization.id } returns EntityID(UUID.randomUUID(), Organizations)
+                            every { organization.name } returns "Org1"
+                            every { organization.isPrivate } returns false
+                            every { role } returns RoleType.Writer.role
+                        })
 
                 with(handleRequest(HttpMethod.Get, "/api/users/me/organizations")) {
                     assertEquals(HttpStatusCode.OK, response.status())
-                    val deserializedContent = response.deserializeContent<UserOrganizationCollectionMessageBody>()
-                    assertEquals(1, deserializedContent.data.count())
-                    assertTrue { deserializedContent.data.any { it.name == "Org1" && it.organizationRole == OrganizationRole.writer } }
+                    val deserializedContent =
+                        response.deserializeContent<List<ApiOrganization>>()
+                    assertEquals(1, deserializedContent.count())
+                    assertTrue {
+                        deserializedContent.any { it.name == "Org1" }
+                    }
+                }
+
+                verify { accountService.getRolesAssignedToUser(userId = any()) }
+            }
+
+            @Test
+            fun `responds to user session termination attempt with 204`() = withConfiguredTestApplication {
+                withAuthentication {
+                    with(handleRequest(HttpMethod.Delete, "/api/users/session")) {
+                        assertEquals(HttpStatusCode.NoContent, response.status())
+                    }
                 }
             }
-
-            verify { accountService.getRolesAssignedToUser(userId = any()) }
         }
-
-    @Test
-    fun `responds to user session termination attempt with 204`() = withConfiguredTestApplication {
-        withAuthentication {
-            with(handleRequest(HttpMethod.Delete, "/api/users/session")) {
-                assertEquals(HttpStatusCode.NoContent, response.status())
-            }
-        }
-    }
 }

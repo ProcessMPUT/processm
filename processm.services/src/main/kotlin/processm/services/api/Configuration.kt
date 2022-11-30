@@ -12,7 +12,8 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.util.logging.*
 import processm.core.logging.loggedScope
-import processm.services.api.models.ErrorMessageBody
+import processm.services.api.models.ErrorMessage
+import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import java.time.Duration
 import java.util.*
@@ -40,18 +41,19 @@ internal fun ApplicationStatusPageConfiguration(): StatusPagesConfig.() -> Unit 
     loggedScope { logger ->
         exception<ValidationException> { call, cause ->
             val responseStatusCode = when (cause.reason) {
-                ValidationException.Reason.ResourceAlreadyExists -> HttpStatusCode.Conflict
-                ValidationException.Reason.ResourceNotFound -> HttpStatusCode.NotFound
-                ValidationException.Reason.ResourceFormatInvalid -> HttpStatusCode.BadRequest
+                Reason.ResourceAlreadyExists -> HttpStatusCode.Conflict
+                Reason.ResourceNotFound -> HttpStatusCode.NotFound
+                Reason.ResourceFormatInvalid -> HttpStatusCode.BadRequest
+                Reason.UnprocessableResource -> HttpStatusCode.UnprocessableEntity
             }
             logger.trace(cause.message)
-            call.respond(responseStatusCode, ErrorMessageBody(cause.userMessage))
+            call.respond(responseStatusCode, ErrorMessage(cause.userMessage))
         }
         exception<ApiException> { call, cause ->
-            call.respond(cause.responseCode, ErrorMessageBody(cause.publicMessage.orEmpty()))
+            call.respond(cause.responseCode, ErrorMessage(cause.publicMessage.orEmpty()))
         }
         exception<TokenExpiredException> { call, cause ->
-            call.respond(HttpStatusCode.Unauthorized, ErrorMessageBody(cause.message.orEmpty()))
+            call.respond(HttpStatusCode.Unauthorized, ErrorMessage(cause.message.orEmpty()))
         }
         exception<BadRequestException> { call, cause ->
             logger.error(cause)

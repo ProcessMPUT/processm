@@ -1,10 +1,10 @@
 package processm.enhancement.kpi
 
-import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.stats.Distribution
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /**
  * All data verified with R.
@@ -14,7 +14,7 @@ class DistributionTests {
     @Test
     fun `distribution of zero points is invalid`() {
         val raw = doubleArrayOf()
-        assertThrows<IllegalArgumentException> {
+        assertFailsWith<IllegalArgumentException> {
             Distribution(raw)
         }
     }
@@ -90,7 +90,7 @@ class DistributionTests {
         assertEquals(distribution.quantile(1.0), distribution.max)
         assertEquals(3.646916506, distribution.standardDeviation, 1e-6)
 
-        assertThrows<IllegalArgumentException> { distribution.quantile(-0.1) }
+        assertFailsWith<IllegalArgumentException> { distribution.quantile(-0.1) }
         assertEquals(-5.0, distribution.quantile(0.0))
         assertEquals(-5.0, distribution.quantile(0.1))
         assertEquals(-4.2, distribution.quantile(0.2))
@@ -104,7 +104,7 @@ class DistributionTests {
         assertEquals(3.2, distribution.quantile(0.8), 1e-6)
         assertEquals(4.0, distribution.quantile(0.9))
         assertEquals(4.0, distribution.quantile(1.0))
-        assertThrows<IllegalArgumentException> { distribution.quantile(1.1) }
+        assertFailsWith<IllegalArgumentException> { distribution.quantile(1.1) }
 
         assertEquals(0.0, distribution.cdf(rawS[0] - 0.1))
         assertEquals(0.2, distribution.cdf(rawS[0]))
@@ -133,7 +133,7 @@ class DistributionTests {
         assertEquals(distribution.quantile(1.0), distribution.max)
         assertEquals(4.23083916, distribution.standardDeviation, 1e-6)
 
-        assertThrows<IllegalArgumentException> { distribution.quantile(-0.1) }
+        assertFailsWith<IllegalArgumentException> { distribution.quantile(-0.1) }
         assertEquals(-5.0, distribution.quantile(0.0))
         assertEquals(-5.0, distribution.quantile(0.1))
         assertEquals(-3.8, distribution.quantile(0.2), 1e-6)
@@ -145,7 +145,7 @@ class DistributionTests {
         assertEquals(4.8, distribution.quantile(0.8), 1e-6)
         assertEquals(6.0, distribution.quantile(0.9))
         assertEquals(6.0, distribution.quantile(1.0))
-        assertThrows<IllegalArgumentException> { distribution.quantile(1.1) }
+        assertFailsWith<IllegalArgumentException> { distribution.quantile(1.1) }
 
         assertEquals(0.0, distribution.cdf(rawS[0] - 0.1))
         assertEquals(1.0 / 6.0, distribution.cdf(rawS[0]))

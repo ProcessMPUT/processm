@@ -2,7 +2,6 @@ package processm.enhancement.kpi
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import processm.core.DBTestHelper
@@ -14,6 +13,7 @@ import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import processm.miners.triggerEvent
 import java.util.*
@@ -203,7 +203,7 @@ class AlignerKPIServiceTests {
     }
 
     fun createKPIComponent(_query: String, _modelId: Long) {
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             WorkspaceComponent.new {
                 name = "test-aligner-kpi"
                 componentType = ComponentTypeDto.AlignerKpi
@@ -218,7 +218,7 @@ class AlignerKPIServiceTests {
 
     @AfterTest
     fun deleteKPIComponent() {
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             WorkspaceComponents.deleteWhere {
                 (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }
@@ -242,7 +242,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
@@ -309,7 +309,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
@@ -375,7 +375,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
@@ -398,7 +398,7 @@ class AlignerKPIServiceTests {
 
             Thread.sleep(1000L) // wait for calculation
 
-            transaction(DBCache.getMainDBPool().database) {
+            transactionMain {
                 val component = WorkspaceComponent.find {
                     (WorkspaceComponents.name eq "test-aligner-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
                 }.first()
@@ -412,7 +412,7 @@ class AlignerKPIServiceTests {
             alignerKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()

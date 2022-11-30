@@ -3,11 +3,12 @@ package processm.services.logic
 import io.mockk.*
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.select
-import processm.core.communication.Producer
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.toFlatSequence
 import processm.dbmodels.etl.jdbc.ETLConfiguration
+import processm.dbmodels.models.AccessControlList
 import processm.dbmodels.models.DataStores
+import processm.dbmodels.models.Groups
 import processm.dbmodels.models.Organizations
 import processm.etl.jdbc.toXESInputStream
 import processm.services.api.models.JdbcEtlColumnConfiguration
@@ -19,36 +20,35 @@ import java.util.*
 import kotlin.test.*
 
 internal class DataStoreServiceTest : ServiceTestBase() {
-    private lateinit var producer: Producer
     private lateinit var dataStoreService: DataStoreService
 
     @BeforeTest
     override fun setUp() {
         super.setUp()
-        producer = mockk()
         dataStoreService = DataStoreService(producer)
     }
 
     @Test
-    fun `Read all data stores assigned to organization`(): Unit = withCleanTables(DataStores, Organizations) {
-        val expectedOrgId = createOrganization(name = "Expected").value
-        val ignoredOrgId = createOrganization(name = "Ignored").value
+    fun `Read all data stores assigned to organization`(): Unit =
+        withCleanTables(AccessControlList, DataStores, Organizations) {
+            val expectedOrgId = createOrganization(name = "Expected").id.value
+            val ignoredOrgId = createOrganization(name = "Ignored").id.value
 
-        createDataStore(organizationId = expectedOrgId, name = "Expected #1")
-        createDataStore(organizationId = expectedOrgId, name = "Expected #2")
-        createDataStore(organizationId = ignoredOrgId, name = "Ignored #2")
+            createDataStore(organizationId = expectedOrgId, name = "Expected #1")
+            createDataStore(organizationId = expectedOrgId, name = "Expected #2")
+            createDataStore(organizationId = ignoredOrgId, name = "Ignored #2")
 
-        val data = dataStoreService.allByOrganizationId(expectedOrgId)
+            val data = dataStoreService.allByOrganizationId(expectedOrgId)
 
-        assertEquals(2, data.size)
-        assertNotNull(data.firstOrNull { it.name == "Expected #1" })
-        assertNotNull(data.firstOrNull { it.name == "Expected #2" })
-        assertNull(data.firstOrNull { it.name == "Ignored #1" })
-    }
+            assertEquals(2, data.size)
+            assertNotNull(data.firstOrNull { it.name == "Expected #1" })
+            assertNotNull(data.firstOrNull { it.name == "Expected #2" })
+            assertNull(data.firstOrNull { it.name == "Ignored #1" })
+        }
 
     @Test
-    fun `Create new data store`(): Unit = withCleanTables(DataStores, Organizations) {
-        val org = createOrganization().value
+    fun `Create new data store`(): Unit = withCleanTables(AccessControlList, DataStores, Groups, Organizations) {
+        val org = createOrganization().id.value
         assertTrue(dataStoreService.allByOrganizationId(org).isEmpty())
 
         val data = dataStoreService.createDataStore(organizationId = org, name = "New data store")
@@ -66,13 +66,13 @@ internal class DataStoreServiceTest : ServiceTestBase() {
             dataStoreService.getDataStore(UUID.randomUUID())
         }
 
-        assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
     fun `getting specified data store returns`(): Unit = withCleanTables(DataStores) {
-        val organizationId = createOrganization()
-        val dataStoreId = createDataStore(organizationId.value, name = "DataStore1")
+        val organization = createOrganization()
+        val dataStoreId = createDataStore(organization.id.value, name = "DataStore1")
 
         val dataStore = assertNotNull(dataStoreService.getDataStore(dataStoreId.value))
 
@@ -80,9 +80,11 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `successful renaming of data store returns true`(): Unit = withCleanTables(Organizations, DataStores) {
-        val organizationId = createOrganization()
-        val dataStoreId = createDataStore(organizationId.value)
+    fun `successful renaming of data store returns true`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations, DataStores
+    ) {
+        val organization = createOrganization()
+        val dataStoreId = createDataStore(organization.id.value)
         val newName = "DataStore2"
 
         assertTrue(dataStoreService.renameDataStore(dataStoreId.value, newName))
@@ -94,9 +96,11 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `successful removal of data store returns true`(): Unit = withCleanTables(Organizations, DataStores) {
-        val organizationId = createOrganization()
-        val dataStoreId = createDataStore(organizationId.value)
+    fun `successful removal of data store returns true`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations, DataStores
+    ) {
+        val organization = createOrganization()
+        val dataStoreId = createDataStore(organization.id.value)
         mockkObject(SchemaUtils) {
             every { SchemaUtils.dropDatabase("\"$dataStoreId\"") } just runs
 
@@ -115,12 +119,15 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `creating data connector with connection string throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
-        assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", "connection string") }
-    }
+    fun `creating data connector with connection string throws if nonexistent data store`(): Unit =
+        withCleanTables(DataStores) {
+            assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", "connection string") }
+        }
 
     @Test
-    fun `creating data connector with connection properties throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
+    fun `creating data connector with connection properties throws if nonexistent data store`(): Unit = withCleanTables(
+        DataStores
+    ) {
         assertDataStoreExistence { createDataConnector(UUID.randomUUID(), "DataConnector1", emptyMap()) }
     }
 
@@ -151,7 +158,14 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `creating automatic ETL process throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
-        assertDataStoreExistence { createAutomaticEtlProcess(UUID.randomUUID(), UUID.randomUUID(), "processName", emptyList()) }
+        assertDataStoreExistence {
+            createAutomaticEtlProcess(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "processName",
+                emptyList()
+            )
+        }
     }
 
     @Test
@@ -165,17 +179,18 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     fun assertDataStoreExistence(methodCall: DataStoreService.() -> Unit) {
-     val exception = assertFailsWith<ValidationException>("The specified data store does not exist or the user has insufficient permissions to it") {
-         methodCall(dataStoreService)
-     }
+        val exception =
+            assertFailsWith<ValidationException>("The specified data store does not exist or the user has insufficient permissions to it") {
+                methodCall(dataStoreService)
+            }
 
-     assertEquals(ValidationException.Reason.ResourceNotFound, exception.reason)
+        assertEquals(Reason.ResourceNotFound, exception.reason)
     }
 
     @Test
-    fun `create sampling ETL proces`(): Unit = withCleanTables(DataStores, Organizations) {
+    fun `create sampling ETL proces`(): Unit = withCleanTables(AccessControlList, Groups, DataStores, Organizations) {
         val service = DataStoreService(producer)
-        val org = createOrganization().value
+        val org = createOrganization().id.value
 
         val ds = service.createDataStore(organizationId = org, name = "New data store")
 
@@ -191,43 +206,44 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     }
 
     @Test
-    fun `create, query and delete sampling ETL proces`(): Unit = withCleanTables(DataStores, Organizations) {
-        val service = DataStoreService(producer)
-        val logsService = LogsService(producer)
-        val org = createOrganization().value
+    fun `create, query and delete sampling ETL proces`(): Unit =
+        withCleanTables(AccessControlList, Groups, DataStores, Organizations) {
+            val service = DataStoreService(producer)
+            val logsService = LogsService(producer)
+            val org = createOrganization().id.value
 
-        val ds = service.createDataStore(organizationId = org, name = "New data store")
+            val ds = service.createDataStore(organizationId = org, name = "New data store")
 
-        val dc = service.createDataConnector(ds.id.value, "DC name", "foo://bar")
+            val dc = service.createDataConnector(ds.id.value, "DC name", "foo://bar")
 
-        val cfg = JdbcEtlProcessConfiguration(
-            "query", true, false,
-            JdbcEtlColumnConfiguration("traceId", "traceId"), JdbcEtlColumnConfiguration("eventId", "eventId"),
-            emptyArray(), BigDecimal(60), "0", Types.INTEGER
-        )
+            val cfg = JdbcEtlProcessConfiguration(
+                "query", true, false,
+                JdbcEtlColumnConfiguration("traceId", "traceId"), JdbcEtlColumnConfiguration("eventId", "eventId"),
+                emptyArray(), BigDecimal(60), "0", Types.INTEGER
+            )
 
-        mockkStatic(ETLConfiguration::toXESInputStream)
+            mockkStatic(ETLConfiguration::toXESInputStream)
 
-        every { any<ETLConfiguration>().toXESInputStream() } returns logFromString(
-            """
+            every { any<ETLConfiguration>().toXESInputStream() } returns logFromString(
+                """
             a b c
         """.trimIndent()
-        ).toFlatSequence()
+            ).toFlatSequence()
 
-        val etlProcessId = service.createSamplingJdbcEtlProcess(ds.id.value, dc, "dummy", cfg, 3)
+            val etlProcessId = service.createSamplingJdbcEtlProcess(ds.id.value, dc, "dummy", cfg, 3)
 
-        val logIdentityId = service.getEtlProcessInfo(ds.id.value, etlProcessId).logIdentityId
+            val logIdentityId = service.getEtlProcessInfo(ds.id.value, etlProcessId).logIdentityId
 
-        val data = ByteArrayOutputStream().use {
-            logsService.queryDataStoreJSON(ds.id.value, "where log:identity:id=$logIdentityId")(it)
-            return@use it.toByteArray()
-        }.decodeToString()
+            val data = ByteArrayOutputStream().use {
+                logsService.queryDataStoreJSON(ds.id.value, "where log:identity:id=$logIdentityId")(it)
+                return@use it.toByteArray()
+            }.decodeToString()
 
-        println(data)
+            println(data)
 
-        logsService.removeLog(ds.id.value, logIdentityId)
+            logsService.removeLog(ds.id.value, logIdentityId)
 
-        service.removeEtlProcess(ds.id.value, etlProcessId)
-    }
+            service.removeEtlProcess(ds.id.value, etlProcessId)
+        }
 
 }

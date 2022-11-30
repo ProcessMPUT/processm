@@ -5,7 +5,6 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.verify
 import org.apache.commons.math3.distribution.RealDistribution
-import org.junit.jupiter.api.assertThrows
 import processm.core.log.Event
 import processm.core.log.Log
 import processm.core.log.Trace
@@ -22,6 +21,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ApplyResourceBasedSchedulingTest {
@@ -197,7 +197,7 @@ class ApplyResourceBasedSchedulingTest {
             simulationStartOffset
         )
 
-        assertThrows<NoSuchElementException> { resourceBasedScheduler.takeTraces(1).toList() }
+        assertFailsWith<NoSuchElementException> { resourceBasedScheduler.takeTraces(1).toList() }
     }
 
     @Test

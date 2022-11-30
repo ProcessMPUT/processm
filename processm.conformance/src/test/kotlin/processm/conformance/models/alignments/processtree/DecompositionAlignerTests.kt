@@ -1,8 +1,8 @@
 package processm.conformance.models.alignments.processtree
 
-import org.junit.jupiter.api.Test
 import processm.conformance.ProcessTrees
 import processm.core.log.Helpers
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class DecompositionAlignerTests {

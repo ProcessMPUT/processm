@@ -2,7 +2,6 @@ package processm.conformance.models.alignments.petrinet
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
 import processm.conformance.CausalNets
 import processm.conformance.CausalNets.fig312
 import processm.conformance.CausalNets.fig316
@@ -28,10 +27,11 @@ import processm.core.models.petrinet.converters.toPetriNet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertFalse
 
-@Disabled("These tests are intended for manual execution")
+@Ignore("These tests are intended for manual execution")
 class DecompositionAlignerPerformanceTests {
 
     companion object {

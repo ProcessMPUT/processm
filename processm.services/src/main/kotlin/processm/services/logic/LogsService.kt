@@ -17,7 +17,6 @@ import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
-import processm.services.api.models.QueryResultCollectionMessageBody
 import java.io.BufferedInputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -53,15 +52,21 @@ class LogsService(private val producer: Producer) {
             ).use { db ->
                 db.write(
                     XMLXESInputStream(
-                            if (fileName?.endsWith("gz") == true) GZIPInputStream(
-                                logStream.boundStreamSize(xesFileInputSizeLimit)
-                            )
-                            else logStream.boundStreamSize(xesFileInputSizeLimit))
+                        if (fileName?.endsWith("gz") == true) GZIPInputStream(
+                            logStream.boundStreamSize(xesFileInputSizeLimit)
+                        )
+                        else logStream.boundStreamSize(xesFileInputSizeLimit)
+                    )
                         .map {
                             val log = it as? Log ?: return@map it
                             val logAttributes = log.attributes.toMutableMap()
 
-                            logAttributes.computeIfAbsent(identityIdAttributeName) { IDAttr(identityIdAttributeName, UUID.randomUUID()) }
+                            logAttributes.computeIfAbsent(identityIdAttributeName) {
+                                IDAttr(
+                                    identityIdAttributeName,
+                                    UUID.randomUUID()
+                                )
+                            }
 
                             return@map Log(
                                 logAttributes,
@@ -69,7 +74,8 @@ class LogsService(private val producer: Producer) {
                                 log.traceGlobals.toMutableMap(),
                                 log.eventGlobals.toMutableMap(),
                                 log.traceClassifiers.toMutableMap(),
-                                log.eventClassifiers.toMutableMap())
+                                log.eventClassifiers.toMutableMap()
+                            )
                         }
                 )
             }
@@ -93,7 +99,7 @@ class LogsService(private val producer: Producer) {
                     .build()
             val factory = JsonXMLOutputFactory(config)
 
-            write("{\"${QueryResultCollectionMessageBody::data.name}\":[".toByteArray())
+            write("[".toByteArray())
             val logsIterator = queryStream.iterator()
 
             while (logsIterator.hasNext()) {
@@ -111,7 +117,7 @@ class LogsService(private val producer: Producer) {
                 if (logsIterator.hasNext()) write(",".toByteArray())
             }
 
-            write("]}".toByteArray())
+            write("]".toByteArray())
         }
     }
 
@@ -157,11 +163,13 @@ class LogsService(private val producer: Producer) {
                 .slice(EtlProcessesMetadata.name, DataConnectors.dataModelId)
                 .select { EtlProcessesMetadata.id eq etlProcessId }
                 .firstOrNull() ?: throw ValidationException(
-                    ValidationException.Reason.ResourceNotFound,
-                    "The specified ETL process and/or data store does not exist")
+                Reason.ResourceNotFound,
+                "The specified ETL process and/or data store does not exist"
+            )
             val dataModelId = etlProcessDetails[DataConnectors.dataModelId]?.value ?: throw ValidationException(
-                ValidationException.Reason.ResourceNotFound,
-                "The specified ETL process and/or data store has no data model")
+                Reason.ResourceNotFound,
+                "The specified ETL process and/or data store has no data model"
+            )
             val etlProcessName = etlProcessDetails[EtlProcessesMetadata.name]
 
             producer.produce(ETL_PROCESS_CONVERSION_TOPIC) {

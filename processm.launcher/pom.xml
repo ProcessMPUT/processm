@@ -107,6 +107,21 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-content-negotiation-jvm</artifactId>
+            <version>${ktor.client.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-serialization-gson-jvm</artifactId>
+            <version>${ktor.client.version}</version>
+            <!-- Although processm.launcher uses ktor-serialization-gson-jvm only in tests, processm.services requires
+            it at runtime. Setting scope: test here overrides the inherited from processm.services scope: compile, and
+            thus we set it to "compile" inconsistently with the other ktor-client-* dependencies. -->
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-coroutines-core</artifactId>
             <version>${kotlinx.coroutines.version}</version>

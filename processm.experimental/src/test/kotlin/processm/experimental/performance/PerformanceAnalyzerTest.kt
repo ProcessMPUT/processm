@@ -1,7 +1,6 @@
 package processm.experimental.performance
 
 import ch.qos.logback.classic.Level
-import org.junit.jupiter.api.assertThrows
 import org.slf4j.LoggerFactory.getLogger
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.mapToSet
@@ -574,7 +573,7 @@ class PerformanceAnalyzerTest {
         (getLogger("processm.experimental") as ch.qos.logback.classic.Logger).level = Level.WARN
         val log = load("../xes-logs/BPIC15_2f.xes.gz").traces.toList()
         val hm = OnlineMiner()
-        assertThrows<IllegalStateException> {
+        assertFailsWith<IllegalStateException> {
             for (start in 0 until 113) {
                 val remove =
                     if (start > windowSize) log.subList(start - windowSize - step, start - windowSize) else emptyList()

@@ -1,5 +1,6 @@
 package processm.core.helpers
 
+import org.jetbrains.exposed.sql.SizedIterable
 import processm.core.log.attribute.deepEquals
 import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
@@ -176,6 +177,14 @@ inline fun <T, reified R> Sequence<T>.mapToArray(transform: (T) -> R): Array<R> 
  */
 inline fun <T, reified R> Array<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
     Array<R>(this.size) { _ -> transform(it.next()) }
+}
+
+/**
+ * Returns an [Array] containing the results of applying the given [transform] function
+ * to each element in the original [SizedIterable].
+ */
+inline fun <T, reified R> SizedIterable<T>.mapToArray(transform: (T) -> R): Array<R> = this.iterator().let {
+    Array<R>(this.count().toInt()) { _ -> transform(it.next()) }
 }
 
 /**

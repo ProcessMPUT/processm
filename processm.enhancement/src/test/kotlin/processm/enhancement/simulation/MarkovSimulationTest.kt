@@ -1,8 +1,5 @@
 package processm.enhancement.simulation
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.assertThrows
 import processm.conformance.CausalNets
 import processm.conformance.PetriNets
 import processm.conformance.models.alignments.CompositeAligner
@@ -16,6 +13,9 @@ import processm.core.models.petrinet.Place
 import processm.core.models.petrinet.Transition
 import kotlin.math.abs
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 @OptIn(InMemoryXESProcessing::class)
 class MarkovSimulationTest {
@@ -67,7 +67,7 @@ class MarkovSimulationTest {
     @Test
     fun `model that terminates in the non-terminal state throw an exception`() {
         val simulation = MarkovSimulation(CausalNets.fig316)
-        val exception = assertThrows<IllegalStateException> {
+        val exception = assertFailsWith<IllegalStateException> {
             simulation.takeTraces(10).forEach { /*just iterate*/ }
         }
         assertTrue("terminal non-final state" in exception.message!!)

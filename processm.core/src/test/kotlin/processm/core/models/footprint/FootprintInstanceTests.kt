@@ -1,7 +1,7 @@
 package processm.core.models.footprint
 
-import org.junit.jupiter.api.Test
 import processm.core.models.commons.Activity
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class FootprintInstanceTests {

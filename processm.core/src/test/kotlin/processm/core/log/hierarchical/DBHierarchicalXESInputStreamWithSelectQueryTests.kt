@@ -1,6 +1,5 @@
 package processm.core.log.hierarchical
 
-import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.implies
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
@@ -150,7 +149,7 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
 
     @Test
     fun scopedSelectAllWithGroupBy() {
-        assertThrows<IllegalArgumentException> {
+        assertFailsWith<IllegalArgumentException> {
             q("select l:*, t:*, e:*, max(e:timestamp)-min(e:timestamp) where l:name like 'Jour%Rev%' and l:id=$journal group by e:instance")
         }
     }

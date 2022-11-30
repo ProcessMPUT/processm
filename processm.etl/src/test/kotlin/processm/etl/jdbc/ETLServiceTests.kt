@@ -15,11 +15,15 @@ import processm.core.log.DBLogCleaner
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
-import processm.dbmodels.models.*
+import processm.dbmodels.models.DataStore
+import processm.dbmodels.models.EtlProcessMetadata
+import processm.dbmodels.models.EtlProcessesMetadata
+import processm.dbmodels.models.Organization
 import processm.etl.DBMSEnvironment
 import processm.etl.PostgreSQLEnvironment
 import java.time.LocalDateTime
@@ -201,19 +205,13 @@ OFFSET ?::bigint
         }
 
         private fun createDateStore() {
-            transaction(DBCache.getMainDBPool().database) {
+            transactionMain {
                 DataStore.new(dataStoreId.toUUID()) {
                     name = "Temporary data store for tests"
                     creationDate = LocalDateTime.now()
                     organization = Organization.all().firstOrNull() ?: Organization.new {
                         name = "Test organization"
                         isPrivate = true
-                        sharedGroup = UserGroup.all().firstOrNull() ?: UserGroup.new {
-                            isImplicit = true
-                            groupRole = GroupRole.all().firstOrNull() ?: GroupRole.new {
-                                name = GroupRoleDto.Owner
-                            }
-                        }
                     }
                 }
             }

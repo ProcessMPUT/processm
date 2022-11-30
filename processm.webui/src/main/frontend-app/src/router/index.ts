@@ -57,6 +57,15 @@ const routes = [
       Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
     },
     meta: { allowUnauthenticated: true }
+  },
+  {
+    path: "/reset-password",
+    name: "reset-password",
+    component: () => import("@/views/ResetPassword.vue"),
+    beforeEnter: (_to: any, _from: any, next: any) => {
+      Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
+    },
+    meta: { allowUnauthenticated: true }
   }
 ];
 
@@ -65,10 +74,7 @@ const router = new VueRouter({
 });
 
 router.beforeEach((to, _from, next) => {
-  Vue.prototype.$sessionStorage.sessionExists ||
-  to.matched.some((record) => record.meta.allowUnauthenticated)
-    ? next()
-    : next({ name: "login" });
+  Vue.prototype.$sessionStorage.sessionExists || to.matched.some((record) => record.meta.allowUnauthenticated) ? next() : next({ name: "login" });
 });
 
 export default router;
