@@ -18,13 +18,7 @@ import kotlin.reflect.KClass
 open class DBXESOutputStream protected constructor(protected val connection: Connection, val isAppending: Boolean) :
     XESOutputStream {
     companion object {
-        internal const val batchSize = 384000
-
-        /**
-         * The limit of the number of parameters in an SQL query. When exceeded, no new trace will be inserted in the
-         * current batch. The current trace will be still completed.
-         */
-        internal const val paramSoftLimit = Short.MAX_VALUE - 8192
+        internal const val batchSize = 1024 * 1024    //An arbitrarily chosen value
 
         private const val analyzeThreshold = Short.MAX_VALUE
 
@@ -76,9 +70,12 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         // Disable autoCommit on connection - we want to add whole XES log structure
         connection.autoCommit = false
 
-        //TODO how do I know this failed?
-        connection.prepareStatement("create temporary table $tempTracesTable (like TRACES including defaults including generated) on commit drop; create temporary table $tempEventsTable (like EVENTS including defaults including generated) on commit drop")
-            .execute()
+        connection.createStatement().use { stmt ->
+            stmt.execute(
+                """CREATE TEMPORARY TABLE $tempTracesTable (LIKE TRACES INCLUDING DEFAULTS INCLUDING GENERATED) ON COMMIT DROP; 
+            CREATE TEMPORARY TABLE $tempEventsTable (LIKE EVENTS INCLUDING DEFAULTS INCLUDING GENERATED) ON COMMIT DROP"""
+            )
+        }
     }
 
     /**
@@ -184,15 +181,14 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
 
         val known = HashMap<UUID, Long>()
         if (isAppending) {
-            val sql = SQL()
-            with(sql.sql) {
-                append("""select traces."identity:id", traces.id from traces join unnest(?) tmp("identity:id") on traces."identity:id" = tmp."identity:id"::uuid""")
-            }
-            val traceIdentities = queue.filterIsInstance<Trace>().mapNotNull { it.identityId }
-            sql.params.addLast(traceIdentities.toTypedArray())
-            sql.executeQuery { rs ->
-                while (rs.next()) {
-                    known[rs.getString(1).toUUID()!!] = rs.getLong(2)
+            with(SQL()) {
+                sql.append("""SELECT TRACES."identity:id", TRACES.id FROM TRACES JOIN UNNEST(?) tmp("identity:id") ON TRACES."identity:id" = tmp."identity:id"::uuid""")
+                val traceIdentities = queue.filterIsInstance<Trace>().mapNotNull { it.identityId }
+                params.addLast(traceIdentities.toTypedArray())
+                executeQuery { rs ->
+                    while (rs.next()) {
+                        known[rs.getString(1).toUUID()!!] = rs.getLong(2)
+                    }
                 }
             }
         }
@@ -253,22 +249,25 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         }
         check(traceIds.size == lastTraceIndex + 1) { "Write unsuccessful." }
 
-        connection.prepareStatement("INSERT INTO TRACES SELECT * FROM $tempTracesTable; DELETE FROM $tempTracesTable")
-            .execute()
+        connection.createStatement().use { stmt ->
+            stmt.execute("INSERT INTO TRACES SELECT * FROM $tempTracesTable; TRUNCATE $tempTracesTable")
+        }
 
         eventCopy.execute(connection, traceIds)
 
         val eventIds = ArrayList<Long>()
-        connection.prepareStatement("SELECT id FROM $tempEventsTable").executeQuery().use { rs ->
-            while (rs.next()) {
-                eventIds.add(rs.getLong(1))
+        connection.createStatement().use { stmt ->
+            stmt.executeQuery("SELECT id FROM $tempEventsTable").use { rs ->
+                while (rs.next()) {
+                    eventIds.add(rs.getLong(1))
+                }
             }
         }
         check(eventIds.size == lastEventIndex + 1) { "Write unsuccessful." }
 
-        // TODO INSERT seems to take its time and proportional to the number of rows rather than to the number of calls. Can this be optimized?
-        connection.prepareStatement("INSERT INTO EVENTS SELECT * FROM $tempEventsTable; DELETE FROM $tempEventsTable")
-            .execute()
+        connection.createStatement().use { stmt ->
+            stmt.execute("INSERT INTO EVENTS SELECT * FROM $tempEventsTable; TRUNCATE $tempEventsTable")
+        }
 
         eventAttrCopy.execute(connection, eventIds)
         traceAttrCopy.execute(connection, traceIds)
@@ -295,7 +294,7 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         totalInserts += countItemsToInsert
     }
 
-    protected fun writeEventData(event: Event, to: LazyCopy, traceIndex: Int) {
+    private fun writeEventData(event: Event, to: LazyCopy, traceIndex: Int) {
         with(to) {
             add(event.conceptName)
             add(event.conceptInstance)
@@ -313,7 +312,7 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         }
     }
 
-    protected fun writeTraceData(trace: Trace, to: EagerCopy) {
+    private fun writeTraceData(trace: Trace, to: EagerCopy) {
         with(to) {
             add(logId?.toLong())
             add(trace.conceptName)
@@ -438,15 +437,6 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         assert(!first)
         to.sql.deleteCharAt(to.sql.length - 1)
         to.sql.append(") c(scope,name,keys))")
-    }
-
-    private fun writeGlobals(scope: String, globals: AttributeMap) {
-        if (globals.isNotEmpty())
-            copyForAttributes("GLOBALS", "log", mapOf("scope" to scope)) { a, b ->
-                EagerCopy(connection, a, listOf(logId!!.toString()), b)
-            }.use {
-                writeAttributes(globals, it)
-            }
     }
 
     protected inner class SQL {

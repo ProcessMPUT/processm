@@ -39,7 +39,9 @@ class AppendingDBXESOutputStreamTest {
             Event(mutableAttributeMapOf(CONCEPT_NAME to "backorder")),
             Event(mutableAttributeMapOf(CONCEPT_NAME to "issue invoice")),
             Event(mutableAttributeMapOf(CONCEPT_NAME to "pay").apply { children("other name")["floatKey"] = 1.23 }),
-            Event(mutableAttributeMapOf(CONCEPT_NAME to "deliver")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "deliver").apply {
+                children("some name")["booleanKey"] = true
+            }),
             Event(mutableAttributeMapOf(CONCEPT_NAME to "complaint")),
         )
 

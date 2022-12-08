@@ -7,13 +7,12 @@ import java.util.*
 
 abstract class Copy(destination: String, extraColumnValues: Collection<String>) {
     companion object {
-        //TODO these two are current defaults, but maybe they should be passed in the query in order to make the query more robust?
         const val NULL = "\\N"
         const val DELIMITER = '\t'
         val ISO8601 = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC)
     }
 
-    protected val sql = "COPY $destination FROM STDIN"
+    protected val sql = "COPY $destination FROM STDIN WITH (NULL '$NULL', DELIMITER '$DELIMITER')"
 
     protected lateinit var suffix: String
 
@@ -68,10 +67,10 @@ abstract class Copy(destination: String, extraColumnValues: Collection<String>) 
     }
 
     fun add(value: Boolean?) {
-        addInternal(value?.toString())   //TODO verify
+        addInternal(value?.toString())
     }
 
     fun add(value: Double?) {
-        addInternal(value?.toString())   //TODO verify
+        addInternal(value?.toString())
     }
 }
