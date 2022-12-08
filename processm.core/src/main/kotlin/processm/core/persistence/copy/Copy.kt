@@ -5,6 +5,13 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+/**
+ * A wrapper around Postgres-specific COPY FROM STDIN operation. It seems that COPY is much faster than a convoluted
+ * INSERT with some values inlined. The exposed methods are tailored to the datatypes used in [processm.core.log.attribute.AttributeMap].
+ *
+ * @param destination The part of the COPY query to insert between COPY and FROM, as per PostgreSQL's documentation.
+ * @param extraColumnValues A collection of constant values to append to each inserted row. Can be updated later by calling [setExtraColumnValues]
+ */
 abstract class Copy(destination: String, extraColumnValues: Collection<String>) {
     companion object {
         const val NULL = "\\N"

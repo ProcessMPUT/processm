@@ -7,13 +7,23 @@ import java.io.PrintStream
 import java.sql.Connection
 
 
+/**
+ * A wrapper around Postgres-specific COPY FROM operation with eager execution, i.e., the COPY command is started immediately
+ * upon creation of the instance and the data is passed to the DB as they arrive.
+ *
+ * Values are added by calling to [add] functions, and the current row is ended by calling to [flushRow]. To flush the
+ * data and end the COPY command, one must call to [close].
+ *
+ * @param destination The part of the COPY query to insert between COPY and FROM, as per PostgreSQL's documentation.
+ * @param prefix A collection of constant values to prepend each inserted row
+ * @param extraColumnValues A collection of constant values to append to each inserted row
+ */
 class EagerCopy(
     connection: Connection,
     destination: String,
     prefix: Collection<String> = emptyList(),
     extraColumnValues: Collection<String> = emptyList()
-) :
-    Copy(destination, extraColumnValues), Closeable {
+) : Copy(destination, extraColumnValues), Closeable {
 
     private val prefix: String = if (prefix.isNotEmpty()) {
         with(StringBuilder()) {
