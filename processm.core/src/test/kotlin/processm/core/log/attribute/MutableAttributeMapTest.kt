@@ -1,8 +1,6 @@
 package processm.core.log.attribute
 
-import org.junit.jupiter.api.assertThrows
 import kotlin.test.*
-import kotlin.test.Test
 
 class MutableAttributeMapTest {
 
@@ -134,7 +132,7 @@ class MutableAttributeMapTest {
         for (value in listOf(1L, 2L, 3L, 4L, 6L, 11L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L))
             assertFalse { submap.containsValue(value) }
         assertEquals(23L, submap["x"])
-        assertThrows<NoSuchElementException> { submap["d"] }
+        assertFailsWith<NoSuchElementException> { submap["d"] }
     }
 
     @Test
@@ -148,8 +146,8 @@ class MutableAttributeMapTest {
             assertFalse { submap.containsKey(key.toString()) }
         for (value in listOf(1L, 2L, 3L, 4L, 6L, 11L, 7L, 8L, 12L, 13L, 14L, 16L, 17L, 18L, 23L))
             assertFalse { submap.containsValue(value) }
-        assertThrows<NoSuchElementException> { submap["x"] }
-        assertThrows<NoSuchElementException> { submap["d"] }
+        assertFailsWith<NoSuchElementException> { submap["x"] }
+        assertFailsWith<NoSuchElementException> { submap["d"] }
     }
 
     @Test
@@ -198,38 +196,38 @@ class MutableAttributeMapTest {
         val map = MutableAttributeMap()
         map["a"] = 1L
         assertEquals(1L, map["a"])
-        assertThrows<NoSuchElementException> { map["b"] }
-        assertThrows<NoSuchElementException> { map["c"] }
+        assertFailsWith<NoSuchElementException> { map["b"] }
+        assertFailsWith<NoSuchElementException> { map["c"] }
         assertFalse { map.containsValue(null) }
         map["b"] = null
         assertEquals(1L, map["a"])
         assertNull(map["b"])
-        assertThrows<NoSuchElementException> { map["c"] }
+        assertFailsWith<NoSuchElementException> { map["c"] }
         assertTrue { map.containsValue(null) }
     }
 
     @Test
     fun `compute if absent`() {
         val map = MutableAttributeMap()
-        assertThrows<NoSuchElementException> { map["a"] }
-        assertThrows<NoSuchElementException> { map["b"] }
-        assertThrows<NoSuchElementException> { map["c"] }
+        assertFailsWith<NoSuchElementException> { map["a"] }
+        assertFailsWith<NoSuchElementException> { map["b"] }
+        assertFailsWith<NoSuchElementException> { map["c"] }
         map.computeIfAbsent("a") { 1L }
         assertEquals(1L, map["a"])
-        assertThrows<NoSuchElementException> { map["b"] }
-        assertThrows<NoSuchElementException> { map["c"] }
+        assertFailsWith<NoSuchElementException> { map["b"] }
+        assertFailsWith<NoSuchElementException> { map["c"] }
         map.computeIfAbsent("a") { null }
         assertEquals(1L, map["a"])
-        assertThrows<NoSuchElementException> { map["b"] }
-        assertThrows<NoSuchElementException> { map["c"] }
+        assertFailsWith<NoSuchElementException> { map["b"] }
+        assertFailsWith<NoSuchElementException> { map["c"] }
         map.computeIfAbsent("b") { null }
         assertEquals(1L, map["a"])
         assertNull(map["b"])
-        assertThrows<NoSuchElementException> { map["c"] }
+        assertFailsWith<NoSuchElementException> { map["c"] }
         map.computeIfAbsent("b") { 1L }
         assertEquals(1L, map["a"])
         assertNull(map["b"])
-        assertThrows<NoSuchElementException> { map["c"] }
+        assertFailsWith<NoSuchElementException> { map["c"] }
     }
 
     @Test
