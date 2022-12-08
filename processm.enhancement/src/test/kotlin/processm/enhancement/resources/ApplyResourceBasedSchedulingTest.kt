@@ -5,11 +5,11 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.verify
 import org.apache.commons.math3.distribution.RealDistribution
-import org.junit.jupiter.api.assertThrows
 import processm.core.log.*
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.models.commons.Activity
 import processm.enhancement.simulation.CAUSE
 import processm.enhancement.simulation.MarkovSimulation
@@ -17,6 +17,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ApplyResourceBasedSchedulingTest {
@@ -192,7 +193,7 @@ class ApplyResourceBasedSchedulingTest {
             simulationStartOffset
         )
 
-        assertThrows<NoSuchElementException> { resourceBasedScheduler.takeTraces(1).toList() }
+        assertFailsWith<NoSuchElementException> { resourceBasedScheduler.takeTraces(1).toList() }
     }
 
     @Test

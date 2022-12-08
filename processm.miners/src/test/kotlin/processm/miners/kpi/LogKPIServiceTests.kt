@@ -2,14 +2,13 @@ package processm.miners.kpi
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import processm.core.DBTestHelper
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
-import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.Workspace
 import processm.dbmodels.models.WorkspaceComponent
@@ -42,7 +41,7 @@ class LogKPIServiceTests {
     }
 
     fun createKPIComponent(_query: String = "select count(l:name) where l:name='JournalReview'") {
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             WorkspaceComponent.new {
                 name = "test-kpi"
                 componentType = ComponentTypeDto.Kpi
@@ -55,7 +54,7 @@ class LogKPIServiceTests {
 
     @AfterTest
     fun deleteKPIComponent() {
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             WorkspaceComponents.deleteWhere {
                 (WorkspaceComponents.name eq "test-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
             }
@@ -76,7 +75,7 @@ class LogKPIServiceTests {
             logKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
@@ -103,7 +102,7 @@ class LogKPIServiceTests {
             logKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
@@ -129,7 +128,7 @@ class LogKPIServiceTests {
             logKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()
@@ -152,7 +151,7 @@ class LogKPIServiceTests {
 
             Thread.sleep(1000L) // wait for calculation
 
-            transaction(DBCache.getMainDBPool().database) {
+            transactionMain {
                 val component = WorkspaceComponent.find {
                     (WorkspaceComponents.name eq "test-kpi") and (WorkspaceComponents.dataStoreId eq dataStore)
                 }.first()
@@ -166,7 +165,7 @@ class LogKPIServiceTests {
             logKpiService.stop()
         }
 
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             val component = WorkspaceComponent.find {
                 WorkspaceComponents.dataStoreId eq dataStore
             }.first()

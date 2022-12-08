@@ -14,12 +14,12 @@
         grow
       >
         <v-tab href="#users">
-          Users
+          {{ $t("users.users") }}
           <v-icon>group</v-icon>
         </v-tab>
 
         <v-tab href="#groups">
-          Groups
+          {{ $t("users.groups") }}
           <v-icon>group_work</v-icon>
         </v-tab>
       </v-tabs>
@@ -59,15 +59,6 @@ import UserGroupList from "./UserGroupList.vue";
   components: { UserList, UserGroupList }
 })
 export default class Users extends Vue {
-  @Inject() organizationService!: OrganizationService;
-  organizationMembers: Array<OrganizationMember> = [];
   tab = 0;
-
-  async mounted() {
-    const currentOrganization = this.$sessionStorage.currentOrganization;
-    this.organizationMembers = await this.organizationService.getOrganizationMembers(
-      currentOrganization.id
-    );
-  }
 }
 </script>

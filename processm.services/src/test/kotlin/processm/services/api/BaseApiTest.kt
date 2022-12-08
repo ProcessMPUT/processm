@@ -1,64 +1,69 @@
 package processm.services.api
 
 import com.google.common.reflect.TypeToken
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
 import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
-import io.mockk.MockKAnnotations
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkClass
-import org.junit.Before
-import org.junit.jupiter.api.BeforeEach
+import io.mockk.*
+import org.jetbrains.exposed.dao.id.EntityID
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.koin.test.KoinTest
 import org.koin.test.mock.MockProvider
 import org.koin.test.mock.declareMock
-import processm.dbmodels.models.OrganizationRoleDto
+import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.models.Organizations
+import processm.dbmodels.models.Users
+import processm.services.LocalDateTimeTypeAdapter
+import processm.services.NonNullableTypeAdapterFactory
 import processm.services.api.models.AuthenticationResult
 import processm.services.api.models.OrganizationRole
 import processm.services.apiModule
 import processm.services.logic.AccountService
+import processm.services.logic.toDB
 import java.time.LocalDateTime
 import java.util.*
 import java.util.stream.Stream
 import kotlin.reflect.KClass
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
-    protected val gson: Gson = GsonBuilder()
-        .registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
-            override fun write(out: JsonWriter, value: LocalDateTime?) {
-                out.value(value?.toString())
-            }
-
-            override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
-        }).create()
+    companion object {
+        val gson by lazy {
+            // TODO: replace GSON with kotlinx/serialization
+            val gsonBuilder = GsonBuilder()
+            // Correctly serialize/deserialize LocalDateTime
+            gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
+            gsonBuilder.registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
+            gsonBuilder.create()
+        }
+    }
 
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
     private val mocksMap = mutableMapOf<KClass<*>, Any>()
 
-    // @Before causes the setUp() method to be called when running tests individually
-    // @BeforeEach causes the setUp() method to be called before @ParameterizedTest tests
-    @Before
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
         // The resolved instances are cached, so every call to `declareMock` returns the same instance.
         MockProvider.register { mockedClass -> mocksMap.computeIfAbsent(mockedClass) { mockkClass(mockedClass) } }
     }
 
+    @AfterTest
+    fun tearDown() {
+        clearAllMocks()
+    }
+
     @ParameterizedTest
     @MethodSource("endpointsWithAuthentication")
-    fun `responds to not authenticated requests with 403`(requestEndpoint: Pair<HttpMethod, String>?) =
+    fun `responds to not authenticated requests with 401`(requestEndpoint: Pair<HttpMethod, String>?) =
         withConfiguredTestApplication {
             if (requestEndpoint == null) {
                 return@withConfiguredTestApplication
@@ -110,14 +115,14 @@ abstract class BaseApiTest : KoinTest {
     ) {
         val accountService = declareMock<AccountService>()
         every { accountService.verifyUsersCredentials(login, password) } returns mockk {
-            every { id } returns userId
+            every { id } returns EntityID(userId, Users)
             every { email } returns login
         }
         every { accountService.getRolesAssignedToUser(userId) } returns
                 listOf(mockk {
-                    every { user.id } returns userId
-                    every { organization.id } returns role.second
-                    every { this@mockk.role } returns OrganizationRoleDto.byNameInDatabase(role.first.name)
+                    every { user.id } returns EntityID(userId, Users)
+                    every { organization.id } returns EntityID(role.second, Organizations)
+                    every { this@mockk.role } returns transactionMain { role.first.toDB() }
                 })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
@@ -135,10 +140,10 @@ abstract class BaseApiTest : KoinTest {
             if (authenticationHeader == null) {
                 with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
                     addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("""{"data":{"login":"$login","password":"$password"}}""")
+                    setBody("""{"login":"$login","password":"$password"}""")
                 }) {
                     assertEquals(HttpStatusCode.Created, response.status())
-                    assertTrue(response.content!!.contains("${AuthenticationResult::authorizationToken.name}"))
+                    assertTrue(response.content!!.contains(AuthenticationResult::authorizationToken.name))
                     val token =
                         response.content?.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""")
                             ?.substringBefore('"')
@@ -155,23 +160,12 @@ abstract class BaseApiTest : KoinTest {
         }
     }
 
-    protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T {
-        // TODO: replace GSON with kotlinx/serialization
-        val gsonBuilder = GsonBuilder()
-        // Correctly serialize/deserialize LocalDateTime
-        gsonBuilder.registerTypeAdapter(LocalDateTime::class.java, object : TypeAdapter<LocalDateTime>() {
-            override fun write(out: JsonWriter, value: LocalDateTime?) {
-                out.value(value?.toString())
-            }
-
-            override fun read(`in`: JsonReader): LocalDateTime = LocalDateTime.parse(`in`.nextString())
-        })
-        return gsonBuilder.create().fromJson(content, object : TypeToken<T>() {}.type)
-    }
+    protected inline fun <reified T> TestApplicationResponse.deserializeContent(): T =
+        gson.fromJson(content, object : TypeToken<T>() {}.type)
 
     protected inline fun <T : Any> TestApplicationRequest.withSerializedBody(requestBody: T) {
         addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-        setBody(Gson().toJson(requestBody))
+        setBody(gson.toJson(requestBody))
     }
 
 }

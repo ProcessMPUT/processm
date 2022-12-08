@@ -2,7 +2,6 @@ package processm.core.querylanguage
 
 import org.antlr.v4.runtime.RecognitionException
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.assertThrows
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.COST_CURRENCY
 import processm.core.log.attribute.Attribute.COST_TOTAL
@@ -1229,7 +1228,7 @@ class QueryTests {
 
     @Test
     fun deleteWithGroupByNotAllowed() {
-        val ex = assertThrows<RecognitionException> {
+        val ex = assertFailsWith<RecognitionException> {
             Query("delete event group by l:name")
         }
         assertTrue("mismatched input" in ex.message!!)
@@ -1239,7 +1238,7 @@ class QueryTests {
 
     @Test
     fun deleteWithSelectNotAllowed() {
-        val ex = assertThrows<RecognitionException> {
+        val ex = assertFailsWith<RecognitionException> {
             Query("select e:name delete event where l:name='abc'")
         }
         assertTrue("mismatched input" in ex.message!!)

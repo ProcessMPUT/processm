@@ -1,6 +1,5 @@
 package processm.core.models.causalnet
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicContainer
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -8,6 +7,7 @@ import processm.core.logging.logger
 import processm.core.verifiers.CausalNetVerifier
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
+import kotlin.test.Ignore
 import kotlin.test.assertTrue
 
 class RandomGeneratorTest {
@@ -16,7 +16,7 @@ class RandomGeneratorTest {
         val logger = logger()
     }
 
-    @Disabled("Suspected to cause OOM on the build system.")
+    @Ignore("Suspected to cause OOM on the build system.")
     @TestFactory
     fun factory(): List<DynamicContainer> {
         var out: List<DynamicContainer>? = null

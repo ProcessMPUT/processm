@@ -4,93 +4,148 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.locations.*
+import io.ktor.server.locations.patch
+import io.ktor.server.locations.post
+import io.ktor.server.locations.put
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import processm.services.api.models.*
-import processm.services.logic.OrganizationService
+import processm.core.helpers.mapToArray
+import processm.core.persistence.connection.transactionMain
+import processm.services.api.models.OrganizationMember
+import processm.services.api.models.OrganizationRole
+import processm.services.logic.*
+import processm.services.respondCreated
 
 @KtorExperimentalLocationsAPI
 fun Route.OrganizationsApi() {
     val organizationService by inject<OrganizationService>()
 
     authenticate {
-        route("/organizations/{organizationId}/members") {
-            post {
-                val principal = call.authentication.principal<ApiUser>()
-
-                call.respond(HttpStatusCode.NotImplemented)
-            }
-        }
-
-        route("/organizations") {
-            post {
-                val principal = call.authentication.principal<ApiUser>()
-
-                call.respond(HttpStatusCode.NotImplemented)
-            }
-        }
-
-
-        get<Paths.Organization> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
+        // region Organizations
+        get<Paths.Organizations> { _ ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            // TODO: access control: who can see organizations? What can see a particular user?
 
             call.respond(HttpStatusCode.NotImplemented)
         }
 
+        post<Paths.Organizations> { _ ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            val newOrganization = call.receive<ApiOrganization>()
 
+            val newOrg = organizationService.create(
+                name = newOrganization.name,
+                isPrivate = newOrganization.isPrivate,
+                ownerUserId = principal.userId
+            )
+
+            call.respondCreated(Paths.Organization(newOrg.id.value))
+        }
+
+        get<Paths.Organization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.reader)
+
+            val organization = organizationService.get(path.organizationId)
+
+            call.respond(HttpStatusCode.OK, organization.toApi())
+        }
+
+        delete<Paths.Organization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.owner)
+
+            organizationService.remove(path.organizationId)
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+
+        put<Paths.Organization> { path ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(path.organizationId, OrganizationRole.writer)
+
+            val newOrg = call.receive<ApiOrganization>()
+
+            organizationService.update(path.organizationId) {
+                this.name = newOrg.name
+                this.isPrivate = newOrg.isPrivate
+                // TODO: currently, we do not support change of other attributes
+            }
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+        // end region
+
+        // region Organization members
+        get<Paths.OrganizationMembers> { params ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(params.organizationId)
+
+            val members = transactionMain {
+                organizationService.getMembers(params.organizationId).mapToArray {
+                    OrganizationMember(
+                        id = it.user.id.value,
+                        email = it.user.email,
+                        organizationRole = it.role.toApi()
+                    )
+                }
+            }
+            call.respond(HttpStatusCode.OK, members)
+        }
+
+        post<Paths.OrganizationMembers> { params ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
+            val member = call.receive<OrganizationMember>()
+
+            val user = organizationService.addMember(
+                params.organizationId,
+                requireNotNull(member.email),
+                member.organizationRole.toRoleType()
+            )
+
+            call.respondCreated(Paths.OrganizationMember(params.organizationId, user.id.value))
+        }
+
+        patch<Paths.OrganizationMember> { params ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
+            val member = call.receive<OrganizationMember>()
+
+            params.userId.validateNot(
+                principal.userId,
+                Reason.UnprocessableResource,
+                "Cannot change role of the current user."
+            )
+            organizationService.updateMember(params.organizationId, params.userId, member.organizationRole.toRoleType())
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+
+        delete<Paths.OrganizationMember> { params ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(params.organizationId, OrganizationRole.owner)
+
+            params.userId.validateNot(principal.userId, Reason.UnprocessableResource, "Cannot delete the current user.")
+            organizationService.removeMember(params.organizationId, params.userId)
+
+            call.respond(HttpStatusCode.NoContent)
+        }
+        // endregion
+
+        // region Groups
         get<Paths.OrganizationGroups> { organization ->
             val principal = call.authentication.principal<ApiUser>()!!
 
             principal.ensureUserBelongsToOrganization(organization.organizationId)
 
             val organizationGroups = organizationService.getOrganizationGroups(organization.organizationId)
-                .map { Group(it.name ?: "", it.isImplicit, organization.organizationId, GroupRole.reader, it.id) }
-                .toTypedArray()
+                .mapToArray { it.toApi() }
 
-            call.respond(HttpStatusCode.OK, GroupCollectionMessageBody(organizationGroups))
+            call.respond(HttpStatusCode.OK, organizationGroups)
         }
-
-
-        get<Paths.OrganizationMembers> { organizationMembers ->
-            val principal = call.authentication.principal<ApiUser>()!!
-
-            principal.ensureUserBelongsToOrganization(organizationMembers.organizationId)
-
-            val members = organizationService.getOrganizationMembers(organizationMembers.organizationId)
-                .map { OrganizationMember(it.user.id, it.user.email, OrganizationRole.valueOf(it.role.roleName)) }
-                .toTypedArray()
-
-            call.respond(HttpStatusCode.OK, OrganizationMemberCollectionMessageBody(members))
-        }
-
-
-        get<Paths.Organizations> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
-
-            call.respond(HttpStatusCode.NotImplemented)
-        }
-
-
-        delete<Paths.Organization> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
-
-            call.respond(HttpStatusCode.NotImplemented)
-        }
-
-
-        delete<Paths.OrganizationMember> { _ ->
-            val principal = call.authentication.principal<ApiUser>()
-
-            call.respond(HttpStatusCode.NotImplemented)
-        }
-
-        route("/organizations/{organizationId}") {
-            put {
-                val principal = call.authentication.principal<ApiUser>()
-
-                call.respond(HttpStatusCode.NotImplemented)
-            }
-        }
+        // endregion
     }
 }

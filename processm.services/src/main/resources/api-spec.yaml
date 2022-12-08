@@ -40,15 +40,30 @@ paths:
         - users
       summary: Get users associated with the current user by organization membership
       operationId: getUsers
+      parameters:
+        - in: query
+          name: email
+          schema:
+            type: string
+          required: false
+          description: A fragment of the e-mail address for filtering.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          required: false
+          description: The limit on the number of returned items.
       responses:
         '200':
           description: Successful operation
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserAccountInfo'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - users
@@ -59,7 +74,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/AccountRegistrationInfoMessageBody'
+              $ref: '#/components/schemas/AccountRegistrationInfo'
         required: true
       responses:
         '201':
@@ -86,7 +101,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/UserCredentialsMessageBody'
+              $ref: '#/components/schemas/UserCredentials'
         required: false
       responses:
         '201':
@@ -94,7 +109,7 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/AuthenticationResultMessageBody'
+                $ref: '#/components/schemas/AuthenticationResult'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -110,7 +125,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /users/me:
     get:
       tags:
@@ -123,9 +138,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserAccountInfoMessageBody'
+                $ref: '#/components/schemas/UserAccountInfo'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /users/me/password:
     patch:
       tags:
@@ -137,7 +152,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/PasswordChangeMessageBody'
+              $ref: '#/components/schemas/PasswordChange'
         required: true
       responses:
         '200':
@@ -147,7 +162,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /users/me/locale:
     patch:
       tags:
@@ -159,7 +174,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/LocaleChangeMessageBody'
+              $ref: '#/components/schemas/LocaleChange'
         required: true
       responses:
         '200':
@@ -169,7 +184,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /users/me/organizations:
     get:
       tags:
@@ -182,11 +197,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserOrganizationCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores:
     parameters:
       - name: organizationId
@@ -207,13 +224,15 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataStoreCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataStore'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - dataStores
@@ -224,7 +243,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataStoreMessageBody'
+              $ref: '#/components/schemas/DataStore'
         required: true
       responses:
         '201':
@@ -232,13 +251,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataStoreMessageBody'
+                $ref: '#/components/schemas/DataStore'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}:
     parameters:
       - name: organizationId
@@ -266,13 +285,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataStoreMessageBody'
+                $ref: '#/components/schemas/DataStore'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     patch:
       tags:
         - dataStores
@@ -283,7 +302,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataStoreMessageBody'
+              $ref: '#/components/schemas/DataStore'
       responses:
         '204':
           description: Successful operation
@@ -292,7 +311,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - dataStores
@@ -306,7 +325,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors:
     parameters:
       - name: organizationId
@@ -334,13 +353,15 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataConnectorCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataConnector'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - dataStores
@@ -351,7 +372,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataConnectorMessageBody'
+              $ref: '#/components/schemas/DataConnector'
         required: true
       responses:
         '201':
@@ -359,13 +380,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/DataConnectorMessageBody'
+                $ref: '#/components/schemas/DataConnector'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}:
     parameters:
       - name: organizationId
@@ -399,7 +420,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataConnectorMessageBody'
+              $ref: '#/components/schemas/DataConnector'
       responses:
         '204':
           description: Successful operation
@@ -408,7 +429,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - dataStores
@@ -422,7 +443,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/test:
     parameters:
       - name: organizationId
@@ -449,7 +470,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/DataConnectorMessageBody'
+              $ref: '#/components/schemas/DataConnector'
         required: true
       responses:
         '204':
@@ -459,7 +480,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/case-notions:
     parameters:
       - name: organizationId
@@ -494,13 +515,15 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/CaseNotionCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaseNotion'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/data-connectors/{dataConnectorId}/relationship-graph:
     parameters:
       - name: organizationId
@@ -535,13 +558,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/CaseNotionMessageBody'
+                $ref: '#/components/schemas/CaseNotion'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes:
     parameters:
       - name: organizationId
@@ -569,13 +592,15 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/EtlProcessCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbstractEtlProcess'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - dataStores
@@ -586,7 +611,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/EtlProcessMessageBody'
+              $ref: '#/components/schemas/AbstractEtlProcess'
         required: true
       responses:
         '201':
@@ -594,13 +619,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/EtlProcessMessageBody'
+                $ref: '#/components/schemas/AbstractEtlProcess'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}:
     parameters:
       - name: organizationId
@@ -634,7 +659,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/EtlProcessMessageBody'
+              $ref: '#/components/schemas/AbstractEtlProcess'
         required: true
       responses:
         '204':
@@ -644,7 +669,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     get:
       tags:
         - dataStores
@@ -662,7 +687,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - dataStores
@@ -676,7 +701,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}/logs:
     parameters:
       - name: organizationId
@@ -713,7 +738,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/data-stores/{dataStoreId}/sampling-etl-processes/:
     parameters:
       - name: organizationId
@@ -740,7 +765,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/EtlProcessMessageBody'
+              $ref: '#/components/schemas/EtlProcess'
         required: true
       responses:
         '200':
@@ -748,13 +773,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/EtlProcessMessageBody'
+                $ref: '#/components/schemas/EtlProcess'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/workspaces:
     parameters:
       - name: organizationId
@@ -775,9 +800,11 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workspace'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - workspaces
@@ -788,7 +815,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/WorkspaceMessageBody'
+              $ref: '#/components/schemas/Workspace'
         required: true
       responses:
         '201':
@@ -796,11 +823,11 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceMessageBody'
+                $ref: '#/components/schemas/Workspace'
         '403':
           $ref: '#/components/responses/Forbidden'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/workspaces/{workspaceId}:
     parameters:
       - name: organizationId
@@ -828,13 +855,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/WorkspaceMessageBody'
+                $ref: '#/components/schemas/Workspace'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     put:
       tags:
         - workspaces
@@ -845,7 +872,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/WorkspaceMessageBody'
+              $ref: '#/components/schemas/Workspace'
         required: true
       responses:
         '204':
@@ -855,7 +882,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - workspaces
@@ -869,7 +896,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/workspaces/{workspaceId}/components:
     parameters:
       - name: organizationId
@@ -898,13 +925,15 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbstractComponent'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}:
     parameters:
       - name: organizationId
@@ -940,13 +969,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentMessageBody'
+                $ref: '#/components/schemas/AbstractComponent'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     put:
       tags:
         - workspaces
@@ -958,7 +987,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/ComponentMessageBody'
+              $ref: '#/components/schemas/AbstractComponent'
         required: true
       responses:
         '204':
@@ -968,7 +997,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - workspaces
@@ -981,13 +1010,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentMessageBody'
+                $ref: '#/components/schemas/AbstractComponent'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/workspaces/{workspaceId}/components/{componentId}/data:
     parameters:
       - name: organizationId
@@ -1023,13 +1052,13 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/ComponentDataMessageBody'
+                $ref: '#/components/schemas/AbstractComponentData'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/workspaces/{workspaceId}/layout:
     parameters:
       - name: organizationId
@@ -1065,12 +1094,20 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
-  /groups:
+        - bearerAuth: [ ]
+  /organizations/{organizationId}/groups:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
     get:
       tags:
         - groups
-      summary: Get groups belonging to the current user's organization
+      summary: Get groups belonging to the organization
       operationId: getGroups
       responses:
         '200':
@@ -1078,20 +1115,22 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - groups
-      summary: Create user group
+      summary: Create group
       operationId: createGroup
       requestBody:
         description: Group details
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/GroupMessageBody'
+              $ref: '#/components/schemas/Group'
         required: true
       responses:
         '201':
@@ -1099,13 +1138,24 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupMessageBody'
+                $ref: '#/components/schemas/Group'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
-  /groups/{groupId}:
+        - bearerAuth: [ ]
+  /organizations/{organizationId}/groups/{groupId}:
     parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
       - name: groupId
         in: path
         description: Group ID
@@ -1124,11 +1174,15 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/GroupMessageBody'
+                $ref: '#/components/schemas/Group'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     put:
       tags:
         - groups
@@ -1139,33 +1193,44 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/GroupMessageBody'
+              $ref: '#/components/schemas/Group'
         required: true
       responses:
         '204':
           description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - groups
-      summary: Remove user group
+      summary: Remove group
       operationId: removeGroup
       responses:
         '204':
           description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
-  /groups/{groupId}/members:
+        - bearerAuth: [ ]
+  /organizations/{organizationId}/groups/{groupId}/members:
     parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
       - name: groupId
         in: path
         description: Group ID
@@ -1184,9 +1249,11 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/UserInfoCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserInfo'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - groups
@@ -1204,14 +1271,23 @@ paths:
       responses:
         '201':
           description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
-  /groups/{groupId}/members/{userId}:
+        - bearerAuth: [ ]
+  /organizations/{organizationId}/groups/{groupId}/members/{userId}:
     parameters:
+      - name: organizationId
+        in: path
+        required: true
+        description: The id of the organization
+        schema:
+          type: string
+          format: uuid
       - name: groupId
         in: path
         description: Group ID
@@ -1234,88 +1310,14 @@ paths:
       responses:
         '204':
           description: Successful operation
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
-  /groups/{groupId}/subgroups:
-    parameters:
-      - name: groupId
-        in: path
-        description: Group ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      tags:
-        - groups
-      summary: Get subgroups of the specified group
-      operationId: getSubgroups
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            'application/json':
-              schema:
-                $ref: '#/components/schemas/GroupCollectionMessageBody'
-      security:
-        - bearerAuth: []
-    post:
-      tags:
-        - groups
-      summary: Create new subgroup
-      operationId: createSubgroup
-      requestBody:
-        description: Subgroup details
-        content:
-          'application/json':
-            schema:
-              $ref: '#/components/schemas/GroupMessageBody'
-        required: true
-      responses:
-        '201':
-          description: Successful operation
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-      security:
-        - bearerAuth: []
-  /groups/{groupId}/subgroups/{subgroupId}:
-    parameters:
-      - name: groupId
-        in: path
-        description: Group ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: subgroupId
-        in: path
-        description: Subgroup ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-    delete:
-      tags:
-        - groups
-      summary: Remove the specified subgroup
-      operationId: removeSubgroup
-      responses:
-        '204':
-          description: Successful operation
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations:
     get:
       tags:
@@ -1328,9 +1330,11 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - organizations
@@ -1341,7 +1345,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/OrganizationMessageBody'
+              $ref: '#/components/schemas/Organization'
         required: true
       responses:
         '201':
@@ -1351,7 +1355,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}:
     parameters:
       - name: organizationId
@@ -1372,11 +1376,11 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationMessageBody'
+                $ref: '#/components/schemas/Organization'
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     put:
       tags:
         - organizations
@@ -1387,7 +1391,7 @@ paths:
         content:
           'application/json':
             schema:
-              $ref: '#/components/schemas/OrganizationMessageBody'
+              $ref: '#/components/schemas/Organization'
         required: true
       responses:
         '204':
@@ -1397,7 +1401,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - organizations
@@ -1411,7 +1415,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/members:
     parameters:
       - name: organizationId
@@ -1432,7 +1436,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/OrganizationMemberCollectionMessageBody'
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationMember'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -1440,7 +1446,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - organizations
@@ -1451,8 +1457,7 @@ paths:
         content:
           'application/json':
             schema:
-              description: Username
-              type: string
+              $ref: '#/components/schemas/OrganizationMember'
         required: true
       responses:
         '201':
@@ -1462,7 +1467,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /organizations/{organizationId}/members/{userId}:
     parameters:
       - name: organizationId
@@ -1479,6 +1484,27 @@ paths:
         schema:
           type: string
           format: uuid
+    patch:
+      tags:
+        - organizations
+      summary: Changes member attributes
+      operationId: updateOrganizationMember
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/OrganizationMember"
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      security:
+        - bearerAuth: [ ]
     delete:
       tags:
         - organizations
@@ -1491,35 +1517,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
       security:
-        - bearerAuth: []
-  /organizations/{organizationId}/groups:
-    parameters:
-      - name: organizationId
-        in: path
-        description: Organization ID
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      tags:
-        - organizations
-      summary: Get groups associated with the specified organization
-      operationId: getOrganizationGroups
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            'application/json':
-              schema:
-                $ref: '#/components/schemas/GroupCollectionMessageBody'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /data-stores/{dataStoreId}/logs:
     parameters:
       - name: dataStoreId
@@ -1556,7 +1557,9 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: '#/components/schemas/QueryResultCollectionMessageBody'
+                type: array
+                items:
+                  type: object
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -1564,7 +1567,7 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - dataStores
@@ -1588,7 +1591,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /data-stores/{dataStoreId}/logs/{identityId}:
     parameters:
       - name: dataStoreId
@@ -1619,12 +1622,12 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
 components:
   schemas:
     Config:
       type: object
-      required: [loginMessage, demoMode]
+      required: [ loginMessage, demoMode ]
       properties:
         loginMessage:
           type: string
@@ -1634,109 +1637,78 @@ components:
           type: boolean
           description: Switches modes of operation of certain components into demo mode (e.g., less secure).
           default: false
-    ErrorMessageBody:
+    ErrorMessage:
       type: object
-      required: [error]
+      required: [ error ]
       properties:
         error:
           description: Error details
           type: string
     OrganizationRole:
       type: string
-      enum: [owner, writer, reader]
-    GroupRole:
-      type: string
-      enum: [owner, writer, reader]
+      enum: [ owner, writer, reader, none ]
     ComponentType:
       type: string
       enum: [ kpi, alignerKpi, causalNet, petriNet, bpmn ]
     AccountRegistrationInfo:
       type: object
-      required: [userEmail, organizationName]
+      required: [ userEmail, userPassword, newOrganization ]
       properties:
         userEmail:
           type: string
+        userPassword:
+          type: string
+          format: password
         organizationName:
           type: string
-    AccountRegistrationInfoMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/AccountRegistrationInfo'
+        newOrganization:
+          type: boolean
+          default: false
+          description: Controls whether the user becomes an owner of a new organization.
     UserCredentials:
       type: object
-      required: [login, password]
+      required: [ login, password ]
       properties:
         login:
           type: string
         password:
           type: string
           format: password
-    UserCredentialsMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/UserCredentials'
     UserAccountInfo:
       type: object
-      required: [userEmail, locale]
+      required: [ id, email, locale ]
       properties:
-        username:
+        id:
           type: string
-        userEmail:
+          format: uuid
+        email:
           type: string
         locale:
           type: string
-    UserAccountInfoMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/UserAccountInfo'
     AuthenticationResult:
       type: object
-      required: [authorizationToken]
+      required: [ authorizationToken ]
       properties:
         authorizationToken:
           type: string
-    AuthenticationResultMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/AuthenticationResult'
     PasswordChange:
       type: object
-      required: [currentPassword, newPassword]
+      required: [ currentPassword, newPassword ]
       properties:
         currentPassword:
           type: string
         newPassword:
           type: string
-    PasswordChangeMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/PasswordChange'
     LocaleChange:
       type: object
-      required: [locale]
+      required: [ locale ]
       properties:
         locale:
           type: string
           description: New locale settings in ICU format
-    LocaleChangeMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/LocaleChange'
     UserInfo:
       type: object
-      required: [userEmail, organization, organizationRole]
+      required: [ userEmail, organization, role ]
       properties:
         id:
           type: string
@@ -1751,55 +1723,20 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/OrganizationRole'
-    UserInfoCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserInfo'
     OrganizationMember:
       type: object
-      required: [id, username, organizationRole]
+      required: [ organizationRole ]
       properties:
         id:
           type: string
           format: uuid
-        username:
+        email:
           type: string
         organizationRole:
           $ref: '#/components/schemas/OrganizationRole'
-    OrganizationMemberCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrganizationMember'
-    UserOrganization:
-      type: object
-      required: [id, name, organizationRole]
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        organizationRole:
-          $ref: '#/components/schemas/OrganizationRole'
-    UserOrganizationCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserOrganization'
     DataStore:
       type: object
-      required: [name]
+      required: [ name ]
       properties:
         id:
           type: string
@@ -1811,20 +1748,6 @@ components:
         createdAt:
           type: string
           format: date-time
-    DataStoreMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/DataStore'
-    DataStoreCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DataStore'
     DataConnector:
       type: object
       properties:
@@ -1841,23 +1764,9 @@ components:
           type: object
           additionalProperties:
             type: string
-    DataConnectorMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/DataConnector'
-    DataConnectorCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/DataConnector'
     EtlProcessType:
       type: string
-      enum: [automatic, jdbc]
+      enum: [ automatic, jdbc ]
     AbstractEtlProcess:
       oneOf:
         - $ref: '#/components/schemas/AutomaticEtlProcess'
@@ -1899,23 +1808,11 @@ components:
           format: date-time
         type:
           $ref: '#/components/schemas/EtlProcessType'
-    EtlProcessMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/AbstractEtlProcess'
-    EtlProcessCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AbstractEtlProcess'
+      discriminator:
+        propertyName: type
     EtlProcessInfo:
       type: object
-      required: [logIdentityId]
+      required: [ logIdentityId ]
       properties:
         logIdentityId:
           type: string
@@ -1929,7 +1826,7 @@ components:
           format: date-time
     EtlError:
       type: object
-      required: [message, time]
+      required: [ message, time ]
       properties:
         message:
           type: string
@@ -1940,42 +1837,22 @@ components:
           format: date-time
     DataConnectorConnectivity:
       type: object
-      required: [isValid]
+      required: [ isValid ]
       properties:
         isValid:
           type: boolean
-    DataConnectorConnectivityMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/DataConnectorConnectivity'
     Workspace:
       type: object
-      required: [name]
+      required: [ name ]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
-    WorkspaceMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/Workspace'
-    WorkspaceCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Workspace'
     Component:
       type: object
-      required: [id, query, dataStore, type]
+      required: [ id, query, dataStore, type ]
       properties:
         id:
           type: string
@@ -1999,6 +1876,8 @@ components:
           format: date-time
         lastError:
           type: string
+      discriminator:
+        propertyName: type
     LayoutElement:
       type: object
       properties:
@@ -2012,7 +1891,7 @@ components:
           type: number
     LayoutCollectionMessageBody:
       type: object
-      required: [data]
+      required: [ data ]
       properties:
         data:
           type: object
@@ -2039,10 +1918,12 @@ components:
           type: object
     ComponentData:
       type: object
-      required: [type]
+      required: [ type ]
       properties:
         type:
           $ref: '#/components/schemas/ComponentType'
+      discriminator:
+        propertyName: type
     AbstractComponentData:
       oneOf:
         - $ref: '#/components/schemas/KpiComponentData'
@@ -2139,7 +2020,7 @@ components:
               type: array
               items:
                 type: object
-                required: [id, splits, joins]
+                required: [ id, splits, joins ]
                 properties:
                   id:
                     type: string
@@ -2159,7 +2040,7 @@ components:
               type: array
               items:
                 type: object
-                required: [sourceNodeId, targetNodeId]
+                required: [ sourceNodeId, targetNodeId ]
                 properties:
                   sourceNodeId:
                     type: string
@@ -2261,29 +2142,9 @@ components:
               $ref: '#/components/schemas/BPMNComponentData'
             customizationData:
               type: object
-    ComponentMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/AbstractComponent'
-    ComponentDataMessageBody:
-      type: object
-      required: [ data ]
-      properties:
-        data:
-          $ref: '#/components/schemas/AbstractComponentData'
-    ComponentCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AbstractComponent'
     Group:
       type: object
-      required: [name, groupRole, isImplicit, organizationId]
+      required: [ name ]
       properties:
         id:
           type: string
@@ -2293,28 +2154,15 @@ components:
         isImplicit:
           type: boolean
           description: Indicates whether the group was explicitly created by a user or implicitly created by the system (default groups)
+        isShared:
+          type: boolean
+          description: Indicated whether the group is shared by all organization members.
         organizationId:
           type: string
           format: uuid
-        groupRole:
-          $ref: '#/components/schemas/GroupRole'
-    GroupMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/Group'
-    GroupCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Group'
     Organization:
       type: object
-      required: [name, isPrivate]
+      required: [ name, isPrivate ]
       properties:
         id:
           type: string
@@ -2327,31 +2175,9 @@ components:
         isPrivate:
           type: boolean
           description: Indicates whether the organization can be accessed by ancestral organizations members
-    OrganizationMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/Organization'
-    OrganizationCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Organization'
-    QueryResultCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            type: object
     CaseNotion:
       type: object
-      required: [classes, edges]
+      required: [ classes, edges ]
       properties:
         classes:
           type: object
@@ -2361,7 +2187,7 @@ components:
           type: array
           items:
             type: object
-            required: [sourceClassId, targetClassId]
+            required: [ sourceClassId, targetClassId ]
             properties:
               sourceClassId:
                 type: string
@@ -2369,7 +2195,7 @@ components:
                 type: string
     JdbcEtlProcessConfiguration:
       type: object
-      required: [query, enabled, batch, traceId, eventId, attributes]
+      required: [ query, enabled, batch, traceId, eventId, attributes ]
       properties:
         query:
           type: string
@@ -2384,10 +2210,8 @@ components:
         lastEventExternalIdType:
           type: integer
         traceId:
-          type: object
           $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
         eventId:
-          type: object
           $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
         attributes:
           type: array
@@ -2395,63 +2219,55 @@ components:
             $ref: '#/components/schemas/JdbcEtlColumnConfiguration'
     JdbcEtlColumnConfiguration:
       type: object
-      required: [source, target]
+      required: [ source, target ]
       properties:
         source:
           type: string
         target:
           type: string
-    CaseNotionCollectionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/CaseNotion'
-    CaseNotionMessageBody:
-      type: object
-      required: [data]
-      properties:
-        data:
-          $ref: '#/components/schemas/CaseNotion'
   responses:
     BadRequest:
       description: Invalid request body
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/ErrorMessage'
     Unauthorized:
       description: The user is not authenticated
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/ErrorMessage'
     Forbidden:
       description: The user is not authorized
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/ErrorMessage'
     NotFound:
       description: The specified resource was not found
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
-    Conflict:
-      description: The resource with the sepcified identifier already exists
+            $ref: '#/components/schemas/ErrorMessage'
+    UnprocessableEntity:
+      description: The request is syntactically valid but semantically invalid and cannot be processed.
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/ErrorMessage'
+    Conflict:
+      description: The resource with the specified identifier already exists
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
     ServiceUnavailable:
       description: The server is not ready to handle the request
       content:
         'application/json':
           schema:
-            $ref: '#/components/schemas/ErrorMessageBody'
+            $ref: '#/components/schemas/ErrorMessage'
   securitySchemes:
     bearerAuth:
       type: http

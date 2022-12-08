@@ -1,6 +1,5 @@
 package processm.core.log
 
-import org.junit.jupiter.api.assertThrows
 import processm.core.helpers.parseISO8601
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.ORG_GROUP
@@ -185,7 +184,7 @@ internal class XMLXESInputStreamTest {
         """.trimIndent().byteInputStream().use { stream ->
             val iterator = XMLXESInputStream(stream).iterator()
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 
@@ -207,7 +206,7 @@ internal class XMLXESInputStreamTest {
             // Skip Log structure
             assert(iterator.next() is Log)
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 
@@ -226,7 +225,7 @@ internal class XMLXESInputStreamTest {
         """.trimIndent().byteInputStream().use { stream ->
             val iterator = XMLXESInputStream(stream).iterator()
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 
@@ -246,7 +245,7 @@ internal class XMLXESInputStreamTest {
         """.trimIndent().byteInputStream().use { stream ->
             val iterator = XMLXESInputStream(stream).iterator()
 
-            val thrown = assertThrows<Exception> {
+            val thrown = assertFailsWith<Exception> {
                 iterator.next()
             }
 

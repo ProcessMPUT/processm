@@ -1,7 +1,6 @@
 package processm.miners.causalnet.onlineminer
 
 import ch.qos.logback.classic.Level
-import org.junit.jupiter.api.Disabled
 import processm.core.log.Helpers.logFromModel
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
@@ -83,7 +82,7 @@ class OnlineMinerTest {
     }
 
     @Test
-    @Disabled("Takes a bit too long, because replayer used for testing is slow")
+    @Ignore("Takes a bit too long, because replayer used for testing is slow")
     fun `diamond of diamonds - batch`() {
         val log = logFromModel(dodReference)
         val hm = OnlineMiner(SingleReplayer())
@@ -121,7 +120,7 @@ class OnlineMinerTest {
     }
 
     @Test
-    @Disabled("Takes a bit too long, because replayer used for testing is slow")
+    @Ignore("Takes a bit too long, because replayer used for testing is slow")
     fun `diamond of diamonds - window`() {
         val windowSize = 20
         val stepSize = 1

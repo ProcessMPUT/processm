@@ -1,44 +1,43 @@
 import Vue from "vue";
 import UserAccount from "@/models/UserAccount";
 import BaseService from "./BaseService";
-import UserOrganization from "@/models/UserOrganization";
+import { Organization, UserAccountInfo } from "@/openapi";
 
 export default class AccountService extends BaseService {
   public async signIn(login: string, password: string) {
     const response = await this.usersApi.signUserIn(
       undefined,
       {
-        data: { login, password }
+        login: login,
+        password: password
       },
       { skipAuthRefresh: true }
     );
 
-    if (response.status != 201) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 201, response.statusText);
 
-    Vue.prototype.$sessionStorage.sessionToken =
-      response.data.data.authorizationToken;
+    Vue.prototype.$sessionStorage.sessionToken = response.data.authorizationToken;
   }
 
   public async signOut() {
     const response = await this.usersApi
-      .signUserOut()
+      .signUserOut({
+        validateStatus: (status: number) => status == 204 || status == 404
+      })
       .finally(() => Vue.prototype.$sessionStorage.removeSession());
 
-    if (![204, 404].includes(response.status)) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 204 || response.status == 404, response.statusText);
   }
 
-  public async registerNewAccount(userEmail: string, organizationName: string) {
+  public async registerNewAccount(userEmail: string, userPassword: string, newOrganization: boolean, organizationName?: string) {
     const response = await this.usersApi.createAccount({
-      data: { userEmail, organizationName }
+      userEmail: userEmail,
+      userPassword: userPassword,
+      newOrganization: newOrganization,
+      organizationName: organizationName
     });
 
-    if (response.status != 201) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 201, response.statusText);
   }
 
   public async getAccountDetails(): Promise<UserAccount> {
@@ -48,42 +47,39 @@ export default class AccountService extends BaseService {
       throw new Error(response.statusText);
     }
 
-    const accountDetails = response.data.data;
+    const accountDetails = response.data;
 
-    return (Vue.prototype.$sessionStorage.userInfo = new UserAccount(
-      accountDetails.userEmail,
-      accountDetails.locale
-    ));
+    return (Vue.prototype.$sessionStorage.userInfo = new UserAccount(accountDetails.email, accountDetails.locale));
   }
 
   public async changePassword(currentPassword: string, newPassword: string) {
     const response = await this.usersApi.changeUserPassword({
-      data: { currentPassword, newPassword }
+      currentPassword: currentPassword,
+      newPassword: newPassword
     });
 
-    if (response.status != 202) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 202, response.statusText);
   }
 
   public async changeLocale(locale: string) {
     const response = await this.usersApi.changeUserLocale({
-      data: { locale }
+      locale: locale
     });
 
-    if (response.status != 202) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 204, response.statusText);
   }
 
-  public async getOrganizations(): Promise<UserOrganization[]> {
+  public async getUserOrganizations(): Promise<Organization[]> {
     const response = await this.usersApi.getUserOrganizations();
 
-    if (response.status != 200) {
-      throw new Error(response.statusText);
-    }
+    console.assert(response.status == 200, response.statusText);
 
-    return (Vue.prototype.$sessionStorage.userOrganizations =
-      response.data.data);
+    return (Vue.prototype.$sessionStorage.userOrganizations = response.data);
+  }
+
+  public async getUsers(email?: string, limit?: number): Promise<Array<UserAccountInfo>> {
+    const response = await this.usersApi.getUsers(email, limit);
+    if (response.status != 200) throw new Error(response.statusText);
+    return response.data;
   }
 }

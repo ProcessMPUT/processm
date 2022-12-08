@@ -9,7 +9,7 @@ import java.util.*
 
 object UsersInGroups : IdTable<UUID>("users_in_groups") {
     val userId = reference("user_id", Users)
-    val groupId = reference("user_group_id", UserGroups)
+    val groupId = reference("group_id", Groups)
     override val primaryKey = PrimaryKey(userId, groupId)
     override val id: Column<EntityID<UUID>>
         get() = groupId
@@ -19,9 +19,6 @@ class UsersInGroup(userId: EntityID<UUID>) : Entity<UUID>(userId) {
     companion object : EntityClass<UUID, UsersInGroup>(UsersInGroups)
 
     val user by User referencedOn UsersInGroups.userId
-    val group by UserGroup referencedOn UsersInGroups.groupId
-
-    fun toDto() = GroupMemberDto(user.toDto(), group.toDto())
+    val group by Group referencedOn UsersInGroups.groupId
 }
 
-data class GroupMemberDto(val user: UserDto, val group: UserGroupDto)

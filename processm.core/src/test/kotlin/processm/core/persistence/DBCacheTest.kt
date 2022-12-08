@@ -7,9 +7,9 @@ import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.addLogger
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.Timeout
 import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import java.lang.management.ManagementFactory
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Semaphore
@@ -49,7 +49,7 @@ class DBCacheTest {
 
     @Test
     fun databaseTest() {
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             assertEquals(false, this.db.connector().isClosed)
         }
     }
@@ -66,14 +66,14 @@ class DBCacheTest {
             val finishSemaphore = Semaphore(0)
             val finallyExpected = setOf("A", "B", "C", "D")
 
-            transaction(DBCache.getMainDBPool().database) {
+            transactionMain {
                 addLogger(StdOutSqlLogger)
                 // PostgreSQL poorly supports concurrent modification of schema, so we create schema in advance.
                 SchemaUtils.create(Dummies)
             }
 
             thread {
-                transaction(DBCache.getMainDBPool().database) {
+                transactionMain {
                     addLogger(StdOutSqlLogger)
 
                     val A = Dummy.new {
@@ -118,7 +118,7 @@ class DBCacheTest {
                     barrier.await()
                 }
 
-                transaction(DBCache.getMainDBPool().database) {
+                transactionMain {
                     barrier.await()
                     // verify durability
                     val actual = Dummy.all().map { it.value }
@@ -129,7 +129,7 @@ class DBCacheTest {
             }
 
             thread {
-                transaction(DBCache.getMainDBPool().database) {
+                transactionMain {
                     addLogger(StdOutSqlLogger)
 
                     val C = Dummy.new {
@@ -173,7 +173,7 @@ class DBCacheTest {
                     barrier.await()
                 }
 
-                transaction(DBCache.getMainDBPool().database) {
+                transactionMain {
                     barrier.await()
                     // verify durability
                     val actual = Dummy.all().map { it.value }
@@ -185,7 +185,7 @@ class DBCacheTest {
 
             finishSemaphore.acquire(2)
         } finally {
-            transaction(DBCache.getMainDBPool().database) {
+            transactionMain {
                 SchemaUtils.drop(Dummies)
             }
         }

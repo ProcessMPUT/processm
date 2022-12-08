@@ -1,6 +1,5 @@
 package processm.miners.processtree.inductiveminer
 
-import org.junit.jupiter.api.assertThrows
 import processm.core.log.Helpers.logFromString
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
@@ -89,7 +88,7 @@ internal class DirectlyFollowsSubGraphTest {
         val dfg = DirectlyFollowsGraph().also { it.discover(sequenceOf(log)) }
         val graph = DirectlyFollowsSubGraph(activities, dfg)
 
-        assertThrows<IllegalStateException> {
+        assertFailsWith<IllegalStateException> {
             graph.finishCalculations()
         }.also { exception ->
             assertEquals("SubGraph is not split yet. Can't fetch activity!", exception.message)

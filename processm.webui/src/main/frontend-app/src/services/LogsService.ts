@@ -13,11 +13,7 @@ export default class LogsService extends BaseService {
     }
   }
 
-  public async submitUserQuery(
-    dataStoreId: string,
-    query?: string,
-    accept: "application/json" | "application/zip" = "application/json"
-  ): Promise<Array<Log>> {
+  public async submitUserQuery(dataStoreId: string, query?: string, accept: "application/json" | "application/zip" = "application/json"): Promise<Array<Log>> {
     let options;
     if (accept == "application/json")
       options = {
@@ -37,15 +33,11 @@ export default class LogsService extends BaseService {
       };
     }
 
-    const response = await this.logsApi.submitLogsQuery(
-      dataStoreId,
-      accept,
-      query,
-      options
-    );
+    const response = await this.logsApi.submitLogsQuery(dataStoreId, accept, query, options);
 
     if (accept == "application/json") {
-      return response.data.data.reduce(
+      // FIXME: TypeError: response.data.reduce is not a function
+      return response.data.reduce(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (logs: Log[], item: { log: Log } | any) => {
           if (item != null) {
@@ -58,7 +50,7 @@ export default class LogsService extends BaseService {
       );
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const blob = new Blob([response.data as any], { type: accept });
+      const blob = new Blob([response as any], { type: accept });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "xes.zip";
@@ -68,10 +60,7 @@ export default class LogsService extends BaseService {
     }
   }
 
-  public async removeLog(
-    dataStoreId: string,
-    identityId: string
-  ): Promise<void> {
+  public async removeLog(dataStoreId: string, identityId: string): Promise<void> {
     const response = await this.logsApi.removeLog(dataStoreId, identityId);
 
     if (response.status != 204) {

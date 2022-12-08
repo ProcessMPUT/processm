@@ -1,10 +1,10 @@
 package processm.core.models.bpmn
 
 import jakarta.xml.bind.JAXBElement
-import org.junit.jupiter.api.Test
 import processm.core.models.bpmn.jaxb.*
 import javax.xml.namespace.QName
 import kotlin.test.Ignore
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 

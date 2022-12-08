@@ -1,32 +1,25 @@
 package processm.services.logic
 
 import io.mockk.MockKAnnotations
-import io.mockk.mockkClass
+import io.mockk.every
+import io.mockk.mockk
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.After
-import org.junit.Before
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.koin.core.context.startKoin
-import org.koin.core.context.stopKoin
-import org.koin.dsl.module
-import org.koin.test.KoinTest
-import org.koin.test.mock.MockProvider
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.insertAndGetId
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import processm.core.communication.Producer
 import processm.core.esb.Artemis
-import processm.core.persistence.connection.DBCache
+import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import java.time.LocalDateTime
 import java.util.*
+import kotlin.test.BeforeTest
 
 abstract class ServiceTestBase {
-    // @Before causes the setUp() method to be called when running tests individually
-    // @BeforeEach causes the setUp() method to be called before @ParameterizedTest tests
-    @Before
-    @BeforeEach
+    @BeforeTest
     open fun setUp() {
         MockKAnnotations.init(this, relaxUnitFun = true)
     }
@@ -44,59 +37,61 @@ abstract class ServiceTestBase {
 
         @JvmStatic
         @AfterAll
-        fun `unmock ETLConfiguration_notifyUsers`() {
+        fun `stop Artemis`() {
             artemis.stop()
         }
     }
 
+    protected val producer: Producer = mockk {
+        every { produce(DATA_CONNECTOR_TOPIC, any()) } returns Unit
+    }
+
+    protected val groupService = GroupService()
+    protected val accountService = AccountService(groupService)
+    protected val organizationService = OrganizationService(accountService, groupService)
+    protected val aclService = ACLService()
+    protected val workspaceService = WorkspaceService(accountService, aclService, producer)
+
     protected fun <R> withCleanTables(vararg tables: Table, testLogic: Transaction.() -> R) =
-        transaction(DBCache.getMainDBPool().database) {
+        transactionMain {
             tables.forEach { it.deleteAll() }
             testLogic(this)
         }
 
     protected fun Transaction.createUser(
         userEmail: String = "user@example.com",
-        passwordHash: String = "###",
+        password: String? = "P@ssw0rd!",
+        passwordHash: String? = null,
         locale: String = "en_US",
-        privateGroupId: UUID? = null
-    ): EntityID<UUID> {
-        val groupId = privateGroupId ?: createGroup(groupRole = GroupRoleDto.Owner, isImplicit = true).value
-
-        val userId = Users.insertAndGetId {
-            it[email] = userEmail
-            it[password] = passwordHash
-            it[Users.locale] = locale
-            it[Users.privateGroupId] = EntityID(groupId, UserGroups)
+        organizationId: UUID = UUID(12L, 12L)
+    ): User {
+        require(password === null || passwordHash === null)
+        require(password !== null || passwordHash !== null)
+        val user = accountService.create(userEmail, locale, password ?: passwordHash!!)
+        if (passwordHash !== null) {
+            // write hash directly to database, since create() takes password and hashes it internally
+            accountService.update(user.id.value) {
+                this.password = passwordHash
+            }
         }
-
-        attachUserToGroup(userId.value, groupId)
-
-        return userId
+        // TODO: replace with OrganizationService call
+        val org = Organization.findById(organizationId) ?: createOrganization()
+        groupService.attachUserToGroup(user.id.value, org.sharedGroup.id.value)
+        return user
     }
 
-    protected fun Transaction.createOrganization(
+    protected fun createOrganization(
         name: String = "Org1",
         isPrivate: Boolean = false,
-        parentOrganizationId: UUID? = null,
-        sharedGroupId: UUID? = null
-    ): EntityID<UUID> {
-        val groupId = sharedGroupId ?: createGroup(groupRole = GroupRoleDto.Reader, isImplicit = true).value
-
-        return Organizations.insertAndGetId {
-            it[this.name] = name
-            it[this.isPrivate] = isPrivate
-            it[this.parentOrganizationId] =
-                if (parentOrganizationId != null) EntityID(parentOrganizationId, Organizations) else null
-            it[this.sharedGroupId] = EntityID(groupId, UserGroups)
-        }
-    }
+        parentOrganizationId: UUID? = null
+    ): Organization = organizationService.create(name, isPrivate, parentOrganizationId)
 
     protected fun createDataStore(
         organizationId: UUID,
         name: String = "DataStore#1",
         creationDate: LocalDateTime = LocalDateTime.now()
     ): EntityID<UUID> {
+        // TODO: replace with DataStoreService calls
         return DataStores.insertAndGetId {
             it[DataStores.name] = name
             it[DataStores.creationDate] = creationDate
@@ -104,63 +99,44 @@ abstract class ServiceTestBase {
         }
     }
 
-    protected fun Transaction.attachUserToOrganization(
+    protected fun attachUserToOrganization(
         userId: UUID,
         organizationId: UUID,
-        organizationRole: OrganizationRoleDto = OrganizationRoleDto.Reader
-    ) =
-        UsersRolesInOrganizations.insertAndGetId {
-            it[UsersRolesInOrganizations.userId] = EntityID(userId, Users)
-            it[UsersRolesInOrganizations.organizationId] = EntityID(organizationId, Organizations)
-            it[roleId] = OrganizationRoles.getIdByName(organizationRole)
-        }
+        role: RoleType = RoleType.Reader
+    ) = organizationService.addMember(organizationId, userId, role)
 
     protected fun Transaction.createGroup(
         name: String = "Group1",
         parentGroupId: UUID? = null,
-        groupRole: GroupRoleDto = GroupRoleDto.Reader,
-        isImplicit: Boolean = false
-    ) =
-        UserGroups.insertAndGetId {
+        organizationId: UUID? = null,
+        isImplicit: Boolean = (organizationId === null)
+    ) = // TODO: replace with GroupService calls
+        Groups.insertAndGetId {
             it[this.name] = name
-            it[this.parentGroupId] = if (parentGroupId != null) EntityID(parentGroupId, UserGroups) else null
-            it[this.groupRoleId] = GroupRoles.getIdByName(groupRole)
+            it[this.parentGroupId] = if (parentGroupId != null) EntityID(parentGroupId, Groups) else null
+            it[this.organizationId] = organizationId
             it[this.isImplicit] = isImplicit
         }
 
-    protected fun Transaction.attachUserToGroup(userId: UUID, groupId: UUID) =
-        UsersInGroups.insert {
-            it[this.userId] = EntityID(userId, Users)
-            it[this.groupId] = EntityID(groupId, UserGroups)
-        }
+    protected fun attachUserToGroup(userId: UUID, groupId: UUID) =
+        groupService.attachUserToGroup(userId, groupId)
 
-    protected fun Transaction.createWorkspace(name: String = "Workspace1") =
-        Workspaces.insertAndGetId {
-            it[this.name] = name
-        }
-
-    protected fun Transaction.attachUserGroupToWorkspace(
-        userGroupId: UUID,
-        workspaceId: UUID,
-        organizationId: UUID? = null
-    ) =
-        UserGroupWithWorkspaces.insertAndGetId {
-            it[this.userGroupId] = EntityID(userGroupId, UserGroups)
-            it[this.workspaceId] = EntityID(workspaceId, Workspaces)
-            it[this.organizationId] = EntityID(organizationId ?: createOrganization().value, Organizations)
-        }
+    protected fun createWorkspace(
+        name: String = "Workspace1",
+        userId: UUID,
+        organizationId: UUID
+    ) = workspaceService.create(name, userId, organizationId)
 
     protected fun Transaction.createWorkspaceComponent(
         name: String = "Component1",
-        componentWorkspaceId: UUID? = null,
+        workspaceId: UUID,
         query: String = "SELECT ...",
         dataStore: UUID = UUID.randomUUID(),
         componentType: ComponentTypeDto = ComponentTypeDto.CausalNet,
         data: String? = null,
         customizationData: String = "{}"
     ): EntityID<UUID> {
-        val workspaceId = componentWorkspaceId ?: createWorkspace().value
-
+        // TODO: replace with WorkspaceService calls
         return WorkspaceComponents.insertAndGetId {
             it[this.name] = name
             it[this.workspaceId] = EntityID(workspaceId, Workspaces)

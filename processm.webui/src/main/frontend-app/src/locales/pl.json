@@ -51,10 +51,10 @@
     "add-automatic-process": {
       "title": "Dodaj automatyczny process",
       "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych",
-      "case-notion":"Identyfikator perspektywy biznesowej",
+      "case-notion": "Identyfikator perspektywy biznesowej",
       "select-data-connector": "Wybierz łącze danych",
       "case-notion-description": "dla każdego wpisu w {source} powiązanego z wpisem w {target}"
-  },
+    },
     "add-manual-query": {
       "title": "Dodaj ręcznie zapytanie",
       "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
@@ -139,9 +139,20 @@
     "change-password": "Zmień hasło"
   },
   "users": {
+    "exclude-member": "Usuń członka z organizacji",
+    "groups": "Grupy",
+    "group": "Grupa",
+    "member-included": "Dodano członka do organizacji",
+    "member-excluded": "Usunięto członka z organizacji",
+    "organizations": "Organizacje",
+    "owner": "Właściciel",
     "page-title": "Użytkownicy",
+    "reader": "Czytelnik",
+    "role": "Role",
     "users": "Użytkownicy",
-    "groups": "Grupy"
+    "user": "Użytkownik",
+    "writer": "Pisarz",
+    "you": "Ty"
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie {count} logów?"
@@ -173,33 +184,37 @@
     }
   },
   "login-form": {
-    "title": "Panel logowania",
     "email": "E-mail",
-    "password": "Hasło",
+    "error-box": {
+      "failed": "Nieprawidłowy e-mail lub hasło"
+    },
     "login": "Zaloguj",
+    "password": "Hasło",
     "register-account": "Zarejestruj konto",
+    "reset-password": "Resetuj hasło",
+    "title": "Panel logowania",
     "validation": {
       "email-format": "Nieprawidłowy format adresu e-mail",
       "password-empty": "Hasło nie może być puste"
-    },
-    "error-box": {
-      "failed": "Nieprawidłowy e-mail lub hasło"
     }
   },
   "registration-form": {
-    "title": "Rejestracja konta",
-    "organization-name": "Nazwa organizacji",
-    "admin-email": "E-mail administratora",
-    "register": "Zarejestruj",
-    "validation": {
-      "email-format": "Nieprawidłowy format adresu e-mail",
-      "organization-empty": "Nazwa organizacji nie może być pusta"
-    },
+    "admin-email": "E-mail",
     "error-box": {
       "failed": "Nieprawidłowy adres e-mail lub nazwa organizacji"
     },
+    "new-organization": "Utwórz nową organizację zarządzaną przez tego użytkownika",
+    "organization-name": "Nazwa organizacji",
+    "password": "Hasło",
+    "register": "Zarejestruj",
     "success-box": {
       "registered": "Rejestracja konta zakończona powodzeniem"
+    },
+    "title": "Rejestracja konta",
+    "validation": {
+      "email-format": "Nieprawidłowy format adresu e-mail",
+      "password-format": "Hasło musi zawierać co najmniej jedną małą literę, jedną wielką literę, jedną cyfrę i być długości co najmniej 8 znaków.",
+      "organization-empty": "Nazwa organizacji nie może być pusta"
     }
   },
   "xes-preview-dialog": {
@@ -241,6 +256,7 @@
     "final": "Końcowe",
     "filename": "Nazwa pliku",
     "cancel": "Anuluj",
+    "email": "E-mail",
     "save": "Zapisz",
     "test": "Test",
     "rename": "Zmień nazwę",
@@ -276,6 +292,7 @@
     "testing": {
       "success": "Test udany",
       "failure": "Test nieudany"
-    }
+    },
+    "in": "w"
   }
 }

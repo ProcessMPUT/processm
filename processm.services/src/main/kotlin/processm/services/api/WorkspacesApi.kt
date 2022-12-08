@@ -13,8 +13,10 @@ import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
-import processm.dbmodels.models.WorkspaceDto
-import processm.services.api.models.*
+import processm.services.api.models.AbstractComponent
+import processm.services.api.models.LayoutCollectionMessageBody
+import processm.services.api.models.OrganizationRole
+import processm.services.api.models.Workspace
 import processm.services.logic.WorkspaceService
 import java.util.*
 
@@ -26,7 +28,7 @@ fun Route.WorkspacesApi() {
     authenticate {
         post<Paths.Workspaces> {
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
+            val workspace = call.receiveOrNull<Workspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(it.organizationId, OrganizationRole.writer)
@@ -35,9 +37,9 @@ fun Route.WorkspacesApi() {
                 throw ApiException("Workspace name needs to be specified when creating new workspace")
             }
 
-            val workspaceId = workspaceService.createWorkspace(workspace.name, principal.userId, it.organizationId)
+            val workspaceId = workspaceService.create(workspace.name, principal.userId, it.organizationId)
 
-            call.respond(HttpStatusCode.Created, WorkspaceMessageBody(Workspace(workspace.name, workspaceId)))
+            call.respond(HttpStatusCode.Created, Workspace(workspace.name, workspaceId))
         }
 
         delete<Paths.Workspace> { workspace ->
@@ -45,31 +47,30 @@ fun Route.WorkspacesApi() {
 
             principal.ensureUserBelongsToOrganization(workspace.organizationId, OrganizationRole.writer)
 
-            val workspaceRemoved =
-                workspaceService.removeWorkspace(workspace.workspaceId, principal.userId, workspace.organizationId)
+            workspaceService.remove(workspace.workspaceId, principal.userId, workspace.organizationId)
 
-            call.respond(if (workspaceRemoved) HttpStatusCode.NoContent else HttpStatusCode.NotFound)
+            call.respond(HttpStatusCode.NoContent)
         }
 
         get<Paths.Workspaces> { workspace ->
             val principal = call.authentication.principal<ApiUser>()!!
             val workspaces = workspaceService.getUserWorkspaces(principal.userId, workspace.organizationId)
-                .map { Workspace(it.name, it.id) }.toTypedArray()
+                .map { Workspace(it.name, it.id.value) }.toTypedArray()
 
-            call.respond(HttpStatusCode.OK, WorkspaceCollectionMessageBody(workspaces))
+            call.respond(HttpStatusCode.OK, workspaces)
         }
 
         put<Paths.Workspace> { path ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(path.organizationId)
 
-            val workspace = call.receiveOrNull<WorkspaceMessageBody>()?.data
+            val workspace = call.receiveOrNull<Workspace>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
-            workspaceService.updateWorkspace(
+            workspaceService.update(
                 principal.userId,
                 path.organizationId,
-                WorkspaceDto(path.workspaceId, workspace.name)
+                workspace
             )
 
             call.respond(HttpStatusCode.OK)
@@ -83,12 +84,12 @@ fun Route.WorkspacesApi() {
 
         put<Paths.WorkspaceComponent> { component ->
             val principal = call.authentication.principal<ApiUser>()!!
-            val workspaceComponent = call.receiveOrNull<ComponentMessageBody>()?.data
+            val workspaceComponent = call.receiveOrNull<AbstractComponent>()
                 ?: throw ApiException("The provided workspace data cannot be parsed")
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
             with(workspaceComponent) {
-                workspaceService.addOrUpdateWorkspaceComponent(
+                workspaceService.addOrUpdateComponent(
                     component.componentId,
                     component.workspaceId,
                     principal.userId,
@@ -110,7 +111,7 @@ fun Route.WorkspacesApi() {
             val principal = call.authentication.principal<ApiUser>()!!
 
             principal.ensureUserBelongsToOrganization(component.organizationId)
-            workspaceService.removeWorkspaceComponent(
+            workspaceService.removeComponent(
                 component.componentId,
                 component.workspaceId,
                 principal.userId,
@@ -132,13 +133,13 @@ fun Route.WorkspacesApi() {
 
                 principal.ensureUserBelongsToOrganization(workspace.organizationId)
 
-                val components = workspaceService.getWorkspaceComponents(
+                val components = workspaceService.getComponents(
                     workspace.workspaceId,
                     principal.userId,
                     workspace.organizationId
                 ).mapToArray(WorkspaceComponent::toAbstractComponent)
 
-                call.respond(HttpStatusCode.OK, ComponentCollectionMessageBody(components))
+                call.respond(HttpStatusCode.OK, components)
             }
         }
 
@@ -153,7 +154,7 @@ fun Route.WorkspacesApi() {
                 .mapKeys { UUID.fromString(it.key) }
                 .mapValues { Gson().toJson(it.value) }
 
-            workspaceService.updateWorkspaceLayout(
+            workspaceService.updateLayout(
                 workspace.workspaceId,
                 principal.userId,
                 workspace.organizationId,

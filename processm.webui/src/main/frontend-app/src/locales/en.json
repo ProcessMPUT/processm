@@ -141,9 +141,20 @@
     "change-password": "Change password"
   },
   "users": {
+    "exclude-member": "Exclude from organization",
+    "groups": "Groups",
+    "group": "Group",
+    "member-included": "Member included in organization",
+    "member-excluded": "Member excluded from organization",
+    "organizations": "Organizations",
+    "owner": "Owner",
     "page-title": "Users",
+    "reader": "Reader",
+    "role": "Role",
     "users": "Users",
-    "groups": "Groups"
+    "user": "User",
+    "writer": "Writer",
+    "you": "You"
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Do you want to permanently remove {count} logs?"
@@ -175,33 +186,37 @@
     }
   },
   "login-form": {
-    "title": "Login form",
     "email": "E-mail",
-    "password": "Password",
+    "error-box": {
+      "failed": "Incorrect e-mail or password"
+    },
     "login": "Login",
+    "password": "Password",
     "register-account": "Register account",
+    "reset-password": "Reset password",
+    "title": "Login form",
     "validation": {
       "email-format": "The e-mail address must be valid",
       "password-empty": "The password cannot be empty"
-    },
-    "error-box": {
-      "failed": "Incorrect e-mail or password"
     }
   },
   "registration-form": {
-    "title": "Account registration",
-    "organization-name": "Organization name",
-    "admin-email": "Administrator e-mail",
-    "register": "Register",
-    "validation": {
-      "email-format": "The e-mail must be valid",
-      "organization-empty": "The organization name cannot be empty"
-    },
+    "admin-email": "E-mail",
     "error-box": {
       "failed": "Incorrect e-mail address or organization name"
     },
+    "new-organization": "Create new organization owned by new user",
+    "organization-name": "Organization name",
+    "password": "Password",
+    "register": "Register",
     "success-box": {
       "registered": "The account registration was successful"
+    },
+    "title": "Account registration",
+    "validation": {
+      "email-format": "The e-mail must be valid",
+      "password-format": "The password must contain at least one lower-case letter, one upper-case letter, one digit, and be of length at least 8.",
+      "organization-empty": "The organization name cannot be empty"
     }
   },
   "xes-preview-dialog": {
@@ -244,6 +259,7 @@
     "filename": "Filename",
     "cancel": "Cancel",
     "debug": "Debug",
+    "email": "E-mail",
     "save": "Save",
     "test": "Test",
     "rename": "Rename",
@@ -279,6 +295,7 @@
     "testing": {
       "success": "Test succeeded",
       "failure": "Test failed"
-    }
+    },
+    "in": "in"
   }
 }

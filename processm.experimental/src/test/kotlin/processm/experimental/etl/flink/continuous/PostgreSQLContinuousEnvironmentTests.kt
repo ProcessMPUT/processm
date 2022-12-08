@@ -3,7 +3,6 @@ package processm.experimental.etl.flink.continuous
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
@@ -13,10 +12,7 @@ import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
 import kotlin.concurrent.thread
-import kotlin.test.Ignore
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @Suppress("SqlResolve")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -179,7 +175,7 @@ class PostgreSQLContinuousEnvironmentTests {
                     Thread.sleep(5000L)
                     iter.close()
                 }
-                assertThrows<RuntimeException> {
+                assertFailsWith<RuntimeException> {
                     iter.next()
                     total++
                 }
@@ -252,7 +248,7 @@ class PostgreSQLContinuousEnvironmentTests {
                     Thread.sleep(5000L)
                     iter.close()
                 }
-                assertThrows<RuntimeException> {
+                assertFailsWith<RuntimeException> {
                     iter.next()
                     total++
                 }
@@ -307,7 +303,7 @@ class PostgreSQLContinuousEnvironmentTests {
                     Thread.sleep(5000L)
                     iter.close()
                 }
-                assertThrows<RuntimeException> {
+                assertFailsWith<RuntimeException> {
                     iter.next()
                     total++
                 }
@@ -358,7 +354,7 @@ class PostgreSQLContinuousEnvironmentTests {
                     Thread.sleep(5000L)
                     iter.close()
                 }
-                assertThrows<RuntimeException> {
+                assertFailsWith<RuntimeException> {
                     iter.next()
                     total++
                 }
@@ -421,7 +417,7 @@ class PostgreSQLContinuousEnvironmentTests {
                     Thread.sleep(5000L)
                     iter.close()
                 }
-                assertThrows<RuntimeException> {
+                assertFailsWith<RuntimeException> {
                     iter.next()
                     total++
                 }
@@ -474,7 +470,7 @@ class PostgreSQLContinuousEnvironmentTests {
                     Thread.sleep(5000L)
                     iter.close()
                 }
-                assertThrows<RuntimeException> {
+                assertFailsWith<RuntimeException> {
                     iter.next()
                     total++
                 }
