@@ -2,9 +2,10 @@ import {
   DataLink,
   DataNode
 } from "@/components/workspace/causal-net/CausalNet";
-import { AlignerKpiReport, ComponentType } from "@/openapi";
+// TODO add PetriNet = "petriNet" to ComponentType
+import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
 
-type CustomizationData = {};
+type CustomizationData = Record<string, unknown>;
 
 export interface CausalNetCustomizationData extends CustomizationData {
   layout: { id: string; x: number; y: number }[];
@@ -51,6 +52,21 @@ export class BPMNComponentData extends ComponentData {
   }
 }
 
+export class PetriNetComponentData extends ComponentData {
+  // TODO: Change any to some type
+  places?: Array<any>;
+  transitions?: Array<any>;
+  initialMarking: any
+  finalMarking: any
+
+  get isDisplayable() {
+    return this.initialMarking != null
+        && this.finalMarking != null
+        && this?.places?.length != 0
+        && this.transitions?.length != 0;
+  }
+}
+
 export class LayoutElement {
   constructor(init: Partial<LayoutElement>) {
     Object.assign(this, init);
@@ -63,16 +79,7 @@ export class LayoutElement {
 }
 
 export class WorkspaceComponent {
-  constructor(init: {
-    id: string;
-    name?: string;
-    query: string;
-    dataStore: string;
-    type: ComponentType;
-    data?: { type: ComponentType };
-    layout?: LayoutElement;
-    customizationData?: CustomizationData;
-  }) {
+  constructor(init: AbstractComponent) {
     Object.assign(this, init);
 
     // FIXME: customizations like this should be implemented using inheritance
@@ -87,6 +94,10 @@ export class WorkspaceComponent {
       }
       case ComponentType.AlignerKpi: {
         this.data = new AlignerKpiComponentData(init.data ?? {});
+        break;
+      }
+      case ComponentType.PetriNet: {
+        this.data = new PetriNetComponentData(init.data ?? {});
         break;
       }
       case ComponentType.Bpmn: {

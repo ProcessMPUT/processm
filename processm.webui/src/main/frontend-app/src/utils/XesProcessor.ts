@@ -16,7 +16,7 @@ export class LogItem {
   constructor(readonly scope: XesComponentScope, readonly _id: number) {}
 
   readonly _children: LogItem[] = [];
-  [key: string]: {};
+  [key: string]: unknown;
 }
 
 export default class XesProcessor {

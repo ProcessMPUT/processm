@@ -1649,7 +1649,7 @@ components:
       enum: [owner, writer, reader]
     ComponentType:
       type: string
-      enum: [ kpi, alignerKpi, causalNet, bpmn ]
+      enum: [ kpi, alignerKpi, causalNet, petriNet, bpmn ]
     AccountRegistrationInfo:
       type: object
       required: [userEmail, organizationName]
@@ -2023,6 +2023,7 @@ components:
         - $ref: '#/components/schemas/KpiComponent'
         - $ref: '#/components/schemas/AlignerKpiComponent'
         - $ref: '#/components/schemas/CausalNetComponent'
+        - $ref: '#/components/schemas/PetriNetComponent'
         - $ref: '#/components/schemas/BPMNComponent'
       discriminator:
         propertyName: type
@@ -2030,6 +2031,7 @@ components:
           kpi: '#/components/schemas/KpiComponent'
           alignerKpi: '#/components/schemas/AlignerKpiComponent'
           causalNet: '#/components/schemas/CausalNetComponent'
+          petriNet: '#/components/schemas/PetriNetComponent'
           bpmn: '#/components/schemas/BPMNComponent'
       type: object
       properties:
@@ -2046,6 +2048,7 @@ components:
         - $ref: '#/components/schemas/KpiComponentData'
         - $ref: '#/components/schemas/AlignerKpiComponentData'
         - $ref: '#/components/schemas/CausalNetComponentData'
+        - $ref: '#/components/schemas/PetriNetComponentData'
         - $ref: '#/components/schemas/BPMNComponentData'
       discriminator:
         propertyName: type
@@ -2053,6 +2056,7 @@ components:
           kpi: '#/components/schemas/KpiComponentData'
           alignerKpi: '#/components/schemas/AlignerKpiComponentData'
           causalNet: '#/components/schemas/CausalNetComponentData'
+          petriNet: '#/components/schemas/PetriNetComponentData'
           bpmn: '#/components/schemas/BPMNComponentData'
     KpiComponentData:
       allOf:
@@ -2168,6 +2172,64 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/CausalNetComponentData'
+            customizationData:
+              type: object
+              properties:
+                layout:
+                  type: array
+                  items:
+                    type: object
+                    required: [ id, x, y ]
+                    properties:
+                      id:
+                        type: string
+                      x:
+                        type: number
+                      y:
+                        type: number
+    PetriNetComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          required: [ initialMarking, finalMarking, places, transitions ]
+          properties:
+            initialMarking:
+              type: object
+            finalMarking:
+              type: object
+            places:
+              type: array
+              items:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+            transitions:
+              type: array
+              items:
+                type: object
+                required: [ name, isSilent, inPlaces, outPlaces ]
+                properties:
+                  name:
+                    type: string
+                  isSilent:
+                    type: boolean
+                  inPlaces:
+                    type: array
+                    items:
+                      type: object
+                  outPlaces:
+                    type: array
+                    items:
+                      type: object
+    PetriNetComponent:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PetriNetComponentData'
             customizationData:
               type: object
               properties:

@@ -26,6 +26,7 @@
       "causal-net": "Causal net",
       "kpi": "KPI",
       "bpmn": "BPMN",
+      "petri-net": "Petri net",
       "select": "Select type",
       "no-data": "No data to be displayed",
       "edit": {
@@ -218,8 +219,31 @@
     "log-identity-id": "Log identity:id",
     "errors": "Errors"
   },
+  "petri-net": {
+    "connect": "Connect",
+    "create": {
+      "place": "Create place",
+      "transition": "Create transition"
+    },
+    "pnml": {
+      "import": "Import PNML",
+      "export": "Export PNML"
+    },
+    "fire": "Fire",
+    "fire-backwards": "Fire backwards",
+    "new": {
+      "place": "New place",
+      "transition": "New transition"
+    },
+    "token-count": "Token count"
+  },
   "common": {
+    "calculate-layout": "Calculate layout",
+    "initial": "Initial",
+    "final": "Final",
+    "filename": "Filename",
     "cancel": "Cancel",
+    "debug": "Debug",
     "save": "Save",
     "test": "Test",
     "rename": "Rename",

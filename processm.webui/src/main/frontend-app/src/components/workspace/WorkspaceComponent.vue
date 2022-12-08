@@ -115,6 +115,7 @@ import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop } from "vue-property-decorator";
 import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
+import PetriNetComponent from "./petri-net/PetriNetComponent.vue";
 import KpiComponent from "./KpiComponent.vue";
 import BPMNComponent from "./bpmn/BPMNComponent.vue";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
@@ -129,12 +130,11 @@ export enum ComponentMode {
   components: {
     causalNetComponent: CausalNetComponent,
     kpiComponent: KpiComponent,
+    petriNetComponent: PetriNetComponent,
     bpmnComponent: BPMNComponent // https://stackoverflow.com/a/58875919
   }
 })
 export default class WorkspaceComponent extends Vue {
-  ComponentMode = ComponentMode;
-
   @Prop({ default: null })
   readonly componentDetails?: WorkspaceComponentModel;
   @Prop({ default: false })
