@@ -2,6 +2,7 @@ package processm.core.log.hierarchical
 
 import processm.core.helpers.LazyNestableAutoCloseable
 import processm.core.helpers.mapToArray
+import processm.core.helpers.toClosedRanges
 import processm.core.log.attribute.Attribute.DB_ID
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.logging.enter
@@ -835,18 +836,8 @@ internal class TranslatedQuery(
             }
         }
 
-        private inner class RegularIterator(val trace: Cache.RegularTraceEntry, logId: Int) : IdBasedIterator() {
+        private inner class RegularIterator(val trace: Cache.RegularTraceEntry, val logId: Int) : IdBasedIterator() {
             override val ids: Iterator<Any> = trace.ids.iterator()
-            private val query = SQLQuery {
-                selectAttributes(Scope.Event, "events_attributes", emptySet(), it)
-                it.query.append("FROM events_attributes")
-                whereAttributes(Scope.Event, it, logId)
-                it.query.append(" AND event_id=ANY(?)")
-                it.params.add(idPlaceholder)
-            }
-            private val stmt by lazy(NONE) {
-                connection!!.prepareStatement(query.query, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY)
-            }
 
             override fun next(): QueryResult {
                 val ids = nextIds()
@@ -860,18 +851,11 @@ internal class TranslatedQuery(
                     trace.queryExpressions
                 ).executeMany(connection!!, entityParameters, exprParameters)
 
-                val attributes = tailoredAttributesQuery(idParam, ids as List<Long>)
+                val rs = (cache.topEntry.logs[logId]!! as Cache.RegularLogEntry).sharedAttributesQuery(connection!!)
+                val attributes = SubsettingResultSet(rs, ids as List<Long>, 2)
                 offset += batchSize
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), attributes, results[1])
-            }
-
-            private fun tailoredAttributesQuery(idParam: java.sql.Array, ids: List<Long>): SortingResultSet {
-                val params = query.params.fillPlaceholders(idParam, offset)
-                for ((i, p) in params.withIndex())
-                    stmt.setObject(i + 1, p)
-                val rs = stmt.executeQuery()
-                return SortingResultSet(rs, ids)
             }
         }
 
@@ -1063,6 +1047,39 @@ internal class TranslatedQuery(
             override val queryEntity: SQLQuery get() = cache.entityQueryTrace
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Trace, logId) }
             override val queryExpressions: SQLQuery get() = cache.expressionsQueryTrace
+
+            private var sharedAttributesQuery: ResultSet? = null
+            fun sharedAttributesQuery(connection: Connection): ResultSet {
+                if (sharedAttributesQuery?.isClosed != false) {
+                    val allIds = traces!!.values.flatMap { it.ids as List<Long> }
+                    val query = SQLQuery {
+                        selectAttributes(Scope.Event, "events_attributes", emptySet(), it)
+                        it.query.append("FROM events_attributes")
+                        whereAttributes(Scope.Event, it, logId)
+                        it.query.append("AND (")
+                        allIds.toClosedRanges().forEach { range ->
+                            it.query.append("(? <= event_id AND event_id <= ?) OR")
+                            it.params.add(range.first)
+                            it.params.add(range.last)
+                        }
+                        it.query.setLength(it.query.length - 3)
+                        it.query.append(")")
+                    }
+                    with(
+                        connection.prepareStatement(
+                            query.query,
+                            ResultSet.TYPE_SCROLL_SENSITIVE,
+                            ResultSet.CONCUR_READ_ONLY
+                        )
+                    ) {
+                        for ((i, p) in query.params.withIndex())
+                            setObject(i + 1, p)
+                        fetchSize = batchSize
+                        sharedAttributesQuery = SortingResultSet(executeQuery(), allIds)
+                    }
+                }
+                return sharedAttributesQuery!!
+            }
         }
 
         open inner class GroupingLogEntry(parent: TopEntry, logId: Int) : LogEntry(parent) {
@@ -1174,7 +1191,7 @@ internal class TranslatedQuery(
 
             override val queryIds: SQLQuery by lazy(NONE) { throw UnsupportedOperationException("RegularTraceEntry does not expose queryIds") }
             override val queryEntity: SQLQuery get() = cache.entityQueryEvent
-            override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Event, logId) }
+            override val queryAttributes: SQLQuery by lazy(NONE) { throw UnsupportedOperationException("RegularTraceEntry does not expose queryAttributes") }
             override val queryExpressions: SQLQuery get() = cache.expressionsQueryEvent
         }
 
