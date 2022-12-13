@@ -12,6 +12,7 @@ import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.*
 import processm.core.querylanguage.Function
 import java.sql.Connection
+import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
 import kotlin.LazyThreadSafetyMode.NONE
@@ -812,8 +813,7 @@ internal class TranslatedQuery(
     }
 
     private inner class EventExecutor(logId: Int, traceId: Long) : Executor<QueryResult>() {
-        private val trace = cache.topEntry.logs[logId]!!.traces!![traceId]!!
-        override val iterator: IdBasedIterator = object : IdBasedIterator() {
+        private inner class UniversalIterator(val trace: Cache.TraceEntry) : IdBasedIterator() {
             override val ids: Iterator<Any> = trace.ids.iterator()
 
             override fun next(): QueryResult {
@@ -833,6 +833,53 @@ internal class TranslatedQuery(
 
                 return QueryResult(ErrorSuppressingResultSet(results[0]), results[1], results[2])
             }
+        }
+
+        private inner class RegularIterator(val trace: Cache.RegularTraceEntry, logId: Int) : IdBasedIterator() {
+            override val ids: Iterator<Any> = trace.ids.iterator()
+            private val query = SQLQuery {
+                selectAttributes(Scope.Event, "events_attributes", emptySet(), it)
+                it.query.append("FROM events_attributes")
+                whereAttributes(Scope.Event, it, logId)
+                it.query.append(" AND event_id=ANY(?)")
+                it.params.add(idPlaceholder)
+            }
+            private val stmt by lazy(NONE) {
+                connection!!.prepareStatement(query.query, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY)
+            }
+
+            override fun next(): QueryResult {
+                val ids = nextIds()
+                logger.trace { "Retrieving event/group ids: ${ids.joinToString()}." }
+                val idParam = connection!!.createArrayOf("bigint", ids.toTypedArray())
+                val entityParameters = trace.queryEntity.params.fillPlaceholders(idParam, offset)
+                val exprParameters = trace.queryExpressions.params.fillPlaceholders(idParam, offset)
+
+                val results = listOf(
+                    trace.queryEntity,
+                    trace.queryExpressions
+                ).executeMany(connection!!, entityParameters, exprParameters)
+
+                val attributes = tailoredAttributesQuery(idParam, ids as List<Long>)
+                offset += batchSize
+
+                return QueryResult(ErrorSuppressingResultSet(results[0]), attributes, results[1])
+            }
+
+            private fun tailoredAttributesQuery(idParam: java.sql.Array, ids: List<Long>): SortingResultSet {
+                val params = query.params.fillPlaceholders(idParam, offset)
+                for ((i, p) in params.withIndex())
+                    stmt.setObject(i + 1, p)
+                val rs = stmt.executeQuery()
+                return SortingResultSet(rs, ids)
+            }
+        }
+
+        override val iterator: IdBasedIterator
+
+        init {
+            val trace = cache.topEntry.logs[logId]!!.traces!![traceId]!!
+            iterator = if (trace is Cache.RegularTraceEntry) RegularIterator(trace, logId) else UniversalIterator(trace)
         }
     }
     // endregion
