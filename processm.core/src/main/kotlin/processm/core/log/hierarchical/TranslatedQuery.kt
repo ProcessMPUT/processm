@@ -1,9 +1,9 @@
 package processm.core.log.hierarchical
 
-import processm.core.helpers.NestableAutoCloseable
+import processm.core.helpers.LazyNestableAutoCloseable
 import processm.core.helpers.mapToArray
-import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.Attribute.DB_ID
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -48,7 +48,7 @@ internal class TranslatedQuery(
         }
     }
 
-    private val connection: NestableAutoCloseable<Connection> = NestableAutoCloseable {
+    private val connection: LazyNestableAutoCloseable<Connection> = LazyNestableAutoCloseable {
         DBCache.get(dbName).getConnection().apply {
             assert(metaData.supportsMultipleResultSets())
             assert(metaData.supportsCorrelatedSubqueries())
