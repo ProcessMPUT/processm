@@ -2,11 +2,13 @@ package processm.core.log
 
 import org.openjdk.jol.info.GraphLayout
 import processm.core.DBTestHelper
-import processm.core.DBTestHelper.loadLog
+import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.PrintStream
+import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import kotlin.system.measureTimeMillis
 import kotlin.test.Ignore
@@ -15,6 +17,11 @@ import kotlin.test.Test
 class PerformanceTest {
 
     data class Measurement(val timeMs: Double, val nRepeats: Int, val memBytes: Long)
+
+    private fun <T> measureNoRestart(repeats: Int = 1, block: (Int) -> T): Measurement {
+        val time = measureTimeMillis { repeat(repeats) { block(it) } }.toDouble() / repeats
+        return Measurement(time, repeats, 0)
+    }
 
     private fun <T> measure(repeats: Int, block: (Int) -> T): Measurement {
         val mem = GraphLayout.parseInstance(block(0))
@@ -62,11 +69,28 @@ Synthetic_Event_Logs-Loan_application_example-ETM_Configuration2.xes.gz
 Synthetic_Event_Logs-Loan_application_example-ETM_Configuration3.xes.gz
 Synthetic_Event_Logs-Loan_application_example-ETM_Configuration4.xes.gz""".split("\n").map { "../xes-logs/$it" }
 
+    private fun gitTag(): String? {
+        try {
+            with(ProcessBuilder("git", "describe", "--always", "--dirty")) {
+                redirectOutput()
+                val proc = start()
+                if (proc.waitFor(5, TimeUnit.SECONDS))
+                    return proc.inputStream.bufferedReader().readLine().trim()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
+
     @Ignore("Not a real test")
     @Test
     fun test() {
-        PrintStream("XES-performance-report.tsv").use { reportStream ->
+        val maxNoOfComponentsToWriteToDb = 2 * Short.MAX_VALUE.toInt()
+        val tag = gitTag()
+        PrintStream("XES-performance-report-$tag.tsv").use { reportStream ->
             fun report(path: String, test: String, measurement: Measurement) {
+                println("$path\t$test\t${measurement.memBytes}\t${measurement.timeMs}\t${measurement.nRepeats}")
                 reportStream.println("$path\t$test\t${measurement.memBytes}\t${measurement.timeMs}\t${measurement.nRepeats}")
             }
             for (path in paths) {
@@ -75,14 +99,30 @@ Synthetic_Event_Logs-Loan_application_example-ETM_Configuration4.xes.gz""".split
                         gzip.readAllBytes()
                     }
                 })
-                val loadToMem = measure(21) {
+                var components: List<XESComponent> = emptyList()
+                val loadToMem = measure(11) {
                     data.reset()
-                    XMLXESInputStream(data).toList()
+                    components = XMLXESInputStream(data).toList()
                 }
+                if (components.size > maxNoOfComponentsToWriteToDb)
+                    components = components.subList(0, maxNoOfComponentsToWriteToDb)
                 report(path, "loadToMem", loadToMem)
-                data.reset()
-                val uuid = loadLog(data)
-                val loadFromDb = measure(6) {
+                val uuids = ArrayList<UUID>()
+                val saveToDb = measureNoRestart(1) {
+                    DBXESOutputStream(DBCache.get(DBTestHelper.dbName).getConnection()).use { output ->
+                        val uuid = UUID.randomUUID()
+
+                        output.write(components.asSequence().map {
+                            if (it is processm.core.log.Log) /* The base class for log */
+                                it.identityId = uuid
+                            it
+                        })
+                        uuids.add(uuid)
+                    }
+                }
+                report(path, "saveToDb", saveToDb)
+                val loadFromDb = measureNoRestart(uuids.size) {
+                    val uuid = uuids[it.coerceAtMost(uuids.size - 1)]
                     DBXESInputStream(DBTestHelper.dbName, Query("where l:id=$uuid")).toList()
                 }
                 report(path, "loadFromDb", loadFromDb)
