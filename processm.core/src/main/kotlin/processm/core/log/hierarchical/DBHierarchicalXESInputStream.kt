@@ -388,7 +388,6 @@ class DBHierarchicalXESInputStream(
 
         with(Event()) {
             val eventId = result.entity.getLong("id")
-//            println("Reading $eventId")
             readEventAttributes(result.attributes, this, eventId, nameMap)
             readExpressions(result.expressions, this, eventId)
 
