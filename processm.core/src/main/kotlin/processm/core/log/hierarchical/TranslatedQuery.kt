@@ -299,7 +299,7 @@ internal class TranslatedQuery(
         with(sql.query) {
             append(" WHERE 1=1 ")
 
-            if(!readNestedAttributes)
+            if (!readNestedAttributes)
                 append("AND NOT starts_with(key, '$SEPARATOR') ")
 
             if (pql.selectAll[scope]!!)
@@ -843,19 +843,29 @@ internal class TranslatedQuery(
                 val ids = nextIds()
                 logger.trace { "Retrieving event/group ids: ${ids.joinToString()}." }
                 val idParam = connection!!.createArrayOf("bigint", ids.toTypedArray())
-                val entityParameters = trace.queryEntity.params.fillPlaceholders(idParam, offset)
                 val exprParameters = trace.queryExpressions.params.fillPlaceholders(idParam, offset)
 
                 val results = listOf(
-                    trace.queryEntity,
                     trace.queryExpressions
-                ).executeMany(connection!!, entityParameters, exprParameters)
+                ).executeMany(connection!!, exprParameters)
 
-                val rs = (cache.topEntry.logs[logId]!! as Cache.RegularLogEntry).sharedAttributesQuery(connection!!)
-                val attributes = SubsettingResultSet(rs, ids as List<Long>, 2)
+//                var entities = cache.entityQueryEvent.execute(connection!!, cache.entityQueryEvent.params.fillPlaceholders(idParam, offset))
+//                entities =  SubsettingResultSet(entities, ids as List<Long>, 1)
+                println(cache.entityQueryEvent.query)
+                println("next $ids")
+                val entities = SubsettingResultSet(
+                    (cache.topEntry.logs[logId]!! as Cache.RegularLogEntry).sharedEventsQuery(connection!!),
+                    ids as List<Long>,
+                    1
+                )
+                val attributes = SubsettingResultSet(
+                    (cache.topEntry.logs[logId]!! as Cache.RegularLogEntry).sharedAttributesQuery(connection!!),
+                    ids as List<Long>,
+                    2
+                )
                 offset += batchSize
 
-                return QueryResult(ErrorSuppressingResultSet(results[0]), attributes, results[1])
+                return QueryResult(ErrorSuppressingResultSet(entities), attributes, results[0])
             }
         }
 
@@ -1054,31 +1064,63 @@ internal class TranslatedQuery(
                     val allIds = traces!!.values.flatMap { it.ids as List<Long> }
                     val query = SQLQuery {
                         selectAttributes(Scope.Event, "events_attributes", emptySet(), it)
-                        it.query.append("FROM events_attributes")
+                        it.query.append("FROM events_attributes ")
+                        it.query.append("INNER JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON events_attributes.event_id=ids.id ")
+                        it.params.add(connection.createArrayOf("bigint", allIds.toTypedArray()))
                         whereAttributes(Scope.Event, it, logId)
-                        it.query.append("AND (")
-                        allIds.toClosedRanges().forEach { range ->
-                            it.query.append("(? <= event_id AND event_id <= ?) OR")
-                            it.params.add(range.first)
-                            it.params.add(range.last)
-                        }
-                        it.query.setLength(it.query.length - 3)
-                        it.query.append(")")
+//                        it.query.append("AND (")
+//                        allIds.toClosedRanges().forEach { range ->
+//                            it.query.append("(? <= event_id AND event_id <= ?) OR")
+//                            it.params.add(range.first)
+//                            it.params.add(range.last)
+//                        }
+//                        it.query.setLength(it.query.length - 3)
+//                        it.query.append(")")
+                        it.query.append(" ORDER BY ids.ord")
                     }
-                    with(
-                        connection.prepareStatement(
-                            query.query,
-                            ResultSet.TYPE_SCROLL_SENSITIVE,
-                            ResultSet.CONCUR_READ_ONLY
-                        )
-                    ) {
+                    println("SAQ ${query.query}")
+                    println("SAQ ${allIds.toClosedRanges().toList()}")
+                    with(connection.prepareStatement(query.query)) {
                         for ((i, p) in query.params.withIndex())
                             setObject(i + 1, p)
                         fetchSize = batchSize
-                        sharedAttributesQuery = SortingResultSet(executeQuery(), allIds)
+                        sharedAttributesQuery = executeQuery()
                     }
                 }
                 return sharedAttributesQuery!!
+            }
+
+            private var sharedEventsQuery: ResultSet? = null
+
+            fun sharedEventsQuery(connection: Connection): ResultSet {
+                if (sharedEventsQuery?.isClosed != false) {
+                    val allIds = traces!!.values.flatMap { it.ids as List<Long> }
+                    val query = SQLQuery { sql ->
+                        selectEntity(Scope.Event, sql)
+                        sql.query.append(" FROM ${Scope.Event.table} ${Scope.Event.alias}")
+                        sql.query.append(" INNER JOIN unnest(?) WITH ORDINALITY ids(id, ord) ON ${Scope.Event.alias}.id=ids.id ")
+                        sql.params.add(connection.createArrayOf("bigint", allIds.toTypedArray()))
+//                        sql.query.append(" WHERE (")
+//                        //TODO share ranges
+//                        allIds.toClosedRanges().forEach { range ->
+//                            sql.query.append("(? <= ${Scope.Event.alias}.id AND ${Scope.Event.alias}.id <= ?) OR")
+//                            sql.params.add(range.first)
+//                            sql.params.add(range.last)
+//                        }
+//                        sql.query.setLength(sql.query.length - 3)
+//                        sql.query.append(")")
+                        sql.query.append(" ORDER BY ids.ord")
+                        println("SEQ ${sql.query}")
+                        println("SEQ ${allIds.toClosedRanges().toList()}")
+                    }
+                    with(connection.prepareStatement(query.query)) {
+                        for ((i, p) in query.params.withIndex())
+                            setObject(i + 1, p)
+                        fetchSize = batchSize
+                        sharedEventsQuery = executeQuery()
+                    }
+                }
+                return sharedEventsQuery!!
             }
         }
 
@@ -1190,7 +1232,7 @@ internal class TranslatedQuery(
                 }
 
             override val queryIds: SQLQuery by lazy(NONE) { throw UnsupportedOperationException("RegularTraceEntry does not expose queryIds") }
-            override val queryEntity: SQLQuery get() = cache.entityQueryEvent
+            override val queryEntity: SQLQuery get() = throw UnsupportedOperationException("RegularTraceEntry does not expose queryEntity")
             override val queryAttributes: SQLQuery by lazy(NONE) { throw UnsupportedOperationException("RegularTraceEntry does not expose queryAttributes") }
             override val queryExpressions: SQLQuery get() = cache.expressionsQueryEvent
         }
@@ -1319,6 +1361,7 @@ internal class TranslatedQuery(
                         sql, null, if (expression.type != Type.Unknown) expression.type else expectedType, 1,
                         ignoreHoisting = false, attributeToIndex = attributeToIndex
                     )
+
                     is Literal<*> -> {
                         if (expression.scope != null)
                             sql.scopes.add(ScopeWithMetadata(expression.scope!!, 0))
@@ -1329,12 +1372,14 @@ internal class TranslatedQuery(
                                 append("?::timestamptz")
                                 sql.params.add(Timestamp.from(expression.value))
                             }
+
                             else -> {
                                 append("?::${expression.type.asDBType}")
                                 sql.params.add(expression.value!!)
                             }
                         }
                     }
+
                     is Operator -> {
                         when (expression.operatorType) {
                             OperatorType.Prefix -> {
@@ -1342,6 +1387,7 @@ internal class TranslatedQuery(
                                 append(" ${expression.value} ")
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                             }
+
                             OperatorType.Infix -> {
                                 assert(expression.children.size >= 2)
                                 append(' ')
@@ -1363,6 +1409,7 @@ internal class TranslatedQuery(
                                     append(")/$secondsPerDay")
                                 append(' ')
                             }
+
                             OperatorType.Postfix -> {
                                 assert(expression.children.size == 1)
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
@@ -1370,6 +1417,7 @@ internal class TranslatedQuery(
                             }
                         }
                     }
+
                     is Function -> {
                         when (expression.name) {
                             "min", "max", "avg", "count", "sum" -> {
@@ -1389,18 +1437,21 @@ internal class TranslatedQuery(
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")) s(id, a0)) s)")
                             }
+
                             "round", "lower", "upper" -> {
                                 append(expression.name)
                                 append('(')
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(')')
                             }
+
                             "date", "time" -> {
                                 assert(expression.children.size == 1)
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append("::")
                                 append(expression.name)
                             }
+
                             "year", "month", "day", "hour", "minute", "quarter" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(")
@@ -1409,37 +1460,44 @@ internal class TranslatedQuery(
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(')')
                             }
+
                             "second" -> {
                                 assert(expression.children.size == 1)
                                 append("floor(extract(second from ")
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append("))")
                             }
+
                             "millisecond" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(milliseconds from ") // note the plural form
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")%1000")
                             }
+
                             "dayofweek" -> {
                                 assert(expression.children.size == 1)
                                 append("extract(dow from ")
                                 walk(expression.children[0], expression.expectedChildrenTypes[0])
                                 append(")+1")
                             }
+
                             "now" -> {
                                 assert(expression.children.isEmpty())
                                 append("?::timestamptz")
                                 sql.params.add(now)
                             }
+
                             else -> throw IllegalArgumentException("Undefined function ${expression.name}.")
                         }
 
                     }
+
                     is AnyExpression -> append(expression.value)
                     // Expression must be the last but one because other classes inherit from this one.
                     is Expression -> expression.children.withIndex()
                         .forEach { walk(it.value, expression.expectedChildrenTypes[it.index]) }
+
                     else -> throw IllegalArgumentException("Unknown expression type: $expression")
                 }
             }
