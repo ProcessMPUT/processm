@@ -86,12 +86,17 @@ Synthetic_Event_Logs-Loan_application_example-ETM_Configuration4.xes.gz""".split
     @Ignore("Not a real test")
     @Test
     fun test() {
-        val maxNoOfComponentsToWriteToDb = 2 * Short.MAX_VALUE.toInt()
+        DBCache.get(DBTestHelper.dbName).getConnection().use {
+            // Do nothing, this is just to init the DB
+        }
+        val maxNoOfComponentsToWriteToDb = 1000 // 2 * Short.MAX_VALUE.toInt()
         val tag = gitTag()
         PrintStream("XES-performance-report-$tag.tsv").use { reportStream ->
             fun report(path: String, test: String, measurement: Measurement) {
                 println("$path\t$test\t${measurement.memBytes}\t${measurement.timeMs}\t${measurement.nRepeats}")
+                System.out.flush()
                 reportStream.println("$path\t$test\t${measurement.memBytes}\t${measurement.timeMs}\t${measurement.nRepeats}")
+                reportStream.flush()
             }
             for (path in paths) {
                 val data = ByteArrayInputStream(File(path).inputStream().use { raw ->
@@ -103,6 +108,7 @@ Synthetic_Event_Logs-Loan_application_example-ETM_Configuration4.xes.gz""".split
                 val loadToMem = measure(11) {
                     data.reset()
                     components = XMLXESInputStream(data).toList()
+                    return@measure components
                 }
                 if (components.size > maxNoOfComponentsToWriteToDb)
                     components = components.subList(0, maxNoOfComponentsToWriteToDb)
