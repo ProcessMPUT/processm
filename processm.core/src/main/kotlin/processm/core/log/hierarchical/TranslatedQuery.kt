@@ -1088,7 +1088,6 @@ internal class TranslatedQuery(
                 get() {
                     if (field === null) {
                         // Initialize all sibling RegularTraceEntries together
-                        val id2trace = parent.traces!!.values.associateBy { (it as RegularTraceEntry).traceId }
 
                         val query = SQLQuery { sql ->
                             with(sql.query) {
@@ -1099,16 +1098,18 @@ internal class TranslatedQuery(
                                 append(") FROM events x WHERE trace_id = ANY(?)")
                                 insert(0, "SELECT DISTINCT trace_id, ARRAY(")
                             }
-                            sql.params.add(id2trace.keys.toTypedArray())
+                            sql.params.add(parent.traces!!.values.mapToArray { (it as RegularTraceEntry).traceId })
                         }
+                        val intermediate = HashMap<Long, List<Long>>()
                         connection.use {
                             query.execute(it).use { rs ->
                                 while (rs.next()) {
-                                    val traceId = rs.getLong(1)
-                                    val events = (rs.getArray(2).array as Array<Long>).toList()
-                                    id2trace[traceId]!!.events = events
+                                    intermediate[rs.getLong(1)] =  (rs.getArray(2).array as Array<Long>).toList()
                                 }
                             }
+                        }
+                        parent.traces!!.values.forEach {
+                            it.events = intermediate[(it as RegularTraceEntry).traceId].orEmpty()
                         }
                         assert(field !== null)
                     }
