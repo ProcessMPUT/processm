@@ -89,7 +89,7 @@ Synthetic_Event_Logs-Loan_application_example-ETM_Configuration4.xes.gz""".split
         DBCache.get(DBTestHelper.dbName).getConnection().use {
             // Do nothing, this is just to init the DB
         }
-        val maxNoOfComponentsToWriteToDb = 1000 // 2 * Short.MAX_VALUE.toInt()
+        val maxNoOfComponentsToWriteToDb = 1000
         val tag = gitTag()
         PrintStream("XES-performance-report-$tag.tsv").use { reportStream ->
             fun report(path: String, test: String, measurement: Measurement) {
