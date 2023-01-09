@@ -113,22 +113,17 @@ Synthetic_Event_Logs-Loan_application_example-ETM_Configuration4.xes.gz""".split
                 if (components.size > maxNoOfComponentsToWriteToDb)
                     components = components.subList(0, maxNoOfComponentsToWriteToDb)
                 report(path, "loadToMem", loadToMem)
-                val uuids = ArrayList<UUID>()
+                val uuid = UUID.randomUUID();
+                for (component in components)
+                    if (component is Log)
+                        component.identityId = uuid
                 val saveToDb = measureNoRestart(1) {
                     DBXESOutputStream(DBCache.get(DBTestHelper.dbName).getConnection()).use { output ->
-                        val uuid = UUID.randomUUID()
-
-                        output.write(components.asSequence().map {
-                            if (it is processm.core.log.Log) /* The base class for log */
-                                it.identityId = uuid
-                            it
-                        })
-                        uuids.add(uuid)
+                        output.write(components.asSequence())
                     }
                 }
                 report(path, "saveToDb", saveToDb)
-                val loadFromDb = measureNoRestart(uuids.size) {
-                    val uuid = uuids[it.coerceAtMost(uuids.size - 1)]
+                val loadFromDb = measure(6) {
                     DBXESInputStream(DBTestHelper.dbName, Query("where l:id=$uuid")).toList()
                 }
                 report(path, "loadFromDb", loadFromDb)
