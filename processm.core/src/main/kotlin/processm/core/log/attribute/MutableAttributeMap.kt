@@ -1,8 +1,10 @@
 package processm.core.log.attribute
 
 import processm.core.helpers.mapToSet
+import processm.core.log.attribute.AttributeMap.Companion.AFTER_SEPARATOR_CHAR
 import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR_CHAR
 import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.log.isAllowedAttributeValue
 import java.time.Instant
@@ -24,76 +26,90 @@ open class MutableAttributeMap(
         map.entries.forEach { this[it.key] = it.value }
     }
 
-    protected open fun childrenKey(key: String): String =
-        SEPARATOR + STRING_MARKER + key + SEPARATOR
+    protected open fun childrenKey(key: String): Pair<String, String> {
+        require(SEPARATOR_CHAR !in key)
+        val prefix = SEPARATOR + STRING_MARKER + key
+        return prefix + SEPARATOR to prefix + AFTER_SEPARATOR_CHAR
+    }
 
-    protected open fun childrenKey(key: Int): String =
-        SEPARATOR + INT_MARKER + key + SEPARATOR
+    protected open fun childrenKey(key: Int): Pair<String, String> {
+        val prefix = SEPARATOR + INT_MARKER + key
+        return prefix + SEPARATOR to prefix + AFTER_SEPARATOR_CHAR
+    }
 
+    private inline fun unsafeSet(key: String, value: Any?) {
+        require(SEPARATOR_CHAR !in key)
+        flat[key] = value
+    }
 
     private operator fun set(key: String, value: Any?) {
         require(value.isAllowedAttributeValue())
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     open operator fun set(key: String, value: String?) {
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     open operator fun set(key: String, value: Long) {
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     open operator fun set(key: String, value: Double) {
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     open operator fun set(key: String, value: Instant) {
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     open operator fun set(key: String, value: UUID) {
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     open operator fun set(key: String, value: Boolean) {
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     open operator fun set(key: String, value: Tag) {
-        flat[key] = value
+        unsafeSet(key, value)
     }
 
     override operator fun get(key: String): Any? = flat.getValue(key)
 
     override fun getOrNull(key: String?): Any? = if (key !== null) flat[key] else null
 
-    protected fun childrenKeys(prefix: String): Set<Any> = flat.subMap(prefix, prefix + SEPARATOR).keys.mapToSet {
-        val end = it.indexOf(SEPARATOR, prefix.length)
-        val s = it.substring(prefix.length, end)
-        if (s[0] == STRING_MARKER)
-            s.substring(1, s.length)
-        else {
-            assert(s[0] == INT_MARKER)
-            s.substring(1, s.length).toInt()
+    protected fun childrenKeys(prefix: String): Set<Any> {
+        val prefixWithSeparatorLength = prefix.length + 1
+        return flat.subMap(prefix + SEPARATOR_CHAR, prefix + AFTER_SEPARATOR_CHAR).keys.mapToSet {
+            val end = it.indexOf(SEPARATOR_CHAR, prefixWithSeparatorLength)
+            val s = it.substring(prefixWithSeparatorLength, end)
+            if (s[0] == STRING_MARKER)
+                s.substring(1, s.length)
+            else {
+                assert(s[0] == INT_MARKER)
+                s.substring(1, s.length).toInt()
+            }
         }
     }
 
     override val childrenKeys: Set<Any>
-        get() = childrenKeys(SEPARATOR)
+        get() = childrenKeys("")
 
     override fun children(key: String): MutableAttributeMap {
-        val s = childrenKey(key)
-        return MutableAttributeMapWithPrefix(flat.subMap(s, s + SEPARATOR + SEPARATOR), s)
+        val (s, e) = childrenKey(key)
+        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s)
     }
 
     override fun children(key: Int): MutableAttributeMap {
-        val s = childrenKey(key)
-        return MutableAttributeMapWithPrefix(flat.subMap(s, s + SEPARATOR + SEPARATOR), s)
+        val (s, e) = childrenKey(key)
+        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s)
     }
 
-    protected open val top: MutableMap<String, Any?>
-        get() = flat.headMap(SEPARATOR)
+    protected open val top: MutableMap<String, Any?> by lazy(LazyThreadSafetyMode.NONE) {
+        // lazy initialization because taking head/tail map of an empty map doesn't seem to work
+        SplitMutableMap(flat.headMap(SEPARATOR), flat.tailMap(AFTER_SEPARATOR_CHAR), SEPARATOR)
+    }
 
     override val entries: Set<Map.Entry<String, Any?>>
         get() = top.entries

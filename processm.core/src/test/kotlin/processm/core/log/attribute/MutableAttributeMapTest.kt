@@ -1,5 +1,6 @@
 package processm.core.log.attribute
 
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR_CHAR
 import kotlin.test.*
 
 class MutableAttributeMapTest {
@@ -234,5 +235,123 @@ class MutableAttributeMapTest {
     fun deepCopy() {
         val other = MutableAttributeMap(map)
         assertEquals(map, other)
+    }
+
+    @Test
+    fun `key starting with 07`() {
+        val key1 = "\u0007bell"
+        val key2 = "normal key"
+        val map = MutableAttributeMap()
+        map[key1] = "a"
+        map[key2] = "b"
+        assertEquals(setOf(key1, key2), map.keys)
+    }
+
+    @Test
+    fun `child key starting with 07`() {
+        val key1 = "\u0007bell"
+        val key2 = "normal key"
+        val map = MutableAttributeMap()
+        map.children(key1)["a"] = "b"
+        map.children(key2)["a"] = "b"
+        assertEquals(setOf(key1, key2), map.childrenKeys)
+    }
+
+    @Test
+    fun `key in a child starting with 07`() {
+        val key1 = "\u0007bell"
+        val key2 = "normal key"
+        val map = MutableAttributeMap().children("a")
+        map[key1] = "a"
+        map[key2] = "b"
+        assertEquals(setOf(key1, key2), map.keys)
+    }
+
+    @Test
+    fun `child key in a child starting with 07`() {
+        val key1 = "\u0007bell"
+        val key2 = "normal key"
+        val map = MutableAttributeMap().children("blah")
+        map.children(key1)["a"] = "b"
+        map.children(key2)["a"] = "b"
+        assertEquals(setOf(key1, key2), map.childrenKeys)
+    }
+
+    @Test
+    fun `prefixes at top`() {
+        val BEFORE = SEPARATOR_CHAR - 1
+        val AFTER = SEPARATOR_CHAR + 1
+        val map = MutableAttributeMap()
+        map["$BEFORE"] = 1
+        map["$BEFORE$BEFORE"] = 2
+        map["$BEFORE$AFTER"] = 5
+        map["$AFTER"] = 6
+        map["$AFTER$BEFORE"] = 7
+        map["$AFTER$AFTER"] = 8
+        assertEquals(
+            setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
+            map.keys
+        )
+        assertEquals(0, map.childrenKeys.size)
+        map.children("$BEFORE")["a"] = 1
+        map.children("$BEFORE$BEFORE")["a"] = 1
+        map.children("$BEFORE$AFTER")["a"] = 1
+        map.children("$AFTER")["a"] = 1
+        map.children("$AFTER$BEFORE")["a"] = 1
+        map.children("$AFTER$AFTER")["a"] = 1
+        assertEquals(
+            setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
+            map.keys
+        )
+        assertEquals(
+            setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
+            map.childrenKeys
+        )
+    }
+
+    @Test
+    fun `prefixes in children`() {
+        val BEFORE = SEPARATOR_CHAR - 1
+        val AFTER = SEPARATOR_CHAR + 1
+        val top = MutableAttributeMap()
+        val children = listOf(top.children("$BEFORE"),
+            top.children("$BEFORE$BEFORE"),
+            top.children("$BEFORE$AFTER"),
+            top.children("$AFTER"),
+            top.children("$AFTER$BEFORE"),
+            top.children("$AFTER$AFTER"))
+        for(map in children) {
+            map["$BEFORE"] = 1
+            map["$BEFORE$BEFORE"] = 2
+            map["$BEFORE$AFTER"] = 5
+            map["$AFTER"] = 6
+            map["$AFTER$BEFORE"] = 7
+            map["$AFTER$AFTER"] = 8
+        }
+        for(map in children) {
+            assertEquals(
+                setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
+                map.keys
+            )
+            assertEquals(0, map.childrenKeys.size)
+        }
+        for(map in children) {
+            map.children("$BEFORE")["a"] = 1
+            map.children("$BEFORE$BEFORE")["a"] = 1
+            map.children("$BEFORE$AFTER")["a"] = 1
+            map.children("$AFTER")["a"] = 1
+            map.children("$AFTER$BEFORE")["a"] = 1
+            map.children("$AFTER$AFTER")["a"] = 1
+        }
+        for(map in children) {
+            assertEquals(
+                setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
+                map.keys
+            )
+            assertEquals(
+                setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
+                map.childrenKeys
+            )
+        }
     }
 }

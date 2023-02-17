@@ -14,11 +14,16 @@ internal class MutableAttributeMapWithPrefix(
 
     private fun valueKey(key: String): String = commonPrefix + key
 
-    override fun childrenKey(key: String): String =
-        commonPrefix + AttributeMap.SEPARATOR + STRING_MARKER + key + AttributeMap.SEPARATOR
+    override fun childrenKey(key: String): Pair<String, String> {
+        require(AttributeMap.SEPARATOR_CHAR !in key)
+        val prefix = commonPrefix + AttributeMap.SEPARATOR + STRING_MARKER + key
+        return prefix + AttributeMap.SEPARATOR to prefix + AttributeMap.AFTER_SEPARATOR_CHAR
+    }
 
-    override fun childrenKey(key: Int): String =
-        commonPrefix + AttributeMap.SEPARATOR + INT_MARKER + key + AttributeMap.SEPARATOR
+    override fun childrenKey(key: Int): Pair<String, String> {
+        val prefix = commonPrefix + AttributeMap.SEPARATOR + INT_MARKER + key
+        return prefix + AttributeMap.SEPARATOR to prefix + AttributeMap.AFTER_SEPARATOR_CHAR
+    }
 
     private fun strip(key: String): String {
         assert(key.length >= commonPrefix.length)
@@ -26,47 +31,58 @@ internal class MutableAttributeMapWithPrefix(
         return key.substring(commonPrefix.length)
     }
 
+    private inline fun unsafeSet(key: String, value: Any?) {
+        require(AttributeMap.SEPARATOR_CHAR !in key)
+        flat[valueKey(key)] = value
+    }
+
     private operator fun set(key: String, value: Any?) {
         require(value.isAllowedAttributeValue())
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun set(key: String, value: String?) {
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun set(key: String, value: Long) {
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun set(key: String, value: Double) {
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun set(key: String, value: Instant) {
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun set(key: String, value: UUID) {
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun set(key: String, value: Boolean) {
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun set(key: String, value: Tag) {
-        flat[valueKey(key)] = value
+        unsafeSet(key, value)
     }
 
     override operator fun get(key: String): Any? = flat.getValue(valueKey(key))
 
     override fun getOrNull(key: String?): Any? = if (key !== null) flat[valueKey(key)] else null
     override val childrenKeys: Set<Any>
-        get() = childrenKeys(commonPrefix + AttributeMap.SEPARATOR)
+        get() = childrenKeys(commonPrefix)
 
     override val top: MutableMap<String, Any?>
-        get() = flat.subMap(commonPrefix, commonPrefix + AttributeMap.SEPARATOR)
+
+    init {
+        val leftEnd = commonPrefix + AttributeMap.SEPARATOR_CHAR
+        val rightStart = commonPrefix + AttributeMap.AFTER_SEPARATOR_CHAR
+        val rightEnd = commonPrefix.substring(0, commonPrefix.length - 1) + AttributeMap.AFTER_SEPARATOR_CHAR
+        top = SplitMutableMap(flat.subMap(commonPrefix, leftEnd), flat.subMap(rightStart, rightEnd), rightStart)
+    }
 
     private class RewritingIterator<T>(val baseIterator: Iterator<T>, val from: (T) -> T) :
         Iterator<T> by baseIterator {

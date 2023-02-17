@@ -9,9 +9,13 @@ class Tag internal constructor()
 interface AttributeMap : Map<String, Any?> {
 
     companion object {
-        //this is not a valid unicode character hence it should not occur in an attribute name. Neither is '\ufffe'
-        private const val SEPARATOR_CHAR = '\uffff'
+        /**
+         * Unit separator https://en.wikipedia.org/wiki/C0_and_C1_control_codes#Field_separators
+         */
+        const val SEPARATOR_CHAR = '\u001f'
         const val SEPARATOR = SEPARATOR_CHAR.toString()
+        const val AFTER_SEPARATOR_CHAR = (SEPARATOR_CHAR + 1).toString()
+
         const val INT_MARKER = 'i'
         const val STRING_MARKER = 's'
         val LIST_TAG = Tag()
