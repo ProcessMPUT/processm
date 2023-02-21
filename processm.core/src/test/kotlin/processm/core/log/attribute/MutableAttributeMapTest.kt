@@ -1,6 +1,8 @@
 package processm.core.log.attribute
 
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR_CHAR
+import processm.core.log.attribute.AttributeMap.Companion.BEFORE_STRING
 import kotlin.test.*
 
 class MutableAttributeMapTest {
@@ -314,13 +316,15 @@ class MutableAttributeMapTest {
         val BEFORE = SEPARATOR_CHAR - 1
         val AFTER = SEPARATOR_CHAR + 1
         val top = MutableAttributeMap()
-        val children = listOf(top.children("$BEFORE"),
+        val children = listOf(
+            top.children("$BEFORE"),
             top.children("$BEFORE$BEFORE"),
             top.children("$BEFORE$AFTER"),
             top.children("$AFTER"),
             top.children("$AFTER$BEFORE"),
-            top.children("$AFTER$AFTER"))
-        for(map in children) {
+            top.children("$AFTER$AFTER")
+        )
+        for (map in children) {
             map["$BEFORE"] = 1
             map["$BEFORE$BEFORE"] = 2
             map["$BEFORE$AFTER"] = 5
@@ -328,14 +332,14 @@ class MutableAttributeMapTest {
             map["$AFTER$BEFORE"] = 7
             map["$AFTER$AFTER"] = 8
         }
-        for(map in children) {
+        for (map in children) {
             assertEquals(
                 setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
                 map.keys
             )
             assertEquals(0, map.childrenKeys.size)
         }
-        for(map in children) {
+        for (map in children) {
             map.children("$BEFORE")["a"] = 1
             map.children("$BEFORE$BEFORE")["a"] = 1
             map.children("$BEFORE$AFTER")["a"] = 1
@@ -343,7 +347,7 @@ class MutableAttributeMapTest {
             map.children("$AFTER$BEFORE")["a"] = 1
             map.children("$AFTER$AFTER")["a"] = 1
         }
-        for(map in children) {
+        for (map in children) {
             assertEquals(
                 setOf("$BEFORE", "$BEFORE$BEFORE", "$BEFORE$AFTER", "$AFTER", "$AFTER$BEFORE", "$AFTER$AFTER"),
                 map.keys
@@ -353,5 +357,26 @@ class MutableAttributeMapTest {
                 map.childrenKeys
             )
         }
+    }
+
+    fun equalRopes(rope1: SemiRope, rope2: SemiRope): Boolean =
+        (rope1.right == rope2.right) &&
+                ((rope1.left is String && rope2.left is String && rope1.left == rope2.left) ||
+                        (rope1.left is SemiRope && rope2.left is SemiRope && equalRopes(
+                            rope1.left as SemiRope,
+                            rope2.left as SemiRope
+                        )))
+
+    @Test
+    fun `putFlat recovers structure`() {
+        val map2 = MutableAttributeMap()
+        map2.children("a").children("b")["c"] = "d"
+        val map1 = MutableAttributeMap()
+        map1.putFlat("${BEFORE_STRING}a${SEPARATOR}${BEFORE_STRING}b${SEPARATOR}c", "d")
+        val rope1 = map1.flatView.keys.single()
+        val rope2 = map2.flatView.keys.single()
+        assertIs<SemiRope>(rope1)
+        assertIs<SemiRope>(rope2)
+        assertTrue(equalRopes(rope1, rope2))
     }
 }

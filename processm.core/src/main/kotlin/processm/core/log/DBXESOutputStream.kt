@@ -355,9 +355,9 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         extraColumns: Map<String, String> = emptyMap()
     ): LazyCopy = copyForAttributes(destinationTable, rootTempTable, extraColumns, ::LazyCopy)
 
-    private fun Copy.addAttribute(attribute: Map.Entry<String, Any?>) {
+    private fun Copy.addAttribute(attribute: Map.Entry<CharSequence, Any?>) {
         add(attribute.value.xesTag)
-        add(attribute.key)
+        add(attribute.key.toString())
         add(attribute.value as? String)
         add(attribute.value as? UUID)
         add(attribute.value as? Instant)
@@ -374,7 +374,7 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         if (attributes.isEmpty())
             return
         with(to) {
-            for (attribute in attributes.flat) {
+            for (attribute in attributes.flatView) {
                 addAttribute(attribute)
                 flushRow(rootIndex)
             }
@@ -385,7 +385,7 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         if (attributes.isEmpty())
             return
         with(to) {
-            for (attribute in attributes.flat) {
+            for (attribute in attributes.flatView) {
                 addAttribute(attribute)
                 flushRow()
             }

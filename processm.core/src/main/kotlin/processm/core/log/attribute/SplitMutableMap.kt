@@ -80,34 +80,37 @@ private class SplitMutableSet<T>(override val left: MutableSet<T>, override val 
 /**
  * A map backed by two maps. All keys below [lastLeftKeyExclusive] are stored in [left], and the remainder is stored in [right]
  */
-internal class SplitMutableMap<K : Comparable<K>, V>(
+internal class SplitMutableMap<K, V>(
     val left: SortedMap<K, V>,
     val right: SortedMap<K, V>,
-    private val lastLeftKeyExclusive: K
+    private val lastLeftKeyExclusive: K,
+    private val comparator: Comparator<K>
 ) : MutableMap<K, V> {
 
+
     init {
-        require(left.isEmpty() || left.lastKey() < lastLeftKeyExclusive)
-        require(right.isEmpty() || lastLeftKeyExclusive <= right.firstKey())
+        require(left.isEmpty() || comparator.compare(left.lastKey(), lastLeftKeyExclusive) < 0)
+        require(right.isEmpty() || comparator.compare(lastLeftKeyExclusive, right.firstKey()) <= 0)
     }
 
     override fun containsKey(key: K): Boolean = left.containsKey(key) || right.containsKey(key)
 
     override fun containsValue(value: V): Boolean = left.containsValue(value) || right.containsValue(value)
 
-    override fun get(key: K): V? = if (key < lastLeftKeyExclusive) left[key] else right[key]
+    override fun get(key: K): V? = if (comparator.compare(key, lastLeftKeyExclusive) < 0) left[key] else right[key]
 
     override fun clear() {
         left.clear()
         right.clear()
     }
 
-    override fun remove(key: K): V? = if (key < lastLeftKeyExclusive) left.remove(key) else right.remove(key)
+    override fun remove(key: K): V? =
+        if (comparator.compare(key, lastLeftKeyExclusive) < 0) left.remove(key) else right.remove(key)
 
     override fun putAll(from: Map<out K, V>) = from.forEach(::put)
 
     override fun put(key: K, value: V): V? =
-        if (key < lastLeftKeyExclusive) left.put(key, value) else right.put(key, value)
+        if (comparator.compare(key, lastLeftKeyExclusive) < 0) left.put(key, value) else right.put(key, value)
 
     override fun isEmpty(): Boolean = left.isEmpty() && right.isEmpty()
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>>

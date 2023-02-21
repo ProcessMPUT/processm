@@ -114,7 +114,7 @@ fun Any?.deepEquals(other: Any?): Boolean {
         return this == other
     }
     if (this is AttributeMap) {
-        return other is AttributeMap && this.flat == other.flat && this.flat.entries.all { (k, v) -> v.deepEquals(other[k]) }
+        return other is AttributeMap && this.flatView == other.flatView && this.flatView.entries.all { (k, v) -> v.deepEquals(other[k]) }
     }
     return false
 }

@@ -1,42 +1,44 @@
 package processm.core.log.attribute
 
+import processm.core.log.attribute.AttributeMap.Companion.BEFORE_INT
+import processm.core.log.attribute.AttributeMap.Companion.BEFORE_STRING
 import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
 import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.log.isAllowedAttributeValue
+import java.lang.ref.SoftReference
 import java.time.Instant
 import java.util.*
 
 
 internal class MutableAttributeMapWithPrefix(
-    flat: SortedMap<String, Any?>,
-    private val commonPrefix: String
-) : MutableAttributeMap(flat) {
+    flat: SortedMap<CharSequence, Any?>,
+    private val commonPrefix: CharSequence,
+    intern: (String) -> String
+) : MutableAttributeMap(flat, intern = intern) {
+    private fun valueKey(key: String): CharSequence = SemiRope(commonPrefix, key)
 
-    private fun valueKey(key: String): String = commonPrefix + key
-
-    override fun childrenKey(key: String): Pair<String, String> {
-        require(AttributeMap.SEPARATOR_CHAR !in key)
-        val prefix = commonPrefix + AttributeMap.SEPARATOR + STRING_MARKER + key
-        return prefix + AttributeMap.SEPARATOR to prefix + AttributeMap.AFTER_SEPARATOR_CHAR
+    override val stringPrefix: CharSequence by lazy(LazyThreadSafetyMode.NONE) {
+        SemiRope(commonPrefix, BEFORE_STRING)
     }
 
-    override fun childrenKey(key: Int): Pair<String, String> {
-        val prefix = commonPrefix + AttributeMap.SEPARATOR + INT_MARKER + key
-        return prefix + AttributeMap.SEPARATOR to prefix + AttributeMap.AFTER_SEPARATOR_CHAR
+    override val intPrefix: CharSequence by lazy(LazyThreadSafetyMode.NONE) {
+        SemiRope(commonPrefix, BEFORE_INT)
     }
 
-    private fun strip(key: String): String {
-        assert(key.length >= commonPrefix.length)
-        assert(key.substring(0, commonPrefix.length) == commonPrefix)
-        return key.substring(commonPrefix.length)
+    private fun strip(key: CharSequence): String {
+        require(key is SemiRope)
+        return key.right
     }
 
     private inline fun unsafeSet(key: String, value: Any?) {
         require(AttributeMap.SEPARATOR_CHAR !in key)
-        flat[valueKey(key)] = value
+        flat[valueKey(intern(key))] = value
     }
 
-    private operator fun set(key: String, value: Any?) {
+    /**
+    Since unsafeSet is private inline, this is not the same as [MutableAttributeMap.safeSet] even though it looks the same
+     */
+    override fun safeSet(key: String, value: Any?) {
         require(value.isAllowedAttributeValue())
         unsafeSet(key, value)
     }
@@ -75,46 +77,57 @@ internal class MutableAttributeMapWithPrefix(
     override val childrenKeys: Set<Any>
         get() = childrenKeys(commonPrefix)
 
-    override val top: MutableMap<String, Any?>
-
-    init {
+    override val top: MutableMap<CharSequence, Any?> by lazy(LazyThreadSafetyMode.NONE) {
+        //TODO or SemiRope?
+        val commonPrefix = this.commonPrefix.toString()
         val leftEnd = commonPrefix + AttributeMap.SEPARATOR_CHAR
         val rightStart = commonPrefix + AttributeMap.AFTER_SEPARATOR_CHAR
         val rightEnd = commonPrefix.substring(0, commonPrefix.length - 1) + AttributeMap.AFTER_SEPARATOR_CHAR
-        top = SplitMutableMap(flat.subMap(commonPrefix, leftEnd), flat.subMap(rightStart, rightEnd), rightStart)
+        SplitMutableMap(
+            flat.subMap(commonPrefix, leftEnd),
+            flat.subMap(rightStart, rightEnd),
+            rightStart,
+            comparator
+        )
     }
 
-    private class RewritingIterator<T>(val baseIterator: Iterator<T>, val from: (T) -> T) :
-        Iterator<T> by baseIterator {
-        override fun next(): T = from(baseIterator.next())
+    private class RewritingIterator<T1, T2>(val baseIterator: Iterator<T2>, val from: (T2) -> T1) :
+        Iterator<T1> {
+        override fun hasNext(): Boolean = baseIterator.hasNext()
+
+        override fun next(): T1 = from(baseIterator.next())
     }
 
-    private class RewritingSet<E>(val base: Set<E>, val from: (E) -> E, val to: (E) -> E) :
-        Set<E> {
+    private class RewritingSet<E1, E2>(val base: Set<E2>, val from: (E2) -> E1, val to: (E1) -> E2) :
+        Set<E1> {
 
         override val size: Int
             get() = base.size
 
         override fun isEmpty(): Boolean = base.isEmpty()
 
-        override fun containsAll(elements: Collection<E>): Boolean = base.containsAll(elements.map(to))
+        override fun containsAll(elements: Collection<E1>): Boolean = base.containsAll(elements.map(to))
 
-        override fun contains(element: E): Boolean = base.contains(to(element))
+        override fun contains(element: E1): Boolean = base.contains(to(element))
 
-        override fun iterator(): Iterator<E> = RewritingIterator(base.iterator(), from)
+        override fun iterator(): Iterator<E1> = RewritingIterator(base.iterator(), from)
 
     }
 
-    private class RewritingEntry<V>(val base: MutableMap.MutableEntry<String, V>, val from: (String) -> String) :
-        MutableMap.MutableEntry<String, V> by base {
-        override val key: String
+    private class RewritingEntry<E1, E2, V>(val base: MutableMap.MutableEntry<E1, V>, val from: (E1) -> E2) :
+        MutableMap.MutableEntry<E2, V> {
+        override val key: E2
             get() = from(base.key)
+        override val value: V
+            get() = base.value
+
+        override fun setValue(newValue: V): V = base.setValue(newValue)
     }
 
     override val entries: Set<Map.Entry<String, Any?>>
         get() = RewritingSet(top.entries, { RewritingEntry(it, ::strip) }, { (it as RewritingEntry).base })
     override val keys: Set<String>
-        get() = RewritingSet(top.keys, ::strip) { commonPrefix + it }
+        get() = RewritingSet(top.keys, ::strip) { SemiRope(commonPrefix, it) }
 
     override fun containsKey(key: String): Boolean = top.containsKey(valueKey(key))
 

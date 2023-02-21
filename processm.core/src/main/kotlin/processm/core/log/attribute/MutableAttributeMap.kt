@@ -1,7 +1,9 @@
 package processm.core.log.attribute
 
 import processm.core.helpers.mapToSet
-import processm.core.log.attribute.AttributeMap.Companion.AFTER_SEPARATOR_CHAR
+import processm.core.log.attribute.AttributeMap.Companion.AFTER_SEPARATOR
+import processm.core.log.attribute.AttributeMap.Companion.BEFORE_INT
+import processm.core.log.attribute.AttributeMap.Companion.BEFORE_STRING
 import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR_CHAR
@@ -9,40 +11,68 @@ import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.log.isAllowedAttributeValue
 import java.time.Instant
 import java.util.*
+import kotlin.Comparator
 
 /**
  * Attention! [get] throws if the key is not in the map instead of returning `null`.
- * Similarily, [computeIfAbsent] assigns `null` instead of ignoring it
+ * Similarly, [computeIfAbsent] assigns `null` instead of ignoring it
+ *
+ * @param intern A possible replacement for [String.intern], e.g., a more efficient implementation, or an idempotent function to disable interning
  */
 open class MutableAttributeMap(
-    override val flat: SortedMap<String, Any?> = TreeMap()
+    protected val flat: SortedMap<CharSequence, Any?> = TreeMap(comparator),
+    val intern: (String) -> String = String::intern
 ) : AttributeMap {
 
+    companion object {
+        val comparator = Comparator<CharSequence> { a, b ->
+            if (a is SemiRope) a.compareTo(b)
+            else if (b is SemiRope) -b.compareTo(a)
+            else {
+                check(a is String)
+                check(b is String)
+                a.compareTo(b)
+            }
+        }
+    }
+
+    protected open val stringPrefix: CharSequence
+        get() = BEFORE_STRING
+
+    protected open val intPrefix: CharSequence
+        get() = BEFORE_INT
+
     constructor(map: AttributeMap) : this() {
-        map.deepCopyTo(this)
+        flat.putAll(map.flatView)
     }
 
     constructor(map: Map<String, *>) : this() {
-        map.entries.forEach { this[it.key] = it.value }
+        map.entries.forEach { safeSet(it.key, it.value) }
     }
 
-    protected open fun childrenKey(key: String): Pair<String, String> {
+    private val children = HashMap<Any, Pair<CharSequence, CharSequence>>()
+
+    protected open fun childrenRange(key: String): Pair<CharSequence, CharSequence> {
         require(SEPARATOR_CHAR !in key)
-        val prefix = SEPARATOR + STRING_MARKER + key
-        return prefix + SEPARATOR to prefix + AFTER_SEPARATOR_CHAR
+        return children.computeIfAbsent(key) {
+            val prefix = SemiRope(stringPrefix, key)
+            SemiRope(prefix, SEPARATOR) to SemiRope(prefix, AFTER_SEPARATOR)
+        }
     }
 
-    protected open fun childrenKey(key: Int): Pair<String, String> {
-        val prefix = SEPARATOR + INT_MARKER + key
-        return prefix + SEPARATOR to prefix + AFTER_SEPARATOR_CHAR
+    protected open fun childrenRange(key: Int): Pair<CharSequence, CharSequence> {
+        return children.computeIfAbsent(key) {
+            val prefix = SemiRope(intPrefix, key.toString())
+            SemiRope(prefix, SEPARATOR) to SemiRope(prefix, AFTER_SEPARATOR)
+        }
     }
 
     private inline fun unsafeSet(key: String, value: Any?) {
         require(SEPARATOR_CHAR !in key)
-        flat[key] = value
+        flat[intern(key)] = value
     }
 
-    private operator fun set(key: String, value: Any?) {
+    protected open fun safeSet(key: String, value: Any?) {
         require(value.isAllowedAttributeValue())
         unsafeSet(key, value)
     }
@@ -76,12 +106,14 @@ open class MutableAttributeMap(
     }
 
     override operator fun get(key: String): Any? = flat.getValue(key)
+    override val flatView: Map<CharSequence, Any?>
+        get() = Collections.unmodifiableMap(flat)
 
     override fun getOrNull(key: String?): Any? = if (key !== null) flat[key] else null
 
-    protected fun childrenKeys(prefix: String): Set<Any> {
+    protected fun childrenKeys(prefix: CharSequence): Set<Any> {
         val prefixWithSeparatorLength = prefix.length + 1
-        return flat.subMap(prefix + SEPARATOR_CHAR, prefix + AFTER_SEPARATOR_CHAR).keys.mapToSet {
+        return flat.subMap(SemiRope(prefix, SEPARATOR), SemiRope(prefix, AFTER_SEPARATOR)).keys.mapToSet {
             val end = it.indexOf(SEPARATOR_CHAR, prefixWithSeparatorLength)
             val s = it.substring(prefixWithSeparatorLength, end)
             if (s[0] == STRING_MARKER)
@@ -97,25 +129,25 @@ open class MutableAttributeMap(
         get() = childrenKeys("")
 
     override fun children(key: String): MutableAttributeMap {
-        val (s, e) = childrenKey(key)
-        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s)
+        val (s, e) = childrenRange(intern(key))
+        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s, intern)
     }
 
     override fun children(key: Int): MutableAttributeMap {
-        val (s, e) = childrenKey(key)
-        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s)
+        val (s, e) = childrenRange(key)
+        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s, intern)
     }
 
-    protected open val top: MutableMap<String, Any?> by lazy(LazyThreadSafetyMode.NONE) {
+    protected open val top: MutableMap<CharSequence, Any?> by lazy(LazyThreadSafetyMode.NONE) {
         // lazy initialization because taking head/tail map of an empty map doesn't seem to work
-        SplitMutableMap(flat.headMap(SEPARATOR), flat.tailMap(AFTER_SEPARATOR_CHAR), SEPARATOR)
+        SplitMutableMap(flat.headMap(SEPARATOR), flat.tailMap(AFTER_SEPARATOR), SEPARATOR, comparator)
     }
 
     override val entries: Set<Map.Entry<String, Any?>>
-        get() = top.entries
+        get() = top.entries as Set<Map.Entry<String, Any?>>
 
     override val keys: Set<String>
-        get() = top.keys
+        get() = top.keys as Set<String>
 
     override val size: Int
         get() = top.size
@@ -131,7 +163,7 @@ open class MutableAttributeMap(
     fun computeIfAbsent(key: String, ctor: (key: String) -> Any?): Any? =
         if (!containsKey(key)) {
             val value = ctor(key)
-            set(key, value)
+            safeSet(key, value)
             value
         } else
             get(key)
@@ -145,13 +177,23 @@ open class MutableAttributeMap(
         }
         return false
     }
+
+    fun putFlat(key: String, value: Any) {
+        require(value.isAllowedAttributeValue())
+        var target = this
+        var start = 0
+        while (key[start] == SEPARATOR_CHAR) {
+            val end = key.indexOf(SEPARATOR_CHAR, startIndex = start + 1)
+            val childKey = key.substring(start + 2, end)
+            target =
+                if (key[start + 1] == STRING_MARKER) target.children(childKey) else target.children(childKey.toInt())
+            start = end + 1
+        }
+        target.safeSet(key.substring(start), value)
+    }
 }
 
 fun AttributeMap.toMutableAttributeMap() = MutableAttributeMap(this)
-
-fun AttributeMap.deepCopyTo(destination: MutableAttributeMap) {
-    destination.flat.putAll(flat)
-}
 
 fun attributeMapOf(vararg pairs: Pair<String, Any?>): AttributeMap = mutableAttributeMapOf(*pairs)
 fun mutableAttributeMapOf(vararg pairs: Pair<String, Any?>): MutableAttributeMap =

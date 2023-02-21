@@ -29,7 +29,6 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
     private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
     private var lastSeenElement: String? = null
 
-    private val intern = HashMap<String, String>()
 
     /**
      * Maps standard names of attributes into custom names in the XES document being read.
@@ -56,53 +55,60 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }.iterator()
 
-    private fun parseLog(reader: XMLStreamReader) = Log().also {
-        it.xesVersion = reader.getAttributeValue(null, "xes.version")
-        it.xesFeatures = reader.getAttributeValue(null, "xes.features")
+    private fun parseLog(reader: XMLStreamReader):Log {
+        val intern = HashMap<String,String>()
+        return Log(
+            attributesInternal = MutableAttributeMap { key -> intern.computeIfAbsent(key) { it } },
+            traceGlobalsInternal = MutableAttributeMap { key -> intern.computeIfAbsent(key) { it } },
+            eventGlobalsInternal = MutableAttributeMap { key -> intern.computeIfAbsent(key) { it } },
+        ).also {
+            it.xesVersion = reader.getAttributeValue(null, "xes.version")
+            it.xesFeatures = reader.getAttributeValue(null, "xes.features")
 
-        // Read until have next and do not find 'trace' or 'event' element
-        while (reader.hasNext()) {
-            reader.next()
+            // Read until have next and do not find 'trace' or 'event' element
+            while (reader.hasNext()) {
+                reader.next()
 
-            if (reader.isStartElement) {
-                if (reader.localName in exitTags) {
-                    lastSeenElement = reader.localName
-                    break
-                }
-
-                when (reader.localName) {
-                    "extension" ->
-                        addExtensionToLogElement(it, reader)
-
-                    "classifier" ->
-                        addClassifierToLogElement(it, reader)
-
-                    "global" -> {
-                        // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
-                        // Scope is optional, default 'event'
-
-                        val map =
-                            when (val scope = reader.getAttributeValue(null, "scope") ?: "event") {
-                                "trace" -> it.traceGlobalsInternal
-                                "event" -> it.eventGlobalsInternal
-                                else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
-                            }
-
-                        addGlobalAttributes(map, reader)
+                if (reader.isStartElement) {
+                    if (reader.localName in exitTags) {
+                        lastSeenElement = reader.localName
+                        break
                     }
 
-                    in attributeTags -> {
-                        parseAttributeTags(reader, reader.localName, it.attributesInternal)
-                    }
+                    when (reader.localName) {
+                        "extension" ->
+                            addExtensionToLogElement(it, reader)
 
-                    else -> {
-                        throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                        "classifier" ->
+                            addClassifierToLogElement(it, reader)
+
+                        "global" -> {
+                            // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
+                            // Scope is optional, default 'event'
+
+                            val map =
+                                when (val scope = reader.getAttributeValue(null, "scope") ?: "event") {
+                                    "trace" -> it.traceGlobalsInternal
+                                    "event" -> it.eventGlobalsInternal
+                                    else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                                }
+
+                            addGlobalAttributes(map, reader)
+                        }
+
+                        in attributeTags -> {
+                            parseAttributeTags(reader, reader.localName, it.attributesInternal)
+                        }
+
+                        else -> {
+                            throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                        }
                     }
                 }
             }
-        }
 
-        it.setStandardAttributes(nameMap)
+            it.setStandardAttributes(nameMap)
+        }
     }
 
     private fun parseTrace(reader: XMLStreamReader) = Trace().also {
@@ -223,6 +229,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                     in attributeTags -> {
                         parseAttributeTags(reader, reader.localName, xesComponent.attributesInternal)
                     }
+
                     else -> {
                         throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
@@ -240,15 +247,14 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         value: String,
         storage: MutableAttributeMap
     ) {
-        val internedKey = intern.computeIfAbsent(key) { it }
         when (type) {
-            "string" -> storage[internedKey] = value
-            "float" -> storage[internedKey] = numberFormatter.parse(value).toDouble()
-            "id" -> storage[internedKey] = requireNotNull(value.toUUID())
-            "int" -> storage[internedKey] = value.toLong()
-            "date" -> storage[internedKey] = value.fastParseISO8601()
-            "boolean" -> storage[internedKey] = value.toBoolean()
-            "list" -> storage[internedKey] = LIST_TAG
+            "string" -> storage[key] = value
+            "float" -> storage[key] = numberFormatter.parse(value).toDouble()
+            "id" -> storage[key] = requireNotNull(value.toUUID())
+            "int" -> storage[key] = value.toLong()
+            "date" -> storage[key] = value.fastParseISO8601()
+            "boolean" -> storage[key] = value.toBoolean()
+            "list" -> storage[key] = LIST_TAG
 
             else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
         }
