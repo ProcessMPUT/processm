@@ -1,5 +1,6 @@
 package processm.core.log
 
+import processm.core.helpers.HashMapIntern
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.fastParseISO8601
 import processm.core.helpers.toUUID
@@ -39,6 +40,8 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         val xmlInputFactory: XMLInputFactory = XMLInputFactory.newDefaultFactory()
         val reader = xmlInputFactory.createXMLStreamReader(input)
 
+        val intern = HashMapIntern()
+
         while (reader.hasNext()) {
             if (!reader.isStartElement || lastSeenElement == null)
                 reader.next()
@@ -46,8 +49,8 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             if (reader.isStartElement) {
                 val xesElement = when (reader.localName) {
                     "log" -> parseLog(reader)
-                    "trace" -> parseTrace(reader)
-                    "event" -> parseEvent(reader)
+                    "trace" -> parseTrace(reader, intern = intern::invoke)
+                    "event" -> parseEvent(reader, intern = intern::invoke)
                     else -> throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                 }
                 yield(xesElement)
@@ -55,12 +58,12 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }.iterator()
 
-    private fun parseLog(reader: XMLStreamReader):Log {
-        val intern = HashMap<String,String>()
+    private fun parseLog(reader: XMLStreamReader): Log {
+        val intern = HashMapIntern()
         return Log(
-            attributesInternal = MutableAttributeMap { key -> intern.computeIfAbsent(key) { it } },
-            traceGlobalsInternal = MutableAttributeMap { key -> intern.computeIfAbsent(key) { it } },
-            eventGlobalsInternal = MutableAttributeMap { key -> intern.computeIfAbsent(key) { it } },
+            attributesInternal = MutableAttributeMap(intern = intern::invoke),
+            traceGlobalsInternal = MutableAttributeMap(intern = intern::invoke),
+            eventGlobalsInternal = MutableAttributeMap(intern = intern::invoke),
         ).also {
             it.xesVersion = reader.getAttributeValue(null, "xes.version")
             it.xesFeatures = reader.getAttributeValue(null, "xes.features")
@@ -111,17 +114,19 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun parseTrace(reader: XMLStreamReader) = Trace().also {
-        lastSeenElement = null
-        parseTraceOrEventTag(reader, it)
-        it.setStandardAttributes(nameMap)
-    }
+    private fun parseTrace(reader: XMLStreamReader, intern: (String) -> String) =
+        Trace(attributesInternal = MutableAttributeMap(intern = intern)).also {
+            lastSeenElement = null
+            parseTraceOrEventTag(reader, it)
+            it.setStandardAttributes(nameMap)
+        }
 
-    private fun parseEvent(reader: XMLStreamReader) = Event().also {
-        lastSeenElement = null
-        parseTraceOrEventTag(reader, it)
-        it.setStandardAttributes(nameMap)
-    }
+    private fun parseEvent(reader: XMLStreamReader, intern: (String) -> String) =
+        Event(attributesInternal = MutableAttributeMap(intern = intern)).also {
+            lastSeenElement = null
+            parseTraceOrEventTag(reader, it)
+            it.setStandardAttributes(nameMap)
+        }
 
     private fun addExtensionToLogElement(log: Log, reader: XMLStreamReader) {
         val prefix = reader.getAttributeValue(null, "prefix")

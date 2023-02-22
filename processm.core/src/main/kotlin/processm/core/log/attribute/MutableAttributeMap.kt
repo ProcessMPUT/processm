@@ -42,12 +42,8 @@ open class MutableAttributeMap(
     protected open val intPrefix: CharSequence
         get() = BEFORE_INT
 
-    constructor(map: AttributeMap) : this() {
+    constructor(map: AttributeMap) : this(intern = if (map is MutableAttributeMap) map.intern else String::intern) {
         flat.putAll(map.flatView)
-    }
-
-    constructor(map: Map<String, *>) : this() {
-        map.entries.forEach { safeSet(it.key, it.value) }
     }
 
     private val children = HashMap<Any, Pair<CharSequence, CharSequence>>()

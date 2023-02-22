@@ -161,14 +161,6 @@ class MutableAttributeMapTest {
     }
 
     @Test
-    fun `secondary constructor and equals with a map of other type`() {
-        val base = mapOf<String, Any?>("a" to 1L, "b" to 2L)
-        val map = MutableAttributeMap(base)
-        assertEquals(base, map)
-        assertEquals(map, base)
-    }
-
-    @Test
     fun `empty key`() {
         val map = MutableAttributeMap()
         map[""] = 1L
