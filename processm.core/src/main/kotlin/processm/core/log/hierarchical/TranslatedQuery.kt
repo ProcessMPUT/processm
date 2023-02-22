@@ -1074,7 +1074,7 @@ internal class TranslatedQuery(
             abstract var events: List<Any>?
         }
 
-        inner class RegularTraceEntry(parent: LogEntry, val logId: Int, val traceId: Long) : TraceEntry(parent) {
+        inner class RegularTraceEntry(parent: LogEntry, logId: Int, traceId: Long) : TraceEntry(parent) {
             init {
                 assert(!pql.isImplicitGroupBy[Scope.Log]!!)
                 assert(!pql.isImplicitGroupBy[Scope.Trace]!!)
@@ -1089,34 +1089,24 @@ internal class TranslatedQuery(
                     if (field === null) {
                         // Initialize all sibling RegularTraceEntries together
 
-                        val query = SQLQuery { sql ->
-                            with(sql.query) {
-                                append("SELECT id FROM events e WHERE e.trace_id=x.trace_id")
-                                pql.orderByExpressions[Scope.Event]!!.toSQL(sql, logId, "1", true, true)
-                                pql.offset[Scope.Event]?.toInt()?.let { append(" OFFSET $it") }
-                                pql.limit[Scope.Event]?.toInt()?.let { append(" LIMIT $it") }
-                                append(") FROM events x WHERE trace_id = ANY(?)")
-                                insert(0, "SELECT DISTINCT trace_id, ARRAY(")
-                            }
-                            sql.params.add(parent.traces!!.values.mapToArray { (it as RegularTraceEntry).traceId })
-                        }
-                        val intermediate = HashMap<Long, List<Long>>()
+                        val queries = parent.traces!!.values.map { it.queryIds }
                         connection.use {
-                            query.execute(it).use { rs ->
-                                while (rs.next()) {
-                                    intermediate[rs.getLong(1)] =  (rs.getArray(2).array as Array<Long>).toList()
-                                }
+                            val events = ArrayList<ArrayList<Long>>()
+                            queries.executeMultipleTimes(it) { index, result ->
+                                assert(index == events.size)
+                                events.add(result.toIdList { it.getLong(1) })
+                                true
                             }
-                        }
-                        parent.traces!!.values.forEach {
-                            it.events = intermediate[(it as RegularTraceEntry).traceId].orEmpty()
+                            for ((index, trace) in parent.traces!!.values.withIndex()) {
+                                trace.events = events[index]
+                            }
                         }
                         assert(field !== null)
                     }
                     return field
                 }
 
-            override val queryIds: SQLQuery by lazy(NONE) { throw UnsupportedOperationException("RegularTraceEntry does not expose queryIds") }
+            override val queryIds: SQLQuery by lazy(NONE) { idQuery(Scope.Event, logId, traceId) }
             override val queryEntity: SQLQuery get() = cache.entityQueryEvent
             override val queryAttributes: SQLQuery by lazy(NONE) { attributesQuery(Scope.Event, logId) }
             override val queryExpressions: SQLQuery get() = cache.expressionsQueryEvent
