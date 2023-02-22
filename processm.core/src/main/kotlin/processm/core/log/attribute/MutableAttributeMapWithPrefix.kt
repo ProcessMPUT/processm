@@ -9,9 +9,8 @@ import java.util.*
 
 internal class MutableAttributeMapWithPrefix(
     flat: SortedMap<String, Any?>,
-    private val commonPrefix: String,
-    intern: (String) -> String
-) : MutableAttributeMap(flat, intern = intern) {
+    private val commonPrefix: String
+) : MutableAttributeMap(flat) {
     private fun valueKey(key: String): String = commonPrefix + key
 
     override val stringPrefix: String by lazy(LazyThreadSafetyMode.NONE) {
@@ -28,7 +27,7 @@ internal class MutableAttributeMapWithPrefix(
 
     private inline fun unsafeSet(key: String, value: Any?) {
         require(AttributeMap.SEPARATOR_CHAR !in key)
-        flat[valueKey(intern(key))] = value
+        flat[valueKey(key)] = value
     }
 
     /**

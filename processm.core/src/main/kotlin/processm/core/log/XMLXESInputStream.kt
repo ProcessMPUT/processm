@@ -1,6 +1,5 @@
 package processm.core.log
 
-import processm.core.helpers.HashMapIntern
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.fastParseISO8601
 import processm.core.helpers.toUUID
@@ -40,8 +39,6 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         val xmlInputFactory: XMLInputFactory = XMLInputFactory.newDefaultFactory()
         val reader = xmlInputFactory.createXMLStreamReader(input)
 
-        val intern = HashMapIntern()
-
         while (reader.hasNext()) {
             if (!reader.isStartElement || lastSeenElement == null)
                 reader.next()
@@ -49,8 +46,8 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
             if (reader.isStartElement) {
                 val xesElement = when (reader.localName) {
                     "log" -> parseLog(reader)
-                    "trace" -> parseTrace(reader, intern = intern::invoke)
-                    "event" -> parseEvent(reader, intern = intern::invoke)
+                    "trace" -> parseTrace(reader)
+                    "event" -> parseEvent(reader)
                     else -> throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                 }
                 yield(xesElement)
@@ -58,75 +55,66 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }.iterator()
 
-    private fun parseLog(reader: XMLStreamReader): Log {
-        val intern = HashMapIntern()
-        return Log(
-            attributesInternal = MutableAttributeMap(intern = intern::invoke),
-            traceGlobalsInternal = MutableAttributeMap(intern = intern::invoke),
-            eventGlobalsInternal = MutableAttributeMap(intern = intern::invoke),
-        ).also {
-            it.xesVersion = reader.getAttributeValue(null, "xes.version")
-            it.xesFeatures = reader.getAttributeValue(null, "xes.features")
+    private fun parseLog(reader: XMLStreamReader): Log = Log().also {
+        it.xesVersion = reader.getAttributeValue(null, "xes.version")
+        it.xesFeatures = reader.getAttributeValue(null, "xes.features")
 
-            // Read until have next and do not find 'trace' or 'event' element
-            while (reader.hasNext()) {
-                reader.next()
+        // Read until have next and do not find 'trace' or 'event' element
+        while (reader.hasNext()) {
+            reader.next()
 
-                if (reader.isStartElement) {
-                    if (reader.localName in exitTags) {
-                        lastSeenElement = reader.localName
-                        break
+            if (reader.isStartElement) {
+                if (reader.localName in exitTags) {
+                    lastSeenElement = reader.localName
+                    break
+                }
+
+                when (reader.localName) {
+                    "extension" ->
+                        addExtensionToLogElement(it, reader)
+
+                    "classifier" ->
+                        addClassifierToLogElement(it, reader)
+
+                    "global" -> {
+                        // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
+                        // Scope is optional, default 'event'
+
+                        val map =
+                            when (val scope = reader.getAttributeValue(null, "scope") ?: "event") {
+                                "trace" -> it.traceGlobalsInternal
+                                "event" -> it.eventGlobalsInternal
+                                else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
+                            }
+
+                        addGlobalAttributes(map, reader)
                     }
 
-                    when (reader.localName) {
-                        "extension" ->
-                            addExtensionToLogElement(it, reader)
+                    in attributeTags -> {
+                        parseAttributeTags(reader, reader.localName, it.attributesInternal)
+                    }
 
-                        "classifier" ->
-                            addClassifierToLogElement(it, reader)
-
-                        "global" -> {
-                            // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
-                            // Scope is optional, default 'event'
-
-                            val map =
-                                when (val scope = reader.getAttributeValue(null, "scope") ?: "event") {
-                                    "trace" -> it.traceGlobalsInternal
-                                    "event" -> it.eventGlobalsInternal
-                                    else -> throw Exception("Illegal <global> scope. Expected 'trace' or 'event', found $scope in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
-                                }
-
-                            addGlobalAttributes(map, reader)
-                        }
-
-                        in attributeTags -> {
-                            parseAttributeTags(reader, reader.localName, it.attributesInternal)
-                        }
-
-                        else -> {
-                            throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
-                        }
+                    else -> {
+                        throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
                 }
             }
-
-            it.setStandardAttributes(nameMap)
         }
+
+        it.setStandardAttributes(nameMap)
     }
 
-    private fun parseTrace(reader: XMLStreamReader, intern: (String) -> String) =
-        Trace(attributesInternal = MutableAttributeMap(intern = intern)).also {
-            lastSeenElement = null
-            parseTraceOrEventTag(reader, it)
-            it.setStandardAttributes(nameMap)
-        }
+    private fun parseTrace(reader: XMLStreamReader) = Trace().also {
+        lastSeenElement = null
+        parseTraceOrEventTag(reader, it)
+        it.setStandardAttributes(nameMap)
+    }
 
-    private fun parseEvent(reader: XMLStreamReader, intern: (String) -> String) =
-        Event(attributesInternal = MutableAttributeMap(intern = intern)).also {
-            lastSeenElement = null
-            parseTraceOrEventTag(reader, it)
-            it.setStandardAttributes(nameMap)
-        }
+    private fun parseEvent(reader: XMLStreamReader) = Event().also {
+        lastSeenElement = null
+        parseTraceOrEventTag(reader, it)
+        it.setStandardAttributes(nameMap)
+    }
 
     private fun addExtensionToLogElement(log: Log, reader: XMLStreamReader) {
         val prefix = reader.getAttributeValue(null, "prefix")

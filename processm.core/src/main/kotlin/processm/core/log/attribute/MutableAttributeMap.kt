@@ -19,8 +19,7 @@ import java.util.*
  * @param intern A possible replacement for [String.intern], e.g., a more efficient implementation, or an idempotent function to disable interning
  */
 open class MutableAttributeMap(
-    protected val flat: SortedMap<String, Any?> = TreeMap(),
-    val intern: (String) -> String = String::intern
+    protected val flat: SortedMap<String, Any?> = TreeMap()
 ) : AttributeMap {
 
     companion object {
@@ -35,7 +34,7 @@ open class MutableAttributeMap(
     protected open val intPrefix: String
         get() = BEFORE_INT
 
-    constructor(map: AttributeMap) : this(intern = if (map is MutableAttributeMap) map.intern else String::intern) {
+    constructor(map: AttributeMap) : this() {
         flat.putAll(map.flatView)
     }
 
@@ -52,7 +51,7 @@ open class MutableAttributeMap(
 
     private inline fun unsafeSet(key: String, value: Any?) {
         require(SEPARATOR_CHAR !in key)
-        flat[intern(key)] = value
+        flat[key] = value
     }
 
     protected open fun safeSet(key: String, value: Any?) {
@@ -112,13 +111,13 @@ open class MutableAttributeMap(
         get() = childrenKeys("")
 
     override fun children(key: String): MutableAttributeMap {
-        val (s, e) = childrenRange(intern(key))
-        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s, intern)
+        val (s, e) = childrenRange(key)
+        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s)
     }
 
     override fun children(key: Int): MutableAttributeMap {
         val (s, e) = childrenRange(key)
-        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s, intern)
+        return MutableAttributeMapWithPrefix(flat.subMap(s, e), s)
     }
 
     protected open val top: MutableMap<String, Any?> by lazy(LazyThreadSafetyMode.NONE) {
@@ -127,10 +126,10 @@ open class MutableAttributeMap(
     }
 
     override val entries: Set<Map.Entry<String, Any?>>
-        get() = top.entries as Set<Map.Entry<String, Any?>>
+        get() = top.entries
 
     override val keys: Set<String>
-        get() = top.keys as Set<String>
+        get() = top.keys
 
     override val size: Int
         get() = top.size
@@ -163,16 +162,7 @@ open class MutableAttributeMap(
 
     fun putFlat(key: String, value: Any) {
         require(value.isAllowedAttributeValue())
-        var target = this
-        var start = 0
-        while (key[start] == SEPARATOR_CHAR) {
-            val end = key.indexOf(SEPARATOR_CHAR, startIndex = start + 1)
-            val childKey = key.substring(start + 2, end)
-            target =
-                if (key[start + 1] == STRING_MARKER) target.children(childKey) else target.children(childKey.toInt())
-            start = end + 1
-        }
-        target.safeSet(key.substring(start), value)
+        flat[key] = value
     }
 }
 

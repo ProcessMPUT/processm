@@ -228,11 +228,7 @@ class DBHierarchicalXESInputStream(
 
         assert(!result.entity.isEnded) { "By contract a row must exist." }
 
-        val intern = HashMap<String, String>()
-
-        with(Log(
-            attributesInternal = MutableAttributeMap { key -> intern.computeIfAbsent(key) { it } }
-        )) {
+        with(Log()) {
             val logId = result.entity.getInt("id")
             // Load classifiers, extensions, globals and attributes inside log structure
             readClassifiers(result.classifiers, this, logId)
