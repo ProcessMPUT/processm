@@ -11,7 +11,6 @@ import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.log.isAllowedAttributeValue
 import java.time.Instant
 import java.util.*
-import kotlin.Comparator
 
 /**
  * Attention! [get] throws if the key is not in the map instead of returning `null`.
@@ -20,47 +19,35 @@ import kotlin.Comparator
  * @param intern A possible replacement for [String.intern], e.g., a more efficient implementation, or an idempotent function to disable interning
  */
 open class MutableAttributeMap(
-    protected val flat: SortedMap<CharSequence, Any?> = TreeMap(comparator),
+    protected val flat: SortedMap<String, Any?> = TreeMap(),
     val intern: (String) -> String = String::intern
 ) : AttributeMap {
 
     companion object {
-        val comparator = Comparator<CharSequence> { a, b ->
-            if (a is SemiRope) a.compareTo(b)
-            else if (b is SemiRope) -b.compareTo(a)
-            else {
-                check(a is String)
-                check(b is String)
-                a.compareTo(b)
-            }
+        val comparator = Comparator<String> { a, b ->
+            a.compareTo(b)
         }
     }
 
-    protected open val stringPrefix: CharSequence
+    protected open val stringPrefix: String
         get() = BEFORE_STRING
 
-    protected open val intPrefix: CharSequence
+    protected open val intPrefix: String
         get() = BEFORE_INT
 
     constructor(map: AttributeMap) : this(intern = if (map is MutableAttributeMap) map.intern else String::intern) {
         flat.putAll(map.flatView)
     }
 
-    private val children = HashMap<Any, Pair<CharSequence, CharSequence>>()
-
-    protected open fun childrenRange(key: String): Pair<CharSequence, CharSequence> {
+    protected open fun childrenRange(key: String): Pair<String, String> {
         require(SEPARATOR_CHAR !in key)
-        return children.computeIfAbsent(key) {
-            val prefix = SemiRope(stringPrefix, key)
-            SemiRope(prefix, SEPARATOR) to SemiRope(prefix, AFTER_SEPARATOR)
-        }
+        val prefix = stringPrefix + key
+        return prefix + SEPARATOR to prefix + AFTER_SEPARATOR
     }
 
-    protected open fun childrenRange(key: Int): Pair<CharSequence, CharSequence> {
-        return children.computeIfAbsent(key) {
-            val prefix = SemiRope(intPrefix, key.toString())
-            SemiRope(prefix, SEPARATOR) to SemiRope(prefix, AFTER_SEPARATOR)
-        }
+    protected open fun childrenRange(key: Int): Pair<String, String> {
+        val prefix = intPrefix + key.toString()
+        return prefix + SEPARATOR to prefix + AFTER_SEPARATOR
     }
 
     private inline fun unsafeSet(key: String, value: Any?) {
@@ -102,14 +89,14 @@ open class MutableAttributeMap(
     }
 
     override operator fun get(key: String): Any? = flat.getValue(key)
-    override val flatView: Map<CharSequence, Any?>
+    override val flatView: Map<String, Any?>
         get() = Collections.unmodifiableMap(flat)
 
     override fun getOrNull(key: String?): Any? = if (key !== null) flat[key] else null
 
-    protected fun childrenKeys(prefix: CharSequence): Set<Any> {
+    protected fun childrenKeys(prefix: String): Set<Any> {
         val prefixWithSeparatorLength = prefix.length + 1
-        return flat.subMap(SemiRope(prefix, SEPARATOR), SemiRope(prefix, AFTER_SEPARATOR)).keys.mapToSet {
+        return flat.subMap(prefix + SEPARATOR, prefix + AFTER_SEPARATOR).keys.mapToSet {
             val end = it.indexOf(SEPARATOR_CHAR, prefixWithSeparatorLength)
             val s = it.substring(prefixWithSeparatorLength, end)
             if (s[0] == STRING_MARKER)
@@ -134,7 +121,7 @@ open class MutableAttributeMap(
         return MutableAttributeMapWithPrefix(flat.subMap(s, e), s, intern)
     }
 
-    protected open val top: MutableMap<CharSequence, Any?> by lazy(LazyThreadSafetyMode.NONE) {
+    protected open val top: MutableMap<String, Any?> by lazy(LazyThreadSafetyMode.NONE) {
         // lazy initialization because taking head/tail map of an empty map doesn't seem to work
         SplitMutableMap(flat.headMap(SEPARATOR), flat.tailMap(AFTER_SEPARATOR), SEPARATOR, comparator)
     }

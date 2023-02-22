@@ -2,32 +2,28 @@ package processm.core.log.attribute
 
 import processm.core.log.attribute.AttributeMap.Companion.BEFORE_INT
 import processm.core.log.attribute.AttributeMap.Companion.BEFORE_STRING
-import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
-import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
 import processm.core.log.isAllowedAttributeValue
-import java.lang.ref.SoftReference
 import java.time.Instant
 import java.util.*
 
 
 internal class MutableAttributeMapWithPrefix(
-    flat: SortedMap<CharSequence, Any?>,
-    private val commonPrefix: CharSequence,
+    flat: SortedMap<String, Any?>,
+    private val commonPrefix: String,
     intern: (String) -> String
 ) : MutableAttributeMap(flat, intern = intern) {
-    private fun valueKey(key: String): CharSequence = SemiRope(commonPrefix, key)
+    private fun valueKey(key: String): String = commonPrefix + key
 
-    override val stringPrefix: CharSequence by lazy(LazyThreadSafetyMode.NONE) {
-        SemiRope(commonPrefix, BEFORE_STRING)
+    override val stringPrefix: String by lazy(LazyThreadSafetyMode.NONE) {
+        commonPrefix + BEFORE_STRING
     }
 
-    override val intPrefix: CharSequence by lazy(LazyThreadSafetyMode.NONE) {
-        SemiRope(commonPrefix, BEFORE_INT)
+    override val intPrefix: String by lazy(LazyThreadSafetyMode.NONE) {
+        commonPrefix + BEFORE_INT
     }
 
-    private fun strip(key: CharSequence): String {
-        require(key is SemiRope)
-        return key.right
+    private fun strip(key: String): String {
+        return key.substring(commonPrefix.length)
     }
 
     private inline fun unsafeSet(key: String, value: Any?) {
@@ -77,9 +73,7 @@ internal class MutableAttributeMapWithPrefix(
     override val childrenKeys: Set<Any>
         get() = childrenKeys(commonPrefix)
 
-    override val top: MutableMap<CharSequence, Any?> by lazy(LazyThreadSafetyMode.NONE) {
-        //TODO or SemiRope?
-        val commonPrefix = this.commonPrefix.toString()
+    override val top: MutableMap<String, Any?> by lazy(LazyThreadSafetyMode.NONE) {
         val leftEnd = commonPrefix + AttributeMap.SEPARATOR_CHAR
         val rightStart = commonPrefix + AttributeMap.AFTER_SEPARATOR_CHAR
         val rightEnd = commonPrefix.substring(0, commonPrefix.length - 1) + AttributeMap.AFTER_SEPARATOR_CHAR
@@ -127,7 +121,7 @@ internal class MutableAttributeMapWithPrefix(
     override val entries: Set<Map.Entry<String, Any?>>
         get() = RewritingSet(top.entries, { RewritingEntry(it, ::strip) }, { (it as RewritingEntry).base })
     override val keys: Set<String>
-        get() = RewritingSet(top.keys, ::strip) { SemiRope(commonPrefix, it) }
+        get() = RewritingSet(top.keys, ::strip) { commonPrefix + it }
 
     override fun containsKey(key: String): Boolean = top.containsKey(valueKey(key))
 

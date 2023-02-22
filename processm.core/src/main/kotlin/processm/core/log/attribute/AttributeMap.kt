@@ -59,7 +59,7 @@ interface AttributeMap : Map<String, Any?> {
     /**
      * An unmodifiable view of the flat representation
      */
-    val flatView: Map<CharSequence, Any?>
+    val flatView: Map<String, Any?>
 
     fun getOrNull(key: String?): Any?
 

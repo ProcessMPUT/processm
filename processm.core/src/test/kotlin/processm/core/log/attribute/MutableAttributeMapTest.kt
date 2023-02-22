@@ -350,25 +350,4 @@ class MutableAttributeMapTest {
             )
         }
     }
-
-    fun equalRopes(rope1: SemiRope, rope2: SemiRope): Boolean =
-        (rope1.right == rope2.right) &&
-                ((rope1.left is String && rope2.left is String && rope1.left == rope2.left) ||
-                        (rope1.left is SemiRope && rope2.left is SemiRope && equalRopes(
-                            rope1.left as SemiRope,
-                            rope2.left as SemiRope
-                        )))
-
-    @Test
-    fun `putFlat recovers structure`() {
-        val map2 = MutableAttributeMap()
-        map2.children("a").children("b")["c"] = "d"
-        val map1 = MutableAttributeMap()
-        map1.putFlat("${BEFORE_STRING}a${SEPARATOR}${BEFORE_STRING}b${SEPARATOR}c", "d")
-        val rope1 = map1.flatView.keys.single()
-        val rope2 = map2.flatView.keys.single()
-        assertIs<SemiRope>(rope1)
-        assertIs<SemiRope>(rope2)
-        assertTrue(equalRopes(rope1, rope2))
-    }
 }
