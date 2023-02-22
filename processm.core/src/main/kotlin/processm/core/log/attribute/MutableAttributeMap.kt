@@ -120,10 +120,8 @@ open class MutableAttributeMap(
         return MutableAttributeMapWithPrefix(flat.subMap(s, e), s)
     }
 
-    protected open val top: MutableMap<String, Any?> by lazy(LazyThreadSafetyMode.NONE) {
-        // lazy initialization because taking head/tail map of an empty map doesn't seem to work
-        SplitMutableMap(flat.headMap(SEPARATOR), flat.tailMap(AFTER_SEPARATOR), SEPARATOR, comparator)
-    }
+    protected open val top: MutableMap<String, Any?>
+        get() = SplitMutableMap(flat.headMap(SEPARATOR), flat.tailMap(AFTER_SEPARATOR), SEPARATOR, comparator)
 
     override val entries: Set<Map.Entry<String, Any?>>
         get() = top.entries
@@ -137,10 +135,11 @@ open class MutableAttributeMap(
     override val values: Collection<Any?>
         get() = top.values
 
-    override fun isEmpty(): Boolean = top.isEmpty()
-    override fun containsValue(value: Any?): Boolean = top.containsValue(value)
+    // The following method reference flat to avoid creating top if flat is empty and thus top will be empty as well
+    override fun isEmpty(): Boolean = flat.isEmpty() || top.isEmpty()
+    override fun containsValue(value: Any?): Boolean = flat.isNotEmpty() && top.containsValue(value)
 
-    override fun containsKey(key: String): Boolean = top.containsKey(key)
+    override fun containsKey(key: String): Boolean = flat.isNotEmpty() && top.containsKey(key)
 
     fun computeIfAbsent(key: String, ctor: (key: String) -> Any?): Any? =
         if (!containsKey(key)) {

@@ -240,14 +240,15 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         value: String,
         storage: MutableAttributeMap
     ) {
+        val internedKey = key.intern()
         when (type) {
-            "string" -> storage[key] = value
-            "float" -> storage[key] = numberFormatter.parse(value).toDouble()
-            "id" -> storage[key] = requireNotNull(value.toUUID())
-            "int" -> storage[key] = value.toLong()
-            "date" -> storage[key] = value.fastParseISO8601()
-            "boolean" -> storage[key] = value.toBoolean()
-            "list" -> storage[key] = LIST_TAG
+            "string" -> storage[internedKey] = value
+            "float" -> storage[internedKey] = numberFormatter.parse(value).toDouble()
+            "id" -> storage[internedKey] = requireNotNull(value.toUUID())
+            "int" -> storage[internedKey] = value.toLong()
+            "date" -> storage[internedKey] = value.fastParseISO8601()
+            "boolean" -> storage[internedKey] = value.toBoolean()
+            "list" -> storage[internedKey] = LIST_TAG
 
             else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
         }
