@@ -18,7 +18,7 @@ import processm.core.log.DBXESOutputStream
 import processm.core.log.Log
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.IDENTITY_ID
-import processm.core.log.toMutableAttributeMap
+import processm.core.log.attribute.toMutableAttributeMap
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*

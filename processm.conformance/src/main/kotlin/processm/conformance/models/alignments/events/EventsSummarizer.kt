@@ -2,9 +2,9 @@ package processm.conformance.models.alignments.events
 
 import processm.core.log.Event
 import processm.core.log.attribute.Attribute
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
-import processm.core.log.mutableAttributeMapOf
 import processm.core.models.commons.Activity
 
 /**

@@ -58,7 +58,12 @@ open class MutableAttributeMap(
         flat[key] = value
     }
 
-    protected open fun safeSet(key: String, value: Any?) {
+    /**
+     * Associates [key] with [value]
+     *
+     * @throws IllegalArgumentException if [value] is not one of the allowed data types
+     */
+    open fun safeSet(key: String, value: Any?) {
         require(value.isAllowedAttributeValue())
         unsafeSet(key, value)
     }

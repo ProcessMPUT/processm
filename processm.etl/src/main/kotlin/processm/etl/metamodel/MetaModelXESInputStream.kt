@@ -2,12 +2,16 @@ package processm.etl.metamodel
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.log.*
+import processm.core.log.Event
+import processm.core.log.Log
+import processm.core.log.Trace
+import processm.core.log.XESInputStream
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.ORG_RESOURCE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.persistence.connection.DBCache
 import java.time.Instant
 

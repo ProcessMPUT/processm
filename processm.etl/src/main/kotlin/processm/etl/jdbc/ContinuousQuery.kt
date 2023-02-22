@@ -226,7 +226,7 @@ private fun toAttributes(rs: ResultSet, columnMap: Map<String, ETLColumnToAttrib
                 else -> throw UnsupportedOperationException("Unsupported value type $colType for expression $colName.")
             }
             if (!rs.wasNull() && attr !== null)
-                set(attrName, attr)
+                safeSet(attrName, attr)
         }
     }
 

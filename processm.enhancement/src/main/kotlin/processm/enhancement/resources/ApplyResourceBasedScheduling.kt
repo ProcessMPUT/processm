@@ -7,6 +7,7 @@ import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.ORG_RESOURCE
 import processm.core.log.attribute.Attribute.ORG_ROLE
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.MutableAttributeMap
 import processm.enhancement.simulation.CAUSE
 import java.time.Duration
 import java.time.Instant
