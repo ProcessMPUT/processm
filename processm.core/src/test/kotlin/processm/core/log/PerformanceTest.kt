@@ -34,6 +34,7 @@ class PerformanceTest {
     }
 
     // zgrep -lE '<(string|int|float)[^<>]*[^/]>' *.gz
+    // Except bpi_challenge_2019.xes.gz which is memory-demanding and complicates the experiment needlessly
     val paths = """BPIC12.xes.gz
 BPIC13_cp.xes.gz
 BPIC13_i.xes.gz
@@ -47,7 +48,6 @@ bpi_challenge_2013_closed_problems.xes.gz
 bpi_Challenge_2013_incidents.xes.gz
 bpi_challenge_2013_open_problems.xes.gz
 bpi_challenge_2017.xes.gz
-bpi_challenge_2019.xes.gz
 CoSeLoG_WABO_1.xes.gz
 CoSeLoG_WABO_2.xes.gz
 CoSeLoG_WABO_3.xes.gz
