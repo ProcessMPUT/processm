@@ -13,17 +13,18 @@ import java.time.Instant
 import java.util.*
 
 /**
+ * A mutable implementation of [AttributeMap]
+ *
  * Attention! [get] throws if the key is not in the map instead of returning `null`.
  * Similarly, [computeIfAbsent] assigns `null` instead of ignoring it
- *
- * @param intern A possible replacement for [String.intern], e.g., a more efficient implementation, or an idempotent function to disable interning
  */
 open class MutableAttributeMap(
     protected val flat: SortedMap<String, Any?> = TreeMap()
 ) : AttributeMap {
 
     companion object {
-        val comparator = Comparator<String> { a, b ->
+        @JvmStatic
+        protected val comparator = Comparator<String> { a, b ->
             a.compareTo(b)
         }
     }
@@ -34,6 +35,9 @@ open class MutableAttributeMap(
     protected open val intPrefix: String
         get() = BEFORE_INT
 
+    /**
+     * Copies [map]
+     */
     constructor(map: AttributeMap) : this() {
         flat.putAll(map.flatView)
     }
@@ -59,30 +63,51 @@ open class MutableAttributeMap(
         unsafeSet(key, value)
     }
 
+    /**
+     * Associates [key] with [value]. If [value] is `null` it is stored rather than deleting the key.
+     */
     open operator fun set(key: String, value: String?) {
         unsafeSet(key, value)
     }
 
+    /**
+     * Associates [key] with [value].
+     */
     open operator fun set(key: String, value: Long) {
         unsafeSet(key, value)
     }
 
+    /**
+     * Associates [key] with [value].
+     */
     open operator fun set(key: String, value: Double) {
         unsafeSet(key, value)
     }
 
+    /**
+     * Associates [key] with [value].
+     */
     open operator fun set(key: String, value: Instant) {
         unsafeSet(key, value)
     }
 
+    /**
+     * Associates [key] with [value].
+     */
     open operator fun set(key: String, value: UUID) {
         unsafeSet(key, value)
     }
 
+    /**
+     * Associates [key] with [value].
+     */
     open operator fun set(key: String, value: Boolean) {
         unsafeSet(key, value)
     }
 
+    /**
+     * Associates [key] with [value].
+     */
     open operator fun set(key: String, value: Tag) {
         unsafeSet(key, value)
     }
@@ -141,6 +166,10 @@ open class MutableAttributeMap(
 
     override fun containsKey(key: String): Boolean = flat.isNotEmpty() && top.containsKey(key)
 
+    /**
+     * Associates [key] with the result of invoking [ctor] and returns this result, if [key] was not present in the map.
+     * Otherwise, returns the value already present.
+     */
     fun computeIfAbsent(key: String, ctor: (key: String) -> Any?): Any? =
         if (!containsKey(key)) {
             val value = ctor(key)
@@ -159,6 +188,12 @@ open class MutableAttributeMap(
         return false
     }
 
+    /**
+     * Associates [key] with [value] assuming [key] is a key for the flat representation, i.e.,
+     * follows the grammar described in the class documentation.
+     *
+     * This function is intended only for deserialization and should be otherwise avoided.
+     */
     fun putFlat(key: String, value: Any) {
         require(value.isAllowedAttributeValue())
         flat[key] = value
@@ -167,7 +202,6 @@ open class MutableAttributeMap(
 
 fun AttributeMap.toMutableAttributeMap() = MutableAttributeMap(this)
 
-fun attributeMapOf(vararg pairs: Pair<String, Any?>): AttributeMap = mutableAttributeMapOf(*pairs)
 fun mutableAttributeMapOf(vararg pairs: Pair<String, Any?>): MutableAttributeMap =
     MutableAttributeMap().apply {
         pairs.forEach { (k, v) ->

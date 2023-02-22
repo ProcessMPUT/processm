@@ -7,6 +7,9 @@ import java.time.Instant
 import java.util.*
 
 
+/**
+ * An auxiliary class for [MutableAttributeMap] enabling exposing a part of shared flat representation as a separate [AttributeMap]
+ */
 internal class MutableAttributeMapWithPrefix(
     flat: SortedMap<String, Any?>,
     private val commonPrefix: String

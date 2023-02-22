@@ -49,10 +49,21 @@ interface AttributeMap : Map<String, Any?> {
         const val AFTER_SEPARATOR_CHAR = SEPARATOR_CHAR + 1
         const val AFTER_SEPARATOR = AFTER_SEPARATOR_CHAR.toString()
 
+        /**
+         * A marker to distinguish integer child keys from string child keys
+         */
         const val INT_MARKER = 'i'
+
+        /**
+         * A marker to distinguish string child keys from integer child keys
+         */
         const val STRING_MARKER = 's'
         const val BEFORE_STRING = SEPARATOR + STRING_MARKER
         const val BEFORE_INT = SEPARATOR + INT_MARKER
+
+        /**
+         * An auxiliary object used in deserialization
+         */
         val LIST_TAG = Tag()
     }
 
@@ -61,12 +72,30 @@ interface AttributeMap : Map<String, Any?> {
      */
     val flatView: Map<String, Any?>
 
+    /**
+     * Returns the value associated with [key] if `key != null` and there is a value associated with it, and `null` otherwise
+     */
     fun getOrNull(key: String?): Any?
 
+    /**
+     * The set of values that can be passed as an argument of [children] to obtain an [AttributeMap] which is non-empty and/or has non-empty [childrenKeys]
+     */
     val childrenKeys: Set<Any>
+
+    /**
+     * The sub-map of this map corresponding to [key]
+     */
     fun children(key: String): AttributeMap
+
+    /**
+     * The sub-map of this map corresponding to [key]. Integer keys are intended to represent lists.
+     */
     fun children(key: Int): AttributeMap
 
+    /**
+     * A read-only view consisting of only children with integer keys. The integer keys can be arbitrary,
+     * but [List.size] will be computed correctly only if they form a consecutive sequence from 0 to some `n`
+     */
     fun asList(): List<AttributeMap> = AttributeMapAsList(this)
 }
 
