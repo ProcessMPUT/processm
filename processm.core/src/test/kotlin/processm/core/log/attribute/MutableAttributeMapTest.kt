@@ -1,5 +1,8 @@
 package processm.core.log.attribute
 
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR_CHAR
 import processm.core.log.attribute.AttributeMap.Companion.BEFORE_STRING
@@ -349,5 +352,15 @@ class MutableAttributeMapTest {
                 map.childrenKeys
             )
         }
+    }
+
+    @Test
+    fun `hashCode and equals for maps created with mutableAttributeMapOf`() {
+        val map1 =
+            mutableAttributeMapOf(CONCEPT_NAME to "abc", LIFECYCLE_TRANSITION to "complete", CONCEPT_INSTANCE to null)
+        val map2 =
+            mutableAttributeMapOf(CONCEPT_NAME to "abc", LIFECYCLE_TRANSITION to "complete", CONCEPT_INSTANCE to null)
+        assertEquals(map1.hashCode(), map2.hashCode())
+        assertEquals(map1, map2)
     }
 }

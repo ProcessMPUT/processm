@@ -183,6 +183,8 @@ open class MutableAttributeMap(
         } else
             get(key)
 
+    override fun hashCode(): Int = flat.hashCode()
+
     override fun equals(other: Any?): Boolean {
         if (other is MutableAttributeMap) {
             return this.flat == other.flat
