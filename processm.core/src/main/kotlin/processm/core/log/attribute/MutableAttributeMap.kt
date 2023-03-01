@@ -213,6 +213,7 @@ fun mutableAttributeMapOf(vararg pairs: Pair<String, Any?>): MutableAttributeMap
             when (v) {
                 is String -> set(k, v)
                 is Long -> set(k, v)
+                is Int -> set(k, v.toLong())
                 is Double -> set(k, v)
                 is Instant -> set(k, v)
                 is UUID -> set(k, v)
