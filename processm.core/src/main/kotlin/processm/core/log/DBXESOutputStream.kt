@@ -182,9 +182,10 @@ open class DBXESOutputStream protected constructor(protected val connection: Con
         val known = HashMap<UUID, Long>()
         if (isAppending) {
             with(SQL()) {
-                sql.append("""SELECT TRACES."identity:id", TRACES.id FROM TRACES JOIN UNNEST(?) tmp("identity:id") ON TRACES."identity:id" = tmp."identity:id"::uuid""")
+                sql.append("""SELECT TRACES."identity:id", TRACES.id FROM TRACES JOIN UNNEST(?) tmp("identity:id") ON TRACES."identity:id" = tmp."identity:id"::uuid AND TRACES.log_id = ?""")
                 val traceIdentities = queue.filterIsInstance<Trace>().mapNotNull { it.identityId }
                 params.addLast(traceIdentities.toTypedArray())
+                params.addLast(logId)
                 executeQuery { rs ->
                     while (rs.next()) {
                         known[rs.getString(1).toUUID()!!] = rs.getLong(2)
