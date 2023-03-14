@@ -7,9 +7,21 @@ import java.util.SortedMap
  */
 private class SplitMutableIterator<T>(val left: MutableIterator<T>, val right: MutableIterator<T>) :
     MutableIterator<T> {
-    private var realHasNext = ::leftHasNext
-    private var realNext = left::next
-    private var realRemove = left::remove
+    private var realHasNext: () -> Boolean
+    private var realNext: () -> T
+    private var realRemove: () -> Unit
+
+    init {
+        if (left.hasNext()) {
+            realNext = left::next
+            realHasNext = ::leftHasNext
+            realRemove = left::remove
+        } else {
+            realHasNext = right::hasNext
+            realNext = right::next
+            realRemove = right::remove
+        }
+    }
 
     private fun leftHasNext(): Boolean {
         if (left.hasNext())
