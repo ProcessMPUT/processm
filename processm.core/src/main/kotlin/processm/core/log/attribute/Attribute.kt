@@ -2,204 +2,119 @@ package processm.core.log.attribute
 
 import java.time.Instant
 import java.util.*
-import kotlin.reflect.KClass
 
 /**
  * The base class for the attribute compliant with the XES standard.
  */
-abstract class Attribute<T>(key: String) {
-    companion object {
-        /**
-         * Stores a generally understood name for a log/trace/event.
-         */
-        const val CONCEPT_NAME = "concept:name"
-
-        /**
-         * This represents an identifier of the activity instance whose execution has generated the event.
-         */
-        const val CONCEPT_INSTANCE = "concept:instance"
-
-        /**
-         * The value contains the cost amount for a cost driver.
-         */
-        const val COST_AMOUNT = "cost:amount"
-
-        /**
-         * The currency (using the ISO 4217:2008 standard) of all costs of this trace/event.
-         */
-        const val COST_CURRENCY = "cost:currency"
-
-        /**
-         *  The value contains the id for the cost driver.
-         */
-        const val COST_DRIVER = "cost:driver"
-
-        /**
-         * A detailed list containing cost driver details.
-         */
-        const val COST_DRIVERS = "cost:drivers"
-
-        /**
-         * Total cost incurred for a trace/event. The value represents the sum of all the cost amounts within the element.
-         */
-        const val COST_TOTAL = "cost:total"
-
-        /**
-         * The value contains the cost type (e.g., Fixed, Overhead, Materials).
-         */
-        const val COST_TYPE = "cost:type"
-
-        /**
-         * The database identifier of an object.
-         */
-        const val DB_ID = "db:id"
-
-        /**
-         * Unique identifier (UUID) for the log/trace/event.
-         */
-        const val IDENTITY_ID = "identity:id"
-
-        /**
-         * This attribute refers to the lifecycle transactional model used for all events in the log. If this
-         * attribute has a value of "standard", the standard lifecycle transactional model of this extension is
-         * assumed. If it is has a value of "bpaf", the Business Process Analytics Format (BPAF) lifecycle transactional
-         * model is assumed.
-         */
-        const val LIFECYCLE_MODEL = "lifecycle:model"
-
-        /**
-         * The transition attribute is defined for events, and specifies the lifecycle transition of each event.
-         */
-        const val LIFECYCLE_TRANSITION = "lifecycle:transition"
-
-        /**
-         * The state attribute is defined for events, and specifies the lifecycle state of each event.
-         */
-        const val LIFECYCLE_STATE = "lifecycle:state"
-
-        /**
-         * The group within the organizational structure, of which the resource that triggered the event is a member.
-         */
-        const val ORG_GROUP = "org:group"
-
-        /**
-         * The name, or identifier, of the resource that triggered the event.
-         */
-        const val ORG_RESOURCE = "org:resource"
-
-        /**
-         * The role of the resource that triggered the event, within the organizational structure.
-         */
-        const val ORG_ROLE = "org:role"
-
-        /**
-         * The UTC time at which the event occurred.
-         */
-        const val TIME_TIMESTAMP = "time:timestamp"
-
-        /**
-         * The version of XES standard.
-         */
-        const val XES_VERSION = "xes:version"
-
-        /**
-         * The features used in the holding log.
-         */
-        const val XES_FEATURES = "xes:features"
-    }
-
-    private var childrenInternal: MutableMap<String, Attribute<*>>? = null
+object Attribute {
 
     /**
-     * Gets the child attribute. This is a shortcut call equivalent to `children.get(key)`.
+     * Stores a generally understood name for a log/trace/event.
      */
-    operator fun get(key: String): Attribute<*>? = childrenInternal?.get(key)
-
+    const val CONCEPT_NAME = "concept:name"
 
     /**
-     * Sets the child attribute
+     * This represents an identifier of the activity instance whose execution has generated the event.
      */
-    internal operator fun set(key: String, child: Attribute<*>) {
-        if (childrenInternal === null)
-            childrenInternal = HashMap()
-        childrenInternal!![key] = child
-    }
+    const val CONCEPT_INSTANCE = "concept:instance"
 
     /**
-     * Attribute's key from XES file
+     * The value contains the cost amount for a cost driver.
      */
-    val key: String = key.intern()
+    const val COST_AMOUNT = "cost:amount"
 
     /**
-     * Attribute's value
+     * The currency (using the ISO 4217:2008 standard) of all costs of this trace/event.
      */
-    internal abstract fun getValue(): T
+    const val COST_CURRENCY = "cost:currency"
 
     /**
-     * Value to String formatting
+     *  The value contains the id for the cost driver.
      */
-    internal open fun valueToString(): String = getValue().toString()
+    const val COST_DRIVER = "cost:driver"
 
     /**
-     * Attributes inside this attribute (nested-attributes)
-     * Used as getter based on the internal representation of children
+     * A detailed list containing cost driver details.
      */
-    val children: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(childrenInternal ?: emptyMap())
+    const val COST_DRIVERS = "cost:drivers"
 
     /**
-     * Tag in XES standard
+     * Total cost incurred for a trace/event. The value represents the sum of all the cost amounts within the element.
      */
-    abstract val xesTag: String
+    const val COST_TOTAL = "cost:total"
 
     /**
-     * Equals if are the same or contains the same `value`, `key`, `xesTag` and children (first level - no deep equals)
+     * The value contains the cost type (e.g., Fixed, Overhead, Materials).
      */
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Attribute<*>
-        return value == other.value && childrenInternal == other.childrenInternal
-                && key == other.key && xesTag == other.xesTag
-    }
+    const val COST_TYPE = "cost:type"
 
     /**
-     * Deep equals - should be equals AND each attribute in children also the same
+     * The database identifier of an object.
      */
-    fun deepEquals(other: Attribute<*>?): Boolean {
-        return this == other && this.childrenInternal?.size == other.childrenInternal?.size && this.childrenInternal?.all {
-            it.value.deepEquals(other.childrenInternal?.get(it.key))
-        } ?: true
-    }
+    const val DB_ID = "db:id"
 
-    override fun hashCode(): Int {
-        var result = childrenInternal.hashCode()
-        result = 31 * result + value.hashCode()
-        result = 31 * result + key.hashCode()
-        result = 31 * result + xesTag.hashCode()
-        return result
-    }
+    /**
+     * Unique identifier (UUID) for the log/trace/event.
+     */
+    const val IDENTITY_ID = "identity:id"
+
+    /**
+     * This attribute refers to the lifecycle transactional model used for all events in the log. If this
+     * attribute has a value of "standard", the standard lifecycle transactional model of this extension is
+     * assumed. If it is has a value of "bpaf", the Business Process Analytics Format (BPAF) lifecycle transactional
+     * model is assumed.
+     */
+    const val LIFECYCLE_MODEL = "lifecycle:model"
+
+    /**
+     * The transition attribute is defined for events, and specifies the lifecycle transition of each event.
+     */
+    const val LIFECYCLE_TRANSITION = "lifecycle:transition"
+
+    /**
+     * The state attribute is defined for events, and specifies the lifecycle state of each event.
+     */
+    const val LIFECYCLE_STATE = "lifecycle:state"
+
+    /**
+     * The group within the organizational structure, of which the resource that triggered the event is a member.
+     */
+    const val ORG_GROUP = "org:group"
+
+    /**
+     * The name, or identifier, of the resource that triggered the event.
+     */
+    const val ORG_RESOURCE = "org:resource"
+
+    /**
+     * The role of the resource that triggered the event, within the organizational structure.
+     */
+    const val ORG_ROLE = "org:role"
+
+    /**
+     * The UTC time at which the event occurred.
+     */
+    const val TIME_TIMESTAMP = "time:timestamp"
+
+    /**
+     * The version of XES standard.
+     */
+    const val XES_VERSION = "xes:version"
+
+    /**
+     * The features used in the holding log.
+     */
+    const val XES_FEATURES = "xes:features"
 }
 
-val Attribute<*>.value: Any?
-    get() = this.getValue()
-
-fun Map<String, Attribute<*>>.deepEquals(other: Map<String, Attribute<*>>): Boolean =
-    this == other && this.all { it.value.deepEquals(other[it.key]) }
-
-/**
- * Returns `KClass` corresponding to the value of the attribute
- */
-val Attribute<*>.valueType: KClass<*>
-    get() = when (this) {
-        is BoolAttr -> Boolean::class
-        is DateTimeAttr -> Instant::class
-        is IDAttr -> UUID::class
-        is IntAttr -> Long::class
-        is ListAttr -> List::class
-        is NullAttr -> Nothing::class
-        is RealAttr -> Double::class
-        is StringAttr -> String::class
-        else -> TODO("Type ${this::class} is not supported")
+fun Any?.deepEquals(other: Any?): Boolean {
+    if (this === null)
+        return other === null
+    if (this is Boolean || this is Instant || this is UUID || this is Long || this is Double || this is String || this is Tag) {
+        return this == other
     }
+    if (this is AttributeMap) {
+        return other is AttributeMap && this.flatView == other.flatView && this.flatView.entries.all { (k, v) -> v.deepEquals(other[k]) }
+    }
+    return false
+}

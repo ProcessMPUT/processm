@@ -13,10 +13,6 @@ import processm.conformance.models.alignments.petrinet.DecompositionAligner
 import processm.core.helpers.MRUMap
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.stats.Distribution
-import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.IntAttr
-import processm.core.log.attribute.RealAttr
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.Log
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DecoupledNodeExecution
@@ -261,18 +257,18 @@ class Calculator(
         }
 
         for (log in logs) {
-            for (attribute in log.attributes.values) {
-                if (!attribute.isNumeric())
+            for ((key, value) in log.attributes.entries) {
+                if (value !is Number)
                     continue
 
-                logKPIraw.compute(attribute.key) { _, old ->
-                    (old ?: ArrayList()).apply { add(attribute.toDouble()) }
+                logKPIraw.compute(key) { _, old ->
+                    (old ?: ArrayList()).apply { add(value.toDouble()) }
                 }
             }
 
             for (trace in log.traces) {
                 for ((key, attribute) in trace.attributes) {
-                    if (!attribute.isNumeric())
+                    if (attribute !is Number)
                         continue
 
                     traceKPIraw.compute(key) { _, old ->
@@ -293,7 +289,7 @@ class Calculator(
                     }
 
                     val rawValues = step.logMove!!.attributes.mapNotNull { (key, attribute) ->
-                        if (attribute.isNumeric()) NumericAttribute(key, attribute.toDouble()) else null
+                        if (attribute is Number) NumericAttribute(key, attribute.toDouble()) else null
                     }
 
                     for ((key, attributeValue) in rawValues) {

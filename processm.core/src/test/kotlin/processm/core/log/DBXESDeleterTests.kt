@@ -2,7 +2,6 @@ package processm.core.log
 
 import org.junit.jupiter.api.Tag
 import processm.core.DBTestHelper
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
@@ -43,7 +42,7 @@ class DBXESDeleterTests {
             // verify whether two copies of JournalReview are still stored in the database but the second copy is empty
             val after = q("select count(l:name), count(^t:name) where l:name='JournalReview'").first()
             assertEquals(2, after.count)
-            assertEquals(101L, after.attributes["count(^trace:concept:name)"]!!.value)
+            assertEquals(101L, after.attributes["count(^trace:concept:name)"])
             assertEquals(0, q("where l:id=$toRemove").first().traces.count())
             val currentTotals = Totals.get()
 
@@ -70,7 +69,7 @@ class DBXESDeleterTests {
             // verify whether two copies of JournalReview are still stored in the database
             val after = q("select count(l:name), count(^t:name) where l:name='JournalReview'").first()
             assertEquals(2, after.count)
-            assertEquals(151L, after.attributes["count(^trace:concept:name)"]!!.value)
+            assertEquals(151L, after.attributes["count(^trace:concept:name)"])
 
             // verify whether all remaining traces have the cost:total set
             val remaining = q("where l:id=$toRemove")
@@ -101,14 +100,14 @@ class DBXESDeleterTests {
 
             // verify whether two copies of JournalReview are still stored in the database but the traces are empty
             val after = q("select count(l:name), count(^t:name), count(^^e:name) where l:name='JournalReview'").first()
-            assertEquals(2L, after.attributes["count(log:concept:name)"]!!.value)
-            assertEquals(202L, after.attributes["count(^trace:concept:name)"]!!.value)
-            assertEquals(2298L, after.attributes["count(^^event:concept:name)"]!!.value)
+            assertEquals(2L, after.attributes["count(log:concept:name)"])
+            assertEquals(202L, after.attributes["count(^trace:concept:name)"])
+            assertEquals(2298L, after.attributes["count(^^event:concept:name)"])
 
             val removed = q("select count(l:name), count(^t:name), count(^^e:name) where l:id=$toRemove").first()
-            assertEquals(1L, removed.attributes["count(log:concept:name)"]!!.value)
-            assertEquals(101L, removed.attributes["count(^trace:concept:name)"]!!.value)
-            assertEquals(0L, removed.attributes["count(^^event:concept:name)"]!!.value)
+            assertEquals(1L, removed.attributes["count(log:concept:name)"])
+            assertEquals(101L, removed.attributes["count(^trace:concept:name)"])
+            assertEquals(0L, removed.attributes["count(^^event:concept:name)"])
 
             // verify totals
             val currentTotals = Totals.get()
@@ -138,7 +137,7 @@ class DBXESDeleterTests {
             // verify whether two copies of JournalReview are still stored in the database
             val after = q("select count(l:name), count(^t:name) where l:name='JournalReview'").first()
             assertEquals(2, after.count)
-            assertEquals(202L, after.attributes["count(^trace:concept:name)"]!!.value)
+            assertEquals(202L, after.attributes["count(^trace:concept:name)"])
 
             // verify whether all traces remain and have all but additional review events
             val remaining = q("where l:id=$toRemove")
@@ -176,7 +175,7 @@ class DBXESDeleterTests {
                 // verify whether two copies of JournalReview are stored in the database
                 val before = q("select count(l:name), count(^t:name) where l:name='JournalReview'").first()
                 assertEquals(2, before.count)
-                assertEquals(202L, before.attributes["count(^trace:concept:name)"]!!.value)
+                assertEquals(202L, before.attributes["count(^trace:concept:name)"])
                 assertNotEquals(baseTotals, Totals.get())
             }
 

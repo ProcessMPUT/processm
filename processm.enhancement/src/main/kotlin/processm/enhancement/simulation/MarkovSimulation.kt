@@ -4,11 +4,10 @@ import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.helpers.map2d.Map2D
 import processm.core.log.*
 import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.StringAttr
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import java.util.*
@@ -44,9 +43,9 @@ class MarkovSimulation(
         while (true) {
             yield(
                 Trace(
-                    mutableMapOf(
-                        CONCEPT_NAME to StringAttr(CONCEPT_NAME, (++lastTraceId).toString()),
-                        IDENTITY_ID to IDAttr(IDENTITY_ID, UUID(1L, lastTraceId))
+                    mutableAttributeMapOf(
+                        CONCEPT_NAME to (++lastTraceId).toString(),
+                        IDENTITY_ID to UUID(1L, lastTraceId)
                     )
                 )
             )
@@ -118,14 +117,14 @@ class MarkovSimulation(
                     if (!activity.isSilent) {
                         val conceptInstance = conceptInstances.compute(activity.name) { _, old -> (old ?: 0) + 1 }
                         lastEvent = Event(
-                            mutableMapOf<String, Attribute<*>>(
-                                CONCEPT_NAME to StringAttr(CONCEPT_NAME, activity.name),
-                                CONCEPT_INSTANCE to StringAttr(CONCEPT_INSTANCE, conceptInstance.toString()),
-                                IDENTITY_ID to IDAttr(IDENTITY_ID, UUID(0L, ++lastEventId))
+                            mutableAttributeMapOf(
+                                CONCEPT_NAME to activity.name,
+                                CONCEPT_INSTANCE to conceptInstance.toString(),
+                                IDENTITY_ID to UUID(0L, ++lastEventId)
                             ).apply {
                                 val prevId = precedingActivities[activity]?.identityId
                                 if (prevId !== null)
-                                    put(Attribute.CAUSE, IDAttr(Attribute.CAUSE, prevId))
+                                    set(Attribute.CAUSE, prevId)
                             }
                         )
                         events.add(lastEvent)

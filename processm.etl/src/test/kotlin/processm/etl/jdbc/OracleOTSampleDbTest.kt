@@ -6,7 +6,6 @@ import org.junit.jupiter.api.*
 import processm.core.DBTestHelper
 import processm.core.helpers.mapToSet
 import processm.core.log.*
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
@@ -152,11 +151,11 @@ class OracleOTSampleDbTest {
         )
 
         val log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(expectedNumberOfTraces.toLong(), log.traces.first().attributes["count(trace:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(expectedNumberOfTraces.toLong(), log.traces.first().attributes["count(trace:identity:id)"] )
         assertEquals(
             expectedNumberOfEvents.toLong(),
-            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+            log.traces.first().events.first().attributes["count(event:identity:id)"] 
         )
 
         logger.info("Verifying contents...")
@@ -192,9 +191,9 @@ class OracleOTSampleDbTest {
         )
 
         var log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(47L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
-        assertEquals(49L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(47L, log.traces.first().attributes["count(trace:identity:id)"] )
+        assertEquals(49L, log.traces.first().events.first().attributes["count(event:identity:id)"] )
 
         // import the remaining components
         logger.info("Importing the remaining XES components...")
@@ -212,11 +211,11 @@ class OracleOTSampleDbTest {
             Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
         )
         log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(expectedNumberOfTraces.toLong(), log.traces.first().attributes["count(trace:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(expectedNumberOfTraces.toLong(), log.traces.first().attributes["count(trace:identity:id)"] )
         assertEquals(
             expectedNumberOfEvents.toLong(),
-            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+            log.traces.first().events.first().attributes["count(event:identity:id)"] 
         )
     }
 

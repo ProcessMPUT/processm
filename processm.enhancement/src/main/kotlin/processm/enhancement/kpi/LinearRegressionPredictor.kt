@@ -30,7 +30,7 @@ class LinearRegressionPredictor(val classifier: (Event) -> Any? = { it.conceptNa
                 for (event in trace.events) {
                     val eventKey = classifier(event)
                     for ((key, attribute) in event.attributes)
-                        if (attribute.isNumeric()) {
+                        if (attribute is Number) {
                             val current = attribute.toDouble()
                             val previous = history[key]
                             if (!previous.isNullOrEmpty())
@@ -65,7 +65,7 @@ class LinearRegressionPredictor(val classifier: (Event) -> Any? = { it.conceptNa
 
     override fun observeEvent(event: Event) {
         for ((key, attribute) in event.attributes)
-            if (attribute.isNumeric())
+            if (attribute is Number)
                 currentTrace.computeIfAbsent(key) { ArrayList() }.add(attribute.toDouble())
     }
 

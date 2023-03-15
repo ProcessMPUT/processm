@@ -1,15 +1,11 @@
 package processm.core.log
 
 import processm.core.helpers.parseISO8601
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.ListAttr
-import processm.core.log.attribute.value
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertSame
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.ORG_GROUP
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.AttributeMap
+import kotlin.test.*
 
 internal class XMLXESInputStreamTest {
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -27,6 +23,13 @@ internal class XMLXESInputStreamTest {
                 <string key="conceptowy:name" value="__INVALID__"/>
                 <string key="org:group" value="__INVALID__"/>
                 <date key="time:timestamp" value="1970-01-01T01:00:00.000+01:00"/>
+                <list key="globalListKey">
+                    <int key="intInsideListKey" value="25" />
+                    <values>
+                        <float key="__UNKNOWN__" value="123.617"/>
+                        <int key="__NEW__" value="456"/>
+                    </values>
+                </list>
             </global>
             <classifier name="Event Name" keys="conceptowy:name"/>
             <classifier scope="trace" name="Department Classifier" keys="org:group"/>
@@ -117,7 +120,7 @@ internal class XMLXESInputStreamTest {
             val receivedLog: Log = iterator.next() as Log
 
             assertEquals(receivedLog.traceGlobals.size, 1)
-            assertEquals(receivedLog.traceGlobals.getValue("conceptowy:name").value, "__INVALID__")
+            assertEquals(receivedLog.traceGlobals.getValue("conceptowy:name"), "__INVALID__")
         }
     }
 
@@ -128,15 +131,29 @@ internal class XMLXESInputStreamTest {
 
             val receivedLog: Log = iterator.next() as Log
 
-            assertEquals(receivedLog.eventGlobals.size, 4)
+            assertEquals(receivedLog.eventGlobals.size, 5)
 
-            assertEquals(receivedLog.eventGlobals.getValue("conceptowy:name").value, "__INVALID__")
-            assertEquals(receivedLog.eventGlobals.getValue(LIFECYCLE_TRANSITION).value, "complete")
-            assertEquals(receivedLog.eventGlobals.getValue(ORG_GROUP).value, "__INVALID__")
+            assertEquals(receivedLog.eventGlobals.getValue("conceptowy:name"), "__INVALID__")
+            assertEquals(receivedLog.eventGlobals.getValue(LIFECYCLE_TRANSITION), "complete")
+            assertEquals(receivedLog.eventGlobals.getValue(ORG_GROUP), "__INVALID__")
             assertEquals(
-                receivedLog.eventGlobals.getValue(TIME_TIMESTAMP).value,
+                receivedLog.eventGlobals.getValue(TIME_TIMESTAMP),
                 "1970-01-01T01:00:00.000+01:00".parseISO8601()
             )
+            with(receivedLog.eventGlobals.children("globalListKey").asList() as List<AttributeMap>) {
+                val children = receivedLog.eventGlobals.children("globalListKey")
+                assertEquals(1, children.size)
+                assertEquals(25L, children["intInsideListKey"])
+                assertEquals(2, size)
+                with(this[0]) {
+                    assertIs<AttributeMap>(this)
+                    assertEquals(123.617, this["__UNKNOWN__"])
+                }
+                with(this[1]) {
+                    assertIs<AttributeMap>(this)
+                    assertEquals(456L, this["__NEW__"])
+                }
+            }
         }
     }
 
@@ -245,16 +262,13 @@ internal class XMLXESInputStreamTest {
             val iterator = XMLXESInputStream(stream).iterator()
 
             val receivedLog: Log = iterator.next() as Log
-            val listAttr = receivedLog.attributes.getValue("listKey") as ListAttr
+            val listAttr = receivedLog.attributes.children("listKey").asList()
 
-            assertEquals(listAttr.key, "listKey")
-            assertEquals(listAttr.children.getValue("intInsideListKey").value, 22L)
+            assertEquals(22L, receivedLog.attributes.children("listKey").getValue("intInsideListKey"))
 
-            assertEquals(listAttr.getValue()[0].key, "__UNKNOWN__")
-            assertEquals(listAttr.getValue()[0].value, 202.617)
+            assertEquals(202.617, listAttr[0]["__UNKNOWN__"])
 
-            assertEquals(listAttr.getValue()[1].key, "__NEW__")
-            assertEquals(listAttr.getValue()[1].value, 111L)
+            assertEquals(111L, listAttr[1]["__NEW__"])
         }
     }
 
@@ -271,11 +285,11 @@ internal class XMLXESInputStreamTest {
             assertEquals(receivedTrace.attributes.size, 3)
 
             assertEquals(
-                receivedTrace.attributes.getValue("End date").value,
+                receivedTrace.attributes.getValue("End date"),
                 "2006-01-04T23:45:36.000+01:00".parseISO8601()
             )
-            assertEquals(receivedTrace.attributes.getValue("Age").value, 33L)
-            assertEquals(receivedTrace.attributes.getValue("conceptowy:name").value, "00000001")
+            assertEquals(receivedTrace.attributes.getValue("Age"), 33L)
+            assertEquals(receivedTrace.attributes.getValue("conceptowy:name"), "00000001")
         }
     }
 
@@ -295,17 +309,17 @@ internal class XMLXESInputStreamTest {
             assertEquals(receivedEvent.attributes.size, 9)
 
             assertEquals(
-                receivedEvent.attributes.getValue(TIME_TIMESTAMP).value,
+                receivedEvent.attributes.getValue(TIME_TIMESTAMP),
                 "2005-01-03T00:00:00+01:00".parseISO8601()
             )
-            assertEquals(receivedEvent.attributes.getValue("Activity code").value, 410100L)
-            assertEquals(receivedEvent.attributes.getValue(LIFECYCLE_TRANSITION).value, "complete")
-            assertEquals(receivedEvent.attributes.getValue("Section").value, "Section 5")
-            assertEquals(receivedEvent.attributes.getValue("Producer code").value, "SRTH")
-            assertEquals(receivedEvent.attributes.getValue("conceptowy:name").value, "1e consult poliklinisch")
-            assertEquals(receivedEvent.attributes.getValue(ORG_GROUP).value, "Radiotherapy")
-            assertEquals(receivedEvent.attributes.getValue("Number of executions").value, 1L)
-            assertEquals(receivedEvent.attributes.getValue("Specialism code").value, 61L)
+            assertEquals(receivedEvent.attributes.getValue("Activity code"), 410100L)
+            assertEquals(receivedEvent.attributes.getValue(LIFECYCLE_TRANSITION), "complete")
+            assertEquals(receivedEvent.attributes.getValue("Section"), "Section 5")
+            assertEquals(receivedEvent.attributes.getValue("Producer code"), "SRTH")
+            assertEquals(receivedEvent.attributes.getValue("conceptowy:name"), "1e consult poliklinisch")
+            assertEquals(receivedEvent.attributes.getValue(ORG_GROUP), "Radiotherapy")
+            assertEquals(receivedEvent.attributes.getValue("Number of executions"), 1L)
+            assertEquals(receivedEvent.attributes.getValue("Specialism code"), 61L)
         }
     }
 

@@ -1,18 +1,19 @@
 package processm.core.log
 
+import org.junit.jupiter.api.Tag
+import processm.core.DBTestHelper
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.parseISO8601
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.ListAttr
-import processm.core.log.attribute.value
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.ORG_GROUP
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.AttributeMap
+import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import java.io.File
+import java.util.*
+import kotlin.test.*
 
 internal class DBXESInputStreamTest {
     private val content: String = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -129,38 +130,45 @@ internal class DBXESInputStreamTest {
         with(receivedLog.traceGlobals) {
             assertEquals(size, 3)
 
-            assertEquals(getValue("conceptowy:name").value, "__INVALID__")
-            assertEquals(getValue("meta_org:resource_events_standard_deviation").value, 2.2)
-            assertEquals(getValue("extras").value, 0.617)
+            assertEquals(getValue("conceptowy:name"), "__INVALID__")
+            assertEquals(getValue("meta_org:resource_events_standard_deviation"), 2.2)
+            assertEquals(getValue("extras"), 0.617)
         }
 
-        with(receivedLog.traceGlobals.getValue("meta_org:resource_events_standard_deviation")) {
-            assertEquals(children.size, 2)
+        with(receivedLog.traceGlobals.children("meta_org:resource_events_standard_deviation")) {
+            assertEquals(size, 2)
 
-            assertEquals(children.getValue("UNKNOWN").value, 202.617)
-            assertEquals(children.getValue("meta:key").value, 22L)
+            assertEquals(getValue("UNKNOWN"), 202.617)
+            assertEquals(getValue("meta:key"), 22L)
 
-            with(children.getValue("meta:key")) {
-                assertEquals(children.size, 7)
+            with(children("meta:key")) {
+                assertEquals(size, 7)
 
-                assertEquals(children.getValue(ORG_GROUP).value, "Radiotherapy")
-                assertEquals(children.getValue("Specialism code").value, 61L)
-                assertEquals(children.getValue("conceptowy:name").value, "1e consult poliklinisch")
-                assertEquals(children.getValue("Activity code").value, 410100L)
-                assertEquals("2005-01-03T00:00:00.000+01:00".parseISO8601(), children.getValue(TIME_TIMESTAMP).value)
-                assertEquals(children.getValue(LIFECYCLE_TRANSITION).value, "complete")
+                assertEquals(getValue(ORG_GROUP), "Radiotherapy")
+                assertEquals(getValue("Specialism code"), 61L)
+                assertEquals(getValue("conceptowy:name"), "1e consult poliklinisch")
+                assertEquals(getValue("Activity code"), 410100L)
+                assertEquals("2005-01-03T00:00:00.000+01:00".parseISO8601(), getValue(TIME_TIMESTAMP))
+                assertEquals(getValue(LIFECYCLE_TRANSITION), "complete")
 
-                with(children.getValue("listKey") as ListAttr) {
-                    assertEquals(children.size, 1)
-                    assertEquals(value.size, 2)
+                with(children("listKey")) {
+                    assertEquals(size, 1)
+                    assertEquals(getValue("intInsideListKey"), 12L)
+                }
+                with(children("listKey").asList()) {
+                    assertEquals(this.size, 2)
+                    assertIs<AttributeMap>(this[0])
+                    assertIs<AttributeMap>(this[1])
 
-                    assertEquals(children.getValue("intInsideListKey").value, 12L)
+                    with(this[0] as AttributeMap) {
+                        assertEquals(1, size)
+                        assertEquals(6.17, this["__UNKNOWN__"])
+                    }
 
-                    assertEquals(value[0].value, 6.17)
-                    assertEquals(value[0].key, "__UNKNOWN__")
-
-                    assertEquals(value[1].value, 111L)
-                    assertEquals(value[1].key, "__NEW__")
+                    with(this[1] as AttributeMap) {
+                        assertEquals(1, size)
+                        assertEquals(111L, this["__NEW__"])
+                    }
                 }
             }
         }
@@ -175,8 +183,8 @@ internal class DBXESInputStreamTest {
         with(receivedLog.eventGlobals) {
             assertEquals(size, 2)
 
-            assertEquals(getValue("conceptowy:name").value, "__INVALID__")
-            assertEquals(getValue(ORG_GROUP).value, "__INVALID__")
+            assertEquals(getValue("conceptowy:name"), "__INVALID__")
+            assertEquals(getValue(ORG_GROUP), "__INVALID__")
         }
     }
 
@@ -189,19 +197,19 @@ internal class DBXESInputStreamTest {
         with(receivedLog.attributes) {
             assertEquals(size, 4)
 
-            assertEquals(getValue("meta_org:resource_events_standard_deviation").value, 202.617)
-            assertEquals(getValue("meta_3TU:log_type").value, "Real-life")
-            assertEquals(getValue("conceptowy:name").value, "Some amazing log file")
-            assertEquals(getValue("meta_org:role_events_total").value, 150291L)
+            assertEquals(getValue("meta_org:resource_events_standard_deviation"), 202.617)
+            assertEquals(getValue("meta_3TU:log_type"), "Real-life")
+            assertEquals(getValue("conceptowy:name"), "Some amazing log file")
+            assertEquals(getValue("meta_org:role_events_total"), 150291L)
 
-            with(getValue("meta_org:resource_events_standard_deviation").children) {
+            with(children("meta_org:resource_events_standard_deviation")) {
                 assertEquals(size, 1)
-                assertEquals(getValue("UNKNOWN").value, 202.617)
+                assertEquals(getValue("UNKNOWN"), 202.617)
             }
 
-            with(getValue("meta_org:role_events_total").children) {
+            with(children("meta_org:role_events_total")) {
                 assertEquals(size, 1)
-                assertEquals(getValue("UNKNOWN").value, 150291L)
+                assertEquals(getValue("UNKNOWN"), 150291L)
             }
         }
     }
@@ -236,14 +244,14 @@ internal class DBXESInputStreamTest {
         with(receivedEvent.attributes) {
             assertEquals(size, 6)
 
-            assertEquals("Radiotherapy", getValue(ORG_GROUP).value)
-            assertEquals(61L, getValue("Specialism code").value)
-            assertEquals(1, getValue("Specialism code").children.size)
-            assertEquals(20.20, getValue("Specialism code").children.getValue("fl-y").value)
-            assertEquals("administratief tarief - eerste pol", getValue("conceptowy:name").value)
-            assertEquals("complete", getValue(LIFECYCLE_TRANSITION).value)
-            assertEquals(419100L, getValue("Activity code").value)
-            assertEquals(date, getValue(TIME_TIMESTAMP).value)
+            assertEquals("Radiotherapy", getValue(ORG_GROUP))
+            assertEquals(61L, getValue("Specialism code"))
+            assertEquals(1, children("Specialism code").size)
+            assertEquals(20.20, children("Specialism code").getValue("fl-y"))
+            assertEquals("administratief tarief - eerste pol", getValue("conceptowy:name"))
+            assertEquals("complete", getValue(LIFECYCLE_TRANSITION))
+            assertEquals(419100L, getValue("Activity code"))
+            assertEquals(date, getValue(TIME_TIMESTAMP))
         }
 
         with(receivedEvent) {
@@ -262,6 +270,28 @@ internal class DBXESInputStreamTest {
         val stream = DBXESInputStream(dbName, Query(missingLogId)).iterator()
 
         assertFalse(stream.hasNext())
+    }
+
+    @Ignore("This test is slow and `reading a log with over 65536 traces all at once` should test exactly the same thing")
+    @Test
+    @Tag("slow")
+    fun `too many parameters while reading Hospital_Billing-Event_Log from DB`() {
+        val uuid = DBTestHelper.loadLog(File("../xes-logs/Hospital_Billing-Event_Log.xes.gz"))
+        DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
+    }
+
+    @Tag("slow")
+    @Test
+    fun `reading a log with over 65536 traces all at once`() {
+        val traces = List(65537) { processm.core.log.hierarchical.Trace(sequenceOf(Event())) }
+        val log = processm.core.log.hierarchical.Log(traces.asSequence())
+        val uuid = UUID.randomUUID()
+        log.identityId = uuid
+        DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
+            output.write(log.toFlatSequence())
+        }
+        val actual = DBXESInputStream(dbName, Query("where l:id=$uuid")).count()
+        assertEquals(2 * 65537 + 1, actual) // log + 65537 traces, each with a single event
     }
 
     private fun setUp(): Int {

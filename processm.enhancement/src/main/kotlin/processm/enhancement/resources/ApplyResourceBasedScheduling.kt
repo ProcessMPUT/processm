@@ -3,13 +3,11 @@ package processm.enhancement.resources
 import org.apache.commons.math3.distribution.RealDistribution
 import processm.core.log.*
 import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
-import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.DateTimeAttr
-import processm.core.log.attribute.StringAttr
-import processm.core.log.attribute.value
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.ORG_ROLE
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.MutableAttributeMap
 import processm.enhancement.simulation.CAUSE
 import java.time.Duration
 import java.time.Instant
@@ -31,9 +29,9 @@ class ApplyResourceBasedScheduling(
 ) : XESInputStream {
 
     companion object {
-        private val ASSIGN = StringAttr(LIFECYCLE_TRANSITION, "assign")
-        private val START = StringAttr(LIFECYCLE_TRANSITION, "start")
-        private val COMPLETE = StringAttr(LIFECYCLE_TRANSITION, "complete")
+        private val ASSIGN = "assign"
+        private val START = "start"
+        private val COMPLETE =  "complete"
     }
 
     private val random: kotlin.random.Random = kotlin.random.Random.Default
@@ -51,7 +49,7 @@ class ApplyResourceBasedScheduling(
                     requireNotNull(component.conceptName) { "The concept:name attribute must be set for every event." }
 
                     val latestPrecedingActivityEnd =
-                        scheduling[component.attributes[Attribute.CAUSE]?.value]?.second
+                        scheduling[component.attributes.getOrNull(Attribute.CAUSE)]?.second
                             ?: lastEndEventTime
                             ?: lastProcessExecutionStartTime
                     val permittedRoles = activitiesRoles[component.conceptName]
@@ -68,21 +66,21 @@ class ApplyResourceBasedScheduling(
                     val activityStart = resource.enqueueActivity(duration, latestPrecedingActivityEnd)
                     scheduling[component.identityId!!] = activityStart to activityStart + duration
 
-                    val attributesAssign = HashMap(component.attributes)
-                    attributesAssign[TIME_TIMESTAMP] = DateTimeAttr(TIME_TIMESTAMP, latestPrecedingActivityEnd)
+                    val attributesAssign = MutableAttributeMap(component.attributes)
+                    attributesAssign[TIME_TIMESTAMP] = latestPrecedingActivityEnd
                     attributesAssign[LIFECYCLE_TRANSITION] = ASSIGN
-                    attributesAssign[ORG_RESOURCE] = StringAttr(ORG_RESOURCE, resource.name)
+                    attributesAssign[ORG_RESOURCE] = resource.name
                     if (permittedRoles !== null) {
                         val role = resource.roles.intersect(permittedRoles).random(random)
-                        attributesAssign[ORG_ROLE] = StringAttr(ORG_ROLE, role)
+                        attributesAssign[ORG_ROLE] = role
                     }
 
-                    val attributesStart = HashMap(attributesAssign)
-                    attributesStart[TIME_TIMESTAMP] = DateTimeAttr(TIME_TIMESTAMP, activityStart)
+                    val attributesStart = MutableAttributeMap(attributesAssign)
+                    attributesStart[TIME_TIMESTAMP] = activityStart
                     attributesStart[LIFECYCLE_TRANSITION] = START
-                    val attributesComplete = HashMap(attributesStart)
+                    val attributesComplete = MutableAttributeMap(attributesStart)
                     attributesComplete[LIFECYCLE_TRANSITION] = COMPLETE
-                    attributesComplete[TIME_TIMESTAMP] = DateTimeAttr(TIME_TIMESTAMP, activityStart + duration)
+                    attributesComplete[TIME_TIMESTAMP] = activityStart + duration
 
                     eventBuffer.add(Event(attributesAssign))
                     eventBuffer.add(Event(attributesStart))

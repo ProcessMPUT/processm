@@ -71,6 +71,14 @@ object Migrator {
         }
     }
 
+    private fun jdbc2libpq(jdbc: String): String {
+        // https://www.postgresql.org/docs/15/libpq-connect.html#LIBPQ-CONNSTRING
+        if (jdbc.startsWith("jdbc:postgres"))   // The URI scheme designator can be either postgresql:// or postgres://.
+            return jdbc.substring(5)
+        else
+            throw IllegalArgumentException("Cannot deal with '$jdbc'")
+    }
+
     private fun ensureDatabaseExists(dataStoreDBName: String) {
         loggedScope { logger ->
             logger.debug("Create datastore database if required")

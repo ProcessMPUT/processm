@@ -8,7 +8,7 @@ import processm.core.DBTestHelper
 import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
-import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
+import processm.core.log.attribute.Attribute.COST_TOTAL
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet

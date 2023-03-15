@@ -2,9 +2,9 @@ package processm.core.log
 
 import processm.core.helpers.identityMap
 import processm.core.log.attribute.*
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.CausalNet
@@ -29,22 +29,10 @@ object Helpers {
         return Log(tmp.asSequence().map { seq -> Trace(seq.asSequence().map { event(it.activity) }) })
     }
 
-    private fun wrap(key: String, value: Any): Attribute<*> = when (value) {
-        is Boolean -> BoolAttr(key, value)
-        is String -> StringAttr(key, value)
-        is Int -> IntAttr(key, value.toLong())
-        is Long -> IntAttr(key, value)
-        is Double -> RealAttr(key, value)
-        is Float -> RealAttr(key, value.toDouble())
-        else -> throw IllegalArgumentException("A value of the type ${value::class} is not supported")
-    }
-
-    fun event(name: String, vararg attrs: Pair<String, Any>): Event = Event().apply {
-        attributesInternal[CONCEPT_NAME] = StringAttr(CONCEPT_NAME, name)
-        attributesInternal[LIFECYCLE_TRANSITION] = StringAttr(LIFECYCLE_TRANSITION, "complete")
-        attributesInternal[CONCEPT_INSTANCE] = NullAttr(CONCEPT_INSTANCE)
-        for ((key, value) in attrs)
-            attributesInternal[key] = wrap(key, value)
+    fun event(name: String, vararg attrs: Pair<String, Any>): Event = Event(mutableAttributeMapOf(*attrs)).apply {
+        attributesInternal.computeIfAbsent(CONCEPT_NAME) { name }
+        attributesInternal.computeIfAbsent(LIFECYCLE_TRANSITION) { "complete" }
+        attributesInternal.computeIfAbsent(CONCEPT_INSTANCE) { null }
         setStandardAttributes(identityMap())
     }
 

@@ -27,7 +27,7 @@ class FlatARIMAPredictor : Predictor {
             for (trace in log.traces) {
                 for (event in trace.events)
                     for ((key, attribute) in event.attributes)
-                        if (attribute.isNumeric())
+                        if (attribute is Number)
                             kpis.computeIfAbsent(key) { ArrayList() }.add(attribute.toDouble())
             }
         }
@@ -42,7 +42,7 @@ class FlatARIMAPredictor : Predictor {
 
     override fun observeEvent(event: Event) {
         for ((key, attribute) in event.attributes)
-            if (attribute.isNumeric())
+            if (attribute is Number)
                 kpis[key]?.add(attribute.toDouble())
     }
 

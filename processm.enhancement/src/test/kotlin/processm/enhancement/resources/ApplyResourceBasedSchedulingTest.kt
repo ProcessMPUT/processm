@@ -5,15 +5,11 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.verify
 import org.apache.commons.math3.distribution.RealDistribution
-import processm.core.log.Event
-import processm.core.log.Log
-import processm.core.log.Trace
+import processm.core.log.*
 import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.StringAttr
-import processm.core.log.takeTraces
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.models.commons.Activity
 import processm.enhancement.simulation.CAUSE
 import processm.enhancement.simulation.MarkovSimulation
@@ -38,9 +34,9 @@ class ApplyResourceBasedSchedulingTest {
                         sequenceOf(
                             Trace(),
                             Event(
-                                mutableMapOf(
-                                    CONCEPT_NAME to StringAttr(CONCEPT_NAME, activity.name),
-                                    IDENTITY_ID to IDAttr(IDENTITY_ID, UUID.randomUUID())
+                                mutableAttributeMapOf(
+                                    CONCEPT_NAME to activity.name,
+                                    IDENTITY_ID to UUID.randomUUID()
                                 )
                             )
                         )
@@ -85,9 +81,9 @@ class ApplyResourceBasedSchedulingTest {
                         sequenceOf(
                             Trace(),
                             Event(
-                                mutableMapOf(
-                                    CONCEPT_NAME to StringAttr(CONCEPT_NAME, activity.name),
-                                    IDENTITY_ID to IDAttr(IDENTITY_ID, UUID.randomUUID())
+                                mutableAttributeMapOf(
+                                    CONCEPT_NAME to activity.name,
+                                    IDENTITY_ID to UUID.randomUUID()
                                 )
                             )
                         )
@@ -133,9 +129,9 @@ class ApplyResourceBasedSchedulingTest {
                         sequenceOf(
                             Trace(),
                             Event(
-                                mutableMapOf(
-                                    CONCEPT_NAME to StringAttr(CONCEPT_NAME, activity.name),
-                                    IDENTITY_ID to IDAttr(IDENTITY_ID, UUID.randomUUID())
+                                mutableAttributeMapOf(
+                                    CONCEPT_NAME to activity.name,
+                                    IDENTITY_ID to UUID.randomUUID()
                                 )
                             )
                         )
@@ -176,9 +172,9 @@ class ApplyResourceBasedSchedulingTest {
                         sequenceOf(
                             Trace(),
                             Event(
-                                mutableMapOf(
-                                    CONCEPT_NAME to StringAttr(CONCEPT_NAME, activity.name),
-                                    IDENTITY_ID to IDAttr(IDENTITY_ID, UUID.randomUUID())
+                                mutableAttributeMapOf(
+                                    CONCEPT_NAME to activity.name,
+                                    IDENTITY_ID to UUID.randomUUID()
                                 )
                             )
                         )
@@ -213,16 +209,16 @@ class ApplyResourceBasedSchedulingTest {
                             sequenceOf(
                                 Trace(),
                                 Event(
-                                    mutableMapOf(
-                                        CONCEPT_NAME to StringAttr(CONCEPT_NAME, criticalActivity.name),
-                                        IDENTITY_ID to IDAttr(IDENTITY_ID, UUID(0L, 1L))
+                                    mutableAttributeMapOf(
+                                        CONCEPT_NAME to criticalActivity.name,
+                                        IDENTITY_ID to UUID(0L, 1L)
                                     )
                                 ),
                                 Event(
-                                    mutableMapOf(
-                                        CONCEPT_NAME to StringAttr(CONCEPT_NAME, activity.name),
-                                        IDENTITY_ID to IDAttr(IDENTITY_ID, UUID(0L, 2L)),
-                                        Attribute.CAUSE to IDAttr(Attribute.CAUSE, UUID(0L, 1L))
+                                    mutableAttributeMapOf(
+                                        CONCEPT_NAME to activity.name,
+                                        IDENTITY_ID to UUID(0L, 2L),
+                                        Attribute.CAUSE to UUID(0L, 1L)
                                     )
                                 )
                             )

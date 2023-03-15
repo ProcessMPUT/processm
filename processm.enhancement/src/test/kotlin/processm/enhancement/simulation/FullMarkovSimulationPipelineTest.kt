@@ -6,7 +6,6 @@ import processm.conformance.CausalNets
 import processm.conformance.PetriNets
 import processm.conformance.ProcessTrees
 import processm.core.log.InferTimes
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.takeTraces
@@ -69,7 +68,7 @@ class FullMarkovSimulationPipelineTest {
         val log = HoneyBadgerHierarchicalXESInputStream(stream.takeTraces(tracesCount)).first()
         val traces = log.traces.map { trace ->
             trace.events
-                .joinToString("\n") { "${it.identityId} ${it.conceptName} after: ${it.attributes["cause"]?.value}, timestamp: ${it.timeTimestamp}" }
+                .joinToString("\n") { "${it.identityId} ${it.conceptName} after: ${it.attributes.getOrNull("cause")}, timestamp: ${it.timeTimestamp}" }
         }.toList()
         println(traces)
         val avgLeadTime = log.traces.map { trace ->

@@ -9,8 +9,8 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
 import processm.core.communication.Producer
 import processm.core.log.*
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.IDAttr
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.toMutableAttributeMap
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.logging.loggedScope
@@ -59,20 +59,15 @@ class LogsService(private val producer: Producer) {
                     )
                         .map {
                             val log = it as? Log ?: return@map it
-                            val logAttributes = log.attributes.toMutableMap()
+                            val logAttributes = log.attributes.toMutableAttributeMap()
 
-                            logAttributes.computeIfAbsent(identityIdAttributeName) {
-                                IDAttr(
-                                    identityIdAttributeName,
-                                    UUID.randomUUID()
-                                )
-                            }
+                            logAttributes.computeIfAbsent(identityIdAttributeName) {  UUID.randomUUID() }
 
                             return@map Log(
                                 logAttributes,
                                 log.extensions.toMutableMap(),
-                                log.traceGlobals.toMutableMap(),
-                                log.eventGlobals.toMutableMap(),
+                                log.traceGlobals.toMutableAttributeMap(),
+                                log.eventGlobals.toMutableAttributeMap(),
                                 log.traceClassifiers.toMutableMap(),
                                 log.eventClassifiers.toMutableMap()
                             )

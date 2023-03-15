@@ -16,10 +16,9 @@ import processm.core.helpers.toUUID
 import processm.core.log.DBLogCleaner
 import processm.core.log.DBXESOutputStream
 import processm.core.log.Log
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.StringAttr
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.toMutableAttributeMap
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
@@ -142,26 +141,20 @@ class MetaModelToXesConversionService : Service {
                 DBXESOutputStream(connection).use { dbStream ->
                     dbStream.write(xesInputStream.map {
                             val log = it as? Log ?: return@map it
-                            val logAttributes = log.attributes.toMutableMap()
+                            val logAttributes = log.attributes.toMutableAttributeMap()
 
                             logAttributes.computeIfAbsent(identityIdAttributeName) {
-                                IDAttr(
-                                    identityIdAttributeName,
-                                    etlProcessId
-                                )
+                                etlProcessId
                             }
                             logAttributes.computeIfAbsent(conceptNameAttributeName) {
-                                StringAttr(
-                                    conceptNameAttributeName,
-                                    logName
-                                )
+                                logName
                             }
 
                             return@map Log(
                                 logAttributes,
                                 log.extensions.toMutableMap(),
-                                log.traceGlobals.toMutableMap(),
-                                log.eventGlobals.toMutableMap(),
+                                log.traceGlobals.toMutableAttributeMap(),
+                                log.eventGlobals.toMutableAttributeMap(),
                                 log.traceClassifiers.toMutableMap(),
                                 log.eventClassifiers.toMutableMap()
                             )

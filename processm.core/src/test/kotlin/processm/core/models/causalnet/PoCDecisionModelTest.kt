@@ -3,7 +3,7 @@ package processm.core.models.causalnet
 import io.mockk.every
 import io.mockk.mockk
 import processm.core.log.Event
-import processm.core.log.attribute.IntAttr
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.Trace
 import kotlin.test.Test
 
@@ -15,7 +15,7 @@ class PoCDecisionModelTest {
         val e = mockk<Event>()
         every { e.conceptName } returns name
         every { e.lifecycleTransition } returns null
-        every { e.attributes } returns mapOf(featureName to IntAttr(featureName, feature))
+        every { e.attributes } returns mutableAttributeMapOf(featureName to feature)
         return e
     }
 

@@ -8,9 +8,11 @@ import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.io.File
 import java.util.zip.GZIPInputStream
+import kotlin.test.Ignore
 import kotlin.test.Test
 
 class XESPerformanceTest {
+    @Ignore
     @Test
     @Tag("performance")
     fun `Analyze logs from 4TU repository`() {

@@ -1,8 +1,9 @@
 package processm.core.log
 
 import processm.core.helpers.identityMap
-import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.value
+import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.MutableAttributeMap
+import processm.core.log.attribute.unmodifiableView
 import java.util.*
 
 /**
@@ -13,7 +14,7 @@ import java.util.*
  * @property attributesInternal A backing mutable field for [attributes].
  */
 abstract class XESComponent(
-    internal val attributesInternal: MutableMap<String, Attribute<*>> = HashMap()
+    internal val attributesInternal: MutableAttributeMap = MutableAttributeMap()
 ) {
     /**
      * Standard attribute based on concept:name
@@ -42,8 +43,8 @@ abstract class XESComponent(
     /**
      * Collection of all attributes associated with this element.
      */
-    val attributes: Map<String, Attribute<*>>
-        get() = Collections.unmodifiableMap(attributesInternal)
+    val attributes: AttributeMap
+        get() = attributesInternal.unmodifiableView()
 
     /**
      * Call this function at the end of constructor in all derived non-abstract classes.
@@ -59,7 +60,7 @@ abstract class XESComponent(
      * @return The value of the attribute.
      * @throws IllegalArgumentException if the attribute with the given name does not exist.
      */
-    operator fun get(attributeName: String): Any? = requireNotNull(attributesInternal[attributeName]).value
+    operator fun get(attributeName: String): Any? = attributesInternal[attributeName]
 
     /**
      * Sets the values of the standard attributes based on the custom attributes and the name map from the standard
@@ -77,10 +78,9 @@ abstract class XESComponent(
     fun <T> setCustomAttribute(
         stdVal: T?,
         stdName: String,
-        ctor: (key: String, value: T) -> Attribute<T>,
         nameMap: Map<String, String> = emptyMap()
     ) {
         stdVal ?: return
-        attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { ctor(it, stdVal) }
+        attributesInternal.computeIfAbsent(nameMap[stdName] ?: stdName) { stdVal }
     }
 }

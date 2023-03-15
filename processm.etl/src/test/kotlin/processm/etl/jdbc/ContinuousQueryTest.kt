@@ -5,7 +5,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.*
 import processm.core.DBTestHelper
 import processm.core.log.*
-import processm.core.log.attribute.value
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
@@ -278,11 +277,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         )
 
         val log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"] )
         assertEquals(
             expectedNumberOfEvents,
-            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+            log.traces.first().events.first().attributes["count(event:identity:id)"]
         )
 
         logger.info("Verifying contents...")
@@ -316,12 +315,12 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         )
 
         var log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
         assertEquals(
             expectedNumberOfTracesInTheFirstBatch,
-            log.traces.first().attributes["count(trace:identity:id)"]?.value
+            log.traces.first().attributes["count(trace:identity:id)"]
         )
-        assertEquals(6214L, log.traces.first().events.first().attributes["count(event:identity:id)"]?.value)
+        assertEquals(6214L, log.traces.first().events.first().attributes["count(event:identity:id)"] )
 
         // import the remaining components
         logger.info("Importing the remaining XES components...")
@@ -340,11 +339,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
             Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
         )
         log = counts.first()
-        assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+        assertEquals(1L, log.attributes["count(log:identity:id)"] )
+        assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"] )
         assertEquals(
             expectedNumberOfEvents,
-            log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+            log.traces.first().events.first().attributes["count(event:identity:id)"]
         )
     }
 
@@ -405,11 +404,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
                 Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
             )
             var log = counts.first()
-            assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-            assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+            assertEquals(1L, log.attributes["count(log:identity:id)"] )
+            assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"] )
             assertEquals(
                 expectedNumberOfEvents + 2,
-                log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+                log.traces.first().events.first().attributes["count(event:identity:id)"]
             )
 
             // simulate new return
@@ -453,11 +452,11 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
                 Query("select count(l:id), count(t:id), count(e:id) where l:id=$logUUID")
             )
             log = counts.first()
-            assertEquals(1L, log.attributes["count(log:identity:id)"]?.value)
-            assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"]?.value)
+            assertEquals(1L, log.attributes["count(log:identity:id)"] )
+            assertEquals(4580L, log.traces.first().attributes["count(trace:identity:id)"] )
             assertEquals(
                 expectedNumberOfEvents + 4,
-                log.traces.first().events.first().attributes["count(event:identity:id)"]?.value
+                log.traces.first().events.first().attributes["count(event:identity:id)"]
             )
         } finally {
             externalDB.connect().use { conn ->

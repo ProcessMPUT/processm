@@ -5,19 +5,18 @@ import processm.core.DBTestHelper
 import processm.core.helpers.parseISO8601
 import processm.core.log.Event
 import processm.core.log.XESComponent
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
-import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
-import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
-import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.value
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.COST_CURRENCY
+import processm.core.log.attribute.Attribute.COST_TOTAL
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.ORG_GROUP
+import processm.core.log.attribute.Attribute.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.ORG_ROLE
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.getStandardToCustomNameMap
 import processm.core.logging.logger
 import processm.core.querylanguage.Query
@@ -64,7 +63,7 @@ open class DBHierarchicalXESInputStreamWithQueryTestsBase {
         // This is because XESInputStream implementations are required to only map custom attributes to standard attributes
         // but not otherwise.
         fun cmp(standard: Any?, standardName: String) =
-            assertTrue(standard == component.attributes[nameMap[standardName]]?.value || component.attributes[nameMap[standardName]]?.value == null)
+            assertTrue(!component.attributes.containsKey(nameMap[standardName]) || standard == component.attributes[nameMap[standardName]])
 
         cmp(component.conceptName, CONCEPT_NAME)
         cmp(component.identityId, IDENTITY_ID)

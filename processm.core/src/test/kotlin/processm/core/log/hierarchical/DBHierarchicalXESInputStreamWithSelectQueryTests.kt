@@ -3,10 +3,8 @@ package processm.core.log.hierarchical
 import processm.core.helpers.implies
 import processm.core.helpers.parseISO8601
 import processm.core.helpers.toDateTime
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.StringAttr
-import processm.core.log.attribute.value
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.abs
@@ -111,8 +109,8 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -188,8 +186,8 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
                 assertNull(event.orgRole)
                 assertNull(event.identityId)
 
-                assertTrue(event.attributes[CONCEPT_NAME]?.value in eventNames)
-                assertTrue(event.attributes[LIFECYCLE_TRANSITION]?.value in lifecycleTransitions)
+                assertTrue(event.attributes[CONCEPT_NAME] in eventNames)
+                assertTrue(event.attributes[LIFECYCLE_TRANSITION] in lifecycleTransitions)
                 standardAndAllAttributesMatch(log, event)
             }
         }
@@ -205,9 +203,9 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
         assertEquals(1, log.traces.count())
         val trace = log.traces.first()
         assertEquals(101, trace.count)
-        assertEquals(11.0, trace.attributes["min(trace:cost:total)"]?.value)
-        assertEquals(21.98, trace.attributes["avg(trace:cost:total)"]?.value)
-        assertEquals(47.0, trace.attributes["max(trace:cost:total)"]?.value)
+        assertEquals(11.0, trace.attributes["min(trace:cost:total)"])
+        assertEquals(21.98, trace.attributes["avg(trace:cost:total)"])
+        assertEquals(47.0, trace.attributes["max(trace:cost:total)"])
 
         assertTrue(trace.events.count() > 1)
         assertEquals(2298, trace.events.sumBy { it.count })
@@ -226,7 +224,7 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
 
         assertEquals(101, log.traces.count())
         assertTrue(log.traces.any { trace ->
-            trace.events.map { it.attributes["result"] }.filterNotNull().any()
+            trace.events.any { it.attributes.containsKey("result") }
         })
         for (trace in log.traces) {
             assertNull(trace.conceptName)
@@ -247,7 +245,7 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
                 assertNull(event.orgGroup)
                 assertNull(event.orgResource)
                 assertNull(event.orgRole)
-                assertTrue(with(event.attributes["result"]) { this === null || this is StringAttr && this.value in results })
+                assertTrue { !event.attributes.containsKey("result") || with(event.attributes["result"]) { this === null || this is String && this in results } }
                 standardAndAllAttributesMatch(log, event)
             }
         }
@@ -275,8 +273,8 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
 
             for (event in trace.events) {
                 val rangeInDays =
-                    event.attributes["max(event:time:timestamp) - min(event:time:timestamp)"]!!.value as Double
-                val count = event.attributes["count(event:time:timestamp)"]!!.value as Long
+                    event.attributes["max(event:time:timestamp) - min(event:time:timestamp)"] as Double
+                val count = event.attributes["count(event:time:timestamp)"] as Long
                 assertTrue({ count == 1L } implies { rangeInDays < 1e-6 })
                 assertTrue({ count != 1L } implies { rangeInDays >= 0.0 })
             }
@@ -314,8 +312,8 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
         assertEquals("JournalReview", log.conceptName)
         assertEquals("standard", log.lifecycleModel)
         assertEquals(journal, log.identityId)
-        assertTrue(with(log.attributes["source"]) { this is StringAttr && this.value == "CPN Tools" })
-        assertTrue(with(log.attributes["description"]) { this is StringAttr && this.value == "Log file created in CPN Tools" })
+        assertTrue(with(log.attributes["source"]) { this is String && this == "CPN Tools" })
+        assertTrue(with(log.attributes["description"]) { this is String && this == "Log file created in CPN Tools" })
         assertEquals(3, log.eventClassifiers.size)
         assertEquals(2, log.eventGlobals.size)
         assertEquals(1, log.traceGlobals.size)
@@ -358,21 +356,21 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
 
         val log = stream.first()
         assertEquals(2, log.attributes.size)
-        assertEquals(1.0, log.attributes["log:1.0"]?.value)
-        assertEquals("2020-03-12T00:00:00Z".parseISO8601(), log.attributes["log:D2020-03-12T00:00:00Z"]?.value)
+        assertEquals(1.0, log.attributes["log:1.0"])
+        assertEquals("2020-03-12T00:00:00Z".parseISO8601(), log.attributes["log:D2020-03-12T00:00:00Z"])
 
         assertEquals(1, log.traces.count())
         val trace = log.traces.first()
         assertEquals(2, trace.attributes.size)
-        assertEquals(5.0, trace.attributes["log:2.0 + trace:3.0"]?.value)
-        assertNull(trace.attributes["trace:null / 11.0"]!!.value)
+        assertEquals(5.0, trace.attributes["log:2.0 + trace:3.0"])
+        assertNull(trace.attributes["trace:null / 11.0"])
 
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(3, event.attributes.size)
-        assertEquals(26.0, event.attributes["log:4.0 * trace:5.0 + event:6.0"]?.value)
-        assertEquals(-8.125, event.attributes["7.0 / 8.0 - 9.0"]?.value)
-        assertNull(event.attributes["10.0 * null"]!!.value)
+        assertEquals(26.0, event.attributes["log:4.0 * trace:5.0 + event:6.0"])
+        assertEquals(-8.125, event.attributes["7.0 / 8.0 - 9.0"])
+        assertNull(event.attributes["10.0 * null"])
     }
 
     @Test
@@ -411,11 +409,11 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(5, event.attributes.size)
-        assertEquals("2020-03-13T00:00:00Z".parseISO8601(), event.attributes["D2020-03-13T00:00:00Z"]?.value)
-        assertEquals("2020-03-13T16:45:00Z".parseISO8601(), event.attributes["D2020-03-13T16:45:00Z"]?.value)
-        assertEquals("2020-03-13T16:45:50Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50Z"]?.value)
-        assertEquals("2020-03-13T16:45:50.333Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50.333Z"]?.value)
-        assertEquals("2020-03-13T14:45:00Z".parseISO8601(), event.attributes["D2020-03-13T14:45:00Z"]?.value)
+        assertEquals("2020-03-13T00:00:00Z".parseISO8601(), event.attributes["D2020-03-13T00:00:00Z"])
+        assertEquals("2020-03-13T16:45:00Z".parseISO8601(), event.attributes["D2020-03-13T16:45:00Z"])
+        assertEquals("2020-03-13T16:45:50Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50Z"])
+        assertEquals("2020-03-13T16:45:50.333Z".parseISO8601(), event.attributes["D2020-03-13T16:45:50.333Z"])
+        assertEquals("2020-03-13T14:45:00Z".parseISO8601(), event.attributes["D2020-03-13T14:45:00Z"])
         // TODO: should we return duplicate attributes?
     }
 
@@ -436,13 +434,13 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(7, event.attributes.size)
-        assertEquals(0.0, event.attributes["0.0"]?.value)
-        assertEquals(-0.0, event.attributes["-0.0"]?.value)
-        assertEquals(1.0, event.attributes["1.0"]?.value)
-        assertEquals(-1.0, event.attributes["-1.0"]?.value)
-        assertEquals(Math.PI, event.attributes["${Math.PI}"]?.value)
-        assertEquals(Double.MIN_VALUE, event.attributes["${Double.MIN_VALUE}"]?.value)
-        assertEquals(Double.MAX_VALUE, event.attributes["${Double.MAX_VALUE}"]?.value)
+        assertEquals(0.0, event.attributes["0.0"])
+        assertEquals(-0.0, event.attributes["-0.0"])
+        assertEquals(1.0, event.attributes["1.0"])
+        assertEquals(-1.0, event.attributes["-1.0"])
+        assertEquals(Math.PI, event.attributes["${Math.PI}"])
+        assertEquals(Double.MIN_VALUE, event.attributes["${Double.MIN_VALUE}"])
+        assertEquals(Double.MAX_VALUE, event.attributes["${Double.MAX_VALUE}"])
         // TODO: should we return duplicate attributes?
     }
 
@@ -461,8 +459,8 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(2, event.attributes.size)
-        assertEquals(true, event.attributes["true"]?.value)
-        assertEquals(false, event.attributes["false"]?.value)
+        assertEquals(true, event.attributes["true"])
+        assertEquals(false, event.attributes["false"])
     }
 
     @Test
@@ -480,8 +478,8 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
         assertEquals(1, trace.events.count())
         val event = trace.events.first()
         assertEquals(2, event.attributes.size)
-        assertEquals("single-quoted", event.attributes["single-quoted"]?.value)
-        assertEquals("double-quoted", event.attributes["double-quoted"]?.value)
+        assertEquals("single-quoted", event.attributes["single-quoted"])
+        assertEquals("double-quoted", event.attributes["double-quoted"])
     }
 
     @Test
@@ -503,12 +501,12 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
 
         val log = stream.first()
         assertEquals(1, log.attributes.size)
-        assertTrue(abs(Duration.between(now, log.attributes["log:now()"]?.value as Instant?).toMillis()) <= diff)
+        assertTrue(abs(Duration.between(now, log.attributes["log:now()"] as Instant?).toMillis()) <= diff)
 
         // verify repetitiveness
         Thread.sleep(1L)
         val log2 = stream.first()
-        assertEquals(log.attributes["log:now()"]?.value, log2.attributes["log:now()"]?.value)
+        assertEquals(log.attributes["log:now()"], log2.attributes["log:now()"])
     }
 
     @Test
@@ -519,7 +517,7 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
             for (event in trace.events) {
                 assertEquals(
                     event.timeTimestamp!!.toDateTime().second.toDouble(),
-                    event.attributes["second(event:time:timestamp)"]?.value
+                    event.attributes["second(event:time:timestamp)"]
                 )
             }
         }
@@ -541,9 +539,9 @@ class DBHierarchicalXESInputStreamWithSelectQueryTests : DBHierarchicalXESInputS
             val log = stream.first()
             for (trace in log.traces) {
                 for (event in trace.events) {
-                    assertNull(event.attributes["🦠"])
+                    assertFailsWith<NoSuchElementException> { event.attributes["🦠"] }
 
-                    val result = event.attributes["result"]?.value as String?
+                    val result = event.attributes.getOrNull("result") as String?
                     assertTrue(result in validResults.keys)
                     validResults.compute(result) { _, v -> v!! + 1 }
                 }

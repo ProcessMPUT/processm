@@ -2,13 +2,12 @@ package processm.core.log
 
 import processm.core.DBTestHelper
 import processm.core.helpers.fastParseISO8601
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.DateTimeAttr
-import processm.core.log.attribute.StringAttr
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
@@ -41,22 +40,22 @@ class InferTimesTests {
         HoneyBadgerHierarchicalXESInputStream(
             InferTimes(
                 sequenceOf(
-                    Log(mutableMapOf(LIFECYCLE_MODEL to StringAttr(LIFECYCLE_MODEL, "bpaf"))),
+                    Log(mutableAttributeMapOf(LIFECYCLE_MODEL to "bpaf")),
                     Trace(),
                     Event(
-                        mutableMapOf(
-                            CONCEPT_NAME to StringAttr(CONCEPT_NAME, "A"),
-                            CONCEPT_INSTANCE to StringAttr(CONCEPT_INSTANCE, "1"),
-                            LIFECYCLE_STATE to StringAttr(LIFECYCLE_STATE, "Open.Running.InProgress"),
-                            TIME_TIMESTAMP to DateTimeAttr(TIME_TIMESTAMP, "2022-07-05T16:27:00.00Z".fastParseISO8601())
+                        mutableAttributeMapOf(
+                            CONCEPT_NAME to "A",
+                            CONCEPT_INSTANCE to "1",
+                            LIFECYCLE_STATE to "Open.Running.InProgress",
+                            TIME_TIMESTAMP to "2022-07-05T16:27:00.00Z".fastParseISO8601()
                         )
                     ),
                     Event(
-                        mutableMapOf(
-                            CONCEPT_NAME to StringAttr(CONCEPT_NAME, "A"),
-                            CONCEPT_INSTANCE to StringAttr(CONCEPT_INSTANCE, "1"),
-                            LIFECYCLE_STATE to StringAttr(LIFECYCLE_STATE, "Closed.Completed"),
-                            TIME_TIMESTAMP to DateTimeAttr(TIME_TIMESTAMP, "2022-07-05T16:30:00.00Z".fastParseISO8601())
+                        mutableAttributeMapOf(
+                            CONCEPT_NAME to "A",
+                            CONCEPT_INSTANCE to "1",
+                            LIFECYCLE_STATE to "Closed.Completed",
+                            TIME_TIMESTAMP to "2022-07-05T16:30:00.00Z".fastParseISO8601()
                         )
                     )
                 )

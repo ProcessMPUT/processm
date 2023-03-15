@@ -3,7 +3,6 @@ package processm.core.log
 import io.mockk.every
 import io.mockk.spyk
 import processm.core.helpers.parseISO8601
-import processm.core.log.attribute.value
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -603,7 +602,7 @@ internal class XESImportCertificationFirstLevelTest {
             }
 
             with(receivedLog.attributes) {
-                assertEquals(getValue("value-without-extension").value, "some-special-value")
+                assertEquals(getValue("value-without-extension"), "some-special-value")
             }
 
             with(iterator.next() as Trace) {
@@ -613,8 +612,8 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(costCurrency, "PLN")
 
                 with(attributes) {
-                    assertEquals(getValue("wascost:total").value, 99.99)
-                    assertEquals(getValue("wascost:currency").value, "PLN")
+                    assertEquals(getValue("wascost:total"), 99.99)
+                    assertEquals(getValue("wascost:currency"), "PLN")
                 }
             }
 
@@ -630,9 +629,9 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(costCurrency, "PLN")
 
                 with(attributes) {
-                    assertEquals(getValue("wascost:total").value, 90.99)
-                    assertEquals(getValue("wascost:currency").value, "PLN")
-                    assertEquals(getValue("cost:level").value, 1L)
+                    assertEquals(getValue("wascost:total"), 90.99)
+                    assertEquals(getValue("wascost:currency"), "PLN")
+                    assertEquals(getValue("cost:level"), 1L)
                 }
             }
 
@@ -648,9 +647,9 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(costCurrency, "PLN")
 
                 with(attributes) {
-                    assertEquals(getValue("wascost:total").value, 9.00)
-                    assertEquals(getValue("wascost:currency").value, "PLN")
-                    assertEquals(getValue("cost:level").value, 2L)
+                    assertEquals(getValue("wascost:total"), 9.00)
+                    assertEquals(getValue("wascost:currency"), "PLN")
+                    assertEquals(getValue("cost:level"), 2L)
                 }
             }
 
@@ -661,8 +660,8 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(costCurrency, "USD")
 
                 with(attributes) {
-                    assertEquals(getValue("wascost:total").value, 10.00)
-                    assertEquals(getValue("wascost:currency").value, "USD")
+                    assertEquals(getValue("wascost:total"), 10.00)
+                    assertEquals(getValue("wascost:currency"), "USD")
                 }
             }
 
@@ -678,9 +677,9 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(costCurrency, "USD")
 
                 with(attributes) {
-                    assertEquals(getValue("wascost:total").value, 5.00)
-                    assertEquals(getValue("wascost:currency").value, "USD")
-                    assertEquals(getValue("cost:level").value, 1L)
+                    assertEquals(getValue("wascost:total"), 5.00)
+                    assertEquals(getValue("wascost:currency"), "USD")
+                    assertEquals(getValue("cost:level"), 1L)
                 }
             }
 
@@ -696,9 +695,9 @@ internal class XESImportCertificationFirstLevelTest {
                 assertEquals(costCurrency, "USD")
 
                 with(attributes) {
-                    assertEquals(getValue("wascost:total").value, 5.00)
-                    assertEquals(getValue("wascost:currency").value, "USD")
-                    assertEquals(getValue("cost:level").value, 1L)
+                    assertEquals(getValue("wascost:total"), 5.00)
+                    assertEquals(getValue("wascost:currency"), "USD")
+                    assertEquals(getValue("cost:level"), 1L)
                 }
             }
         }

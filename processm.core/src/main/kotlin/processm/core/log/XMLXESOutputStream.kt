@@ -1,8 +1,7 @@
 package processm.core.log
 
 import processm.core.Brand
-import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.ListAttr
+import processm.core.log.attribute.AttributeMap
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -113,27 +112,26 @@ class XMLXESOutputStream(
      * Store attribute as <xml-tag key value>
      * If ListAttr - ignore value and store ordered list of attributes (from value field)
      */
-    private fun writeAttribute(attribute: Attribute<*>) {
-        if (attribute.children.isEmpty()) {
-            output.writeEmptyElement(attribute.xesTag)
-            output.writeAttribute("key", attribute.key)
-            if (attribute.xesTag != "list") {
-                output.writeAttribute("value", attribute.valueToString())
+    private fun writeAttribute(key: String, value: Any?, children: AttributeMap) {
+        if (children.isEmpty()) {
+            output.writeEmptyElement(value.xesTag)
+            output.writeAttribute("key", key)
+            if (value.xesTag != "list") {
+                output.writeAttribute("value", value.valueToString())
             } else {
-                assert(attribute is ListAttr)
-                writeListAttributes((attribute as ListAttr).value)
+                assert(value is List<*>)
+                writeListAttributes(value as List<AttributeMap>)
             }
 
         } else {
-            output.writeStartElement(attribute.xesTag)
-            output.writeAttribute("key", attribute.key)
-            if (attribute.xesTag != "list") {
-                output.writeAttribute("value", attribute.valueToString())
-                writeAttributes(attribute.children)
+            output.writeStartElement(value.xesTag)
+            output.writeAttribute("key", key)
+            if (value.xesTag != "list") {
+                output.writeAttribute("value", value.valueToString())
+                writeAttributes(children)
             } else {
-                assert(attribute is ListAttr)
-                writeAttributes(attribute.children)
-                writeListAttributes((attribute as ListAttr).value)
+                writeAttributes(children)
+                writeListAttributes(children.asList())
             }
 
             output.writeEndElement()
@@ -145,12 +143,12 @@ class XMLXESOutputStream(
      *
      * Used to store attributes in List<Attribute<*>>
      */
-    private fun writeListAttributes(children: List<Attribute<*>>) {
+    private fun writeListAttributes(children: List<AttributeMap>) {
         if (children.isNotEmpty()) {
             output.writeStartElement("values")
 
             for (attribute in children) {
-                writeAttribute(attribute)
+                writeAttributes(attribute)
             }
 
             output.writeEndElement()
@@ -160,21 +158,21 @@ class XMLXESOutputStream(
     /**
      * Store attributes
      */
-    private fun writeAttributes(attributes: Map<String, Attribute<*>>) {
-        for (attribute in attributes.values.let { if (sortAttributesByType) it.sortedBy(Attribute<*>::xesTag) else it })
-            writeAttribute(attribute)
+    private fun writeAttributes(attributes: AttributeMap) {
+        for ((key, value) in attributes.entries.let { if (sortAttributesByType) it.sortedBy { (k, _) -> k.xesTag } else it })
+            writeAttribute(key, value, attributes.children(key))
     }
 
     /**
      * Write global's attributes in selected scope into XML file
      */
-    private fun writeGlobals(scope: String, globals: Map<String, Attribute<*>>) {
+    private fun writeGlobals(scope: String, globals: AttributeMap) {
         if (globals.isNotEmpty()) {
             output.writeStartElement("global")
             output.writeAttribute("scope", scope)
 
-            for (global in globals.values) {
-                writeAttribute(global)
+            for ((key, global) in globals.entries) {
+                writeAttribute(key, global, globals.children(key))
             }
 
             output.writeEndElement()

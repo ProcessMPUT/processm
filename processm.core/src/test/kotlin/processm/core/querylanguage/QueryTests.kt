@@ -2,10 +2,10 @@ package processm.core.querylanguage
 
 import org.antlr.v4.runtime.RecognitionException
 import org.junit.jupiter.api.Tag
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
-import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.COST_CURRENCY
+import processm.core.log.attribute.Attribute.COST_TOTAL
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import kotlin.test.*
 
 @Tag("PQL")

@@ -3,20 +3,21 @@ package processm.core.log.hierarchical
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.*
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_INSTANCE
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.COST_CURRENCY
-import processm.core.log.attribute.Attribute.Companion.COST_TOTAL
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_MODEL
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_STATE
-import processm.core.log.attribute.Attribute.Companion.LIFECYCLE_TRANSITION
-import processm.core.log.attribute.Attribute.Companion.ORG_GROUP
-import processm.core.log.attribute.Attribute.Companion.ORG_RESOURCE
-import processm.core.log.attribute.Attribute.Companion.ORG_ROLE
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.Attribute.Companion.XES_FEATURES
-import processm.core.log.attribute.Attribute.Companion.XES_VERSION
+import processm.core.log.attribute.Attribute.CONCEPT_INSTANCE
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.COST_CURRENCY
+import processm.core.log.attribute.Attribute.COST_TOTAL
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.Attribute.LIFECYCLE_MODEL
+import processm.core.log.attribute.Attribute.LIFECYCLE_STATE
+import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
+import processm.core.log.attribute.Attribute.ORG_GROUP
+import processm.core.log.attribute.Attribute.ORG_RESOURCE
+import processm.core.log.attribute.Attribute.ORG_ROLE
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
+import processm.core.log.attribute.Attribute.XES_FEATURES
+import processm.core.log.attribute.Attribute.XES_VERSION
+import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -300,13 +301,12 @@ class DBHierarchicalXESInputStream(
 
         while (!resultSet.isEnded && resultSet.getInt("log_id") == logId) {
             val scope = resultSet.getString("scope")
-            val attribute = readRecordsIntoAttributes(resultSet)
-
-            when (scope) {
-                "event" -> log.eventGlobalsInternal[attribute.key] = attribute
-                "trace" -> log.traceGlobalsInternal[attribute.key] = attribute
+            val map = when (scope) {
+                "event" -> log.eventGlobalsInternal
+                "trace" -> log.traceGlobalsInternal
                 else -> throw IllegalStateException("Illegal scope $scope for the global.")
             }
+            readRecordsIntoAttributes(resultSet, map)
         }
     }
 
@@ -326,19 +326,25 @@ class DBHierarchicalXESInputStream(
             component.attributesInternal.computeIfAbsent(colName) {
                 when (val colType = metadata.getColumnType(colIndex)) {
                     Types.VARCHAR, Types.NVARCHAR, Types.CHAR, Types.NCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
-                        resultSet.getString(colIndex)?.let { StringAttr(colName, it) }
+                        resultSet.getString(colIndex)
+
                     Types.BIGINT, Types.INTEGER, Types.SMALLINT, Types.TINYINT ->
-                        resultSet.getLongOrNull(colIndex)?.let { IntAttr(colName, it) }
+                        resultSet.getLongOrNull(colIndex)
+
                     Types.NUMERIC, Types.DOUBLE, Types.FLOAT, Types.REAL, Types.DECIMAL ->
-                        resultSet.getDoubleOrNull(colIndex)?.let { RealAttr(colName, it) }
+                        resultSet.getDoubleOrNull(colIndex)
+
                     Types.TIMESTAMP_WITH_TIMEZONE, Types.TIMESTAMP, Types.DATE, Types.TIME, Types.TIME_WITH_TIMEZONE ->
-                        resultSet.getTimestamp(colIndex, gmtCalendar)?.let { DateTimeAttr(colName, it.toInstant()) }
+                        resultSet.getTimestamp(colIndex, gmtCalendar)?.toInstant()
+
                     Types.BIT, Types.BOOLEAN ->
-                        resultSet.getBooleanOrNull(colIndex)?.let { BoolAttr(colName, it) }
+                        resultSet.getBooleanOrNull(colIndex)
+
                     Types.NULL ->
-                        NullAttr(colName)
+                        null
+
                     else -> throw UnsupportedOperationException("Unsupported expression type $colType for expression $colName.")
-                } ?: NullAttr(colName)
+                }
             }
         }
 
@@ -426,55 +432,39 @@ class DBHierarchicalXESInputStream(
             resultSet.next()
 
         while (!resultSet.isEnded && getElementId(resultSet) == elementId) {
-            with(readRecordsIntoAttributes(resultSet)) {
-                component.attributesInternal[this.key] = this
-            }
+            readRecordsIntoAttributes(resultSet, component.attributesInternal)
         }
 
         component.setStandardAttributes(nameMap)
     }
 
-    private fun readRecordsIntoAttributes(resultSet: ResultSet): Attribute<*> {
-        val attr = attributeFromRecord(resultSet.getString("key"), resultSet)
-        val attrId = resultSet.getLong("id")
+    private fun readRecordsIntoAttributes(
+        resultSet: ResultSet,
+        parentStorage: MutableAttributeMap
+    ) {
+        val key = resultSet.getString("key")
+        val attr = attributeFromRecord(resultSet)
 
-        if (!resultSet.next())
-            return attr
-
-        if (resultSet.getLong("parent_id") != attrId) {
-            return attr
-        } else {
-            do {
-                val isInsideList = resultSet.getBoolean("in_list_attr")
-                with(readRecordsIntoAttributes(resultSet)) {
-                    if (isInsideList) {
-                        assert(attr is ListAttr)
-                        (attr as ListAttr).valueInternal.add(this)
-                    } else {
-                        attr[this.key] = this
-                    }
-                }
-            } while (!resultSet.isEnded && resultSet.getLong("parent_id") == attrId)
-        }
-
-        return attr
+        parentStorage.putFlat(key, attr)
+        resultSet.next()
     }
 
-    private fun attributeFromRecord(key: String, record: ResultSet): Attribute<*> {
+    private fun attributeFromRecord(record: ResultSet): Any {
         with(record) {
             val type = getString("type")!!
             assert(type.length >= 2)
             return when (type[0]) {
-                's' -> StringAttr(key, getString("string_value"))
-                'f' -> RealAttr(key, getDouble("real_value"))
+                's' -> getString("string_value")
+                'f' -> getDouble("real_value")
                 'i' -> when (type[1]) {
-                    'n' -> IntAttr(key, getLong("int_value"))
-                    'd' -> IDAttr(key, getString("uuid_value").toUUID()!!)
+                    'n' -> getLong("int_value")
+                    'd' -> getString("uuid_value").toUUID()!!
                     else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
                 }
-                'd' -> DateTimeAttr(key, getTimestamp("date_value", gmtCalendar).toInstant())
-                'b' -> BoolAttr(key, getBoolean("bool_value"))
-                'l' -> ListAttr(key)
+
+                'd' -> getTimestamp("date_value", gmtCalendar).toInstant()
+                'b' -> getBoolean("bool_value")
+                'l' -> LIST_TAG
                 else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
             }
         }

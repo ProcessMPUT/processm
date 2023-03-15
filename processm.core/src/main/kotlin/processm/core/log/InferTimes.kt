@@ -1,9 +1,8 @@
 package processm.core.log
 
 import processm.core.helpers.map2d.DoublingMap2D
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.TIME_TIMESTAMP
-import processm.core.log.attribute.StringAttr
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.models.metadata.BasicMetadata.LEAD_TIME
 import processm.core.models.metadata.BasicMetadata.SERVICE_TIME
 import processm.core.models.metadata.BasicMetadata.SUSPENSION_TIME
@@ -43,10 +42,10 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
                     nameInstanceToEvent.getRow(row).values.sumOf { v -> v.suspension.toMillis() }
                 })
 
-                attributesInternal[LEAD_TIME.urn] = StringAttr(LEAD_TIME.urn, lead.toString())
-                attributesInternal[SERVICE_TIME.urn] = StringAttr(SERVICE_TIME.urn, service.toString())
-                attributesInternal[WAITING_TIME.urn] = StringAttr(WAITING_TIME.urn, waiting.toString())
-                attributesInternal[SUSPENSION_TIME.urn] = StringAttr(SUSPENSION_TIME.urn, suspension.toString())
+                attributesInternal[LEAD_TIME.urn] = lead.toString()
+                attributesInternal[SERVICE_TIME.urn] = service.toString()
+                attributesInternal[WAITING_TIME.urn] = waiting.toString()
+                attributesInternal[SUSPENSION_TIME.urn] = suspension.toString()
 
                 yield(traceBuffer!!)
                 yieldAll(eventBuffer)
@@ -80,11 +79,10 @@ class InferTimes(val base: XESInputStream) : XESInputStream {
                         }
                     }!!
 
-                    attributesInternal[LEAD_TIME.urn] = StringAttr(LEAD_TIME.urn, times.lead.toString())
-                    attributesInternal[SERVICE_TIME.urn] = StringAttr(SERVICE_TIME.urn, times.service.toString())
-                    attributesInternal[WAITING_TIME.urn] = StringAttr(WAITING_TIME.urn, times.waiting.toString())
-                    attributesInternal[SUSPENSION_TIME.urn] =
-                        StringAttr(SUSPENSION_TIME.urn, times.suspension.toString())
+                    attributesInternal[LEAD_TIME.urn] = times.lead.toString()
+                    attributesInternal[SERVICE_TIME.urn] = times.service.toString()
+                    attributesInternal[WAITING_TIME.urn] = times.waiting.toString()
+                    attributesInternal[SUSPENSION_TIME.urn] = times.suspension.toString()
 
                     eventBuffer.add(component)
                 }

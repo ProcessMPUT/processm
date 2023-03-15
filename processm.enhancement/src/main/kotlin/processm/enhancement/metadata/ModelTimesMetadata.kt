@@ -4,7 +4,6 @@ import processm.conformance.models.alignments.Alignment
 import processm.conformance.models.alignments.CompositeAligner
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.*
-import processm.core.log.attribute.value
 import processm.core.models.causalnet.DecoupledNodeExecution
 import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
@@ -27,7 +26,7 @@ fun Sequence<Alignment>.getTimesMetadataProviders(): List<MetadataProvider> {
             val event = step.logMove ?: continue
             val activity = step.modelMove ?: continue
             for (key in BASIC_TIME_STATISTICS) {
-                val value = Duration.parse(event.attributes[key.urn]?.value?.toString() ?: continue)
+                val value = Duration.parse(event.attributes.getOrNull(key.urn)?.toString() ?: continue)
                 stats.compute(activity, key) { _, _, old -> old ?: ArrayList() }!!.add(value)
             }
         }

@@ -30,7 +30,7 @@ internal class DataStoreServiceTest : ServiceTestBase() {
 
     @Test
     fun `Read all data stores assigned to organization`(): Unit =
-        withCleanTables(AccessControlList, DataStores, Organizations) {
+        withCleanTables(AccessControlList, DataStores, Groups, Organizations) {
             val expectedOrgId = createOrganization(name = "Expected").id.value
             val ignoredOrgId = createOrganization(name = "Ignored").id.value
 

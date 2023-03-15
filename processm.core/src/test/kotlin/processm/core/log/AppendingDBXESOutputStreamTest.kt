@@ -1,10 +1,9 @@
 package processm.core.log
 
 import processm.core.DBTestHelper
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
-import processm.core.log.attribute.IDAttr
-import processm.core.log.attribute.StringAttr
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.Attribute.IDENTITY_ID
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
@@ -23,30 +22,32 @@ class AppendingDBXESOutputStreamTest {
         val trace2UUID = UUID.randomUUID()
         val trace3UUID = UUID.randomUUID()
 
-        val log = Log(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, logUUID)))
-        val trace1 = Trace(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, trace1UUID)))
-        val trace2 = Trace(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, trace2UUID)))
-        val trace3 = Trace(mutableMapOf(IDENTITY_ID to IDAttr(IDENTITY_ID, trace3UUID)))
+        val log = Log(mutableAttributeMapOf(IDENTITY_ID to logUUID))
+        val trace1 = Trace(mutableAttributeMapOf(IDENTITY_ID to trace1UUID))
+        val trace2 = Trace(mutableAttributeMapOf(IDENTITY_ID to trace2UUID))
+        val trace3 = Trace(mutableAttributeMapOf(IDENTITY_ID to trace3UUID))
 
         val events1 = sequenceOf(
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "create order"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "issue invoice"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "pay"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "deliver"))),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "create order")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "issue invoice")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "pay")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "deliver")),
         )
 
         val events2 = sequenceOf(
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "create order"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "backorder"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "issue invoice"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "pay"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "deliver"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "complaint"))),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "create order")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "backorder")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "issue invoice")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "pay").apply { children("other name")["floatKey"] = 1.23 }),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "deliver").apply {
+                children("some name")["booleanKey"] = true
+            }),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "complaint")),
         )
 
         val events3 = sequenceOf(
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "create order"))),
-            Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "change quantity"))),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "create order")),
+            Event(mutableAttributeMapOf(CONCEPT_NAME to "change quantity")),
         )
 
         val part1 = sequenceOf(log, trace1) + events1.take(2) + sequenceOf(trace2) + events2.take(2)

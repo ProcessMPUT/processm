@@ -27,7 +27,7 @@ class VerticalARIMAPredictor(val classifier: (Event) -> Any? = { it.conceptName 
                 for (event in trace.events) {
                     val eventKey = classifier(event)
                     for ((key, attribute) in event.attributes)
-                        if (attribute.isNumeric())
+                        if (attribute is Number)
                             kpis.compute(eventKey, key) { _, _, old -> old ?: ArrayList() }?.add(attribute.toDouble())
                 }
             }
@@ -46,7 +46,7 @@ class VerticalARIMAPredictor(val classifier: (Event) -> Any? = { it.conceptName 
     override fun observeEvent(event: Event) {
         val eventKey = classifier(event)
         for ((key, attribute) in event.attributes)
-            if (attribute.isNumeric())
+            if (attribute is Number)
                 kpis[eventKey, key]?.add(attribute.toDouble())
     }
 

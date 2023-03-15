@@ -1,6 +1,6 @@
 package processm.experimental.core.log
 
-import processm.core.log.attribute.Attribute.Companion.IDENTITY_ID
+import processm.core.log.attribute.Attribute.IDENTITY_ID
 import java.io.File
 import java.util.*
 import java.util.concurrent.Executors

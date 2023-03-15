@@ -2,7 +2,8 @@ package processm.core.log.hierarchical
 
 import processm.core.helpers.NestableAutoCloseable
 import processm.core.helpers.mapToArray
-import processm.core.log.attribute.Attribute.Companion.DB_ID
+import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
+import processm.core.log.attribute.Attribute.DB_ID
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
@@ -103,7 +104,11 @@ internal class TranslatedQuery(
         with(sql.query) {
             // filter by trace id and log id if necessary
             when (scope) {
-                Scope.Event -> append(" WHERE e.trace_id=$traceId")
+                Scope.Event -> {
+                    append(" WHERE e.trace_id=?")
+                    sql.params.add(traceId!!)
+                }
+
                 Scope.Trace -> append(" WHERE t.log_id=$logId")
                 Scope.Log -> Unit
             }
@@ -261,41 +266,29 @@ internal class TranslatedQuery(
 
         val attrTable = table ?: (scope.toString() + "s_attributes")
         with(it.query) {
-            append("WITH ")
-            if (readNestedAttributes)
-                append("RECURSIVE ")
-            append("tmp AS (")
             selectAttributes(scope, attrTable, extraColumns, it)
-            append(", ARRAY[ids.ord, $attrTable.id] AS path")
             append(" FROM $attrTable")
-            append(" JOIN (SELECT * FROM unnest(?) WITH ORDINALITY LIMIT $batchSize) ids(id, ord) ON ${scope}_id=ids.id")
+            append(" JOIN unnest(?) WITH ORDINALITY ids(id, path) ON ${scope}_id=ids.id")
             it.params.add(idPlaceholder)
             whereAttributes(scope, it, logId)
-            if (readNestedAttributes) {
-                append(" UNION ALL ")
-                selectAttributes(scope, attrTable, extraColumns, it)
-                append(", path || $attrTable.id")
-                append(" FROM $attrTable")
-                append(" JOIN tmp ON $attrTable.parent_id=tmp.id AND $attrTable.parent_id IS NOT NULL")
-            }
-            append(") ")
-            selectAttributes(scope, "tmp", extraColumns, it)
-            append(" FROM tmp")
             orderByAttributes(it)
         }
     }
 
     private fun selectAttributes(scope: Scope, table: String, extraColumns: Set<String>, sql: MutableSQLQuery) {
         sql.query.append(
-            """SELECT $table.id, $table.${scope}_id, $table.parent_id, $table.type, $table.key,
-            $table.string_value, $table.uuid_value, $table.date_value, $table.int_value, $table.bool_value, $table.real_value, $table.in_list_attr
+            """SELECT $table.id, $table.${scope}_id, $table.type, $table.key,
+            $table.string_value, $table.uuid_value, $table.date_value, $table.int_value, $table.bool_value, $table.real_value
             ${extraColumns.join { "$table.$it" }}"""
         )
     }
 
     private fun whereAttributes(scope: Scope, sql: MutableSQLQuery, logId: Int?) {
         with(sql.query) {
-            append(" WHERE parent_id IS NULL ")
+            append(" WHERE 1=1 ")
+
+            if(!readNestedAttributes)
+                append("AND NOT starts_with(key, '$SEPARATOR') ")
 
             if (pql.selectAll[scope]!!)
                 return@with
@@ -477,8 +470,8 @@ internal class TranslatedQuery(
 
     private fun selectGroupAttributes(scope: Scope, sql: MutableSQLQuery) {
         sql.query.append(
-            """SELECT DISTINCT ON(ids.ord, a.key) ids.ord AS id, ids.ord+? AS ${scope}_id, NULL AS parent_id, 
-            a.type, a.key, a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, a.in_list_attr"""
+            """SELECT DISTINCT ON(ids.ord, a.key) ids.ord AS id, ids.ord+? AS ${scope}_id, 
+            a.type, a.key, a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value"""
         )
         sql.params.add(idOffsetPlaceholder)
     }
@@ -1095,11 +1088,17 @@ internal class TranslatedQuery(
                 get() {
                     if (field === null) {
                         // Initialize all sibling RegularTraceEntries together
+
                         val queries = parent.traces!!.values.map { it.queryIds }
                         connection.use {
-                            val results = queries.executeMany(it)
+                            val events = ArrayList<ArrayList<Long>>()
+                            queries.executeMultipleTimes(it) { index, result ->
+                                assert(index == events.size)
+                                events.add(result.toIdList { it.getLong(1) })
+                                true
+                            }
                             for ((index, trace) in parent.traces!!.values.withIndex()) {
-                                trace.events = results[index].toIdList { it.getLong(1) }
+                                trace.events = events[index]
                             }
                         }
                         assert(field !== null)

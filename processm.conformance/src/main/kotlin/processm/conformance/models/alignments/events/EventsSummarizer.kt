@@ -2,7 +2,7 @@ package processm.conformance.models.alignments.events
 
 import processm.core.log.Event
 import processm.core.log.attribute.Attribute
-import processm.core.log.attribute.StringAttr
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.commons.Activity
@@ -17,7 +17,7 @@ fun interface EventsSummarizer<out T> {
     operator fun invoke(trace: Trace): T = invoke(trace.events.asIterable())
 
     fun summary(activities: Iterable<Activity>): T = invoke(
-        activities.map { Event(mutableMapOf(Attribute.CONCEPT_NAME to StringAttr(Attribute.CONCEPT_NAME, it.name))) }
+        activities.map { Event(mutableAttributeMapOf(Attribute.CONCEPT_NAME to it.name)) }
     )
 }
 

@@ -3,7 +3,8 @@ package processm.core.log
 import processm.core.helpers.HashMapWithDefault
 import processm.core.helpers.fastParseISO8601
 import processm.core.helpers.toUUID
-import processm.core.log.attribute.*
+import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
+import processm.core.log.attribute.MutableAttributeMap
 import processm.core.logging.logger
 import java.io.InputStream
 import java.text.NumberFormat
@@ -27,6 +28,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
      */
     private val numberFormatter = NumberFormat.getInstance(Locale.ROOT)
     private var lastSeenElement: String? = null
+
 
     /**
      * Maps standard names of attributes into custom names in the XES document being read.
@@ -53,7 +55,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }.iterator()
 
-    private fun parseLog(reader: XMLStreamReader) = Log().also {
+    private fun parseLog(reader: XMLStreamReader): Log = Log().also {
         it.xesVersion = reader.getAttributeValue(null, "xes.version")
         it.xesFeatures = reader.getAttributeValue(null, "xes.features")
 
@@ -70,8 +72,10 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 when (reader.localName) {
                     "extension" ->
                         addExtensionToLogElement(it, reader)
+
                     "classifier" ->
                         addClassifierToLogElement(it, reader)
+
                     "global" -> {
                         // Based on 5.6.2 Attributes IEEE Standard for eXtensible Event Stream (XES) for Achieving Interoperability in Event Logs and Event Streams
                         // Scope is optional, default 'event'
@@ -85,11 +89,11 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
 
                         addGlobalAttributes(map, reader)
                     }
+
                     in attributeTags -> {
-                        with(parseAttributeTags(reader, reader.localName)) {
-                            it.attributesInternal[this.key] = this
-                        }
+                        parseAttributeTags(reader, reader.localName, it.attributesInternal)
                     }
+
                     else -> {
                         throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
@@ -144,21 +148,23 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         classifiers[name] = classifier
     }
 
-    private fun addGlobalAttributes(map: MutableMap<String, Attribute<*>>, reader: XMLStreamReader) {
+    private fun addGlobalAttributes(map: MutableAttributeMap, reader: XMLStreamReader) {
         while (reader.hasNext()) {
             reader.next()
 
             if (reader.isStartElement) {
-                with(parseAttributeTags(reader, reader.localName)) {
-                    map[this.key] = this
-                }
+                parseAttributeTags(reader, reader.localName, map)
             } else if (reader.isEndElement && reader.localName == "global") {
                 break
             }
         }
     }
 
-    private fun parseAttributeTags(reader: XMLStreamReader, elementName: String): Attribute<*> {
+    private fun parseAttributeTags(
+        reader: XMLStreamReader,
+        elementName: String,
+        parentStorage: MutableAttributeMap
+    ) {
         val key = with(reader.getAttributeValue(null, "key")) {
             if (this == null) {
                 logger().warn("Missing key in XES log file in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
@@ -173,7 +179,7 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 ""
             } else this
         }
-        val attribute = castToAttribute(reader.localName, key, value)
+        val attribute = castToAttribute(reader.localName, key, value, parentStorage)
 
         while (reader.hasNext()) {
             reader.next()
@@ -182,27 +188,23 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
                 break
             } else if (reader.isStartElement) {
                 if (reader.localName == "values") {
+                    var ctr = 0
+                    val list = parentStorage.children(key)
                     while (reader.hasNext()) {
                         reader.next()
 
                         if (reader.isStartElement) {
-                            with(parseAttributeTags(reader, reader.localName)) {
-                                (attribute as ListAttr).valueInternal.add(this)
-                            }
+                            parseAttributeTags(reader, reader.localName, list.children(ctr++))
                         } else if (reader.isEndElement) {
                             assert(reader.localName == "values")
                             break
                         }
                     }
                 } else {
-                    with(parseAttributeTags(reader, reader.localName)) {
-                        attribute[this.key] = this
-                    }
+                    parseAttributeTags(reader, reader.localName, parentStorage.children(key))
                 }
             }
         }
-
-        return attribute
     }
 
     private fun parseTraceOrEventTag(reader: XMLStreamReader, xesComponent: XESComponent) {
@@ -218,10 +220,9 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
 
                 when (reader.localName) {
                     in attributeTags -> {
-                        with(parseAttributeTags(reader, reader.localName)) {
-                            xesComponent.attributesInternal[this.key] = this
-                        }
+                        parseAttributeTags(reader, reader.localName, xesComponent.attributesInternal)
                     }
+
                     else -> {
                         throw IllegalArgumentException("Found unexpected XML tag: ${reader.localName} in line ${reader.location.lineNumber} column ${reader.location.columnNumber}")
                     }
@@ -233,15 +234,23 @@ class XMLXESInputStream(private val input: InputStream) : XESInputStream {
         }
     }
 
-    private fun castToAttribute(type: String, key: String, value: String): Attribute<*> =
+    private fun castToAttribute(
+        type: String,
+        key: String,
+        value: String,
+        storage: MutableAttributeMap
+    ) {
+        val internedKey = key.intern()
         when (type) {
-            "string" -> StringAttr(key, value)
-            "float" -> RealAttr(key, numberFormatter.parse(value).toDouble())
-            "id" -> IDAttr(key, requireNotNull(value.toUUID()))
-            "int" -> IntAttr(key, value.toLong())
-            "date" -> DateTimeAttr(key, value.fastParseISO8601())
-            "boolean" -> BoolAttr(key, value.toBoolean())
-            "list" -> ListAttr(key)
+            "string" -> storage[internedKey] = value
+            "float" -> storage[internedKey] = numberFormatter.parse(value).toDouble()
+            "id" -> storage[internedKey] = requireNotNull(value.toUUID())
+            "int" -> storage[internedKey] = value.toLong()
+            "date" -> storage[internedKey] = value.fastParseISO8601()
+            "boolean" -> storage[internedKey] = value.toBoolean()
+            "list" -> storage[internedKey] = LIST_TAG
+
             else -> throw IllegalArgumentException("Attribute not recognized. Received $type type.")
         }
+    }
 }

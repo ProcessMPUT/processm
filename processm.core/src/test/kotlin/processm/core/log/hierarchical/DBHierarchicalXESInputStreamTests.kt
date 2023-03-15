@@ -3,12 +3,9 @@ package processm.core.log.hierarchical
 import org.junit.jupiter.api.BeforeAll
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.hierarchicalCompare
-import processm.core.log.AppendingDBXESOutputStream
-import processm.core.log.DBXESOutputStream
-import processm.core.log.Event
-import processm.core.log.XESInputStream
-import processm.core.log.attribute.Attribute.Companion.CONCEPT_NAME
-import processm.core.log.attribute.StringAttr
+import processm.core.log.*
+import processm.core.log.attribute.Attribute.CONCEPT_NAME
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import java.util.*
@@ -89,7 +86,7 @@ class DBHierarchicalXESInputStreamTests {
             AppendingDBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
                 out.write(log.first())
                 out.write(log.first().traces.first())
-                out.write(Event(mutableMapOf(CONCEPT_NAME to StringAttr(CONCEPT_NAME, "Z"))))
+                out.write(Event(mutableAttributeMapOf(CONCEPT_NAME to "Z")))
             }
 
             // implementation should ensure that phantom reads do not occur

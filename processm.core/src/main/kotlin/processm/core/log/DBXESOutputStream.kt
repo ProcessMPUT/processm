@@ -1,7 +1,11 @@
 package processm.core.log
 
-import processm.core.log.attribute.*
+import processm.core.helpers.toUUID
+import processm.core.log.attribute.AttributeMap
 import processm.core.logging.loggedScope
+import processm.core.persistence.copy.Copy
+import processm.core.persistence.copy.EagerCopy
+import processm.core.persistence.copy.LazyCopy
 import processm.core.querylanguage.Scope
 import java.sql.Connection
 import java.sql.ResultSet
@@ -11,15 +15,10 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.reflect.KClass
 
-open class DBXESOutputStream(protected val connection: Connection) : XESOutputStream {
+open class DBXESOutputStream protected constructor(protected val connection: Connection, val isAppending: Boolean) :
+    XESOutputStream {
     companion object {
-        internal const val batchSize = 384
-
-        /**
-         * The limit of the number of parameters in an SQL query. When exceeded, no new trace will be inserted in the
-         * current batch. The current trace will be still completed.
-         */
-        internal const val paramSoftLimit = Short.MAX_VALUE - 8192
+        internal const val batchSize = 1024 * 1024    //An arbitrarily chosen value
 
         private const val analyzeThreshold = Short.MAX_VALUE
 
@@ -27,7 +26,17 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
 
         private val tagStartChars = ('a'..'z') + ('A'..'Z') + ('_')
         private val tagChars = ('0'..'9') + tagStartChars
+
+        @JvmStatic
+        protected fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
+            for (item in this@join) {
+                append(", ")
+                append(transform(item))
+            }
+        }
     }
+
+    constructor(connection: Connection) : this(connection, false) {}
 
     /**
      * Log ID of inserted Log record
@@ -50,6 +59,9 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
      */
     private var totalInserts: Long = 0L
 
+    private val tempTracesTable = """"${UUID.randomUUID()}""""
+    private val tempEventsTable = """"${UUID.randomUUID()}""""
+
     init {
         assert(connection.metaData.supportsGetGeneratedKeys())
         assert(connection.metaData.supportsTransactions())
@@ -57,6 +69,13 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
 
         // Disable autoCommit on connection - we want to add whole XES log structure
         connection.autoCommit = false
+
+        connection.createStatement().use { stmt ->
+            stmt.execute(
+                """CREATE TEMPORARY TABLE $tempTracesTable (LIKE TRACES INCLUDING DEFAULTS INCLUDING GENERATED) ON COMMIT DROP; 
+            CREATE TEMPORARY TABLE $tempEventsTable (LIKE EVENTS INCLUDING DEFAULTS INCLUDING GENERATED) ON COMMIT DROP"""
+            )
+        }
     }
 
     /**
@@ -76,6 +95,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
 
                 queue.add(component)
             }
+
             is Trace -> {
                 if (queue.size >= batchSize)
                     flushQueue(false)
@@ -86,6 +106,7 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 queue.add(component)
                 sawTrace = true
             }
+
             is Log -> {
                 flushQueue(true) // flush events and traces from the previous log
                 sawTrace = false // we must not refer to a trace from the previous log
@@ -95,11 +116,23 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                 writeExtensions(component.extensions.values, sql)
                 writeClassifiers(Scope.Event, component.eventClassifiers.values, sql)
                 writeClassifiers(Scope.Trace, component.traceClassifiers.values, sql)
-                writeGlobals("event", component.eventGlobals.values, sql)
-                writeGlobals("trace", component.traceGlobals.values, sql)
-                writeAttributes("LOGS_ATTRIBUTES", "log", 0, component.attributes.values, sql)
                 logId = sql.executeQuery("log").toInt()
+                copyForAttributes("GLOBALS", "log", mapOf("scope" to "event")) { a, b ->
+                    EagerCopy(connection, a, listOf(logId!!.toString()), b)
+                }.use {
+                    writeAttributes(component.eventGlobals, it)
+                    it.setExtraColumnValues(listOf("trace"))
+                    writeAttributes(component.traceGlobals, it)
+                }
+                if (component.attributes.isNotEmpty()) {
+                    copyForAttributes("LOGS_ATTRIBUTES", "log") { a, b ->
+                        EagerCopy(connection, a, prefix = listOf(logId!!.toString()), b)
+                    }.use {
+                        writeAttributes(component.attributes, it)
+                    }
+                }
             }
+
             else ->
                 throw IllegalArgumentException("Unsupported XESComponent found. Expected 'Log', 'Trace' or 'Event' but received ${component.javaClass}")
         }
@@ -146,65 +179,100 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         if (queue.isEmpty())
             return
 
-        val traceSql = SQL()
-        val eventSql = SQL()
-        val attrSql = SQL()
-
-        with(traceSql.sql) {
-            append("WITH trace AS (")
-            append("""INSERT INTO TRACES(log_id,"concept:name","cost:total","cost:currency","identity:id",event_stream) VALUES""")
+        val known = HashMap<UUID, Long>()
+        if (isAppending) {
+            with(SQL()) {
+                sql.append("""SELECT TRACES."identity:id", TRACES.id FROM TRACES JOIN UNNEST(?) tmp("identity:id") ON TRACES."identity:id" = tmp."identity:id"::uuid AND TRACES.log_id = ?""")
+                val traceIdentities = queue.filterIsInstance<Trace>().mapNotNull { it.identityId }
+                params.addLast(traceIdentities.toTypedArray())
+                params.addLast(logId)
+                executeQuery { rs ->
+                    while (rs.next()) {
+                        known[rs.getString(1).toUUID()!!] = rs.getLong(2)
+                    }
+                }
+            }
         }
 
-        with(eventSql.sql) {
-            append(", event AS (")
-            append("""INSERT INTO EVENTS(trace_id,"concept:name","concept:instance","cost:total","cost:currency","identity:id","lifecycle:transition","lifecycle:state","org:resource","org:role","org:group","time:timestamp") VALUES""")
-        }
+        val eventCopy =
+            LazyCopy("""$tempEventsTable(trace_id,"concept:name","concept:instance","cost:total","cost:currency","identity:id","lifecycle:transition","lifecycle:state","org:resource","org:role","org:group","time:timestamp")""")
+        val traceAttrCopy = copyForAttributes("TRACES_ATTRIBUTES", "trace")
+        val eventAttrCopy = copyForAttributes("EVENTS_ATTRIBUTES", "event")
+
+        val intermediateTraceIds = ArrayList<Long?>()
 
         var lastEventIndex = -1
         var lastTraceIndex = -1
-        for (component in queue) {
-            when (component) {
-                is Event -> {
-                    check(lastTraceIndex >= 0) { "Trace must precede event in the queue." }
-                    ++lastEventIndex
-                    writeEventData(component, eventSql, lastTraceIndex)
-                    writeAttributes("EVENTS_ATTRIBUTES", "event", lastEventIndex, component.attributes.values, attrSql)
-                }
-                is Trace -> {
-                    if (traceSql.params.size + eventSql.params.size + attrSql.params.size >= paramSoftLimit) {
-                        // #102: if the total number of parameters in an SQL query is too large, then DO NOT start new trace
-                        break
+        EagerCopy(
+            connection,
+            """$tempTracesTable(log_id,"concept:name","cost:total","cost:currency","identity:id",event_stream)"""
+        ).use { traceCopy ->
+            for (component in queue) {
+                when (component) {
+                    is Event -> {
+                        check(lastTraceIndex >= 0) { "Trace must precede event in the queue." }
+                        ++lastEventIndex
+                        writeEventData(component, eventCopy, lastTraceIndex)
+                        writeAttributes(lastEventIndex, component.attributes, eventAttrCopy)
                     }
-                    ++lastTraceIndex
-                    writeTraceData(component, traceSql)
-                    writeAttributes("TRACES_ATTRIBUTES", "trace", lastTraceIndex, component.attributes.values, attrSql)
+
+                    is Trace -> {
+                        ++lastTraceIndex
+                        if (isAppending) {
+                            val existingTraceId = component.identityId?.let { known[it] }
+                            if (existingTraceId === null)
+                                writeTraceData(component, traceCopy)
+                            intermediateTraceIds.add(existingTraceId)
+                        } else
+                            writeTraceData(component, traceCopy)
+                        writeAttributes(lastTraceIndex, component.attributes, traceAttrCopy)
+                    }
+
+                    else -> throw UnsupportedOperationException("Unexpected $component.")
                 }
-                else -> throw UnsupportedOperationException("Unexpected $component.")
             }
         }
 
         assert(lastTraceIndex >= 0)
 
-        with(traceSql.sql) {
-            delete(length - 2, length)
-            append(" RETURNING id)")
+        val traceIds = ArrayList<Long>()
+        connection.prepareStatement("SELECT id FROM $tempTracesTable").executeQuery().use { rs ->
+            if (isAppending) {
+                for (i in 0..lastTraceIndex) {
+                    traceIds.add(intermediateTraceIds[i] ?: run {
+                        check(rs.next())
+                        rs.getLong(1)
+                    })
+                }
+            } else
+                while (rs.next())
+                    traceIds.add(rs.getLong(1))
+        }
+        check(traceIds.size == lastTraceIndex + 1) { "Write unsuccessful." }
+
+        connection.createStatement().use { stmt ->
+            stmt.execute("INSERT INTO TRACES SELECT * FROM $tempTracesTable; TRUNCATE $tempTracesTable")
         }
 
-        with(eventSql.sql) {
-            delete(length - 2, length)
-            append(" RETURNING id)")
-        }
+        eventCopy.execute(connection, traceIds)
 
-        with(traceSql) {
-            if (lastEventIndex >= 0) {
-                sql.append(eventSql.sql)
-                params.addAll(eventSql.params)
+        val eventIds = ArrayList<Long>()
+        connection.createStatement().use { stmt ->
+            stmt.executeQuery("SELECT id FROM $tempEventsTable").use { rs ->
+                while (rs.next()) {
+                    eventIds.add(rs.getLong(1))
+                }
             }
-
-            sql.append(attrSql.sql)
-            params.addAll(attrSql.params)
-            execute()
         }
+        check(eventIds.size == lastEventIndex + 1) { "Write unsuccessful." }
+
+        connection.createStatement().use { stmt ->
+            stmt.execute("INSERT INTO EVENTS SELECT * FROM $tempEventsTable; TRUNCATE $tempEventsTable")
+        }
+
+        eventAttrCopy.execute(connection, eventIds)
+        traceAttrCopy.execute(connection, traceIds)
+
 
         clearQueue(lastEventIndex, lastTraceIndex, force)
     }
@@ -227,38 +295,33 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         totalInserts += countItemsToInsert
     }
 
-    protected fun writeEventData(event: Event, to: SQL, traceIndex: Int?) {
+    private fun writeEventData(event: Event, to: LazyCopy, traceIndex: Int) {
         with(to) {
-            sql.append("((SELECT id FROM trace LIMIT 1 OFFSET $traceIndex),")
+            add(event.conceptName)
+            add(event.conceptInstance)
+            add(event.costTotal)
+            add(event.costCurrency)
+            add(event.identityId)
+            add(event.lifecycleTransition)
+            add(event.lifecycleState)
+            add(event.orgResource)
+            add(event.orgRole)
+            add(event.orgGroup)
+            add(event.timeTimestamp)
 
-            addAsParamOrInline(event.conceptName)
-            addAsParamOrInline(event.conceptInstance)
-            addAsParamOrInline(event.costTotal)
-            addAsParamOrInline(event.costCurrency)
-            addAsParamOrInline(event.identityId)
-            addAsParamOrInline(event.lifecycleTransition)
-            addAsParamOrInline(event.lifecycleState)
-            addAsParamOrInline(event.orgResource)
-            addAsParamOrInline(event.orgRole)
-            addAsParamOrInline(event.orgGroup)
-            addAsParamOrInline(event.timeTimestamp, "")
-
-            sql.append("), ")
+            flushRow(traceIndex)
         }
     }
 
-    protected fun writeTraceData(trace: Trace, to: SQL) {
+    private fun writeTraceData(trace: Trace, to: EagerCopy) {
         with(to) {
-            sql.append('(')
-
-            addAsParamOrInline(logId)
-            addAsParamOrInline(trace.conceptName)
-            addAsParamOrInline(trace.costTotal)
-            addAsParamOrInline(trace.costCurrency)
-            addAsParamOrInline(trace.identityId)
-            addAsParamOrInline(trace.isEventStream, "")
-
-            sql.append("), ")
+            add(logId?.toLong())
+            add(trace.conceptName)
+            add(trace.costTotal)
+            add(trace.costCurrency)
+            add(trace.identityId)
+            add(trace.isEventStream)
+            flushRow()
         }
     }
 
@@ -277,118 +340,56 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         }
     }
 
-    private fun writeAttributes(
+
+    private fun <T> copyForAttributes(
         destinationTable: String,
         rootTempTable: String,
-        rootIndex: Int,
-        attributes: Collection<Attribute<*>>,
-        to: SQL,
+        extraColumns: Map<String, String> = emptyMap(), ctor: (String, Collection<String>) -> T
+    ): T = ctor(
+        "$destinationTable (${rootTempTable}_id, type, key, string_value, uuid_value, date_value, int_value, bool_value, real_value ${extraColumns.keys.join()})",
+        extraColumns.values
+    )
+
+    private fun copyForAttributes(
+        destinationTable: String,
+        rootTempTable: String,
         extraColumns: Map<String, String> = emptyMap()
+    ): LazyCopy = copyForAttributes(destinationTable, rootTempTable, extraColumns, ::LazyCopy)
+
+    private fun Copy.addAttribute(attribute: Map.Entry<CharSequence, Any?>) {
+        add(attribute.value.xesTag)
+        add(attribute.key.toString())
+        add(attribute.value as? String)
+        add(attribute.value as? UUID)
+        add(attribute.value as? Instant)
+        add(attribute.value as? Long)
+        add(attribute.value as? Boolean)
+        add(attribute.value as? Double)
+    }
+
+    private fun writeAttributes(
+        rootIndex: Int,
+        attributes: AttributeMap,
+        to: LazyCopy,
     ) {
         if (attributes.isEmpty())
             return
-
-        fun addAttributes(
-            attributes: Iterable<Attribute<*>>,
-            parentTableNumber: Int = 0,
-            parentRowIndex: Int = 0,
-            topMost: Boolean = true,
-            inList: Boolean? = null
-        ) {
-            // This function preserves the order of attributes on each level of the tree but does not preserve the order
-            // between the levels. This is enough to preserve the order of list attribute. It cannot use the (straightforward)
-            // depth-first-search algorithm, as writable common table extensions in PostgreSQL are evaluated concurrently.
-            // From https://www.postgresql.org/docs/current/queries-with.html:
-            // The sub-statements in WITH are executed concurrently with each other and with the main query. Therefore,
-            // when using data-modifying statements in WITH, the order in which the specified updates actually happen is
-            // unpredictable. All the statements are executed with the same snapshot (see Chapter 13), so they cannot
-            // “see” one another's effects on the target tables. This alleviates the effects of the unpredictability of
-            // the actual order of row updates, and means that RETURNING data is the only way to communicate changes
-            // between different WITH sub-statements and the main query.
-            val myTableNumber = ++to.attrSeq
-            with(to.sql) {
-                append(", attributes$myTableNumber AS (")
-                append(
-                    "INSERT INTO $destinationTable(${rootTempTable}_id, key, type, " +
-                            "string_value, uuid_value, date_value, int_value, bool_value, real_value, " +
-                            "parent_id, in_list_attr${extraColumns.keys.join()}) "
-                )
-                append(
-                    "SELECT (SELECT id FROM $rootTempTable ORDER BY id LIMIT 1 OFFSET $rootIndex), a.key, a.type, " +
-                            "a.string_value, a.uuid_value, a.date_value, a.int_value, a.bool_value, a.real_value, " +
-                            "${if (topMost) "NULL" else "(SELECT id FROM attributes$parentTableNumber ORDER BY id LIMIT 1 OFFSET $parentRowIndex)"}, " +
-                            "a.in_list_attr${extraColumns.values.join { "'$it'" }} FROM (VALUES "
-                )
-            }
-            with(to) {
-                var first = true
-                for (attribute in attributes) {
-                    sql.append("(?,'${attribute.xesTag}'")
-                    if (first)
-                        sql.append("::attribute_type")
-                    sql.append(',')
-                    params.addLast(attribute.key)
-                    writeTypedAttribute(attribute, StringAttr::class, to, first)
-                    writeTypedAttribute(attribute, IDAttr::class, to, first)
-                    writeTypedAttribute(attribute, DateTimeAttr::class, to, first)
-                    writeTypedAttribute(attribute, IntAttr::class, to, first)
-                    writeTypedAttribute(attribute, BoolAttr::class, to, first)
-                    writeTypedAttribute(attribute, RealAttr::class, to, first)
-                    sql.append(inList)
-                    if (first) {
-                        sql.append("::boolean")
-                        first = false
-                    }
-                    sql.append("),")
-                }
-                assert(!first)
-            }
-
-            with(to.sql) {
-                deleteCharAt(length - 1)
-                append(") a(key,type,string_value,uuid_value,date_value,int_value,bool_value,real_value,in_list_attr) ")
-                append("RETURNING id)")
-            }
-
-            // Handle children and lists
-            for ((index, attribute) in attributes.withIndex()) {
-                // Advance to children
-                if (attribute.children.isNotEmpty())
-                    addAttributes(attribute.children.values, myTableNumber, index, false)
-
-                // Handle list
-                if (attribute is ListAttr && attribute.value.isNotEmpty())
-                    addAttributes(attribute.value, myTableNumber, index, false, true)
+        with(to) {
+            for (attribute in attributes.flatView) {
+                addAttribute(attribute)
+                flushRow(rootIndex)
             }
         }
-
-        addAttributes(attributes)
     }
 
-    protected fun writeTypedAttribute(attribute: Attribute<*>, type: KClass<*>, to: SQL, writeCast: Boolean) {
-        val cast = if (writeCast) {
-            when (type) {
-                StringAttr::class -> ""
-                IDAttr::class -> "::uuid"
-                DateTimeAttr::class -> "::timestamptz"
-                IntAttr::class -> "::bigint"
-                BoolAttr::class -> "::boolean"
-                RealAttr::class -> "::double precision"
-                else -> throw UnsupportedOperationException("Unknown attribute type $type.")
+    private fun writeAttributes(attributes: AttributeMap, to: EagerCopy) {
+        if (attributes.isEmpty())
+            return
+        with(to) {
+            for (attribute in attributes.flatView) {
+                addAttribute(attribute)
+                flushRow()
             }
-        } else ""
-        if (type.isInstance(attribute)) {
-            when (type) {
-                IntAttr::class, BoolAttr::class -> to.sql.append("${attribute.value}$cast,")
-                IDAttr::class -> to.sql.append("'${attribute.value}'$cast,")
-                DateTimeAttr::class -> to.sql.append("'${ISO8601.format(attribute.value as Instant)}'$cast,")
-                else -> {
-                    to.sql.append("?$cast,")
-                    to.params.addLast(attribute.value)
-                }
-            }
-        } else {
-            to.sql.append("NULL$cast,")
         }
     }
 
@@ -439,16 +440,6 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
         to.sql.append(") c(scope,name,keys))")
     }
 
-    private fun writeGlobals(scope: String, globals: Collection<Attribute<*>>, to: SQL) =
-        writeAttributes("GLOBALS", "log", 0, globals, to, mapOf("scope" to scope))
-
-    protected fun Iterable<Any>.join(transform: (a: Any) -> Any = { it }) = buildString {
-        for (item in this@join) {
-            append(", ")
-            append(transform(item))
-        }
-    }
-
     protected inner class SQL {
         var attrSeq: Int = 0
         val sql: StringBuilder = StringBuilder()
@@ -465,6 +456,22 @@ open class DBXESOutputStream(protected val connection: Connection) : XESOutputSt
                     check(r.next()) { "Write unsuccessful." }
                     return@executeQuery r.getLong(1)
                 }
+            }
+        }
+
+        /**
+         * [use] is responsible for verifying whether there is a correct number of rows and throwing an exception otherwise
+         */
+        fun <T> executeQuery(use: (ResultSet) -> T): T {
+            inlineParamsOverLimit()
+            connection.prepareStatement("$sql").use {
+                for ((i, obj) in params.withIndex()) {
+                    if (obj is Array<*>)
+                        it.setArray(i + 1, connection.createArrayOf("text", obj))
+                    else
+                        it.setObject(i + 1, obj)
+                }
+                return it.executeQuery().use(use)
             }
         }
 
