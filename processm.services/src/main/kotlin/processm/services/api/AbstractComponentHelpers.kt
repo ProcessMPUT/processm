@@ -6,11 +6,12 @@ import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
-import processm.core.models.petrinet.petrinet
+import processm.core.models.petrinet.Place
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.*
+import java.util.*
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].
@@ -117,35 +118,32 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                         .bufferedReader().readText() // FIXME: replace the mock with actual implementation
                 )
             }
+
             ComponentTypeDto.PetriNet -> {
-                // TODO: Create network mock (check FitnessTest.kt)
-                val petriNet = petrinet {
-                    P tout "a"
-                    P tin "a" * "f" tout "b" * "c"
-                    P tin "a" * "f" tout "d"
-                    P tin "b" * "c" tout "e"
-                    P tin "d" tout "e"
-                    P tin "e" tout "g" * "h" * "f"
-                    P tin "g" * "h"
-                }
+                val petriNet = processm.core.models.petrinet.DBSerializer.fetch(
+                    DBCache.get(dataStoreId.toString()).database,
+                    UUID.fromString(requireNotNull(data) { "Missing PetriNet id" })
+                )
                 val componentDataTransitions = petriNet.transitions.mapToArray {
                     PetriNetComponentDataAllOfTransitions(
+                        it.hashCode().toString(), // TODO consider introducing field id into Transition
                         it.name,
                         it.isSilent,
-                        it.inPlaces.toTypedArray(),
-                        it.outPlaces.toTypedArray()
+                        it.inPlaces.mapToArray(Place::id),
+                        it.outPlaces.mapToArray(Place::id)
                     )
                 }
                 petriNet.transitions.toTypedArray()
 
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
-                    initialMarking = petriNet.initialMarking,
-                    finalMarking = petriNet.finalMarking,
+                    initialMarking = petriNet.initialMarking.mapKeys { it.key.id },
+                    finalMarking = petriNet.finalMarking.mapKeys { it.key.id },
                     places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id) },
                     transitions = componentDataTransitions
                 )
             }
+
             else -> TODO("Data conversion is not implemented for type $componentType.")
         }
     } catch (e: Throwable) {

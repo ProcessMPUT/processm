@@ -2076,13 +2076,17 @@ components:
           properties:
             initialMarking:
               type: object
+              additionalProperties:
+                type: integer
             finalMarking:
               type: object
+              additionalProperties:
+                type: integer
             places:
               type: array
               items:
                 type: object
-                required: [id]
+                required: [ id ]
                 properties:
                   id:
                     type: string
@@ -2090,8 +2094,10 @@ components:
               type: array
               items:
                 type: object
-                required: [ name, isSilent, inPlaces, outPlaces ]
+                required: [ id, name, isSilent, inPlaces, outPlaces ]
                 properties:
+                  id:
+                    type: string
                   name:
                     type: string
                   isSilent:
@@ -2099,11 +2105,11 @@ components:
                   inPlaces:
                     type: array
                     items:
-                      type: object
+                      type: string
                   outPlaces:
                     type: array
                     items:
-                      type: object
+                      type: string
     PetriNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'

@@ -61,8 +61,8 @@ export default class PetriNetComponent extends Vue {
         id: place.id,
         // TODO: Missing `text` attribute in place data from server
         text: "",
-        type: this.getPlaceType(place),
-        tokenCount: this.getPlaceType(place) == PlaceType.INITIAL ? 1 : 0
+        type: this.getPlaceType(place.id),
+        tokenCount: this.data.data.initialMarking ? this.data.data.initialMarking[place.id] : 0
       } as PlaceDto;
     });
 
@@ -72,8 +72,7 @@ export default class PetriNetComponent extends Vue {
   private getTransitionsAsDto(): TransitionDto[] {
     const transitions = this.data.data.transitions?.map((transition) => {
       return {
-        // TODO: Missing `id` attribute in transition data from server
-        id: transition.name,
+        id: transition.id,
         text: transition.name,
         isSilent: transition.isSilent
       } as TransitionDto;
@@ -84,19 +83,17 @@ export default class PetriNetComponent extends Vue {
 
   private getArcsAsDto(): ArcDto[] {
     const arcs = this.data.data.transitions?.flatMap((transition) => {
-      const inArcs = transition.inPlaces.map((inPlace: any) => {
+      const inArcs = transition.inPlaces.map((inPlace: string) => {
         return {
-          outElementId: inPlace.id,
-          // TODO: Replace with id, when `id` attribute added to transitions downloaded from server
-          inElementId: transition.name
+          outElementId: inPlace,
+          inElementId: transition.id
         } as ArcDto;
       });
 
-      const outArcs = transition.outPlaces.map((outPlace: any) => {
+      const outArcs = transition.outPlaces.map((outPlace: string) => {
         return {
-          // TODO: Replace with id, when `id` attribute added to transitions downloaded from server
-          outElementId: transition.name,
-          inElementId: outPlace.id
+          outElementId: transition.id,
+          inElementId: outPlace
         } as ArcDto;
       });
 
@@ -106,12 +103,12 @@ export default class PetriNetComponent extends Vue {
     return arcs ?? [];
   }
 
-  private getPlaceType(place: any): PlaceType {
-    if (place in this.data.data.initialMarking) {
+  private getPlaceType(place: string): PlaceType {
+    if (this.data.data.initialMarking !== undefined && place in this.data.data.initialMarking) {
       return PlaceType.INITIAL;
     }
 
-    if (place in this.data.data.finalMarking) {
+    if (this.data.data.finalMarking !== undefined && place in this.data.data.finalMarking) {
       return PlaceType.FINAL;
     }
 

@@ -56,14 +56,11 @@ export class PetriNetComponentData extends ComponentData {
   // TODO: Change any to some type
   places?: Array<any>;
   transitions?: Array<any>;
-  initialMarking: any
-  finalMarking: any
+  initialMarking?: { [key: string]: number };
+  finalMarking?: { [key: string]: number };
 
   get isDisplayable() {
-    return this.initialMarking != null
-        && this.finalMarking != null
-        && this?.places?.length != 0
-        && this.transitions?.length != 0;
+    return this.initialMarking !== undefined && this.finalMarking !== undefined && this?.places?.length != 0 && this.transitions?.length != 0;
   }
 }
 
