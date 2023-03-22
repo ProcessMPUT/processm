@@ -2046,6 +2046,21 @@ components:
                     type: string
                   targetNodeId:
                     type: string
+    ProcessModelCustomizationData:
+      type: object
+      properties:
+        layout:
+          type: array
+          items:
+            type: object
+            required: [ id, x, y ]
+            properties:
+              id:
+                type: string
+              x:
+                type: number
+              y:
+                type: number
     CausalNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2054,20 +2069,7 @@ components:
             data:
               $ref: '#/components/schemas/CausalNetComponentData'
             customizationData:
-              type: object
-              properties:
-                layout:
-                  type: array
-                  items:
-                    type: object
-                    required: [ id, x, y ]
-                    properties:
-                      id:
-                        type: string
-                      x:
-                        type: number
-                      y:
-                        type: number
+              $ref: '#/components/schemas/ProcessModelCustomizationData'
     PetriNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2118,20 +2120,7 @@ components:
             data:
               $ref: '#/components/schemas/PetriNetComponentData'
             customizationData:
-              type: object
-              properties:
-                layout:
-                  type: array
-                  items:
-                    type: object
-                    required: [ id, x, y ]
-                    properties:
-                      id:
-                        type: string
-                      x:
-                        type: number
-                      y:
-                        type: number
+              $ref: '#/components/schemas/ProcessModelCustomizationData'
     BPMNComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'

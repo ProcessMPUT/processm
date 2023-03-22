@@ -3,12 +3,16 @@ import {
   DataNode
 } from "@/components/workspace/causal-net/CausalNet";
 // TODO add PetriNet = "petriNet" to ComponentType
-import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
+import {AbstractComponent, AlignerKpiReport, ComponentType} from "@/openapi";
 
-type CustomizationData = Record<string, unknown>;
+export abstract class CustomizationData {
+  constructor(init: Partial<CustomizationData>) {
+    Object.assign(this, init);
+  }
+}
 
-export interface CausalNetCustomizationData extends CustomizationData {
-  layout: { id: string; x: number; y: number }[];
+export class ProcessModelCustomizationData extends CustomizationData {
+  layout?: { id: string; x: number; y: number }[];
 }
 
 export abstract class ComponentData {
@@ -95,6 +99,7 @@ export class WorkspaceComponent {
       }
       case ComponentType.PetriNet: {
         this.data = new PetriNetComponentData(init.data ?? {});
+        this.customizationData = new ProcessModelCustomizationData(init.customizationData ?? {});
         break;
       }
       case ComponentType.Bpmn: {

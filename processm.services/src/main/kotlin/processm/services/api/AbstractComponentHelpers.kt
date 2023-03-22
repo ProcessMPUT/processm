@@ -59,13 +59,14 @@ private fun WorkspaceComponent.getLayout(): LayoutElement? =
  * Deserializes the customization data for the component.
  */
 // TODO: replace GSON with kotlinx/serialization
-private fun WorkspaceComponent.getCustomizationData(): CausalNetComponentAllOfCustomizationData? {
+private fun WorkspaceComponent.getCustomizationData(): ProcessModelCustomizationData? {
     if (customizationData.isNullOrBlank())
         return null
 
     return when (componentType) {
-        ComponentTypeDto.CausalNet ->
-            Gson().fromJson(customizationData, CausalNetComponentAllOfCustomizationData::class.java)
+        ComponentTypeDto.CausalNet, ComponentTypeDto.PetriNet ->
+            Gson().fromJson(customizationData, ProcessModelCustomizationData::class.java)
+
         else -> TODO("Customization data is not implemented for type $componentType.")
     }
 }

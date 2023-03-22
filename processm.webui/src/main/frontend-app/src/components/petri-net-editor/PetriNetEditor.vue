@@ -206,8 +206,8 @@ export default class PetriNetEditor extends Vue {
 
     this.places.forEach((place) =>
       this.petriNetManager.createPlace({
-        x: 0,
-        y: 0,
+        x: place.x ?? 0,
+        y: place.y ?? 0,
         text: place.text,
         tokenCount: 0,
         id: place.id,
@@ -216,8 +216,8 @@ export default class PetriNetEditor extends Vue {
     );
     this.transitions.forEach((transition) =>
       this.petriNetManager.createTransition({
-        x: 0,
-        y: 0,
+        x: transition.x ?? 0,
+        y: transition.y ?? 0,
         text: transition.text,
         id: transition.id,
         isSilent: transition.isSilent
