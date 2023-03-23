@@ -141,6 +141,9 @@ object DBSerializer {
     }
 
 
+    /**
+     * Deletes Petri net present in the DB under the id [modelId] and stores [petriNet] using the same [modelId]
+     */
     fun update(database: Database, modelId: UUID, petriNet: PetriNet) = transaction(database) {
         delete(database, modelId)
         insert(database, petriNet, modelId)
