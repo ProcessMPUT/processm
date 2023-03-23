@@ -67,7 +67,7 @@ object DBSerializer {
             addLogger(Slf4jSqlDebugLogger)
             val petriNetModel = PetriNetModel.new(modelId) {}
             for (place in petriNet.places) {
-                PlaceModel.new(UUID.fromString(place.id)) {
+                PlaceModel.new(place.id) {
                     petrinet = petriNetModel
                     initialMarking = petriNet.initialMarking[place]
                     finalMarking = petriNet.finalMarking[place]
@@ -78,8 +78,8 @@ object DBSerializer {
                     petrinet = petriNetModel
                     name = transition.name
                     isSilent = transition.isSilent
-                    inPlaces = transition.inPlaces.joinToString(separator = SEPARATOR) { it.id }
-                    outPlaces = transition.outPlaces.joinToString(separator = SEPARATOR) { it.id }
+                    inPlaces = transition.inPlaces.joinToString(separator = SEPARATOR) { it.id.toString() }
+                    outPlaces = transition.outPlaces.joinToString(separator = SEPARATOR) { it.id.toString() }
                 }
             }
             return@transaction petriNetModel.id.value
@@ -105,7 +105,7 @@ object DBSerializer {
         val finalMarking = Marking()
         for (placeModel in petriNetModel.places) {
             val id = placeModel.id.value.toString()
-            val place = Place(id)
+            val place = Place(UUID.fromString(id))
             places[id] = place
             placeModel.initialMarking?.let { initialMarking[place] = it }
             placeModel.finalMarking?.let { finalMarking[place] = it }

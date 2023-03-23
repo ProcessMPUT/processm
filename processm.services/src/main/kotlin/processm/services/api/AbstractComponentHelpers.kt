@@ -135,16 +135,16 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                         it.id.toString(),
                         it.name,
                         it.isSilent,
-                        it.inPlaces.mapToArray(Place::id),
-                        it.outPlaces.mapToArray(Place::id)
+                        it.inPlaces.mapToArray { it.id.toString() },
+                        it.outPlaces.mapToArray { it.id.toString() }
                     )
                 }
 
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
-                    initialMarking = petriNet.initialMarking.mapKeys { it.key.id },
-                    finalMarking = petriNet.finalMarking.mapKeys { it.key.id },
-                    places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id) },
+                    initialMarking = petriNet.initialMarking.mapKeys { it.key.id.toString() },
+                    finalMarking = petriNet.finalMarking.mapKeys { it.key.id.toString() },
+                    places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
                     transitions = componentDataTransitions
                 )
             }
@@ -159,7 +159,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
 
 
 private fun PetriNetComponentData.toPetriNet(): PetriNet {
-    val places = this.places.associate { it.id to Place(it.id) }
+    val places = this.places.associate { it.id to Place(UUID.fromString(it.id)) }
     val transitions = this.transitions.map {
         val inPlaces = it.inPlaces.map(places::getValue)
         val outPlaces = it.outPlaces.map(places::getValue)
