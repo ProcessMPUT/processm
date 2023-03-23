@@ -10,6 +10,7 @@ import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.helpers.mapToSet
+import processm.core.models.petrinet.PetriNet
 import processm.core.persistence.DBConnectionPool
 import java.util.*
 

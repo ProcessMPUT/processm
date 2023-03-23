@@ -61,15 +61,11 @@ internal class PetriNetModel(id: EntityID<UUID>) : UUIDEntity(id) {
 }
 
 object DBSerializer {
-    /**
-     * Inserts the [petriNet] model into the database [database] and returns the DB identifier of the model
-     *
-     * Includes places, transitions and markings
-     */
-    fun insert(database: Database, petriNet: PetriNet): UUID =
+
+    private fun insert(database: Database, petriNet: PetriNet, modelId: UUID): UUID =
         transaction(database) {
             addLogger(Slf4jSqlDebugLogger)
-            val petriNetModel = PetriNetModel.new(UUID.randomUUID()) {}
+            val petriNetModel = PetriNetModel.new(modelId) {}
             for (place in petriNet.places) {
                 PlaceModel.new(UUID.fromString(place.id)) {
                     petrinet = petriNetModel
@@ -78,7 +74,7 @@ object DBSerializer {
                 }
             }
             for (transition in petriNet.transitions) {
-                TransitionModel.new {
+                TransitionModel.new(transition.id) {
                     petrinet = petriNetModel
                     name = transition.name
                     isSilent = transition.isSilent
@@ -88,6 +84,13 @@ object DBSerializer {
             }
             return@transaction petriNetModel.id.value
         }
+
+    /**
+     * Inserts the [petriNet] model into the database [database] and returns the DB identifier of the model
+     *
+     * Includes places, transitions and markings
+     */
+    fun insert(database: Database, petriNet: PetriNet): UUID = insert(database, petriNet, UUID.randomUUID())
 
     /**
      * Returns [PetriNet] present in the [database] under the id [modelId]
@@ -116,7 +119,8 @@ object DBSerializer {
                     transitionModel.name,
                     inPlaces = inPlaces,
                     outPlaces = outPlaces,
-                    isSilent = transitionModel.isSilent
+                    isSilent = transitionModel.isSilent,
+                    id = transitionModel.id.value
                 )
             )
         }
@@ -134,5 +138,11 @@ object DBSerializer {
         TransitionModel.find { Transitions.petrinet eq modelId }.forEach(TransitionModel::delete)
         PlaceModel.find { Places.petrinet eq modelId }.forEach(PlaceModel::delete)
         model.delete()
+    }
+
+
+    fun update(database: Database, modelId: UUID, petriNet: PetriNet) = transaction(database) {
+        delete(database, modelId)
+        insert(database, petriNet, modelId)
     }
 }

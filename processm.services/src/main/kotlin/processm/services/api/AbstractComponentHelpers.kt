@@ -6,7 +6,10 @@ import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
+import processm.core.models.petrinet.Marking
+import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
+import processm.core.models.petrinet.Transition
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
@@ -106,12 +109,14 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     edges = edges
                 )
             }
+
             ComponentTypeDto.Kpi -> {
                 KpiComponentData(
                     type = ComponentType.kpi,
                     value = data
                 )
             }
+
             ComponentTypeDto.BPMN -> {
                 BPMNComponentData(
                     type = ComponentType.bpmn,
@@ -127,14 +132,13 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 )
                 val componentDataTransitions = petriNet.transitions.mapToArray {
                     PetriNetComponentDataAllOfTransitions(
-                        it.hashCode().toString(), // TODO consider introducing field id into Transition
+                        it.id.toString(),
                         it.name,
                         it.isSilent,
                         it.inPlaces.mapToArray(Place::id),
                         it.outPlaces.mapToArray(Place::id)
                     )
                 }
-                petriNet.transitions.toTypedArray()
 
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
@@ -153,3 +157,40 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     }
 }
 
+
+private fun PetriNetComponentData.toPetriNet(): PetriNet {
+    val places = this.places.associate { it.id to Place(it.id) }
+    val transitions = this.transitions.map {
+        val inPlaces = it.inPlaces.map(places::getValue)
+        val outPlaces = it.outPlaces.map(places::getValue)
+        Transition(
+            name = it.name,
+            inPlaces = inPlaces,
+            outPlaces = outPlaces,
+            isSilent = it.isSilent,
+            id = UUID.fromString(it.id)
+        )
+    }
+    val initialMarking = Marking(this.initialMarking.mapKeys { places.getValue(it.key) })
+    val finalMarking = Marking(this.finalMarking.mapKeys { places.getValue(it.key) })
+    return PetriNet(places.values.toList(), transitions, initialMarking, finalMarking)
+}
+
+/**
+ * Updates the data within the component from the JSON received in the abstract component from the frontend
+ */
+fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
+    when (componentType) {
+        ComponentTypeDto.PetriNet -> {
+            // TODO: replace GSON with kotlinx/serialization
+            val petriNet = Gson().fromJson(data, PetriNetComponentData::class.java).toPetriNet()
+            processm.core.models.petrinet.DBSerializer.update(
+                DBCache.get(dataStoreId.toString()).database,
+                UUID.fromString(this.data),
+                petriNet
+            )
+        }
+
+        else -> logger.error("Updating data for $componentType is currently not supported")
+    }
+}

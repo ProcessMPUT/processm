@@ -1,7 +1,10 @@
 package processm.core.models.petrinet
 
 import kotlinx.serialization.Serializable
+import processm.core.helpers.SerializableUUID
 import processm.core.models.commons.Activity
+import java.util.*
+
 
 /**
  * A transition in a Petri net.
@@ -14,7 +17,11 @@ open class Transition(
     override val name: String,
     val inPlaces: Collection<Place> = emptyList(),
     val outPlaces: Collection<Place> = emptyList(),
-    override val isSilent: Boolean = false
+    override val isSilent: Boolean = false,
+    /**
+     * A unique identifier to maintain identity of the object, e.g., between the frontend and the backend.
+     */
+    val id: SerializableUUID = UUID.randomUUID()
 ) : Activity {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

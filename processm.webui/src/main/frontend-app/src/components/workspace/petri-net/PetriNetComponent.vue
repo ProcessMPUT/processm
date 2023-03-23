@@ -155,9 +155,31 @@ export default class PetriNetComponent extends Vue {
         return {id: transition.id, x: transition.x, y: transition.y}
       }));
 
-      // TODO: #160 Remap rawData to ProcessM data format
-      // const data = {};
-      // this.data.data.xml = data.xml;
+      const inPlaces: Record<string, Array<string>> = {};
+      const outPlaces: Record<string, Array<string>> = {};
+      for (const arc of rawData.arcs) {
+        const inp = arc.inElementId;
+        const out = arc.outElementId;
+        if (!(out in inPlaces))
+          inPlaces[out] = [];
+        inPlaces[out].push(inp);
+        if (!(inp in outPlaces))
+          outPlaces[inp] = [];
+        outPlaces[inp].push(out);
+      }
+
+      this.petriNet.transitions = rawData.transitions.map((transition) => {
+        return {
+          id: transition.id,
+          name: transition.text,
+          isSilent: transition.isSilent,
+          inPlaces: outPlaces[transition.id],
+          outPlaces: inPlaces[transition.id]
+        };
+      });
+      this.petriNet.places = rawData.places.map((place) => {
+        return {id: place.id};
+      });
     }
   }
 }

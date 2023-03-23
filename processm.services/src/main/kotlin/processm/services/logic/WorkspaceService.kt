@@ -1,5 +1,6 @@
 package processm.services.logic
 
+import com.google.gson.JsonElement
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
@@ -10,6 +11,7 @@ import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
 import processm.miners.triggerEvent
+import processm.services.api.updateData
 import java.util.*
 
 class WorkspaceService(
@@ -125,7 +127,8 @@ class WorkspaceService(
         dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
-        layoutData: String? = null
+        layoutData: String? = null,
+        data: String? = null
     ): Unit = transactionMain {
         aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
 
@@ -143,7 +146,8 @@ class WorkspaceService(
                 dataStore,
                 componentType,
                 customizationData,
-                layoutData
+                layoutData,
+                data
             )
         }
 
@@ -152,6 +156,7 @@ class WorkspaceService(
         dataStore.validateNotNull { "Missing data store. " }
         componentType.validateNotNull { "Missing component type. " }
 
+        // data is ignored here on purpose under the assumption that a new component's data is populated server-side
         addComponent(
             workspaceComponentId,
             workspaceId,
@@ -234,7 +239,8 @@ class WorkspaceService(
         dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
-        layoutData: String? = null
+        layoutData: String? = null,
+        data: String? = null
     ) {
         WorkspaceComponent[workspaceComponentId].apply {
             if (workspaceId != null) this.workspace = Workspace[workspaceId]
@@ -245,6 +251,7 @@ class WorkspaceService(
                 ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)
             if (customizationData != null) this.customizationData = customizationData
             if (layoutData != null) this.layoutData = layoutData
+            if (data != null) this.updateData(data)
 
             afterCommit {
                 triggerEvent(producer)
