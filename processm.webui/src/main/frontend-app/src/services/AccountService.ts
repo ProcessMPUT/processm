@@ -1,7 +1,7 @@
 import Vue from "vue";
 import UserAccount from "@/models/UserAccount";
 import BaseService from "./BaseService";
-import { Organization, UserAccountInfo } from "@/openapi";
+import {Organization, ResetPasswordRequest, UserAccountInfo} from "@/openapi";
 
 export default class AccountService extends BaseService {
   public async signIn(login: string, password: string) {
@@ -11,7 +11,7 @@ export default class AccountService extends BaseService {
         login: login,
         password: password
       },
-      { skipAuthRefresh: true }
+      {skipAuthRefresh: true}
     );
 
     console.assert(response.status == 201, response.statusText);
@@ -81,5 +81,17 @@ export default class AccountService extends BaseService {
     const response = await this.usersApi.getUsers(email, limit);
     if (response.status != 200) throw new Error(response.statusText);
     return response.data;
+  }
+
+  public async requestPasswordReset(userEmail: string) {
+    const response = await this.usersApi.resetPasswordRequestPost({email: userEmail});
+
+    console.assert(response.status == 202, response.statusText);
+  }
+
+  public async resetPassword(token: string, newPassword: string) {
+    const response = await this.usersApi.resetPasswordTokenPost(token, {currentPassword: "", newPassword: newPassword});
+
+    console.assert(response.status == 200, response.statusText);
   }
 }

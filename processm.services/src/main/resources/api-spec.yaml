@@ -48,6 +48,14 @@ paths:
         '202':
           description: Successful operation
   /reset-password/{token}:
+    parameters:
+      - name: token
+        in: path
+        description: Token for resetting the password
+        required: true
+        schema:
+          type: string
+          format: uuid
     post:
       tags:
         - users

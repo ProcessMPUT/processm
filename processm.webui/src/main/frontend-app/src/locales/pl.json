@@ -217,6 +217,16 @@
       "organization-empty": "Nazwa organizacji nie może być pusta"
     }
   },
+  "reset-password-form": {
+    "request": {
+      "title": "Resetowanie hasła",
+      "requested": "Jeżeli wprowadzony adres email odpowiada zarejestrowanemu użytkownikowi, wiadomość email z dalszymi instrukcjami została wysłana na ten adres email.",
+      "reset": "Zresetuj hasło"
+    },
+    "title": "Resetowanie hasła",
+    "invalid-token": "Wykorzystany odnośnik jest przeterminowany bądź w inny sposób nieprawidłowy",
+    "success": "Hasło zostało zmienione"
+  },
   "xes-preview-dialog": {
     "title": "Przeglądarka logu",
     "no-data-store": "Nie znaleziono odpowiedniego magazynu danych",

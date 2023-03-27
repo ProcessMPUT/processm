@@ -203,7 +203,7 @@ class AccountService(private val groupService: GroupService, private val produce
         val message = MimeMessage(Session.getInstance(Properties())).apply {
             addRecipients(Message.RecipientType.TO, user.email)
             subject = bundle.getString("subject")
-            val url = "${getPropertyIgnoreCase("processm.baseUrl")}/reset-password/${requestId}"
+            val url = "${getPropertyIgnoreCase("processm.baseUrl")}/#/reset-password/${requestId}"
             setText(String.format(locale, bundle.getString("body"), url, notAfter))
         }
         PasswordResetRequest.new(requestId) {
