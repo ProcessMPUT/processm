@@ -43,7 +43,7 @@ fun Application.apiModule() {
         install(DataConversion, ApplicationDataConversionConfiguration())
         install(Koin) {
             modules(module {
-                single { AccountService(get()) }
+                single { AccountService(get(), get()) }
                 single { GroupService() }
                 single { OrganizationService(get(), get()) }
                 single { ACLService() }

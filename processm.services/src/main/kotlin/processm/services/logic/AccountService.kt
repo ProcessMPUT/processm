@@ -1,19 +1,28 @@
 package processm.services.logic
 
 import com.kosprov.jargon2.api.Jargon2.*
+import jakarta.mail.Message
+import jakarta.mail.Session
+import jakarta.mail.internet.MimeMessage
 import org.jetbrains.exposed.sql.*
+import processm.core.communication.Producer
+import processm.core.communication.email.EMAIL_ID
+import processm.core.communication.email.EMAIL_TOPIC
+import processm.core.communication.email.Email
+import processm.core.communication.email.fromMessage
+import processm.core.helpers.getPropertyIgnoreCase
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
+import processm.dbmodels.afterCommit
 import processm.dbmodels.ieq
 import processm.dbmodels.ilike
-import processm.dbmodels.models.User
-import processm.dbmodels.models.UserRoleInOrganization
-import processm.dbmodels.models.Users
-import processm.dbmodels.models.UsersRolesInOrganizations
+import processm.dbmodels.models.*
 import processm.services.helpers.Patterns
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 
-class AccountService(private val groupService: GroupService) {
+class AccountService(private val groupService: GroupService, private val producer: Producer) {
     private val passwordHasher =
         jargon2Hasher().type(Type.ARGON2d).memoryCost(65536).timeCost(3).saltLength(16).hashLength(16)
     private val passwordVerifier = jargon2Verifier()
@@ -158,6 +167,79 @@ class AccountService(private val groupService: GroupService) {
      */
     fun getUser(userId: UUID): User = transactionMain {
         User.findById(userId).validateNotNull(Reason.ResourceNotFound) { "The specified user account does not exist" }
+    }
+
+    /**
+     * Returns the amount of time a password-resetting token is valid. Can be set by a system property `processm.services.timeToResetPassword` (in minutes).
+     * Defaults to 1 hour.
+     */
+    private fun getTimeToResetPassword(): Duration =
+        getPropertyIgnoreCase("processm.services.timeToResetPassword")?.let { Duration.ofMinutes(it.toLong()) }
+            ?: Duration.ofHours(1L)
+
+    /**
+     * Returns the resource bundle [baseName] for [locale] if it is available.
+     * Otherwise, returns the resource bundle [baseName] for [defaultLocale].
+     *
+     * @throws MissingResourceException If [baseName] bundle is not available for [locale] nor for [defaultLocale]
+     */
+    private fun safeGetBundle(baseName: String, locale: Locale): ResourceBundle =
+        try {
+            ResourceBundle.getBundle(baseName, locale)
+        } catch (_: MissingResourceException) {
+            ResourceBundle.getBundle(baseName, defaultLocale)
+        }
+
+    /**
+     * If there is a registered user with the email address [email], generates a new password-resetting token for them and sends it to that email
+     */
+    fun sendPasswordResetEmail(email: String): Unit = transactionMain {
+        val user = Users.select { Users.email ieq email }.limit(1).map { User.wrapRow(it) }.single()
+        val notBefore = Instant.now()
+        val notAfter = notBefore.plus(getTimeToResetPassword())
+        val requestId = UUID.randomUUID()
+        val locale = parseLocale(user.locale)
+        val bundle = safeGetBundle("PasswordResetEmail", locale)
+        val message = MimeMessage(Session.getInstance(Properties())).apply {
+            addRecipients(Message.RecipientType.TO, user.email)
+            subject = bundle.getString("subject")
+            val url = "${getPropertyIgnoreCase("processm.baseUrl")}/reset-password/${requestId}"
+            setText(String.format(locale, bundle.getString("body"), url, notAfter))
+        }
+        PasswordResetRequest.new(requestId) {
+            this.user = user
+            this.notBefore = notBefore
+            this.notAfter = notAfter
+            val emailId = UUID.randomUUID()
+            this.email = Email.new(emailId) { fromMessage(message) }
+            afterCommit {
+                producer.produce(EMAIL_TOPIC) {
+                    setString(EMAIL_ID, emailId.toString())
+                }
+            }
+        }
+    }
+
+    /**
+     * If the given [token] is valid, the password of the token's owner is set to [newPassword]
+     *
+     * @return `true` if the password was changed, `false` otherwise
+     */
+    fun resetPasswordWithToken(token: UUID, newPassword: String): Boolean = transactionMain {
+        loggedScope { logger ->
+            val resetRequest = PasswordResetRequest.findById(token) ?: return@transactionMain false
+            val now = Instant.now()
+            resetRequest.notBefore <= now || return@transactionMain false
+            now <= resetRequest.notAfter || return@transactionMain false
+            resetRequest.linkClicked == null || return@transactionMain false
+            resetRequest.email != null || return@transactionMain false
+            resetRequest.email?.sent != null || return@transactionMain false
+
+            resetRequest.user.password = calculatePasswordHash(newPassword)
+            resetRequest.linkClicked = now
+            logger.debug("A user password has been successfully changed for the user $${resetRequest.user.id} using a token")
+            return@transactionMain true
+        }
     }
 
     private fun calculatePasswordHash(password: String) = passwordHasher.password(password.toByteArray()).encodedHash()

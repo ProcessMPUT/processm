@@ -1,12 +1,17 @@
 package processm.services.logic
 
 import io.mockk.*
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import processm.core.communication.email.Email
+import processm.core.communication.email.Emails
 import processm.dbmodels.models.*
 import java.util.*
+import kotlin.NoSuchElementException
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -187,5 +192,58 @@ class AccountServiceTest : ServiceTestBase() {
             accountService.getRolesAssignedToUser(userId = UUID.randomUUID())
         }
         assertEquals(Reason.ResourceNotFound, exception.reason)
+    }
+
+    @Test
+    fun `request password reset for non-existing user`() = withCleanTables(Users, PasswordResetRequests) {
+        assertFailsWith<NoSuchElementException> { accountService.sendPasswordResetEmail("nonexisting@example.com") }
+    }
+
+    @Test
+    fun `request password reset for an existing user`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+        val user = createUser()
+        val email = user.email
+        accountService.sendPasswordResetEmail(email)
+        val token =
+            PasswordResetRequest.wrapRow(PasswordResetRequests.select { PasswordResetRequests.userId eq user.id }
+                .single()).id.value
+        val emailBody = Emails.selectAll().map { Email.wrapRow(it) }.single().body.decodeToString()
+        assertTrue { token.toString() in emailBody }
+    }
+
+    @Test
+    fun `reset password with valid token`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+        val user = createUser()
+        val email = user.email
+        accountService.sendPasswordResetEmail(email)
+        val token =
+            PasswordResetRequest.wrapRow(PasswordResetRequests.select { PasswordResetRequests.userId eq user.id }
+                .single()).id.value
+        assertTrue(accountService.resetPasswordWithToken(token, "new_password"))
+        assertNotNull(accountService.verifyUsersCredentials(user.email, "new_password"))
+    }
+
+    @Test
+    fun `fail to reset password with non-existing token`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+        val user = createUser()
+        val email = user.email
+        accountService.sendPasswordResetEmail(email)
+        val token = UUID.randomUUID()
+        assertFalse(accountService.resetPasswordWithToken(token, "new_password"))
+        assertNull(accountService.verifyUsersCredentials(user.email, "new_password"))
+    }
+
+    @Test
+    fun `fail to reset password with already used token`() = withCleanTables(Users, PasswordResetRequests, Emails) {
+        val user = createUser()
+        val email = user.email
+        accountService.sendPasswordResetEmail(email)
+        val token =
+            PasswordResetRequest.wrapRow(PasswordResetRequests.select { PasswordResetRequests.userId eq user.id }
+                .single()).id.value
+        assertTrue(accountService.resetPasswordWithToken(token, "new_password"))
+        assertFalse(accountService.resetPasswordWithToken(token, "another_password"))
+        assertNull(accountService.verifyUsersCredentials(user.email, "another_password"))
+        assertNotNull(accountService.verifyUsersCredentials(user.email, "new_password"))
     }
 }

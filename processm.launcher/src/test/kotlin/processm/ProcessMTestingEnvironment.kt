@@ -24,6 +24,7 @@ import processm.services.api.models.*
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
+import kotlin.collections.HashMap
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
@@ -38,6 +39,7 @@ class ProcessMTestingEnvironment {
     var currentDataStore: DataStore? = null
     var currentDataConnector: DataConnector? = null
     var currentEtlProcess: AbstractEtlProcess? = null
+    var properties: HashMap<String, String> = HashMap()
 
     val client = HttpClient(CIO) {
         expectSuccess = true
@@ -107,9 +109,15 @@ class ProcessMTestingEnvironment {
         return this
     }
 
+    fun withProperty(key: String, value: String): ProcessMTestingEnvironment {
+        properties[key] = value
+        return this
+    }
+
     fun <T> run(block: ProcessMTestingEnvironment.() -> T) {
         try {
             loadConfiguration(true)
+            properties.forEach { (k, v) -> System.setProperty(k, v) }
             jdbcUrl?.let { jdbcUrl ->
                 System.setProperty("PROCESSM.CORE.PERSISTENCE.CONNECTION.URL", jdbcUrl)
                 Migrator.reloadConfiguration()

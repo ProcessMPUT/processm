@@ -47,7 +47,7 @@ abstract class ServiceTestBase {
     }
 
     protected val groupService = GroupService()
-    protected val accountService = AccountService(groupService)
+    protected val accountService = AccountService(groupService, producer)
     protected val organizationService = OrganizationService(accountService, groupService)
     protected val aclService = ACLService()
     protected val workspaceService = WorkspaceService(accountService, aclService, producer)
