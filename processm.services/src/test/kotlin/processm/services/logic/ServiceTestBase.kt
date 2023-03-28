@@ -11,6 +11,7 @@ import org.jetbrains.exposed.sql.insertAndGetId
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import processm.core.communication.Producer
+import processm.core.communication.email.EMAIL_TOPIC
 import processm.core.esb.Artemis
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
@@ -44,6 +45,7 @@ abstract class ServiceTestBase {
 
     protected val producer: Producer = mockk {
         every { produce(DATA_CONNECTOR_TOPIC, any()) } returns Unit
+        every { produce(EMAIL_TOPIC, any()) } returns Unit
     }
 
     protected val groupService = GroupService()
