@@ -2,12 +2,19 @@ package processm
 
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
+import io.ktor.http.*
 import io.ktor.server.locations.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeThat
+import org.junit.Assume.assumeTrue
+import org.junit.jupiter.api.Assumptions
+import processm.core.Brand
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
 import processm.services.api.models.*
+import java.io.File
+import java.nio.file.Files
 import kotlin.test.*
 
 /**
@@ -199,6 +206,59 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 get<Paths.EtlProcess, Unit> {}
             }
         }
+    }
+
+    private class FauxSendmail {
+        private val bodyFile: File
+        private val sendmail: File
+
+        init {
+            Assumptions.assumeTrue(File("/bin/sh").canExecute())
+            with(Files.createTempDirectory(Brand.name).toFile()) {
+                deleteOnExit()
+                bodyFile = File(this, "body")
+                bodyFile.deleteOnExit()
+                sendmail = File(this, "sendmail")
+                sendmail.deleteOnExit()
+                println(sendmail.absolutePath)
+                sendmail.outputStream().use { stream ->
+                    stream.write(
+                        """#!/bin/sh
+                |exec /bin/cat >${bodyFile.absolutePath}
+            """.trimMargin().encodeToByteArray()
+                    )
+                }
+                Assumptions.assumeTrue(sendmail.setExecutable(true))
+            }
+        }
+
+        val executable: String
+            get() = sendmail.absolutePath
+
+        val lastEmailBody: String
+            get() = bodyFile.readText()
+    }
+
+    @Test
+    fun `complete workflow for resetting password`() {
+        val sendmail = FauxSendmail()
+        ProcessMTestingEnvironment()
+            .withProperty("processm.email.sendmailExecutable", sendmail.executable)
+            .withFreshDatabase().run {
+                registerUser("text@example.com", "some organization")
+                post<Paths.ResetPasswordRequest, ResetPasswordRequest, Unit>(ResetPasswordRequest("text@example.com")) {
+                    assertEquals(HttpStatusCode.Accepted, status)
+                }
+                //wait for the email
+                Thread.sleep(100L)
+                val re = Regex("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", RegexOption.IGNORE_CASE)
+                val token = re.find(sendmail.lastEmailBody)?.value
+                assertNotNull(token)
+                post("/reset-password/$token", PasswordChange("", "newPassword")) {
+                    assertEquals(HttpStatusCode.OK, status)
+                }
+                login("text@example.com", "newPassword")
+            }
     }
 
 }

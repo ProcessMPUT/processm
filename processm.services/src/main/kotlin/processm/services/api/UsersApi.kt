@@ -100,6 +100,32 @@ fun Route.UsersApi() {
         }
     }
 
+    post<Paths.ResetPasswordRequest> {
+        loggedScope { logger ->
+            val request = call.receiveOrNull<ResetPasswordRequest>()
+                ?: throw ApiException("The provided information cannot be parsed")
+            try {
+                accountService.sendPasswordResetEmail(request.email)
+            } catch (e: Throwable) {
+                // Logged but no information is returned to the frontend to avoid leaking information about registered users
+                logger.error("Suppressed error during sending password reset request for `${request.email}`", e)
+            }
+            call.respond(HttpStatusCode.Accepted)
+        }
+    }
+
+    post<Paths.ResetPassword> { path ->
+        loggedScope {
+            val token = path.token
+            val request =
+                call.receiveOrNull<PasswordChange>() ?: throw ApiException("The provided information cannot be parsed")
+            if (accountService.resetPasswordWithToken(token, request.newPassword))
+                call.respond(HttpStatusCode.OK)
+            else
+                call.respond(HttpStatusCode.Forbidden)
+        }
+    }
+
     authenticate {
         get<Paths.UserAccountDetails> { _ ->
             val principal = call.authentication.principal<ApiUser>()!!

@@ -1,31 +1,55 @@
 <template>
-  <v-container fill-height fluid>
+  <v-container fluid fill-height>
     <v-layout align-center justify-center>
-      <v-flex md4 sm8 xs12>
+      <v-flex xs12 sm8 md4>
         <v-card class="elevation-12" min-width="470">
           <v-toolbar color="primary" dark flat>
-            <v-toolbar-title>{{ $t("reset-password.title") }}</v-toolbar-title>
+            <v-toolbar-title>
+              {{ $t("reset-password-form.title") }}
+            </v-toolbar-title>
           </v-toolbar>
           <v-card-text>
-            <v-form ref="resetForm" v-model="isValidForm" @submit.prevent="reset">
+            <v-form v-model="isFormValid">
               <v-text-field
-                v-model="username"
-                :label="$t('common.email')"
-                :rules="[(v) => /.+@.+\..+/.test(v) || $t('login-form.validation.email-format')]"
-                prepend-icon="person"
-                type="text"
+                  id="newPassword"
+                  :label="$t('password-change-dialog.new-password')"
+                  v-model="newPassword"
+                  type="password"
+                  :rules="[
+                    (v) =>
+                      !!v ||
+                      $t('password-change-dialog.validation.password-empty')
+                  ]"
+                  validate-on-blur
+                  required
               ></v-text-field>
+              <v-text-field
+                  id="passwordConfirmation"
+                  :label="$t('password-change-dialog.password-confirmation')"
+                  v-model="passwordConfirmation"
+                  type="password"
+                  :rules="[
+                    (v) =>
+                      !!v ||
+                      $t('password-change-dialog.validation.password-empty'),
+                    (v) =>
+                      v == newPassword ||
+                      $t(
+                        'password-change-dialog.validation.password-confirmation-not-the-same'
+                      )
+                  ]"
+                  required
+              ></v-text-field>
+
+              <v-layout>
+                <v-spacer></v-spacer>
+                <v-btn color="secondary" text @click="cancel">
+                  {{ $t("common.cancel") }}
+                </v-btn>
+                <v-btn color="primary" @click.stop="submit">{{ $t("common.submit") }}</v-btn>
+              </v-layout>
             </v-form>
           </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="secondary" text @click="cancel">
-              {{ $t("common.cancel") }}
-            </v-btn>
-            <v-btn :disabled="!isValidForm" color="primary" form="resetForm" type="submit">
-              {{ $t("reset-pasword.reset") }}
-            </v-btn>
-          </v-card-actions>
         </v-card>
       </v-flex>
     </v-layout>
@@ -33,28 +57,35 @@
 </template>
 
 <script lang="ts">
-import { Component, Inject } from "vue-property-decorator";
 import Vue from "vue";
+import {Component, Inject} from "vue-property-decorator";
+import PasswordChangeDialog from "@/components/PasswordChangeDialog.vue";
 import App from "@/App.vue";
+import AccountService from "@/services/AccountService";
 
-@Component
+@Component({
+  components: {PasswordChangeDialog}
+})
 export default class ResetPassword extends Vue {
   @Inject() app!: App;
-  isValidForm = false;
+  @Inject() accountService!: AccountService;
+  newPassword = "";
+  passwordConfirmation = "";
+  isFormValid = false;
 
-  cancel() {
-    this.$router.push({ name: "login" });
+  async submit() {
+    try {
+      const token = this.$route.params.token;
+      await this.accountService.resetPassword(token, this.newPassword);
+      this.app.info(this.$t("reset-password-form.success").toString());
+      await this.$router.push({name: "login"});
+    } catch (e) {
+      this.app.error(this.$t("reset-password-form.invalid-token").toString());
+    }
   }
 
-  async reset() {
-    try {
-      // TODO
-      throw new Error("Not implemented");
-    } catch (e) {
-      this.app.error(e);
-    }
+  cancel() {
+    this.$router.push({name: "login"});
   }
 }
 </script>
-
-<style scoped></style>

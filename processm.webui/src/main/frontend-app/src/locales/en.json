@@ -219,6 +219,16 @@
       "organization-empty": "The organization name cannot be empty"
     }
   },
+  "reset-password-form": {
+    "request": {
+      "title": "Reset password",
+      "requested": "If the entered email address corresponds to a registered user, an email with further instructions has been sent to that email address.",
+      "reset": "Reset password"
+    },
+    "title": "Reset password",
+    "invalid-token": "The link you have followed is expired or otherwise invalid",
+    "success": "The password has been changed successfully"
+  },
   "xes-preview-dialog": {
     "title": "Log viewer",
     "no-data-store": "No appropriate data store found to query.",

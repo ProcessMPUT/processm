@@ -248,6 +248,12 @@ object Paths {
     @Location("/users/session")
     class UsersSession
 
+    @Location("/reset-password/request")
+    class ResetPasswordRequest
+
+    @Location("/reset-password/{token}")
+    class ResetPassword(val token: UUID)
+
     /**
      * Get, update or remove the specified workspace in the context of the specified organization
      *

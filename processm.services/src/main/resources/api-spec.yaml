@@ -34,6 +34,42 @@ paths:
             'application/json':
               schema:
                 $ref: '#/components/schemas/Config'
+  /reset-password/request:
+    post:
+      tags:
+        - users
+      summary: If the given email corresponds to a registered user, an email to reset the password is sent to this email
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '202':
+          description: Successful operation
+  /reset-password/{token}:
+    parameters:
+      - name: token
+        in: path
+        description: Token for resetting the password
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags:
+        - users
+      summary: Changes the password of the owner of the token (send via email) if the token is valid
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PasswordChange'
+      responses:
+        '200':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /users:
     get:
       tags:
@@ -2219,6 +2255,12 @@ components:
         source:
           type: string
         target:
+          type: string
+    ResetPasswordRequest:
+      type: object
+      required: [ email ]
+      properties:
+        email:
           type: string
   responses:
     BadRequest:
