@@ -429,9 +429,9 @@ class WorkspacesApiTest : BaseApiTest() {
                             dataStore = dataStore,
                             name = "Component1",
                             type = ComponentType.causalNet,
-                            customizationData = CausalNetComponentAllOfCustomizationData(
+                            customizationData = ProcessModelCustomizationData(
                                 arrayOf(
-                                    CausalNetComponentAllOfCustomizationDataLayout(
+                                    ProcessModelCustomizationDataLayoutInner(
                                         id = "id1",
                                         x = 10.toBigDecimal(),
                                         y = 10.toBigDecimal()

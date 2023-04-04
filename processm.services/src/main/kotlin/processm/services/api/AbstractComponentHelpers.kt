@@ -6,11 +6,15 @@ import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
-import processm.core.models.petrinet.petrinet
+import processm.core.models.petrinet.Marking
+import processm.core.models.petrinet.PetriNet
+import processm.core.models.petrinet.Place
+import processm.core.models.petrinet.Transition
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.*
+import java.util.*
 
 /**
  * Converts the database representation of the [WorkspaceComponent] into service API [AbstractComponent].
@@ -58,13 +62,14 @@ private fun WorkspaceComponent.getLayout(): LayoutElement? =
  * Deserializes the customization data for the component.
  */
 // TODO: replace GSON with kotlinx/serialization
-private fun WorkspaceComponent.getCustomizationData(): CausalNetComponentAllOfCustomizationData? {
+private fun WorkspaceComponent.getCustomizationData(): ProcessModelCustomizationData? {
     if (customizationData.isNullOrBlank())
         return null
 
     return when (componentType) {
-        ComponentTypeDto.CausalNet ->
-            Gson().fromJson(customizationData, CausalNetComponentAllOfCustomizationData::class.java)
+        ComponentTypeDto.CausalNet, ComponentTypeDto.PetriNet ->
+            Gson().fromJson(customizationData, ProcessModelCustomizationData::class.java)
+
         else -> TODO("Customization data is not implemented for type $componentType.")
     }
 }
@@ -104,12 +109,14 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     edges = edges
                 )
             }
+
             ComponentTypeDto.Kpi -> {
                 KpiComponentData(
                     type = ComponentType.kpi,
                     value = data
                 )
             }
+
             ComponentTypeDto.BPMN -> {
                 BPMNComponentData(
                     type = ComponentType.bpmn,
@@ -117,35 +124,31 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                         .bufferedReader().readText() // FIXME: replace the mock with actual implementation
                 )
             }
+
             ComponentTypeDto.PetriNet -> {
-                // TODO: Create network mock (check FitnessTest.kt)
-                val petriNet = petrinet {
-                    P tout "a"
-                    P tin "a" * "f" tout "b" * "c"
-                    P tin "a" * "f" tout "d"
-                    P tin "b" * "c" tout "e"
-                    P tin "d" tout "e"
-                    P tin "e" tout "g" * "h" * "f"
-                    P tin "g" * "h"
-                }
+                val petriNet = processm.core.models.petrinet.DBSerializer.fetch(
+                    DBCache.get(dataStoreId.toString()).database,
+                    UUID.fromString(requireNotNull(data) { "Missing PetriNet id" })
+                )
                 val componentDataTransitions = petriNet.transitions.mapToArray {
                     PetriNetComponentDataAllOfTransitions(
+                        it.id.toString(),
                         it.name,
                         it.isSilent,
-                        it.inPlaces.toTypedArray(),
-                        it.outPlaces.toTypedArray()
+                        it.inPlaces.mapToArray { it.id.toString() },
+                        it.outPlaces.mapToArray { it.id.toString() }
                     )
                 }
-                petriNet.transitions.toTypedArray()
 
                 PetriNetComponentData(
                     type = ComponentType.petriNet,
-                    initialMarking = petriNet.initialMarking,
-                    finalMarking = petriNet.finalMarking,
-                    places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id) },
+                    initialMarking = petriNet.initialMarking.mapKeys { it.key.id.toString() },
+                    finalMarking = petriNet.finalMarking.mapKeys { it.key.id.toString() },
+                    places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
                     transitions = componentDataTransitions
                 )
             }
+
             else -> TODO("Data conversion is not implemented for type $componentType.")
         }
     } catch (e: Throwable) {
@@ -154,3 +157,40 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
     }
 }
 
+
+private fun PetriNetComponentData.toPetriNet(): PetriNet {
+    val places = this.places.associate { it.id to Place(UUID.fromString(it.id)) }
+    val transitions = this.transitions.map {
+        val inPlaces = it.inPlaces.map(places::getValue)
+        val outPlaces = it.outPlaces.map(places::getValue)
+        Transition(
+            name = it.name,
+            inPlaces = inPlaces,
+            outPlaces = outPlaces,
+            isSilent = it.isSilent,
+            id = UUID.fromString(it.id)
+        )
+    }
+    val initialMarking = Marking(this.initialMarking.mapKeys { places.getValue(it.key) })
+    val finalMarking = Marking(this.finalMarking.mapKeys { places.getValue(it.key) })
+    return PetriNet(places.values.toList(), transitions, initialMarking, finalMarking)
+}
+
+/**
+ * Updates the data within the component from the JSON received in the abstract component from the frontend
+ */
+fun WorkspaceComponent.updateData(data: String) = loggedScope { logger ->
+    when (componentType) {
+        ComponentTypeDto.PetriNet -> {
+            // TODO: replace GSON with kotlinx/serialization
+            val petriNet = Gson().fromJson(data, PetriNetComponentData::class.java).toPetriNet()
+            processm.core.models.petrinet.DBSerializer.update(
+                DBCache.get(dataStoreId.toString()).database,
+                UUID.fromString(this.data),
+                petriNet
+            )
+        }
+
+        else -> logger.error("Updating data for $componentType is currently not supported")
+    }
+}

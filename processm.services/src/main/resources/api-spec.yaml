@@ -2046,6 +2046,21 @@ components:
                     type: string
                   targetNodeId:
                     type: string
+    ProcessModelCustomizationData:
+      type: object
+      properties:
+        layout:
+          type: array
+          items:
+            type: object
+            required: [ id, x, y ]
+            properties:
+              id:
+                type: string
+              x:
+                type: number
+              y:
+                type: number
     CausalNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2054,20 +2069,7 @@ components:
             data:
               $ref: '#/components/schemas/CausalNetComponentData'
             customizationData:
-              type: object
-              properties:
-                layout:
-                  type: array
-                  items:
-                    type: object
-                    required: [ id, x, y ]
-                    properties:
-                      id:
-                        type: string
-                      x:
-                        type: number
-                      y:
-                        type: number
+              $ref: '#/components/schemas/ProcessModelCustomizationData'
     PetriNetComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2076,13 +2078,17 @@ components:
           properties:
             initialMarking:
               type: object
+              additionalProperties:
+                type: integer
             finalMarking:
               type: object
+              additionalProperties:
+                type: integer
             places:
               type: array
               items:
                 type: object
-                required: [id]
+                required: [ id ]
                 properties:
                   id:
                     type: string
@@ -2090,8 +2096,10 @@ components:
               type: array
               items:
                 type: object
-                required: [ name, isSilent, inPlaces, outPlaces ]
+                required: [ id, name, isSilent, inPlaces, outPlaces ]
                 properties:
+                  id:
+                    type: string
                   name:
                     type: string
                   isSilent:
@@ -2099,11 +2107,11 @@ components:
                   inPlaces:
                     type: array
                     items:
-                      type: object
+                      type: string
                   outPlaces:
                     type: array
                     items:
-                      type: object
+                      type: string
     PetriNetComponent:
       allOf:
         - $ref: '#/components/schemas/Component'
@@ -2112,20 +2120,7 @@ components:
             data:
               $ref: '#/components/schemas/PetriNetComponentData'
             customizationData:
-              type: object
-              properties:
-                layout:
-                  type: array
-                  items:
-                    type: object
-                    required: [ id, x, y ]
-                    properties:
-                      id:
-                        type: string
-                      x:
-                        type: number
-                      y:
-                        type: number
+              $ref: '#/components/schemas/ProcessModelCustomizationData'
     BPMNComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'

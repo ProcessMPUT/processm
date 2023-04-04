@@ -184,7 +184,7 @@ import {
 } from "./UserInputHandlers";
 import {
   CausalNetComponentData,
-  CausalNetCustomizationData,
+  ProcessModelCustomizationData,
   WorkspaceComponent as WorkspaceComponentModel
 } from "../../../models/WorkspaceComponent";
 
@@ -353,7 +353,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
     if (this.data?.data == null) return;
     const data = this.data?.data as CausalNetComponentData;
     const customizationData = this.data
-      ?.customizationData as CausalNetCustomizationData;
+      ?.customizationData as ProcessModelCustomizationData;
 
     this.causalNet = new CausalNet(
       data.nodes ?? [],
@@ -555,7 +555,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
 
   public updateNodeLayoutPosition(nodeId: string, position: Point): void {
     const customizationData = this.data
-      ?.customizationData as CausalNetCustomizationData;
+      ?.customizationData as ProcessModelCustomizationData;
 
     if (customizationData?.layout == null) return;
 

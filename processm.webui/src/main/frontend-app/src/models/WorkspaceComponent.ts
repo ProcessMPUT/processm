@@ -3,12 +3,16 @@ import {
   DataNode
 } from "@/components/workspace/causal-net/CausalNet";
 // TODO add PetriNet = "petriNet" to ComponentType
-import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
+import {AbstractComponent, AlignerKpiReport, ComponentType} from "@/openapi";
 
-type CustomizationData = Record<string, unknown>;
+export abstract class CustomizationData {
+  constructor(init: Partial<CustomizationData>) {
+    Object.assign(this, init);
+  }
+}
 
-export interface CausalNetCustomizationData extends CustomizationData {
-  layout: { id: string; x: number; y: number }[];
+export class ProcessModelCustomizationData extends CustomizationData {
+  layout?: { id: string; x: number; y: number }[];
 }
 
 export abstract class ComponentData {
@@ -56,14 +60,11 @@ export class PetriNetComponentData extends ComponentData {
   // TODO: Change any to some type
   places?: Array<any>;
   transitions?: Array<any>;
-  initialMarking: any
-  finalMarking: any
+  initialMarking?: { [key: string]: number };
+  finalMarking?: { [key: string]: number };
 
   get isDisplayable() {
-    return this.initialMarking != null
-        && this.finalMarking != null
-        && this?.places?.length != 0
-        && this.transitions?.length != 0;
+    return this.initialMarking !== undefined && this.finalMarking !== undefined && this?.places?.length != 0 && this.transitions?.length != 0;
   }
 }
 
@@ -98,6 +99,7 @@ export class WorkspaceComponent {
       }
       case ComponentType.PetriNet: {
         this.data = new PetriNetComponentData(init.data ?? {});
+        this.customizationData = new ProcessModelCustomizationData(init.customizationData ?? {});
         break;
       }
       case ComponentType.Bpmn: {
