@@ -1,62 +1,56 @@
 <template>
   <div v-if="data != null" v-resize:debounce.10="onResize">
     <petri-net-editor
-        ref="editor"
-        :debug="false"
-        :run-layouter-on-start="!hasWorkingLayout"
-        :show-buttons="showButtons"
-        :enable-dragging="enableDragging"
-        :places="getPlacesAsDto()"
-        :transitions="getTransitionsAsDto()"
-        :arcs="getArcsAsDto()"
+      ref="editor"
+      :debug="false"
+      :run-layouter-on-start="!hasWorkingLayout"
+      :show-buttons="showButtons"
+      :enable-dragging="enableDragging"
+      :places="getPlacesAsDto()"
+      :transitions="getTransitionsAsDto()"
+      :arcs="getArcsAsDto()"
     ></petri-net-editor>
-    <div class="node-details"/>
+    <div class="node-details" />
   </div>
   <p v-else>{{ $t("workspace.component.no-data") }}</p>
 </template>
 
 <script lang="ts">
 import Vue from "vue";
-import {Component, Prop, Watch} from "vue-property-decorator";
-import {ProcessModelCustomizationData, PetriNetComponentData, WorkspaceComponent} from "@/models/WorkspaceComponent";
+import { Component, Prop, Watch } from "vue-property-decorator";
+import { PetriNetComponentData, ProcessModelCustomizationData, WorkspaceComponent } from "@/models/WorkspaceComponent";
 import resize from "vue-resize-directive";
-import {ComponentMode} from "@/components/workspace/WorkspaceComponent.vue";
+import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 import PetriNetEditor from "@/components/petri-net-editor/PetriNetEditor.vue";
-import {ArcDto, PlaceDto, TransitionDto} from "@/components/petri-net-editor/Dto";
-import {PlaceType} from "@/components/petri-net-editor/model/Place";
+import { ArcDto, PlaceDto, TransitionDto } from "@/components/petri-net-editor/Dto";
+import { PlaceType } from "@/components/petri-net-editor/model/Place";
 
 @Component({
-  components: {PetriNetEditor},
+  components: { PetriNetEditor },
   directives: {
     resize
   }
 })
 export default class PetriNetComponent extends Vue {
-  @Prop({default: {}})
+  @Prop({ default: {} })
   readonly data!: WorkspaceComponent;
 
-  @Prop({default: null})
+  @Prop({ default: null })
   readonly componentMode?: ComponentMode;
 
-  @Prop({default: false})
+  @Prop({ default: false })
   readonly updateData = false;
 
   $refs!: {
     editor: PetriNetEditor;
   };
 
-  private readonly showButtons: boolean =
-      this.componentMode === ComponentMode.Edit;
+  private readonly showButtons: boolean = this.componentMode === ComponentMode.Edit;
 
-  private readonly enableDragging: boolean =
-      this.componentMode === ComponentMode.Edit ||
-      this.componentMode === ComponentMode.Interactive;
-
-  mounted() {
-  }
+  private readonly enableDragging: boolean = this.componentMode === ComponentMode.Edit || this.componentMode === ComponentMode.Interactive;
 
   private get petriNet() {
-    return this.data.data as PetriNetComponentData
+    return this.data.data as PetriNetComponentData;
   }
 
   private get hasWorkingLayout() {
@@ -68,8 +62,7 @@ export default class PetriNetComponent extends Vue {
     const result: Record<string, { id: string; x: number; y: number }> = {};
     const items = (this.data.customizationData as ProcessModelCustomizationData)?.layout;
     if (items !== undefined) {
-      for (const item of items)
-        result[item.id] = item;
+      for (const item of items) result[item.id] = item;
     }
     return result;
   }
@@ -84,7 +77,7 @@ export default class PetriNetComponent extends Vue {
         type: this.getPlaceType(place.id),
         tokenCount: this.petriNet.initialMarking ? this.petriNet.initialMarking[place.id] : 0,
         x: layout[place.id]?.x,
-        y: layout[place.id]?.y,
+        y: layout[place.id]?.y
       } as PlaceDto;
     });
 
@@ -99,7 +92,7 @@ export default class PetriNetComponent extends Vue {
         text: transition.name,
         isSilent: transition.isSilent,
         x: layout[transition.id]?.x,
-        y: layout[transition.id]?.y,
+        y: layout[transition.id]?.y
       } as TransitionDto;
     });
 
@@ -149,22 +142,24 @@ export default class PetriNetComponent extends Vue {
     if (this.updateData) {
       // eslint-disable-next-line
       const rawData = this.$refs.editor.getPetriNetJson();
-      (this.data.customizationData as ProcessModelCustomizationData).layout = rawData.places.map((place) => {
-        return {id: place.id, x: place.cx, y: place.cy}
-      }).concat(rawData.transitions.map((transition) => {
-        return {id: transition.id, x: transition.x, y: transition.y}
-      }));
+      (this.data.customizationData as ProcessModelCustomizationData).layout = rawData.places
+        .map((place) => {
+          return { id: place.id, x: place.cx, y: place.cy };
+        })
+        .concat(
+          rawData.transitions.map((transition) => {
+            return { id: transition.id, x: transition.x, y: transition.y };
+          })
+        );
 
       const inPlaces: Record<string, Array<string>> = {};
       const outPlaces: Record<string, Array<string>> = {};
       for (const arc of rawData.arcs) {
         const inp = arc.inElementId;
         const out = arc.outElementId;
-        if (!(out in inPlaces))
-          inPlaces[out] = [];
+        if (!(out in inPlaces)) inPlaces[out] = [];
         inPlaces[out].push(inp);
-        if (!(inp in outPlaces))
-          outPlaces[inp] = [];
+        if (!(inp in outPlaces)) outPlaces[inp] = [];
         outPlaces[inp].push(out);
       }
 
@@ -178,7 +173,7 @@ export default class PetriNetComponent extends Vue {
         };
       });
       this.petriNet.places = rawData.places.map((place) => {
-        return {id: place.id};
+        return { id: place.id };
       });
     }
   }
