@@ -68,6 +68,12 @@ export class PetriNetComponentData extends ComponentData {
   }
 }
 
+export class LogViewComponentData extends ComponentData {
+  get isDisplayable() {
+    return true;
+  }
+}
+
 export class LayoutElement {
   constructor(init: Partial<LayoutElement>) {
     Object.assign(this, init);
@@ -104,6 +110,10 @@ export class WorkspaceComponent {
       }
       case ComponentType.Bpmn: {
         this.data = new BPMNComponentData(init.data ?? {});
+        break;
+      }
+      case ComponentType.LogView: {
+        this.data = new LogViewComponentData(init.data ?? {});
         break;
       }
     }
