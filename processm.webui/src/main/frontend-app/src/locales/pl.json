@@ -42,6 +42,10 @@
           "query-empty": "Zapytanie nie może być puste"
         }
       }
+    },
+    "flat-log-view": "Tabelaryczny dziennik zdarzeń",
+    "flat-log": {
+      "no-data": "(brak danych)"
     }
   },
   "data-stores": {
@@ -306,6 +310,7 @@
       "success": "Test udany",
       "failure": "Test nieudany"
     },
-    "in": "w"
+    "in": "w",
+    "search": "Szukaj"
   }
 }

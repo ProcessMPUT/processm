@@ -120,6 +120,7 @@ import KpiComponent from "./KpiComponent.vue";
 import BPMNComponent from "./bpmn/BPMNComponent.vue";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import TreeLogViewComponent from "@/components/workspace/TreeLogViewComponent.vue";
+import FlatLogViewComponent from "@/components/workspace/FlatLogViewComponent.vue";
 
 export enum ComponentMode {
   Static,
@@ -133,7 +134,8 @@ export enum ComponentMode {
     kpiComponent: KpiComponent,
     petriNetComponent: PetriNetComponent,
     bpmnComponent: BPMNComponent,
-    treeLogViewComponent: TreeLogViewComponent // https://stackoverflow.com/a/58875919
+    treeLogViewComponent: TreeLogViewComponent,
+    flatLogViewComponent: FlatLogViewComponent // https://stackoverflow.com/a/58875919
   }
 })
 export default class WorkspaceComponent extends Vue {

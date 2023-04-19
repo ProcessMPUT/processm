@@ -17,6 +17,16 @@ export class LogItem {
 
   readonly _children: LogItem[] = [];
   [key: string]: unknown;
+
+  /**
+   * Flattens the entire hierarchy into an array.
+   */
+  flatten(parent: LogItem | null = null, path: number[] | null = []): LogItem[] {
+    this["_parent"] = parent;
+    this["_path"] = [path, this._id].flat();
+    const children = this._children.flatMap((child) => child.flatten(this, this["_path"] as number[]));
+    return Array.of(this, ...children);
+  }
 }
 
 export default class XesProcessor {

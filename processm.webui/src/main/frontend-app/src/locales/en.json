@@ -41,6 +41,10 @@
           "name-empty": "The name cannot be empty",
           "query-empty": "The query cannot be empty"
         }
+      },
+      "flat-log-view": "Flat log",
+      "flat-log": {
+        "no-data": "(no data)"
       }
     }
   },
@@ -309,6 +313,7 @@
       "success": "Test succeeded",
       "failure": "Test failed"
     },
-    "in": "in"
+    "in": "in",
+    "search": "Search"
   }
 }
