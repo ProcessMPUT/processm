@@ -23,9 +23,11 @@
       "save": "Save layout"
     },
     "component": {
-      "causal-net": "Causal net",
-      "kpi": "KPI",
+      "aligner-kpi": "KPI based on alignments",
       "bpmn": "BPMN",
+      "causal-net": "Causal net",
+      "kpi": "KPI based on log",
+      "tree-log-view": "Tree log view",
       "petri-net": "Petri net",
       "select": "Select type",
       "no-data": "No data to be displayed",
@@ -35,6 +37,7 @@
         "query": "PQL Query",
         "datastore": "Data store",
         "validation": {
+          "datastore-empty": "The datastore cannot be empty",
           "name-empty": "The name cannot be empty",
           "query-empty": "The query cannot be empty"
         }

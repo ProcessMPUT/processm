@@ -127,7 +127,8 @@ enum class ComponentTypeDto(val typeName: String) {
     BPMN("bpmn"),
     Kpi("kpi"),
     AlignerKpi("alignerKpi"),
-    PetriNet("petriNet");
+    PetriNet("petriNet"),
+    TreeLogView("treeLogView");
 
     companion object {
         fun byTypeNameInDatabase(typeNameInDatabase: String) = values().first { it.typeName == typeNameInDatabase }

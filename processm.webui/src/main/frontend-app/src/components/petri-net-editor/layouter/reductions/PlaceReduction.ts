@@ -47,32 +47,22 @@ export class PlaceReduction implements Reduction {
       return this.score;
     }
 
-    const prePlaces1: Set<string> = new Set<string>(
-      state.getPrePrePlaces(this.placeToReduce).map((place) => place.id)
-    );
-    const prePlaces2: Set<string> = new Set<string>(
-      state.getPrePrePlaces(this.place).map((place) => place.id)
-    );
-    const postPlaces1: Set<string> = new Set<string>(
-      state.getPostPostPlaces(this.placeToReduce).map((place) => place.id)
-    );
-    const postPlaces2: Set<string> = new Set<string>(
-      state.getPostPostPlaces(this.place).map((place) => place.id)
-    );
+    const prePlaces1 = state.getPrePrePlaces(this.placeToReduce);
+    const prePlaces2 = new Set(state.getPrePrePlaces(this.place));
+    const postPlaces1 = state.getPostPostPlaces(this.placeToReduce);
+    const postPlaces2 = new Set(state.getPostPostPlaces(this.place));
 
-    const preIntersection = new Set<string>(
-      [...prePlaces1].filter((place) => prePlaces2.has(place))
-    );
-    const postIntersection = new Set<string>(
-      [...postPlaces1].filter((place) => postPlaces2.has(place))
-    );
+    const preIntersection = prePlaces1.filter((place) => prePlaces2.has(place));
+    const postIntersection = postPlaces1.filter((place) => postPlaces2.has(place));
 
-    const preUnion = new Set<string>([...prePlaces1, ...prePlaces2]);
-    const postUnion = new Set<string>([...postPlaces1, ...postPlaces2]);
+    const preUnion = prePlaces2;
+    const postUnion = postPlaces2;
+    prePlaces1.forEach((place) => preUnion.add(place));
+    postPlaces1.forEach((place) => postUnion.add(place));
 
     this.score =
       (PlaceReduction.MAX_SCORE *
-        (preIntersection.size + postIntersection.size)) /
+        (preIntersection.length + postIntersection.length)) /
       (preUnion.size + postUnion.size);
     return this.score;
   }

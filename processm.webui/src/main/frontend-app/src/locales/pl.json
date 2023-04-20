@@ -23,9 +23,11 @@
       "save": "Zapisz układ"
     },
     "component": {
-      "causal-net": "Sieć przyczynowa",
-      "kpi": "KPI",
+      "aligner-kpi": "KPI bazujące na wyrównaniu",
       "bpmn": "BPMN",
+      "causal-net": "Sieć przyczynowa",
+      "kpi": "KPI bazujące na logu",
+      "tree-log-view": "Hierarchiczny widok logu",
       "petri-net": "Sieć Petriego",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
@@ -35,6 +37,7 @@
         "query": "Zapytanie PQL",
         "datastore": "Magazyn danych",
         "validation": {
+          "datastore-empty": "Magazyn danych nie może być pusty",
           "name-empty": "Nazwa nie może być pusta",
           "query-empty": "Zapytanie nie może być puste"
         }
