@@ -7,6 +7,7 @@ import processm.core.models.processtree.ProcessTreeSimplifier
 import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import processm.miners.processtree.inductiveminer.CutType.*
 import java.util.*
+import processm.miners.processtree.inductiveminer.CutType.Activity as CertainActivity
 
 /**
  * Online Inductive Miner
@@ -14,7 +15,8 @@ import java.util.*
 class OnlineInductiveMiner : InductiveMiner() {
     companion object {
         val operatorCuts = setOf(Parallel, Sequence, Exclusive, RedoLoop)
-        val activityCuts = setOf(Activity, OptionalActivity, RedoActivityAtLeastOnce, RedoActivityAtLeastZeroTimes)
+        val activityCuts =
+            setOf(CertainActivity, OptionalActivity, RedoActivityAtLeastOnce, RedoActivityAtLeastZeroTimes)
     }
 
     /**
@@ -95,6 +97,8 @@ class OnlineInductiveMiner : InductiveMiner() {
             changedStatistics = false
         } else if (diff.isNotEmpty()) {
             // Detect affected by change activities
+            @Suppress("UNCHECKED_CAST")
+            diff as Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>
             val affectedActivities = detectAffectedActivities(diff)
 
             // Find where rebuild graph

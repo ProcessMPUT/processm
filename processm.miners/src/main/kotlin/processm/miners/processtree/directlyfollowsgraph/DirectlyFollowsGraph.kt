@@ -2,6 +2,7 @@ package processm.miners.processtree.directlyfollowsgraph
 
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.LogInputStream
+import processm.core.models.commons.Activity
 import processm.core.models.processtree.ProcessTreeActivity
 import java.util.concurrent.ConcurrentHashMap
 
@@ -15,7 +16,7 @@ class DirectlyFollowsGraph {
      * Connection FROM -> TO stored as:
      * FROM as row index, TO as column index
      *
-     * Inside [ProcessTreeActivity] [ProcessTreeActivity] position stored arc statistic (cardinality of relations)
+     * For the pair of ([Activity] [Activity]) arc consists of the cardinality of the relation.
      *
      * Log <A, B, B, B, C> will be build as:
      *    B    C
@@ -24,7 +25,7 @@ class DirectlyFollowsGraph {
      *
      * Memory usage: O(|activities|^2)
      */
-    val graph = DoublingMap2D<ProcessTreeActivity, ProcessTreeActivity, Arc>()
+    val graph = DoublingMap2D<Activity, Activity, Arc>()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics
@@ -37,7 +38,7 @@ class DirectlyFollowsGraph {
      *
      * Memory usage: O(|activities|)
      */
-    val startActivities = HashMap<ProcessTreeActivity, Arc>()
+    val startActivities = HashMap<Activity, Arc>()
 
     /**
      * Map with end activities (last activity in trace) + arc statistics
@@ -50,7 +51,7 @@ class DirectlyFollowsGraph {
      *
      * Memory usage: O(|activities|)
      */
-    val endActivities = HashMap<ProcessTreeActivity, Arc>()
+    val endActivities = HashMap<Activity, Arc>()
 
     /**
      * Total traces analyzed in directly-follows graph
@@ -75,7 +76,7 @@ class DirectlyFollowsGraph {
      *
      * Memory usage: O(|activities|)
      */
-    val activityTraceSupport = HashMap<ProcessTreeActivity, Int>()
+    val activityTraceSupport = HashMap<Activity, Int>()
 
     /**
      * Duplicated activities occurrence in single trace, after analyze all traces.
@@ -91,7 +92,7 @@ class DirectlyFollowsGraph {
      *
      * Memory usage: O(|activities|)
      */
-    val activitiesDuplicatedInTraces = ConcurrentHashMap<ProcessTreeActivity, Int>()
+    val activitiesDuplicatedInTraces = ConcurrentHashMap<Activity, Int>()
 
     /**
      * Build directly-follows graph
@@ -102,16 +103,16 @@ class DirectlyFollowsGraph {
      * Discover changes in DFG.
      * Update internal structure of graph, analyze changes and return changes list - new connections between pair of activities.
      *
-     * Can return [null] if changes in graph focused on:
+     * Can return null if changes in graph focused on:
      * - new start activity, or
      * - new end activity, or
      * - new activity in graph
      *
      * Empty [Set] will be if:
-     * - no new connection between pair of activities in graph
+     * - no new connection between a pair of activities in graph
      *
-     * Non empty [Set] if:
-     * - new connections between pair of activities. Element of [Set] == this pair of activities.
+     * Nonempty [Set] if:
+     * - new connections between a pair of activities. Element of [Set] == this pair of activities.
      */
     fun discoverDiff(log: LogInputStream) = discoverGraph(log, buildDiff = true)
 
@@ -121,7 +122,7 @@ class DirectlyFollowsGraph {
      *
      * Runs in: O(|collection|), maximum O(|activities|)
      */
-    fun maximumTraceSupport(collection: Collection<ProcessTreeActivity>): Int {
+    fun maximumTraceSupport(collection: Collection<Activity>): Int {
         val activityWithHighestSupport = collection.maxByOrNull { activityTraceSupport[it] ?: 0 }
         return activityTraceSupport[activityWithHighestSupport] ?: 0
     }
@@ -135,17 +136,17 @@ class DirectlyFollowsGraph {
     private fun discoverGraph(
         log: LogInputStream,
         buildDiff: Boolean = false
-    ): Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>? {
+    ): Collection<Pair<Activity, Activity>>? {
         var changedStartActivity = false
         var changedEndActivity = false
         var newActivityFound = false
-        val addedConnectionsCollection = LinkedHashSet<Pair<ProcessTreeActivity, ProcessTreeActivity>>()
+        val addedConnectionsCollection = LinkedHashSet<Pair<Activity, Activity>>()
 
         log.forEach { l ->
             l.traces.forEach { trace ->
-                val activitiesInTrace = HashSet<ProcessTreeActivity>()
-                val duplicatedActivities = HashSet<ProcessTreeActivity>()
-                var previousActivity: ProcessTreeActivity? = null
+                val activitiesInTrace = HashSet<Activity>()
+                val duplicatedActivities = HashSet<Activity>()
+                var previousActivity: Activity? = null
 
                 // Iterate over all events in current trace
                 trace.events.forEach { event ->
@@ -206,7 +207,6 @@ class DirectlyFollowsGraph {
 
                 // Add connection with sink
                 if (previousActivity != null) {
-                    // TODO: This is really strange - previous Activity is ProcessTree Activity but compiler suggests it can be any type.
                     // Runs in O(1)
                     if (previousActivity in endActivities) {
                         // Just only insert
@@ -240,11 +240,11 @@ class DirectlyFollowsGraph {
      *
      * Runs in: O(|traces| * |activities|)
      */
-    fun discoverRemovedPartOfGraph(log: LogInputStream): Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>? {
+    fun discoverRemovedPartOfGraph(log: LogInputStream): Collection<Pair<Activity, Activity>>? {
         var changedStartActivity = false
         var changedEndActivity = false
         var removedActivity = false
-        val removedConnections = LinkedHashSet<Pair<ProcessTreeActivity, ProcessTreeActivity>>()
+        val removedConnections = LinkedHashSet<Pair<Activity, Activity>>()
 
         log.forEach { l ->
             l.traces.forEach { trace ->
@@ -252,9 +252,9 @@ class DirectlyFollowsGraph {
                 tracesCount--
                 require(tracesCount >= 0) { "Cannot rollback more traces than have been previously analyzed." }
 
-                val activitiesInTrace = HashSet<ProcessTreeActivity>()
-                val duplicatedActivities = HashSet<ProcessTreeActivity>()
-                var previousActivity: ProcessTreeActivity? = null
+                val activitiesInTrace = HashSet<Activity>()
+                val duplicatedActivities = HashSet<Activity>()
+                var previousActivity: Activity? = null
 
                 // Iterate over all events in current trace
                 trace.events.forEach { event ->
@@ -316,16 +316,15 @@ class DirectlyFollowsGraph {
                 // Add connection with sink
                 if (previousActivity != null) {
                     require(previousActivity in endActivities) { "The log provided for deletion has not been previously inserted into DFG." }
-                    previousActivity as ProcessTreeActivity
 
                     // Decrement support and remove from DFG if cardinality equal to zero
                     // Runs in O(1)
-                    with(endActivities[previousActivity as ProcessTreeActivity]!!) {
+                    with(endActivities[previousActivity as Activity]!!) {
                         decrement()
 
                         if (cardinality == 0) {
                             // Runs in O(1)
-                            endActivities.remove(previousActivity as ProcessTreeActivity)
+                            endActivities.remove(previousActivity as Activity)
                             changedEndActivity = true
                         }
                     }
@@ -375,8 +374,8 @@ class DirectlyFollowsGraph {
      * Runs in: O(|activities|)
      */
     private fun updateTraceStatistics(
-        activitiesInTrace: Set<ProcessTreeActivity>,
-        duplicatedActivities: HashSet<ProcessTreeActivity>
+        activitiesInTrace: Set<Activity>,
+        duplicatedActivities: HashSet<Activity>
     ) {
         // Total traces count update
         tracesCount++
