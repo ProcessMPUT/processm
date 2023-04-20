@@ -27,7 +27,7 @@
       "bpmn": "BPMN",
       "causal-net": "Causal net",
       "kpi": "KPI based on log",
-      "log-view": "Log view",
+      "tree-log-view": "Tree log view",
       "petri-net": "Petri net",
       "select": "Select type",
       "no-data": "No data to be displayed",

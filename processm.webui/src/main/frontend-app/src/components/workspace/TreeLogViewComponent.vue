@@ -19,8 +19,9 @@
   </div>
 </template>
 
-<style>
-.log-view, .scroll-container {
+<style scoped>
+.log-view,
+.scroll-container {
   height: 100%;
 }
 
@@ -32,7 +33,8 @@
 .scroll-container {
   overflow: auto;
 }
-
+</style>
+<style>
 .log-view .zk-table__cell-inner {
   padding: 1px 1px;
 }
@@ -50,7 +52,7 @@ import App from "@/App.vue";
 import XesDataTable from "@/components/XesDataTable.vue";
 
 @Component({ components: { XesDataTable } })
-export default class LogViewComponent extends Vue {
+export default class TreeLogViewComponent extends Vue {
   @Prop({ default: {} })
   readonly data!: WorkspaceComponent;
 
@@ -76,16 +78,14 @@ export default class LogViewComponent extends Vue {
 
       const queryResults = await this.logsService.submitUserQuery(this.data.dataStore, this.data.query);
 
-      await waitForRepaint(async () => {
-        const { headers, logItems } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(queryResults);
-        this.headers = headers;
+      const { headers, logItems } = this.xesProcessor.extractHierarchicalLogItemsFromAllScopes(queryResults);
+      this.headers = headers;
 
-        for (const item of logItems) {
-          await waitForRepaint(() => {
-            this.items.push(item);
-          });
-        }
-      });
+      for (const item of logItems) {
+        await waitForRepaint(() => {
+          this.items.push(item);
+        });
+      }
     } catch (err) {
       this.app.error(err?.response?.data?.error ?? err);
     } finally {

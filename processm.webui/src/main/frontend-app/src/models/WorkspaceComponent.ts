@@ -68,7 +68,7 @@ export class PetriNetComponentData extends ComponentData {
   }
 }
 
-export class LogViewComponentData extends ComponentData {
+export class TreeLogViewComponentData extends ComponentData {
   get isDisplayable() {
     return true;
   }
@@ -112,8 +112,8 @@ export class WorkspaceComponent {
         this.data = new BPMNComponentData(init.data ?? {});
         break;
       }
-      case ComponentType.LogView: {
-        this.data = new LogViewComponentData(init.data ?? {});
+      case ComponentType.TreeLogView: {
+        this.data = new TreeLogViewComponentData(init.data ?? {});
         break;
       }
     }

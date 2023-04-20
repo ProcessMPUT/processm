@@ -27,7 +27,7 @@
       "bpmn": "BPMN",
       "causal-net": "Sieć przyczynowa",
       "kpi": "KPI bazujące na logu",
-      "log-view": "Widok logu",
+      "tree-log-view": "Hierarchiczny widok logu",
       "petri-net": "Sieć Petriego",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",

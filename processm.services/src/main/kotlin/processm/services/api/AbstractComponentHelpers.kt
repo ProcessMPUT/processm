@@ -149,7 +149,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 )
             }
 
-            ComponentTypeDto.LogView -> {
+            ComponentTypeDto.TreeLogView -> {
                 null
             }
 

@@ -43,7 +43,7 @@ export default new Vuetify({
       bpmnComponent: {
         component: BPMNIcon
       },
-      logViewComponent: {
+      treeLogViewComponent: {
         component: XesLogIcon
       }
     }
