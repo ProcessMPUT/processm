@@ -1,9 +1,6 @@
-import {
-  DataLink,
-  DataNode
-} from "@/components/workspace/causal-net/CausalNet";
+import { DataLink, DataNode } from "@/components/workspace/causal-net/CausalNet";
 // TODO add PetriNet = "petriNet" to ComponentType
-import {AbstractComponent, AlignerKpiReport, ComponentType} from "@/openapi";
+import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
 
 export abstract class CustomizationData {
   constructor(init: Partial<CustomizationData>) {
@@ -74,6 +71,12 @@ export class TreeLogViewComponentData extends ComponentData {
   }
 }
 
+export class FlatLogViewComponentData extends ComponentData {
+  get isDisplayable() {
+    return true;
+  }
+}
+
 export class LayoutElement {
   constructor(init: Partial<LayoutElement>) {
     Object.assign(this, init);
@@ -114,6 +117,10 @@ export class WorkspaceComponent {
       }
       case ComponentType.TreeLogView: {
         this.data = new TreeLogViewComponentData(init.data ?? {});
+        break;
+      }
+      case ComponentType.FlatLogView: {
+        this.data = new FlatLogViewComponentData(init.data ?? {});
         break;
       }
     }

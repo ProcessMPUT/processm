@@ -153,6 +153,10 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                 null
             }
 
+            ComponentTypeDto.FlatLogView -> {
+                null
+            }
+
             else -> TODO("Data conversion is not implemented for type $componentType.")
         }
     } catch (e: Throwable) {

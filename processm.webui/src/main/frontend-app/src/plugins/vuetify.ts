@@ -45,6 +45,9 @@ export default new Vuetify({
       },
       treeLogViewComponent: {
         component: XesLogIcon
+      },
+      flatLogViewComponent: {
+        component: XesLogIcon
       }
     }
   }
