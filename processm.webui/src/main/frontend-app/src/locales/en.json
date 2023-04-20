@@ -42,7 +42,7 @@
           "query-empty": "The query cannot be empty"
         }
       },
-      "flat-log-view": "Flat log",
+      "flat-log-view": "Flat log view",
       "flat-log": {
         "no-data": "(no data)"
       }
