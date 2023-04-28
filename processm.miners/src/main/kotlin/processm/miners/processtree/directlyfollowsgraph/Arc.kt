@@ -1,7 +1,7 @@
 package processm.miners.processtree.directlyfollowsgraph
 
-class Arc {
-    var cardinality: Int = 0
+class Arc(cardinality: Int = 0) {
+    var cardinality: Int = cardinality
         private set
 
     internal fun increment(): Arc {
@@ -14,5 +14,18 @@ class Arc {
 
         cardinality--
         return this
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Arc) return false
+
+        if (cardinality != other.cardinality) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return cardinality
     }
 }

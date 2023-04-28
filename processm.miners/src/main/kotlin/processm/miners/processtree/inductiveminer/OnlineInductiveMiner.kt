@@ -83,8 +83,8 @@ class OnlineInductiveMiner : InductiveMiner() {
 
         if (diff == null) {
             val activities = dfg.graph.rows.toHashSet().also {
-                it.addAll(dfg.startActivities.keys)
-                it.addAll(dfg.endActivities.keys)
+                it.addAll(dfg.initialActivities.keys)
+                it.addAll(dfg.finalActivities.keys)
             }
 
             // Rebuild tree - changes are too big

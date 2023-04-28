@@ -628,7 +628,7 @@ class DirectlyFollowsSubGraph(
      * This should be done only if initial start activities not assigned yet
      */
     private fun inferStartActivities(): Set<Activity> {
-        return dfg.startActivities.keys
+        return dfg.initialActivities.keys
     }
 
     /**
@@ -636,7 +636,7 @@ class DirectlyFollowsSubGraph(
      * This should be done only if initial end activities not assigned yet
      */
     private fun inferEndActivities(): Set<Activity> {
-        return dfg.endActivities.keys
+        return dfg.finalActivities.keys
     }
 
     /**

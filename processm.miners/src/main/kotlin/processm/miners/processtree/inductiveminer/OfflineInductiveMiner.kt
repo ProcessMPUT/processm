@@ -21,12 +21,12 @@ class OfflineInductiveMiner : InductiveMiner() {
         dfg.discover(logsCollection)
 
         // DFG without activities - return empty process tree model
-        if (dfg.startActivities.isEmpty() || dfg.endActivities.isEmpty()) return ProcessTree()
+        if (dfg.initialActivities.isEmpty() || dfg.finalActivities.isEmpty()) return ProcessTree()
 
         // Prepare set with activities in graph
         val activities = dfg.graph.rows.toHashSet().also {
-            it.addAll(dfg.startActivities.keys)
-            it.addAll(dfg.endActivities.keys)
+            it.addAll(dfg.initialActivities.keys)
+            it.addAll(dfg.finalActivities.keys)
         }
 
         // Discover processTree model

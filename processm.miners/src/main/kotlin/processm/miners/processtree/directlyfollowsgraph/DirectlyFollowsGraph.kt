@@ -1,15 +1,22 @@
 package processm.miners.processtree.directlyfollowsgraph
 
+import jakarta.transaction.NotSupportedException
+import org.jetbrains.exposed.sql.Database
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.LogInputStream
-import processm.core.models.commons.Activity
+import processm.core.models.commons.*
 import processm.core.models.processtree.ProcessTreeActivity
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Directly-follows graph based on log's events sequences
  */
-class DirectlyFollowsGraph {
+class DirectlyFollowsGraph : ProcessModel {
+    companion object {
+        fun load(database: Database, id: UUID): DirectlyFollowsGraph = loadDFG(database, id)
+    }
+
     /**
      * Built graph
      *
@@ -27,6 +34,9 @@ class DirectlyFollowsGraph {
      */
     val graph = DoublingMap2D<Activity, Activity, Arc>()
 
+    override val activities: Sequence<Activity>
+        get() = graph.rows.asSequence()
+
     /**
      * Map with start activities (first activity in trace) + arc statistics
      *
@@ -38,7 +48,10 @@ class DirectlyFollowsGraph {
      *
      * Memory usage: O(|activities|)
      */
-    val startActivities = HashMap<Activity, Arc>()
+    val initialActivities = HashMap<Activity, Arc>()
+
+    override val startActivities: Sequence<Activity>
+        get() = initialActivities.keys.asSequence()
 
     /**
      * Map with end activities (last activity in trace) + arc statistics
@@ -51,7 +64,20 @@ class DirectlyFollowsGraph {
      *
      * Memory usage: O(|activities|)
      */
-    val endActivities = HashMap<Activity, Arc>()
+    val finalActivities = HashMap<Activity, Arc>()
+
+    override val endActivities: Sequence<Activity>
+        get() = finalActivities.keys.asSequence()
+
+    override val controlStructures: Sequence<ControlStructure>
+        get() = emptySequence()
+
+    override val decisionPoints: Sequence<DecisionPoint>
+        get() = emptySequence()
+
+    override fun createInstance(): ProcessModelInstance {
+        throw NotSupportedException("Directly-follows graphs does not have executable semantics.")
+    }
 
     /**
      * Total traces analyzed in directly-follows graph
@@ -167,14 +193,14 @@ class DirectlyFollowsGraph {
                     // Add connection from source to activity
                     if (previousActivity == null) {
                         // Runs in O(1)
-                        if (activity in startActivities) {
+                        if (activity in initialActivities) {
                             // Just only insert
                             // Runs in O(1)
-                            startActivities[activity]!!.increment()
+                            initialActivities[activity]!!.increment()
                         } else {
                             // Insert and increment
                             // Runs in O(1)
-                            startActivities[activity] = Arc().increment()
+                            initialActivities[activity] = Arc().increment()
 
                             // Remember - changed start activities
                             changedStartActivity = true
@@ -208,14 +234,14 @@ class DirectlyFollowsGraph {
                 // Add connection with sink
                 if (previousActivity != null) {
                     // Runs in O(1)
-                    if (previousActivity in endActivities) {
+                    if (previousActivity in finalActivities) {
                         // Just only insert
                         // Runs in O(1)
-                        endActivities[previousActivity!!]!!.increment()
+                        finalActivities[previousActivity!!]!!.increment()
                     } else {
                         // Insert and increment
                         // Runs in O(1)
-                        endActivities[previousActivity!!] = Arc().increment()
+                        finalActivities[previousActivity!!] = Arc().increment()
 
                         // Remember - changed end activity
                         changedEndActivity = true
@@ -266,16 +292,16 @@ class DirectlyFollowsGraph {
 
                     // Connection from source to activity
                     if (previousActivity == null) {
-                        require(activity in startActivities) { "The log provided for deletion has not been previously inserted into DFG." }
+                        require(activity in initialActivities) { "The log provided for deletion has not been previously inserted into DFG." }
 
                         // Decrement support and remove from DFG if cardinality equal to zero
                         // Runs in O(1)
-                        with(startActivities[activity]!!) {
+                        with(initialActivities[activity]!!) {
                             decrement()
 
                             if (cardinality == 0) {
                                 // Runs in O(1)
-                                startActivities.remove(activity)
+                                initialActivities.remove(activity)
                                 changedStartActivity = true
                             }
                         }
@@ -315,16 +341,16 @@ class DirectlyFollowsGraph {
 
                 // Add connection with sink
                 if (previousActivity != null) {
-                    require(previousActivity in endActivities) { "The log provided for deletion has not been previously inserted into DFG." }
+                    require(previousActivity in finalActivities) { "The log provided for deletion has not been previously inserted into DFG." }
 
                     // Decrement support and remove from DFG if cardinality equal to zero
                     // Runs in O(1)
-                    with(endActivities[previousActivity as Activity]!!) {
+                    with(finalActivities[previousActivity as Activity]!!) {
                         decrement()
 
                         if (cardinality == 0) {
                             // Runs in O(1)
-                            endActivities.remove(previousActivity as Activity)
+                            finalActivities.remove(previousActivity as Activity)
                             changedEndActivity = true
                         }
                     }
@@ -388,4 +414,24 @@ class DirectlyFollowsGraph {
             activitiesDuplicatedInTraces.compute(activity) { _, v -> if (v === null) 1 else v + 1 }
         }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DirectlyFollowsGraph) return false
+
+        if (graph != other.graph) return false
+        if (initialActivities != other.initialActivities) return false
+        if (finalActivities != other.finalActivities) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = graph.hashCode()
+        result = 31 * result + initialActivities.hashCode()
+        result = 31 * result + finalActivities.hashCode()
+        return result
+    }
+
+
 }
