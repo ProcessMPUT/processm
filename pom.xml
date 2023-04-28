@@ -69,7 +69,7 @@
         <maven.shade.plugin.version>3.3.0</maven.shade.plugin.version>
         <testcontainers.version>1.17.3</testcontainers.version>
         <org.apache.commons.math.version>3.6.1</org.apache.commons.math.version>
-        <io.fabric8.docker-maven-plugin.version>0.40.1</io.fabric8.docker-maven-plugin.version>
+        <io.fabric8.docker-maven-plugin.version>0.42.1</io.fabric8.docker-maven-plugin.version>
         <pooled-jms.version>3.0.0</pooled-jms.version>
         <org.slf4j.version>1.7.36</org.slf4j.version>
         <debezium.version>1.9.4.Final</debezium.version>

@@ -1,12 +1,10 @@
-package processm.miners.processtree.directlyfollowsgraph
+package processm.dbmodels.models
 
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.models.dfg.Arc
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.processtree.ProcessTreeActivity
-import processm.dbmodels.models.DFG
-import processm.dbmodels.models.DFGArc
-import processm.dbmodels.models.DFGEndActivity
-import processm.dbmodels.models.DFGStartActivity
 import java.util.*
 
 /**
@@ -47,7 +45,7 @@ fun DirectlyFollowsGraph.store(database: Database): UUID = transaction(database)
 /**
  * For internal use. Use [DirectlyFollowsGraph.load] instead.
  */
-internal fun loadDFG(database: Database, id: UUID): DirectlyFollowsGraph = transaction(database) {
+fun DirectlyFollowsGraph.Companion.load(database: Database, id: UUID): DirectlyFollowsGraph = transaction(database) {
     val dfg = DirectlyFollowsGraph()
     val dbDfg = DFG[id]
     for (arc in dbDfg.arcs) {

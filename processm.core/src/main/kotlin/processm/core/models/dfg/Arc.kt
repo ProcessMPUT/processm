@@ -1,4 +1,4 @@
-package processm.miners.processtree.directlyfollowsgraph
+package processm.core.models.dfg
 
 class Arc(cardinality: Int = 0) {
     var cardinality: Int = cardinality

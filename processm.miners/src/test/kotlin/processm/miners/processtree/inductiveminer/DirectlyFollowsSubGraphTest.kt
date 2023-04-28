@@ -1,8 +1,8 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.log.Helpers.logFromString
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.processtree.ProcessTreeActivity
-import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import kotlin.test.*
 
 internal class DirectlyFollowsSubGraphTest {

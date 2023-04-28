@@ -1,9 +1,9 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.LogInputStream
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeSimplifier
-import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 
 /**
  * Inductive Miner version Offline, without log split inside.

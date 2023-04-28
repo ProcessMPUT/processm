@@ -1,22 +1,17 @@
-package processm.miners.processtree.directlyfollowsgraph
+package processm.core.models.dfg
 
 import jakarta.transaction.NotSupportedException
-import org.jetbrains.exposed.sql.Database
 import processm.core.helpers.map2d.DoublingMap2D
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.commons.*
 import processm.core.models.processtree.ProcessTreeActivity
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Directly-follows graph based on log's events sequences
  */
 class DirectlyFollowsGraph : ProcessModel {
-    companion object {
-        fun load(database: Database, id: UUID): DirectlyFollowsGraph = loadDFG(database, id)
-    }
-
+    companion object
     /**
      * Built graph
      *

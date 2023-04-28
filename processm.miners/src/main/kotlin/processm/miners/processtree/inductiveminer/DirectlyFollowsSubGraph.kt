@@ -1,11 +1,11 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.models.commons.Activity
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.processtree.Exclusive
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.RedoLoop
 import processm.core.models.processtree.SilentActivity
-import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import java.lang.Integer.min
 import java.util.*
 import kotlin.properties.Delegates

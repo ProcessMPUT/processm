@@ -2,8 +2,11 @@ package processm.miners.processtree.directlyfollowsgraph
 
 import processm.core.DBTestHelper
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
+import processm.dbmodels.models.load
+import processm.dbmodels.models.store
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
