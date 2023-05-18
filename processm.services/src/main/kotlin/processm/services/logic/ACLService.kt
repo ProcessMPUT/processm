@@ -24,6 +24,23 @@ class ACLService {
     }
 
     /**
+     * Verifies whether the given [userId] has at least the given [role] to access the object identified by the [urn].
+     * @return True if they have it, false otherwise
+     */
+    fun hasPermission(
+        userId: UUID,
+        organizationId: UUID,
+        urn: URN,
+        role: RoleType
+    ) = transactionMain {
+        queryUserACL(userId, organizationId, role).andWhere {
+            (AccessControlList.urn.column eq urn.urn)
+        }
+            .limit(1)
+            .any()
+    }
+
+    /**
      * Verifies whether the given [userId] has at least the given [role] to access [itemId] of type [itemType].
      * @throws ValidationException if the user does not have access.
      */
@@ -33,17 +50,22 @@ class ACLService {
         itemType: Table,
         itemId: UUID,
         role: RoleType
-    ) = transactionMain {
-        val hasPermission = queryUserACL(userId, organizationId, role).andWhere {
-            (AccessControlList.urn.column eq getURN(itemType, itemId).urn)
-        }
-            .limit(1)
-            .any()
+    ) = checkAccess(userId, organizationId, getURN(itemType, itemId), role)
 
-        if (!hasPermission) {
+    /**
+     * Verifies whether the given [userId] has at least the given [role] to access the object identified by the [urn].
+     * @throws ValidationException if the user does not have access.
+     */
+    fun checkAccess(
+        userId: UUID,
+        organizationId: UUID,
+        urn: URN,
+        role: RoleType
+    ) = transactionMain {
+        if (!hasPermission(userId, organizationId, urn, role)) {
             throw ValidationException(
                 Reason.ResourceNotFound,
-                "The specified ${itemType.tableName} item does not exist or the user does not have the required ${role.name} role."
+                "The specified item (identified by ${urn.urn}) does not exist or the user does not have the required ${role.name} role."
             )
         }
     }
@@ -154,5 +176,44 @@ class ACLService {
      */
     fun removeEntries(itemType: Table, itemId: UUID) = removeEntries(getURN(itemType, itemId))
 
-    private fun getURN(itemType: Table, itemId: UUID) = URN("urn:processm:db/${itemType.tableName}/$itemId")
+    fun getURN(itemType: Table, itemId: UUID) = URN("urn:processm:db/${itemType.tableName}/$itemId")
+
+    /**
+     * Given a URN and a userId, returns Groups that could plausibly be added to the ACL for the URN by the userId
+     *
+     * The returned list consists of all the shared groups belonging to any of the organizations of the given user and all
+     * the private groups of the users of these organizations, except those groups that already have an entry in the ACL
+     * for the given urn
+     */
+    fun getAvailableGroups(urn: URN, userId: UUID): SizedIterable<Group> =
+        // all groups assigned - directly or indirectly - to any of the organizations of the user except those for which an ACE is already defined for the given URN
+        transactionMain {
+            // organizations the user is a member of
+            val organizations = (UsersInGroups innerJoin Groups).slice(Groups.organizationId).select {
+                (UsersInGroups.userId eq userId) and Groups.organizationId.isNotNull()
+            }
+            // groups of these organizations
+            val organizationGroups =
+                Groups.slice(Groups.id).select { Groups.organizationId inSubQuery organizations }
+            // all users belonging to these groups
+            val usersOfOrganizations1 = UsersInGroups.slice(UsersInGroups.userId)
+                .select { UsersInGroups.groupId inSubQuery organizationGroups }
+            // all users belonging to the organizations according to UsersRolesInOrganizations
+            val usersOfOrganizations2 = UsersRolesInOrganizations.slice(UsersRolesInOrganizations.userId)
+                .select { UsersRolesInOrganizations.organizationId inSubQuery organizations }
+            // private groups of all possibly relevant users
+            val userGroups = (UsersInGroups innerJoin Groups).slice(Groups.id)
+                .select { (Groups.isImplicit eq true) and ((UsersInGroups.userId inSubQuery usersOfOrganizations1) or (UsersInGroups.userId inSubQuery usersOfOrganizations2)) }
+
+            // groups that already have ACE for this particular URN
+            val groupsAlreadyHavingACE =
+                AccessControlList.slice(AccessControlList.group_id).select { AccessControlList.urn.column eq urn.urn }
+
+            // all possibly relevant groups - both private and shared - except those that already have an entry in the ACL for the given URN
+            val groups =
+                Groups.select { ((Groups.id inSubQuery organizationGroups) or (Groups.id inSubQuery userGroups)) and (Groups.id notInSubQuery groupsAlreadyHavingACE) }
+                    .withDistinct()
+
+            return@transactionMain Group.wrapRows(groups)
+        }
 }

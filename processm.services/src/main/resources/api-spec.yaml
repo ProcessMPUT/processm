@@ -20,6 +20,8 @@ tags:
     description: Data stores management
   - name: logs
     description: Log data management
+  - name: acl
+    description: Access control lists management
 paths:
   /config:
     get:
@@ -1659,6 +1661,143 @@ paths:
           $ref: '#/components/responses/NotFound'
       security:
         - bearerAuth: [ ]
+  /acl/{urn}:
+    parameters:
+      - name: urn
+        in: path
+        description: URN of the object
+        required: true
+        schema:
+          type: string
+          format: base64
+    get:
+      tags:
+        - acl
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccessControlEntry"
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+    post:
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/AccessControlEntry"
+      tags:
+        - acl
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+  /acl/{urn}/available-groups:
+    parameters:
+      - name: urn
+        in: path
+        description: URN of the object
+        required: true
+        schema:
+          type: string
+          format: base64
+    get:
+      tags:
+        - acl
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            'application/json':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Group"
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+  /acl/{urn}/can-modify:
+    parameters:
+      - name: urn
+        in: path
+        description: URN of the object
+        required: true
+        schema:
+          type: string
+          format: base64
+    get:
+      tags:
+        - acl
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+  /acl/{urn}/ace/{groupId}:
+    parameters:
+      - name: urn
+        in: path
+        description: URN of the object
+        required: true
+        schema:
+          type: string
+          format: base64
+      - name: groupId
+        in: path
+        description: Group ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/OrganizationRole'
+      tags:
+        - acl
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+    delete:
+      tags:
+        - acl
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
 components:
   schemas:
     Config:
@@ -2262,6 +2401,17 @@ components:
       properties:
         email:
           type: string
+    AccessControlEntry:
+      type: object
+      required: [ groupId, role ]
+      properties:
+        groupId:
+          type: string
+          format: uuid
+        groupName:
+          type: string
+        role:
+          $ref: '#/components/schemas/OrganizationRole'
   responses:
     BadRequest:
       description: Invalid request body

@@ -152,14 +152,17 @@
     "member-included": "Dodano członka do organizacji",
     "member-excluded": "Usunięto członka z organizacji",
     "organizations": "Organizacje",
-    "owner": "Właściciel",
     "page-title": "Użytkownicy",
-    "reader": "Czytelnik",
-    "role": "Role",
+    "role": "Rola",
     "users": "Użytkownicy",
     "user": "Użytkownik",
-    "writer": "Pisarz",
-    "you": "Ty"
+    "you": "Ty",
+    "roles": {
+      "owner": "Właściciel",
+      "reader": "Czytelnik",
+      "writer": "Pisarz",
+      "none": "Brak"
+    }
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie {count} logów?"
@@ -267,6 +270,11 @@
     },
     "token-count": "Liczba tokenów"
   },
+  "acl": {
+    "dialog-title": "Lista kontroli dostępu",
+    "ace-dialog-title": "Wpis na liście kontroli dostępu",
+    "no-candidates": "Nie ma grup które mogłyby zostać dodane do listy kontroli dostępu"
+  },
   "common": {
     "calculate-layout": "Oblicz układ",
     "initial": "Początkowe",
@@ -311,6 +319,7 @@
       "failure": "Test nieudany"
     },
     "in": "w",
-    "search": "Szukaj"
+    "search": "Szukaj",
+    "security": "Bezpieczeństwo"
   }
 }

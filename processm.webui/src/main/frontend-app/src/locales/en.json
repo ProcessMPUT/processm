@@ -154,14 +154,17 @@
     "member-included": "Member included in organization",
     "member-excluded": "Member excluded from organization",
     "organizations": "Organizations",
-    "owner": "Owner",
     "page-title": "Users",
-    "reader": "Reader",
     "role": "Role",
     "users": "Users",
     "user": "User",
-    "writer": "Writer",
-    "you": "You"
+    "you": "You",
+    "roles": {
+      "owner": "Owner",
+      "reader": "Reader",
+      "writer": "Writer",
+      "none": "None"
+    }
   },
   "xes-data-table": {
     "logs-removal-confirmation": "Do you want to permanently remove {count} logs?"
@@ -269,6 +272,11 @@
     },
     "token-count": "Token count"
   },
+  "acl": {
+    "dialog-title": "Access Control List",
+    "ace-dialog-title": "Access Control Entry",
+    "no-candidates": "There are no groups that could be added to the ACL"
+  },
   "common": {
     "calculate-layout": "Calculate layout",
     "initial": "Initial",
@@ -314,6 +322,7 @@
       "failure": "Test failed"
     },
     "in": "in",
-    "search": "Search"
+    "search": "Search",
+    "security": "Security"
   }
 }
