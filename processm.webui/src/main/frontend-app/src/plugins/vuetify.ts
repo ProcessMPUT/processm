@@ -7,6 +7,7 @@ import KpiIcon from "@/components/icons/KpiIcon.vue";
 import CausalNetIcon from "@/components/icons/CausalNetIcon.vue";
 import BPMNIcon from "@/components/icons/BPMNIcon.vue";
 import PetriNetIcon from "@/components/icons/PetriNetIcon.vue";
+import GraphIcon from "@/components/icons/GraphIcon.vue";
 
 Vue.use(Vuetify);
 
@@ -48,6 +49,9 @@ export default new Vuetify({
       },
       flatLogViewComponent: {
         component: XesLogIcon
+      },
+      directlyFollowsGraphComponent: {
+        component: GraphIcon
       }
     }
   }

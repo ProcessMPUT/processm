@@ -1,8 +1,13 @@
 <template>
-  <div id="graph"></div>
+  <div ref="graph" class="dfg"></div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.dfg {
+  width: 100%;
+  height: 100%;
+}
+</style>
 
 <script lang="ts">
 import Vue from "vue";
@@ -38,13 +43,24 @@ export default class DirectlyFollowsGraphComponent extends Vue {
         }
       ]
     };
-    const graph = new G6.Graph({
-      container: "mountNode", // String | HTMLElement, required, the id of DOM element or an HTML node
-      width: 800, // Number, required, the width of the graph
-      height: 500 // Number, required, the height of the graph
-    });
-    graph.data(data); // Load the data defined in Step 2
-    graph.render(); // Render the graph
+    setTimeout(() => {
+      // wait until height of the component is calculated
+      const container = this.$refs.graph as HTMLElement;
+      const graph = new G6.Graph({
+        container: container, // String | HTMLElement, required, the id of DOM element or an HTML node
+        width: container.offsetWidth, // Number, required, the width of the graph
+        height: container.offsetHeight, // Number, required, the height of the graph
+        fitView: true,
+        layout: {
+          type: "dagre"
+        },
+        defaultNode: {
+          type: "rect"
+        }
+      });
+      graph.data(data); // Load the data defined in Step 2
+      graph.render(); // Render the graph
+    }, 0);
   }
 }
 </script>

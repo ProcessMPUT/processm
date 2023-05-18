@@ -121,16 +121,16 @@ export class WorkspaceComponent {
         this.data = new BPMNComponentData(init.data ?? {});
         break;
       }
-      case ComponentType.DirectlyFollowsGraph: {
-        this.data = new DirectlyFollowsGraphData(init.data ?? {});
-        break;
-      }
       case ComponentType.TreeLogView: {
         this.data = new TreeLogViewComponentData(init.data ?? {});
         break;
       }
       case ComponentType.FlatLogView: {
         this.data = new FlatLogViewComponentData(init.data ?? {});
+        break;
+      }
+      case ComponentType.DirectlyFollowsGraph: {
+        this.data = new DirectlyFollowsGraphData(init.data ?? {});
         break;
       }
     }

@@ -26,6 +26,7 @@
       "aligner-kpi": "KPI based on alignments",
       "bpmn": "BPMN",
       "causal-net": "Causal net",
+      "directly-follows-graph": "Directly-follows graph",
       "kpi": "KPI based on log",
       "tree-log-view": "Tree log view",
       "petri-net": "Petri net",

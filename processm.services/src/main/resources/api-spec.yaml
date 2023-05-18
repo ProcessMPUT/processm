@@ -2106,6 +2106,7 @@ components:
         - $ref: '#/components/schemas/CausalNetComponentData'
         - $ref: '#/components/schemas/PetriNetComponentData'
         - $ref: '#/components/schemas/BPMNComponentData'
+        - $ref: '#/components/schemas/DirectlyFollowsGraphComponentData'
       discriminator:
         propertyName: type
         mapping:
@@ -2114,6 +2115,7 @@ components:
           causalNet: '#/components/schemas/CausalNetComponentData'
           petriNet: '#/components/schemas/PetriNetComponentData'
           bpmn: '#/components/schemas/BPMNComponentData'
+          dfg: '#/components/schemas/DirectlyFollowsGraphComponentData'
     KpiComponentData:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
@@ -2312,6 +2314,55 @@ components:
               $ref: '#/components/schemas/BPMNComponentData'
             customizationData:
               type: object
+    DirectlyFollowsGraphComponentData:
+      allOf:
+        - $ref: '#/components/schemas/ComponentData'
+        - type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/DFGNode'
+            edges:
+              type: array
+              items:
+                $ref: '#/components/schemas/DFGEdge'
+    DFGNode:
+      type: object
+      required: [ id, label ]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        style:
+          type: object
+          properties:
+            fill:
+              type: string
+            stroke:
+              type: string
+    DFGEdge:
+      type: object
+      required: [ source, target ]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        source:
+          type: string
+          description: Node id
+        target:
+          type: string
+          description: Node id
+        style:
+          type: object
+          properties:
+            fill:
+              type: string
+            stroke:
+              type: string
     Group:
       type: object
       required: [ name ]

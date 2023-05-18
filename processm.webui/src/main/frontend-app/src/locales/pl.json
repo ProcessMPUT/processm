@@ -26,6 +26,7 @@
       "aligner-kpi": "KPI bazujące na wyrównaniu",
       "bpmn": "BPMN",
       "causal-net": "Sieć przyczynowa",
+      "directly-follows-graph": "Graph bezpośredniego następstwa",
       "kpi": "KPI bazujące na logu",
       "tree-log-view": "Hierarchiczny widok logu",
       "petri-net": "Sieć Petriego",
