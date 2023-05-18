@@ -65,6 +65,12 @@ export class PetriNetComponentData extends ComponentData {
   }
 }
 
+export class DirectlyFollowsGraphData extends ComponentData {
+  get isDisplayable() {
+    return true;
+  }
+}
+
 export class TreeLogViewComponentData extends ComponentData {
   get isDisplayable() {
     return true;
@@ -113,6 +119,10 @@ export class WorkspaceComponent {
       }
       case ComponentType.Bpmn: {
         this.data = new BPMNComponentData(init.data ?? {});
+        break;
+      }
+      case ComponentType.DirectlyFollowsGraph: {
+        this.data = new DirectlyFollowsGraphData(init.data ?? {});
         break;
       }
       case ComponentType.TreeLogView: {

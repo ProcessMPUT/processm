@@ -6,6 +6,7 @@ import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
@@ -13,6 +14,7 @@ import processm.core.models.petrinet.Transition
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
+import processm.dbmodels.models.load
 import processm.services.api.models.*
 import java.util.*
 
@@ -41,6 +43,7 @@ private fun ComponentTypeDto.toComponentType(): ComponentType = when (this) {
     ComponentTypeDto.CausalNet -> ComponentType.causalNet
     ComponentTypeDto.Kpi -> ComponentType.kpi
     ComponentTypeDto.BPMN -> ComponentType.bpmn
+    ComponentTypeDto.DirectlyFollowsGraph -> ComponentType.directlyFollowsGraph
     else -> {
         val thisString = this.toString()
         requireNotNull(ComponentType.values().firstOrNull { it.toString().equals(thisString, ignoreCase = true) }) {
@@ -147,6 +150,15 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     places = petriNet.places.mapToArray { PetriNetComponentDataAllOfPlaces(it.id.toString()) },
                     transitions = componentDataTransitions
                 )
+            }
+
+            ComponentTypeDto.DirectlyFollowsGraph -> {
+                val dfg = DirectlyFollowsGraph.load(
+                    DBCache.get(dataStoreId.toString()).database,
+                    UUID.fromString(requireNotNull(data) { "Missing DFG id" })
+                )
+
+                TODO("create component data")
             }
 
             ComponentTypeDto.TreeLogView -> {

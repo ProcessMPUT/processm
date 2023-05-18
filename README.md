@@ -23,7 +23,7 @@ The above produces Uber JAR (containing code from all modules) in ./processm.lau
 Docker Desktop is required to be installed.
 
 ```shell
-mvn docker:build
+mvn docker:build --non-recursive
 ```
 
 #### Exporting the image to file and uploading it

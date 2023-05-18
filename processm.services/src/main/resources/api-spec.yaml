@@ -1824,7 +1824,7 @@ components:
       enum: [ owner, writer, reader, none ]
     ComponentType:
       type: string
-      enum: [ kpi, alignerKpi, treeLogView, flatLogView, causalNet, petriNet, bpmn ]
+      enum: [ kpi, alignerKpi, treeLogView, flatLogView, causalNet, petriNet, bpmn, directlyFollowsGraph ]
     AccountRegistrationInfo:
       type: object
       required: [ userEmail, userPassword, newOrganization ]
