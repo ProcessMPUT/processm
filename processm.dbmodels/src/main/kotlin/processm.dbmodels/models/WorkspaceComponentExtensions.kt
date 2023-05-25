@@ -11,5 +11,8 @@ fun WorkspaceComponent.triggerEvent(producer: Producer, event: String = CREATE_O
         setStringProperty(WORKSPACE_COMPONENT_TYPE, componentType.toString())
         setString(WORKSPACE_COMPONENT_EVENT, event)
         setString(WORKSPACE_COMPONENT_ID, id.value.toString())
+        if (event == DATA_CHANGE) {
+            setString(WORKSPACE_ID, workspace.id.toString())
+        }
     }
 }

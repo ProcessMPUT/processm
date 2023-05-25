@@ -14,6 +14,7 @@ import io.ktor.server.plugins.hsts.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import processm.core.communication.Producer
@@ -41,6 +42,7 @@ fun Application.apiModule() {
         install(StatusPages, ApplicationStatusPageConfiguration())
         install(Authentication, ApplicationAuthenticationConfiguration(environment.config.config("ktor.jwt")))
         install(DataConversion, ApplicationDataConversionConfiguration())
+        install(WebSockets)
         install(Koin) {
             modules(module {
                 single { AccountService(get(), get()) }

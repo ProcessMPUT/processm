@@ -1,10 +1,16 @@
 package processm.services.logic
 
-import com.google.gson.JsonElement
+import jakarta.jms.MapMessage
+import jakarta.jms.Message
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import processm.core.communication.Producer
+import processm.core.esb.AbstractJMSListener
+import processm.core.helpers.toUUID
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
@@ -13,6 +19,8 @@ import processm.dbmodels.urn
 import processm.miners.triggerEvent
 import processm.services.api.updateData
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedDeque
 
 class WorkspaceService(
     private val accountService: AccountService,
@@ -258,4 +266,67 @@ class WorkspaceService(
             }
         }
     }
+
+    private class Listener : AbstractJMSListener(
+        WORKSPACE_COMPONENTS_TOPIC,
+        null,
+        "WorkspaceNotificationService"
+    ) {
+        private val clients = ConcurrentHashMap<UUID, ConcurrentLinkedDeque<Channel<UUID>>>()
+
+        init {
+            listen()
+        }
+
+        fun subscribe(workspaceId: UUID, channel: Channel<UUID>) {
+            clients.computeIfAbsent(workspaceId) { ConcurrentLinkedDeque() }.addLast(channel)
+        }
+
+        fun unsubscribe(workspaceId: UUID, channel: Channel<UUID>) = unsubscribe(workspaceId, setOf(channel))
+
+        fun unsubscribe(workspaceId: UUID, channel: Set<Channel<UUID>>) {
+            synchronized(clients) {
+                val queue = clients[workspaceId]
+                if (queue !== null && queue.removeAll(channel) && queue.isEmpty())
+                    clients.remove(workspaceId)
+            }
+        }
+
+        override fun onMessage(msg: Message?) {
+            if (msg !is MapMessage) return
+            val event = msg.getString(WORKSPACE_COMPONENT_EVENT)
+            if (event != DATA_CHANGE) return
+            val componentId = checkNotNull(msg.getString(WORKSPACE_COMPONENT_ID).toUUID())
+            val workspaceId = checkNotNull(msg.getString(WORKSPACE_ID).toUUID())
+            val failed = HashSet<Channel<UUID>>()
+            runBlocking(CoroutineName("WorkspaceServices#Listener#onMessage")) {
+                clients[workspaceId]?.forEach { channel ->
+                    val result = channel.trySend(componentId)
+                    if (!result.isSuccess) {
+                        channel.close()
+                        failed.add(channel)
+                    }
+                }
+            }
+            if (failed.isNotEmpty())
+                unsubscribe(workspaceId, failed)
+        }
+    }
+
+    private val listener by lazy { Listener() }
+
+    /**
+     * Subscribe the given [channel] to receive notifications about data changes in the components in the workspace
+     * identified by [workspaceId]. [WorkspaceComponent.id] is posted to the channel every time an ESB event in the topic
+     * [WORKSPACE_COMPONENTS_TOPIC] with the [WORKSPACE_COMPONENT_EVENT] = [DATA_CHANGE] is received.
+     *
+     * If sending a notification fails, the channel is closed and unsubscribed.
+     */
+    fun subscribeForUpdates(workspaceId: UUID, channel: Channel<UUID>) =
+        listener.subscribe(workspaceId, channel)
+
+    /**
+     * Unsubscribe the [channel] from receiving notifications for [workspaceId]. The channel is not closed.
+     */
+    fun unsubscribeFromUpdates(workspaceId: UUID, channel: Channel<UUID>) = listener.unsubscribe(workspaceId, channel)
 }

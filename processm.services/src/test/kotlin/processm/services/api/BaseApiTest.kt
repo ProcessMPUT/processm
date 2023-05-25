@@ -5,7 +5,10 @@ import com.google.gson.GsonBuilder
 import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
+import io.ktor.websocket.*
 import io.mockk.*
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.SendChannel
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,6 +28,7 @@ import processm.services.logic.AccountService
 import processm.services.logic.toDB
 import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
 import kotlin.reflect.KClass
 import kotlin.test.AfterTest
@@ -47,7 +51,7 @@ abstract class BaseApiTest : KoinTest {
 
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
-    private val mocksMap = mutableMapOf<KClass<*>, Any>()
+    private val mocksMap = ConcurrentHashMap<KClass<*>, Any>()
 
     @BeforeTest
     fun setUp() {
@@ -132,31 +136,39 @@ abstract class BaseApiTest : KoinTest {
         private val engine: TestApplicationEngine, private val login: String, private val password: String
     ) {
 
-        private var authenticationHeader: Pair<String, String>? = null
+        private val authenticationHeader: Pair<String, String>
+
+        init {
+            // Previously authentication was handled lazily, right before the request. It didn't work with coroutines, causing needless reauthentication. A similar situations happens for `by lazy`
+            with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody("""{"login":"$login","password":"$password"}""")
+            }) {
+                assertEquals(HttpStatusCode.Created, response.status())
+                assertTrue(response.content!!.contains(AuthenticationResult::authorizationToken.name))
+                val token =
+                    response.content?.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""")
+                        ?.substringBefore('"')
+                authenticationHeader = Pair(HttpHeaders.Authorization, "Bearer $token")
+            }
+        }
 
         fun handleRequest(
             method: HttpMethod, uri: String, test: TestApplicationRequest.() -> Unit = {}
         ): TestApplicationCall {
-            if (authenticationHeader == null) {
-                with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("""{"login":"$login","password":"$password"}""")
-                }) {
-                    assertEquals(HttpStatusCode.Created, response.status())
-                    assertTrue(response.content!!.contains(AuthenticationResult::authorizationToken.name))
-                    val token =
-                        response.content?.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""")
-                            ?.substringBefore('"')
-                    authenticationHeader = Pair(HttpHeaders.Authorization, "Bearer $token")
-                }
-            }
-
             return engine.handleRequest(method, uri) {
-                if (authenticationHeader != null && !authenticationHeader?.first.isNullOrEmpty()) {
-                    addHeader(authenticationHeader!!.first, authenticationHeader?.second ?: "")
-                }
+                addHeader(authenticationHeader.first, authenticationHeader.second)
                 test()
             }
+        }
+
+        fun handleWebSocketConversation(
+            uri: String,
+            callback: suspend TestApplicationCall.(incoming: ReceiveChannel<Frame>, outgoing: SendChannel<Frame>) -> Unit
+        ): TestApplicationCall {
+            return engine.handleWebSocketConversation(uri, {
+                addHeader(authenticationHeader.first, authenticationHeader.second)
+            }, callback = callback)
         }
     }
 

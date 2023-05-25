@@ -5,6 +5,7 @@ import jakarta.jms.Message
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.quartz.*
+import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.helpers.toUUID
@@ -16,6 +17,7 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
+import processm.miners.triggerEvent
 import java.time.Instant
 import java.util.*
 
@@ -52,6 +54,7 @@ class AlignerKPIService : AbstractJobService(
         return when (event) {
             CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!))
             DELETE -> emptyList() /* ignore for now */
+            DATA_CHANGE -> emptyList() // ignore
             else -> throw IllegalArgumentException("Unknown event type: $event.")
         }
     }
@@ -71,7 +74,7 @@ class AlignerKPIService : AbstractJobService(
     }
 
     class AlignerKPIJob : ServiceJob {
-        override fun execute(context: JobExecutionContext) = loggedScope { logger ->
+        override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
             val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
             logger.debug("Calculating aligner-based KPI for component $id...")
@@ -79,7 +82,7 @@ class AlignerKPIService : AbstractJobService(
                 val component = WorkspaceComponent.findById(id)
                 if (component === null) {
                     logger.error("Component with id $id is not found.")
-                    return@transactionMain
+                    return@transactionMain null
                 }
 
                 try {
@@ -100,7 +103,8 @@ class AlignerKPIService : AbstractJobService(
                     component.lastError = e.message
                     logger.warn("Cannot calculate aligner-based KPI for component with id $id.", e)
                 }
-            }
+                return@transactionMain component
+            }?.triggerEvent(Producer(), DATA_CHANGE)
         }
 
         private fun WorkspaceComponent.getModel(): ProcessModel = when (modelType) {
@@ -109,6 +113,7 @@ class AlignerKPIService : AbstractJobService(
                 DBCache.get(dataStoreId.toString()).database,
                 modelId!!.toInt()
             )
+
             else -> TODO("Retrieval of model type $modelType is not implemented.")
         }
     }

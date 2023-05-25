@@ -8,9 +8,15 @@ import io.ktor.server.locations.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.Route
+import io.ktor.websocket.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.onFailure
+import kotlinx.coroutines.channels.trySendBlocking
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
+import processm.core.logging.logger
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.AbstractComponent
@@ -18,12 +24,15 @@ import processm.services.api.models.LayoutCollectionMessageBody
 import processm.services.api.models.OrganizationRole
 import processm.services.api.models.Workspace
 import processm.services.logic.WorkspaceService
+import processm.services.webSocket
 import java.util.*
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("FunctionName")
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
+    val logger = logger()
 
     authenticate {
         post<Paths.Workspaces> {
@@ -163,6 +172,23 @@ fun Route.WorkspacesApi() {
             )
 
             call.respond(HttpStatusCode.NoContent)
+        }
+
+        webSocket<Paths.Workspace> { workspace ->
+            val channel = Channel<UUID>(Channel.CONFLATED)
+            try {
+                workspaceService.subscribeForUpdates(workspace.workspaceId, channel)
+                while (!channel.isClosedForReceive) {
+                    val componentId = channel.receive()
+                    val result = outgoing.trySendBlocking(Frame.Text(componentId.toString()))
+                        .onFailure { logger.warn("Workspace notification terminated unexpectedly", it) }
+                    if (!result.isSuccess)
+                        break
+                }
+            } finally {
+                workspaceService.unsubscribeFromUpdates(workspace.workspaceId, channel)
+                channel.close()
+            }
         }
     }
 }

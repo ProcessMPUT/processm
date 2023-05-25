@@ -2,27 +2,59 @@ package processm.services.api
 
 import com.google.gson.Gson
 import io.ktor.http.*
+import io.ktor.server.testing.*
+import io.ktor.websocket.*
 import io.mockk.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.trySendBlocking
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.dao.id.EntityID
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.Timeout
 import org.koin.test.mock.declareMock
+import processm.core.communication.Producer
+import processm.core.esb.Artemis
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.MutableCausalNet
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.models.ComponentTypeDto
-import processm.dbmodels.models.WorkspaceComponents
-import processm.dbmodels.models.Workspaces
+import processm.dbmodels.models.*
+import processm.miners.triggerEvent
 import processm.services.api.models.*
+import processm.services.api.models.Workspace
 import processm.services.logic.Reason
 import processm.services.logic.ValidationException
 import processm.services.logic.WorkspaceService
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WorkspacesApiTest : BaseApiTest() {
+
+    companion object {
+
+        val artemis = Artemis()
+
+        @JvmStatic
+        @BeforeAll
+        fun `start aretmis`() {
+            artemis.register()
+            artemis.start()
+        }
+
+        @JvmStatic
+        @AfterAll
+        fun `stop artemis`() {
+            artemis.stop()
+        }
+    }
+
     override fun endpointsWithAuthentication() = Stream.of(
         HttpMethod.Get to "/api/organizations/${UUID.randomUUID()}/workspaces",
         HttpMethod.Post to "/api/organizations/${UUID.randomUUID()}/workspaces",
@@ -583,4 +615,143 @@ class WorkspacesApiTest : BaseApiTest() {
                 }
             }
         }
+
+    @Test
+    @Timeout(10L, unit = TimeUnit.SECONDS)
+    fun `make 5 changes but receive only 2 of them and let the server handle broken connection`() {
+        withConfiguredTestApplication {
+            val workspaceId = UUID.randomUUID()
+            val componentId = UUID.randomUUID()
+            val component = mockk<WorkspaceComponent> {
+                every { componentType } returns ComponentTypeDto.Kpi
+                every { workspace } returns
+                        mockk { every { id } returns EntityID(workspaceId, Workspaces) }
+                every { id } returns EntityID(componentId, WorkspaceComponents)
+            }
+            val sync = Channel<Int>(Channel.UNLIMITED)
+            withAuthentication {
+                launch {
+                    handleWebSocketConversation("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { input, _ ->
+                        sync.send(1)
+                        repeat(2) {
+                            val frame = input.receive()
+                            assertIs<Frame.Text>(frame)
+                            assertEquals(componentId, UUID.fromString(frame.readText()))
+                        }
+                    }
+                }
+                runBlocking {
+                    sync.receive()
+                    repeat(5) {
+                        delay(200L)
+                        component.triggerEvent(Producer(), DATA_CHANGE)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(10L, unit = TimeUnit.SECONDS)
+    fun `make changes to components in different workspaces one without subscription`() {
+        withConfiguredTestApplication {
+            val workspaceId1 = UUID.randomUUID()
+            val workspaceId2 = UUID.randomUUID()
+            val component1 = mockk<WorkspaceComponent> {
+                every { componentType } returns ComponentTypeDto.Kpi
+                every { workspace } returns
+                        mockk { every { id } returns EntityID(workspaceId1, Workspaces) }
+                every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
+            }
+            val component2 = mockk<WorkspaceComponent> {
+                every { componentType } returns ComponentTypeDto.Kpi
+                every { workspace } returns
+                        mockk { every { id } returns EntityID(workspaceId2, Workspaces) }
+                every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
+            }
+            val sync = Channel<Int>(Channel.UNLIMITED)
+            withAuthentication {
+                launch {
+                    handleWebSocketConversation("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId2}") { input, _ ->
+                        sync.send(1)
+                        with(input.receive()) {
+                            assertIs<Frame.Text>(this)
+                            assertEquals(component2.id.value, UUID.fromString(readText()))
+                        }
+                    }
+                }
+                runBlocking {
+                    sync.receive()
+                    component1.triggerEvent(Producer(), DATA_CHANGE)
+                    component2.triggerEvent(Producer(), DATA_CHANGE)
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(10L, unit = TimeUnit.SECONDS)
+    fun `five subscriptions from a single client`() {
+        withConfiguredTestApplication {
+            val workspaceId = UUID.randomUUID()
+            val component = mockk<WorkspaceComponent> {
+                every { componentType } returns ComponentTypeDto.Kpi
+                every { workspace } returns
+                        mockk { every { id } returns EntityID(workspaceId, Workspaces) }
+                every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
+            }
+            val sync = Channel<Int>()
+            val n = 5
+            withAuthentication {
+                repeat(n) {
+                    launch {
+                        handleWebSocketConversation("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { input, _ ->
+                            sync.send(1)
+                            with(input.receive()) {
+                                assertIs<Frame.Text>(this)
+                                assertEquals(component.id.value, UUID.fromString(readText()))
+                            }
+                        }
+                    }
+                }
+                runBlocking {
+                    repeat(n) { sync.receive() }
+                    component.triggerEvent(Producer(), DATA_CHANGE)
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(10L, unit = TimeUnit.SECONDS)
+    fun `five subscriptions from different clients`() {
+        withConfiguredTestApplication {
+            val workspaceId = UUID.randomUUID()
+            val component = mockk<WorkspaceComponent> {
+                every { componentType } returns ComponentTypeDto.Kpi
+                every { workspace } returns
+                        mockk { every { id } returns EntityID(workspaceId, Workspaces) }
+                every { id } returns EntityID(UUID.randomUUID(), WorkspaceComponents)
+            }
+            val sync = Channel<Int>(Channel.UNLIMITED)
+            val n = 5
+            repeat(n) { ctr ->
+                launch {
+                    withAuthentication(login = "user${ctr}@example.com") {
+                        handleWebSocketConversation("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { input, _ ->
+                            sync.trySendBlocking(ctr)
+                            with(input.receive()) {
+                                assertIs<Frame.Text>(this)
+                                assertEquals(component.id.value, UUID.fromString(readText()))
+                            }
+                        }
+                    }
+                }
+            }
+            runBlocking {
+                repeat(n) { sync.receive() }
+                component.triggerEvent(Producer(), DATA_CHANGE)
+            }
+        }
+    }
 }

@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.quartz.*
+import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.helpers.toUUID
@@ -25,7 +26,7 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
     abstract fun mine(stream: DBHierarchicalXESInputStream): T
     abstract fun store(database: Database, model: T): String
 
-    override fun execute(context: JobExecutionContext) = loggedScope { logger ->
+    override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
         val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
         logger.debug("Calculating model for component $id...")
@@ -33,12 +34,12 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
             val component = WorkspaceComponent.findById(id)
             if (component === null) {
                 logger.error("Component with id $id is not found.")
-                return@transactionMain
+                return@transactionMain null
             }
 
-            if(component.data !== null) {
+            if (component.data !== null) {
                 logger.debug("Component $id is already populated with data, skipping")
-                return@transactionMain
+                return@transactionMain null
             }
 
             // TODO: store the entire history of models in the component.data field
@@ -57,7 +58,8 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
             }
-        }
+            return@transactionMain component
+        }?.triggerEvent(Producer(), DATA_CHANGE)
     }
 }
 
@@ -125,6 +127,7 @@ abstract class AbstractMinerService(
         return when (event) {
             CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!, calcJob))
             DELETE -> listOf(createJob(id.toUUID()!!, deleteJob))
+            DATA_CHANGE -> emptyList() // ignore
             else -> throw IllegalArgumentException("Unknown event type: $event.")
         }
     }

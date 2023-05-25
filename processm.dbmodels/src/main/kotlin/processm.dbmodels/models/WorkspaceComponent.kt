@@ -18,6 +18,8 @@ const val WORKSPACE_COMPONENTS_TOPIC = "workspace_components"
  */
 const val WORKSPACE_COMPONENT_ID = "id"
 
+const val WORKSPACE_ID = "workspace_id"
+
 /**
  * The property of the JMS message containing the type of the component as string.
  */
@@ -28,6 +30,8 @@ const val WORKSPACE_COMPONENT_EVENT = "event"
 const val CREATE_OR_UPDATE = "create_or_update"
 
 const val DELETE = "delete"
+
+const val DATA_CHANGE = "data_change"
 
 object WorkspaceComponents : UUIDTable("workspace_components") {
     /**
