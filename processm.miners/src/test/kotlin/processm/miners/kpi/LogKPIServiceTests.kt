@@ -9,11 +9,7 @@ import processm.core.communication.Producer
 import processm.core.esb.Artemis
 import processm.core.esb.ServiceStatus
 import processm.core.persistence.connection.transactionMain
-import processm.dbmodels.models.ComponentTypeDto
-import processm.dbmodels.models.Workspace
-import processm.dbmodels.models.WorkspaceComponent
-import processm.dbmodels.models.WorkspaceComponents
-import processm.miners.triggerEvent
+import processm.dbmodels.models.*
 import java.util.*
 import kotlin.test.*
 

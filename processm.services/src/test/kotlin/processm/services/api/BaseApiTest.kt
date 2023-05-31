@@ -5,10 +5,15 @@ import com.google.gson.GsonBuilder
 import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
+import io.ktor.util.pipeline.*
+import io.ktor.utils.io.*
 import io.ktor.websocket.*
 import io.mockk.*
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
@@ -169,6 +174,49 @@ abstract class BaseApiTest : KoinTest {
             return engine.handleWebSocketConversation(uri, {
                 addHeader(authenticationHeader.first, authenticationHeader.second)
             }, callback = callback)
+        }
+
+        // Based on https://youtrack.jetbrains.com/issue/KTOR-3290/Improve-support-for-testing-Server-Sent-Events-SSE
+        fun handleSse(
+            uri: String,
+            setup: TestApplicationRequest.() -> Unit = {},
+            callback: suspend TestApplicationCall.(incoming: ByteReadChannel) -> Unit
+        ): TestApplicationCall {
+            val call = engine.createCall(closeRequest = false) {
+                this.uri = uri
+                addHeader(HttpHeaders.Accept, ContentType.Text.EventStream.toString())
+                addHeader(authenticationHeader.first, authenticationHeader.second)
+                setup()
+                bodyChannel = ByteChannel(true)
+            }
+
+            engine.launch(call.coroutineContext) {
+                // Execute server side.
+                engine.pipeline.execute(call)
+            }
+
+            runBlocking(call.coroutineContext) {
+                // responseChannelDeferred is internal, so we wait like this.
+                // Ref: https://github.com/ktorio/ktor/blob/c5877a22c91fd693ea6dcd0b4e1924f05d3b6825/ktor-server/ktor-server-test-host/jvm/src/io/ktor/server/testing/TestApplicationEngine.kt#L225-L230
+                var responseChannel: ByteReadChannel?
+                do {
+                    // Ensure status is absent or valid.
+                    val status = call.response.status()
+                    if (status?.isSuccess() == false) {
+                        throw IllegalStateException(status.toString())
+                    }
+
+                    // Suspend, then try to grab response channel.
+                    yield()
+                    // websocketChannel is just responseChannel internally.
+                    responseChannel = call.response.websocketChannel()
+                } while (responseChannel == null)
+
+                // Execute client side.
+                call.callback(responseChannel)
+            }
+
+            return call
         }
     }
 

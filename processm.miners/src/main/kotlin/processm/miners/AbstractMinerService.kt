@@ -34,12 +34,12 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
             val component = WorkspaceComponent.findById(id)
             if (component === null) {
                 logger.error("Component with id $id is not found.")
-                return@transactionMain null
+                return@transactionMain
             }
 
             if (component.data !== null) {
                 logger.debug("Component $id is already populated with data, skipping")
-                return@transactionMain null
+                return@transactionMain
             }
 
             // TODO: store the entire history of models in the component.data field
@@ -58,8 +58,8 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                 component.lastError = e.message
                 logger.warn("Cannot calculate model for component with id $id.", e)
             }
-            return@transactionMain component
-        }?.triggerEvent(Producer(), DATA_CHANGE)
+            component.triggerEvent(Producer(), DATA_CHANGE)
+        }
     }
 }
 

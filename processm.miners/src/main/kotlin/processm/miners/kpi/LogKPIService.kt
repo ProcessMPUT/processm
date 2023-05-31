@@ -14,7 +14,6 @@ import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
-import processm.miners.triggerEvent
 import java.time.Instant
 import java.util.*
 
@@ -82,7 +81,7 @@ class LogKPIService : AbstractJobService(
                 val component = WorkspaceComponent.findById(id)
                 if (component === null) {
                     logger.error("Component with id $id is not found.")
-                    return@transactionMain null
+                    return@transactionMain
                 }
 
                 try {
@@ -99,8 +98,8 @@ class LogKPIService : AbstractJobService(
                     component.lastError = e.message
                     logger.warn("Cannot calculate log-based KPI for component with id $id.", e)
                 }
-                component
-            }?.triggerEvent(Producer(), DATA_CHANGE)
+                component.triggerEvent(Producer(), DATA_CHANGE)
+            }
         }
     }
 }

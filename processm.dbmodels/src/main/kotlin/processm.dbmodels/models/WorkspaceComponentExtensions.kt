@@ -1,7 +1,6 @@
-package processm.miners
+package processm.dbmodels.models
 
 import processm.core.communication.Producer
-import processm.dbmodels.models.*
 
 /**
  * Raises an event about this [WorkspaceComponent] change.

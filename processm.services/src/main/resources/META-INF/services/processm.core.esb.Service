@@ -1,1 +1,2 @@
 processm.services.WebServicesHost
+processm.services.logic.WorkspaceNotificationService

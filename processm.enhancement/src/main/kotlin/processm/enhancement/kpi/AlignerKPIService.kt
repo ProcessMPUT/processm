@@ -17,7 +17,6 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
-import processm.miners.triggerEvent
 import java.time.Instant
 import java.util.*
 
@@ -82,7 +81,7 @@ class AlignerKPIService : AbstractJobService(
                 val component = WorkspaceComponent.findById(id)
                 if (component === null) {
                     logger.error("Component with id $id is not found.")
-                    return@transactionMain null
+                    return@transactionMain
                 }
 
                 try {
@@ -103,8 +102,8 @@ class AlignerKPIService : AbstractJobService(
                     component.lastError = e.message
                     logger.warn("Cannot calculate aligner-based KPI for component with id $id.", e)
                 }
-                return@transactionMain component
-            }?.triggerEvent(Producer(), DATA_CHANGE)
+                component.triggerEvent(Producer(), DATA_CHANGE)
+            }
         }
 
         private fun WorkspaceComponent.getModel(): ProcessModel = when (modelType) {
