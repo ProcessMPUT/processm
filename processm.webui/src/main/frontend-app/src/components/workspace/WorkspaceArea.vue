@@ -154,6 +154,7 @@ import {
   WorkspaceComponent as WorkspaceComponentModel
 } from "@/models/WorkspaceComponent";
 import { ComponentType } from "@/openapi";
+import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
 
 @Component({
   components: {
@@ -188,11 +189,34 @@ export default class WorkspaceArea extends Vue {
     w: number;
     h: number;
   }> = [];
+  notifications : WorkspaceObserver | undefined = undefined
 
-  async created() {
+  private async refreshComponent(componentId: string) {
+    const component = await this.workspaceService.getComponent(this.workspaceId, componentId)
+    if (this.componentsDetails.has(component.id)) {
+      this.componentsDetails.set(component.id, component);
+      const idx = this.layout.findIndex((value) => value.i == component.id);
+      console.assert(idx >= 0)
+      this.layout.splice(idx, 1);
+      this.layout.push( {
+        i: component.id,
+        x: component.layout?.x ?? 0,
+        y: component.layout?.y ?? 0,
+        w: component.layout?.width ?? this.defaultComponentWidth,
+        h: component.layout?.height ?? this.defaultComponentHeight
+      });
+    } else {
+      await this.fullRefresh()
+    }
+
+  }
+
+  async fullRefresh() {
     const components = await this.workspaceService.getWorkspaceComponents(
       this.workspaceId
     );
+    this.componentsDetails.clear();
+    this.layout.length = 0;
     for (const component of components) {
       this.componentsDetails.set(component.id, component);
       this.layout.push({
@@ -203,6 +227,18 @@ export default class WorkspaceArea extends Vue {
         h: component.layout?.height ?? this.defaultComponentHeight
       });
     }
+  }
+
+  // noinspection JSUnusedGlobalSymbols
+  beforeDestroy() {
+    this.notifications?.close();
+  }
+
+  async created() {
+    await this.fullRefresh()
+    if(this.notifications === undefined)
+      this.notifications = this.workspaceService.observeWorkspace(this.workspaceId, this.refreshComponent);
+    this.notifications.start()
   }
 
   toggleLocked() {
