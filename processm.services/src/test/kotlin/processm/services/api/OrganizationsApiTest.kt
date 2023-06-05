@@ -46,7 +46,13 @@ class OrganizationsApiTest : BaseApiTest() {
         val memberId1 = UUID.randomUUID()
         val memberId2 = UUID.randomUUID()
 
-        withAuthentication(userId) {
+        every { accountService.getRolesAssignedToUser(userId) } returns
+                listOf(mockk {
+                    every { user.id } returns EntityID(userId, Users)
+                    every { organization.id } returns EntityID(organizationId, Organizations)
+                    every { role } returns RoleType.Reader.role
+                })
+        withAuthentication(userId, role = null) {
             every { organizationService.getMembers(organizationId) } returns listOf(
                 mockk {
                     every { user.id } returns EntityID(memberId1, Users)
@@ -59,12 +65,6 @@ class OrganizationsApiTest : BaseApiTest() {
                     every { role } returns RoleType.Writer.role
                 }
             )
-            every { accountService.getRolesAssignedToUser(userId) } returns
-                    listOf(mockk {
-                        every { user.id } returns EntityID(userId, Users)
-                        every { organization.id } returns EntityID(organizationId, Organizations)
-                        every { role } returns RoleType.Reader.role
-                    })
             with(handleRequest(HttpMethod.Get, "/api/organizations/$organizationId/members")) {
                 assertEquals(HttpStatusCode.OK, response.status())
                 val members = assertNotNull(response.deserializeContent<List<OrganizationMember>>())
@@ -99,17 +99,18 @@ class OrganizationsApiTest : BaseApiTest() {
             val accountService = declareMock<AccountService>()
             val removedOrganizationId = UUID.randomUUID()
 
-            withAuthentication {
+            every { accountService.getRolesAssignedToUser(any()) } returns
+                    listOf(mockk {
+                        every { user.id } returns EntityID(UUID.randomUUID(), Users)
+                        every { organization.id } returns EntityID(removedOrganizationId, Organizations)
+                        every { role } returns RoleType.Reader.role
+                    })
+
+            withAuthentication(role = null) {
                 every { organizationService.getMembers(removedOrganizationId) } throws ApiException(
                     publicMessage = "",
                     responseCode = HttpStatusCode.NotFound
                 )
-                every { accountService.getRolesAssignedToUser(any()) } returns
-                        listOf(mockk {
-                            every { user.id } returns EntityID(UUID.randomUUID(), Users)
-                            every { organization.id } returns EntityID(removedOrganizationId, Organizations)
-                            every { role } returns RoleType.Reader.role
-                        })
 
                 with(handleRequest(HttpMethod.Get, "/api/organizations/$removedOrganizationId/members")) {
                     assertEquals(HttpStatusCode.NotFound, response.status())

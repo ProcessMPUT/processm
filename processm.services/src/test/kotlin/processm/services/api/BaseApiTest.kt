@@ -119,7 +119,7 @@ abstract class BaseApiTest : KoinTest {
         userId: UUID = UUID.randomUUID(),
         login: String = "user@example.com",
         password: String = "pass",
-        role: Pair<OrganizationRole, UUID> = OrganizationRole.owner to UUID.randomUUID(),
+        role: Pair<OrganizationRole, UUID>? = OrganizationRole.owner to UUID.randomUUID(),
         callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         val accountService = declareMock<AccountService>()
@@ -127,12 +127,13 @@ abstract class BaseApiTest : KoinTest {
             every { id } returns EntityID(userId, Users)
             every { email } returns login
         }
-        every { accountService.getRolesAssignedToUser(userId) } returns
-                listOf(mockk {
-                    every { user.id } returns EntityID(userId, Users)
-                    every { organization.id } returns EntityID(role.second, Organizations)
-                    every { this@mockk.role } returns transactionMain { role.first.toDB() }
-                })
+        if (role !== null)
+            every { accountService.getRolesAssignedToUser(userId) } returns
+                    listOf(mockk {
+                        every { user.id } returns EntityID(userId, Users)
+                        every { organization.id } returns EntityID(role.second, Organizations)
+                        every { this@mockk.role } returns transactionMain { role.first.toDB() }
+                    })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
     }
