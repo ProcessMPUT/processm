@@ -41,6 +41,7 @@ data class ComponentUpdateEventPayload(val componentId: SerializableUUID)
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
+    val workspaceNotificationService by inject<WorkspaceNotificationService>()
     val logger = logger()
 
     authenticate {
@@ -197,13 +198,13 @@ fun Route.WorkspacesApi() {
             call.eventStream {
                 val channel = Channel<UUID>(Channel.CONFLATED)
                 try {
-                    checkNotNull(WorkspaceNotificationService.INSTANCE).subscribe(workspace.workspaceId, channel)
+                    workspaceNotificationService.subscribe(workspace.workspaceId, channel)
                     while (!channel.isClosedForReceive) {
                         val componentId = channel.receive()
                         writeEvent(ComponentUpdateEventPayload(componentId))
                     }
                 } finally {
-                    WorkspaceNotificationService.INSTANCE?.unsubscribe(workspace.workspaceId, channel)
+                    workspaceNotificationService.unsubscribe(workspace.workspaceId, channel)
                     channel.close()
                 }
             }

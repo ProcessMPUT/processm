@@ -43,21 +43,17 @@ class WorkspacesApiTest : BaseApiTest() {
     companion object {
 
         val artemis = Artemis()
-        val workspaceNotificationService = WorkspaceNotificationService()
 
         @JvmStatic
         @BeforeAll
-        fun `start services`() {
+        fun `start artemis`() {
             artemis.register()
             artemis.start()
-            workspaceNotificationService.register()
-            workspaceNotificationService.start()
         }
 
         @JvmStatic
         @AfterAll
-        fun `stop services`() {
-            workspaceNotificationService.stop()
+        fun `stop artemis`() {
             artemis.stop()
         }
     }

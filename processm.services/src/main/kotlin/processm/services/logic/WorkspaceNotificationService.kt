@@ -6,36 +6,18 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import processm.core.esb.AbstractJMSListener
-import processm.core.esb.Artemis
-import processm.core.esb.Service
-import processm.core.esb.ServiceStatus
 import processm.core.helpers.toUUID
-import processm.core.logging.loggedScope
 import processm.dbmodels.models.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
-import kotlin.reflect.KClass
 
 /**
- * An ESB service to receive and distribute notifications about data changes in workflow components.
+ * A service to receive and distribute notifications about data changes in workflow components.
  * The service receives [DATA_CHANGE] events in the [WORKSPACE_COMPONENTS_TOPIC] in AMQP and distribute them
  * via [Channel]s to interested parties.
  */
-class WorkspaceNotificationService : Service {
-
-    companion object {
-        //TODO this is ugly. Can it be done better?
-        var INSTANCE: WorkspaceNotificationService? = null
-            private set
-    }
-
-    init {
-        check(INSTANCE == null)
-        INSTANCE = this
-    }
-
-    override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
+class WorkspaceNotificationService {
 
     private val clients = ConcurrentHashMap<UUID, ConcurrentLinkedDeque<Channel<UUID>>>()
 
@@ -47,7 +29,11 @@ class WorkspaceNotificationService : Service {
      * If sending a notification fails, the channel is closed and unsubscribed.
      */
     fun subscribe(workspaceId: UUID, channel: Channel<UUID>) {
-        clients.computeIfAbsent(workspaceId) { ConcurrentLinkedDeque() }.addLast(channel)
+        synchronized(clients) {
+            if (clients.isEmpty())
+                listener.listen()
+            clients.computeIfAbsent(workspaceId) { ConcurrentLinkedDeque() }.addLast(channel)
+        }
     }
 
     /**
@@ -61,6 +47,8 @@ class WorkspaceNotificationService : Service {
             if (queue !== null && queue.removeAll(channel) && queue.isEmpty()) {
                 clients.remove(workspaceId)
             }
+            if (clients.isEmpty())
+                listener.close()
         }
     }
 
@@ -90,22 +78,4 @@ class WorkspaceNotificationService : Service {
             }
         }
     }
-
-    override fun register() = loggedScope {
-        status = ServiceStatus.Stopped
-    }
-
-    override fun start() = loggedScope {
-        listener.listen()
-        status = ServiceStatus.Started
-    }
-
-    override fun stop() = loggedScope {
-        listener.close()
-        status = ServiceStatus.Stopped
-    }
-
-    override var status: ServiceStatus = ServiceStatus.Unknown
-        private set
-    override val name: String = "WorkspaceNotificationService"
 }

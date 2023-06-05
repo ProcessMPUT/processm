@@ -53,6 +53,7 @@ fun Application.apiModule() {
                 single { DataStoreService(get()) }
                 single { LogsService(get()) }
                 single { Producer() }
+                single { WorkspaceNotificationService() }
             })
         }
 
