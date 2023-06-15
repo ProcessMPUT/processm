@@ -62,6 +62,7 @@ fun Application.apiModule() {
                 UsersApi()
                 WorkspacesApi()
                 DataStoresApi()
+                ACLApi()
                 get { call.respondRedirect("/api-docs/", permanent = true) }
             }
         }

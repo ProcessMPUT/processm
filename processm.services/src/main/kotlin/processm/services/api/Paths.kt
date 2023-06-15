@@ -309,4 +309,27 @@ object Paths {
     @Location("/organizations/{organizationId}/workspaces")
     class Workspaces(val organizationId: UUID)
 
+    /**
+     * Get the whole ACL for the given URN
+     */
+    @Location("/acl/{urn}")
+    class ACL(val urn: String)
+
+    /**
+     * Modify/delete the entry related to the given groupId in the ACL for the given URN
+     */
+    @Location("/acl/{urn}/ace/{groupId}")
+    class ACE(val urn: String, val groupId: UUID)
+
+    /**
+     * List groups that could be plausibly added to the ACL for the given URN by the current user
+     */
+    @Location("/acl/{urn}/available-groups")
+    class AvailableGroups(val urn: String)
+
+    /**
+     * 204 if the current user can modify the ACL for the given URN, 403 otherwise
+     */
+    @Location("/acl/{urn}/can-modify")
+    class CanModifyACL(val urn: String)
 }

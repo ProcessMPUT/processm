@@ -17,6 +17,7 @@ import DataStoreService from "@/services/DataStoreService";
 import LogsService from "./services/LogsService";
 import ConfigService from "@/services/ConfigService";
 import VuetifyConfirm from "vuetify-confirm";
+import ACLService from "@/services/ACLService";
 
 Vue.config.productionTip = false;
 Vue.use(SessionStorage, { persist: true });
@@ -33,7 +34,8 @@ new Vue({
     dataStoreService: new DataStoreService(),
     accountService: new AccountService(),
     organizationService: new OrganizationService(),
-    logsService: new LogsService()
+    logsService: new LogsService(),
+    aclService: new ACLService()
   }),
   render: (h) => h(App)
 }).$mount("#app");

@@ -40,6 +40,12 @@
               >
               <v-list-item-title>{{ $t("common.rename") }}</v-list-item-title>
             </v-list-item>
+            <v-list-item @click.stop="aclDialogDisplayed = true">
+              <v-list-item-icon>
+                <v-icon>security</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>{{ $t("common.security") }}</v-list-item-title>
+            </v-list-item>
           </v-list>
         </v-menu>
         <v-tab v-for="workspace in workspaces" :key="workspace.index">{{
@@ -54,6 +60,12 @@
         @cancelled="workspaceNameToRename = null"
         @submitted="renameWorkspace"
         :old-name="workspaceNameToRename"
+      />
+      <acl-dialog
+          :value="aclDialogDisplayed"
+          :urn="currentWorkspaceUrn"
+          @closed="aclDialogDisplayed = false"
+          :force-view-only="false"
       />
     </v-row>
   </v-container>
@@ -96,15 +108,17 @@ import WorkspaceArea from "@/components/workspace/WorkspaceArea.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
 import WorkspaceService from "@/services/WorkspaceService";
 import Workspace from "@/models/Workspace";
+import AclDialog from "@/components/acl/AclDialog.vue";
 
 @Component({
-  components: { WorkspaceArea, RenameDialog }
+  components: {AclDialog, WorkspaceArea, RenameDialog }
 })
 export default class Workspaces extends Vue {
   @Inject() workspaceService!: WorkspaceService;
   workspaceNameToRename: string | null = null;
   currentWorkspaceIndex = 0;
   workspaces: Array<Workspace> = [];
+  aclDialogDisplayed: boolean = false;
 
   async created() {
     this.workspaces = await this.workspaceService.getAll();
@@ -112,6 +126,11 @@ export default class Workspaces extends Vue {
 
   get currentWorkspaceName(): string {
     return this.workspaces[this.currentWorkspaceIndex]?.name || "";
+  }
+
+  get currentWorkspaceUrn(): string {
+    const id = this.workspaces[this.currentWorkspaceIndex]?.id
+    return "urn:processm:db/workspaces/" + id;
   }
 
   async createWorkspace() {
