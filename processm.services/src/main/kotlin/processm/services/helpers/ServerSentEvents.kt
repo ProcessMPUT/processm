@@ -19,6 +19,12 @@ import kotlin.reflect.full.findAnnotation
 annotation class ServerSentEvent(val eventName: String)
 
 /**
+ * Replace each occurrence of `\` in [input] with `\\`, and `\n` with `\\n`
+ */
+internal fun escapeNewLine(input: String): String = input.replace("\\", "\\\\").replace("\n", "\\n")
+
+
+/**
  * A stream representing server-sent events. Create using [ApplicationCall.eventStream]
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/
@@ -50,11 +56,12 @@ class EventStream(val base: OutputStream) {
     }
 
     /**
-     * Write arbitrary event to the stream. Due to the simplicity of the implementation, [data] is expected not to contain `\n`
+     * Write arbitrary event to the stream. Backslash `\` is escaped as `\\` and newline `\n` as `\\n`.
      */
     fun writeEvent(event: String, data: String) {
-        assert('\n' !in data)
-        val text = "event:$event\ndata:$data\n\n"
+        val eventEscaped = escapeNewLine(event)
+        val dataEscaped = escapeNewLine(data)
+        val text = "event:$eventEscaped\ndata:$dataEscaped\n\n"
         base.write(text.toByteArray())
         base.flush()
     }
