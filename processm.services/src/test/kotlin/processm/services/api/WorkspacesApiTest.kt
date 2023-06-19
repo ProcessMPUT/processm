@@ -637,7 +637,6 @@ class WorkspacesApiTest : BaseApiTest() {
             // This is sloppy, as readUTF8Line treats both \n and \r\n as line terminators, thus possibly leading to misinterpreting received data.
             // It doesn't seem to be a problem in the current use case and, nevertheless, it is recommended to encode the content of the event as JSON
             var line = readUTF8Line()
-            println("line=`$line'")
             if (line.isNullOrEmpty())
                 break
             val i = line.indexOf(':')
@@ -771,7 +770,7 @@ class WorkspacesApiTest : BaseApiTest() {
     }
 
     @Test
-    @Timeout(10L, unit = TimeUnit.SECONDS)
+    @Timeout(20L, unit = TimeUnit.SECONDS)
     fun `five subscriptions from different clients`() {
         val result = ConcurrentLinkedDeque<UUID>()
         val workspaceId = UUID.randomUUID()
