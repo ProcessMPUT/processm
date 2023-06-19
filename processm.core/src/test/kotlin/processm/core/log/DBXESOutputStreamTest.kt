@@ -8,6 +8,7 @@ import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 import kotlin.test.Ignore
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 internal class DBXESOutputStreamTest {
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -118,9 +119,11 @@ internal class DBXESOutputStreamTest {
         }
 
         val depth = 14
+        val attributes = MutableAttributeMap().apply { create(depth, this) }
+        assertEquals(1 shl depth, attributes.flatView.size)
         val log = processm.core.log.hierarchical.Log(
             emptySequence(),
-            attributesInternal = MutableAttributeMap().apply { create(depth, this) }
+            attributesInternal = attributes
         )
         DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
             output.write(log)
