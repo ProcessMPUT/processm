@@ -6,7 +6,7 @@ import { ConfigApi, Configuration, DataStoresApi, LogsApi, OrganizationsApi, Use
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
 export default abstract class BaseService {
-  private readonly defaultApiPath = "/api";
+  protected readonly defaultApiPath = "/api";
   private readonly axiosInstance: AxiosInstance;
 
   constructor() {
@@ -52,7 +52,7 @@ export default abstract class BaseService {
     return this.getGenericClient(LogsApi);
   }
 
-  private prolongExistingSession(failedRequest: AxiosError<object>, api: UsersApi): Promise<void> {
+  protected prolongExistingSession(failedRequest: AxiosError<object>|undefined, api: UsersApi): Promise<void> {
     const expiredToken = Vue.prototype.$sessionStorage.sessionToken;
     const getAuthorizationHeaderValue = (token: string) => `Bearer ${token}`;
 
@@ -62,7 +62,7 @@ export default abstract class BaseService {
         const newToken = tokenRefreshResponse.data.authorizationToken;
         Vue.prototype.$sessionStorage.sessionToken = newToken;
 
-        if (failedRequest.response != null) {
+        if (failedRequest?.response != undefined) {
           failedRequest.response.config.headers["Authorization"] = getAuthorizationHeaderValue(newToken);
         }
         return Promise.resolve();

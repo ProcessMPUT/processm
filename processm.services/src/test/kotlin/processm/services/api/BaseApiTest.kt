@@ -5,7 +5,15 @@ import com.google.gson.GsonBuilder
 import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
+import io.ktor.util.pipeline.*
+import io.ktor.utils.io.*
+import io.ktor.websocket.*
 import io.mockk.*
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,6 +33,7 @@ import processm.services.logic.AccountService
 import processm.services.logic.toDB
 import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
 import kotlin.reflect.KClass
 import kotlin.test.AfterTest
@@ -47,7 +56,7 @@ abstract class BaseApiTest : KoinTest {
 
     protected abstract fun endpointsWithAuthentication(): Stream<Pair<HttpMethod, String>?>
     protected abstract fun endpointsWithNoImplementation(): Stream<Pair<HttpMethod, String>?>
-    private val mocksMap = mutableMapOf<KClass<*>, Any>()
+    private val mocksMap = ConcurrentHashMap<KClass<*>, Any>()
 
     @BeforeTest
     fun setUp() {
@@ -110,7 +119,7 @@ abstract class BaseApiTest : KoinTest {
         userId: UUID = UUID.randomUUID(),
         login: String = "user@example.com",
         password: String = "pass",
-        role: Pair<OrganizationRole, UUID> = OrganizationRole.owner to UUID.randomUUID(),
+        role: Pair<OrganizationRole, UUID>? = OrganizationRole.owner to UUID.randomUUID(),
         callback: JwtAuthenticationTrackingEngine.() -> Unit
     ) {
         val accountService = declareMock<AccountService>()
@@ -118,12 +127,13 @@ abstract class BaseApiTest : KoinTest {
             every { id } returns EntityID(userId, Users)
             every { email } returns login
         }
-        every { accountService.getRolesAssignedToUser(userId) } returns
-                listOf(mockk {
-                    every { user.id } returns EntityID(userId, Users)
-                    every { organization.id } returns EntityID(role.second, Organizations)
-                    every { this@mockk.role } returns transactionMain { role.first.toDB() }
-                })
+        if (role !== null)
+            every { accountService.getRolesAssignedToUser(userId) } returns
+                    listOf(mockk {
+                        every { user.id } returns EntityID(userId, Users)
+                        every { organization.id } returns EntityID(role.second, Organizations)
+                        every { this@mockk.role } returns transactionMain { role.first.toDB() }
+                    })
 
         callback(JwtAuthenticationTrackingEngine(this, login, password))
     }
@@ -132,31 +142,82 @@ abstract class BaseApiTest : KoinTest {
         private val engine: TestApplicationEngine, private val login: String, private val password: String
     ) {
 
-        private var authenticationHeader: Pair<String, String>? = null
+        private val authenticationHeader: Pair<String, String>
+
+        init {
+            // Previously authentication was handled lazily, right before the request. It didn't work with coroutines, causing needless reauthentication. A similar situations happens for `by lazy`
+            with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody("""{"login":"$login","password":"$password"}""")
+            }) {
+                assertEquals(HttpStatusCode.Created, response.status())
+                assertTrue(response.content!!.contains(AuthenticationResult::authorizationToken.name))
+                val token =
+                    response.content?.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""")
+                        ?.substringBefore('"')
+                authenticationHeader = Pair(HttpHeaders.Authorization, "Bearer $token")
+            }
+        }
 
         fun handleRequest(
             method: HttpMethod, uri: String, test: TestApplicationRequest.() -> Unit = {}
         ): TestApplicationCall {
-            if (authenticationHeader == null) {
-                with(engine.handleRequest(HttpMethod.Post, "/api/users/session") {
-                    addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                    setBody("""{"login":"$login","password":"$password"}""")
-                }) {
-                    assertEquals(HttpStatusCode.Created, response.status())
-                    assertTrue(response.content!!.contains(AuthenticationResult::authorizationToken.name))
-                    val token =
-                        response.content?.substringAfter("""${AuthenticationResult::authorizationToken.name}":"""")
-                            ?.substringBefore('"')
-                    authenticationHeader = Pair(HttpHeaders.Authorization, "Bearer $token")
-                }
-            }
-
             return engine.handleRequest(method, uri) {
-                if (authenticationHeader != null && !authenticationHeader?.first.isNullOrEmpty()) {
-                    addHeader(authenticationHeader!!.first, authenticationHeader?.second ?: "")
-                }
+                addHeader(authenticationHeader.first, authenticationHeader.second)
                 test()
             }
+        }
+
+        fun handleWebSocketConversation(
+            uri: String,
+            callback: suspend TestApplicationCall.(incoming: ReceiveChannel<Frame>, outgoing: SendChannel<Frame>) -> Unit
+        ): TestApplicationCall {
+            return engine.handleWebSocketConversation(uri, {
+                addHeader(authenticationHeader.first, authenticationHeader.second)
+            }, callback = callback)
+        }
+
+        // Based on https://youtrack.jetbrains.com/issue/KTOR-3290/Improve-support-for-testing-Server-Sent-Events-SSE
+        fun handleSse(
+            uri: String,
+            setup: TestApplicationRequest.() -> Unit = {},
+            callback: suspend TestApplicationCall.(incoming: ByteReadChannel) -> Unit
+        ): TestApplicationCall {
+            val call = engine.createCall(closeRequest = false) {
+                this.uri = uri
+                addHeader(HttpHeaders.Accept, ContentType.Text.EventStream.toString())
+                addHeader(authenticationHeader.first, authenticationHeader.second)
+                setup()
+                bodyChannel = ByteChannel(true)
+            }
+
+            engine.launch(call.coroutineContext) {
+                // Execute server side.
+                engine.pipeline.execute(call)
+            }
+
+            runBlocking(call.coroutineContext) {
+                // responseChannelDeferred is internal, so we wait like this.
+                // Ref: https://github.com/ktorio/ktor/blob/c5877a22c91fd693ea6dcd0b4e1924f05d3b6825/ktor-server/ktor-server-test-host/jvm/src/io/ktor/server/testing/TestApplicationEngine.kt#L225-L230
+                var responseChannel: ByteReadChannel?
+                do {
+                    // Ensure status is absent or valid.
+                    val status = call.response.status()
+                    if (status?.isSuccess() == false) {
+                        throw IllegalStateException(status.toString())
+                    }
+
+                    // Suspend, then try to grab response channel.
+                    yield()
+                    // websocketChannel is just responseChannel internally.
+                    responseChannel = call.response.websocketChannel()
+                } while (responseChannel == null)
+
+                // Execute client side.
+                call.callback(responseChannel)
+            }
+
+            return call
         }
     }
 

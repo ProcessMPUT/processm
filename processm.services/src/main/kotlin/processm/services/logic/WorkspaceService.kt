@@ -1,6 +1,5 @@
 package processm.services.logic
 
-import com.google.gson.JsonElement
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
@@ -10,7 +9,6 @@ import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
 import processm.dbmodels.models.*
 import processm.dbmodels.urn
-import processm.miners.triggerEvent
 import processm.services.api.updateData
 import java.util.*
 
@@ -100,6 +98,18 @@ class WorkspaceService(
             }
         }
     }
+
+    /**
+     * Returns the specified component [componentId] from the workspace [workspaceId].
+     */
+    fun getComponent(componentId: UUID, userId: UUID, organizationId: UUID, workspaceId: UUID): WorkspaceComponent =
+        transactionMain {
+            aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
+
+            WorkspaceComponent.find {
+                WorkspaceComponents.id eq componentId
+            }.single()
+        }
 
     /**
      * Returns all components in the specified [workspaceId].

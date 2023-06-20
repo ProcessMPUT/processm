@@ -3,6 +3,7 @@ import Workspace from "@/models/Workspace";
 import BaseService from "./BaseService";
 import { LayoutElement, WorkspaceComponent } from "@/models/WorkspaceComponent";
 import { AbstractComponent, Workspace as ApiWorkspace } from "@/openapi";
+import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
 
 export default class WorkspaceService extends BaseService {
   public async getAll(): Promise<Array<Workspace>> {
@@ -96,4 +97,14 @@ export default class WorkspaceService extends BaseService {
   private get currentOrganizationId() {
     return Vue.prototype.$sessionStorage.currentOrganization.id;
   }
+
+  public observeWorkspace(workspaceId: string, callback: (componentId: string) => void) {
+    const observer = new WorkspaceObserver(this.defaultApiPath, this.currentOrganizationId, workspaceId, callback);
+    observer.reauthenticate = async () => {
+      await this.prolongExistingSession(undefined, this.usersApi)
+      return true
+    }
+    return observer;
+  }
+
 }

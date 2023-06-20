@@ -346,6 +346,11 @@
             <version>${ktor.version}</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-websockets-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>io.ktor</groupId>

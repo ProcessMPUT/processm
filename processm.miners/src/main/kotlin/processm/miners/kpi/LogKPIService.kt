@@ -5,6 +5,7 @@ import jakarta.jms.Message
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.quartz.*
+import processm.core.communication.Producer
 import processm.core.esb.AbstractJobService
 import processm.core.esb.ServiceJob
 import processm.core.helpers.toUUID
@@ -52,6 +53,7 @@ class LogKPIService : AbstractJobService(
         return when (event) {
             CREATE_OR_UPDATE -> listOf(createJob(id.toUUID()!!))
             DELETE -> emptyList() /* ignore for now */
+            DATA_CHANGE -> emptyList() // ignore
             else -> throw IllegalArgumentException("Unknown event type: $event.")
         }
     }
@@ -71,7 +73,7 @@ class LogKPIService : AbstractJobService(
     }
 
     class KPIJob : ServiceJob {
-        override fun execute(context: JobExecutionContext) = loggedScope { logger ->
+        override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
             val id = requireNotNull(context.jobDetail.key.name?.toUUID())
 
             logger.debug("Calculating log-based KPI for component $id...")
@@ -96,6 +98,7 @@ class LogKPIService : AbstractJobService(
                     component.lastError = e.message
                     logger.warn("Cannot calculate log-based KPI for component with id $id.", e)
                 }
+                component.triggerEvent(Producer(), DATA_CHANGE)
             }
         }
     }

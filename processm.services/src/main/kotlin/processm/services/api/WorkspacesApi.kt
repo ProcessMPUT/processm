@@ -5,25 +5,44 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.locations.*
+import io.ktor.server.locations.patch
+import io.ktor.server.locations.post
+import io.ktor.server.locations.put
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import io.ktor.server.routing.Route
+import io.ktor.server.routing.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
+import processm.core.helpers.SerializableUUID
 import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
+import processm.core.logging.logger
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.WorkspaceComponent
 import processm.services.api.models.AbstractComponent
 import processm.services.api.models.LayoutCollectionMessageBody
 import processm.services.api.models.OrganizationRole
 import processm.services.api.models.Workspace
+import processm.services.helpers.ServerSentEvent
+import processm.services.helpers.eventStream
+import processm.services.logic.WorkspaceNotificationService
 import processm.services.logic.WorkspaceService
 import java.util.*
 
+
+@ServerSentEvent("update")
+@Serializable
+data class ComponentUpdateEventPayload(val componentId: SerializableUUID)
+
+@OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("FunctionName")
 @KtorExperimentalLocationsAPI
 fun Route.WorkspacesApi() {
     val workspaceService by inject<WorkspaceService>()
+    val workspaceNotificationService by inject<WorkspaceNotificationService>()
+    val logger = logger()
 
     authenticate {
         post<Paths.Workspaces> {
@@ -78,8 +97,16 @@ fun Route.WorkspacesApi() {
 
         get<Paths.WorkspaceComponent> { component ->
             val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(component.organizationId)
 
-            call.respond(HttpStatusCode.NotImplemented)
+            val component = workspaceService.getComponent(
+                component.componentId,
+                principal.userId,
+                component.organizationId,
+                component.workspaceId
+            ).toAbstractComponent()
+
+            call.respond(HttpStatusCode.OK, component)
         }
 
         put<Paths.WorkspaceComponent> { component ->
@@ -163,6 +190,24 @@ fun Route.WorkspacesApi() {
             )
 
             call.respond(HttpStatusCode.NoContent)
+        }
+
+
+
+        get<Paths.Workspace> { workspace ->
+            call.eventStream {
+                val channel = Channel<UUID>(Channel.CONFLATED)
+                try {
+                    workspaceNotificationService.subscribe(workspace.workspaceId, channel)
+                    while (!channel.isClosedForReceive) {
+                        val componentId = channel.receive()
+                        writeEvent(ComponentUpdateEventPayload(componentId))
+                    }
+                } finally {
+                    workspaceNotificationService.unsubscribe(workspace.workspaceId, channel)
+                    channel.close()
+                }
+            }
         }
     }
 }
