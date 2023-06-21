@@ -1,12 +1,14 @@
 package processm.core.log
 
 import processm.core.DBTestHelper.dbName
+import processm.core.log.attribute.MutableAttributeMap
 import processm.core.persistence.connection.DBCache
 import java.io.File
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 import kotlin.test.Ignore
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 internal class DBXESOutputStreamTest {
     private val content = """<?xml version="1.0" encoding="UTF-8" ?>
@@ -98,6 +100,33 @@ internal class DBXESOutputStreamTest {
             DBXESOutputStream(DBCache.get(dbName).getConnection()).use { out ->
                 out.write(XMLXESInputStream(gzip))
             }
+        }
+    }
+
+    /**
+     * This is an updated version of the code in #162. As expected, after #151 the problem disappeared.
+     */
+    @Test
+    fun `too many range table entries`() {
+        fun create(depth: Int, parent: MutableAttributeMap) {
+            if (depth == 0) {
+                parent["0"] = 0
+                return
+            }
+            val child = parent.children("$depth")
+            create(depth - 1, child.children(0))
+            create(depth - 1, child.children(1))
+        }
+
+        val depth = 14
+        val attributes = MutableAttributeMap().apply { create(depth, this) }
+        assertEquals(1 shl depth, attributes.flatView.size)
+        val log = processm.core.log.hierarchical.Log(
+            emptySequence(),
+            attributesInternal = attributes
+        )
+        DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
+            output.write(log)
         }
     }
 }
