@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class DirectlyFollowsGraph : ProcessModel {
     companion object
+
     /**
      * Built graph
      *
@@ -30,7 +31,7 @@ class DirectlyFollowsGraph : ProcessModel {
     val graph = DoublingMap2D<Activity, Activity, Arc>()
 
     override val activities: Sequence<Activity>
-        get() = graph.rows.asSequence()
+        get() = (graph.rows + graph.columns + initialActivities.keys + finalActivities.keys).asSequence()
 
     /**
      * Map with start activities (first activity in trace) + arc statistics

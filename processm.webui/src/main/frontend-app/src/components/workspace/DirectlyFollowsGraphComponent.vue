@@ -12,37 +12,22 @@
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
-import G6 from "@antv/g6";
+import G6, { GraphData } from "@antv/g6";
+import { DirectlyFollowsGraphComponentData } from "@/openapi";
 
 @Component
 export default class DirectlyFollowsGraphComponent extends Vue {
   @Prop({ default: {} })
-  readonly data!: { data: { value: string } };
+  readonly data!: { data: DirectlyFollowsGraphComponentData };
 
   mounted() {
-    const data = {
-      // TODO: replace with actual data
-      // The array of nodes
-      nodes: [
-        {
-          id: "node1", // String, unique and required
-          x: 100, // Number, the x coordinate
-          y: 200 // Number, the y coordinate
-        },
-        {
-          id: "node2", // String, unique and required
-          x: 300, // Number, the x coordinate
-          y: 200 // Number, the y coordinate
-        }
-      ],
-      // The array of edges
-      edges: [
-        {
-          source: "node1", // String, required, the id of the source node
-          target: "node2" // String, required, the id of the target node
-        }
-      ]
-    };
+    const graphData = (this.data.data as unknown) as GraphData;
+    this.markSelfLoops(graphData);
+    this.calcSize(graphData);
+    this.calcLayers(graphData);
+
+    console.log(graphData);
+
     setTimeout(() => {
       // wait until height of the component is calculated
       const container = this.$refs.graph as HTMLElement;
@@ -51,16 +36,93 @@ export default class DirectlyFollowsGraphComponent extends Vue {
         width: container.offsetWidth, // Number, required, the width of the graph
         height: container.offsetHeight, // Number, required, the height of the graph
         fitView: true,
+        fitCenter: true,
         layout: {
-          type: "dagre"
+          type: "comboCombined",
+          preventOverlap: true,
+          outerLayout: new G6.Layout["dagre"]({
+            rankdir: "LR",
+            nodesep: 20,
+            ranksep: 50,
+            controlPoints: true
+          })
         },
         defaultNode: {
-          type: "rect"
+          type: "ellipse",
+          size: [100, 25],
+          logoIcon: {
+            show: false
+          },
+          stateIcon: {
+            show: false
+          }
+        },
+        defaultEdge: {
+          type: "quadratic",
+          style: {
+            stroke: "#424242",
+            endArrow: {
+              path: G6.Arrow.vee(10, 10, 0),
+              //d: 0,
+              fill: "#424242",
+              stroke: "#424242"
+            }
+          },
+          labelCfg: {
+            refY: 5
+          }
         }
       });
-      graph.data(data); // Load the data defined in Step 2
+      graph.data(graphData); // Load the data
       graph.render(); // Render the graph
     }, 0);
+  }
+
+  markSelfLoops(data: GraphData) {
+    const selfLoops = data.edges!.filter((edge) => edge.source === edge.target);
+    for (const edge of selfLoops) {
+      edge.type = "loop";
+    }
+  }
+
+  calcSize(data: GraphData) {
+    for (const node of data.nodes!) {
+      const chars = node.label!.toString().length;
+      if (chars > 20) {
+        node.size = [5 * chars + Math.log2(chars), 25];
+      }
+    }
+  }
+
+  calcLayers(data: GraphData) {
+    // begin with start nodes
+    const queue = data.nodes!.filter((node) => !data.edges!.some((edge) => edge.source !== node.id && edge.target === node.id));
+    for (let node of queue) {
+      node.layer = 0;
+    }
+
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      const followers = data
+        .edges!.filter((edge) => edge.source === node.id)
+        .map((edge) => data.nodes!.find((node) => node.id === edge.target)!)
+        .filter((node) => node.layer === undefined);
+      for (const follower of followers) {
+        follower.layer = (node.layer as number) + 1;
+      }
+      queue.push(...followers);
+    }
+
+    // move final nodes to the last layer
+    const maxLayer = Math.max(...data.nodes!.map((node) => node.layer as number)) + 1;
+    const final = data.nodes!.filter((node) => !data.edges!.some((edge) => edge.source === node.id && edge.target !== node.id));
+    for (const node of final) {
+      node.layer = maxLayer;
+    }
+
+    for (const node of data.nodes!) {
+      node.comboId = "" + node.layer;
+    }
   }
 }
 </script>

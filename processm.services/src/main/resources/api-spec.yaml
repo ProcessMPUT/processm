@@ -2318,6 +2318,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/ComponentData'
         - type: object
+          required: [ nodes, edges ]
           properties:
             nodes:
               type: array
@@ -2344,7 +2345,7 @@ components:
               type: string
     DFGEdge:
       type: object
-      required: [ source, target ]
+      required: [ label, source, target ]
       properties:
         id:
           type: string
@@ -2356,6 +2357,10 @@ components:
         target:
           type: string
           description: Node id
+        support:
+          type: number
+          format: double
+          default: 1.0
         style:
           type: object
           properties:

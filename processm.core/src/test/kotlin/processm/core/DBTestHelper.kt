@@ -19,6 +19,13 @@ object DBTestHelper {
     val dbName: String = UUID(0xFFFFFL, System.currentTimeMillis()).toString()
 
     /**
+     * The UUID of the JournalReview.xes log.
+     */
+    val JournalReview by lazy {
+        this::class.java.getResourceAsStream("/xes-logs/JournalReview.xes").use { loadLog(it) }
+    }
+
+    /**
      * The UUID of the JournalReview-extra.xes log.
      */
     val JournalReviewExtra by lazy {

@@ -158,7 +158,25 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     UUID.fromString(requireNotNull(data) { "Missing DFG id" })
                 )
 
-                TODO("create component data")
+                DirectlyFollowsGraphComponentData(
+                    type = ComponentType.directlyFollowsGraph,
+                    nodes = dfg.activities.mapToArray {
+                        DFGNode(
+                            it.name,
+                            it.name
+                        )
+                    },
+                    edges = dfg.graph.rows.flatMap { source ->
+                        dfg.graph.getRow(source).map { (target, arc) ->
+                            DFGEdge(
+                                source = source.name,
+                                target = target.name,
+                                label = arc.cardinality.toString(),
+                                support = arc.cardinality.toDouble()
+                            )
+                        }
+                    }.toTypedArray()
+                )
             }
 
             ComponentTypeDto.TreeLogView -> {
