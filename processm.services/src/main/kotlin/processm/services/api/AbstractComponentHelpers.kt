@@ -169,6 +169,7 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                     edges = dfg.graph.rows.flatMap { source ->
                         dfg.graph.getRow(source).map { (target, arc) ->
                             DFGEdge(
+                                id = "${source.name}->${target.name}",
                                 source = source.name,
                                 target = target.name,
                                 label = arc.cardinality.toString(),

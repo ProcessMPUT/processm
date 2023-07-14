@@ -1,128 +1,64 @@
-<template>
-  <div ref="graph" class="dfg"></div>
+<template xmlns:v-slot="http://www.w3.org/1999/html">
+  <table>
+    <tr>
+      <td>
+        <graph :data="data.data" :filter-edge="filterEdge" :refresh="support"></graph>
+      </td>
+      <td>
+        <v-card>
+          <v-card-title>{{ $t("common.filter") }}</v-card-title>
+          <v-card-text>
+            <div>
+              {{ $t("workspace.component.dfg.support") }}
+            </div>
+            <v-slider v-model="support" :max="maxSupport" :min="minSupport" step="1" thumb-label="always" vertical></v-slider>
+          </v-card-text>
+        </v-card>
+      </td>
+    </tr>
+  </table>
 </template>
 
 <style scoped>
-.dfg {
+table {
   width: 100%;
   height: 100%;
+}
+
+table td:last-child {
+  width: 100px;
+  text-align: center;
 }
 </style>
 
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
-import G6, { GraphData } from "@antv/g6";
 import { DirectlyFollowsGraphComponentData } from "@/openapi";
+import Graph from "@/components/Graph.vue";
+import { EdgeConfig } from "@antv/g6-core/lib/types";
 
-@Component
+@Component({
+  components: { Graph }
+})
 export default class DirectlyFollowsGraphComponent extends Vue {
   @Prop({ default: {} })
   readonly data!: { data: DirectlyFollowsGraphComponentData };
 
+  minSupport: number = 0;
+  maxSupport: number = 1;
+  support: number = 1;
+
   mounted() {
-    const graphData = (this.data.data as unknown) as GraphData;
-    this.markSelfLoops(graphData);
-    this.calcSize(graphData);
-    this.calcLayers(graphData);
-
-    console.log(graphData);
-
-    setTimeout(() => {
-      // wait until height of the component is calculated
-      const container = this.$refs.graph as HTMLElement;
-      const graph = new G6.Graph({
-        container: container, // String | HTMLElement, required, the id of DOM element or an HTML node
-        width: container.offsetWidth, // Number, required, the width of the graph
-        height: container.offsetHeight, // Number, required, the height of the graph
-        fitView: true,
-        fitCenter: true,
-        layout: {
-          type: "comboCombined",
-          preventOverlap: true,
-          outerLayout: new G6.Layout["dagre"]({
-            rankdir: "LR",
-            nodesep: 20,
-            ranksep: 50,
-            controlPoints: true
-          })
-        },
-        defaultNode: {
-          type: "ellipse",
-          size: [100, 25],
-          logoIcon: {
-            show: false
-          },
-          stateIcon: {
-            show: false
-          }
-        },
-        defaultEdge: {
-          type: "quadratic",
-          style: {
-            stroke: "#424242",
-            endArrow: {
-              path: G6.Arrow.vee(10, 10, 0),
-              //d: 0,
-              fill: "#424242",
-              stroke: "#424242"
-            }
-          },
-          labelCfg: {
-            refY: 5
-          }
-        }
-      });
-      graph.data(graphData); // Load the data
-      graph.render(); // Render the graph
-    }, 0);
+    const supports = this.data.data.edges.map((edge) => edge.support as number).sort((a, b) => a - b);
+    this.minSupport = Math.min(...supports);
+    this.maxSupport = Math.max(...supports);
+    this.support = Math.min(supports[Math.round(supports.length * 0.2)], Math.round(this.minSupport + (this.maxSupport - this.minSupport) * 0.2));
+    this.support = Math.max(this.support, this.minSupport);
   }
 
-  markSelfLoops(data: GraphData) {
-    const selfLoops = data.edges!.filter((edge) => edge.source === edge.target);
-    for (const edge of selfLoops) {
-      edge.type = "loop";
-    }
-  }
-
-  calcSize(data: GraphData) {
-    for (const node of data.nodes!) {
-      const chars = node.label!.toString().length;
-      if (chars > 20) {
-        node.size = [5 * chars + Math.log2(chars), 25];
-      }
-    }
-  }
-
-  calcLayers(data: GraphData) {
-    // begin with start nodes
-    const queue = data.nodes!.filter((node) => !data.edges!.some((edge) => edge.source !== node.id && edge.target === node.id));
-    for (let node of queue) {
-      node.layer = 0;
-    }
-
-    while (queue.length > 0) {
-      const node = queue.shift()!;
-      const followers = data
-        .edges!.filter((edge) => edge.source === node.id)
-        .map((edge) => data.nodes!.find((node) => node.id === edge.target)!)
-        .filter((node) => node.layer === undefined);
-      for (const follower of followers) {
-        follower.layer = (node.layer as number) + 1;
-      }
-      queue.push(...followers);
-    }
-
-    // move final nodes to the last layer
-    const maxLayer = Math.max(...data.nodes!.map((node) => node.layer as number)) + 1;
-    const final = data.nodes!.filter((node) => !data.edges!.some((edge) => edge.source === node.id && edge.target !== node.id));
-    for (const node of final) {
-      node.layer = maxLayer;
-    }
-
-    for (const node of data.nodes!) {
-      node.comboId = "" + node.layer;
-    }
+  filterEdge(edge: EdgeConfig): boolean {
+    return (edge.support as number) >= this.support;
   }
 }
 </script>

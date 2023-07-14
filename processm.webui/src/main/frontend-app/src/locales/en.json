@@ -32,6 +32,9 @@
       "petri-net": "Petri net",
       "select": "Select type",
       "no-data": "No data to be displayed",
+      "dfg": {
+        "support": "Support"
+      },
       "edit": {
         "name": "Name",
         "type": "Type",
@@ -283,6 +286,7 @@
     "initial": "Initial",
     "final": "Final",
     "filename": "Filename",
+    "filter": "Filter",
     "cancel": "Cancel",
     "debug": "Debug",
     "email": "E-mail",

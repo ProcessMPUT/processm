@@ -13,7 +13,7 @@ class DirectlyFollowsGraphTests {
     fun `Journal review complete only`() {
         val log = DBHierarchicalXESInputStream(
             DBTestHelper.dbName,
-            Query("where l:id=${DBTestHelper.JournalReview} and transition='complete'")
+            Query("where l:id=${DBTestHelper.JournalReviewExtra} and transition='complete'")
         )
 
         val dfg = DirectlyFollowsGraph()

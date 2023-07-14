@@ -8,3 +8,4 @@ processm.core/gen/
 /processm.webui/src/main/node/
 *.DS_Store
 /processm-docker-image.tar
+*dependency-reduced-pom.xml

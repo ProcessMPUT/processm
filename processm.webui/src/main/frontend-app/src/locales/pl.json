@@ -32,6 +32,9 @@
       "petri-net": "Sieć Petriego",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
+      "dfg": {
+        "support": "Wsparcie"
+      },
       "edit": {
         "name": "Nazwa",
         "type": "Typ",
@@ -281,6 +284,7 @@
     "initial": "Początkowe",
     "final": "Końcowe",
     "filename": "Nazwa pliku",
+    "filter": "Filtr",
     "cancel": "Anuluj",
     "email": "E-mail",
     "save": "Zapisz",
