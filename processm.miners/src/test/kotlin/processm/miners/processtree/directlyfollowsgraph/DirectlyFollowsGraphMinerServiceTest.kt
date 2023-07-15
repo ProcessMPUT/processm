@@ -12,7 +12,6 @@ import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
-import processm.miners.triggerEvent
 import java.util.*
 import kotlin.test.*
 
