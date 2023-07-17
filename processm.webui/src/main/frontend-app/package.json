@@ -18,6 +18,7 @@
     "testEnvironment": "jsdom"
   },
   "dependencies": {
+    "@antv/g6": "^4.8.13",
     "@types/clarinet": "^0.12.0",
     "@types/dagre": "^0.7.44",
     "axios": "^0.19.2",

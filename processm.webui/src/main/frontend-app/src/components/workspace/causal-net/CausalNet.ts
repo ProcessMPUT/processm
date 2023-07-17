@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
-import { SimulationNodeDatum, SimulationLinkDatum } from "d3";
+import { SimulationLinkDatum, SimulationNodeDatum } from "d3";
 import dagre from "dagre";
+import { Graph } from "graphlib";
 
 export interface DataNode {
   id: string;
@@ -613,7 +614,7 @@ export default class CausalNet {
     nodes: Array<{ id: string }>,
     links: Array<{ sourceNodeId: string; targetNodeId: string }>
   ) {
-    const networkGraph = new dagre.graphlib.Graph()
+    const networkGraph = new Graph()
       .setGraph({
         marginx: 10,
         marginy: 10,
@@ -623,26 +624,26 @@ export default class CausalNet {
         return new Map();
       });
 
-    links.forEach((link) =>
-      networkGraph.setEdge(link.sourceNodeId, link.targetNodeId)
-    );
+    links.forEach((link) => networkGraph.setEdge(link.sourceNodeId, link.targetNodeId));
     nodes.forEach((node: { id: string }) => {
       networkGraph.setNode(node.id, { label: node.id });
     });
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     dagre.layout(networkGraph);
-    const layoutWidth = networkGraph.graph().width,
-      layoutHeight = networkGraph.graph().height;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const layoutWidth = networkGraph.graph().width;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const layoutHeight = networkGraph.graph().height;
 
-    return networkGraph
-      .nodes()
-      .reduce((layout: Map<string, Point>, nodeId: string) => {
-        const node = networkGraph.node(nodeId);
-        const nodePosition =
-          this.nodeTransition?.(node as Point, layoutWidth, layoutHeight) ||
-          (node as Point);
-        return layout.set(nodeId, nodePosition);
-      }, new Map());
+    return networkGraph.nodes().reduce((layout: Map<string, Point>, nodeId: string) => {
+      const node = networkGraph.node(nodeId);
+      const nodePosition = this.nodeTransition?.(node as Point, layoutWidth, layoutHeight) || (node as Point);
+      return layout.set(nodeId, nodePosition);
+    }, new Map());
   }
 
   private groupObjectsByProperty<TObject, TProperty>(

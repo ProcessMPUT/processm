@@ -133,10 +133,15 @@ enum class ComponentTypeDto(val typeName: String) {
     AlignerKpi("alignerKpi"),
     PetriNet("petriNet"),
     TreeLogView("treeLogView"),
-    FlatLogView("flatLogView");
+    FlatLogView("flatLogView"),
+    DirectlyFollowsGraph("directlyFollowsGraph");
 
     companion object {
-        fun byTypeNameInDatabase(typeNameInDatabase: String) = values().first { it.typeName == typeNameInDatabase }
+        fun byTypeNameInDatabase(typeNameInDatabase: String) = try {
+            values().first { it.typeName == typeNameInDatabase }
+        } catch (e: NoSuchElementException) {
+            throw IllegalArgumentException("Unknown component type: $typeNameInDatabase", e)
+        }
     }
 
     override fun toString(): String = typeName

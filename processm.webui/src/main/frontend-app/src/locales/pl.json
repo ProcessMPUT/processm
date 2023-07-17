@@ -26,11 +26,15 @@
       "aligner-kpi": "KPI bazujące na wyrównaniu",
       "bpmn": "BPMN",
       "causal-net": "Sieć przyczynowa",
+      "directly-follows-graph": "Graph bezpośredniego następstwa",
       "kpi": "KPI bazujące na logu",
       "tree-log-view": "Hierarchiczny widok logu",
       "petri-net": "Sieć Petriego",
       "select": "Wybierz komponent",
       "no-data": "Brak danych do wyświetlenia",
+      "dfg": {
+        "support": "Wsparcie"
+      },
       "edit": {
         "name": "Nazwa",
         "type": "Typ",
@@ -280,6 +284,7 @@
     "initial": "Początkowe",
     "final": "Końcowe",
     "filename": "Nazwa pliku",
+    "filter": "Filtr",
     "cancel": "Anuluj",
     "email": "E-mail",
     "save": "Zapisz",

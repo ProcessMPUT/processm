@@ -3,15 +3,7 @@
     <div v-if="componentDetails.type != null" class="component-name">
       <v-menu offset-y bottom min-width="0">
         <template #activator="{ on }">
-          <v-btn
-            class="component-name"
-            small
-            tile
-            depressed
-            :ripple="false"
-            v-on="on"
-            >{{ componentDetails.name }}<v-icon dark>expand_more</v-icon></v-btn
-          >
+          <v-btn :ripple="false" class="component-name" depressed small tile v-on="on">{{ componentDetails.name }}<v-icon dark>expand_more</v-icon></v-btn>
         </template>
 
         <v-list dense>
@@ -32,23 +24,12 @@
       </v-menu>
     </div>
     <div v-else>
-      <v-btn
-        icon
-        small
-        class="remove-button"
-        @click="$emit('remove', componentDetails.id)"
-      >
+      <v-btn class="remove-button" icon small @click="$emit('remove', componentDetails.id)">
         <v-icon>close</v-icon>
       </v-btn>
     </div>
     <div v-if="isDisplayable" class="workspace-component-content-parent">
-      <component
-        :is="componentType"
-        :data="componentDetails"
-        :component-mode="componentMode"
-        :update-data="updateData"
-        class="workspace-component-content"
-      />
+      <component :is="componentType" :component-mode="componentMode" :data="componentDetails" :update-data="updateData" class="workspace-component-content" />
       <div class="last-updated">
         {{ $t("common.last-updated") }}:
         {{ lastModified }}
@@ -121,6 +102,7 @@ import BPMNComponent from "./bpmn/BPMNComponent.vue";
 import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import TreeLogViewComponent from "@/components/workspace/TreeLogViewComponent.vue";
 import FlatLogViewComponent from "@/components/workspace/FlatLogViewComponent.vue";
+import DirectlyFollowsGraphComponent from "@/components/workspace/DirectlyFollowsGraphComponent.vue";
 
 export enum ComponentMode {
   Static,
@@ -135,7 +117,8 @@ export enum ComponentMode {
     petriNetComponent: PetriNetComponent,
     bpmnComponent: BPMNComponent,
     treeLogViewComponent: TreeLogViewComponent,
-    flatLogViewComponent: FlatLogViewComponent // https://stackoverflow.com/a/58875919
+    flatLogViewComponent: FlatLogViewComponent,
+    directlyFollowsGraphComponent: DirectlyFollowsGraphComponent // https://stackoverflow.com/a/58875919
   }
 })
 export default class WorkspaceComponent extends Vue {
@@ -153,9 +136,7 @@ export default class WorkspaceComponent extends Vue {
   @Prop({ default: false })
   readonly updateData = false;
 
-  private readonly lastModified =
-    this.componentDetails?.dataLastModified ??
-    this.componentDetails?.userLastModified;
+  private readonly lastModified = this.componentDetails?.dataLastModified ?? this.componentDetails?.userLastModified;
 
   get isDisplayable(): boolean {
     return this.componentDetails?.data?.isDisplayable ?? false;

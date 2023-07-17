@@ -1,12 +1,13 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.LogInputStream
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeActivity
 import processm.core.models.processtree.ProcessTreeSimplifier
-import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 import processm.miners.processtree.inductiveminer.CutType.*
 import java.util.*
+import processm.miners.processtree.inductiveminer.CutType.Activity as CertainActivity
 
 /**
  * Online Inductive Miner
@@ -14,7 +15,8 @@ import java.util.*
 class OnlineInductiveMiner : InductiveMiner() {
     companion object {
         val operatorCuts = setOf(Parallel, Sequence, Exclusive, RedoLoop)
-        val activityCuts = setOf(Activity, OptionalActivity, RedoActivityAtLeastOnce, RedoActivityAtLeastZeroTimes)
+        val activityCuts =
+            setOf(CertainActivity, OptionalActivity, RedoActivityAtLeastOnce, RedoActivityAtLeastZeroTimes)
     }
 
     /**
@@ -81,8 +83,8 @@ class OnlineInductiveMiner : InductiveMiner() {
 
         if (diff == null) {
             val activities = dfg.graph.rows.toHashSet().also {
-                it.addAll(dfg.startActivities.keys)
-                it.addAll(dfg.endActivities.keys)
+                it.addAll(dfg.initialActivities.keys)
+                it.addAll(dfg.finalActivities.keys)
             }
 
             // Rebuild tree - changes are too big
@@ -95,6 +97,8 @@ class OnlineInductiveMiner : InductiveMiner() {
             changedStatistics = false
         } else if (diff.isNotEmpty()) {
             // Detect affected by change activities
+            @Suppress("UNCHECKED_CAST")
+            diff as Collection<Pair<ProcessTreeActivity, ProcessTreeActivity>>
             val affectedActivities = detectAffectedActivities(diff)
 
             // Find where rebuild graph

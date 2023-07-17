@@ -1,6 +1,7 @@
 package processm.miners.processtree.directlyfollowsgraph
 
 import processm.core.log.Helpers.logFromString
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.processtree.ProcessTreeActivity
 import kotlin.test.*
 
@@ -19,8 +20,8 @@ class DirectlyFollowsGraphTest {
 
         assertTrue(miner.graph.rows.isEmpty())
         assertTrue(miner.graph.columns.isEmpty())
-        assertTrue(miner.startActivities.isEmpty())
-        assertTrue(miner.endActivities.isEmpty())
+        assertTrue(miner.initialActivities.isEmpty())
+        assertTrue(miner.finalActivities.isEmpty())
     }
 
     @Test
@@ -84,10 +85,10 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(sequenceOf(log))
 
-        assertEquals(1, miner.startActivities.size)
+        assertEquals(1, miner.initialActivities.size)
 
-        assertTrue(miner.startActivities.contains(A))
-        assertEquals(4, miner.startActivities[A]!!.cardinality)
+        assertTrue(miner.initialActivities.contains(A))
+        assertEquals(4, miner.initialActivities[A]!!.cardinality)
     }
 
     @Test
@@ -103,10 +104,10 @@ class DirectlyFollowsGraphTest {
         val miner = DirectlyFollowsGraph()
         miner.discover(sequenceOf(log))
 
-        assertEquals(1, miner.endActivities.size)
+        assertEquals(1, miner.finalActivities.size)
 
-        assertTrue(miner.endActivities.contains(D))
-        assertEquals(4, miner.endActivities[D]!!.cardinality)
+        assertTrue(miner.finalActivities.contains(D))
+        assertEquals(4, miner.finalActivities[D]!!.cardinality)
     }
 
     @Test
@@ -137,15 +138,15 @@ class DirectlyFollowsGraphTest {
 
         assertTrue(miner.graph.rows.isEmpty())
         assertTrue(miner.graph.columns.isEmpty())
-        assertTrue(miner.startActivities.isEmpty())
-        assertTrue(miner.endActivities.isEmpty())
+        assertTrue(miner.initialActivities.isEmpty())
+        assertTrue(miner.finalActivities.isEmpty())
 
         miner.discoverDiff(sequenceOf(log))
 
         assertTrue(miner.graph.rows.isNotEmpty())
         assertTrue(miner.graph.columns.isNotEmpty())
-        assertTrue(miner.startActivities.isNotEmpty())
-        assertTrue(miner.endActivities.isNotEmpty())
+        assertTrue(miner.initialActivities.isNotEmpty())
+        assertTrue(miner.finalActivities.isNotEmpty())
     }
 
     @Test
@@ -161,8 +162,8 @@ class DirectlyFollowsGraphTest {
 
         assertTrue(miner.graph.rows.isEmpty())
         assertTrue(miner.graph.columns.isEmpty())
-        assertTrue(miner.startActivities.isEmpty())
-        assertTrue(miner.endActivities.isEmpty())
+        assertTrue(miner.initialActivities.isEmpty())
+        assertTrue(miner.finalActivities.isEmpty())
 
         miner.discoverDiff(sequenceOf(log))
 
@@ -173,11 +174,11 @@ class DirectlyFollowsGraphTest {
         assertEquals(1, miner.graph[C, B]!!.cardinality)
         assertEquals(1, miner.graph[C, D]!!.cardinality)
 
-        assertEquals(1, miner.startActivities.size)
-        assertTrue(miner.startActivities.contains(A))
+        assertEquals(1, miner.initialActivities.size)
+        assertTrue(miner.initialActivities.contains(A))
 
-        assertEquals(1, miner.endActivities.size)
-        assertTrue(miner.endActivities.contains(D))
+        assertEquals(1, miner.finalActivities.size)
+        assertTrue(miner.finalActivities.contains(D))
     }
 
     @Test

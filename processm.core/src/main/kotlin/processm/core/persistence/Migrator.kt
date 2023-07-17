@@ -39,7 +39,7 @@ object Migrator {
      */
     private fun migrateMainDatabase() {
         loggedScope { logger ->
-            logger.debug("Migrating the main database if required")
+            logger.info("Migrating the main database if required")
 
             with(Flyway.configure().dataSource(dbConfig.baseConnectionURL, null, null)) {
                 locations("db/processm_main_migrations")
@@ -57,7 +57,7 @@ object Migrator {
      */
     private fun migrateDataStoreDatabase(dataStoreDBName: String) {
         loggedScope { logger ->
-            logger.debug("Migrating datastore database if required")
+            logger.info("Migrating datastore $dataStoreDBName if required")
 
             ensureDatabaseExists(dataStoreDBName)
             val expectedDatabaseConnectionURL = switchDatabaseURL(dataStoreDBName)

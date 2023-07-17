@@ -1,9 +1,9 @@
 package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.LogInputStream
+import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.core.models.processtree.ProcessTree
 import processm.core.models.processtree.ProcessTreeSimplifier
-import processm.miners.processtree.directlyfollowsgraph.DirectlyFollowsGraph
 
 /**
  * Inductive Miner version Offline, without log split inside.
@@ -21,12 +21,12 @@ class OfflineInductiveMiner : InductiveMiner() {
         dfg.discover(logsCollection)
 
         // DFG without activities - return empty process tree model
-        if (dfg.startActivities.isEmpty() || dfg.endActivities.isEmpty()) return ProcessTree()
+        if (dfg.initialActivities.isEmpty() || dfg.finalActivities.isEmpty()) return ProcessTree()
 
         // Prepare set with activities in graph
         val activities = dfg.graph.rows.toHashSet().also {
-            it.addAll(dfg.startActivities.keys)
-            it.addAll(dfg.endActivities.keys)
+            it.addAll(dfg.initialActivities.keys)
+            it.addAll(dfg.finalActivities.keys)
         }
 
         // Discover processTree model

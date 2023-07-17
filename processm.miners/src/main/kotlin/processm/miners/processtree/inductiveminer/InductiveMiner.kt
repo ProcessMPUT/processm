@@ -50,7 +50,7 @@ abstract class InductiveMiner {
      */
     private fun discoveredCutToNodeObject(graph: DirectlyFollowsSubGraph): Node {
         return when (graph.detectedCut) {
-            CutType.Activity -> graph.finishCalculations()
+            CutType.Activity -> graph.finishCalculations() as ProcessTreeActivity
             CutType.Exclusive -> Exclusive()
             CutType.Sequence -> Sequence()
             CutType.Parallel -> Parallel()

@@ -3,6 +3,7 @@ package processm.core.persistence.copy
 import org.postgresql.PGConnection
 import org.postgresql.copy.PGCopyOutputStream
 import java.io.PrintStream
+import java.nio.charset.Charset
 import java.sql.Connection
 
 
@@ -46,7 +47,7 @@ class LazyCopy(destination: String, extraColumnValues: Collection<String> = empt
             return
         val pgConnection = connection.unwrap(PGConnection::class.java)
         PGCopyOutputStream(pgConnection, sql).use {
-            PrintStream(it).use { out ->
+            PrintStream(it, false, Charset.forName("utf-8")).use { out ->
                 for ((idx, row) in data) {
                     out.print(ids[idx])
                     out.print(row)
