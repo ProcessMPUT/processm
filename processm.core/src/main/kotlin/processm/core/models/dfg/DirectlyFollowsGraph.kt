@@ -187,20 +187,9 @@ class DirectlyFollowsGraph : ProcessModel {
                     }
 
                     // Add connection from source to activity
-                    if (previousActivity == null) {
+                    if (previousActivity === null) {
                         // Runs in O(1)
-                        if (activity in initialActivities) {
-                            // Just only insert
-                            // Runs in O(1)
-                            initialActivities[activity]!!.increment()
-                        } else {
-                            // Insert and increment
-                            // Runs in O(1)
-                            initialActivities[activity] = Arc().increment()
-
-                            // Remember - changed start activities
-                            changedStartActivity = true
-                        }
+                        initialActivities.computeIfAbsent(activity) { changedStartActivity = true; Arc() }.increment()
                     } else {
                         // If activity duplicated - remember in special collection
                         if (activity == previousActivity) {
@@ -228,20 +217,9 @@ class DirectlyFollowsGraph : ProcessModel {
                 }
 
                 // Add connection with sink
-                if (previousActivity != null) {
+                if (previousActivity !== null) {
                     // Runs in O(1)
-                    if (previousActivity in finalActivities) {
-                        // Just only insert
-                        // Runs in O(1)
-                        finalActivities[previousActivity!!]!!.increment()
-                    } else {
-                        // Insert and increment
-                        // Runs in O(1)
-                        finalActivities[previousActivity!!] = Arc().increment()
-
-                        // Remember - changed end activity
-                        changedEndActivity = true
-                    }
+                    finalActivities.computeIfAbsent(previousActivity!!) { changedEndActivity = true; Arc() }.increment()
                 }
 
                 // Runs in O(|activities|)
