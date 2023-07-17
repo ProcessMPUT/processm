@@ -4,6 +4,7 @@ import org.postgresql.PGConnection
 import org.postgresql.copy.PGCopyOutputStream
 import java.io.Closeable
 import java.io.PrintStream
+import java.nio.charset.Charset
 import java.sql.Connection
 
 
@@ -36,7 +37,11 @@ class EagerCopy(
     } else ""
 
     private val stream: PrintStream =
-        PrintStream(PGCopyOutputStream(connection.unwrap(PGConnection::class.java), sql))
+        PrintStream(
+            PGCopyOutputStream(connection.unwrap(PGConnection::class.java), sql),
+            false,
+            Charset.forName("utf-8")
+        )
     private var newRow: Boolean = true
 
     override fun addInternal(text: String?) {
