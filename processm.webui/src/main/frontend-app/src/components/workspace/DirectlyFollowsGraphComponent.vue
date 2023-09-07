@@ -4,7 +4,7 @@
       <td>
         <graph :data="data.data" :filter-edge="filterEdge" :refresh="support"></graph>
       </td>
-      <td>
+      <td v-show="componentMode != ComponentMode.Static">
         <v-card>
           <v-card-title>{{ $t("common.filter") }}</v-card-title>
           <v-card-text>
@@ -37,13 +37,22 @@ import { Component, Prop } from "vue-property-decorator";
 import { DirectlyFollowsGraphComponentData } from "@/openapi";
 import Graph from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
+import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 
 @Component({
+  computed: {
+    ComponentMode() {
+      return ComponentMode;
+    }
+  },
   components: { Graph }
 })
 export default class DirectlyFollowsGraphComponent extends Vue {
   @Prop({ default: {} })
   readonly data!: { data: DirectlyFollowsGraphComponentData };
+
+  @Prop({ default: null })
+  readonly componentMode?: ComponentMode;
 
   minSupport: number = 0;
   maxSupport: number = 1;
