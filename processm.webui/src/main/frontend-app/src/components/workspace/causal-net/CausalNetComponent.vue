@@ -1,9 +1,5 @@
 <template>
-  <div
-    v-resize:debounce.10="onResize"
-    class="svg-container"
-    v-if="data != null"
-  >
+  <div v-resize:debounce.10="onResize" class="svg-container" v-if="data != null">
     <svg
       :viewBox="`0 0 ${contentWidth} ${contentHeight}`"
       x="0"
@@ -38,77 +34,36 @@
           markerUnits="userSpaceOnUse"
           :viewBox="`0 0 ${displayPreferences.edgeArrowMaximumSize} ${displayPreferences.edgeArrowMaximumSize}`"
           orient="auto"
-          :refX="`${
-            displayPreferences.edgeArrowHeight + displayPreferences.nodeSize
-          }`"
+          :refX="`${displayPreferences.edgeArrowHeight + displayPreferences.nodeSize}`"
           :refY="`${displayPreferences.edgeArrowWidth / 2}`"
           :markerWidth="`${displayPreferences.edgeArrowMaximumSize}`"
           :markerHeight="`${displayPreferences.edgeArrowMaximumSize}`"
         >
           <path
             :d="`M 0 0
-              ${displayPreferences.edgeArrowHeight} ${
-              displayPreferences.edgeArrowWidth / 2
-            }
+              ${displayPreferences.edgeArrowHeight} ${displayPreferences.edgeArrowWidth / 2}
               0 ${displayPreferences.edgeArrowWidth}
-              ${displayPreferences.edgeArrowWidth / 2} ${
-              displayPreferences.edgeArrowWidth / 2
-            }`"
+              ${displayPreferences.edgeArrowWidth / 2} ${displayPreferences.edgeArrowWidth / 2}`"
             :fill="`${this.displayPreferences.edgeColor}`"
           />
         </marker>
       </defs>
     </svg>
     <div class="node-details" />
-    <v-speed-dial
-      v-if="componentMode == ComponentMode.Edit"
-      top
-      right
-      absolute
-      direction="left"
-    >
+    <v-speed-dial v-if="componentMode == ComponentMode.Edit" top right absolute direction="left">
       <template #activator>
-        <v-btn
-          color="blue darken-2"
-          dark
-          fab
-          elevation="0"
-          @click="setEditMode(null)"
-        >
+        <v-btn color="blue darken-2" dark fab elevation="0" @click="setEditMode(null)">
           <v-icon v-if="editMode == null">edit</v-icon>
           <v-icon v-else>close</v-icon>
         </v-btn>
       </template>
-      <v-btn
-        fab
-        dark
-        small
-        color="green"
-        elevation="0"
-        :outlined="editMode != EditMode.Addition"
-        @click.stop="setEditMode(EditMode.Addition)"
-      >
+      <v-btn fab dark small color="green" elevation="0" :outlined="editMode != EditMode.Addition" @click.stop="setEditMode(EditMode.Addition)">
         <v-icon>add</v-icon>
       </v-btn>
-      <v-btn
-        fab
-        dark
-        small
-        color="red"
-        elevation="0"
-        :outlined="editMode != EditMode.Deletion"
-        @click.stop="setEditMode(EditMode.Deletion)"
-      >
+      <v-btn fab dark small color="red" elevation="0" :outlined="editMode != EditMode.Deletion" @click.stop="setEditMode(EditMode.Deletion)">
         <v-icon>delete</v-icon>
       </v-btn>
-      <v-btn
-        fab
-        dark
-        small
-        color="purple"
-        elevation="0"
-        @click.stop="rearrangeNodes"
-      >
+      <v-btn fab dark small color="purple" elevation="0" @click.stop="rearrangeNodes">
         <v-icon>grain</v-icon>
       </v-btn>
     </v-speed-dial>
@@ -162,31 +117,13 @@
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
 import * as d3 from "d3";
-import {
-  BaseType,
-  ContainerElement,
-  drag,
-  EnterElement,
-  ForceLink,
-  Selection,
-  Simulation
-} from "d3";
+import { BaseType, ContainerElement, drag, EnterElement, ForceLink, Selection, Simulation } from "d3";
 import resize from "vue-resize-directive";
 import { v4 as uuidv4 } from "uuid";
 import { ComponentMode } from "../WorkspaceComponent.vue";
 import CausalNet, { ElementType, Link, Node, Point } from "./CausalNet";
-import {
-  AdditionModeInputHandler,
-  DeletionModeInputHandler,
-  InteractiveModeInputHandler,
-  UserInputHandler,
-  UserInputSource
-} from "./UserInputHandlers";
-import {
-  CausalNetComponentData,
-  ProcessModelCustomizationData,
-  WorkspaceComponent as WorkspaceComponentModel
-} from "../../../models/WorkspaceComponent";
+import { AdditionModeInputHandler, DeletionModeInputHandler, InteractiveModeInputHandler, UserInputHandler, UserInputSource } from "./UserInputHandlers";
+import { CausalNetComponentData, ProcessModelCustomizationData, WorkspaceComponent as WorkspaceComponentModel } from "../../../models/WorkspaceComponent";
 
 enum EditMode {
   Addition,
@@ -224,30 +161,15 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   private nodeShapes() {
-    return this.nodes().select("g") as Selection<
-      SVGPathElement,
-      Node,
-      SVGGElement,
-      unknown
-    >;
+    return this.nodes().select("g") as Selection<SVGPathElement, Node, SVGGElement, unknown>;
   }
 
   private bindingNodeShapes() {
-    return this.nodes().select("path") as Selection<
-      SVGPathElement,
-      Node,
-      SVGGElement,
-      unknown
-    >;
+    return this.nodes().select("path") as Selection<SVGPathElement, Node, SVGGElement, unknown>;
   }
 
   private nodeLabels() {
-    return this.nodes().select("text") as Selection<
-      SVGTextElement,
-      Node,
-      SVGGElement,
-      unknown
-    >;
+    return this.nodes().select("text") as Selection<SVGTextElement, Node, SVGGElement, unknown>;
   }
 
   private linksLayer() {
@@ -310,13 +232,9 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   public runSimulation() {
     this.simulation?.nodes(this.causalNet.nodes).force(
       "charge",
-      d3
-        .forceManyBody()
-        .strength((d) => ((d as Node).hasType(ElementType.Regular) ? -1 : -5))
+      d3.forceManyBody().strength((d) => ((d as Node).hasType(ElementType.Regular) ? -1 : -5))
     );
-    this.simulation
-      ?.force<ForceLink<Node, Link>>("link")
-      ?.links(this.causalNet.links);
+    this.simulation?.force<ForceLink<Node, Link>>("link")?.links(this.causalNet.links);
     this.simulation
       ?.alphaTarget(this.alphaTarget)
       .alphaMin(this.alphaTarget + this.alphaMinDelta)
@@ -324,16 +242,9 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
   }
 
   public nodes(filterExpression: ((link: Node) => boolean) | null = null) {
-    const selection = this.nodesLayer().selectAll("g") as Selection<
-      SVGGElement,
-      Node,
-      SVGGElement,
-      unknown
-    >;
+    const selection = this.nodesLayer().selectAll("g") as Selection<SVGGElement, Node, SVGGElement, unknown>;
 
-    return filterExpression != null
-      ? selection.filter(filterExpression)
-      : selection;
+    return filterExpression != null ? selection.filter(filterExpression) : selection;
   }
 
   public links(filterExpression: ((link: Link) => boolean) | null = null) {
@@ -344,23 +255,15 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
       unknown
     >;
 
-    return filterExpression != null
-      ? selection.filter(filterExpression)
-      : selection;
+    return filterExpression != null ? selection.filter(filterExpression) : selection;
   }
 
   mounted() {
     if (this.data?.data == null) return;
     const data = this.data?.data as CausalNetComponentData;
-    const customizationData = this.data
-      ?.customizationData as ProcessModelCustomizationData;
+    const customizationData = this.data?.customizationData as ProcessModelCustomizationData;
 
-    this.causalNet = new CausalNet(
-      data.nodes ?? [],
-      data.edges ?? [],
-      customizationData?.layout,
-      this.nodeTransition
-    );
+    this.causalNet = new CausalNet(data.nodes ?? [], data.edges ?? [], customizationData?.layout, this.nodeTransition);
 
     if (customizationData?.layout == null) {
       this.data.customizationData = {
@@ -378,43 +281,25 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
         .forceLink()
         .id((d) => (d as Link).id)
         .distance((d) => ((d as Link).isLoopLink ? 20 : 0.1))
-        .strength((d) =>
-          (d as Link).hasType(ElementType.Binding)
-            ? 0
-            : (d as Link).isBetweenSplitAndJoin
-            ? 0.3
-            : 1
-        )
+        .strength((d) => ((d as Link).hasType(ElementType.Binding) ? 0 : (d as Link).isBetweenSplitAndJoin ? 0.3 : 1))
     );
 
     this.rootSvg()
-      .on("click", () =>
-        this.userInputHandler?.backgroundClick(this.getMousePosition())
-      )
-      .on("mousemove", () =>
-        this.userInputHandler?.backgroundMousemove(this.getMousePosition())
-      );
+      .on("click", () => this.userInputHandler?.backgroundClick(this.getMousePosition()))
+      .on("mousemove", () => this.userInputHandler?.backgroundMousemove(this.getMousePosition()));
 
     this.refreshLinks();
     this.refreshNodes();
 
-    this.nodeToBeCreated
-      .attr("transform", "translate(-100, -100)")
-      .style("pointer-events", "none");
+    this.nodeToBeCreated.attr("transform", "translate(-100, -100)").style("pointer-events", "none");
 
-    const scalingFactor = this.calculateScalingFactor(
-      (this.$refs.svg as Element).clientWidth,
-      (this.$refs.svg as Element).clientHeight
-    );
+    const scalingFactor = this.calculateScalingFactor((this.$refs.svg as Element).clientWidth, (this.$refs.svg as Element).clientHeight);
 
     this.scaleElements(scalingFactor);
 
     this.simulation.on("tick", () => {
       this.links().attr("d", this.linkArc);
-      this.nodes().attr(
-        "transform",
-        (d) => `translate(${d.x as number},${d.y as number})`
-      );
+      this.nodes().attr("transform", (d) => `translate(${d.x as number},${d.y as number})`);
     });
     this.runSimulation();
     this.setEditMode(null);
@@ -440,9 +325,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
                   this.userInputHandler?.nodeDragstarted(d);
                   this.userInputHandler?.nodeDragged(d, d3.event);
                 })
-                .on("drag", (d) =>
-                  this.userInputHandler?.nodeDragged(d, d3.event)
-                )
+                .on("drag", (d) => this.userInputHandler?.nodeDragged(d, d3.event))
                 .on("end", (d) => {
                   this.simulation
                     ?.alphaMin(this.alphaTarget + this.alphaMinDelta)
@@ -469,13 +352,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             .filter((d) => d.hasType(ElementType.Regular))
             .append("rect")
             .attr("class", "node-name-background")
-            .attr(
-              "width",
-              (d) =>
-                d.id.length * 3 +
-                this.displayPreferences.nodeSize * 3.6 +
-                this.displayPreferences.nodeSize * 0.2
-            )
+            .attr("width", (d) => d.id.length * 3 + this.displayPreferences.nodeSize * 3.6 + this.displayPreferences.nodeSize * 0.2)
             .attr("height", this.displayPreferences.nodeSize * 2 * 1.2)
             .attr("stroke", this.displayPreferences.regularNodeColor)
             .attr("rx", this.displayPreferences.nodeSize)
@@ -489,19 +366,13 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             .append("text")
             .attr("class", "node-name")
             .attr("x", this.displayPreferences.nodeSize * 1.2)
-            .attr(
-              "textLength",
-              (d) => d.id.length * 3 + this.displayPreferences.nodeSize * 1.2
-            )
+            .attr("textLength", (d) => d.id.length * 3 + this.displayPreferences.nodeSize * 1.2)
             .text((d) => (d.hasType(ElementType.Regular) ? d.id : ""));
 
           return enteredItems;
         },
         (update) => update,
-        (exit) =>
-          exit.call((exit) =>
-            exit.transition().duration(300).style("opacity", 0).remove()
-          )
+        (exit) => exit.call((exit) => exit.transition().duration(300).style("opacity", 0).remove())
       );
   }
 
@@ -512,15 +383,9 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
         (enter) =>
           enter
             .append("path")
-            .attr("stroke-opacity", (d) =>
-              d.hasType(ElementType.Binding) ? 0.5 : 0.7
-            )
-            .attr("marker-end", (d) =>
-              d.isTargetNodeRegular() ? `url(#arrow${this.arrowMarkerId})` : ""
-            )
-            .on("mouseover", (d) =>
-              this.userInputHandler?.linkMouseover(d, this.getMousePosition())
-            )
+            .attr("stroke-opacity", (d) => (d.hasType(ElementType.Binding) ? 0.5 : 0.7))
+            .attr("marker-end", (d) => (d.isTargetNodeRegular() ? `url(#arrow${this.arrowMarkerId})` : ""))
+            .on("mouseover", (d) => this.userInputHandler?.linkMouseover(d, this.getMousePosition()))
             .on("mouseout", (d) => this.userInputHandler?.linkMouseout(d))
             .on("click", (d) => {
               this.userInputHandler?.linkClick(d, this.getMousePosition());
@@ -528,9 +393,10 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
             }),
         (update) => update,
         (exit) =>
-          exit.call((exit) =>
-            exit.transition().duration(300).style("opacity", 0).remove()
-          )
+          exit.call((exit) => {
+            if (exit.transition) exit.transition().duration(300).style("opacity", 0).remove();
+            else exit.remove();
+          })
       );
   }
 
@@ -539,29 +405,20 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
 
     this.links().attr(
       "stroke-width",
-      (d) =>
-        (d.hasType(ElementType.Binding)
-          ? this.displayPreferences.bindingEdgeThickness
-          : this.displayPreferences.edgeThickness) * scalingFactor
+      (d) => (d.hasType(ElementType.Binding) ? this.displayPreferences.bindingEdgeThickness : this.displayPreferences.edgeThickness) * scalingFactor
     );
     this.nodes().attr("stroke-width", scalingFactor);
-    this.nodeLabels().attr(
-      "font-size",
-      this.displayPreferences.nodeLabelSize * scalingFactor
-    );
+    this.nodeLabels().attr("font-size", this.displayPreferences.nodeLabelSize * scalingFactor);
 
     this.currentScalingFactor = scalingFactor;
   }
 
   public updateNodeLayoutPosition(nodeId: string, position: Point): void {
-    const customizationData = this.data
-      ?.customizationData as ProcessModelCustomizationData;
+    const customizationData = this.data?.customizationData as ProcessModelCustomizationData;
 
     if (customizationData?.layout == null) return;
 
-    const nodeIndex = customizationData.layout.findIndex(
-      (node) => node.id == nodeId
-    );
+    const nodeIndex = customizationData.layout.findIndex((node) => node.id == nodeId);
 
     if (nodeIndex < 0) {
       customizationData.layout.push({
@@ -590,18 +447,12 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
       }
     } else {
       this.editMode = null;
-      this.userInputHandler =
-        this.componentMode == ComponentMode.Interactive
-          ? new InteractiveModeInputHandler(this)
-          : null;
+      this.userInputHandler = this.componentMode == ComponentMode.Interactive ? new InteractiveModeInputHandler(this) : null;
     }
   }
 
   private onResize(element: Element) {
-    const scalingFactor = this.calculateScalingFactor(
-      element.clientWidth,
-      element.clientHeight
-    );
+    const scalingFactor = this.calculateScalingFactor(element.clientWidth, element.clientHeight);
 
     this.scaleElements(scalingFactor);
   }
@@ -611,23 +462,11 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
     this.simulation?.alphaTarget(0.3).restart();
   }
 
-  private nodeTransition(
-    nodePosition: Point,
-    layoutWidth?: number,
-    layoutHeight?: number
-  ) {
+  private nodeTransition(nodePosition: Point, layoutWidth?: number, layoutHeight?: number) {
     const scaleX = this.contentWidth / (layoutWidth || this.contentWidth),
       scaleY = this.contentHeight / (layoutHeight || this.contentHeight),
-      offsetX =
-        Math.max(
-          this.contentWidth - (layoutWidth || this.contentWidth) * scaleX,
-          0
-        ) / 2,
-      offsetY =
-        Math.max(
-          this.contentHeight - (layoutHeight || this.contentHeight) * scaleY,
-          0
-        ) / 2;
+      offsetX = Math.max(this.contentWidth - (layoutWidth || this.contentWidth) * scaleX, 0) / 2,
+      offsetY = Math.max(this.contentHeight - (layoutHeight || this.contentHeight) * scaleY, 0) / 2;
 
     return {
       x: nodePosition.x * scaleX + offsetX,
@@ -642,10 +481,7 @@ export default class CausalNetComponent extends Vue implements UserInputSource {
     if (sourceNode == null || targetNode == null) return "";
 
     if (link.isLoopLink || false) {
-      const r = Math.hypot(
-        targetNode.x || 0 - (sourceNode.x || 0),
-        targetNode.y || 0 - (sourceNode.y || 0)
-      );
+      const r = Math.hypot(targetNode.x || 0 - (sourceNode.x || 0), targetNode.y || 0 - (sourceNode.y || 0));
       return `
         M${sourceNode.x},${sourceNode.y}
         A${r},${r} 0 0,1 ${targetNode.x},${targetNode.y}
