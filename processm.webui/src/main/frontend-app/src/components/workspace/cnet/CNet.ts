@@ -102,7 +102,7 @@ export class Link implements SimulationLinkDatum<Node> {
   }
 }
 
-export default class CausalNet {
+export default class CNet {
   constructor(
     dataNodes: Array<DataNode>,
     private dataLinks: Array<DataLink>,
