@@ -1,4 +1,3 @@
-<script src="http://localhost:8098"></script>
 <template xmlns:v-slot="http://www.w3.org/1999/html">
   <table>
     <tr>
