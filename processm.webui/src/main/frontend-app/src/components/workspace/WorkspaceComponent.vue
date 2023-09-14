@@ -112,7 +112,7 @@ export enum ComponentMode {
 
 @Component({
   components: {
-    causalNetComponent: CausalNetComponent,
+    CNetComponent: CNetComponent,
     kpiComponent: KpiComponent,
     petriNetComponent: PetriNetComponent,
     bpmnComponent: BPMNComponent,
