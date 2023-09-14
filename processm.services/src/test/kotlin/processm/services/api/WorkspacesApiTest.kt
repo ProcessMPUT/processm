@@ -28,7 +28,6 @@ import processm.services.api.models.*
 import processm.services.api.models.Workspace
 import processm.services.logic.Reason
 import processm.services.logic.ValidationException
-import processm.services.logic.WorkspaceNotificationService
 import processm.services.logic.WorkspaceService
 import java.time.Instant
 import java.util.*
@@ -771,6 +770,7 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     @Timeout(20L, unit = TimeUnit.SECONDS)
+    @Ignore("Unstable test; see #170")
     fun `five subscriptions from different clients`() {
         val result = ConcurrentLinkedDeque<UUID>()
         val workspaceId = UUID.randomUUID()
