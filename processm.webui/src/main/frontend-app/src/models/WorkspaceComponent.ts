@@ -1,6 +1,6 @@
-import { DataLink, DataNode } from "@/components/workspace/causal-net/CausalNet";
+import {DataLink, DataNode} from "@/components/workspace/causal-net/CausalNet";
 // TODO add PetriNet = "petriNet" to ComponentType
-import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
+import {AbstractComponent, AlignerKpiReport, ComponentType} from "@/openapi";
 
 export abstract class CustomizationData {
   constructor(init: Partial<CustomizationData>) {
@@ -22,7 +22,16 @@ export abstract class ComponentData {
   abstract get isDisplayable(): boolean | undefined;
 }
 
-export class CausalNetComponentData extends ComponentData {
+// export class CausalNetComponentData extends ComponentData {
+//   nodes?: Array<DataNode>;
+//   edges?: Array<DataLink>;
+//
+//   get isDisplayable() {
+//     return this.nodes != null && this.edges != null && this.nodes.length > 0;
+//   }
+// }
+
+export class CNetComponentData extends ComponentData {
   nodes?: Array<DataNode>;
   edges?: Array<DataLink>;
 
@@ -100,10 +109,14 @@ export class WorkspaceComponent {
 
     // FIXME: customizations like this should be implemented using inheritance
     switch (this.type) {
-      case ComponentType.CausalNet: {
-        this.data = new CausalNetComponentData(init.data ?? {});
+      case ComponentType.CNet: {
+        this.data = new CNetComponentData(init.data ?? {});
         break;
       }
+      // case ComponentType.CausalNet: {
+      //   this.data = new CausalNetComponentData(init.data ?? {});
+      //   break;
+      // }
       case ComponentType.Kpi: {
         this.data = new KpiComponentData(init.data ?? {});
         break;
