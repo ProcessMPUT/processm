@@ -1,4 +1,4 @@
-import CausalNet, { Node, Link, ElementType, Point } from "./CausalNet";
+import CNet, { Node, Link, ElementType, Point } from "./CNet";
 import { Selection, BaseType } from "d3";
 
 function validateBoundaries(
@@ -20,7 +20,8 @@ export interface UserInputSource {
   readonly componentWidth: number;
   readonly contentHeight: number;
   readonly contentWidth: number;
-  readonly causalNet: CausalNet;
+  //readonly causalNet: CausalNet;
+  readonly CNet: CNet;
   readonly currentScalingFactor: number;
   readonly displayPreferences: {
     nodeSize: number;
