@@ -3,16 +3,7 @@
     <v-row justify="end" class="pa-1">
       <v-tooltip bottom :open-delay="tooltipOpenDelay">
         <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            fab
-            small
-            depressed
-            class="ma-1"
-            color="primary"
-            @click="createComponent"
-            v-bind="attrs"
-            v-on="on"
-          >
+          <v-btn class="ma-1" color="primary" depressed fab small v-bind="attrs" @click="createComponent" v-on="on">
             <v-icon>add_chart</v-icon>
           </v-btn>
         </template>
@@ -20,17 +11,7 @@
       </v-tooltip>
       <v-tooltip bottom :open-delay="tooltipOpenDelay">
         <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            fab
-            small
-            depressed
-            :outlined="unlocked"
-            color="primary"
-            class="ma-1"
-            @click="toggleLocked"
-            v-bind="attrs"
-            v-on="on"
-          >
+          <v-btn :outlined="unlocked" class="ma-1" color="primary" depressed fab small v-bind="attrs" @click="toggleLocked" v-on="on">
             <v-icon v-if="unlocked">lock</v-icon>
             <v-icon v-else>lock_open</v-icon>
           </v-btn>
@@ -91,10 +72,7 @@
               @edit="editComponent"
               @remove="removeComponent"
             />
-            <empty-component
-              v-else
-              @type-selected="initializeEmptyComponent(item.i, $event)"
-            />
+            <empty-component v-else @type-selected="initializeEmptyComponent(item.i, $event)" />
           </grid-item>
         </grid-layout>
       </v-col>
@@ -149,10 +127,7 @@ import EditComponentView from "./EditComponentView.vue";
 import EmptyComponent from "./EmptyComponent.vue";
 import WorkspaceComponent, { ComponentMode } from "./WorkspaceComponent.vue";
 import WorkspaceService from "@/services/WorkspaceService";
-import {
-  LayoutElement,
-  WorkspaceComponent as WorkspaceComponentModel
-} from "@/models/WorkspaceComponent";
+import { LayoutElement, WorkspaceComponent as WorkspaceComponentModel } from "@/models/WorkspaceComponent";
 import { ComponentType } from "@/openapi";
 import { WorkspaceObserver } from "@/utils/WorkspaceObserver";
 
@@ -189,32 +164,10 @@ export default class WorkspaceArea extends Vue {
     w: number;
     h: number;
   }> = [];
-  notifications : WorkspaceObserver | undefined = undefined
-
-  private async refreshComponent(componentId: string) {
-    const component = await this.workspaceService.getComponent(this.workspaceId, componentId)
-    if (this.componentsDetails.has(component.id)) {
-      this.componentsDetails.set(component.id, component);
-      const idx = this.layout.findIndex((value) => value.i == component.id);
-      console.assert(idx >= 0)
-      this.layout.splice(idx, 1);
-      this.layout.push( {
-        i: component.id,
-        x: component.layout?.x ?? 0,
-        y: component.layout?.y ?? 0,
-        w: component.layout?.width ?? this.defaultComponentWidth,
-        h: component.layout?.height ?? this.defaultComponentHeight
-      });
-    } else {
-      await this.fullRefresh()
-    }
-
-  }
+  notifications: WorkspaceObserver | undefined = undefined;
 
   async fullRefresh() {
-    const components = await this.workspaceService.getWorkspaceComponents(
-      this.workspaceId
-    );
+    const components = await this.workspaceService.getWorkspaceComponents(this.workspaceId);
     this.componentsDetails.clear();
     this.layout.length = 0;
     for (const component of components) {
@@ -229,16 +182,25 @@ export default class WorkspaceArea extends Vue {
     }
   }
 
+  async created() {
+    await this.fullRefresh();
+    if (this.notifications === undefined) this.notifications = this.workspaceService.observeWorkspace(this.workspaceId, this.refreshComponent);
+    this.notifications.start();
+  }
+
   // noinspection JSUnusedGlobalSymbols
   beforeDestroy() {
     this.notifications?.close();
   }
 
-  async created() {
-    await this.fullRefresh()
-    if(this.notifications === undefined)
-      this.notifications = this.workspaceService.observeWorkspace(this.workspaceId, this.refreshComponent);
-    this.notifications.start()
+  async removeComponent(componentId: string) {
+    const componentIndex = this.layout.findIndex((component) => component.i == componentId);
+
+    if (componentIndex >= 0) {
+      await this.workspaceService.removeComponent(this.workspaceId, componentId);
+      this.layout.splice(componentIndex, 1);
+      this.closeModals();
+    }
   }
 
   toggleLocked() {
@@ -267,27 +229,21 @@ export default class WorkspaceArea extends Vue {
     this.displayEditModal = true;
   }
 
-  async removeComponent(componentId: string) {
-    const componentIndex = this.layout.findIndex(
-      (component) => component.i == componentId
-    );
-
-    if (componentIndex >= 0) {
-      await this.workspaceService.removeComponent(
-        this.workspaceId,
-        componentId
-      );
-      this.layout.splice(componentIndex, 1);
-      this.closeModals();
-    }
-  }
-
   updateComponent(componentData: WorkspaceComponentModel) {
     this.componentsDetails.set(componentData.id, componentData);
     this.closeModals();
-    this.$children
-      .find((v, _) => v.$data?.component?.id == componentData.id)
-      ?.$forceUpdate();
+    this.$children.find((v, _) => v.$data?.component?.id == componentData.id)?.$forceUpdate();
+  }
+
+  async saveLayout() {
+    const updatedLayoutElements = {} as Record<string, LayoutElement>;
+    this.componentsWithLayoutsToBeUpdated.forEach((componentId) => {
+      const component = this.componentsDetails.get(componentId);
+
+      if (component?.layout !== undefined) updatedLayoutElements[componentId] = component.layout;
+    });
+
+    if (await this.workspaceService.updateLayout(this.workspaceId, updatedLayoutElements)) this.componentsWithLayoutsToBeUpdated.clear();
   }
 
   closeModals() {
@@ -316,22 +272,23 @@ export default class WorkspaceArea extends Vue {
     this.editComponent(componentId);
   }
 
-  async saveLayout() {
-    const updatedLayoutElements = {} as Record<string, LayoutElement>;
-    this.componentsWithLayoutsToBeUpdated.forEach((componentId) => {
-      const component = this.componentsDetails.get(componentId);
-
-      if (component?.layout !== undefined)
-        updatedLayoutElements[componentId] = component.layout;
-    });
-
-    if (
-      await this.workspaceService.updateLayout(
-        this.workspaceId,
-        updatedLayoutElements
-      )
-    )
-      this.componentsWithLayoutsToBeUpdated.clear();
+  private async refreshComponent(componentId: string) {
+    const component = await this.workspaceService.getComponent(this.workspaceId, componentId);
+    if (this.componentsDetails.has(component.id)) {
+      this.componentsDetails.set(component.id, component);
+      const idx = this.layout.findIndex((value) => value.i == component.id);
+      console.assert(idx >= 0);
+      this.layout.splice(idx, 1);
+      this.layout.push({
+        i: component.id,
+        x: component.layout?.x ?? 0,
+        y: component.layout?.y ?? 0,
+        w: component.layout?.width ?? this.defaultComponentWidth,
+        h: component.layout?.height ?? this.defaultComponentHeight
+      });
+    } else {
+      await this.fullRefresh();
+    }
   }
 
   private updateComponentLayout(id: string, layout: Partial<LayoutElement>) {

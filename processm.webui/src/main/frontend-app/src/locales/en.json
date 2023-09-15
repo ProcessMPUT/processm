@@ -54,9 +54,14 @@
   },
   "data-stores": {
     "page-title": "Data stores",
+    "page-hint": "A data store keeps event logs, configuration for data connectors to remote data sources, and configuration of ETL processes. The data stores are recommended to correspond to projects and/or organizational units.",
+    "name-hint": "Name helps you identify the data store in all components configurable using the data source. The name is recommended to be unique.",
+    "logs-hint": "The list of event logs consists of individual event logs stored in this data store. It is recommended that one event log correspond to one business process. Each event log consists of traces corresponding to the business cases of a process. Each trace consists of events raised during process execution. Logs, traces, and events are described using attributes. Event logs adhere to the eXtensible Event Stream (XES) IEEE 1849-2016 standard.",
     "data-connectors": "Data connectors",
-    "logs": "Logs",
+    "data-connectors-hint": "A data connector consists of the configuration database connection, e.g., database type, address, username, and password.",
+    "logs": "Event logs",
     "etl-processes": "ETL processes",
+    "etl-processes-hint": "The list of Extract, Transformation, Load (ETL) processes consists of individual processes defined in this data store. An ETL process is a configurable pipeline for extracting data using a data connector, transforming them into the form of event log, and loading into the data store. An automatic ETL processes uses machine learning to detect the structure and semantics of the data to configure the transformation. The manual ETL processes relies on manual configuration of the transformation.",
     "add-data-connector": "Add data connector",
     "data-connector-required": "A data connector is required to add continuous ETL process",
     "add-automatic-process": {
@@ -71,8 +76,8 @@
       "description": "Manually define a query that yields relevant events as result rows"
     },
     "upload-xes-file": {
-      "title": "Upload XES file",
-      "description": "Upload XES file that contains recording of business process execution"
+      "title": "Upload XES event log",
+      "description": "Upload event log file in the eXtensible Event Stream (XES) format containing the recording of a business process execution"
     },
     "size": "Size",
     "successful-file-upload": "File uploaded successfully",
@@ -97,23 +102,33 @@
   "add-jdbc-etl-process-dialog": {
     "dialog-title": "Add JDBC ETL process",
     "query": "SQL query",
+    "query-hint": "Type an SQL query that produces one event per row. The SQL dialect depends on the data connector/source database. The resulting columns are transformed into event attributes, omitting NULL values. For each row, the columns corresponding to unique and durable event and trace identifiers must be provided. Two types of queries are supported: batch and continuous. The batch query extracts, transforms, and loads event log on demand all-at-once. The continuous query executes periodically to extract, transform, and load new events that occurred since the last query execution. For continuous query, a condition, e.g., a WHERE clause, must be provided for filtering out already loaded events. This condition must use exactly one binding variable, e.g., ?, that attains the value of the id of the last loaded event.",
     "batch": "Batch query",
+    "batch-hint": "Two types of queries are supported: batch and continuous. The batch query extracts, transforms, and loads event log on demand all-at-once. The continuous query executes periodically to extract, transform, and load new events that occurred since the last query execution.",
     "refresh": "Refresh rate",
+    "refresh-hint": "For continuous query only: time between the successive executions of the SQL query.",
     "enabled": "Enabled",
     "trace-id-source": "Trace ID column",
+    "trace-id-source-hint": "The name of the column in the SQL query storing the trace id.",
     "trace-id-target": "Trace ID attribute",
+    "trace-id-target-hint": "The name of the trace attribute to store its id. Recommended values: identity:id or concept:name.",
     "event-id-source": "Event ID column",
+    "event-id-source-hint": "The name of the column in the SQL query  storing the event id.",
     "event-id-target": "Event ID attribute",
+    "event-id-target-hint": "The name of the event attribute to store its id. Recommended values: identity:id or concept:name.",
     "source": "Column",
     "target": "Attribute",
     "mappings": "Column to attribute mappings",
+    "mappings-hint": "An optional mapping of columns in the SQL query into event attributes. The unmapped columns are directly converted to attributes.",
     "new-mapping": "Add mapping",
     "validation": {
       "non-empty-field": "The value cannot be empty",
       "not-a-positive-integer": "The value is not a positive integer"
     },
     "last-event-external-id": "Initial last event ID",
-    "last-event-external-id-type": "Last event ID datatype"
+    "last-event-external-id-hint": "For continuous query only: the id corresponding to the event before the first event to extract; it may be fake value. This value is assigned to the only binding variable of the SQL query on its first execution.",
+    "last-event-external-id-type": "Last event ID datatype",
+    "last-event-external-id-type-hint": "For continuous query only: the type of the initial event id. This type is used to supply the database driver with the correct type of the value."
   },
   "add-data-connector-dialog": {
     "dialog-title": "Add data connector",
@@ -123,6 +138,7 @@
     "use-connection-string": "Use JDBC connection string",
     "specify-connection-properties": "Specify connection properties",
     "connection-string": "Connection string",
+    "connection-string-hint": "Use JDBC format, e.g., jdbc:driver://host:port?database?user=login&password=password. Driver corresponds to the specific database driver. Supported values are: postgres, sqlserver, mysql, oracle, db2. The remaining part depends on the driver. Please follow the documentation of the database management system.",
     "connector-name": "Connector name",
     "advanced": "Advanced",
     "server": "Server",
@@ -144,8 +160,7 @@
     }
   },
   "about": {
-    "page-title": "About ProcessM",
-    "description": "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi obcaecati tempora debitis, minima deleniti ex inventore laboriosam at animi praesentium, quaerat corrupti molestiae recusandae corporis necessitatibus vitae, nam saepe?"
+    "page-title": "About ProcessM"
   },
   "user-profile": {
     "language": "Language",

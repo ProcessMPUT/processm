@@ -54,9 +54,14 @@
   },
   "data-stores": {
     "page-title": "Magazyny danych",
+    "page-hint": "Magazyn danych przechowuje dzienniki zdarzeń, konfigurację łączy danych do zewnętrznych źródeł danych, oraz konfiguracje procesów ETL. Zaleca się, aby magazyny danych odpowiadały projektom i/lub jednostkom organizacyjnym.",
+    "name-hint": "Nazwa pomaga zidentyfikować składnicę danych we wszystkich komponentach konfigurowalnych przy użyciu magazynu danych. Zaleca się, aby nazwa była unikalna.",
+    "logs-hint": "Lista dzienników zdarzeń składa się z poszczególnych dzienników zdarzeń przechowywanych w tym magazynie danych. Zaleca się, aby jeden dziennik zdarzeń odpowiadał jednemu procesowi biznesowemu. Każdy dziennik zdarzeń składa się ze śladów odpowiadających przypadkom biznesowym procesu. Każdy ślad składa się ze zdarzeń wywołanych podczas wykonywania procesu. Dzienniki, ślady i zdarzenia są opisywane za pomocą atrybutów. Dzienniki zdarzeń są zgodne ze standardem eXtensible Event Stream (XES) IEEE 1849-2016.",
     "data-connectors": "Łącza danych",
-    "logs": "Logi",
+    "data-connectors-hint": "Łącze danych zawiera konfigurację połączenia z bazą danych, np.: typ bazy, adres, nazwę użytkownika, hasło.",
+    "logs": "Dzienniki zdarzeń",
     "etl-processes": "Procesy ETL",
+    "etl-processes-hint": "Lista procesów Ekstrakcji, Transformacji, Ładowania (ETL) składa się z poszczególnych procesów zdefiniowanych w tym magazynie danych. Proces ETL to konfigurowalny potok służący do ekstrakcji danych za pomocą łącza danych, transformacji ich do postaci dziennika zdarzeń i ładowania do magazynu danych. Automatyczne procesy ETL wykorzystują uczenie maszynowe do wykrywania struktury i semantyki danych w celu skonfigurowania transformacji. Ręczne procesy ETL polegają na ręcznej konfiguracji transformacji.",
     "add-data-connector": "Dodaj łącze danych",
     "data-connector-required": "Łącze danych jest wymagane, aby dodać ciągły proces ETL",
     "add-automatic-process": {
@@ -71,8 +76,8 @@
       "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
     },
     "upload-xes-file": {
-      "title": "Załaduj plik XES",
-      "description": "Załaduj plik XES zawierający zapis wykonania procesu biznesowego"
+      "title": "Załaduj dziennik zdarzeń XES",
+      "description": "Załaduj dziennik zdarzeń w formacie eXtensible Event Stream (XES) zawierający zapis wykonania procesu biznesowego"
     },
     "size": "Rozmiar",
     "successful-file-upload": "Plik został załadowany",
@@ -93,26 +98,36 @@
       "log-recreation-confirmation": "Czy chcesz odtworzyć log XES dla procesu ETL {etlProcessName}? Operacja nadpisuje istniejący log XES."
     }
   },
-  "add-manual-query-dialog": {
+  "add-jdbc-etl-process-dialog": {
     "dialog-title": "Dodaj ręczne zapytanie",
     "query": "Zapytanie SQL",
+    "query-hint": "Wpisz zapytanie SQL, które generuje jedno zdarzenie na wiersz. Dialekt SQL zależy od łącza danych/źródłowej bazy danych. Wynikowe kolumny są przekształcane w atrybuty zdarzeń, pomijając wartości NULL. Dla każdego wiersza należy podać kolumny odpowiadające unikalnym i trwałym identyfikatorom zdarzeń i śladom. Obsługiwane są dwa typy zapytań: wsadowe i ciągłe. Zapytanie wsadowe wyodrębnia, przekształca i ładuje dziennik zdarzeń w całości jednorazowo. Zapytanie ciągłe wykonuje się okresowo w celu wyodrębnienia, przekształcenia i załadowania nowych zdarzeń, które wystąpiły od poprzedniego wykonania zapytania. W przypadku zapytania ciągłego należy podać warunek, np. klauzulę WHERE, w celu odfiltrowania wcześniej załadowanych zdarzeń. Warunek ten musi wykorzystywać dokładnie jedną zmienną wiążącą, np. ?, która przyjmuje wartość identyfikatora ostatnio załadowanego zdarzenia.",
     "batch": "Zapytanie wsadowe",
+    "batch-hint": "Obsługiwane są dwa typy zapytań: wsadowe i ciągłe. Zapytanie wsadowe wyodrębnia, przekształca i ładuje dziennik zdarzeń w całości jednorazowo. Zapytanie ciągłe wykonuje się okresowo w celu wyodrębnienia, przekształcenia i załadowania nowych zdarzeń, które wystąpiły od poprzedniego wykonania zapytania.",
     "refresh": "Częstotliwość odświeżania",
+    "refresh-hint": "Tylko dla zapytań ciągłych: czas pomiędzy kolejnymi wykonaniami zapytania SQL.",
     "enabled": "Aktywny",
     "trace-id-source": "Kolumna z ID śladu",
+    "trace-id-source-hint": "Nazwa kolumny w zapytaniu SQL przechowującej identyfikator śladu.",
     "trace-id-target": "Atrybut z ID śladu",
+    "trace-id-target-hint": "Nazwa atrybutu śladu, w którym zapisać jego identyfikator. Zalecane wartości: identity:id lub concept:name.",
     "event-id-source": "Kolumna z ID zdarzenia",
+    "event-id-source-hint": "Nazwa kolumny w zapytaniu SQL przechowującej identyfikator zdarzenia.",
     "event-id-target": "Atrybut z ID zdarzenia",
+    "event-id-target-hint": "Nazwa atrybutu zdarzenia, w którym zapisać jego identyfikator. Zalecane wartości: identity:id lub concept:name.",
     "source": "Kolumna",
     "target": "Atrybut",
     "mappings": "Odwzorowanie z kolumn do atrybutów",
+    "mappings-hint": "Opcjonalne odwzorowanie kolumn w zapytaniu SQL na atrybuty zdarzenia. Kolumny nieuwzględnione w odwzorowaniu są bezpośrednio konwertowane na atrybuty.",
     "new-mapping": "Dodaj odwzorowanie",
     "validation": {
-      "non-empty-field": "Wartośc nie może być pusta",
-      "not-a-positive-integer": "Wartość nie jest dodanią liczbą całkowitą"
+      "non-empty-field": "Wartość nie może być pusta",
+      "not-a-positive-integer": "Wartość nie jest dodatnią liczbą całkowitą"
     },
     "last-event-external-id": "Wartość początkowa ostatniego ID zdarzenia",
-    "last-event-external-id-type": "Typ danych ostatniego ID zdarzenia"
+    "last-event-external-id-hint": "Tylko dla zapytań ciągłych: identyfikator odpowiadający zdarzeniu przed pierwszym zdarzeniem do wyodrębnienia; może to być wartość fałszywa. Wartość ta jest przypisywana do jedynej zmiennej wiążącej zapytania SQL podczas jego pierwszego wykonania.",
+    "last-event-external-id-type": "Typ danych ostatniego ID zdarzenia",
+    "last-event-external-id-type-hint": "Tylko dla zapytań ciągłych: typ początkowego identyfikatora zdarzenia. Ten typ jest używany do dostarczania do sterownika bazy danych prawidłowego typu wartości."
   },
   "add-data-connector-dialog": {
     "dialog-title": "Dodaj łącze danych",
@@ -122,6 +137,7 @@
     "use-connection-string": "Użyj JDBC connection string",
     "specify-connection-properties": "Podaj właściwości połączenia",
     "connection-string": "Connection string",
+    "connection-string-hint": "Użyj formatu JDBC, np. jdbc:driver://host:port?database?user=login&password=password. Driver odpowiada konkretnemu sterownikowi bazy danych. Obsługiwane wartości to: postgres, sqlserver, mysql, oracle, db2. Pozostała część zależy od sterownika. Należy postępować zgodnie z dokumentacją systemu zarządzania bazą danych.",
     "connector-name": "Nazwa łącza",
     "advanced": "Zaawansowane",
     "server": "Serwer",
@@ -133,8 +149,8 @@
     "connector-not-supported": "Łącza danych zdefiniowane za pomocą connection stringa nie są jeszcze wspierane",
     "validation": {
       "non-empty-field": "Wartość nie może być pusta",
-      "connection-string-format": "Wartość nie spełnia formatu connection stringa",
-      "hostname-field": "Wartość powinna być nazwą hosta lub adresem IP",
+      "connection-string-format": "Wartość nie spełnia formatu connection stringa",
+      "hostname-field": "Wartość powinna być nazwą hosta lub adresem IP",
       "port-field": "Wartość powinna być liczbą całkowitą z zakresu 0-65535"
     },
     "testing": {
@@ -246,7 +262,7 @@
     "no-data-store": "Nie znaleziono odpowiedniego magazynu danych",
     "executing-query": "Wykonywanie zapytania...",
     "query-executed": "Zapytanie wykonane i wyniki pobrane w {executionTime} ms. Formatowanie wyników...",
-    "results-retrieved": "Zapytanie wykonane i wyniki pobrane w  {executionTime} ms. Wyniki sformatowane w {formattingTime} ms."
+    "results-retrieved": "Zapytanie wykonane i wyniki pobrane w {executionTime} ms. Wyniki sformatowane w {formattingTime} ms."
   },
   "process-details-dialog": {
     "title": "Szczegóły procesu: {name}",

@@ -6,7 +6,15 @@
           <v-icon>arrow_back</v-icon>
         </v-btn>
         <v-spacer />
-        <v-toolbar-title>{{ dataStoreName }}</v-toolbar-title>
+        <v-toolbar-title
+          >{{ dataStoreName }}
+          <v-tooltip bottom max-width="600px">
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon color="accent" v-bind="attrs" v-on="on">help</v-icon>
+            </template>
+            <span>{{ $t("data-stores.page-hint") }}</span>
+          </v-tooltip>
+        </v-toolbar-title>
         <v-spacer />
       </v-toolbar>
 
@@ -42,9 +50,15 @@
             <template v-slot:default="{ open }">
               <div>
                 {{ $t("data-stores.logs") }}
+                <v-tooltip bottom max-width="600px">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon v-bind="attrs" v-on="on">help</v-icon>
+                  </template>
+                  <span>{{ $t("data-stores.logs-hint") }}</span>
+                </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
-                    <v-tooltip bottom>
+                    <v-tooltip bottom max-width="600px">
                       <template v-slot:activator="{ on, attrs }">
                         <div v-on="on" class="d-inline-block" @click.stop>
                           <v-btn class="mx-2" color="primary" v-bind="attrs" @click.stop="fileUploadDialog = true">
@@ -90,6 +104,12 @@
             <template v-slot:default="{ open }">
               <div>
                 {{ $t("data-stores.data-connectors") }}
+                <v-tooltip bottom max-width="600px">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon v-bind="attrs" v-on="on">help</v-icon>
+                  </template>
+                  <span>{{ $t("data-stores.data-connectors-hint") }}</span>
+                </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
                     <v-btn class="mx-2" color="primary" @click.stop="addDataConnectorDialog = true">
@@ -175,6 +195,12 @@
             <template v-slot:default="{ open }">
               <div>
                 {{ $t("data-stores.etl-processes") }}
+                <v-tooltip bottom max-width="600px">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon v-bind="attrs" v-on="on">help</v-icon>
+                  </template>
+                  <span>{{ $t("data-stores.etl-processes-hint") }}</span>
+                </v-tooltip>
                 <v-fade-transition leave-absolute>
                   <div v-if="open" class="add-button-group">
                     <v-tooltip bottom>
