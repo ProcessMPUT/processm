@@ -213,12 +213,12 @@
                             @click.stop="addAutomaticEtlProcessDialog = true"
                             v-bind="attrs"
                           >
-                            {{ $t("data-stores.add-automatic-process.title") }}
+                            {{ $t("data-stores.automatic-etl-process.title") }}
                           </v-btn>
                         </div>
                       </template>
                       <span>{{
-                        dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.add-automatic-process.description")
+                        dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.automatic-etl-process.description")
                       }}</span>
                     </v-tooltip>
                     <v-tooltip bottom>
@@ -328,7 +328,7 @@
       @cancelled="addDataConnectorDialog = false"
       @submitted="addDataConnector"
     />
-    <add-automatic-etl-process-dialog
+    <automatic-etl-process-dialog
       v-model="addAutomaticEtlProcessDialog"
       :data-store-id="dataStoreId"
       :data-connectors="dataConnectors"
@@ -342,7 +342,7 @@
       @cancelled="dataConnectorIdToRename = null"
       @submitted="renameDataConnector"
     />
-    <add-jdbc-etl-process-dialog
+    <jdbc-etl-process-dialog
       v-model="addJdbcEtlProcessDialog"
       :data-store-id="dataStoreId"
       :dataConnectors="dataConnectors"
@@ -377,21 +377,21 @@ import { waitForRepaint } from "@/utils/waitForRepaint";
 import XesProcessor, { LogItem } from "@/utils/XesProcessor";
 import FileUploadDialog from "@/components/FileUploadDialog.vue";
 import RenameDialog from "@/components/RenameDialog.vue";
-import AddAutomaticEtlProcessDialog from "@/components/etl/AddAutomaticEtlProcessDialog.vue";
+import AutomaticEtlProcessDialog from "@/components/etl/AutomaticEtlProcessDialog.vue";
 import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
-import AddJdbcEtlProcessDialog from "@/components/etl/AddJdbcEtlProcessDialog.vue";
+import JdbcEtlProcessDialog from "@/components/etl/JdbcEtlProcessDialog.vue";
 import ProcessDetailsDialog from "@/components/etl/ProcessDetailsDialog.vue";
 
 @Component({
   components: {
     ProcessDetailsDialog,
-    AddJdbcEtlProcessDialog,
+    JdbcEtlProcessDialog: JdbcEtlProcessDialog,
     AddDataConnectorDialog,
     XesDataTable,
     FileUploadDialog,
     RenameDialog,
-    AddAutomaticEtlProcessDialog
+    AutomaticEtlProcessDialog: AutomaticEtlProcessDialog
   }
 })
 export default class DataStoreConfiguration extends Vue {

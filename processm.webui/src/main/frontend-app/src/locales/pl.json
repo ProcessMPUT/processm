@@ -64,7 +64,7 @@
     "etl-processes-hint": "Lista procesów Ekstrakcji, Transformacji, Ładowania (ETL) składa się z poszczególnych procesów zdefiniowanych w tym magazynie danych. Proces ETL to konfigurowalny potok służący do ekstrakcji danych za pomocą łącza danych, transformacji ich do postaci dziennika zdarzeń i ładowania do magazynu danych. Automatyczne procesy ETL wykorzystują uczenie maszynowe do wykrywania struktury i semantyki danych w celu skonfigurowania transformacji. Ręczne procesy ETL polegają na ręcznej konfiguracji transformacji.",
     "add-data-connector": "Dodaj łącze danych",
     "data-connector-required": "Łącze danych jest wymagane, aby dodać ciągły proces ETL",
-    "add-automatic-process": {
+    "automatic-etl-process": {
       "title": "Dodaj automatyczny process",
       "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych",
       "case-notion": "Identyfikator perspektywy biznesowej",
@@ -98,7 +98,7 @@
       "log-recreation-confirmation": "Czy chcesz odtworzyć log XES dla procesu ETL {etlProcessName}? Operacja nadpisuje istniejący log XES."
     }
   },
-  "add-jdbc-etl-process-dialog": {
+  "jdbc-etl-process-dialog": {
     "dialog-title": "Dodaj ręczne zapytanie",
     "query": "Zapytanie SQL",
     "query-hint": "Wpisz zapytanie SQL, które generuje jedno zdarzenie na wiersz. Dialekt SQL zależy od łącza danych/źródłowej bazy danych. Wynikowe kolumny są przekształcane w atrybuty zdarzeń, pomijając wartości NULL. Dla każdego wiersza należy podać kolumny odpowiadające unikalnym i trwałym identyfikatorom zdarzeń i śladom. Obsługiwane są dwa typy zapytań: wsadowe i ciągłe. Zapytanie wsadowe wyodrębnia, przekształca i ładuje dziennik zdarzeń w całości jednorazowo. Zapytanie ciągłe wykonuje się okresowo w celu wyodrębnienia, przekształcenia i załadowania nowych zdarzeń, które wystąpiły od poprzedniego wykonania zapytania. W przypadku zapytania ciągłego należy podać warunek, np. klauzulę WHERE, w celu odfiltrowania wcześniej załadowanych zdarzeń. Warunek ten musi wykorzystywać dokładnie jedną zmienną wiążącą, np. ?, która przyjmuje wartość identyfikatora ostatnio załadowanego zdarzenia.",

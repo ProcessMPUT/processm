@@ -2,7 +2,7 @@
   <v-dialog v-model="value" @click:outside="cancel" max-width="600">
     <v-card>
       <v-card-title class="headline">
-        {{ $t("add-jdbc-etl-process-dialog.dialog-title") }}
+        {{ $t("jdbc-etl-process-dialog.dialog-title") }}
       </v-card-title>
       <v-card-text>
         <v-container>
@@ -21,51 +21,51 @@
                 ></v-select>
                 <v-textarea
                   v-model="query"
-                  :hint="$t('add-jdbc-etl-process-dialog.query-hint')"
-                  :label="$t('add-jdbc-etl-process-dialog.query')"
+                  :hint="$t('jdbc-etl-process-dialog.query-hint')"
+                  :label="$t('jdbc-etl-process-dialog.query')"
                   :rules="[notEmpty]"
                   data-testid="query"
                 ></v-textarea>
                 <v-switch v-model="batch" data-testid="batch">
                   <template v-slot:label>
-                    {{ $t("add-jdbc-etl-process-dialog.batch") }}&nbsp;
+                    {{ $t("jdbc-etl-process-dialog.batch") }}&nbsp;
                     <v-tooltip bottom max-width="600px">
                       <template v-slot:activator="{ on, attr }">
                         <v-icon v-bind="attr" v-on="on">help</v-icon>
                       </template>
-                      <span>{{ $t("add-jdbc-etl-process-dialog.batch-hint") }}</span>
+                      <span>{{ $t("jdbc-etl-process-dialog.batch-hint") }}</span>
                     </v-tooltip>
                   </template>
                 </v-switch>
                 <v-text-field
                   v-model="refresh"
                   :disabled="batch"
-                  :hint="$t('add-jdbc-etl-process-dialog.refresh-hint')"
-                  :label="$t('add-jdbc-etl-process-dialog.refresh')"
+                  :hint="$t('jdbc-etl-process-dialog.refresh-hint')"
+                  :label="$t('jdbc-etl-process-dialog.refresh')"
                   :rules="refreshRules"
                   data-testid="refresh"
                   suffix="seconds"
                 ></v-text-field>
-                <v-switch v-model="enabled" :label="$t('add-jdbc-etl-process-dialog.enabled')" data-testid="enabled"></v-switch>
+                <v-switch v-model="enabled" :label="$t('jdbc-etl-process-dialog.enabled')" data-testid="enabled"></v-switch>
                 <v-row>
                   <v-col>
                     <v-text-field
                       v-model="lastEventExternalId"
                       :disabled="batch"
-                      :hint="$t('add-jdbc-etl-process-dialog.last-event-external-id-hint')"
-                      :label="$t('add-jdbc-etl-process-dialog.last-event-external-id')"
+                      :hint="$t('jdbc-etl-process-dialog.last-event-external-id-hint')"
+                      :label="$t('jdbc-etl-process-dialog.last-event-external-id')"
                       :rules="lastEventExternalIdRules"
                     ></v-text-field>
                     <v-text-field
                       v-model="traceIdSource"
-                      :hint="$t('add-jdbc-etl-process-dialog.trace-id-source-hint')"
-                      :label="$t('add-jdbc-etl-process-dialog.trace-id-source')"
+                      :hint="$t('jdbc-etl-process-dialog.trace-id-source-hint')"
+                      :label="$t('jdbc-etl-process-dialog.trace-id-source')"
                       :rules="[notEmpty]"
                     ></v-text-field>
                     <v-text-field
                       v-model="eventIdSource"
-                      :hint="$t('add-jdbc-etl-process-dialog.event-id-source-hint')"
-                      :label="$t('add-jdbc-etl-process-dialog.event-id-source')"
+                      :hint="$t('jdbc-etl-process-dialog.event-id-source-hint')"
+                      :label="$t('jdbc-etl-process-dialog.event-id-source')"
                       :rules="[notEmpty]"
                     ></v-text-field>
                   </v-col>
@@ -73,24 +73,24 @@
                     <v-select
                       v-model="lastEventExternalIdType"
                       :disabled="batch"
-                      :hint="$t('add-jdbc-etl-process-dialog.last-event-external-id-type-hint')"
+                      :hint="$t('jdbc-etl-process-dialog.last-event-external-id-type-hint')"
                       :items="jdbcTypes"
-                      :label="$t('add-jdbc-etl-process-dialog.last-event-external-id-type')"
+                      :label="$t('jdbc-etl-process-dialog.last-event-external-id-type')"
                       :rules="lastEventExternalIdRules"
                       item-text="name"
                       item-value="id"
                     ></v-select>
                     <v-text-field
                       v-model="traceIdTarget"
-                      :hint="$t('add-jdbc-etl-process-dialog.trace-id-target-hint')"
-                      :label="$t('add-jdbc-etl-process-dialog.trace-id-target')"
+                      :hint="$t('jdbc-etl-process-dialog.trace-id-target-hint')"
+                      :label="$t('jdbc-etl-process-dialog.trace-id-target')"
                       :rules="[notEmpty]"
                       placeholder="identity:id"
                     ></v-text-field>
                     <v-text-field
                       v-model="eventIdTarget"
-                      :hint="$t('add-jdbc-etl-process-dialog.event-id-target-hint')"
-                      :label="$t('add-jdbc-etl-process-dialog.event-id-target')"
+                      :hint="$t('jdbc-etl-process-dialog.event-id-target-hint')"
+                      :label="$t('jdbc-etl-process-dialog.event-id-target')"
                       :rules="[notEmpty]"
                       placeholder="identity:id"
                     ></v-text-field>
@@ -99,11 +99,11 @@
                 <v-data-table
                   :headers="[
                     {
-                      text: $t('add-jdbc-etl-process-dialog.source'),
+                      text: $t('jdbc-etl-process-dialog.source'),
                       value: 'source'
                     },
                     {
-                      text: $t('add-jdbc-etl-process-dialog.target'),
+                      text: $t('jdbc-etl-process-dialog.target'),
                       value: 'target'
                     },
                     {
@@ -119,17 +119,17 @@
                   <template v-slot:top>
                     <v-toolbar flat>
                       <v-toolbar-title
-                        >{{ $t("add-jdbc-etl-process-dialog.mappings") }}
+                        >{{ $t("jdbc-etl-process-dialog.mappings") }}
                         <v-tooltip bottom max-width="600px">
                           <template v-slot:activator="{ on, attrs }">
                             <v-icon v-bind="attrs" v-on="on">help</v-icon>
                           </template>
-                          <span>{{ $t("add-jdbc-etl-process-dialog.mappings-hint") }}</span>
+                          <span>{{ $t("jdbc-etl-process-dialog.mappings-hint") }}</span>
                         </v-tooltip>
                       </v-toolbar-title>
                       <v-spacer></v-spacer>
                       <v-btn class="mb-2" color="primary" dark @click="addAttribute">
-                        {{ $t("add-jdbc-etl-process-dialog.new-mapping") }}
+                        {{ $t("jdbc-etl-process-dialog.new-mapping") }}
                       </v-btn>
                     </v-toolbar>
                   </template>
@@ -201,7 +201,7 @@ import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
 @Component({
   components: { XESPreviewDialog, PQL }
 })
-export default class AddJdbcEtlProcessDialog extends Vue {
+export default class JdbcEtlProcessDialog extends Vue {
   @Inject() app!: App;
   @Inject() dataStoreService!: DataStoreService;
   @Prop({ default: false })
@@ -222,7 +222,7 @@ export default class AddJdbcEtlProcessDialog extends Vue {
   ];
 
   selectedDataConnectorId: string | null = null;
-  //refreshRules = [(v:string):string|boolean => this.batch?true:isPositiveIntegerRule(v, this.$t("add-jdbc-etl-process-dialog.validation.not-a-positive-integer").toString())]
+  //refreshRules = [(v:string):string|boolean => this.batch?true:isPositiveIntegerRule(v, this.$t("jdbc-etl-process-dialog.validation.not-a-positive-integer").toString())]
   refreshRules = [this.refreshRule];
   lastEventExternalIdRules = [this.lastEventExternalIdRule];
 
@@ -363,12 +363,12 @@ export default class AddJdbcEtlProcessDialog extends Vue {
   }
 
   private notEmpty(v: string): string | boolean {
-    return notEmptyRule(v, this.$t("add-jdbc-etl-process-dialog.validation.non-empty-field").toString());
+    return notEmptyRule(v, this.$t("jdbc-etl-process-dialog.validation.non-empty-field").toString());
   }
 
   private refreshRule(v: string): string | boolean {
     if (this.batch) return true;
-    return isPositiveIntegerRule(v, this.$t("add-jdbc-etl-process-dialog.validation.not-a-positive-integer").toString());
+    return isPositiveIntegerRule(v, this.$t("jdbc-etl-process-dialog.validation.not-a-positive-integer").toString());
   }
 
   private createJdbcConfiguration(): JdbcEtlProcessConfiguration {
