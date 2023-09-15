@@ -32,8 +32,8 @@ export abstract class ComponentData {
 // }
 
 export class CNetComponentData extends ComponentData {
-  nodes?: Array<DataNode>;
-  edges?: Array<DataLink>;
+  nodes!: Array<DataNode>;
+  edges!: Array<DataLink>;
 
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;
@@ -109,14 +109,10 @@ export class WorkspaceComponent {
 
     // FIXME: customizations like this should be implemented using inheritance
     switch (this.type) {
-      case ComponentType.CNet: {
+      case ComponentType.CausalNet: {
         this.data = new CNetComponentData(init.data ?? {});
         break;
       }
-      // case ComponentType.CausalNet: {
-      //   this.data = new CausalNetComponentData(init.data ?? {});
-      //   break;
-      // }
       case ComponentType.Kpi: {
         this.data = new KpiComponentData(init.data ?? {});
         break;
