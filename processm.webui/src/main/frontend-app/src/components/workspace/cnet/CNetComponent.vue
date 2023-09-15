@@ -2,7 +2,7 @@
   <table>
     <tr>
       <td>
-        <graph :data="data.data" :filter-edge="filterEdge" :refresh="support"></graph>
+        <graph :data="graphData" :filter-edge="filterEdge" :refresh="support"></graph>
       </td>
       <td>
         <v-card>
@@ -37,19 +37,23 @@ import { Component, Prop } from "vue-property-decorator";
 import { DirectlyFollowsGraphComponentData } from "@/openapi";
 import Graph from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
+import {CNetComponentData} from "@/models/WorkspaceComponent";
+import {GraphData} from "@antv/g6";
 
 @Component({
   components: { Graph }
 })
-export default class DirectlyFollowsGraphComponent extends Vue {
+export default class CNetComponent extends Vue {
   @Prop({ default: {} })
-  readonly data!: { data: DirectlyFollowsGraphComponentData };
+  readonly data!: { data: CNetComponentData };
+  graphData!: GraphData;
 
   minSupport: number = 0;
   maxSupport: number = 1;
   support: number = 1;
 
   mounted() {
+    //convert cnetdata to graphdata
     const supports = this.data.data.edges.map((edge) => edge.support as number).sort((a, b) => a - b);
     this.minSupport = Math.min(...supports);
     this.maxSupport = Math.max(...supports);
