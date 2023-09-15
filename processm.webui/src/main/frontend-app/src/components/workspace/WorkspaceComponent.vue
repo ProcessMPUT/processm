@@ -95,7 +95,7 @@ button.v-btn.v-btn.component-name[type="button"] {
 import Vue from "vue";
 import Component from "vue-class-component";
 import { Prop } from "vue-property-decorator";
-import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
+//import CausalNetComponent from "./causal-net/CausalNetComponent.vue";
 import PetriNetComponent from "./petri-net/PetriNetComponent.vue";
 import KpiComponent from "./KpiComponent.vue";
 import BPMNComponent from "./bpmn/BPMNComponent.vue";
@@ -103,6 +103,7 @@ import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/Workspac
 import TreeLogViewComponent from "@/components/workspace/TreeLogViewComponent.vue";
 import FlatLogViewComponent from "@/components/workspace/FlatLogViewComponent.vue";
 import DirectlyFollowsGraphComponent from "@/components/workspace/DirectlyFollowsGraphComponent.vue";
+import CNetComponent from "@/components/workspace/cnet/CNetComponent.vue";
 
 export enum ComponentMode {
   Static,
@@ -112,7 +113,7 @@ export enum ComponentMode {
 
 @Component({
   components: {
-    cNetComponent: CNetComponent,
+    causalNetComponent: CNetComponent,
     kpiComponent: KpiComponent,
     petriNetComponent: PetriNetComponent,
     bpmnComponent: BPMNComponent,
