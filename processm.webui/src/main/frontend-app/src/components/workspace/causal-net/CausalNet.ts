@@ -12,6 +12,7 @@ export interface DataNode {
 export interface DataLink {
   sourceNodeId: string;
   targetNodeId: string;
+  support: number;
 }
 
 export enum ElementType {
