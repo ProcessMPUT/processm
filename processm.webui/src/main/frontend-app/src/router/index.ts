@@ -21,6 +21,11 @@ const routes = [
     component: () => import("@/views/About.vue")
   },
   {
+    path: "/licensing",
+    name: "licensing",
+    component: () => import("@/views/Licensing.vue")
+  },
+  {
     path: "/profile",
     name: "profile",
     component: () => import("@/views/UserProfile.vue")
@@ -47,7 +52,7 @@ const routes = [
     beforeEnter: (_to: any, _from: any, next: any) => {
       Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
     },
-    meta: {allowUnauthenticated: true}
+    meta: { allowUnauthenticated: true }
   },
   {
     path: "/register",
@@ -56,7 +61,7 @@ const routes = [
     beforeEnter: (_to: any, _from: any, next: any) => {
       Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
     },
-    meta: {allowUnauthenticated: true}
+    meta: { allowUnauthenticated: true }
   },
   {
     path: "/reset-password",
@@ -65,7 +70,7 @@ const routes = [
     beforeEnter: (_to: any, _from: any, next: any) => {
       Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
     },
-    meta: {allowUnauthenticated: true}
+    meta: { allowUnauthenticated: true }
   },
   {
     path: "/reset-password/:token",
@@ -74,7 +79,7 @@ const routes = [
     beforeEnter: (_to: any, _from: any, next: any) => {
       Vue.prototype.$sessionStorage.sessionExists ? next("/") : next();
     },
-    meta: {allowUnauthenticated: true}
+    meta: { allowUnauthenticated: true }
   }
 ];
 
