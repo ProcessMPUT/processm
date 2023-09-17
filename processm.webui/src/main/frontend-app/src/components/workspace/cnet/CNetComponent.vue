@@ -54,6 +54,33 @@ export default class CNetComponent extends Vue {
 
   mounted() {
     //convert cnetdata to graphdata
+    this.graphData = {
+      nodes: this.data.data.nodes.map((node) => {
+        return {
+          id: node.id,
+          label: node.label,
+          x: node.x,
+          y: node.y,
+          size: node.size,
+          style: {
+            fill: node.color,
+            stroke: node.color
+          }
+        };
+      }),
+      edges: this.data.data.edges.map((edge) => {
+        return {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          label: edge.label,
+          style: {
+            stroke: edge.color
+          },
+          support: edge.support
+        };
+      })
+    };
     const supports = this.data.data.edges.map((edge) => edge.support as number).sort((a, b) => a - b);
     this.minSupport = Math.min(...supports);
     this.maxSupport = Math.max(...supports);
