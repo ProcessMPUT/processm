@@ -11,13 +11,13 @@
 
 <script lang="ts">
 import { Component, Prop, Vue, Watch } from "vue-property-decorator";
-import G6, { GraphData } from "@antv/g6";
-import { EdgeConfig } from "@antv/g6-core/lib/types";
+import G6, {GraphData, NodeConfigMap} from "@antv/g6";
+import {EdgeConfig, NodeConfig} from "@antv/g6-core/lib/types";
 
 @Component({})
 export default class Graph extends Vue {
   @Prop()
-  readonly data!: GraphData;
+  readonly data!: GraphData | CNetGraphData;
 
   @Prop({ default: (edge: EdgeConfig) => true })
   readonly filterEdge!: (edge: EdgeConfig) => boolean;
@@ -33,13 +33,6 @@ export default class Graph extends Vue {
   readonly edgeColor = "#424242";
 
   mounted() {
-    const graphData = this.data;
-    this.markSelfLoops(graphData);
-    this.calcSize(graphData);
-    this.calcLayers(graphData);
-
-    console.log(graphData);
-
     setTimeout(() => {
       const container = this.$refs.graph as HTMLElement;
       this.graph = new G6.Graph({
@@ -85,8 +78,15 @@ export default class Graph extends Vue {
         }
       });
       // wait until height of the component is calculated
+      const graphData = this.data;
+      this.markSelfLoops(graphData);
+      this.calcSize(graphData);
+      this.calcLayers(graphData);
+
+      console.log(graphData);
       this.graph.data(graphData); // Load the data
       this.graph.render(); // Render the graph
+
       this.updateEdges();
     }, 0);
   }
@@ -99,6 +99,8 @@ export default class Graph extends Vue {
   }
 
   calcSize(data: GraphData) {
+    if (data.nodes!.some((node) => node.size !== undefined)) return;
+
     for (const node of data.nodes!) {
       const chars = node.label!.toString().length;
       if (chars > 20) {
@@ -141,6 +143,7 @@ export default class Graph extends Vue {
 
   updateEdges() {
     for (const edge of this.data.edges!) {
+      if (!edge.id) throw new Error("Missing edge id!");
       const edgeObj = this.graph.findById(edge.id);
       const visible = this.filterEdge(edge);
       if (visible) edgeObj.show();
@@ -154,5 +157,14 @@ export default class Graph extends Vue {
     this.updateEdges();
     this.graph.refresh();
   }
+}
+
+export interface CNetGraphData extends GraphData {
+  nodes?: CNetNodeConfig[];
+}
+
+export interface CNetNodeConfig extends NodeConfig {
+  joins: string[][];
+  splits: string[][];
 }
 </script>
