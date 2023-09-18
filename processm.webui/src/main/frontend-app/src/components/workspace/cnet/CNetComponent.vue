@@ -34,11 +34,11 @@ table td:last-child {
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
-import { DirectlyFollowsGraphComponentData } from "@/openapi";
-import Graph from "@/components/Graph.vue";
+//import { DirectlyFollowsGraphComponentData } from "@/openapi";
+import Graph, {CNetGraphData} from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
-import {CNetComponentData} from "@/models/WorkspaceComponent";
-import {GraphData} from "@antv/g6";
+import { CNetComponentData } from "@/models/WorkspaceComponent";
+import {GraphData, NodeConfig} from "@antv/g6";
 
 @Component({
   components: { Graph }
@@ -46,7 +46,10 @@ import {GraphData} from "@antv/g6";
 export default class CNetComponent extends Vue {
   @Prop({ default: {} })
   readonly data!: { data: CNetComponentData };
-  graphData!: GraphData;
+  graphData: CNetGraphData = {
+    nodes: [],
+    edges: []
+  };
 
   minSupport: number = 0;
   maxSupport: number = 1;
@@ -58,25 +61,28 @@ export default class CNetComponent extends Vue {
       nodes: this.data.data.nodes.map((node) => {
         return {
           id: node.id,
-          label: node.label,
-          x: node.x,
-          y: node.y,
-          size: node.size,
-          style: {
-            fill: node.color,
-            stroke: node.color
-          }
+          label: node.id,
+          joins: node.joins,
+          splits: node.splits
+          // label: node.label,
+          // x: node.x,
+          // y: node.y,
+          // size: node.size,
+          // style: {
+          //   fill: node.color,
+          //   stroke: node.color
+          //}
         };
       }),
       edges: this.data.data.edges.map((edge) => {
         return {
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          label: edge.label,
-          style: {
-            stroke: edge.color
-          },
+          id: `${edge.sourceNodeId}->${edge.targetNodeId}`,
+          source: edge.sourceNodeId,
+          target: edge.targetNodeId,
+          // label: edge.label,
+          // style: {
+          //   stroke: edge.color
+          // },
           support: edge.support
         };
       })
