@@ -24,7 +24,15 @@
     >
       <template v-slot:top>
         <v-toolbar flat>
-          <v-toolbar-title> {{ $t("data-stores.page-title") }}</v-toolbar-title>
+          <v-toolbar-title>
+            {{ $t("data-stores.page-title") }}
+            <v-tooltip bottom max-width="600px">
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon v-bind="attrs" v-on="on">help</v-icon>
+              </template>
+              <span>{{ $t("data-stores.page-hint") }}</span>
+            </v-tooltip>
+          </v-toolbar-title>
           <v-spacer></v-spacer>
           <v-dialog v-model="newDialog" max-width="600px">
             <template v-slot:activator="{ on, attrs }">
@@ -36,11 +44,7 @@
               <v-card-title>{{ $t("common.add-new") }}</v-card-title>
               <v-card-text>
                 <v-form>
-                  <v-text-field
-                    :label="$t('common.name')"
-                    type="text"
-                    v-model="newName"
-                  ></v-text-field>
+                  <v-text-field v-model="newName" :hint="$t('data-stores.name-hint')" :label="$t('common.name')" type="text"></v-text-field>
                 </v-form>
               </v-card-text>
               <v-card-actions>
@@ -68,9 +72,7 @@
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
             <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
-              <v-icon small @click="configureDataStore(item.id)"
-                >settings</v-icon
-              >
+              <v-icon small @click="configureDataStore(item.id)">settings</v-icon>
             </v-btn>
           </template>
           <span>{{ $t("common.configure") }}</span>
@@ -78,20 +80,14 @@
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
             <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
-              <v-icon small @click="removeDataStore(item)"
-                >delete_forever</v-icon
-              >
+              <v-icon small @click="removeDataStore(item)">delete_forever</v-icon>
             </v-btn>
           </template>
           <span>{{ $t("common.remove") }}</span>
         </v-tooltip>
       </template>
     </v-data-table>
-    <data-store-configuration
-      :value="dataStoreIdToConfigure != null"
-      :data-store-id="dataStoreIdToConfigure"
-      @closed="closeDataStoreConfiguration"
-    />
+    <data-store-configuration :data-store-id="dataStoreIdToConfigure" :value="dataStoreIdToConfigure != null" @closed="closeDataStoreConfiguration" />
     <rename-dialog
       :value="dataStoreIdToRename != null"
       :old-name="dataStoreNameToRename"
@@ -129,11 +125,7 @@ export default class DataStores extends Vue {
   dataStoreIdToRename: string | null = null;
 
   get dataStoreNameToRename(): string | null {
-    return (
-      this.dataStores.find(
-        (dataStore) => dataStore.id == this.dataStoreIdToRename
-      )?.name || null
-    );
+    return this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename)?.name || null;
   }
 
   async mounted() {
@@ -159,9 +151,7 @@ export default class DataStores extends Vue {
         name: newName
       }))
     ) {
-      const dataStore = this.dataStores.find(
-        (dataStore) => dataStore.id == this.dataStoreIdToRename
-      );
+      const dataStore = this.dataStores.find((dataStore) => dataStore.id == this.dataStoreIdToRename);
 
       if (dataStore != null) dataStore.name = newName;
       this.dataStoreIdToRename = null;
