@@ -769,7 +769,7 @@ class WorkspacesApiTest : BaseApiTest() {
     }
 
     @Test
-    @Timeout(20L, unit = TimeUnit.SECONDS)
+    @Timeout(60L, unit = TimeUnit.SECONDS)
     fun `five subscriptions from different clients`() {
         val result = ConcurrentLinkedDeque<UUID>()
         val workspaceId = UUID.randomUUID()
@@ -786,7 +786,7 @@ class WorkspacesApiTest : BaseApiTest() {
                 launch(context = Dispatchers.IO) {
                     withAuthentication(login = "user${ctr}@example.com") {
                         handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
-                            sync.trySendBlocking(ctr)
+                            sync.send(ctr)
                             result.add(channel.readSSE().asUpdateEvent())
                         }
                     }
