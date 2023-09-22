@@ -1,0 +1,1 @@
+alter table causalnetdependency add column dependency_measure double precision null;
