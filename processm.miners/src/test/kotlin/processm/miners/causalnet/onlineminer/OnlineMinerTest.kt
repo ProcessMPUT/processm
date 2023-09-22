@@ -7,7 +7,7 @@ import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
 import processm.core.models.metadata.BasicMetadata
-import processm.core.models.metadata.SingleValueMetadata
+import processm.core.models.metadata.SingleDoubleMetadata
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
 import kotlin.math.max
 import kotlin.math.min
@@ -158,27 +158,27 @@ class OnlineMinerTest {
         assertTrue { BasicMetadata.DEPENDENCY_MEASURE in hm.result.availableMetadata }
         assertEquals(
             2.0,
-            (hm.result.getMetadata(Dependency(a, b), BasicMetadata.DEPENDENCY_MEASURE) as SingleValueMetadata<Double>)
+            (hm.result.getMetadata(Dependency(a, b), BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata)
                 .value
         )
         assertEquals(
             1.0,
-            (hm.result.getMetadata(Dependency(a, c), BasicMetadata.DEPENDENCY_MEASURE) as SingleValueMetadata<Double>)
+            (hm.result.getMetadata(Dependency(a, c), BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata)
                 .value
         )
         assertEquals(
             1.0,
-            (hm.result.getMetadata(Dependency(b, c), BasicMetadata.DEPENDENCY_MEASURE) as SingleValueMetadata<Double>)
+            (hm.result.getMetadata(Dependency(b, c), BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata)
                 .value
         )
         assertEquals(
             1.0,
-            (hm.result.getMetadata(Dependency(b, d), BasicMetadata.DEPENDENCY_MEASURE) as SingleValueMetadata<Double>)
+            (hm.result.getMetadata(Dependency(b, d), BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata)
                 .value
         )
         assertEquals(
             2.0,
-            (hm.result.getMetadata(Dependency(c, d), BasicMetadata.DEPENDENCY_MEASURE) as SingleValueMetadata<Double>)
+            (hm.result.getMetadata(Dependency(c, d), BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata)
                 .value
         )
     }

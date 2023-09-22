@@ -8,7 +8,7 @@ import processm.core.models.causalnet.*
 import processm.core.models.metadata.BasicMetadata
 import processm.core.models.metadata.DefaultMetadataProvider
 import processm.core.models.metadata.MetadataSubject
-import processm.core.models.metadata.SingleValueMetadata
+import processm.core.models.metadata.SingleDoubleMetadata
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
@@ -130,8 +130,8 @@ class OfflineHeuristicMiner(
 
         val finalModel = removeUnusedParts(model)
 
-        val dependencyMetadata: HashMap<MetadataSubject, SingleValueMetadata<Double>> =
-            finalModel.dependencies.associateWithTo(HashMap()) { SingleValueMetadata(dependencyGraph.getValue(it)) }
+        val dependencyMetadata: HashMap<MetadataSubject, SingleDoubleMetadata> =
+            finalModel.dependencies.associateWithTo(HashMap()) { SingleDoubleMetadata(dependencyGraph.getValue(it)) }
         finalModel.addMetadataProvider(DefaultMetadataProvider(BasicMetadata.DEPENDENCY_MEASURE, dependencyMetadata))
 
         return@lazy finalModel

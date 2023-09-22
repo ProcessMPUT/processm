@@ -126,8 +126,8 @@ class OnlineMiner(
         }
         for (join in joins)
             model.addJoin(join)
-        val dependencyMetadata: HashMap<MetadataSubject, SingleValueMetadata<Double>> =
-            directlyFollows.mapValuesTo(HashMap()) { (_, v) -> SingleValueMetadata(v.toDouble()) }
+        val dependencyMetadata: HashMap<MetadataSubject, SingleDoubleMetadata> =
+            directlyFollows.mapValuesTo(HashMap()) { (_, v) -> SingleDoubleMetadata(v.toDouble()) }
         model.addMetadataProvider(DefaultMetadataProvider(BasicMetadata.DEPENDENCY_MEASURE, dependencyMetadata))
     }
 
