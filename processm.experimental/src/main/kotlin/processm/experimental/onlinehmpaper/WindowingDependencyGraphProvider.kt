@@ -26,11 +26,13 @@ class WindowingDependencyGraphProvider(val windowSize: Int) : DependencyGraphPro
         epoch++
     }
 
-    override fun computeDependencyGraph(): Map<Dependency, Double> =
-        directlyFollows
-            .filterValues { last -> last >= epoch - windowSize }
-            .keys
-            .associateWith { Double.NaN }
+    override fun computeDependencyGraph(): MutableMap<Dependency, Double> {
+        val result = HashMap<Dependency, Double>()
+        for ((k, last) in directlyFollows)
+            if (last >= epoch - windowSize)
+                result[k] = Double.NaN
+        return result
+    }
 
     override val nodes: Set<Node>
         get() = computeDependencyGraph().keys.mapToSet { it.source } + setOf(end)
