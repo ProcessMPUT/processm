@@ -9,6 +9,8 @@ import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.models.causalnet.*
+import processm.core.models.metadata.BasicMetadata
+import processm.core.models.metadata.SingleValueMetadata
 import processm.core.verifiers.CausalNetVerifier
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.miners.causalnet.heuristicminer.bindingproviders.CompleteBindingProvider
@@ -47,6 +49,17 @@ class OfflineHeuristicMinerTest {
             assertEquals(splits[b], setOf(Split(setOf(Dependency(b, c))), Split(setOf(Dependency(b, end)))))
             assertEquals(splits[c], setOf(Split(setOf(Dependency(c, end)))))
         }
+        assertTrue { BasicMetadata.DEPENDENCY_MEASURE in hm.result.availableMetadata }
+        assertEquals(
+            2.0,
+            (hm.result.getMetadata(Dependency(a, b), BasicMetadata.DEPENDENCY_MEASURE) as SingleValueMetadata<Double>)
+                .value
+        )
+        assertEquals(
+            1.0,
+            (hm.result.getMetadata(Dependency(b, c), BasicMetadata.DEPENDENCY_MEASURE) as SingleValueMetadata<Double>)
+                .value
+        )
     }
 
     @Test

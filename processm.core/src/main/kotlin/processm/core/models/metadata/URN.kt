@@ -14,7 +14,7 @@ value class URN(val urn: String) {
 
     companion object {
         /**
-         * Poor's man grammar. Order is important to this extent that a definition must come after all usages
+         * Poor man's grammar. Order is important to this extent that a definition must come after all usages
          */
         private val grammar = listOf(
             "<nid>" to "(?:\\p{Alnum}<ldh>{0,30}\\p{Alnum})", //NID           = (alphanum) 0*30(ldh) (alphanum)

@@ -15,7 +15,8 @@ interface LongDistanceDependencyMiner {
 
     /**
      * For the model [currentModel] return dependencies that should be added to the model.
-     * Should return an empty list if there are no dependencies to add.
+     * Each dependency is associated with the value of a dependency measure.
+     * Should return an empty map if there are no dependencies to add.
      */
-    fun mine(currentModel: CausalNet): Collection<Dependency>
+    fun mine(currentModel: CausalNet): Map<Dependency, Double>
 }

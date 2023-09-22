@@ -26,18 +26,18 @@ class NaiveLongDistanceDependencyMiner(
         }.flatten())
     }
 
-    override fun mine(model: CausalNet): Collection<Dependency> {
+    override fun mine(model: CausalNet): Map<Dependency, Double> {
         val known = (model.outgoing + model.incoming)
             .values
             .flatten()
             .toSet()
         avoidabilityChecker.setContext(model)
         return pairsCtr
-            .filter { (dep, ctr) -> !known.contains(dep) }
+            .filter { (dep, _) -> !known.contains(dep) }
             .map { (dep, ctr) -> dep to ctr.toDouble() / predecessorCtr.getValue(dep.source) }
-            .filter { (dep, ctr) -> ctr >= minLongTermDependency }
-            .map { (dep, ctr) -> dep }
-            .filter { dep -> !(dep.source == model.start && dep.target == model.end) }
-            .filter { dep -> avoidabilityChecker.invoke(setOf(dep.source) to setOf(dep.target)) }
+            .filter { (_, ctr) -> ctr >= minLongTermDependency }
+            .filter { (dep, _) -> !(dep.source == model.start && dep.target == model.end) }
+            .filter { (dep, _) -> avoidabilityChecker.invoke(setOf(dep.source) to setOf(dep.target)) }
+            .toMap()
     }
 }

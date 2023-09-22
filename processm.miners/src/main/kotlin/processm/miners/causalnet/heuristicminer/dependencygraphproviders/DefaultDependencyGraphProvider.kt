@@ -23,5 +23,7 @@ open class DefaultDependencyGraphProvider(
 
 
     override fun computeDependencyGraph() =
-        super.computeDependencyGraph().filter { (a, b) -> dependency(a, b) >= minDependency }
+        super.computeDependencyGraph()
+            .mapValues { (k, _) -> dependency(k.source, k.target) }
+            .filterValues { it >= minDependency }
 }

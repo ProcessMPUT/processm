@@ -32,11 +32,11 @@ interface DependencyGraphProvider {
     fun processTrace(nodeTrace: NodeTrace)
 
     /**
-     * Construct the dependency graph.
+     * Construct the dependency graph. Each dependency is associated with the value of a dependency measure, possibly [Double.NaN]
      *
      * The result may change between subsequent calls to [processTrace]
      */
-    fun computeDependencyGraph(): Collection<Dependency>
+    fun computeDependencyGraph(): Map<Dependency, Double>
 
     fun unprocessTrace(nodeTrace: NodeTrace): Unit =
         throw UnsupportedOperationException("By default this operation is unsupported")

@@ -42,14 +42,14 @@ open class BasicDependencyGraphProvider(protected val minDirectlyFollows: Int) :
         }
         directlyFollows.dec(Dependency(prev, end))
         mutableNodes.clear()
-        val dg = computeDependencyGraph()
+        val dg = computeDependencyGraph().keys
         mutableNodes.addAll(dg.map { it.source })
         mutableNodes.addAll(dg.map { it.target })
     }
 
-    override fun computeDependencyGraph(): Collection<Dependency> = directlyFollows
+    override fun computeDependencyGraph(): Map<Dependency, Double> = directlyFollows
         .filterValues { it >= minDirectlyFollows }
-        .keys
+        .mapValues { (_, v) -> v.toDouble() }
 
 
 }

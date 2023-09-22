@@ -5,6 +5,10 @@ import processm.core.log.hierarchical.Log
 import processm.core.logging.logger
 import processm.core.logging.trace
 import processm.core.models.causalnet.*
+import processm.core.models.metadata.BasicMetadata
+import processm.core.models.metadata.DefaultMetadataProvider
+import processm.core.models.metadata.MetadataSubject
+import processm.core.models.metadata.SingleValueMetadata
 import processm.core.verifiers.causalnet.CausalNetVerifierImpl
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.heuristicminer.bindingproviders.BestFirstBindingProvider
@@ -96,7 +100,8 @@ class OfflineHeuristicMiner(
     override val result: MutableCausalNet by lazy {
         val model = MutableCausalNet(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
         model.addInstance(*dependencyGraphProvider.nodes.toTypedArray())
-        for (dep in dependencyGraphProvider.computeDependencyGraph())
+        val dependencyGraph = dependencyGraphProvider.computeDependencyGraph().toMutableMap()
+        for (dep in dependencyGraph.keys)
             model.addDependency(dep)
 
         logger().trace { "Dependency graph (connected=${CausalNetVerifierImpl(model).isConnected}):\n$model" }
@@ -110,7 +115,8 @@ class OfflineHeuristicMiner(
         while (true) {
             val ltdeps = longDistanceDependencyMiner.mine(model)
             if (ltdeps.isNotEmpty()) {
-                ltdeps.forEach { dep ->
+                dependencyGraph.putAll(ltdeps)
+                ltdeps.keys.forEach { dep ->
                     model.addDependency(dep)
                     model.clearBindingsFor(dep.source)
                     model.clearBindingsFor(dep.target)
@@ -122,7 +128,13 @@ class OfflineHeuristicMiner(
 
         logger().trace { "Intermediate model:\n$model" }
 
-        return@lazy removeUnusedParts(model)
+        val finalModel = removeUnusedParts(model)
+
+        val dependencyMetadata: HashMap<MetadataSubject, SingleValueMetadata<Double>> =
+            finalModel.dependencies.associateWithTo(HashMap()) { SingleValueMetadata(dependencyGraph.getValue(it)) }
+        finalModel.addMetadataProvider(DefaultMetadataProvider(BasicMetadata.DEPENDENCY_MEASURE, dependencyMetadata))
+
+        return@lazy finalModel
     }
 
 }
