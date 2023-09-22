@@ -100,7 +100,7 @@ class OfflineHeuristicMiner(
     override val result: MutableCausalNet by lazy {
         val model = MutableCausalNet(start = dependencyGraphProvider.start, end = dependencyGraphProvider.end)
         model.addInstance(*dependencyGraphProvider.nodes.toTypedArray())
-        val dependencyGraph = dependencyGraphProvider.computeDependencyGraph().toMutableMap()
+        val dependencyGraph = dependencyGraphProvider.computeDependencyGraph()
         for (dep in dependencyGraph.keys)
             model.addDependency(dep)
 

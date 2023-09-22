@@ -32,12 +32,17 @@ class NaiveLongDistanceDependencyMiner(
             .flatten()
             .toSet()
         avoidabilityChecker.setContext(model)
-        return pairsCtr
-            .filter { (dep, _) -> !known.contains(dep) }
-            .map { (dep, ctr) -> dep to ctr.toDouble() / predecessorCtr.getValue(dep.source) }
-            .filter { (_, ctr) -> ctr >= minLongTermDependency }
-            .filter { (dep, _) -> !(dep.source == model.start && dep.target == model.end) }
-            .filter { (dep, _) -> avoidabilityChecker.invoke(setOf(dep.source) to setOf(dep.target)) }
-            .toMap()
+        val result = HashMap<Dependency, Double>()
+        for ((dep, ctr) in pairsCtr) {
+            if (!known.contains(dep)) {
+                val measure = ctr.toDouble() / predecessorCtr.getValue(dep.source)
+                if (measure >= minLongTermDependency &&
+                    !(dep.source == model.start && dep.target == model.end) &&
+                    avoidabilityChecker.invoke(setOf(dep.source) to setOf(dep.target))
+                )
+                    result[dep] = measure
+            }
+        }
+        return result
     }
 }

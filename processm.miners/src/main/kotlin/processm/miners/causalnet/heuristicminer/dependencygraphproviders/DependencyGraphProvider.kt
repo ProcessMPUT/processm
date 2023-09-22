@@ -36,7 +36,7 @@ interface DependencyGraphProvider {
      *
      * The result may change between subsequent calls to [processTrace]
      */
-    fun computeDependencyGraph(): Map<Dependency, Double>
+    fun computeDependencyGraph(): MutableMap<Dependency, Double>
 
     fun unprocessTrace(nodeTrace: NodeTrace): Unit =
         throw UnsupportedOperationException("By default this operation is unsupported")
