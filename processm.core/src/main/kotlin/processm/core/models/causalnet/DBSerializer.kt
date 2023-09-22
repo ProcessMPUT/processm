@@ -10,9 +10,7 @@ import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.helpers.mapToSet
-import processm.core.models.metadata.BasicMetadata
-import processm.core.models.metadata.DefaultMetadataProvider
-import processm.core.models.metadata.SingleDoubleMetadata
+import processm.core.models.metadata.*
 import processm.core.persistence.DBConnectionPool
 import java.util.*
 
@@ -66,14 +64,12 @@ internal class DAODependency(id: EntityID<Int>) : IntEntity(id) {
     var source by CausalNetDependency.depsource
     var target by CausalNetDependency.deptarget
     var model by DAOModel referencedOn CausalNetDependency.model
-    var dependencyMeasure by CausalNetDependency.dependencyMeasure
 }
 
 internal object CausalNetDependency : IntIdTable() {
     val depsource = reference("source", CausalNetNode, onDelete = ReferenceOption.CASCADE)
     val deptarget = reference("target", CausalNetNode, onDelete = ReferenceOption.CASCADE)
     val model = reference("model", CausalNetModel, onDelete = ReferenceOption.CASCADE)
-    val dependencyMeasure = double("dependency_measure").nullable()
 
     init {
         index(true, depsource, deptarget)
@@ -105,6 +101,8 @@ internal object CausalNetDependencyBindings : Table() {
 
 object DBSerializer {
 
+    private fun urn(modelId: Int, dependencyId: Int) = URN("urn:processm:single_value_metadata/$modelId/$dependencyId")
+
     /**
      * Insert a causal net model to the DB
      *
@@ -127,16 +125,23 @@ object DBSerializer {
             }
             daomodel.start = node2DAONode.getValue(model.start).id
             daomodel.end = node2DAONode.getValue(model.end).id
-            val hasDependencyMeasure = BasicMetadata.DEPENDENCY_MEASURE in model.availableMetadata
             val dep2DAODep = model.outgoing.values.flatten().associateWith { dep ->
                 DAODependency.new {
                     source = node2DAONode.getValue(dep.source).id
                     target = node2DAONode.getValue(dep.target).id
                     this.model = daomodel
-                    dependencyMeasure = if (hasDependencyMeasure) (model.getMetadata(
-                        dep,
-                        BasicMetadata.DEPENDENCY_MEASURE
-                    ) as SingleDoubleMetadata).value else null
+                }
+            }
+            if (BasicMetadata.DEPENDENCY_MEASURE in model.availableMetadata) {
+                val modelId = daomodel.id.value
+                for ((k, v) in model.getProvider(BasicMetadata.DEPENDENCY_MEASURE).entries) {
+                    k as Dependency
+                    v as SingleDoubleMetadata
+                    val depId = dep2DAODep.getValue(k).id.value
+                    SingleValueMetadata.new {
+                        urn = urn(modelId, depId)
+                        doubleValue = v
+                    }
                 }
             }
             val tmp = model.joins.values.asSequence().flatten().map { join -> Pair(join, true) } +
@@ -182,15 +187,22 @@ object DBSerializer {
                 throw IllegalStateException("start or end is null") //this means that DB went bonkers
             val mm = MutableCausalNet(start = idNode.getValue(start), end = idNode.getValue(end))
             mm.addInstance(*idNode.values.toTypedArray())
-            val dependencyMeasureMetadataProvider =
-                DefaultMetadataProvider<SingleDoubleMetadata>(BasicMetadata.DEPENDENCY_MEASURE)
             val idDep = daomodel.dependencies.associateWith { row ->
-                val dep = mm.addDependency(
+                mm.addDependency(
                     idNode.getValue(row.source),
                     idNode.getValue(row.target)
                 )
-                row.dependencyMeasure?.let { dependencyMeasureMetadataProvider.put(dep, SingleDoubleMetadata(it)) }
-                return@associateWith dep
+            }
+            val dependencyMeasureMetadataProvider =
+                DefaultMetadataProvider<SingleDoubleMetadata>(BasicMetadata.DEPENDENCY_MEASURE)
+            val urn2dep = idDep.mapKeys { urn(modelId, it.key.id.value).urn }
+            SingleValueMetadata.find {
+                SingleValueMetadataTable.urn inList urn2dep.keys
+            }.forEach {
+                val dep = urn2dep[it.urn.urn]
+                val value = it.doubleValue
+                if (dep !== null && value != null)
+                    dependencyMeasureMetadataProvider.put(dep, value)
             }
             daomodel.bindings.forEach { row ->
                 val deps = row.dependencies.mapToSet { idDep.getValue(it) }
@@ -220,6 +232,9 @@ object DBSerializer {
         transaction(database) {
             addLogger(Slf4jSqlDebugLogger)
             val model = DAOModel.findById(modelId) ?: throw NoSuchElementException()
+            SingleValueMetadataTable.deleteWhere {
+                SingleValueMetadataTable.urn inList model.dependencies.map { urn(modelId, it.id.value).urn }
+            }
             model.delete()
         }
     }

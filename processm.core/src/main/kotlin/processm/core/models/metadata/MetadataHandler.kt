@@ -7,4 +7,5 @@ interface MetadataHandler {
     val availableMetadata: Set<URN>
     fun getAllMetadata(subject: MetadataSubject): Map<URN, MetadataValue>
     fun getMetadata(subject: MetadataSubject, metadata: URN): MetadataValue
+    fun getProvider(metadata: URN): MetadataProvider
 }

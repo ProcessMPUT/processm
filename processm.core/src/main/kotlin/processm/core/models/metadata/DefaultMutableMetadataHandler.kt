@@ -14,6 +14,8 @@ open class DefaultMutableMetadataHandler : MutableMetadataHandler {
         return _metadataProviders.getValue(metadata).get(subject)
     }
 
+    override fun getProvider(metadata: URN): MetadataProvider = _metadataProviders.getValue(metadata)
+
     override fun addMetadataProvider(mp: MetadataProvider) {
         if (mp.name in _metadataProviders)
             throw IllegalArgumentException("${mp.name} is already registered")
