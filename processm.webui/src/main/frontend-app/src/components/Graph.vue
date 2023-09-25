@@ -76,6 +76,37 @@ export default class Graph extends Vue {
             refY: 5
           }
         }
+
+        // custom edge with extra shape
+        customEdge: {
+          type: "quadratic",
+          style: {
+            stroke: this.edgeColor,
+            endArrow: {
+              path: G6.Arrow.vee(10, 10, 0),
+              //d: 0,
+              fill: this.edgeColor,
+              stroke: this.edgeColor
+            }
+          },
+          labelCfg: {
+            refY: 5
+          },
+          draw(cfg: EdgeConfig, group: any) {
+            const startPoint = cfg.startPoint;
+            const endPoint = cfg.endPoint;
+            const shape = group.addShape("path", {
+              attrs: {
+                stroke: this.edgeColor,
+                path: [
+                  ["M", startPoint.x, startPoint.y],
+                  ["Q", (startPoint.x + endPoint.x) / 2, startPoint.y, endPoint.x, endPoint.y]
+                ]
+              }
+            });
+            return shape;
+          }
+        }
       });
       // wait until height of the component is calculated
       const graphData = this.data;
