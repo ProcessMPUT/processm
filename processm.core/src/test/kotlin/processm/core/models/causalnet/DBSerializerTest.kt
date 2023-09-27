@@ -2,6 +2,9 @@ package processm.core.models.causalnet
 
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.mapToSet
+import processm.core.models.metadata.BasicMetadata
+import processm.core.models.metadata.DefaultMetadataProvider
+import processm.core.models.metadata.SingleDoubleMetadata
 import processm.core.persistence.connection.DBCache
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -81,6 +84,28 @@ class DBSerializerTest {
         assertEquals(orig.start, copy.start)
         assertTrue(copy.start.isSilent)
         assertTrue(copy.end.isSilent)
+    }
+
+    @Test
+    fun `metadata handling`() {
+        val orig = MutableCausalNet()
+        val dep = orig.addDependency(orig.start, orig.end)
+        val mp = DefaultMetadataProvider<SingleDoubleMetadata>(BasicMetadata.DEPENDENCY_MEASURE)
+        mp.put(dep, SingleDoubleMetadata(13.37))
+        orig.addMetadataProvider(mp)
+        val id = DBSerializer.insert(DBCache.get(dbName).database, orig)
+        val copy = DBSerializer.fetch(DBCache.get(dbName).database, id)
+        assertEquals(orig.instances, copy.instances)
+        assertEquals(orig.start, copy.start)
+        assertEquals(orig.start, copy.start)
+        assertTrue(copy.start.isSilent)
+        assertTrue(copy.end.isSilent)
+        assertTrue { BasicMetadata.DEPENDENCY_MEASURE in copy.availableMetadata }
+        assertEquals(
+            13.37,
+            (copy.getMetadata(copy.dependencies.single(), BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata)
+                .value
+        )
     }
 
     @Test

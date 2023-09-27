@@ -47,7 +47,7 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
         return latest.single()
     }
 
-    override fun mine(currentModel: CausalNet): Collection<Dependency> {
+    override fun mine(currentModel: CausalNet): Map<Dependency, Double> {
         isAvoidable.setContext(currentModel)
         val result = ArrayList<Dependency>()
         for ((premises, conclusions) in deps) {
@@ -82,6 +82,7 @@ abstract class AbstractAssociationsRulesLongDistanceDependencyMiner(
         }
         if (logger().isDebugEnabled)
             result.forEach { logger().debug("FINAL ${it.source.activity} ${it.target.activity}") }
-        return result
+        // I don't see an obvious value to use as dependency measure
+        return result.associateWith { Double.NaN }
     }
 }

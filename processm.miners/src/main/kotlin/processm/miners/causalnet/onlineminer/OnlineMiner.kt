@@ -5,6 +5,7 @@ import processm.core.log.hierarchical.Log
 import processm.core.logging.debug
 import processm.core.logging.logger
 import processm.core.models.causalnet.*
+import processm.core.models.metadata.*
 import processm.miners.causalnet.CausalNetMiner
 import processm.miners.causalnet.onlineminer.replayer.Replayer
 import processm.miners.causalnet.onlineminer.replayer.SingleReplayer
@@ -125,6 +126,9 @@ class OnlineMiner(
         }
         for (join in joins)
             model.addJoin(join)
+        val dependencyMetadata: HashMap<MetadataSubject, SingleDoubleMetadata> =
+            directlyFollows.mapValuesTo(HashMap()) { (_, v) -> SingleDoubleMetadata(v.toDouble()) }
+        model.addMetadataProvider(DefaultMetadataProvider(BasicMetadata.DEPENDENCY_MEASURE, dependencyMetadata))
     }
 
     /**
