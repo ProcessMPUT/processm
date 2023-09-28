@@ -249,7 +249,8 @@ class DataStoreService(private val producer: Producer) {
     /**
      * Creates an automatic ETL process in the specified [dataStoreId] using case notion described by [relations].
      */
-    fun createAutomaticEtlProcess(
+    fun saveAutomaticEtlProcess(
+        etlId: UUID?,
         dataStoreId: UUID,
         dataConnectorId: UUID,
         name: String,
@@ -258,20 +259,27 @@ class DataStoreService(private val producer: Producer) {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             loggedScope { logger ->
-                val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
-                    it[this.name] = name
-                    it[this.processType] = ProcessTypeDto.Automatic.processTypeName
-                    it[this.dataConnectorId] = dataConnectorId
+                val etlProcessMetadata =
+                    (etlId?.let { EtlProcessMetadata.findById(it) } ?: EtlProcessMetadata.new {}).apply {
+                        this.name = name
+                        this.processType = ProcessTypeDto.Automatic.processTypeName
+                        this.dataConnector = DataConnector[dataConnectorId]
+                    }
+
+                AutomaticEtlProcess.findById(etlProcessMetadata.id.value) ?: AutomaticEtlProcesses.insert {
+                    it[this.id] = etlProcessMetadata.id.value
                 }
-                AutomaticEtlProcesses.insert {
-                    it[this.id] = etlProcessMetadataId
+
+                AutomaticEtlProcessRelations.deleteWhere {
+                    AutomaticEtlProcessRelations.automaticEtlProcessId eq etlProcessMetadata.id.value
                 }
+
                 AutomaticEtlProcessRelations.batchInsert(relations) { relation ->
                     try {
                         val sourceClassId = relation.first.toInt()
                         val targetClassId = relation.second.toInt()
 
-                        this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
+                        this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadata.id.value
                         this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
                         this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
                     } catch (e: NumberFormatException) {
@@ -280,7 +288,7 @@ class DataStoreService(private val producer: Producer) {
                 }
                 notifyActivated(dataStoreId, dataConnectorId)
 
-                return@transaction etlProcessMetadataId.value
+                return@transaction etlProcessMetadata.id.value
             }
         }
     }
