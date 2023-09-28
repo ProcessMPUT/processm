@@ -75,7 +75,7 @@ export default class Graph extends Vue {
           labelCfg: {
             refY: 5
           }
-        }
+        },
 
         // custom edge with extra shape
         customEdge: {
@@ -97,7 +97,7 @@ export default class Graph extends Vue {
             const endPoint = cfg.endPoint;
             const shape = group.addShape("path", {
               attrs: {
-                stroke: this.edgeColor,
+                //stroke: this.edgeColor,
                 path: [
                   ["M", startPoint.x, startPoint.y],
                   ["Q", (startPoint.x + endPoint.x) / 2, startPoint.y, endPoint.x, endPoint.y]
