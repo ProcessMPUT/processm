@@ -137,7 +137,7 @@
     "use-connection-string": "Użyj JDBC connection string",
     "specify-connection-properties": "Podaj właściwości połączenia",
     "connection-string": "Connection string",
-    "connection-string-hint": "Użyj formatu JDBC, np. jdbc:driver://host:port?database?user=login&password=password. Driver odpowiada konkretnemu sterownikowi bazy danych. Obsługiwane wartości to: postgres, sqlserver, mysql, oracle, db2. Pozostała część zależy od sterownika. Należy postępować zgodnie z dokumentacją systemu zarządzania bazą danych.",
+    "connection-string-hint": "Użyj formatu JDBC, np. jdbc:driver://host:port/database?user=login&password=password. Driver odpowiada konkretnemu sterownikowi bazy danych. Obsługiwane wartości to: postgres, sqlserver, mysql, oracle, db2. Pozostała część zależy od sterownika. Należy postępować zgodnie z dokumentacją systemu zarządzania bazą danych.",
     "connector-name": "Nazwa łącza",
     "advanced": "Zaawansowane",
     "server": "Serwer",

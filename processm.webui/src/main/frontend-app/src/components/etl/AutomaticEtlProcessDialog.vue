@@ -121,9 +121,9 @@ import DataStoreService from "@/services/DataStoreService";
 import App from "@/App.vue";
 import CaseNotion, { Relation } from "@/models/CaseNotion";
 import { capitalize } from "@/utils/StringCaseConverter";
-import { EtlProcessType } from "@/models/EtlProcess";
 import { notEmptyRule } from "@/utils/FormValidationRules";
 import CaseNotionEditor from "./CaseNotionEditor.vue";
+import { EtlProcessType } from "@/openapi";
 
 @Component({
   components: {
@@ -195,7 +195,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
               }))
             };
       this.isSubmitting = true;
-      const etlProcess = await this.dataStoreService.createEtlProcess(
+      const etlProcess = await this.dataStoreService.saveEtlProcess(
         this.dataStoreId,
         this.processName,
         EtlProcessType.Automatic,

@@ -23,7 +23,7 @@
                   :label="$t('add-data-connector-dialog.connection-string')"
                   :rules="connectionStringRules"
                   :hint="$t('add-data-connector-dialog.connection-string-hint')"
-                  placeholder="jdbc:driver://host:port?database?user=login&password=password"
+                  placeholder="jdbc:driver://host:port/database?user=login&password=password"
                 ></v-text-field>
               </v-form>
             </v-expansion-panel-content>

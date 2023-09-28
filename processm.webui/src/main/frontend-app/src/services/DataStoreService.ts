@@ -6,11 +6,12 @@ import {
   CaseNotion as ApiCaseNotion,
   DataConnector as ApiDataConnector,
   DataStore as ApiDataStore,
+  EtlProcess,
   EtlProcess as ApiEtlProcess,
   EtlProcessInfo,
+  EtlProcessType,
   EtlProcessType as ApiEtlProcessType
 } from "@/openapi";
-import EtlProcess, { EtlProcessType } from "@/models/EtlProcess";
 import CaseNotion from "@/models/CaseNotion";
 import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
 
@@ -171,14 +172,7 @@ export default class DataStoreService extends BaseService {
         return etlProcesses;
       }
       if (etlProcess.id != null) {
-        etlProcesses.push({
-          id: etlProcess.id,
-          name: etlProcess.name || "",
-          type: etlProcess.type,
-          dataConnectorId: etlProcess.dataConnectorId,
-          isActive: etlProcess.isActive || false,
-          lastExecutionTime: etlProcess.lastExecutionTime ? new Date(etlProcess.lastExecutionTime) : undefined
-        });
+        etlProcesses.push(etlProcess);
       }
 
       return etlProcesses;
@@ -187,19 +181,21 @@ export default class DataStoreService extends BaseService {
     return etlProcesses;
   }
 
-  public async createEtlProcess(
+  public async saveEtlProcess(
     dataStoreId: string,
     processName: string,
     processType: EtlProcessType,
     dataConnectorId: string,
-    configuration: CaseNotion | JdbcEtlProcessConfiguration
+    configuration: CaseNotion | JdbcEtlProcessConfiguration,
+    etlId?: string
   ): Promise<AbstractEtlProcess> {
     let data: AbstractEtlProcess;
     if (processType == EtlProcessType.Automatic) {
       data = {
+        id: etlId,
         name: processName,
         dataConnectorId,
-        type: processType as ApiEtlProcessType,
+        type: processType,
         caseNotion: {
           classes: Object.fromEntries((configuration as CaseNotion).classes),
           edges: (configuration as CaseNotion).edges
@@ -207,19 +203,24 @@ export default class DataStoreService extends BaseService {
       };
     } else {
       data = {
+        id: etlId,
         name: processName,
         dataConnectorId,
         type: processType as ApiEtlProcessType,
         configuration: configuration as JdbcEtlProcessConfiguration
       };
     }
-    const response = await this.dataStoresApi.createEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, data);
+    if (etlId === undefined) {
+      const response = await this.dataStoresApi.createEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, data);
+      return response.data;
+    }
 
-    return response.data;
+    await this.dataStoresApi.updateEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlId, data);
+    return data;
   }
 
   public async changeEtlProcessActivationState(dataStoreId: string, etlProcessId: string, isActive: boolean) {
-    const response = await this.dataStoresApi.updateEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId, { isActive: isActive });
+    const response = await this.dataStoresApi.patchEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId, { isActive: isActive });
 
     return response.status == 204;
   }

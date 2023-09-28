@@ -210,7 +210,7 @@
                             color="primary"
                             class="mx-2"
                             :disabled="dataConnectors.length == 0"
-                            @click.stop="addAutomaticEtlProcessDialog = true"
+                            @click.stop="automaticEtlProcessDialogVisible = true"
                             v-bind="attrs"
                           >
                             {{ $t("data-stores.automatic-etl-process.title") }}
@@ -228,7 +228,7 @@
                             color="primary"
                             class="mx-2"
                             :disabled="dataConnectors.length == 0"
-                            @click.stop="addJdbcEtlProcessDialog = true"
+                            @click.stop="jdbcEtlProcessDialogVisible = true"
                             v-bind="attrs"
                           >
                             {{ $t("data-stores.add-jdbc-etl-process.title") }}
@@ -300,6 +300,14 @@
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
+                      <v-icon small @click="editEtlProcess(item)">edit</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ $t("common.edit") }}</span>
+                </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn color="primary" dark icon v-bind="attrs" v-on="on">
                       <v-icon small @click="removeEtlProcess(item)">delete_forever</v-icon>
                     </v-btn>
                   </template>
@@ -329,11 +337,14 @@
       @submitted="addDataConnector"
     />
     <automatic-etl-process-dialog
-      v-model="addAutomaticEtlProcessDialog"
+      v-model="automaticEtlProcessDialogVisible"
       :data-store-id="dataStoreId"
       :data-connectors="dataConnectors"
-      @cancelled="addAutomaticEtlProcessDialog = false"
-      @submitted="addAutomaticEtlProcess"
+      @cancelled="
+        automaticEtlProcessDialogVisible = false;
+        etlProcessToEdit = null;
+      "
+      @submitted="handleEtlProcessChange"
     />
     <file-upload-dialog v-model="fileUploadDialog" :sizeLimit="fileSizeLimit" @cancelled="fileUploadDialog = false" @submitted="submitFile" />
     <rename-dialog
@@ -343,11 +354,15 @@
       @submitted="renameDataConnector"
     />
     <jdbc-etl-process-dialog
-      v-model="addJdbcEtlProcessDialog"
+      v-model="jdbcEtlProcessDialogVisible"
       :data-store-id="dataStoreId"
       :dataConnectors="dataConnectors"
-      @cancelled="addJdbcEtlProcessDialog = false"
-      @submitted="addJdbcEtlProcess"
+      :initial-config="etlProcessToEdit"
+      @cancelled="
+        jdbcEtlProcessDialogVisible = false;
+        etlProcessToEdit = null;
+      "
+      @submitted="handleEtlProcessChange"
     />
     <process-details-dialog
       :value="processDetailsDialogEtlProcess !== null"
@@ -369,7 +384,6 @@ import Vue from "vue";
 import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import DataStoreService from "@/services/DataStoreService";
 import DataStore, { DataConnector } from "@/models/DataStore";
-import EtlProcess from "@/models/EtlProcess";
 import AddDataConnectorDialog from "@/components/data-connections/AddDataConnectorDialog.vue";
 import XesDataTable from "@/components/XesDataTable.vue";
 import LogsService from "@/services/LogsService";
@@ -382,6 +396,7 @@ import { capitalize } from "@/utils/StringCaseConverter";
 import App from "@/App.vue";
 import JdbcEtlProcessDialog from "@/components/etl/JdbcEtlProcessDialog.vue";
 import ProcessDetailsDialog from "@/components/etl/ProcessDetailsDialog.vue";
+import { EtlProcess, EtlProcessType } from "@/openapi";
 
 @Component({
   components: {
@@ -400,8 +415,8 @@ export default class DataStoreConfiguration extends Vue {
   @Inject() logsService!: LogsService;
   private readonly xesProcessor = new XesProcessor();
   addDataConnectorDialog = false;
-  addAutomaticEtlProcessDialog = false;
-  addJdbcEtlProcessDialog = false;
+  automaticEtlProcessDialogVisible = false;
+  jdbcEtlProcessDialogVisible = false;
   fileUploadDialog = false;
   isUploading = false;
   dataConnectors: DataConnector[] = [];
@@ -416,6 +431,7 @@ export default class DataStoreConfiguration extends Vue {
   dataConnectorIdToRename: string | null = null;
   capitalize = capitalize;
   processDetailsDialogEtlProcess: EtlProcess | null = null;
+  etlProcessToEdit: EtlProcess | null = null;
 
   @Prop({ default: false })
   readonly value!: boolean;
@@ -450,7 +466,7 @@ export default class DataStoreConfiguration extends Vue {
   }
 
   get dataConnectorNameToRename(): string | null {
-    return this.dataConnectors.find((dataStore) => dataStore.id == this.dataConnectorIdToRename)?.name || null;
+    return this.dataConnectors.find((connector) => connector.id == this.dataConnectorIdToRename)?.name || null;
   }
 
   @Watch("value")
@@ -559,8 +575,9 @@ export default class DataStoreConfiguration extends Vue {
     await this.loadDataConnectors();
   }
 
-  async addAutomaticEtlProcess() {
-    this.addAutomaticEtlProcessDialog = false;
+  async handleEtlProcessChange() {
+    this.automaticEtlProcessDialogVisible = false;
+    this.jdbcEtlProcessDialogVisible = false;
     await this.loadEtlProcesses();
   }
 
@@ -604,6 +621,23 @@ export default class DataStoreConfiguration extends Vue {
     }
   }
 
+  async editEtlProcess(etlProcess: EtlProcess) {
+    if (this.dataStoreId == null) return;
+
+    this.etlProcessToEdit = etlProcess;
+    switch (etlProcess.type) {
+      case EtlProcessType.Automatic:
+        this.automaticEtlProcessDialogVisible = true;
+        break;
+      case EtlProcessType.Jdbc:
+        this.jdbcEtlProcessDialogVisible = true;
+        break;
+      default:
+        this.app.error(`Unknown ETL process type: ${etlProcess.type}.`);
+        return;
+    }
+  }
+
   async removeEtlProcess(etlProcess: EtlProcess) {
     if (this.dataStoreId == null) return;
 
@@ -619,7 +653,7 @@ export default class DataStoreConfiguration extends Vue {
     if (!isRemovalConfirmed) return;
 
     try {
-      await this.dataStoreService.removeEtlProcess(this.dataStoreId, etlProcess.id);
+      await this.dataStoreService.removeEtlProcess(this.dataStoreId, etlProcess.id!);
       this.displaySuccessfulRemovalMessage();
       this.etlProcesses.splice(this.etlProcesses.indexOf(etlProcess), 1);
     } catch (error) {
@@ -656,11 +690,11 @@ export default class DataStoreConfiguration extends Vue {
     if (!isConfirmed) return;
 
     try {
-      await this.dataStoreService.changeEtlProcessActivationState(this.dataStoreId, etlProcess.id, !etlProcess.isActive);
+      await this.dataStoreService.changeEtlProcessActivationState(this.dataStoreId, etlProcess.id!, !etlProcess.isActive);
       etlProcess.isActive = !etlProcess.isActive;
       this.app.success(`${this.$t("common.operation-successful")}`);
     } catch (error) {
-      this.app.error(`${this.$t("common.operation-failure")}`);
+      this.app.error(`${this.$t("common.operation-error")}`);
     }
   }
 
@@ -683,20 +717,15 @@ export default class DataStoreConfiguration extends Vue {
     if (!isConfirmed) return;
 
     try {
-      await this.dataStoreService.recreateXesLogFromEtlProcess(this.dataStoreId, etlProcess.id);
+      await this.dataStoreService.recreateXesLogFromEtlProcess(this.dataStoreId, etlProcess.id!);
       this.app.success(`${this.$t("common.operation-successful")}`);
     } catch (error) {
-      this.app.error(`${this.$t("common.operation-failure")}`);
+      this.app.error(`${this.$t("common.operation-error")}`);
     }
   }
 
   getDataConnectorName(dataConnectorId: string) {
     return this.dataConnectors.find((dataConnector) => dataConnector.id == dataConnectorId)?.name || "";
-  }
-
-  async addJdbcEtlProcess() {
-    this.addJdbcEtlProcessDialog = false;
-    await this.loadEtlProcesses();
   }
 
   showEtlProcessDetails(etlProcess: EtlProcess) {
