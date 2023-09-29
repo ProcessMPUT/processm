@@ -65,14 +65,14 @@
     "add-data-connector": "Dodaj łącze danych",
     "data-connector-required": "Łącze danych jest wymagane, aby dodać ciągły proces ETL",
     "automatic-etl-process": {
-      "title": "Dodaj automatyczny process",
+      "title": "Konfiguracja automatycznego procesu ETL",
       "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych",
       "case-notion": "Identyfikator perspektywy biznesowej",
       "select-data-connector": "Wybierz łącze danych",
       "case-notion-description": "dla każdego wpisu w {source} powiązanego z wpisem w {target}"
     },
-    "add-manual-query": {
-      "title": "Dodaj ręcznie zapytanie",
+    "jdbc-etl-process": {
+      "title": "Konfiguracja ręcznego procesu ETL",
       "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
     },
     "upload-xes-file": {

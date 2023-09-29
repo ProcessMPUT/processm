@@ -231,13 +231,11 @@
                             @click.stop="jdbcEtlProcessDialogVisible = true"
                             v-bind="attrs"
                           >
-                            {{ $t("data-stores.add-jdbc-etl-process.title") }}
+                            {{ $t("data-stores.jdbc-etl-process.title") }}
                           </v-btn>
                         </div>
                       </template>
-                      <span>{{
-                        dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.add-jdbc-etl-process.description")
-                      }}</span>
+                      <span>{{ dataConnectors.length == 0 ? $t("data-stores.data-connector-required") : $t("data-stores.jdbc-etl-process.description") }}</span>
                     </v-tooltip>
                   </div>
                   <span v-else> ({{ etlProcesses.length }}) </span>
