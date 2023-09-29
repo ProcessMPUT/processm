@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
     "lint": "vue-cli-service lint",
     "i18n:report": "vue-cli-service i18n:report --src './src/**/*.?(js|vue)' --locales './src/locales/**/*.json'",
     "generate-api-sources": "openapi-generator generate -i ../../../../processm.services/src/main/resources/api-spec.yaml -g typescript-axios -o src/openapi --enable-post-process-file",
@@ -97,6 +97,6 @@
     "vue-loader": "^16.8.2",
     "vue-template-compiler": "^2.6.12",
     "vuetify-loader": "^1.7.2",
-    "webpack": "^4.41.29"
+    "webpack": "^4.47.0"
   }
 }
