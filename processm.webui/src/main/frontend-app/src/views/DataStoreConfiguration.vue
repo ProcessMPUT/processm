@@ -338,6 +338,7 @@
       v-model="automaticEtlProcessDialogVisible"
       :data-store-id="dataStoreId"
       :data-connectors="dataConnectors"
+      :initial-config="etlProcessToEdit"
       @cancelled="
         automaticEtlProcessDialogVisible = false;
         etlProcessToEdit = null;

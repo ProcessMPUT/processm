@@ -2,7 +2,7 @@
   <v-dialog v-model="value" max-height="80%" max-width="40%" @click:outside="cancel">
     <v-card>
       <v-card-title class="headline">
-        {{ $t("data-stores.automatic-etl-process.title") }}
+        {{ $t("automatic-etl-process-dialog.title") }}
       </v-card-title>
       <v-card-text>
         <v-form ref="etlProcessConfiguration" lazy-validation>

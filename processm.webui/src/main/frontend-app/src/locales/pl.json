@@ -65,14 +65,14 @@
     "add-data-connector": "Dodaj łącze danych",
     "data-connector-required": "Łącze danych jest wymagane, aby dodać ciągły proces ETL",
     "automatic-etl-process": {
-      "title": "Konfiguracja automatycznego procesu ETL",
+      "title": "Dodaj automatyczny proces ETL",
       "description": "Automatycznie stwórz perspektywę biznesową i rozpocznij śledzenie zmian w danych",
       "case-notion": "Identyfikator perspektywy biznesowej",
       "select-data-connector": "Wybierz łącze danych",
       "case-notion-description": "dla każdego wpisu w {source} powiązanego z wpisem w {target}"
     },
     "jdbc-etl-process": {
-      "title": "Konfiguracja ręcznego procesu ETL",
+      "title": "Dodaj ręczny proces ETL",
       "description": "Ręcznie zdefiniuj zapytanie, które zwraca istotne zdarzenia w formie wierszy wyniku"
     },
     "upload-xes-file": {
@@ -98,8 +98,11 @@
       "log-recreation-confirmation": "Czy chcesz odtworzyć log XES dla procesu ETL {etlProcessName}? Operacja nadpisuje istniejący log XES."
     }
   },
+  "automatic-etl-process-dialog": {
+    "title": "Konfiguracja automatycznego procesu ETL"
+  },
   "jdbc-etl-process-dialog": {
-    "dialog-title": "Dodaj ręczne zapytanie",
+    "dialog-title": "Konfiguracja ręcznego procesu ETL",
     "query": "Zapytanie SQL",
     "query-hint": "Wpisz zapytanie SQL, które generuje jedno zdarzenie na wiersz. Dialekt SQL zależy od łącza danych/źródłowej bazy danych. Wynikowe kolumny są przekształcane w atrybuty zdarzeń, pomijając wartości NULL. Dla każdego wiersza należy podać kolumny odpowiadające unikalnym i trwałym identyfikatorom zdarzeń i śladom. Obsługiwane są dwa typy zapytań: wsadowe i ciągłe. Zapytanie wsadowe wyodrębnia, przekształca i ładuje dziennik zdarzeń w całości jednorazowo. Zapytanie ciągłe wykonuje się okresowo w celu wyodrębnienia, przekształcenia i załadowania nowych zdarzeń, które wystąpiły od poprzedniego wykonania zapytania. W przypadku zapytania ciągłego należy podać warunek, np. klauzulę WHERE, w celu odfiltrowania wcześniej załadowanych zdarzeń. Warunek ten musi wykorzystywać dokładnie jedną zmienną wiązaną, np. ?, która przyjmuje wartość identyfikatora ostatnio załadowanego zdarzenia.",
     "batch": "Zapytanie wsadowe",

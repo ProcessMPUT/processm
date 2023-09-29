@@ -65,14 +65,14 @@
     "add-data-connector": "Add data connector",
     "data-connector-required": "A data connector is required to add continuous ETL process",
     "automatic-etl-process": {
-      "title": "Configure automatic ETL process",
+      "title": "Add automatic ETL process",
       "description": "Automatically infer a business perspective and start monitoring the data changes",
       "case-notion": "Business perspective identifier",
       "select-data-connector": "Select a data connector first",
       "case-notion-description": "for each entry in {source} related to an entry in {target}"
     },
     "jdbc-etl-process": {
-      "title": "Configure JDBC ETL process",
+      "title": "Add JDBC ETL process",
       "description": "Manually define a query that yields relevant events as result rows"
     },
     "upload-xes-file": {
@@ -99,8 +99,11 @@
       "last-execution-time": "Last execution time"
     }
   },
+  "automatic-etl-process-dialog": {
+    "title": "Configure automatic ETL process"
+  },
   "jdbc-etl-process-dialog": {
-    "dialog-title": "Add JDBC ETL process",
+    "dialog-title": "Configure JDBC ETL process",
     "query": "SQL query",
     "query-hint": "Type an SQL query that produces one event per row. The SQL dialect depends on the data connector/source database. The resulting columns are transformed into event attributes, omitting NULL values. For each row, the columns corresponding to unique and durable event and trace identifiers must be provided. Two types of queries are supported: batch and continuous. The batch query extracts, transforms, and loads event log on demand all-at-once. The continuous query executes periodically to extract, transform, and load new events that occurred since the last query execution. For continuous query, a condition, e.g., a WHERE clause, must be provided for filtering out already loaded events. This condition must use exactly one binding variable, e.g., ?, that attains the value of the id of the last loaded event.",
     "batch": "Batch query",
