@@ -3,6 +3,7 @@ import DataStore, { DataConnector } from "@/models/DataStore";
 import BaseService from "./BaseService";
 import {
   AbstractEtlProcess,
+  CaseNotion,
   CaseNotion as ApiCaseNotion,
   DataConnector as ApiDataConnector,
   DataStore as ApiDataStore,
@@ -12,7 +13,6 @@ import {
   EtlProcessType,
   EtlProcessType as ApiEtlProcessType
 } from "@/openapi";
-import CaseNotion from "@/models/CaseNotion";
 import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
 
 export default class DataStoreService extends BaseService {
@@ -142,10 +142,7 @@ export default class DataStoreService extends BaseService {
 
     return response.data.reduce((caseNotions: CaseNotion[], caseNotion: ApiCaseNotion) => {
       if (caseNotion != null) {
-        caseNotions.push({
-          classes: new Map(Object.entries(caseNotion.classes)),
-          edges: caseNotion.edges
-        });
+        caseNotions.push(caseNotion);
       }
 
       return caseNotions;
@@ -157,10 +154,7 @@ export default class DataStoreService extends BaseService {
 
     const caseNotion = response.data;
 
-    return {
-      classes: new Map(Object.entries(caseNotion.classes)),
-      edges: caseNotion.edges
-    };
+    return caseNotion;
   }
 
   public async getEtlProcesses(dataStoreId: string): Promise<EtlProcess[]> {
@@ -196,10 +190,7 @@ export default class DataStoreService extends BaseService {
         name: processName,
         dataConnectorId,
         type: processType,
-        caseNotion: {
-          classes: Object.fromEntries((configuration as CaseNotion).classes),
-          edges: (configuration as CaseNotion).edges
-        }
+        caseNotion: configuration as CaseNotion
       };
     } else {
       data = {

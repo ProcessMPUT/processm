@@ -42,10 +42,10 @@ svg > defs > marker > path[selected="true"] {
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop, Watch } from "vue-property-decorator";
-import { dia, shapes, layout, util } from "jointjs";
-import CaseNotion from "@/models/CaseNotion";
+import { dia, layout, shapes, util } from "jointjs";
 import dagre from "dagre";
 import graphlib from "graphlib";
+import { CaseNotion } from "@/openapi";
 
 @Component
 export default class CaseNotionEditor extends Vue {
@@ -66,10 +66,7 @@ export default class CaseNotionEditor extends Vue {
   private graph = new dia.Graph();
   private paper = new dia.Paper({});
   private nodes = new Map<string, shapes.standard.Rectangle>();
-  private links = new Map<
-    [shapes.standard.Rectangle, shapes.standard.Rectangle],
-    shapes.standard.Link
-  >();
+  private links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
 
   @Watch("selectedNodes")
   selectedNodesChanged() {
@@ -90,12 +87,10 @@ export default class CaseNotionEditor extends Vue {
 
     this.graph = new dia.Graph();
     this.nodes = new Map<string, shapes.standard.Rectangle>();
-    this.links = new Map<
-      [shapes.standard.Rectangle, shapes.standard.Rectangle],
-      shapes.standard.Link
-    >();
+    this.links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
 
-    relationshipGraph.classes.forEach((className, classId) => {
+    for (let className in relationshipGraph.classes) {
+      let classId = relationshipGraph.classes[className];
       const nodeWidth = 100 + className.length;
       const nodeHeight = 50;
       const rect = new shapes.standard.Rectangle();
@@ -110,7 +105,7 @@ export default class CaseNotionEditor extends Vue {
         }
       });
       this.nodes.set(classId, rect);
-    });
+    }
 
     this.nodes.forEach((node: shapes.standard.Rectangle) => {
       node.addTo(this.graph);
@@ -175,16 +170,10 @@ export default class CaseNotionEditor extends Vue {
   updateLinksSelection() {
     if (this.selectedLinks == null) return;
 
-    const selectedLinks = new Set(
-      this.selectedLinks.map(
-        (link) => `${link.sourceNodeId}_${link.targetNodeId}`
-      )
-    );
+    const selectedLinks = new Set(this.selectedLinks.map((link) => `${link.sourceNodeId}_${link.targetNodeId}`));
 
     this.links.forEach((link, [sourceNode, targetNode]) => {
-      const areBothNodesSelected = selectedLinks.has(
-        `${sourceNode.idAttribute}_${targetNode.idAttribute}`
-      );
+      const areBothNodesSelected = selectedLinks.has(`${sourceNode.idAttribute}_${targetNode.idAttribute}`);
       link.attr({
         line: {
           selected: areBothNodesSelected,
