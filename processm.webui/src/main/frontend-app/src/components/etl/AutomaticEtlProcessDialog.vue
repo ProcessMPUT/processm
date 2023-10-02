@@ -55,13 +55,13 @@
                 >
                   <template v-slot:item="{ item }">
                     <v-list-item-content>
-                      <v-list-item-title>{{ Array.from(item.classes.values()).join(", ") }}</v-list-item-title>
+                      <v-list-item-title>{{ Object.values(item.classes).join(", ") }}</v-list-item-title>
                       <v-list-item-subtitle class="case-notion-description">{{ getCaseNotionDescription(item) }} </v-list-item-subtitle>
                     </v-list-item-content>
                   </template>
                   <template v-slot:selection="{ item }">
                     <span v-if="!isCaseNotionManuallyModified">
-                      {{ Array.from(item.classes.values()).join(", ") }}
+                      {{ Object.values(item.classes).join(", ") }}
                     </span>
                     <span v-else> {{ $t("data-stores.etl.custom-case-notion") }} item </span>
                   </template>
