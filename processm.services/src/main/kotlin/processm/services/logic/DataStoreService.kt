@@ -10,6 +10,7 @@ import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
 import processm.core.communication.Producer
+import processm.core.helpers.mapToArray
 import processm.core.logging.loggedScope
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
@@ -26,8 +27,10 @@ import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
+import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
 import processm.services.api.models.OrganizationRole
+import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
@@ -164,7 +167,7 @@ class DataStoreService(private val producer: Producer) {
         transaction(DBCache.get("$dataStoreId").database) {
             (DataConnectors.deleteWhere {
                 DataConnectors.id eq dataConnectorId
-             } > 0).let { removalStatus ->
+            } > 0).let { removalStatus ->
                 if (removalStatus) notifyDeactivated(dataStoreId, dataConnectorId)
                 return@transaction removalStatus
             }
@@ -177,7 +180,7 @@ class DataStoreService(private val producer: Producer) {
     fun renameDataConnector(dataStoreId: UUID, dataConnectorId: UUID, newName: String) {
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
-            DataConnectors.update ({ DataConnectors.id eq dataConnectorId }) {
+            DataConnectors.update({ DataConnectors.id eq dataConnectorId }) {
                 it[name] = newName
             } > 0
         }
@@ -200,7 +203,10 @@ class DataStoreService(private val producer: Producer) {
     /**
      * Returns case notion suggestions for the data accessed using [dataConnectorId].
      */
-    fun getCaseNotionSuggestions(dataStoreId: UUID, dataConnectorId: UUID): List<Pair<List<Pair<String, String>>, List<Pair<Int, Int>>>> {
+    fun getCaseNotionSuggestions(
+        dataStoreId: UUID,
+        dataConnectorId: UUID
+    ): List<Pair<List<Pair<String, String>>, List<Pair<Int, Int>>>> {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
@@ -211,15 +217,21 @@ class DataStoreService(private val producer: Producer) {
                 .sortedBy { (_, score) -> score }
                 .map { (businessPerspective, _) ->
                     val relations = businessPerspective.caseNotionClasses
-                        .flatMap { classId -> businessPerspective.getSuccessors(classId).map { classId.value to it.value } }
-                    businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations }
+                        .flatMap { classId ->
+                            businessPerspective.getSuccessors(classId).map { classId.value to it.value }
+                        }
+                    businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations
+                }
         }
     }
 
     /**
      * Returns a graph consisting of all relations discovered in [dataConnectorId].
      */
-    fun getRelationshipGraph(dataStoreId: UUID, dataConnectorId: UUID): Pair<Map<String, String>, List<Pair<EntityID<Int>, EntityID<Int>>>> {
+    fun getRelationshipGraph(
+        dataStoreId: UUID,
+        dataConnectorId: UUID
+    ): Pair<Map<String, String>, List<Pair<EntityID<Int>, EntityID<Int>>>> {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
@@ -227,7 +239,8 @@ class DataStoreService(private val producer: Producer) {
             val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
             val classNames = metaModelReader.getClassNames()
             val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
-            val relations = relationshipGraph.edgeSet().map { edgeName -> relationshipGraph.getEdgeSource(edgeName) to relationshipGraph.getEdgeTarget(edgeName) }
+            val relations = relationshipGraph.edgeSet()
+                .map { edgeName -> relationshipGraph.getEdgeSource(edgeName) to relationshipGraph.getEdgeTarget(edgeName) }
 
             return@transaction classNames.mapKeys { "${it.key}" } to relations
         }
@@ -236,24 +249,37 @@ class DataStoreService(private val producer: Producer) {
     /**
      * Creates an automatic ETL process in the specified [dataStoreId] using case notion described by [relations].
      */
-    fun createAutomaticEtlProcess(dataStoreId: UUID, dataConnectorId: UUID, name: String, relations: List<Pair<String, String>>): UUID {
+    fun saveAutomaticEtlProcess(
+        etlId: UUID?,
+        dataStoreId: UUID,
+        dataConnectorId: UUID,
+        name: String,
+        relations: List<Pair<String, String>>
+    ): UUID {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             loggedScope { logger ->
-                val etlProcessMetadataId = EtlProcessesMetadata.insertAndGetId {
-                    it[this.name] = name
-                    it[this.processType] = ProcessTypeDto.Automatic.processTypeName
-                    it[this.dataConnectorId] = dataConnectorId
+                val etlProcessMetadata =
+                    (etlId?.let { EtlProcessMetadata.findById(it) } ?: EtlProcessMetadata.new {}).apply {
+                        this.name = name
+                        this.processType = ProcessTypeDto.Automatic.processTypeName
+                        this.dataConnector = DataConnector[dataConnectorId]
+                    }
+
+                AutomaticEtlProcess.findById(etlProcessMetadata.id.value) ?: AutomaticEtlProcesses.insert {
+                    it[this.id] = etlProcessMetadata.id.value
                 }
-                AutomaticEtlProcesses.insert {
-                    it[this.id] = etlProcessMetadataId
+
+                AutomaticEtlProcessRelations.deleteWhere {
+                    AutomaticEtlProcessRelations.automaticEtlProcessId eq etlProcessMetadata.id.value
                 }
+
                 AutomaticEtlProcessRelations.batchInsert(relations) { relation ->
                     try {
                         val sourceClassId = relation.first.toInt()
                         val targetClassId = relation.second.toInt()
 
-                        this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadataId
+                        this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadata.id.value
                         this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
                         this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
                     } catch (e: NumberFormatException) {
@@ -262,47 +288,68 @@ class DataStoreService(private val producer: Producer) {
                 }
                 notifyActivated(dataStoreId, dataConnectorId)
 
-                return@transaction etlProcessMetadataId.value
+                return@transaction etlProcessMetadata.id.value
             }
         }
     }
 
     private fun Transaction.saveJdbcEtl(
+        etlId: UUID?,
         dataConnectorId: UUID,
-        name: String, configuration: JdbcEtlProcessConfiguration, nComponents: Int? = null
+        name: String,
+        configuration: JdbcEtlProcessConfiguration,
+        nComponents: Int? = null
     ): UUID {
-        val etlProcessMetadata = EtlProcessMetadata.new {
+
+        val etlProcessMetadata = (etlId?.let { EtlProcessMetadata.findById(it) }
+            ?: EtlProcessMetadata.new {}).apply {
             this.name = name
             this.processType = ProcessTypeDto.JDBC.processTypeName
             this.dataConnector = DataConnector[dataConnectorId]
         }
-        val cfg = ETLConfiguration.new {
+        val cfg = (ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessMetadata.id }.firstOrNull()
+            ?: ETLConfiguration.new {}).apply {
             this.metadata = etlProcessMetadata
             this.query = configuration.query
             this.refresh = if (nComponents == null) configuration.refresh?.toLong() else null
             this.enabled = configuration.enabled || nComponents != null
             this.batch = configuration.batch
             this.lastEventExternalId = if (!configuration.batch) configuration.lastEventExternalId else null
-            this.lastEventExternalIdType = if (!configuration.batch) configuration.lastEventExternalIdType else null
+            this.lastEventExternalIdType =
+                if (!configuration.batch) configuration.lastEventExternalIdType else null
             this.sampleSize = nComponents
             afterCommit {
                 notifyUsers()
             }
         }
-        ETLColumnToAttributeMap.new {
+        (ETLColumnToAttributeMap.find {
+            (ETLColumnToAttributeMaps.configuration eq cfg.id) and (ETLColumnToAttributeMaps.eventId eq true)
+        }.firstOrNull()
+            ?: ETLColumnToAttributeMap.new { }).apply {
             this.configuration = cfg
             this.sourceColumn = configuration.eventId.source
             this.target = configuration.eventId.target
             this.traceId = false
             this.eventId = true
         }
-        ETLColumnToAttributeMap.new {
+
+        (ETLColumnToAttributeMap.find {
+            (ETLColumnToAttributeMaps.configuration eq cfg.id) and (ETLColumnToAttributeMaps.traceId eq true)
+        }.firstOrNull()
+            ?: ETLColumnToAttributeMap.new {}).apply {
             this.configuration = cfg
             this.sourceColumn = configuration.traceId.source
             this.target = configuration.traceId.target
             this.traceId = true
             this.eventId = false
         }
+
+        ETLColumnToAttributeMaps.deleteWhere {
+            (ETLColumnToAttributeMaps.configuration eq cfg.id) and
+                    (ETLColumnToAttributeMaps.eventId eq false) and
+                    (ETLColumnToAttributeMaps.traceId eq false)
+        }
+
         ETLColumnToAttributeMaps.batchInsert(configuration.attributes.asIterable()) { columnCfg ->
             this[ETLColumnToAttributeMaps.configuration] = cfg.id
             this[ETLColumnToAttributeMaps.sourceColumn] = columnCfg.source
@@ -314,15 +361,44 @@ class DataStoreService(private val producer: Producer) {
     }
 
     /**
-     * Creates a JDBC-based ETL process in the specified [dataStoreId]
+     * Creates or updates a JDBC-based ETL process in the specified [dataStoreId]
      */
-    fun createJdbcEtlProcess(
+    fun saveJdbcEtlProcess(
+        etlId: UUID?,
         dataStoreId: UUID,
         dataConnectorId: UUID,
         name: String,
         configuration: JdbcEtlProcessConfiguration
     ) = transaction(DBCache.get("$dataStoreId").database) {
-        return@transaction saveJdbcEtl(dataConnectorId, name, configuration)
+        return@transaction saveJdbcEtl(etlId, dataConnectorId, name, configuration)
+    }
+
+    /**
+     * Reads the configuration of the JDBC ETL process. Returns an API type.
+     */
+    fun getJdbcEtlProcessConfiguration(
+        dataStoreId: UUID,
+        etlProcessId: UUID
+    ): JdbcEtlProcessConfiguration = transaction(DBCache.get("$dataStoreId").database) {
+        val cfg = ETLConfiguration.find {
+            ETLConfigurations.metadata eq etlProcessId
+        }.first()
+
+        return@transaction JdbcEtlProcessConfiguration(
+            query = cfg.query,
+            enabled = cfg.enabled,
+            batch = cfg.batch,
+            traceId = cfg.columnToAttributeMap.first { it.traceId }
+                .let { JdbcEtlColumnConfiguration(it.sourceColumn, it.target) },
+            eventId = cfg.columnToAttributeMap.first { it.eventId }
+                .let { JdbcEtlColumnConfiguration(it.sourceColumn, it.target) },
+            attributes = cfg.columnToAttributeMap.filter { !it.eventId && !it.traceId }.mapToArray {
+                JdbcEtlColumnConfiguration(it.sourceColumn, it.target)
+            },
+            refresh = BigDecimal.valueOf(cfg.refresh ?: 0L),
+            lastEventExternalId = cfg.lastEventExternalId,
+            lastEventExternalIdType = cfg.lastEventExternalIdType
+        )
     }
 
     /**
@@ -347,21 +423,25 @@ class DataStoreService(private val producer: Producer) {
                 .update({ EtlProcessesMetadata.id eq etlProcessId }) {
                     it[EtlProcessesMetadata.isActive] = isActive
                 } > 0).let { updateStatus ->
-                    if (updateStatus && dataConnectorId != null) {
-                        if (isActive) notifyActivated(dataStoreId, dataConnectorId)
-                        else notifyModified(dataStoreId, dataConnectorId)
-                    }
-                    return@transaction updateStatus
+                if (updateStatus && dataConnectorId != null) {
+                    if (isActive) notifyActivated(dataStoreId, dataConnectorId)
+                    else notifyModified(dataStoreId, dataConnectorId)
                 }
+                return@transaction updateStatus
+            }
         }
     }
 
-    data class EtlProcessInfo(val logIdentityId:UUID, val errors:List<ETLErrorDto>, val lastExecutionTime: Instant?)
+    data class EtlProcessInfo(val logIdentityId: UUID, val errors: List<ETLErrorDto>, val lastExecutionTime: Instant?)
 
     fun getEtlProcessInfo(dataStoreId: UUID, etlProcessId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
             val etlProcess = ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.first()
-            return@transaction EtlProcessInfo(etlProcess.logIdentityId, etlProcess.errors.map(ETLError::toDto), etlProcess.metadata.lastExecutionTime)
+            return@transaction EtlProcessInfo(
+                etlProcess.logIdentityId,
+                etlProcess.errors.map(ETLError::toDto),
+                etlProcess.metadata.lastExecutionTime
+            )
         }
 
     /**
@@ -466,7 +546,7 @@ class DataStoreService(private val producer: Producer) {
         configuration: JdbcEtlProcessConfiguration,
         nComponents: Int
     ) = transaction(DBCache.get("$dataStoreId").database) {
-        return@transaction saveJdbcEtl(dataConnectorId, name, configuration, nComponents)
+        return@transaction saveJdbcEtl(null, dataConnectorId, name, configuration, nComponents)
     }
 
     fun notifyActivated(dataStoreId: UUID, dataConnectorId: UUID) {

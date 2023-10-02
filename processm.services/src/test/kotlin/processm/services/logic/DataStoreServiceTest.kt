@@ -159,7 +159,8 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     @Test
     fun `creating automatic ETL process throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
         assertDataStoreExistence {
-            createAutomaticEtlProcess(
+            saveAutomaticEtlProcess(
+                null,
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "processName",

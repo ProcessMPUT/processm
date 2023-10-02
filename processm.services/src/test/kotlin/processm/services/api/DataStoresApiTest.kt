@@ -81,6 +81,15 @@ class DataStoresApiTest : BaseApiTest() {
                     )
                 } returns true
                 every {
+                    dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                        userId,
+                        dataStoreId,
+                        OrganizationRole.owner,
+                        OrganizationRole.writer,
+                        OrganizationRole.reader
+                    )
+                } returns true
+                every {
                     dataStoreService.assertDataStoreBelongsToOrganization(
                         organizationId,
                         dataStoreId

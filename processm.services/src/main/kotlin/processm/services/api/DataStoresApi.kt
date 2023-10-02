@@ -14,6 +14,7 @@ import org.antlr.v4.runtime.RecognitionException
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.helpers.toLocalDateTime
+import processm.dbmodels.models.ProcessTypeDto
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -321,7 +322,10 @@ fun Route.DataStoresApi() {
                         it.dataConnectorId,
                         it.isActive,
                         it.lastExecutionTime?.toLocalDateTime(),
-                        EtlProcessType.valueOf(it.processType.processTypeName)
+                        EtlProcessType.valueOf(it.processType.processTypeName),
+                        configuration = if (it.processType == ProcessTypeDto.JDBC)
+                            dataStoreService.getJdbcEtlProcessConfiguration(pathParams.dataStoreId, it.id)
+                        else null
                     )
                 }
 
@@ -351,7 +355,8 @@ fun Route.DataStoresApi() {
                     val relations = etlProcessData.caseNotion?.edges.orEmpty().map { edge ->
                         edge.sourceClassId to edge.targetClassId
                     }
-                    dataStoreService.createAutomaticEtlProcess(
+                    dataStoreService.saveAutomaticEtlProcess(
+                        null,
                         pathParams.dataStoreId,
                         etlProcessData.dataConnectorId,
                         etlProcessData.name,
@@ -362,7 +367,8 @@ fun Route.DataStoresApi() {
                 EtlProcessType.jdbc -> {
                     val configuration =
                         etlProcessData.configuration ?: throw ApiException("Empty ETL configuration is not supported")
-                    dataStoreService.createJdbcEtlProcess(
+                    dataStoreService.saveJdbcEtlProcess(
+                        null,
                         pathParams.dataStoreId,
                         etlProcessData.dataConnectorId,
                         etlProcessData.name,
@@ -404,17 +410,54 @@ fun Route.DataStoresApi() {
             )
 
             call.respond(HttpStatusCode.NoContent)
-            call.respond(
-                HttpStatusCode.Created,
-                AbstractEtlProcess(
-                    etlProcessData.id,
-                    etlProcessData.name,
-                    etlProcessData.dataConnectorId,
-                    etlProcessData.isActive,
-                    null,
-                    etlProcessData.type
-                )
+        }
+
+        put<Paths.EtlProcess> { pathParams ->
+            val principal = call.authentication.principal<ApiUser>()!!
+            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
+            dataStoreService.assertUserHasSufficientPermissionToDataStore(
+                principal.userId,
+                pathParams.dataStoreId,
+                OrganizationRole.owner,
+                OrganizationRole.writer,
             )
+            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
+
+            val etlProcessData = call.receiveOrNull<AbstractEtlProcess>()
+                ?: throw ApiException("The provided ETL process definition cannot be parsed")
+            if (etlProcessData.dataConnectorId == null) throw ApiException("A data connector reference is required")
+            if (etlProcessData.name.isNullOrBlank()) throw ApiException("A name for ETL process is required")
+
+            val etlProcessId = when (etlProcessData.type) {
+                EtlProcessType.automatic -> {
+                    val relations = etlProcessData.caseNotion?.edges.orEmpty().map { edge ->
+                        edge.sourceClassId to edge.targetClassId
+                    }
+                    dataStoreService.saveAutomaticEtlProcess(
+                        etlProcessData.id,
+                        pathParams.dataStoreId,
+                        etlProcessData.dataConnectorId,
+                        etlProcessData.name,
+                        relations
+                    )
+                }
+
+                EtlProcessType.jdbc -> {
+                    val configuration =
+                        etlProcessData.configuration ?: throw ApiException("Empty ETL configuration is not supported")
+                    dataStoreService.saveJdbcEtlProcess(
+                        etlProcessData.id,
+                        pathParams.dataStoreId,
+                        etlProcessData.dataConnectorId,
+                        etlProcessData.name,
+                        configuration
+                    )
+                }
+
+                else -> throw ApiException("The provided ETL process type is not supported")
+            }
+
+            call.respond(HttpStatusCode.NoContent)
         }
 
         get<Paths.EtlProcess> { pathParams ->
@@ -423,7 +466,9 @@ fun Route.DataStoresApi() {
             dataStoreService.assertUserHasSufficientPermissionToDataStore(
                 principal.userId,
                 pathParams.dataStoreId,
-                OrganizationRole.owner
+                OrganizationRole.owner,
+                OrganizationRole.writer,
+                OrganizationRole.reader
             )
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
             try {

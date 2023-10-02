@@ -690,8 +690,29 @@ paths:
     patch:
       tags:
         - dataStores
-      summary: Update the specified ETL process
-      operationId: Update EtlProcess
+      summary: Changes individual properties of an ETL process, e.g., an activation state.
+      operationId: patchEtlProcess
+      requestBody:
+        description: ETL process details
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/AbstractEtlProcess'
+        required: true
+      responses:
+        '204':
+          description: Successful operation
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - bearerAuth: [ ]
+    put:
+      tags:
+        - dataStores
+      summary: Overwrites the specified ETL process
+      operationId: updateEtlProcess
       requestBody:
         description: ETL process details
         content:

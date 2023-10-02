@@ -176,7 +176,7 @@
           {{ $t("common.test") }}
         </v-btn>
 
-        <v-btn :loading="isSubmitting" color="primary" data-testid="submit" text @click.stop="createEtlProcess">
+        <v-btn :loading="isSubmitting" color="primary" data-testid="submit" text @click.stop="saveEtlProcess">
           {{ $t("common.save") }}
         </v-btn>
       </v-card-actions>
@@ -188,12 +188,11 @@
 <script lang="ts">
 import { DataConnector } from "@/models/DataStore";
 import Vue from "vue";
-import { Component, Inject, Prop } from "vue-property-decorator";
+import { Component, Inject, Prop, Watch } from "vue-property-decorator";
 import App from "@/App.vue";
 import DataStoreService from "../../services/DataStoreService";
 import { isPositiveIntegerRule, notEmptyRule } from "@/utils/FormValidationRules";
-import { EtlProcessType } from "@/models/EtlProcess";
-import { AbstractEtlProcess, EtlProcessInfo, JdbcEtlColumnConfiguration } from "@/openapi";
+import { AbstractEtlProcess, EtlProcessInfo, EtlProcessType, JdbcEtlColumnConfiguration, JdbcEtlProcess } from "@/openapi";
 import PQL from "@/views/PQL.vue";
 import XESPreviewDialog from "@/components/XESPreviewDialog.vue";
 import JdbcEtlProcessConfiguration from "@/models/JdbcEtlProcessConfiguration";
@@ -210,6 +209,11 @@ export default class JdbcEtlProcessDialog extends Vue {
   readonly dataStoreId?: string;
   @Prop()
   readonly dataConnectors?: DataConnector[];
+  /**
+   * An optional configuration used to populate form feeds on dialog open.
+   */
+  @Prop()
+  readonly initialConfig: JdbcEtlProcess | null = null;
 
   readonly pollingMaxRetriesCount = 10;
   readonly pollingRetriesDelay = 1000;
@@ -231,17 +235,18 @@ export default class JdbcEtlProcessDialog extends Vue {
     return this.notEmpty(v);
   }
 
-  async createEtlProcess() {
+  async saveEtlProcess() {
     //TODO ensure the column definitions are at least non-empty
     try {
       this.validateForm();
       this.isSubmitting = true;
-      const etlProcess = await this.dataStoreService.createEtlProcess(
+      const etlProcess = await this.dataStoreService.saveEtlProcess(
         this.dataStoreId!,
         this.processName,
         EtlProcessType.Jdbc,
         this.selectedDataConnectorId!,
-        this.createJdbcConfiguration()
+        this.createJdbcConfiguration(),
+        this.initialConfig?.id
       );
       this.app.success(`${this.$t("common.saving.success")}`);
       this.$emit("submitted", etlProcess);
@@ -278,6 +283,26 @@ export default class JdbcEtlProcessDialog extends Vue {
   pqlQuery = "";
   etlProcess: AbstractEtlProcess | undefined = undefined;
   etlProcessInfo: EtlProcessInfo | undefined = undefined;
+
+  @Watch("initialConfig")
+  setInitialConfig() {
+    const etl = this.initialConfig;
+    const cfg = etl?.configuration;
+
+    this.processName = etl?.name || "";
+    this.selectedDataConnectorId = etl?.dataConnectorId || "";
+    this.query = cfg?.query || this.query;
+    this.enabled = cfg?.enabled || false;
+    this.batch = cfg?.batch || false;
+    this.traceIdSource = cfg?.traceId.source || this.traceIdSource;
+    this.traceIdTarget = cfg?.traceId.target || this.traceIdTarget;
+    this.eventIdSource = cfg?.eventId.source || this.eventIdSource;
+    this.eventIdTarget = cfg?.eventId.target || this.eventIdTarget;
+    this.attributes = cfg?.attributes || this.attributes;
+    this.refresh = cfg?.refresh || this.refresh;
+    this.lastEventExternalId = cfg?.lastEventExternalId;
+    this.lastEventExternalIdType = cfg?.lastEventExternalIdType;
+  }
 
   removeAttribute(attr: JdbcEtlColumnConfiguration) {
     const idx = this.attributes.indexOf(attr, 0);
