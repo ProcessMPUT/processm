@@ -34,6 +34,7 @@ export default class Graph extends Vue {
 
   mounted() {
     setTimeout(() => {
+      // get the container size
       const container = this.$refs.graph as HTMLElement;
       this.graph = new G6.Graph({
         container: container, // String | HTMLElement, required, the id of DOM element or an HTML node
@@ -76,9 +77,8 @@ export default class Graph extends Vue {
             refY: 5
           }
         },
-
         // custom edge with extra shape
-        customEdge: {
+        /*customEdge: {
           type: "quadratic",
           style: {
             stroke: this.edgeColor,
@@ -106,8 +106,26 @@ export default class Graph extends Vue {
             });
             return shape;
           }
-        }
+        }*/
       });
+      // define custom edge using G6.registerEdge
+    G6.registerEdge('customEdge', {
+      draw(cfg, group) {
+        const startPoint = cfg.startPoint;
+        const endPoint = cfg.endPoint;
+        const shape = group.addShape('path', {
+          attrs: {
+            //stroke: edgeColor,
+            path: [
+              ['M', startPoint?.x, startPoint?.y],
+              ['Q', (startPoint!.x + endPoint!.x) / 2, startPoint?.y, endPoint!.x, endPoint!.y]
+            ]
+          }
+        });
+        return shape;
+      }
+    });
+
       // wait until height of the component is calculated
       const graphData = this.data;
       this.markSelfLoops(graphData);
