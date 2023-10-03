@@ -6,7 +6,16 @@ import io.debezium.engine.format.Json
 import io.debezium.engine.format.KeyValueChangeEventFormat
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
+import processm.core.persistence.connection.DBCache
+import processm.dbmodels.models.AutomaticEtlProcesses
+import processm.dbmodels.models.EtlProcessesMetadata
+import processm.etl.helpers.reportETLError
 import processm.etl.tracker.DatabaseChangeApplier.*
 import java.io.Closeable
 import java.util.*
@@ -21,43 +30,76 @@ import java.util.concurrent.atomic.AtomicInteger
  * @param changeApplier Component to save data change events to meta model data storage.
  */
 
-class DebeziumChangeTracker(properties: Properties, private val changeApplier: DatabaseChangeApplier) : DebeziumEngine.ChangeConsumer<ChangeEvent<String, String>>, Closeable {
+class DebeziumChangeTracker(
+    properties: Properties,
+    private val changeApplier: DatabaseChangeApplier,
+    private val dataStoreId: UUID,
+    private val dataConnectorId: UUID
+) :
+    DebeziumEngine.ChangeConsumer<ChangeEvent<String, String>>, Closeable {
 
     private val connectionStateMonitor = ConnectionStateMonitor()
     private val executor = Executors.newSingleThreadExecutor();
     private val tracker = DebeziumEngine.create(KeyValueChangeEventFormat.of(Json::class.java, Json::class.java))
         .using(properties)
         .using(connectionStateMonitor)
+        .using { success, message, error ->
+            if (!success) {
+                loggedScope { logger ->
+                    logger.error("Tracker failed: $message", error)
+                    reportError(error)
+                }
+            }
+        }
         .notifying(this)
         .build()
+
+    /**
+     * Reports the same error in all automatic processes sharing the same connector
+     */
+    private fun reportError(error: Throwable) {
+        transaction(DBCache.get("$dataStoreId").database) {
+            EtlProcessesMetadata
+                .innerJoin(AutomaticEtlProcesses)
+                .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }
+                .forEach { row ->
+                    reportETLError(row[EtlProcessesMetadata.id], error)
+                }
+
+        }
+    }
 
     val isAlive get() = connectionStateMonitor.isConnected
 
     override fun handleBatch(
         records: MutableList<ChangeEvent<String, String>>,
-        committer: DebeziumEngine.RecordCommitter<ChangeEvent<String, String>>) {
+        committer: DebeziumEngine.RecordCommitter<ChangeEvent<String, String>>
+    ) {
         loggedScope { logger ->
             try {
-                val databaseChangeEvents = records.fold(mutableListOf<DatabaseChangeEvent>()) { deserializedEvents, rawChangeEvent ->
-                    try {
-                        val databaseChangeEvent = deserializeDebeziumEvent(rawChangeEvent)
-                        deserializedEvents.add(databaseChangeEvent)
-                        committer.markProcessed(rawChangeEvent)
-                    } catch (e: UnsupportedEventFormat) {
-                        logger.warn("An event with unsupported format was received", e)
-                        committer.markProcessed(rawChangeEvent)
-                    } catch (e: Exception) {
-                        logger.warn("An error occurred while processing DB event", e)
-                        logger.debug("Key: ${rawChangeEvent.key()}\nValue: ${rawChangeEvent.value()}")
+                val databaseChangeEvents =
+                    records.fold(mutableListOf<DatabaseChangeEvent>()) { deserializedEvents, rawChangeEvent ->
+                        try {
+                            val databaseChangeEvent = deserializeDebeziumEvent(rawChangeEvent)
+                            deserializedEvents.add(databaseChangeEvent)
+                            committer.markProcessed(rawChangeEvent)
+                        } catch (e: UnsupportedEventFormat) {
+                            logger.warn("An event with unsupported format was received", e)
+                            reportError(e)
+                            committer.markProcessed(rawChangeEvent)
+                        } catch (e: Exception) {
+                            logger.warn("An error occurred while processing DB event", e)
+                            reportError(e)
+                            logger.debug("Key: ${rawChangeEvent.key()}\nValue: ${rawChangeEvent.value()}")
+                        }
+                        return@fold deserializedEvents
                     }
-                    return@fold deserializedEvents
-                }
 
                 changeApplier.ApplyChange(databaseChangeEvents)
                 committer.markBatchFinished()
-            }
-            catch (e: Exception) {
+            } catch (e: Exception) {
                 logger.warn("Failed to apply changes from database", e)
+                reportError(e)
             }
         }
     }

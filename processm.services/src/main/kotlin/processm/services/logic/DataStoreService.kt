@@ -432,15 +432,18 @@ class DataStoreService(private val producer: Producer) {
         }
     }
 
-    data class EtlProcessInfo(val logIdentityId: UUID, val errors: List<ETLErrorDto>, val lastExecutionTime: Instant?)
+    data class EtlProcessInfo(val logIdentityId: UUID?, val errors: List<ETLErrorDto>, val lastExecutionTime: Instant?)
 
     fun getEtlProcessInfo(dataStoreId: UUID, etlProcessId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
-            val etlProcess = ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.first()
+            val etlProcessMetadata = EtlProcessMetadata.findById(etlProcessId)
+                ?: throw NoSuchElementException("Cannot find ETL process with metadata ID `$etlProcessId'")
+            val logIdentityId =
+                ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.firstOrNull()?.logIdentityId
             return@transaction EtlProcessInfo(
-                etlProcess.logIdentityId,
-                etlProcess.errors.map(ETLError::toDto),
-                etlProcess.metadata.lastExecutionTime
+                logIdentityId,
+                etlProcessMetadata.errors.map(ETLError::toDto),
+                etlProcessMetadata.lastExecutionTime
             )
         }
 

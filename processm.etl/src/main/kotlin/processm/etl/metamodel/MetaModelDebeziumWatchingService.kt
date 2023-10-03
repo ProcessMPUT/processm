@@ -208,9 +208,15 @@ class MetaModelDebeziumWatchingService : Service {
         activate(dataStoreId, dataConnectorId)
     }
 
-    private fun createDebeziumTracker(dataStoreId: UUID, dataConnector: DataConnectorDto, trackedEntities: Set<String>): DebeziumChangeTracker {
-        val dataModelId = requireNotNull(dataConnector.dataModelId) { "Automatic ETL process has no data model assigned and cannot be tracked" }
-        val connectionProperties = requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
+    private fun createDebeziumTracker(
+        dataStoreId: UUID,
+        dataConnector: DataConnectorDto,
+        trackedEntities: Set<String>
+    ): DebeziumChangeTracker {
+        val dataModelId =
+            requireNotNull(dataConnector.dataModelId) { "Automatic ETL process has no data model assigned and cannot be tracked" }
+        val connectionProperties =
+            requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
         val connectorType = requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" }
         val properties = Properties()
             .setDefaults()
@@ -221,7 +227,9 @@ class MetaModelDebeziumWatchingService : Service {
         val metaModelReader = MetaModelReader(dataModelId)
         return DebeziumChangeTracker(
             properties,
-            MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader))
+            MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader)),
+            dataStoreId,
+            dataConnector.id
         )
     }
 

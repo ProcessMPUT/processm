@@ -46,10 +46,33 @@ class EtlProcessMetadata(id: EntityID<UUID>) : UUIDEntity(id) {
      */
     var lastExecutionTime by EtlProcessesMetadata.lastExecutionTime
 
-    fun toDto() = EtlProcessMetadataDto(id.value, name, ProcessTypeDto.byNameInDatabase(processType), creationDate, lastUpdateDate, dataConnector.id.value, isActive, lastExecutionTime)
+    /**
+     * The log of errors that occurred during executing the ETL process associated with this metadata.
+     */
+    val errors by ETLError referrersOn ETLErrors.metadata
+
+    fun toDto() = EtlProcessMetadataDto(
+        id.value,
+        name,
+        ProcessTypeDto.byNameInDatabase(processType),
+        creationDate,
+        lastUpdateDate,
+        dataConnector.id.value,
+        isActive,
+        lastExecutionTime
+    )
 }
 
-data class EtlProcessMetadataDto(val id: UUID, val name: String, val processType: ProcessTypeDto, val creationDate: LocalDateTime, val lastUpdateDate: LocalDateTime?, val dataConnectorId: UUID, val isActive: Boolean, val lastExecutionTime: Instant?)
+data class EtlProcessMetadataDto(
+    val id: UUID,
+    val name: String,
+    val processType: ProcessTypeDto,
+    val creationDate: LocalDateTime,
+    val lastUpdateDate: LocalDateTime?,
+    val dataConnectorId: UUID,
+    val isActive: Boolean,
+    val lastExecutionTime: Instant?
+)
 
 enum class ProcessTypeDto(val processTypeName: String) {
     Automatic("automatic"), JDBC("jdbc");

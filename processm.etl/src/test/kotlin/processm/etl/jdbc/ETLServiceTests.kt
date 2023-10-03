@@ -550,7 +550,7 @@ OFFSET ?::bigint
             assertEquals(0, stream.count())
 
             // and the error is reported
-            val errors = config.errors
+            val errors = config.metadata.errors
             assertEquals(1, errors.count())
 
             val error = errors.first()

@@ -18,6 +18,8 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.etl.jdbc.*
 import processm.dbmodels.models.DataStores
+import processm.dbmodels.models.ETLError
+import processm.etl.helpers.reportETLError
 
 /**
  * A micro-service running the JDBC-based ETL processes. On [start] call it loads the ETL configurations from all
@@ -112,18 +114,16 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                     // DO NOT call output.close(), as it would commit transaction and close connection. Instead, we are
                     // just attaching extra data to the exposed-managed database connection.
                     val output = AppendingDBXESOutputStream((connection as JdbcConnectionImpl).connection)
-                    output.write(config!!.toXESInputStream().let { stream -> config!!.sampleSize?.let { stream.take(it) } ?: stream })
+                    output.write(
+                        config!!.toXESInputStream()
+                            .let { stream -> config!!.sampleSize?.let { stream.take(it) } ?: stream })
                     output.flush()
                 }
             } catch (e: Exception) {
                 logger.error(e.message, e)
                 if (config !== null) {
                     transaction(DBCache.get(datastore).database) {
-                        ETLError.new {
-                            configuration = config!!.id
-                            message = e.message ?: "(not available)"
-                            exception = e.stackTraceToString()
-                        }
+                        reportETLError(config!!.metadata.id, e)
                     }
                 }
             } finally {
