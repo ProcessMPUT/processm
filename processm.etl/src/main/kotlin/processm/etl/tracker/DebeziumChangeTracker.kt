@@ -121,8 +121,7 @@ class DebeziumChangeTracker(
                 while (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                     logger.info("Waiting 5 seconds for the Debezium tracker engine to shut down")
                 }
-            }
-            catch (e: InterruptedException) {
+            } catch (e: InterruptedException) {
                 logger.warn("An ${InterruptedException::class.simpleName} was thrown during shutdown of Debezium tracker engine")
             }
 
@@ -135,7 +134,8 @@ class DebeziumChangeTracker(
         }
 
         val keyInfo: JsonObject = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(changeEvent.key())
-        val keyName = (((keyInfo["schema"] as JsonObject)["fields"] as JsonArray)[0] as JsonObject).extractNestedValue<String>("field")
+        val keyName =
+            (((keyInfo["schema"] as JsonObject)["fields"] as JsonArray)[0] as JsonObject).extractNestedValue<String>("field")
         val keyValue = keyInfo.extractNestedValue<String>("payload", keyName)
 
         val valueInfo: JsonObject = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(changeEvent.value())
@@ -167,7 +167,7 @@ class DebeziumChangeTracker(
             else -> EventType.Unknown
         }
 
-    private inline fun <reified TResult: Any?> JsonElement.extractNestedValue(vararg nestedFields: String): TResult {
+    private inline fun <reified TResult : Any?> JsonElement.extractNestedValue(vararg nestedFields: String): TResult {
         var currentElement: JsonElement? = this
         var isNestingEnded = false
 
@@ -177,8 +177,7 @@ class DebeziumChangeTracker(
             else currentElement = (currentElement as JsonObject)[it]
         }
 
-        if (null is TResult && currentElement is JsonNull)
-        {
+        if (null is TResult && currentElement is JsonNull) {
             return null as TResult
         }
 
@@ -187,21 +186,25 @@ class DebeziumChangeTracker(
         }
 
         val selectedElement = currentElement
-                              ?: throw UnsupportedEventFormat("Non-nullable value expected at: ${nestedFields.joinToString()}")
+            ?: throw UnsupportedEventFormat("Non-nullable value expected at: ${nestedFields.joinToString()}")
 
         return when (TResult::class) {
             Int::class -> selectedElement.jsonPrimitive.int as TResult
             Long::class -> selectedElement.jsonPrimitive.long as TResult
             String::class -> selectedElement.jsonPrimitive.content as TResult
             Boolean::class -> selectedElement.jsonPrimitive.boolean as TResult
-            Map::class -> selectedElement.jsonObject.map { _object -> _object.key to _object.value.toString() }.toMap() as TResult
+            Map::class -> selectedElement.jsonObject.map { _object -> _object.key to _object.value.toString() }
+                .toMap() as TResult
+
             else -> selectedElement.jsonPrimitive.content as TResult
         }
     }
 
-    private class ConnectionStateMonitor: DebeziumEngine.ConnectorCallback {
+    private class ConnectionStateMonitor : DebeziumEngine.ConnectorCallback {
         private val activeTasksCounter = AtomicInteger(0)
-        @Volatile var isConnected = false
+
+        @Volatile
+        var isConnected = false
             private set
         val activeTasksCount get() = activeTasksCounter.getOpaque()
 

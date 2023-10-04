@@ -27,6 +27,7 @@ import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
+import processm.services.api.models.EtlProcess
 import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
 import processm.services.api.models.OrganizationRole
@@ -238,7 +239,7 @@ class DataStoreService(private val producer: Producer) {
             val metaModelReader = MetaModelReader(dataModelId.value)
             val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
             val classNames = metaModelReader.getClassNames()
-            val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
+            val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph(false)
             val relations = relationshipGraph.edgeSet()
                 .map { edgeName -> relationshipGraph.getEdgeSource(edgeName) to relationshipGraph.getEdgeTarget(edgeName) }
 
@@ -432,14 +433,19 @@ class DataStoreService(private val producer: Producer) {
         }
     }
 
-    data class EtlProcessInfo(val logIdentityId: UUID?, val errors: List<ETLErrorDto>, val lastExecutionTime: Instant?)
+    data class EtlProcessInfo(val logIdentityId: UUID, val errors: List<ETLErrorDto>, val lastExecutionTime: Instant?)
 
     fun getEtlProcessInfo(dataStoreId: UUID, etlProcessId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
             val etlProcessMetadata = EtlProcessMetadata.findById(etlProcessId)
                 ?: throw NoSuchElementException("Cannot find ETL process with metadata ID `$etlProcessId'")
-            val logIdentityId =
-                ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.firstOrNull()?.logIdentityId
+            val logIdentityId = when (ProcessTypeDto.byNameInDatabase(etlProcessMetadata.processType)) {
+                ProcessTypeDto.JDBC -> ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }
+                    .first().logIdentityId
+
+                ProcessTypeDto.Automatic -> etlProcessId
+            }
+
             return@transaction EtlProcessInfo(
                 logIdentityId,
                 etlProcessMetadata.errors.map(ETLError::toDto),

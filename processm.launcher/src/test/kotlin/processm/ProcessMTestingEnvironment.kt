@@ -97,6 +97,18 @@ class ProcessMTestingEnvironment {
             "$jdbcUrl&user=$user&password=$password"
         }
 
+    val sakilaProperties: Map<String, String>
+        get() = with(sakilaEnv.value) {
+            mapOf(
+                "connection-type" to "PostgreSql",
+                "server" to host,
+                "port" to port.toString(),
+                "username" to user,
+                "password" to password,
+                "database" to dbName
+            )
+        }
+
     fun withPreexistingDatabase(jdbcUrl: String): ProcessMTestingEnvironment {
         this.jdbcUrl = jdbcUrl
         return this

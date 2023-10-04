@@ -30,6 +30,7 @@ class MetaModelDebeziumWatchingService : Service {
     companion object {
         private val logger = logger()
     }
+
     private val defaultSlotName = "processm"
     private val serverProperty = "server"
     private val portProperty = "port"
@@ -89,7 +90,8 @@ class MetaModelDebeziumWatchingService : Service {
     private fun updateDebeziumConnectionState(message: MapMessage): Boolean {
         try {
             val type = message.getString(TYPE)
-            val dataStoreId = requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+            val dataStoreId =
+                requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
             val dataConnectorId =
                 requireNotNull(message.getString(DATA_CONNECTOR_ID)?.toUUID()) { "Missing field: $DATA_CONNECTOR_ID." }
 
@@ -124,6 +126,7 @@ class MetaModelDebeziumWatchingService : Service {
                         val dataConnectorId = dataConnectorResultRow[DataConnectors.id].value
 
                         try {
+                            // TODO I am confused. Why do we call getDataConnector if we have dataConnectorResultRow at hand?
                             val dataConnector = getDataConnector(dataConnectorId)
                             val trackedEntities = getEntitiesToBeTracked(dataConnectorId)
 
@@ -136,23 +139,35 @@ class MetaModelDebeziumWatchingService : Service {
                             debeziumTrackers[dataConnectorId] = tracker
                             tracker.start()
                         } catch (e: IllegalArgumentException) {
-                            logger.warn("Failed to create a connection for data connector $dataConnectorId due to invalid configuration", e)
+                            logger.warn(
+                                "Failed to create a connection for data connector $dataConnectorId due to invalid configuration",
+                                e
+                            )
                         } catch (e: Exception) {
-                            logger.warn("An unknown exception occurred while creating connection for data connector $dataConnectorId", e)
+                            logger.warn(
+                                "An unknown exception occurred while creating connection for data connector $dataConnectorId",
+                                e
+                            )
                         }
                     }
             }
         }
     }
 
-    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String>  {
+    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String> {
         val sourceClassAlias = Classes.alias("c1")
         val targetClassAlias = Classes.alias("c2")
         return EtlProcessesMetadata
             .innerJoin(AutomaticEtlProcesses)
             .innerJoin(AutomaticEtlProcessRelations)
-            .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
-            .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
+            .innerJoin(
+                sourceClassAlias,
+                { AutomaticEtlProcessRelations.sourceClassId },
+                { sourceClassAlias[Classes.id] })
+            .innerJoin(
+                targetClassAlias,
+                { AutomaticEtlProcessRelations.targetClassId },
+                { targetClassAlias[Classes.id] })
             .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
             .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }
             .fold(mutableSetOf()) { entities, relation ->
@@ -171,6 +186,7 @@ class MetaModelDebeziumWatchingService : Service {
                 val dataConnectorDto = dataConnector.toDto()
                 // the below logic misses extracting connection properties from connection string so connectors defined that way are not supported at the moment
                 // the limitations is due to Debezium requiring connection configuration in the form of Properties instance
+                //TODO there seem to exist property connection.url. What about it? https://debezium.io/documentation/reference/stable/connectors/jdbc.html
                 dataConnectorDto.connectionProperties = Json.decodeFromString<MutableMap<String, String>>(
                     dataConnector.connectionProperties
                 )
@@ -233,7 +249,10 @@ class MetaModelDebeziumWatchingService : Service {
         )
     }
 
-    private fun Properties.setConnectionProperties(dataConnectorId: UUID, connectionProperties: Map<String, String>): Properties {
+    private fun Properties.setConnectionProperties(
+        dataConnectorId: UUID,
+        connectionProperties: Map<String, String>
+    ): Properties {
         if (connectionProperties.isEmpty()) throw IllegalArgumentException("Unknown connection properties")
 
         setProperty("database.server.name", "$dataConnectorId")
@@ -256,16 +275,20 @@ class MetaModelDebeziumWatchingService : Service {
                 setProperty("plugin.name", "pgoutput")
                 setProperty("snapshot.mode", "never")
             }
+
             "SqlServer" -> {
                 setProperty("connector.class", "io.debezium.connector.sqlserver.SqlServerConnector")
                 setProperty("snapshot.mode", "schema_only")
             }
+
             "MySql" -> {
                 setProperty("connector.class", "io.debezium.connector.mysql.MySqlConnector")
             }
+
             "OracleDatabase" -> {
                 setProperty("connector.class", "io.debezium.connector.oracle.OracleConnector")
             }
+
             "Db2" -> {
                 setProperty("connector.class", "io.debezium.connector.db2.Db2Connector")
             }
