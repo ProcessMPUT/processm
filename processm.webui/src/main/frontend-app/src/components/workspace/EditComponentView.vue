@@ -174,4 +174,17 @@ export default class EditComponentView extends Vue {
     }
   }
 }
+
+// must be extended with an option to add dynamically new fields/properties by the specific control being edited
+export interface WorkspaceComponent {
+  id: string;
+  name: string;
+  type: ComponentType;
+  query: string;
+  dataStore: string;
+  lastError?: string;
+}
+
+
+
 </script>
