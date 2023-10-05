@@ -196,6 +196,7 @@ class CausalNet2PetriNet(val cnet: CausalNet) {
         assert(cnet.instances.all { node -> node in node2OutboundSilentTransition || node in node2InboundSilentTransition || node in node2Transition })
     }
 
+    //TODO translate the metadata as well
     fun toPetriNet(): PetriNet = PetriNet(
         places = places,
         transitions = (split2SilentTransitionInternal.values + join2SilentTransitionInternal.values + node2TransitionInternal.values + mainTransitionsInternal.values + node2OutboundSilentTransitionInternal.values + node2InboundSilentTransitionInternal.values).toList(),

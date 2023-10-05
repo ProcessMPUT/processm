@@ -1,6 +1,7 @@
 package processm.etl
 
 import org.testcontainers.containers.JdbcDatabaseContainer
+import org.testcontainers.containers.PostgreSQLContainer
 import processm.dbmodels.models.DataConnector
 import java.io.File
 import java.sql.Connection
@@ -38,7 +39,7 @@ abstract class AbstractDBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
 ) : DBMSEnvironment<Container> {
 
     private val containerDelegate = lazy { initAndRun() }
-    private val container: Container
+    protected val container: Container
         get() = containerDelegate.value
 
     protected abstract fun initContainer(): Container
@@ -47,6 +48,12 @@ abstract class AbstractDBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
 
     override val jdbcUrl: String
         get() = container.jdbcUrl
+
+    val host: String
+        get() = container.host
+
+    val port: Int
+        get() = container.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
 
     override fun connect(): Connection = container.createConnection("")
 
