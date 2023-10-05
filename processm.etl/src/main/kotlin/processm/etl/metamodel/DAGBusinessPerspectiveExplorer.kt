@@ -3,12 +3,16 @@ package processm.etl.metamodel
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jgrapht.Graph
+import org.jgrapht.GraphTests
 import org.jgrapht.alg.connectivity.ConnectivityInspector
-import org.jgrapht.alg.cycle.SzwarcfiterLauerSimpleCycles
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath
+import org.jgrapht.alg.spanning.KruskalMinimumSpanningTree
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
+import java.util.*
+import kotlin.collections.ArrayDeque
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
@@ -37,7 +41,7 @@ class DAGBusinessPerspectiveExplorer(
         goodEnoughScore: Double = 0.0
     ): List<Pair<DAGBusinessPerspectiveDefinition<EntityID<Int>>, Double>> =
         transaction(DBCache.get(dataStoreDBName).database) {
-            val relationshipGraph: Graph<EntityID<Int>, String> = getRelationshipGraph(true)
+            val relationshipGraph: Graph<EntityID<Int>, String> = getRelationshipGraph()
             val weights = relationshipGraph.calculateVertexWeights()
 
             return@transaction setOf(relationshipGraph)
@@ -47,31 +51,24 @@ class DAGBusinessPerspectiveExplorer(
                 }
         }
 
-    /**
-     * @param forceAcyclic If set to true, cycles are broken by removing a random edge from each cycle.
-     */
-    fun getRelationshipGraph(forceAcyclic: Boolean): Graph<EntityID<Int>, String> =
-        transaction(DBCache.get(dataStoreDBName).database) {
-            val relationshipGraph: Graph<EntityID<Int>, String> = DefaultDirectedGraph(String::class.java)
+    fun getRelationshipGraph(): Graph<EntityID<Int>, String> = transaction(DBCache.get(dataStoreDBName).database) {
+        val relationshipGraph: Graph<EntityID<Int>, String> = DefaultDirectedGraph(String::class.java)
 
-            metaModelReader.getRelationships()
-                .forEach { (relationshipName, relationship) ->
-                    val (referencingClassId, referencedClassId) = relationship
+        metaModelReader.getRelationships()
+            .forEach { (relationshipName, relationship) ->
+                val (referencingClassId, referencedClassId) = relationship
 
-                    relationshipGraph.addVertex(referencingClassId)
-                    relationshipGraph.addVertex(referencedClassId)
+                relationshipGraph.addVertex(referencingClassId)
+                relationshipGraph.addVertex(referencedClassId)
 
-                    // self-loop, not supported at the moment
-                    if (referencingClassId != referencedClassId) {
-                        relationshipGraph.addEdge(referencingClassId, referencedClassId, relationshipName)
-                    }
+                // self-loop, not supported at the moment
+                if (referencingClassId != referencedClassId) {
+                    relationshipGraph.addEdge(referencingClassId, referencedClassId, relationshipName)
                 }
+            }
 
-            if (forceAcyclic)
-                relationshipGraph.breakCycles()
-
-            return@transaction relationshipGraph
-        }
+        return@transaction relationshipGraph
+    }
 }
 
 private fun Graph<EntityID<Int>, String>.splitByEdge(splittingEdge: String): Set<Graph<EntityID<Int>, String>> {
@@ -150,13 +147,7 @@ private fun Graph<EntityID<Int>, String>.searchForOptimumBottomUp(
                 .asSequence()
                 .filter { edgeOrder[it]!! >= parentGraphInducingEdge }
                 .filter { !parentGraph.containsEdge(it) }
-                .filter {
-                    parentGraph.containsVertex(getEdgeSource(it)) || parentGraph.containsVertex(
-                        getEdgeTarget(
-                            it
-                        )
-                    )
-                }
+                .filter { parentGraph.containsVertex(getEdgeSource(it)) || parentGraph.containsVertex(getEdgeTarget(it)) }
                 .map { edgeName ->
                     val edgeOrdering = edgeOrder[edgeName]!!
                     val supergraph = AsSubgraph(
@@ -171,9 +162,7 @@ private fun Graph<EntityID<Int>, String>.searchForOptimumBottomUp(
 
         supergraphQueue.addAll(derivedGraphs)
 
-        if (parentGraph.vertexSet().size + 1 in acceptableSize && derivedGraphs.isEmpty()) bestSolutions.add(
-            parentGraph to parentScore
-        )
+        if (parentGraph.vertexSet().size + 1 in acceptableSize && derivedGraphs.isEmpty()) bestSolutions.add(parentGraph to parentScore)
     }
 
     return bestSolutions.sortedWith(
@@ -211,43 +200,25 @@ private fun Graph<EntityID<Int>, String>.getEdgeOrderingByDistance(): Map<String
         .toMap()
 }
 
-/**
- * Arbitrarily breaks cycles in the graph. The solution may be suboptimal (i.e., more edges than necessary were removed
- * from the graph), as this is a solution to an NP-hard problem of finding the smallest feedback arc set.
- */
-internal fun <Vertex, Edge> Graph<Vertex, Edge>.breakCycles() {
-    val cycles = SzwarcfiterLauerSimpleCycles(this).findSimpleCycles()
-    for (cycle in cycles) {
-        assert(cycle.size >= 2)
-        removeEdge(cycle[0], cycle[1])
-    }
-}
-
-internal fun <Vertex, Edge> Graph<Vertex, Edge>.calculateVertexWeights(): Map<Vertex, Double> {
-    val vertexWeights = mutableMapOf<Vertex, Double>()
-
-    val unassignedVertices = mutableSetOf<Vertex>()
+private fun Graph<EntityID<Int>, String>.calculateVertexWeights(): Map<EntityID<Int>, Double> {
+    val vertexWeights = mutableMapOf<EntityID<Int>, Double>()
+    val unassignedVertices = mutableSetOf<EntityID<Int>>()
 
     vertexSet().forEach {
         if (outDegreeOf(it) == 0) vertexWeights[it] = 1.0 else unassignedVertices.add(it)
     }
 
-    val modified = HashSet<Vertex>()
-
+    // simple cycles are not supported at the moment
     while (unassignedVertices.isNotEmpty()) {
-        modified.clear()
-
         unassignedVertices.forEach { vertex ->
             val successors = outgoingEdgesOf(vertex).map { getEdgeTarget(it) }
 
             if (vertexWeights.keys.containsAll(successors)) {
                 vertexWeights[vertex] = successors.maxOf { vertexWeights[it]!! } + 1
-                modified.add(vertex)
             }
         }
-        check(modified.isNotEmpty()) { "Weights were not modified, yet there are still ${unassignedVertices.size} unasigned vertices. Aborting an infinite loop." }
 
-        unassignedVertices.removeAll(modified)
+        unassignedVertices.removeAll(vertexWeights.keys)
     }
 
     return vertexWeights
@@ -266,20 +237,14 @@ private fun Graph<EntityID<Int>, String>.calculateEdgeHeterogeneity(): Double {
     return graphHeterogeneity / (edges.size.toDouble().pow(3.0) / 4.0)
 }
 
-private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL1(
-    edge1: String,
-    edge2: String
-): Double {
+private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL1(edge1: String, edge2: String): Double {
     val outDegreeDiff = outDegreeOf(getEdgeSource(edge1)) - outDegreeOf(getEdgeSource(edge2))
     val inDegreeDiff = inDegreeOf(getEdgeTarget(edge1)) - inDegreeOf(getEdgeTarget(edge2))
 
     return abs(outDegreeDiff).plus(abs(inDegreeDiff)).toDouble()
 }
 
-private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL2(
-    edge1: String,
-    edge2: String
-): Double {
+private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL2(edge1: String, edge2: String): Double {
     val outDegreeDiff = outDegreeOf(getEdgeSource(edge1)) - outDegreeOf(getEdgeSource(edge2))
     val inDegreeDiff = inDegreeOf(getEdgeTarget(edge1)) - inDegreeOf(getEdgeTarget(edge2))
 
@@ -299,5 +264,4 @@ private fun AsSubgraph<EntityID<Int>, String>.calculateNormalizedHomogeneity(): 
     val homogeneity = calculateHomogeneity()
 
     return if (homogeneity == 0.0) 0.0 else homogeneity / ((vertexCount * (vertexCount - 2 * sqrt(vertexCount - 1.0))) / (vertexCount - 1))
-
 }

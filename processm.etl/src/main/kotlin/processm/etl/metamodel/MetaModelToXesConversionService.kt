@@ -72,10 +72,8 @@ class MetaModelToXesConversionService : Service {
     }
 
     private fun enqueueLogGeneration(message: MapMessage): Boolean {
-        val dataStoreId =
-            requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
-        val etlProcessId =
-            requireNotNull(message.getString(ETL_PROCESS_ID)?.toUUID()) { "Missing field: $ETL_PROCESS_ID." }
+        val dataStoreId = requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+        val etlProcessId = requireNotNull(message.getString(ETL_PROCESS_ID)?.toUUID()) { "Missing field: $ETL_PROCESS_ID." }
         val dataModelId = requireNotNull(message.getInt(DATA_MODEL_ID)) { "Missing field: $DATA_MODEL_ID." }
         val logName = requireNotNull(message.getString(ETL_PROCESS_NAME)) { "Missing field: $ETL_PROCESS_NAME." }
 
@@ -103,8 +101,7 @@ class MetaModelToXesConversionService : Service {
                         conversionDetails.dataStoreId,
                         conversionDetails.etlProcessId,
                         conversionDetails.dataModelId,
-                        conversionDetails.logName
-                    )
+                        conversionDetails.logName)
                 }
             }
         }
@@ -143,24 +140,25 @@ class MetaModelToXesConversionService : Service {
                 DBLogCleaner.removeLog(connection, etlProcessId)
                 DBXESOutputStream(connection).use { dbStream ->
                     dbStream.write(xesInputStream.map {
-                        val log = it as? Log ?: return@map it
-                        val logAttributes = log.attributes.toMutableAttributeMap()
-                        logAttributes[identityIdAttributeName] =
-                            etlProcessId   // set identity:id to etlProcessId to enable unambiguous link between a process and the resulting log
+                            val log = it as? Log ?: return@map it
+                            val logAttributes = log.attributes.toMutableAttributeMap()
 
-                        logAttributes.computeIfAbsent(conceptNameAttributeName) {
-                            logName
-                        }
+                            logAttributes.computeIfAbsent(identityIdAttributeName) {
+                                etlProcessId
+                            }
+                            logAttributes.computeIfAbsent(conceptNameAttributeName) {
+                                logName
+                            }
 
-                        return@map Log(
-                            logAttributes,
-                            log.extensions.toMutableMap(),
-                            log.traceGlobals.toMutableAttributeMap(),
-                            log.eventGlobals.toMutableAttributeMap(),
-                            log.traceClassifiers.toMutableMap(),
-                            log.eventClassifiers.toMutableMap()
-                        )
-                    })
+                            return@map Log(
+                                logAttributes,
+                                log.extensions.toMutableMap(),
+                                log.traceGlobals.toMutableAttributeMap(),
+                                log.eventGlobals.toMutableAttributeMap(),
+                                log.traceClassifiers.toMutableMap(),
+                                log.eventClassifiers.toMutableMap()
+                            )
+                        })
                 }
             }
         }
@@ -171,24 +169,13 @@ class MetaModelToXesConversionService : Service {
             return EtlProcessesMetadata
                 .innerJoin(AutomaticEtlProcesses)
                 .innerJoin(AutomaticEtlProcessRelations)
-                .innerJoin(
-                    sourceClassAlias,
-                    { AutomaticEtlProcessRelations.sourceClassId },
-                    { sourceClassAlias[Classes.id] })
-                .innerJoin(
-                    targetClassAlias,
-                    { AutomaticEtlProcessRelations.targetClassId },
-                    { targetClassAlias[Classes.id] })
+                .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
+                .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
                 .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
                 .select { EtlProcessesMetadata.id eq etlProcessId }
                 .map { relation -> relation[sourceClassAlias[Classes.name]] to relation[targetClassAlias[Classes.name]] }
         }
 
-        private data class ConversionJobDetails(
-            val dataStoreId: UUID,
-            val etlProcessId: UUID,
-            val dataModelId: Int,
-            val logName: String
-        )
+        private data class ConversionJobDetails(val dataStoreId: UUID, val etlProcessId: UUID, val dataModelId: Int, val logName: String)
     }
 }
