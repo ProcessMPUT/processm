@@ -2008,7 +2008,7 @@ components:
         propertyName: type
     EtlProcessInfo:
       type: object
-      required: [ ]
+      required: [ logIdentityId ]
       properties:
         logIdentityId:
           type: string
