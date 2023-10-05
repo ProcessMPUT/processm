@@ -6,6 +6,8 @@ import io.ktor.http.*
 import io.ktor.server.locations.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeThat
+import org.junit.Assume.assumeTrue
 import org.junit.jupiter.api.Assumptions
 import processm.core.Brand
 import processm.services.api.Paths
@@ -257,80 +259,6 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 }
                 login("text@example.com", "newPassword")
             }
-    }
-
-    /**
-    Numeric values in this test are computed by the test itself and are only intended to prevent unexpected change,
-    not to verify correctness
-     */
-    @Test
-    fun `complete workflow for automatic ETL process with Sakila on Postgres`() {
-        ProcessMTestingEnvironment().withFreshDatabase().run {
-            registerUser("test@example.com", "some organization")
-            login("test@example.com", "P@ssw0rd!")
-            currentOrganizationId = organizations.single().id
-            currentDataStore = createDataStore("datastore")
-            post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakilaProperties)) {
-                assertEquals(HttpStatusCode.NoContent, status)
-            }
-            currentDataConnector = createDataConnector("dc1", sakilaProperties)
-            val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
-                assertEquals(HttpStatusCode.OK, status)
-                return@get body<CaseNotion>()
-            }
-            assertEquals(21, relationshipGraph.classes.size)
-            assertEquals(39, relationshipGraph.edges.size)
-            val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
-                assertEquals(HttpStatusCode.OK, status)
-                return@get body<Array<CaseNotion>>()
-            }
-            assertEquals(354, caseNotions.size)
-            currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
-                AbstractEtlProcess(
-                    name = "autosakila",
-                    dataConnectorId = currentDataConnector?.id,
-                    isActive = true,
-                    type = EtlProcessType.automatic,
-                    caseNotion = caseNotions[0]
-                )
-            ) {
-                assertEquals(HttpStatusCode.Created, status)
-                return@post body<AbstractEtlProcess>()
-            }
-
-            Thread.sleep(5_000)
-
-            sakilaEnv.value.clearAllData()
-            sakilaEnv.value.populate()
-
-            Thread.sleep(60_000)
-
-
-            //TODO I am confused. Do I need to call this? I thought this is an automatic ETL process?
-            post<Paths.EtlProcessLog, Unit> {
-                assertEquals(HttpStatusCode.NoContent, status)
-            }
-
-            val info = runBlocking {
-                for (i in 0..60) {
-                    val info = get<Paths.EtlProcess, EtlProcessInfo> {
-                        return@get body<EtlProcessInfo>()
-                    }
-                    println("$i $info")
-                    if (info.lastExecutionTime !== null)
-                        return@runBlocking info
-                    delay(1000)
-                }
-                error("The ETL process was not executed in the prescribed amount of time")
-            }
-            assertTrue { info.errors.isNullOrEmpty() }
-            val logIdentityId = info.logIdentityId
-
-            val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
-            println(logs.size)
-            //TODO verify actual size or something
-            assertTrue { logs.isNotEmpty() }
-        }
     }
 
 }

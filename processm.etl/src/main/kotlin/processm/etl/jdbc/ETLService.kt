@@ -64,12 +64,10 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                 val config = ETLConfiguration[id.toUUID()!!]
                 listOf(createJob(datastore, config))
             }
-
             DEACTIVATE -> {
                 scheduler.deleteJob(JobKey.jobKey(id, datastore))
                 emptyList()
             }
-
             else -> throw IllegalArgumentException("Unrecognized type: $type.")
         }
     }
@@ -106,7 +104,7 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
             val key = context.jobDetail.key
             val id = key.name
             val datastore = key.group
-            var name: String = "unknown"
+            var name:String = "unknown"
             try {
                 transaction(DBCache.get(datastore).database) {
                     config = ETLConfiguration[id.toUUID()!!]

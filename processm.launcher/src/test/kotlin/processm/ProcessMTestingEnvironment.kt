@@ -90,23 +90,11 @@ class ProcessMTestingEnvironment {
         }
     }
 
-    val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
+    private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
 
     val sakilaJdbcUrl: String
         get() = with(sakilaEnv.value) {
             "$jdbcUrl&user=$user&password=$password"
-        }
-
-    val sakilaProperties: Map<String, String>
-        get() = with(sakilaEnv.value) {
-            mapOf(
-                "connection-type" to "PostgreSql",
-                "server" to host,
-                "port" to port.toString(),
-                "username" to user,
-                "password" to password,
-                "database" to dbName
-            )
         }
 
     fun withPreexistingDatabase(jdbcUrl: String): ProcessMTestingEnvironment {

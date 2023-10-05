@@ -1,16 +1,17 @@
 package processm.etl.metamodel
 
 import jakarta.jms.MapMessage
-import jakarta.jms.Message
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.innerJoin
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.statements.jdbc.JdbcConnectionImpl
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
-import processm.core.esb.*
+import processm.core.communication.Consumer
+import processm.core.esb.Artemis
+import processm.core.esb.Service
+import processm.core.esb.ServiceStatus
 import processm.core.helpers.toUUID
 import processm.core.log.DBLogCleaner
 import processm.core.log.DBXESOutputStream
@@ -18,11 +19,9 @@ import processm.core.log.Log
 import processm.core.log.attribute.Attribute.CONCEPT_NAME
 import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.toMutableAttributeMap
-import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
-import java.time.Instant
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -41,29 +40,21 @@ class MetaModelToXesConversionService : Service {
     private val conversionsQueueLengthLimit = 10
     private val conversionWorker = MetaModelToXesConversionWorker(conversionsQueueLengthLimit)
     private val conversionThread = Thread(conversionWorker)
-    private lateinit var jmsListener: JMSListener
+    private lateinit var consumer: Consumer
     override var status: ServiceStatus = ServiceStatus.Unknown
     override val dependencies: List<KClass<out Service>> = listOf(Artemis::class)
 
     override fun register() {
         status = ServiceStatus.Stopped
         logger.debug("$name service registered")
-        jmsListener = object : AbstractJMSListener(ETL_PROCESS_CONVERSION_TOPIC, null, name) {
-            override fun onMessage(msg: Message?): Unit = loggedScope { logger ->
-                if (msg is MapMessage) {
-                    enqueueLogGeneration(msg)
-                } else {
-                    logger.warn("Received a message of an unexpected type: `${msg?.let { it::class }}'")
-                }
-            }
-        }
+        consumer = Consumer()
     }
 
     override val name: String
         get() = "MetaModel to XES conversion"
 
     override fun start() {
-        jmsListener.listen()
+        consumer.listen(ETL_PROCESS_CONVERSION_TOPIC, name, ::enqueueLogGeneration)
         conversionThread.start()
         status = ServiceStatus.Started
         logger.info("$name service started")
@@ -72,7 +63,7 @@ class MetaModelToXesConversionService : Service {
     override fun stop() {
         try {
             conversionWorker.stopProcessing()
-            jmsListener.close()
+            consumer.close()
             conversionThread.interrupt()
         } finally {
             status = ServiceStatus.Stopped
@@ -81,10 +72,8 @@ class MetaModelToXesConversionService : Service {
     }
 
     private fun enqueueLogGeneration(message: MapMessage): Boolean {
-        val dataStoreId =
-            requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
-        val etlProcessId =
-            requireNotNull(message.getString(ETL_PROCESS_ID)?.toUUID()) { "Missing field: $ETL_PROCESS_ID." }
+        val dataStoreId = requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+        val etlProcessId = requireNotNull(message.getString(ETL_PROCESS_ID)?.toUUID()) { "Missing field: $ETL_PROCESS_ID." }
         val dataModelId = requireNotNull(message.getInt(DATA_MODEL_ID)) { "Missing field: $DATA_MODEL_ID." }
         val logName = requireNotNull(message.getString(ETL_PROCESS_NAME)) { "Missing field: $ETL_PROCESS_NAME." }
 
@@ -112,8 +101,7 @@ class MetaModelToXesConversionService : Service {
                         conversionDetails.dataStoreId,
                         conversionDetails.etlProcessId,
                         conversionDetails.dataModelId,
-                        conversionDetails.logName
-                    )
+                        conversionDetails.logName)
                 }
             }
         }
@@ -148,35 +136,30 @@ class MetaModelToXesConversionService : Service {
                 )
             }
 
-            //TODO error-reporting
-
-            transaction(DBCache.get(dataStoreName).database) {
-                val connection = (connection as JdbcConnectionImpl).connection
-                // TODO do we need to rewrite everything from scratch?
+            DBCache.get(dataStoreName).getConnection().use { connection ->
                 DBLogCleaner.removeLog(connection, etlProcessId)
-                // TODO do we need to rewrite everything from scratch?
-                DBLogCleaner.removeLog(connection, etlProcessId)
-                // DO NOT call output.close(), as it would commit transaction and close connection. Instead, we are
-                // just attaching extra data to the exposed-managed database connection.
-                val dbStream = DBXESOutputStream(connection)
-                dbStream.write(xesInputStream.map {
-                    val log = it as? Log ?: return@map it
-                    val logAttributes = log.attributes.toMutableAttributeMap()
-                    // set identity:id to etlProcessId to enable unambiguous link between a process and the resulting log
-                    logAttributes[identityIdAttributeName] = etlProcessId
+                DBXESOutputStream(connection).use { dbStream ->
+                    dbStream.write(xesInputStream.map {
+                            val log = it as? Log ?: return@map it
+                            val logAttributes = log.attributes.toMutableAttributeMap()
 
-                    logAttributes.computeIfAbsent(conceptNameAttributeName) { logName }
+                            logAttributes.computeIfAbsent(identityIdAttributeName) {
+                                etlProcessId
+                            }
+                            logAttributes.computeIfAbsent(conceptNameAttributeName) {
+                                logName
+                            }
 
-                    return@map Log(
-                        logAttributes,
-                        log.extensions.toMutableMap(),
-                        log.traceGlobals.toMutableAttributeMap(),
-                        log.eventGlobals.toMutableAttributeMap(),
-                        log.traceClassifiers.toMutableMap(),
-                        log.eventClassifiers.toMutableMap()
-                    )
-                })
-                EtlProcessMetadata.findById(etlProcessId)!!.lastExecutionTime = Instant.now()
+                            return@map Log(
+                                logAttributes,
+                                log.extensions.toMutableMap(),
+                                log.traceGlobals.toMutableAttributeMap(),
+                                log.eventGlobals.toMutableAttributeMap(),
+                                log.traceClassifiers.toMutableMap(),
+                                log.eventClassifiers.toMutableMap()
+                            )
+                        })
+                }
             }
         }
 
@@ -186,24 +169,13 @@ class MetaModelToXesConversionService : Service {
             return EtlProcessesMetadata
                 .innerJoin(AutomaticEtlProcesses)
                 .innerJoin(AutomaticEtlProcessRelations)
-                .innerJoin(
-                    sourceClassAlias,
-                    { AutomaticEtlProcessRelations.sourceClassId },
-                    { sourceClassAlias[Classes.id] })
-                .innerJoin(
-                    targetClassAlias,
-                    { AutomaticEtlProcessRelations.targetClassId },
-                    { targetClassAlias[Classes.id] })
+                .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
+                .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
                 .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
                 .select { EtlProcessesMetadata.id eq etlProcessId }
                 .map { relation -> relation[sourceClassAlias[Classes.name]] to relation[targetClassAlias[Classes.name]] }
         }
 
-        private data class ConversionJobDetails(
-            val dataStoreId: UUID,
-            val etlProcessId: UUID,
-            val dataModelId: Int,
-            val logName: String
-        )
+        private data class ConversionJobDetails(val dataStoreId: UUID, val etlProcessId: UUID, val dataModelId: Int, val logName: String)
     }
 }

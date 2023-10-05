@@ -35,10 +35,7 @@ class DebeziumChangeTrackerTest {
         val metaModelReader = MetaModelReader(dataModelId)
         val metaModelAppender = MetaModelAppender(metaModelReader)
 
-        DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender),
-            UUID.randomUUID(),
-            UUID.randomUUID()
-            ).use {
+        DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)).use {
             Thread.sleep(1000000)
         }
     }
@@ -65,7 +62,7 @@ class DebeziumChangeTrackerTest {
         val metaModelReader = MetaModelReader(dataModelId)
         val metaModelAppender = MetaModelAppender(metaModelReader)
 
-        DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender), UUID.randomUUID(), UUID.randomUUID()).use {
+        DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)).use {
             Thread.sleep(6000000)
         }
     }
