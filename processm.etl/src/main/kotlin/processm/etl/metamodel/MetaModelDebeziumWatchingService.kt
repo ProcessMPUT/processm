@@ -125,13 +125,13 @@ class MetaModelDebeziumWatchingService : Service {
                         val dataConnectorId = dataConnectorResultRow[DataConnectors.id].value
 
                         try {
-                            val dataConnector = getDataConnector(dataConnectorId)
                             val trackedEntities = getEntitiesToBeTracked(dataConnectorId)
 
                             if (trackedEntities.isEmpty()) {
                                 logger.debug("No connection attempt will be made for the data connector $dataConnectorId due to no entities to be tracked")
                                 return@dataConnectorsLoop
                             }
+                            val dataConnector = DataConnector.wrapRow(dataConnectorResultRow)
 
                             val tracker = createDebeziumTracker(dataStoreId, dataConnector, trackedEntities)
                             debeziumTrackers[dataConnectorId] = tracker
@@ -221,8 +221,9 @@ class MetaModelDebeziumWatchingService : Service {
         } catch (e: SerializationException) {
             throw IllegalArgumentException("Failed to load connection properties. Connection string based configuration is not yet supported.")
         }
-        val connectorType = requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" }
-        if (connectorType == "SqlServer") {
+        val connectorType =
+            ConnectionType.valueOf(requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" })
+        if (connectorType == ConnectionType.SqlServer) {
             // enable CDC as per https://debezium.io/documentation/reference/stable/connectors/sqlserver.html#_enabling_cdc_on_the_sql_server_database
             dataConnector.getConnection().use { connection ->
                 connection.prepareCall("{call sys.sp_cdc_enable_db}").use { call ->
@@ -272,9 +273,9 @@ class MetaModelDebeziumWatchingService : Service {
         return this
     }
 
-    private fun Properties.setConnectorSpecificDefaults(connectorType: String): Properties {
+    private fun Properties.setConnectorSpecificDefaults(connectorType: ConnectionType): Properties {
         when (connectorType) {
-            "PostgreSql" -> {
+            ConnectionType.PostgreSql -> {
                 setProperty("connector.class", "io.debezium.connector.postgresql.PostgresConnector")
                 setProperty("slot.name", defaultSlotName)
                 setProperty("slot.drop.on.stop", "false")
@@ -282,20 +283,20 @@ class MetaModelDebeziumWatchingService : Service {
                 setProperty("snapshot.mode", "never")
             }
 
-            "SqlServer" -> {
+            ConnectionType.SqlServer -> {
                 setProperty("connector.class", "io.debezium.connector.sqlserver.SqlServerConnector")
                 setProperty("snapshot.mode", "schema_only")
             }
 
-            "MySql" -> {
+            ConnectionType.MySql -> {
                 setProperty("connector.class", "io.debezium.connector.mysql.MySqlConnector")
             }
 
-            "OracleDatabase" -> {
+            ConnectionType.OracleDatabase -> {
                 setProperty("connector.class", "io.debezium.connector.oracle.OracleConnector")
             }
 
-            "Db2" -> {
+            ConnectionType.Db2 -> {
                 setProperty("connector.class", "io.debezium.connector.db2.Db2Connector")
             }
         }

@@ -5,6 +5,7 @@ import org.testcontainers.containers.MSSQLServerContainer
 import org.testcontainers.containers.MSSQLServerContainer.MS_SQL_SERVER_PORT
 import org.testcontainers.lifecycle.Startables
 import processm.core.logging.logger
+import processm.dbmodels.models.ConnectionType
 import processm.dbmodels.models.DataConnector
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import java.sql.Connection
@@ -109,7 +110,7 @@ class MSSQLEnvironment(
         get() = container.withUrlParam("database", dbName).jdbcUrl
     override val connectionProperties: Map<String, String>
         get() = mapOf(
-            "connection-type" to "SqlServer",
+            "connection-type" to ConnectionType.SqlServer.name,
             "server" to container.host,
             "port" to container.getMappedPort(MS_SQL_SERVER_PORT).toString(),
             "username" to user,

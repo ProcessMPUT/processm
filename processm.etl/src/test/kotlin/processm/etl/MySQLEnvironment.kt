@@ -5,6 +5,7 @@ import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.lifecycle.Startables
 import processm.core.logging.logger
+import processm.dbmodels.models.ConnectionType
 import processm.etl.DBMSEnvironment.Companion.TEST_DATABASES_PATH
 import java.io.File
 import java.sql.Connection
@@ -93,7 +94,7 @@ class MySQLEnvironment(
         get() = container.withDatabaseName(dbName).jdbcUrl
     override val connectionProperties: Map<String, String>
         get() = mapOf(
-            "connection-type" to "MySql",
+            "connection-type" to ConnectionType.MySql.name,
             "server" to container.host,
             "port" to container.getMappedPort(MySQLContainer.MYSQL_PORT).toString(),
             "username" to user,
