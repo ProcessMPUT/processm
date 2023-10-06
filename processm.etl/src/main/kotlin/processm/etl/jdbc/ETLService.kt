@@ -64,10 +64,12 @@ class ETLService : AbstractJobService(QUARTZ_CONFIG, JDBC_ETL_TOPIC, null) {
                 val config = ETLConfiguration[id.toUUID()!!]
                 listOf(createJob(datastore, config))
             }
+
             DEACTIVATE -> {
                 scheduler.deleteJob(JobKey.jobKey(id, datastore))
                 emptyList()
             }
+
             else -> throw IllegalArgumentException("Unrecognized type: $type.")
         }
     }

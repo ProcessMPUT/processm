@@ -136,8 +136,9 @@ class DebeziumChangeTracker(
 
         val keyInfo: JsonObject = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(changeEvent.key())
         val schemaName = keyInfo.extractNestedValue<String>("schema", "name")
-        if (schemaName == "io.debezium.connector.mysql.SchemaChangeKey") {
-            //MySQL connector posts schema changes. We ignore them and do not raise an error, as they - by themselves - are not a cause of concern for the user
+        if (schemaName.endsWith(".SchemaChangeKey")) {
+            //"io.debezium.connector.mysql.SchemaChangeKey", "io.debezium.connector.sqlserver.SchemaChangeKey"
+            //MySQL and SQL Server connectors post schema changes. We ignore them and do not raise an error, as they - by themselves - are not a cause of concern for the user
             return null
         }
         val keyName =

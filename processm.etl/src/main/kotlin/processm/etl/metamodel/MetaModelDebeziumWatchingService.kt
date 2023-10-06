@@ -18,6 +18,7 @@ import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
+import processm.etl.helpers.getConnection
 import processm.etl.tracker.DebeziumChangeTracker
 import java.io.File
 import java.util.*
@@ -176,22 +177,8 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    private fun getDataConnector(dataConnectorId: UUID): DataConnectorDto {
-        return requireNotNull(DataConnectors.select { DataConnectors.id eq dataConnectorId }.firstOrNull()?.let {
-            try {
-                val dataConnector = DataConnector.wrapRow(it)
-                val dataConnectorDto = dataConnector.toDto()
-                // the below logic misses extracting connection properties from connection string so connectors defined that way are not supported at the moment
-                // the limitations is due to Debezium requiring connection configuration in the form of Properties instance
-                dataConnectorDto.connectionProperties = Json.decodeFromString<MutableMap<String, String>>(
-                    dataConnector.connectionProperties
-                )
-                return@let dataConnectorDto
-            } catch (e: SerializationException) {
-                throw IllegalArgumentException("Failed to load connection properties. Connection string based configuration is not yet supported.")
-            }
-        }) { "No data connector found with the provided ID" }
-    }
+    private fun getDataConnector(dataConnectorId: UUID): DataConnector =
+        requireNotNull(DataConnector.findById(dataConnectorId)) { "No data connector found with the provided ID" }
 
     private fun activate(dataStoreId: UUID, dataConnectorId: UUID) {
         debeziumTrackers[dataConnectorId]?.close()
@@ -222,26 +209,46 @@ class MetaModelDebeziumWatchingService : Service {
 
     private fun createDebeziumTracker(
         dataStoreId: UUID,
-        dataConnector: DataConnectorDto,
+        dataConnector: DataConnector,
         trackedEntities: Set<String>
     ): DebeziumChangeTracker {
         val dataModelId =
-            requireNotNull(dataConnector.dataModelId) { "Automatic ETL process has no data model assigned and cannot be tracked" }
-        val connectionProperties =
-            requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
+            requireNotNull(dataConnector.dataModel?.id?.value) { "Automatic ETL process has no data model assigned and cannot be tracked" }
+        val connectionProperties = try {
+            Json.decodeFromString<MutableMap<String, String>>(
+                requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
+            )
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException("Failed to load connection properties. Connection string based configuration is not yet supported.")
+        }
         val connectorType = requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" }
+        if (connectorType == "SqlServer") {
+            // enable CDC as per https://debezium.io/documentation/reference/stable/connectors/sqlserver.html#_enabling_cdc_on_the_sql_server_database
+            dataConnector.getConnection().use { connection ->
+                connection.prepareCall("{call sys.sp_cdc_enable_db}").use { call ->
+                    call.execute()
+                }
+                connection.prepareCall("{call sys.sp_cdc_enable_table(N'dbo', ?, @role_name =?)}").use { call ->
+                    for (e in trackedEntities) {
+                        call.setString(1, e)
+                        call.setString(2, connectionProperties["username"])
+                        call.execute()
+                    }
+                }
+            }
+        }
         val properties = Properties()
             .setDefaults()
             .setConnectorSpecificDefaults(connectorType)
-            .setConnectionProperties(dataConnector.id, connectionProperties)
-            .setTemporaryFiles(dataConnector.id)
+            .setConnectionProperties(dataConnector.id.value, connectionProperties)
+            .setTemporaryFiles(dataConnector.id.value)
             .setTrackedEntities(trackedEntities)
         val metaModelReader = MetaModelReader(dataModelId)
         return DebeziumChangeTracker(
             properties,
             MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader)),
             dataStoreId,
-            dataConnector.id
+            dataConnector.id.value
         )
     }
 

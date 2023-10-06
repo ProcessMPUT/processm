@@ -30,13 +30,16 @@ fun getDataSource(connectionProperties: Map<String, String>): DataSource {
             password = connectionProperties["password"]
             databaseName = connectionProperties["database"]
         }
+
         "SqlServer" -> SQLServerDataSource().apply {
             serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1433
             user = connectionProperties["username"]
             setPassword(connectionProperties["password"].orEmpty())
             databaseName = connectionProperties["database"]
+            trustServerCertificate = connectionProperties["trustServerCertificate"]?.toBoolean() ?: false
         }
+
         "MySql" -> MysqlDataSource().apply {
             serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 3306
@@ -44,6 +47,7 @@ fun getDataSource(connectionProperties: Map<String, String>): DataSource {
             password = connectionProperties["password"]
             databaseName = connectionProperties["database"]
         }
+
         "OracleDatabase" -> OracleDataSource().apply {
             serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 1521
@@ -51,6 +55,7 @@ fun getDataSource(connectionProperties: Map<String, String>): DataSource {
             setPassword(connectionProperties["password"].orEmpty())
             databaseName = connectionProperties["database"]
         }
+
         "Db2" -> DB2SimpleDataSource().apply {
             serverName = connectionProperties["server"] ?: throw IllegalArgumentException("Server address is required")
             portNumber = connectionProperties["port"]?.toIntOrNull() ?: 50000
@@ -58,6 +63,7 @@ fun getDataSource(connectionProperties: Map<String, String>): DataSource {
             setPassword(connectionProperties["password"].orEmpty())
             databaseName = connectionProperties["database"]
         }
+
         else -> throw Error("Unsupported connection type")
     }
 }

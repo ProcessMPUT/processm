@@ -11,6 +11,7 @@ import org.testcontainers.lifecycle.Startables
 import processm.core.Brand
 import processm.core.helpers.inverse
 import processm.etl.DBMSEnvironment
+import processm.etl.MSSQLEnvironment
 import processm.etl.MySQLEnvironment
 import processm.etl.PostgreSQLEnvironment
 import processm.services.api.Paths
@@ -332,7 +333,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             sakila.populate()
 
             // A delay for Debezium to report the changes
-            Thread.sleep(5_000)
+            Thread.sleep(30_000)
 
             post<Paths.EtlProcessLog, Unit> {
                 assertEquals(HttpStatusCode.NoContent, status)
@@ -400,6 +401,18 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             sakila.configure(listOf(MySQLEnvironment.SAKILA_SCHEMA_SCRIPT))
             `complete workflow for automatic ETL process with Sakila`(sakila) {
                 sakila.configure(listOf(MySQLEnvironment.SAKILA_INSERT_SCRIPT))
+            }
+        }
+    }
+
+    @Test
+    fun `complete workflow for automatic ETL process with Sakila on MSSQL`(): Unit {
+        val container = MSSQLEnvironment.createContainer()
+        Startables.deepStart(listOf(container)).join()
+        MSSQLEnvironment(container, "sakila").use { sakila ->
+            sakila.configureWithScripts(MSSQLEnvironment.SAKILA_SCHEMA_SCRIPT, null)
+            `complete workflow for automatic ETL process with Sakila`(sakila) {
+                sakila.configureWithScripts(null, MSSQLEnvironment.SAKILA_INSERT_SCRIPT)
             }
         }
     }

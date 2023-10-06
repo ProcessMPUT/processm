@@ -16,11 +16,16 @@ class MSSQLEnvironment(
 ) : DBMSEnvironment<MSSQLServerContainer<*>> {
 
     companion object {
+
+        const val SAKILA_SCHEMA_SCRIPT = "sakila/sql-server-sakila-db/sql-server-sakila-schema.sql"
+        const val SAKILA_INSERT_SCRIPT = "sakila/sql-server-sakila-db/sql-server-sakila-insert-data.sql"
+
         private const val DOCKER_IMAGE = "mcr.microsoft.com/mssql/server:2019-CU12-ubuntu-20.04"
         private val logger = logger()
 
         fun createContainer(): MSSQLServerContainer<*> = MSSQLServerContainer(DOCKER_IMAGE)
             .withFileSystemBind(TEST_DATABASES_PATH.absolutePath, "/tmp/test-databases/", BindMode.READ_ONLY)
+            .withEnv("MSSQL_AGENT_ENABLED", "true")
             .acceptLicense()
 
         private val sharedContainerDelegate = lazy {
@@ -32,10 +37,7 @@ class MSSQLEnvironment(
 
         private val sakilaEnv by lazy {
             val env = MSSQLEnvironment(sharedContainer, "sakila")
-            env.configureWithScripts(
-                "sakila/sql-server-sakila-db/sql-server-sakila-schema.sql",
-                "sakila/sql-server-sakila-db/sql-server-sakila-insert-data.sql"
-            )
+            env.configureWithScripts(SAKILA_SCHEMA_SCRIPT, SAKILA_INSERT_SCRIPT)
             return@lazy env
         }
 
