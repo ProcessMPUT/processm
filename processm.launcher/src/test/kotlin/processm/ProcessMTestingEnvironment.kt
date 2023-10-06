@@ -18,10 +18,13 @@ import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
 import processm.core.persistence.Migrator
 import processm.etl.PostgreSQLEnvironment
+import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
 import processm.services.LocalDateTimeTypeAdapter
 import processm.services.NonNullableTypeAdapterFactory
 import processm.services.api.Paths
 import processm.services.api.models.*
+import java.io.File
+import java.nio.file.Files
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
@@ -94,6 +97,7 @@ class ProcessMTestingEnvironment {
     }
 
     private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
+    private var temporaryDebeziumDirectory: File? = null
 
     val sakilaJdbcUrl: String
         get() = with(sakilaEnv.value) {
@@ -117,6 +121,13 @@ class ProcessMTestingEnvironment {
         return this
     }
 
+    fun withTemporaryDebeziumStorage(): ProcessMTestingEnvironment {
+        val dir = Files.createTempDirectory("processm_debezium").toFile()
+        withProperty(DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY, dir.absolutePath)
+        temporaryDebeziumDirectory = dir
+        return this
+    }
+
     fun <T> run(block: ProcessMTestingEnvironment.() -> T) {
         try {
             loadConfiguration(true)
@@ -135,6 +146,7 @@ class ProcessMTestingEnvironment {
             client.close()
             if (sakilaEnv.isInitialized())
                 sakilaEnv.value.close()
+            temporaryDebeziumDirectory?.deleteRecursively()
         }
     }
 

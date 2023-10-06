@@ -268,7 +268,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
         sakila: T,
         populate: T.() -> Unit
     ) {
-        ProcessMTestingEnvironment().withFreshDatabase().run {
+        ProcessMTestingEnvironment().withTemporaryDebeziumStorage().withFreshDatabase().run {
             registerUser("test@example.com", "some organization")
             login("test@example.com", "P@ssw0rd!")
             currentOrganizationId = organizations.single().id

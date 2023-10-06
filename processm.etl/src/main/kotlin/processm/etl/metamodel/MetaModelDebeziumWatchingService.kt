@@ -11,6 +11,7 @@ import processm.core.communication.Consumer
 import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
+import processm.core.helpers.getPropertyIgnoreCase
 import processm.core.helpers.mapToSet
 import processm.core.helpers.toUUID
 import processm.core.logging.logger
@@ -18,6 +19,7 @@ import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
 import processm.etl.tracker.DebeziumChangeTracker
+import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
@@ -29,6 +31,7 @@ import kotlin.reflect.KClass
 class MetaModelDebeziumWatchingService : Service {
     companion object {
         private val logger = logger()
+        const val DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY = "processm.etl.debezium.persistence.directory"
     }
 
     private val defaultSlotName = "processm"
@@ -304,14 +307,18 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     private fun Properties.setTemporaryFiles(dataConnectorId: UUID): Properties {
+        val directory = File(getPropertyIgnoreCase(DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY) ?: ".")
+        if (!directory.exists())
+            directory.mkdirs()
+        check(directory.exists() && directory.isDirectory) { "The property `$DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY' points to a path that either is not a directory or does not exists and cannot be created, e.g., due to insufficient privileges." }
         setProperty("name", "$dataConnectorId")
         setProperty(
             "offset.storage.file.filename",
-            "debezium_offset_${dataConnectorId}.dat"
+            File(directory, "debezium_offset_${dataConnectorId}.dat").absolutePath
         )
         setProperty(
             "database.history.file.filename",
-            "debezium_dbhistory_${dataConnectorId}.dat"
+            File(directory, "debezium_dbhistory_${dataConnectorId}.dat").absolutePath
         )
 
         return this
