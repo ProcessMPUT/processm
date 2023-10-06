@@ -3,6 +3,7 @@ package processm
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -24,7 +25,6 @@ import processm.services.api.models.*
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
-import kotlin.collections.HashMap
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
@@ -50,6 +50,9 @@ class ProcessMTestingEnvironment {
                 registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
                 registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
             }
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 300_000
         }
     }
 

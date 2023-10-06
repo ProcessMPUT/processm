@@ -30,12 +30,8 @@ class MetaModelDebeziumWatchingService : Service {
     companion object {
         private val logger = logger()
     }
+
     private val defaultSlotName = "processm"
-    private val serverProperty = "server"
-    private val portProperty = "port"
-    private val usernameProperty = "username"
-    private val passwordProperty = "password"
-    private val databaseNameProperty = "database"
     private val connectionTypeProperty = "connection-type"
     private val connectionRefreshingPeriod = 30_000L
 
@@ -89,7 +85,8 @@ class MetaModelDebeziumWatchingService : Service {
     private fun updateDebeziumConnectionState(message: MapMessage): Boolean {
         try {
             val type = message.getString(TYPE)
-            val dataStoreId = requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+            val dataStoreId =
+                requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
             val dataConnectorId =
                 requireNotNull(message.getString(DATA_CONNECTOR_ID)?.toUUID()) { "Missing field: $DATA_CONNECTOR_ID." }
 
@@ -136,23 +133,35 @@ class MetaModelDebeziumWatchingService : Service {
                             debeziumTrackers[dataConnectorId] = tracker
                             tracker.start()
                         } catch (e: IllegalArgumentException) {
-                            logger.warn("Failed to create a connection for data connector $dataConnectorId due to invalid configuration", e)
+                            logger.warn(
+                                "Failed to create a connection for data connector $dataConnectorId due to invalid configuration",
+                                e
+                            )
                         } catch (e: Exception) {
-                            logger.warn("An unknown exception occurred while creating connection for data connector $dataConnectorId", e)
+                            logger.warn(
+                                "An unknown exception occurred while creating connection for data connector $dataConnectorId",
+                                e
+                            )
                         }
                     }
             }
         }
     }
 
-    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String>  {
+    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String> {
         val sourceClassAlias = Classes.alias("c1")
         val targetClassAlias = Classes.alias("c2")
         return EtlProcessesMetadata
             .innerJoin(AutomaticEtlProcesses)
             .innerJoin(AutomaticEtlProcessRelations)
-            .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
-            .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
+            .innerJoin(
+                sourceClassAlias,
+                { AutomaticEtlProcessRelations.sourceClassId },
+                { sourceClassAlias[Classes.id] })
+            .innerJoin(
+                targetClassAlias,
+                { AutomaticEtlProcessRelations.targetClassId },
+                { targetClassAlias[Classes.id] })
             .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
             .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }
             .fold(mutableSetOf()) { entities, relation ->
@@ -233,17 +242,23 @@ class MetaModelDebeziumWatchingService : Service {
         )
     }
 
-    private fun Properties.setConnectionProperties(dataConnectorId: UUID, connectionProperties: Map<String, String>): Properties {
+    private val processmToDebezium = mapOf(
+        "server" to "hostname",
+        "username" to "user",
+        "database" to "dbname"
+    )
+
+    private fun Properties.setConnectionProperties(
+        dataConnectorId: UUID,
+        connectionProperties: Map<String, String>
+    ): Properties {
         if (connectionProperties.isEmpty()) throw IllegalArgumentException("Unknown connection properties")
 
         setProperty("database.server.name", "$dataConnectorId")
-        setProperty("database.hostname", connectionProperties[serverProperty])
-        setProperty("database.port", connectionProperties[portProperty])
-        setProperty("database.dbname", connectionProperties[databaseNameProperty])
-        setProperty("database.user", connectionProperties[usernameProperty])
-        setProperty("database.password", connectionProperties[passwordProperty])
-        setProperty("database.sslmode", "disable") //TODO: use user-provided value if available
-
+        for ((processmKey, value) in connectionProperties) {
+            val debeziumKey = processmToDebezium[processmKey] ?: processmKey
+            setProperty("database.$debeziumKey", value)
+        }
         return this
     }
 
@@ -256,16 +271,20 @@ class MetaModelDebeziumWatchingService : Service {
                 setProperty("plugin.name", "pgoutput")
                 setProperty("snapshot.mode", "never")
             }
+
             "SqlServer" -> {
                 setProperty("connector.class", "io.debezium.connector.sqlserver.SqlServerConnector")
                 setProperty("snapshot.mode", "schema_only")
             }
+
             "MySql" -> {
                 setProperty("connector.class", "io.debezium.connector.mysql.MySqlConnector")
             }
+
             "OracleDatabase" -> {
                 setProperty("connector.class", "io.debezium.connector.oracle.OracleConnector")
             }
+
             "Db2" -> {
                 setProperty("connector.class", "io.debezium.connector.db2.Db2Connector")
             }

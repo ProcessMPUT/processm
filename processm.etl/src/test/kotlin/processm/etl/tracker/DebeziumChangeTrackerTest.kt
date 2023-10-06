@@ -20,10 +20,8 @@ class DebeziumChangeTrackerTest {
         props.setProperty("offset.storage", "org.apache.kafka.connect.storage.FileOffsetBackingStore")
         props.setProperty("offset.storage.file.filename", "/tmp/mysql_offsets.dat")
         props.setProperty("offset.flush.interval.ms", "60000")
-        props.setProperty(
-            "database.history", "io.debezium.relational.history.FileDatabaseHistory")
-        props.setProperty(
-            "database.history.file.filename", "dbhistory.dat")
+        props.setProperty("database.history", "io.debezium.relational.history.FileDatabaseHistory")
+        props.setProperty("database.history.file.filename", "dbhistory.dat")
         props.setProperty("database.server.id", "")
         props.setProperty("database.server.name", "my-app-connector")
         props.setProperty("database.hostname", "")
@@ -35,7 +33,12 @@ class DebeziumChangeTrackerTest {
         val metaModelReader = MetaModelReader(dataModelId)
         val metaModelAppender = MetaModelAppender(metaModelReader)
 
-        DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)).use {
+        DebeziumChangeTracker(
+            props,
+            MetaModel(dataStoreDBName, metaModelReader, metaModelAppender),
+            UUID.randomUUID(),
+            UUID.randomUUID()
+        ).use {
             Thread.sleep(1000000)
         }
     }
@@ -62,7 +65,12 @@ class DebeziumChangeTrackerTest {
         val metaModelReader = MetaModelReader(dataModelId)
         val metaModelAppender = MetaModelAppender(metaModelReader)
 
-        DebeziumChangeTracker(props, MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)).use {
+        DebeziumChangeTracker(
+            props,
+            MetaModel(dataStoreDBName, metaModelReader, metaModelAppender),
+            UUID.randomUUID(),
+            UUID.randomUUID()
+        ).use {
             Thread.sleep(6000000)
         }
     }

@@ -6,10 +6,13 @@ import io.ktor.http.*
 import io.ktor.server.locations.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.Assume.assumeThat
-import org.junit.Assume.assumeTrue
 import org.junit.jupiter.api.Assumptions
+import org.testcontainers.lifecycle.Startables
 import processm.core.Brand
+import processm.core.helpers.inverse
+import processm.etl.DBMSEnvironment
+import processm.etl.MySQLEnvironment
+import processm.etl.PostgreSQLEnvironment
 import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
 import processm.services.api.models.*
@@ -261,4 +264,143 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
     }
 
+    private fun <T : DBMSEnvironment<*>> `complete workflow for automatic ETL process with Sakila`(
+        sakila: T,
+        populate: T.() -> Unit
+    ) {
+        ProcessMTestingEnvironment().withFreshDatabase().run {
+            registerUser("test@example.com", "some organization")
+            login("test@example.com", "P@ssw0rd!")
+            currentOrganizationId = organizations.single().id
+            currentDataStore = createDataStore("datastore")
+            post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
+                assertEquals(HttpStatusCode.NoContent, status)
+            }
+            currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
+            val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
+                assertEquals(HttpStatusCode.OK, status)
+                return@get body<CaseNotion>()
+            }
+            // Originally, the test was supposed to verify the number of items to detect unexpected changes.
+            // Turns out, the numbers differ from DB to DB, i.e., they are not very meaningful
+            // For example, there are 21 classes in Postgres, 17 in MySQL and 168 in MSSQL (preliminary)
+            // Similarily, there are 354 case notions in Postgres and 52 in MySQL
+            assertTrue { relationshipGraph.classes.isNotEmpty() }
+            assertTrue { relationshipGraph.edges.isNotEmpty() }
+            val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
+                assertEquals(HttpStatusCode.OK, status)
+                return@get body<Array<CaseNotion>>()
+            }
+            assertTrue { caseNotions.isNotEmpty() }
+
+            //Find the following CaseNotion to ensure the rest of the test works correctly
+            //CaseNotion(classes={21=store, 4=address, 7=staff}, edges=[CaseNotionEdgesInner(sourceClassId=21, targetClassId=4), CaseNotionEdgesInner(sourceClassId=21, targetClassId=7)])
+            val caseNotion = caseNotions.single { caseNotion ->
+                if (caseNotion.classes.values.toSet() != setOf("store", "address", "staff"))
+                    return@single false
+                val nameToId = caseNotion.classes.inverse()
+                val storeId = nameToId["store"]
+                val addressId = nameToId["address"]
+                val staffId = nameToId["staff"]
+                // Initially storeId was supposed to be sourceClassId in both edges. Turns out the case notions
+                // differs from DB to DB. Possibly FIXME
+                return@single caseNotion.edges.size == 2 &&
+                        caseNotion.edges.any { edge ->
+                            setOf(edge.sourceClassId, edge.targetClassId) == setOf(storeId, addressId)
+                        } &&
+                        caseNotion.edges.any { edge ->
+                            setOf(edge.sourceClassId, edge.targetClassId) == setOf(storeId, staffId)
+                        }
+            }
+
+            currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
+                AbstractEtlProcess(
+                    name = "autosakila",
+                    dataConnectorId = currentDataConnector?.id,
+                    isActive = true,
+                    type = EtlProcessType.automatic,
+                    caseNotion = caseNotion
+                )
+            ) {
+                assertEquals(HttpStatusCode.Created, status)
+                return@post body<AbstractEtlProcess>()
+            }
+
+            // A delay for Debezium to kick in and start monitoring the DB
+            Thread.sleep(5_000)
+
+            sakila.populate()
+
+            // A delay for Debezium to report the changes
+            Thread.sleep(5_000)
+
+            post<Paths.EtlProcessLog, Unit> {
+                assertEquals(HttpStatusCode.NoContent, status)
+            }
+
+            val info = runBlocking {
+                for (i in 0..10) {
+                    val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                        return@get body<EtlProcessInfo>()
+                    }
+                    if (info.lastExecutionTime !== null)
+                        return@runBlocking info
+                    delay(1000)
+                }
+                error("The log was not generated in the prescribed amount of time")
+            }
+            assertTrue { info.errors.isNullOrEmpty() }
+            val logIdentityId = info.logIdentityId
+
+            val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
+
+            assertEquals(1, logs.size)
+
+            with(ducktyping) {
+                val log = logs[0]
+                assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
+                val traces = log["log"]["trace"] as List<*>
+                assertEquals(2, traces.size)
+                assertEquals(3, (traces[0]["event"] as List<*>).size)
+                assertEquals(3, (traces[1]["event"] as List<*>).size)
+            }
+        }
+    }
+
+    @Test
+    fun `complete workflow for automatic ETL process with Sakila on Postgres`(): Unit =
+        PostgreSQLEnvironment(
+            "sakila",
+            "postgres",
+            "sakila_password",
+            PostgreSQLEnvironment.SAKILA_SCHEMA_SCRIPT,
+            null
+        ).use { sakila ->
+            `complete workflow for automatic ETL process with Sakila`(sakila) {
+                connect().use { connection ->
+                    connection.autoCommit = false
+                    connection.createStatement().use { s ->
+                        s.execute(
+                            File(
+                                DBMSEnvironment.TEST_DATABASES_PATH,
+                                PostgreSQLEnvironment.SAKILA_INSERT_SCRIPT
+                            ).readText()
+                        )
+                    }
+                    connection.commit()
+                }
+            }
+        }
+
+    @Test
+    fun `complete workflow for automatic ETL process with Sakila on MySQL`(): Unit {
+        val container = MySQLEnvironment.createContainer()
+        Startables.deepStart(listOf(container)).join()
+        MySQLEnvironment(container, "sakila").use { sakila ->
+            sakila.configure(listOf(MySQLEnvironment.SAKILA_SCHEMA_SCRIPT))
+            `complete workflow for automatic ETL process with Sakila`(sakila) {
+                sakila.configure(listOf(MySQLEnvironment.SAKILA_INSERT_SCRIPT))
+            }
+        }
+    }
 }

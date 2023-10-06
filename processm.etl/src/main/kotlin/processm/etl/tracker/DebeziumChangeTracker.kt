@@ -6,10 +6,8 @@ import io.debezium.engine.format.Json
 import io.debezium.engine.format.KeyValueChangeEventFormat
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.DBCache
@@ -81,10 +79,13 @@ class DebeziumChangeTracker(
                     records.fold(mutableListOf<DatabaseChangeEvent>()) { deserializedEvents, rawChangeEvent ->
                         try {
                             val databaseChangeEvent = deserializeDebeziumEvent(rawChangeEvent)
-                            deserializedEvents.add(databaseChangeEvent)
+                            if (databaseChangeEvent !== null) {
+                                deserializedEvents.add(databaseChangeEvent)
+                            }
                             committer.markProcessed(rawChangeEvent)
                         } catch (e: UnsupportedEventFormat) {
                             logger.warn("An event with unsupported format was received", e)
+                            logger.warn("The offending event: {}", rawChangeEvent)
                             reportError(e)
                             committer.markProcessed(rawChangeEvent)
                         } catch (e: Exception) {
@@ -121,21 +122,26 @@ class DebeziumChangeTracker(
                 while (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                     logger.info("Waiting 5 seconds for the Debezium tracker engine to shut down")
                 }
-            }
-            catch (e: InterruptedException) {
+            } catch (e: InterruptedException) {
                 logger.warn("An ${InterruptedException::class.simpleName} was thrown during shutdown of Debezium tracker engine")
             }
 
         }
     }
 
-    private fun deserializeDebeziumEvent(changeEvent: ChangeEvent<String, String>): DatabaseChangeEvent {
+    private fun deserializeDebeziumEvent(changeEvent: ChangeEvent<String, String>): DatabaseChangeEvent? {
         if (changeEvent.key() == null || changeEvent.value() == null) {
             throw UnsupportedEventFormat("Debezium events are expected to contain both: 'key' and 'value' fields")
         }
 
         val keyInfo: JsonObject = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(changeEvent.key())
-        val keyName = (((keyInfo["schema"] as JsonObject)["fields"] as JsonArray)[0] as JsonObject).extractNestedValue<String>("field")
+        val schemaName = keyInfo.extractNestedValue<String>("schema", "name")
+        if (schemaName == "io.debezium.connector.mysql.SchemaChangeKey") {
+            //MySQL connector posts schema changes. We ignore them and do not raise an error, as they - by themselves - are not a cause of concern for the user
+            return null
+        }
+        val keyName =
+            (((keyInfo["schema"] as JsonObject)["fields"] as JsonArray)[0] as JsonObject).extractNestedValue<String>("field")
         val keyValue = keyInfo.extractNestedValue<String>("payload", keyName)
 
         val valueInfo: JsonObject = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(changeEvent.value())
@@ -167,7 +173,7 @@ class DebeziumChangeTracker(
             else -> EventType.Unknown
         }
 
-    private inline fun <reified TResult: Any?> JsonElement.extractNestedValue(vararg nestedFields: String): TResult {
+    private inline fun <reified TResult : Any?> JsonElement.extractNestedValue(vararg nestedFields: String): TResult {
         var currentElement: JsonElement? = this
         var isNestingEnded = false
 
@@ -177,8 +183,7 @@ class DebeziumChangeTracker(
             else currentElement = (currentElement as JsonObject)[it]
         }
 
-        if (null is TResult && currentElement is JsonNull)
-        {
+        if (null is TResult && currentElement is JsonNull) {
             return null as TResult
         }
 
@@ -187,21 +192,25 @@ class DebeziumChangeTracker(
         }
 
         val selectedElement = currentElement
-                              ?: throw UnsupportedEventFormat("Non-nullable value expected at: ${nestedFields.joinToString()}")
+            ?: throw UnsupportedEventFormat("Non-nullable value expected at: ${nestedFields.joinToString()}")
 
         return when (TResult::class) {
             Int::class -> selectedElement.jsonPrimitive.int as TResult
             Long::class -> selectedElement.jsonPrimitive.long as TResult
             String::class -> selectedElement.jsonPrimitive.content as TResult
             Boolean::class -> selectedElement.jsonPrimitive.boolean as TResult
-            Map::class -> selectedElement.jsonObject.map { _object -> _object.key to _object.value.toString() }.toMap() as TResult
+            Map::class -> selectedElement.jsonObject.map { _object -> _object.key to _object.value.toString() }
+                .toMap() as TResult
+
             else -> selectedElement.jsonPrimitive.content as TResult
         }
     }
 
-    private class ConnectionStateMonitor: DebeziumEngine.ConnectorCallback {
+    private class ConnectionStateMonitor : DebeziumEngine.ConnectorCallback {
         private val activeTasksCounter = AtomicInteger(0)
-        @Volatile var isConnected = false
+
+        @Volatile
+        var isConnected = false
             private set
         val activeTasksCount get() = activeTasksCounter.getOpaque()
 

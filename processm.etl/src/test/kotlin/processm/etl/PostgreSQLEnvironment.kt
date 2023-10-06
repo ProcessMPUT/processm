@@ -11,20 +11,24 @@ class PostgreSQLEnvironment(
     user: String,
     password: String,
     val schemaScript: String,
-    val insertScript: String
+    val insertScript: String?
 ) : AbstractDBMSEnvironment<PostgreSQLContainer<*>>(
     dbName,
     user,
     password
 ) {
     companion object {
+
+        const val SAKILA_SCHEMA_SCRIPT = "sakila/postgres-sakila-db/postgres-sakila-schema.sql"
+        const val SAKILA_INSERT_SCRIPT = "sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
+
         fun getSakila(): PostgreSQLEnvironment =
             PostgreSQLEnvironment(
                 "sakila",
                 "postgres",
                 "sakila_password",
-                "sakila/postgres-sakila-db/postgres-sakila-schema.sql",
-                "sakila/postgres-sakila-db/postgres-sakila-insert-data.sql"
+                SAKILA_SCHEMA_SCRIPT,
+                SAKILA_INSERT_SCRIPT
             )
     }
 
@@ -39,13 +43,24 @@ class PostgreSQLEnvironment(
             connection.autoCommit = false
             connection.createStatement().use { s ->
                 s.execute(File(TEST_DATABASES_PATH, schemaScript).readText())
-                s.execute(File(TEST_DATABASES_PATH, insertScript).readText())
+                if (insertScript !== null)
+                    s.execute(File(TEST_DATABASES_PATH, insertScript).readText())
             }
             connection.commit()
         }
 
         return container as PostgreSQLContainer<*>
     }
+
+    override val connectionProperties: Map<String, String>
+        get() = mapOf(
+            "connection-type" to "PostgreSql",
+            "server" to container.host,
+            "port" to container.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT).toString(),
+            "username" to user,
+            "password" to password,
+            "database" to dbName
+        )
 
     override fun initContainer(): PostgreSQLContainer<*> {
         val imageName = DockerImageName.parse("debezium/postgres:12")

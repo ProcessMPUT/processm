@@ -2,6 +2,7 @@ package processm.etl
 
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.MSSQLServerContainer
+import org.testcontainers.containers.MSSQLServerContainer.MS_SQL_SERVER_PORT
 import org.testcontainers.lifecycle.Startables
 import processm.core.logging.logger
 import processm.dbmodels.models.DataConnector
@@ -55,7 +56,7 @@ class MSSQLEnvironment(
         fun getWWI() = WWIEnv
     }
 
-    fun configureWithScripts(schemaScript: String, insertScript: String) {
+    fun configureWithScripts(schemaScript: String?, insertScript: String?) {
         fun import(script: String, dbName: String) {
             with(
                 container.execInContainer(
@@ -75,12 +76,14 @@ class MSSQLEnvironment(
                 check(exitCode == 0)
             }
         }
-        import(schemaScript, "")
-        import(insertScript, dbName)
-
-        // At this point schema created the DB and it can be used in the connection URL
-        // The name of the param is documented on https://docs.microsoft.com/en-us/sql/connect/jdbc/setting-the-connection-properties?view=sql-server-ver15
-        container.withUrlParam("database", dbName)
+        if (schemaScript !== null) {
+            import(schemaScript, "")
+            // At this point schema created the DB and it can be used in the connection URL
+            // The name of the param is documented on https://docs.microsoft.com/en-us/sql/connect/jdbc/setting-the-connection-properties?view=sql-server-ver15
+            container.withUrlParam("database", dbName)
+        }
+        if (insertScript !== null)
+            import(insertScript, dbName)
     }
 
     fun configureWithBackup(backupFile: String, restoreCommandSuffix: String) {
@@ -102,6 +105,16 @@ class MSSQLEnvironment(
 
     override val jdbcUrl: String
         get() = container.withUrlParam("database", dbName).jdbcUrl
+    override val connectionProperties: Map<String, String>
+        get() = mapOf(
+            "connection-type" to "SqlServer",
+            "server" to container.host,
+            "port" to container.getMappedPort(MS_SQL_SERVER_PORT).toString(),
+            "username" to user,
+            "password" to password,
+            "database" to dbName,
+            "trustServerCertificate" to "true"
+        )
 
     override fun connect(): Connection =
         container.withUrlParam("database", dbName).createConnection("")
@@ -115,7 +128,6 @@ class MSSQLEnvironment(
         get() = DataConnector.new {
             name = UUID.randomUUID().toString()
             connectionProperties = "$jdbcUrl;user=$user;password=$password"
-            println("connectionProperties=$connectionProperties")
         }
 }
 
