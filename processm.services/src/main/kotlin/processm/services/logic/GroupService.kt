@@ -90,11 +90,14 @@ class GroupService {
      * Throws [ValidationException] if the specified [groupId] doesn't exist.
      */
     fun getGroup(groupId: UUID): Group = transactionMain {
-        Group.findById(groupId).validateNotNull(Reason.ResourceNotFound) { "The specified group does not exist" }
+        Group.findById(groupId).validateNotNull(Reason.ResourceNotFound) { "The specified group does not exist." }
     }
 
     /**
      * Creates a new group.
+     * For user's implicit group set [name] to user account name, [organizationId] to null, and [isShared] to false.
+     * For organization's shared group set [name] to organization name, [organizationId] to non-null, and [isShared] to true.
+     * For other groups set [organizationId] to non-null and [isShared] to false.
      */
     fun create(
         name: String,
@@ -102,6 +105,9 @@ class GroupService {
         organizationId: UUID? = null,
         isShared: Boolean = false
     ): Group = transactionMain {
+        name.validateNot("", Reason.ResourceFormatInvalid) { "The group name must not be empty." }
+        (organizationId !== null || !isShared).validate(Reason.ResourceFormatInvalid)
+
         val isImplicit = organizationId === null
         Group.new {
             this.name = name

@@ -1,9 +1,7 @@
 package processm.services.logic
 
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.dao.with
+import org.jetbrains.exposed.sql.*
 import processm.core.logging.debug
 import processm.core.logging.loggedScope
 import processm.core.persistence.connection.transactionMain
@@ -109,9 +107,15 @@ class OrganizationService(
      * Throws [ValidationException] if the specified [organizationId] doesn't exist.
      */
     fun getOrganizationGroups(organizationId: UUID): List<Group> = transactionMain {
-        val groups = Group.find {
-            Groups.organizationId eq organizationId
-        }.toList()
+        val groups = Group
+            .find { Groups.organizationId eq organizationId }
+            .union(
+                Group.wrapRows(
+                    Groups.join(Users, JoinType.INNER, Groups.id, Users.privateGroupId)
+                        .innerJoin(UsersRolesInOrganizations)
+                        .select { UsersRolesInOrganizations.organizationId eq organizationId }
+                )
+            ).with(Group::organizationId /*eager loading*/).toList()
 
         // if organization exists, we should find at least the shared group
         groups.isNotEmpty().validate(Reason.ResourceNotFound, "Organization not found")
@@ -168,6 +172,9 @@ class OrganizationService(
         getOrganization(id).update()
     }
 
+    /**
+     * Deletes organization with the given [id].
+     */
     fun remove(id: UUID): Unit = transactionMain {
         Organizations.deleteWhere {
             Organizations.id eq id
@@ -178,6 +185,9 @@ class OrganizationService(
         }
     }
 
+    /**
+     * Gets the organization with the given [organizationId].
+     */
     fun get(organizationId: UUID): Organization = transactionMain {
         getOrganization(organizationId)
     }
