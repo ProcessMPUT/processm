@@ -1,6 +1,5 @@
 package processm.etl.metamodel
 
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.log.Event
 import processm.core.log.Log
@@ -19,8 +18,7 @@ import java.time.Instant
  * Transforms a collection of traces into a stream of XES components.
  */
 class MetaModelXESInputStream(
-    private val caseNotionClasses: List<EntityID<Int>>,
-    private val traceSet: List<MutableMap<EntityID<Int>, Map<String, List<EntityID<Int>>>>>,
+    private val traceSet: Sequence<Set<Int>>,
     private val dataStoreDBName: String,
     dataModelId: Int
 ) : XESInputStream {
@@ -32,11 +30,8 @@ class MetaModelXESInputStream(
             traceSet.forEach { trace ->
                 val traceEvents =
                     transaction(DBCache.get(dataStoreDBName).database) { metaModelReader.getTraceData(trace) }
-                val traceId = caseNotionClasses.joinToString("-") { caseNotionClassId ->
-                    trace[caseNotionClassId]!!.keys.first()
-                }
 
-                yield(Trace(mutableAttributeMapOf(CONCEPT_NAME to traceId)))
+                yield(Trace())
                 traceEvents.forEach { (timestamp, eventData) ->
                     val dataChanges = eventData.changes.orEmpty().map { "${it.key}: ${it.value}" }.joinToString()
                     yield(

@@ -96,7 +96,7 @@ class DebeziumChangeTracker(
                         return@fold deserializedEvents
                     }
 
-                changeApplier.ApplyChange(databaseChangeEvents)
+                changeApplier.applyChange(databaseChangeEvents)
                 committer.markBatchFinished()
             } catch (e: Exception) {
                 logger.warn("Failed to apply changes from database", e)

@@ -8,17 +8,21 @@ import processm.dbmodels.models.*
  * Reads meta model data from the database.
  */
 class MetaModelReader(private val dataModelId: Int) {
-    private val relatedToDataModel: SqlExpressionBuilder.() -> Op<Boolean> = { Classes.dataModelId eq dataModelId }
+    private fun SqlExpressionBuilder.relatedToDataModel(): Op<Boolean> =
+        Classes.dataModelId eq dataModelId
 
-    fun getClassId(className: String) =
-        MetaModelReaderCache.getClassId(className) {
+    private val classIds = HashMap<String, EntityID<Int>>()
+    private val attributeIds = mutableMapOf<Pair<EntityID<Int>, String>, EntityID<Int>>()
+
+    fun getClassId(className: String): EntityID<Int> =
+        classIds.computeIfAbsent(className) {
             Classes.slice(Classes.id).select { Classes.name eq className and relatedToDataModel() }.firstOrNull()
                 ?.getOrNull(Classes.id)
                 ?: throw NoSuchElementException("A class with the specified name $className does not exist")
         }
 
     fun getAttributeId(classId: EntityID<Int>, attributeName: String) =
-        MetaModelReaderCache.getAttributeId(classId, attributeName) {
+        attributeIds.computeIfAbsent(classId to attributeName) {
             AttributesNames
                 .innerJoin(Classes)
                 .slice(AttributesNames.id)
@@ -42,16 +46,14 @@ class MetaModelReader(private val dataModelId: Int) {
             .firstOrNull()
     }
 
-    fun getObjectVersionsAttributesDelta(
-        newerObjectVersionId: EntityID<Int>,
-        olderObjectVersionId: EntityID<Int>? = null
-    ): Map<String, String> {
-        val olderOrPreviousObjectVersionId = olderObjectVersionId ?: ObjectVersions
+    private fun getObjectVersionsAttributesDelta(newerObjectVersionId: Int): Map<String, String> {
+        // TODO: I am pretty sure this function could be simplified to a single query
+        val olderOrPreviousObjectVersionId = ObjectVersions
             .slice(ObjectVersions.previousObjectVersionId)
             .select { ObjectVersions.id eq newerObjectVersionId }
             .limit(1)
-            .map { it[ObjectVersions.previousObjectVersionId] }
-            .firstOrNull() ?: EntityID(-1, ObjectVersions)
+            .map { it[ObjectVersions.previousObjectVersionId]?.value }
+            .firstOrNull() ?: -1
         val (newObjectVersionAttributes, olderObjectVersionAttributes) = AttributesValues
             .innerJoin(AttributesNames)
             .slice(AttributesNames.name, AttributesValues.value, AttributesValues.objectVersionId)
@@ -61,14 +63,11 @@ class MetaModelReader(private val dataModelId: Int) {
                     olderOrPreviousObjectVersionId
                 )
             }
-            .partition { it[AttributesValues.objectVersionId] == newerObjectVersionId }
-        val olderObjectVersionAttributesMap = olderObjectVersionAttributes
-            .map { it[AttributesNames.name] to it[AttributesValues.value] }
-            .toMap()
+            .partition { it[AttributesValues.objectVersionId].value == newerObjectVersionId }
+        val olderObjectVersionAttributesMap =
+            olderObjectVersionAttributes.associate { it[AttributesNames.name] to it[AttributesValues.value] }
 
-        return newObjectVersionAttributes
-            .map { it[AttributesNames.name] to it[AttributesValues.value] }
-            .toMap()
+        return newObjectVersionAttributes.associate { it[AttributesNames.name] to it[AttributesValues.value] }
             .filter { (attributeName, attributeValue) -> olderObjectVersionAttributesMap[attributeName] != attributeValue }
     }
 
@@ -76,55 +75,11 @@ class MetaModelReader(private val dataModelId: Int) {
         val referencingClassAlias = Classes.alias("referencingClass")
 
         return Relationships
-            .innerJoin(referencingClassAlias, { Relationships.sourceClassId }, { referencingClassAlias[Classes.id] })
+            .innerJoin(referencingClassAlias, { sourceClassId }, { referencingClassAlias[Classes.id] })
             .slice(Relationships.name, Relationships.sourceClassId, Relationships.targetClassId)
             .select { referencingClassAlias[Classes.dataModelId] eq dataModelId }
-            .map { it[Relationships.name] to (it[Relationships.sourceClassId] to it[Relationships.targetClassId]) }
-            .toMap()
+            .associate { it[Relationships.name] to (it[Relationships.sourceClassId] to it[Relationships.targetClassId]) }
     }
-
-    fun getRelatedObjectsVersionsGroupedByObjects(
-        objectsIds: Set<String>,
-        objectClassId: EntityID<Int>,
-        relatedObjectClassId: EntityID<Int>
-    ): List<Map<String, Map<String, List<EntityID<Int>>>>> {
-        val relationships = getRelationshipsBetweenClasses(objectClassId, relatedObjectClassId)
-        return relationships.map { (relationshipId, relationshipClasses) ->
-            val isRelatedObjectClassASourceClass = relationshipClasses.first == relatedObjectClassId
-            val sourceObjectVersionAlias = ObjectVersions.alias("sourceObjectVersion")
-            val targetObjectVersionAlias = ObjectVersions.alias("targetObjectVersion")
-
-            return@map Relations
-                .innerJoin(
-                    sourceObjectVersionAlias,
-                    { Relations.sourceObjectVersionId },
-                    { sourceObjectVersionAlias[ObjectVersions.id] })
-                .innerJoin(
-                    targetObjectVersionAlias,
-                    { Relations.targetObjectVersionId },
-                    { targetObjectVersionAlias[ObjectVersions.id] })
-                .slice(
-                    sourceObjectVersionAlias[ObjectVersions.objectId],
-                    targetObjectVersionAlias[ObjectVersions.objectId],
-                    (if (isRelatedObjectClassASourceClass) sourceObjectVersionAlias else targetObjectVersionAlias)[ObjectVersions.id]
-                )
-                .select {
-                    Relations.relationshipId eq relationshipId and
-                            ((if (isRelatedObjectClassASourceClass) targetObjectVersionAlias else sourceObjectVersionAlias)[ObjectVersions.objectId] inList objectsIds)
-                }
-                .groupBy { it[(if (isRelatedObjectClassASourceClass) targetObjectVersionAlias else sourceObjectVersionAlias)[ObjectVersions.objectId]] }
-                .mapValues { (_, relatedObjects) ->
-                    relatedObjects.groupBy({ it[(if (isRelatedObjectClassASourceClass) sourceObjectVersionAlias else targetObjectVersionAlias)[ObjectVersions.objectId]] },
-                        { it[(if (isRelatedObjectClassASourceClass) sourceObjectVersionAlias else targetObjectVersionAlias)[ObjectVersions.id]] })
-                }
-        }
-    }
-
-    fun getObjectVersionsRelatedToClass(objectVersionClassId: EntityID<Int>) =
-        ObjectVersions
-            .slice(ObjectVersions.objectId, ObjectVersions.id)
-            .select { ObjectVersions.classId eq objectVersionClassId }
-            .groupBy({ it[ObjectVersions.objectId] }, { it[ObjectVersions.id] })
 
     data class LogEvent(
         val timestamp: Long,
@@ -137,10 +92,11 @@ class MetaModelReader(private val dataModelId: Int) {
             "$$changeType $className($objectId): ${changes?.map { (key, value) -> "$key: $value" }?.joinToString()}"
     }
 
-    fun getTraceData(trace: Map<EntityID<Int>, Map<String, List<EntityID<Int>>>>): List<Pair<Long?, LogEvent>> {
-        val objectVersionsIds = trace.values.map { it.values.flatten() }.flatten()
+    fun getTraceData(objectVersionsIds: Set<Int>): List<Pair<Long?, LogEvent>> {
+        // TODO querying trace by trace is inefficient. I'd be better to query in batches,
+        // TODO even better to move the whole Debezium->XES transformation to the DB or even skip it altogether
         val objectVersionsAttributesDelta =
-            objectVersionsIds.map { it to getObjectVersionsAttributesDelta(it) }.toMap()
+            objectVersionsIds.associateWith { getObjectVersionsAttributesDelta(it) }
 
         return ObjectVersions.innerJoin(Classes)
             .slice(
@@ -159,7 +115,7 @@ class MetaModelReader(private val dataModelId: Int) {
                     it[ObjectVersions.causingEventType]!!,
                     it[Classes.name],
                     it[ObjectVersions.objectId],
-                    objectVersionsAttributesDelta[it[ObjectVersions.id]]
+                    objectVersionsAttributesDelta[it[ObjectVersions.id].value]
                 )
             }
     }
@@ -167,27 +123,5 @@ class MetaModelReader(private val dataModelId: Int) {
     fun getClassNames() =
         Classes.slice(Classes.id, Classes.name)
             .selectBatched { relatedToDataModel() }
-            .flatten()
-            .map { it[Classes.id] to it[Classes.name] }
-            .toMap()
-
-
-    private fun getRelationshipsBetweenClasses(firstClassId: EntityID<Int>, secondClassId: EntityID<Int>) =
-        Relationships.slice(Relationships.id, Relationships.sourceClassId, Relationships.targetClassId)
-            .select {
-                (Relationships.sourceClassId eq firstClassId and (Relationships.targetClassId eq secondClassId)) or
-                        (Relationships.sourceClassId eq secondClassId and (Relationships.targetClassId eq firstClassId))
-            }
-            .map { it[Relationships.id] to (it[Relationships.sourceClassId] to it[Relationships.targetClassId]) }
-
-    private companion object MetaModelReaderCache {
-        private val classIds = mutableMapOf<String, EntityID<Int>>()
-        private val attributeIds = mutableMapOf<Pair<EntityID<Int>, String>, EntityID<Int>>()
-
-        fun getClassId(className: String, valueGetter: () -> EntityID<Int>) =
-            classIds.getOrPut(className, valueGetter)
-
-        fun getAttributeId(classId: EntityID<Int>, attributeName: String, valueGetter: () -> EntityID<Int>) =
-            attributeIds.getOrPut(classId to attributeName, valueGetter)
-    }
+            .flatten().associate { it[Classes.id] to it[Classes.name] }
 }

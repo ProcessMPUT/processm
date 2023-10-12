@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.jgrapht.Graph
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.alg.cycle.SzwarcfiterLauerSimpleCycles
+import org.jgrapht.graph.AbstractBaseGraph
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.helpers.mapToSet
@@ -35,22 +36,21 @@ class DAGBusinessPerspectiveExplorer(
     fun discoverBusinessPerspectives(
         performFullSearch: Boolean = false,
         goodEnoughScore: Double = 0.0
-    ): List<Pair<DAGBusinessPerspectiveDefinition<EntityID<Int>>, Double>> =
+    ): List<Pair<DAGBusinessPerspectiveDefinition, Double>> =
         transaction(DBCache.get(dataStoreDBName).database) {
-            val relationshipGraph: Graph<EntityID<Int>, String> = getRelationshipGraph(true)
-            val weights = relationshipGraph.calculateVertexWeights()
+            val relationshipGraph: Graph<EntityID<Int>, String> = getRelationshipGraph()
+            // Acyclic copy is created only for calculateVertexWeights to work correctly
+            // TODO This is an ugly solution. It'd be better to assign weights in a more robust fashion, but currently I don't understand their purpose and expected properties
+            val acyclicRelationshipGraph: Graph<EntityID<Int>, String> =
+                (relationshipGraph as AbstractBaseGraph<EntityID<Int>, String>).clone() as Graph<EntityID<Int>, String>
+            acyclicRelationshipGraph.breakCycles()
+            val weights = acyclicRelationshipGraph.calculateVertexWeights()
 
-            return@transaction setOf(relationshipGraph)
-                .flatMap {
-                    it.searchForOptimumBottomUp(weights, performFullSearch, goodEnoughScore)
-                        .map { DAGBusinessPerspectiveDefinition(it.first) to it.second }
-                }
+            return@transaction relationshipGraph.searchForOptimumBottomUp(weights, performFullSearch, goodEnoughScore)
+                .map { DAGBusinessPerspectiveDefinition(it.first) to it.second }
         }
 
-    /**
-     * @param forceAcyclic If set to true, cycles are broken by removing a random edge from each cycle.
-     */
-    fun getRelationshipGraph(forceAcyclic: Boolean): Graph<EntityID<Int>, String> =
+    fun getRelationshipGraph(): Graph<EntityID<Int>, String> =
         transaction(DBCache.get(dataStoreDBName).database) {
             val relationshipGraph: Graph<EntityID<Int>, String> = DefaultDirectedGraph(String::class.java)
 
@@ -66,9 +66,6 @@ class DAGBusinessPerspectiveExplorer(
                         relationshipGraph.addEdge(referencingClassId, referencedClassId, relationshipName)
                     }
                 }
-
-            if (forceAcyclic)
-                relationshipGraph.breakCycles()
 
             return@transaction relationshipGraph
         }

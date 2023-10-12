@@ -21,30 +21,13 @@ class MetaModel(
     private val metaModelReader: MetaModelReader,
     private val metaModelAppender: MetaModelAppender
 ) : DatabaseChangeApplier {
-    private val objectVersions = mutableMapOf<EntityID<Int>, MutableMap<String, List<EntityID<Int>>>>()
-    private val objectRelations = mutableMapOf<Pair<EntityID<Int>, EntityID<Int>>, MutableList<Pair<String, String>>>()
-
-    private fun addObjectVersions(objectId: String, objectClassId: EntityID<Int>, objectVersions: List<EntityID<Int>>) {
-        this.objectVersions.getOrPut(objectClassId, ::mutableMapOf)[objectId] = objectVersions
-    }
-
-    private fun addObjectRelations(
-        sourceObjectId: String,
-        sourceObjectClassId: EntityID<Int>,
-        targetObjectId: String,
-        targetObjectClassId: EntityID<Int>
-    ) {
-        this.objectRelations
-            .getOrPut(sourceObjectClassId to targetObjectClassId, ::mutableListOf)
-            .add(sourceObjectId to targetObjectId)
-    }
 
     /**
      * Saves data from change events to meta model data storage.
      *
      * @param databaseChangeEvents List of database events to process.
      */
-    override fun ApplyChange(databaseChangeEvents: List<DatabaseChangeEvent>) =
+    override fun applyChange(databaseChangeEvents: List<DatabaseChangeEvent>) =
         transaction(DBCache.get(dataStoreDBName).database) {
             loggedScope { logger ->
                 val now = Instant.now().toEpochMilli()
@@ -81,164 +64,20 @@ class MetaModel(
         }
 
     /**
-     * Returns a collection of traces built according to the provided business perspective definition.
+     * Returns a collection of traces built according to the provided business perspective definition. Each trace is a set
+     * of IDs for the table [processm.dbmodels.models.ObjectVersions]
      *
      * @param businessPerspectiveDefinition An object containing business perspective details.
      */
-    fun buildTracesForBusinessPerspective(businessPerspectiveDefinition: DAGBusinessPerspectiveDefinition<EntityID<Int>>) =
-        transaction(DBCache.get(dataStoreDBName).database) {
-            val traceSet = TraceSet<String>(businessPerspectiveDefinition)
-
-            businessPerspectiveDefinition.forEach { classId ->
-                val objectsIds = mutableSetOf<String>()
-
-                metaModelReader.getObjectVersionsRelatedToClass(classId).forEach { (objectId, objectVersions) ->
-                    addObjectVersions(objectId, classId, objectVersions)
-
-                    if (businessPerspectiveDefinition.isClassIncludedInCaseNotion(classId))
-                        traceSet.addObjectVersions(objectId, classId, objectVersions)
-
-                    objectsIds.add(objectId)
-                }
-
-                businessPerspectiveDefinition.getSuccessors(classId).forEach { successorClassId ->
-                    val relatedObjectsVersions =
-                        metaModelReader.getRelatedObjectsVersionsGroupedByObjects(objectsIds, classId, successorClassId)
-                    relatedObjectsVersions.forEach {
-                        it.forEach { (sourceObjectId, relatedObjectVersionsIds) ->
-                            relatedObjectVersionsIds.forEach { (targetObjectId, _) ->
-                                addObjectRelations(sourceObjectId, classId, targetObjectId, successorClassId)
-
-                                if (businessPerspectiveDefinition.isClassIncludedInCaseNotion(classId))
-                                    traceSet.addObjectRelations(
-                                        sourceObjectId, classId, targetObjectId, successorClassId
-                                    )
-                            }
-                        }
+    fun buildTracesForBusinessPerspective(businessPerspectiveDefinition: DAGBusinessPerspectiveDefinition): Sequence<Set<Int>> =
+        sequence {
+            val query = businessPerspectiveDefinition.generateSQLquery()
+            DBCache.get(dataStoreDBName).getConnection().use { connection ->
+                connection.prepareStatement(query).executeQuery().use { rs ->
+                    while (rs.next()) {
+                        yield((rs.getArray(1).array as Array<Int>).toSet())
                     }
                 }
-            }
-
-            // at this moment the traceSet contains case notions but the full data, it lacks events related to non identifying classes
-
-            return@transaction traceSet.map { caseNotionsClasses ->
-                val processedClasses = caseNotionsClasses.toMutableMap()
-
-                // the following includes successing classes, the trace still lacks i.a. predecessing classes
-
-                val successingClassesToBeProcessed = ArrayDeque(businessPerspectiveDefinition.caseNotionClasses)
-
-                while (successingClassesToBeProcessed.isNotEmpty()) {
-                    val currentClassId = successingClassesToBeProcessed.removeFirst()
-
-                    businessPerspectiveDefinition.getSuccessors(currentClassId)
-                        .filterNot { businessPerspectiveDefinition.isClassIncludedInCaseNotion(it) }
-                        .forEach { successorClassId ->
-                            val successorObjects = objectRelations[currentClassId to successorClassId]!!
-                                .filter { (sourceObjectId, _) ->
-                                    processedClasses[currentClassId]?.containsKey(
-                                        sourceObjectId
-                                    ) ?: false
-                                }
-                                .map { (_, targetObjectId) -> targetObjectId }
-
-                            if (processedClasses.containsKey(successorClassId)) {
-                                val currentObjects =
-                                    processedClasses.getOrPut(successorClassId, { emptyMap() }).toMutableMap()
-                                currentObjects.putAll(successorObjects.map {
-                                    it to objectVersions[successorClassId]?.get(
-                                        it
-                                    ).orEmpty()
-                                })
-                                processedClasses[successorClassId] = currentObjects
-                            } else {
-                                processedClasses[successorClassId] =
-                                    successorObjects.map { it to objectVersions[successorClassId]?.get(it).orEmpty() }
-                                        .toMap()
-                            }
-
-                            if (successorObjects.isNotEmpty()) successingClassesToBeProcessed.addLast(successorClassId)
-                        }
-                }
-
-                // the following includes predecessing classes, the trace still lacks classes independent of the case notions members (the are neither predecessing nor successing the case notion members)
-
-                val predecessingClassesToBeProcessed = ArrayDeque(businessPerspectiveDefinition.caseNotionClasses)
-
-                while (predecessingClassesToBeProcessed.isNotEmpty()) {
-                    val currentClassId = predecessingClassesToBeProcessed.removeFirst()
-
-                    businessPerspectiveDefinition.getPredecessors(currentClassId)
-                        .filterNot { businessPerspectiveDefinition.isClassIncludedInCaseNotion(it) }
-                        .forEach { predecessorClassId ->
-                            val predecessorObjects = objectRelations[predecessorClassId to currentClassId]!!
-                                .filter { (_, targetObjectId) ->
-                                    processedClasses[currentClassId]?.containsKey(
-                                        targetObjectId
-                                    ) ?: false
-                                }
-                                .map { (sourceObjectId, _) -> sourceObjectId }
-
-                            if (processedClasses.containsKey(predecessorClassId)) {
-                                val currentObjects =
-                                    processedClasses.getOrPut(predecessorClassId, { emptyMap() }).toMutableMap()
-                                currentObjects.putAll(predecessorObjects.map {
-                                    it to objectVersions[predecessorClassId]?.get(
-                                        it
-                                    ).orEmpty()
-                                })
-                                processedClasses[predecessorClassId] = currentObjects
-                            } else {
-                                processedClasses[predecessorClassId] = predecessorObjects.map {
-                                    it to objectVersions[predecessorClassId]?.get(it).orEmpty()
-                                }.toMap()
-                            }
-
-                            if (predecessorObjects.isNotEmpty()) predecessingClassesToBeProcessed.addLast(
-                                predecessorClassId
-                            )
-                        }
-                }
-
-                // the following includes classes independent of case notion members
-
-                val notYetProcessedClasses = ArrayDeque(businessPerspectiveDefinition.toList())
-                val alreadyProcessedClasses = processedClasses.keys
-
-                while (notYetProcessedClasses.isNotEmpty()) {
-                    val currentClassId = notYetProcessedClasses.removeFirst()
-
-                    businessPerspectiveDefinition.getSuccessors(currentClassId)
-                        .filterNot { alreadyProcessedClasses.contains(it) }
-                        .forEach { successorClassId ->
-                            val successorObjects = objectRelations[currentClassId to successorClassId]!!
-                                .filter { (sourceObjectId, _) ->
-                                    processedClasses[currentClassId]?.containsKey(
-                                        sourceObjectId
-                                    ) ?: false
-                                }
-                                .map { (_, targetObjectId) -> targetObjectId }
-
-                            if (processedClasses.containsKey(successorClassId)) {
-                                val currentObjects =
-                                    processedClasses.getOrPut(successorClassId, { emptyMap() }).toMutableMap()
-                                currentObjects.putAll(successorObjects.map {
-                                    it to objectVersions[successorClassId]?.get(
-                                        it
-                                    ).orEmpty()
-                                })
-                                processedClasses[successorClassId] = currentObjects
-                            } else {
-                                processedClasses[successorClassId] =
-                                    successorObjects.map { it to objectVersions[successorClassId]?.get(it).orEmpty() }
-                                        .toMap()
-                            }
-
-                            if (successorObjects.isNotEmpty()) notYetProcessedClasses.addLast(successorClassId)
-                        }
-                }
-
-                return@map processedClasses
             }
         }
 
@@ -256,11 +95,9 @@ class MetaModel(
                     .batchInsert(classes) {
                         this[Classes.name] = it.name
                         this[Classes.dataModelId] = dataModelId
-                    }
-                    .map {
+                    }.associate {
                         it[Classes.name] to it[Classes.id]
                     }
-                    .toMap()
 
                 val referencingAttributeIds = BatchInsertStatement(AttributesNames).apply {
                     classes.forEach { metaModelClass ->

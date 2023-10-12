@@ -128,9 +128,7 @@ class MetaModelToXesConversionService : Service {
                     val metaModel = MetaModel(dataStoreName, metaModelReader, metaModelAppender)
                     val relations: Graph<EntityID<Int>, String> = DefaultDirectedGraph(String::class.java)
                     getProcessRelations(etlProcessId)
-                        .forEachIndexed { i, (sourceNode, targetNode) ->
-                            val sourceNodeId = metaModelReader.getClassId(sourceNode)
-                            val targetNodeId = metaModelReader.getClassId(targetNode)
+                        .forEachIndexed { i, (sourceNodeId, targetNodeId) ->
                             relations.addVertex(sourceNodeId)
                             relations.addVertex(targetNodeId)
 
@@ -141,9 +139,9 @@ class MetaModelToXesConversionService : Service {
                         }
 
                     val businessPerspective = DAGBusinessPerspectiveDefinition(relations)
+                    // TODO I'd be better to integrate the following two lines, the intermediate object traces is useless
                     val traces = metaModel.buildTracesForBusinessPerspective(businessPerspective)
                     val xesInputStream = MetaModelXESInputStream(
-                        businessPerspective.caseNotionClasses,
                         traces,
                         dataStoreName,
                         metaModelId
@@ -183,24 +181,13 @@ class MetaModelToXesConversionService : Service {
             }
         }
 
-        private fun getProcessRelations(etlProcessId: UUID): List<Pair<String, String>> {
-            val sourceClassAlias = Classes.alias("c1")
-            val targetClassAlias = Classes.alias("c2")
-            return EtlProcessesMetadata
-                .innerJoin(AutomaticEtlProcesses)
-                .innerJoin(AutomaticEtlProcessRelations)
-                .innerJoin(
-                    sourceClassAlias,
-                    { AutomaticEtlProcessRelations.sourceClassId },
-                    { sourceClassAlias[Classes.id] })
-                .innerJoin(
-                    targetClassAlias,
-                    { AutomaticEtlProcessRelations.targetClassId },
-                    { targetClassAlias[Classes.id] })
-                .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
-                .select { EtlProcessesMetadata.id eq etlProcessId }
-                .map { relation -> relation[sourceClassAlias[Classes.name]] to relation[targetClassAlias[Classes.name]] }
-        }
+        private fun getProcessRelations(etlProcessId: UUID): List<Pair<EntityID<Int>, EntityID<Int>>> =
+            AutomaticEtlProcessRelations
+                .slice(AutomaticEtlProcessRelations.sourceClassId, AutomaticEtlProcessRelations.targetClassId)
+                .select {
+                    AutomaticEtlProcessRelations.automaticEtlProcessId eq etlProcessId
+                }
+                .map { relation -> relation[AutomaticEtlProcessRelations.sourceClassId] to relation[AutomaticEtlProcessRelations.targetClassId] }
 
         private data class ConversionJobDetails(
             val dataStoreId: UUID,

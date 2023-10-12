@@ -21,9 +21,10 @@ object AttributesNames : IntIdTable("attributes_names") {
 class AttributesName(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<AttributesName>(AttributesNames)
 
-    val name by AttributesNames.name
-    val type by AttributesNames.type
-    val attributeClass by Class referencedOn AttributesNames.classId
+    var name by AttributesNames.name
+    var type by AttributesNames.type
+    var attributeClass by Class referencedOn AttributesNames.classId
+    var isReferencingAttribute by AttributesNames.isReferencingAttribute
     val attributesValues by AttributesValue referrersOn AttributesValues.attributeNameId
 
     fun toDto() = AttributeNameDto(id.value, name, type, attributeClass.id.value)
@@ -57,8 +58,8 @@ object Classes : IntIdTable("classes") {
 class Class(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Class>(Classes)
 
-    val name by Classes.name
-    val dataModel by DataModel referencedOn Classes.dataModelId
+    var name by Classes.name
+    var dataModel by DataModel referencedOn Classes.dataModelId
     val attributesNames by AttributesName referrersOn AttributesNames.classId
     //    val objects by Object referrersOn Objects.classId
     val objects by ObjectVersion referrersOn ObjectVersions.classId
@@ -75,8 +76,8 @@ object DataModels : IntIdTable("data_models") {
 
 class DataModel(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<DataModel>(DataModels)
-    val name by DataModels.name
-    val versionDate by DataModels.versionDate
+    var name by DataModels.name
+    var versionDate by DataModels.versionDate
     val classes by Class referrersOn Classes.dataModelId
 }
 
@@ -95,8 +96,8 @@ class ObjectVersion(id: EntityID<Int>) : IntEntity(id) {
 
     val startTime by ObjectVersions.startTime
     val endTime by ObjectVersions.endTime
-    val versionClass by Class referencedOn ObjectVersions.classId
-    val originalId by ObjectVersions.objectId
+    var versionClass by Class referencedOn ObjectVersions.classId
+    var originalId by ObjectVersions.objectId
     val causingEventType by ObjectVersions.causingEventType
     val attributesValues by AttributesValue referrersOn AttributesValues.objectVersionId
     val relationSource by Relation referrersOn Relations.sourceObjectVersionId
@@ -116,9 +117,9 @@ class Relation(id: EntityID<Int>) : IntEntity(id) {
 
     val startTime by Relations.startTime
     val endTime by Relations.endTime
-    val sourceObjectVersion by ObjectVersion referencedOn Relations.sourceObjectVersionId
-    val targetObjectVersion by ObjectVersion referencedOn Relations.targetObjectVersionId
-    val relationship by Relationship referencedOn Relations.relationshipId
+    var sourceObjectVersion by ObjectVersion referencedOn Relations.sourceObjectVersionId
+    var targetObjectVersion by ObjectVersion referencedOn Relations.targetObjectVersionId
+    var relationship by Relationship referencedOn Relations.relationshipId
 }
 
 object Relationships : IntIdTable("relationships") {
@@ -131,10 +132,10 @@ object Relationships : IntIdTable("relationships") {
 class Relationship(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Relationship>(Relationships)
 
-    val name by Relationships.name
-    val sourceClass by Class referencedOn Relationships.sourceClassId
-    val targetClass by Class referencedOn Relationships.targetClassId
-    val referencingAttributesName by AttributesName referencedOn Relationships.referencingAttributeNameId
+    var name by Relationships.name
+    var sourceClass by Class referencedOn Relationships.sourceClassId
+    var targetClass by Class referencedOn Relationships.targetClassId
+    var referencingAttributesName by AttributesName referencedOn Relationships.referencingAttributeNameId
     val relations by Relation referrersOn Relations.relationshipId
 
     fun toDto() = RelationshipDto(id.value, name, sourceClass.id.value, targetClass.id.value, referencingAttributesName.id.value)

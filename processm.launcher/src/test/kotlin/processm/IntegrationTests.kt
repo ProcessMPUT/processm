@@ -303,15 +303,9 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                 val storeId = nameToId["store"]
                 val addressId = nameToId["address"]
                 val staffId = nameToId["staff"]
-                // Initially storeId was supposed to be sourceClassId in both edges. Turns out the case notions
-                // differs from DB to DB. Possibly FIXME
                 return@single caseNotion.edges.size == 2 &&
-                        caseNotion.edges.any { edge ->
-                            setOf(edge.sourceClassId, edge.targetClassId) == setOf(storeId, addressId)
-                        } &&
-                        caseNotion.edges.any { edge ->
-                            setOf(edge.sourceClassId, edge.targetClassId) == setOf(storeId, staffId)
-                        }
+                        caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
+                        caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == staffId }
             }
 
             currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
@@ -416,4 +410,267 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
         }
     }
+
+    /**
+     * The numbers in the test are computed by the test itself and are supposed only to prevent regressions/unexpected changes
+     */
+    private fun <T : DBMSEnvironment<*>> `complete workflow for multiple automatic ETL processes with Sakila`(
+        sakila: T,
+        populate: T.() -> Unit
+    ) {
+        ProcessMTestingEnvironment().withTemporaryDebeziumStorage().withFreshDatabase().run {
+            registerUser("test@example.com", "some organization")
+            login("test@example.com", "P@ssw0rd!")
+            currentOrganizationId = organizations.single().id
+            currentDataStore = createDataStore("datastore")
+            post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
+                assertEquals(HttpStatusCode.NoContent, status)
+            }
+            currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
+            val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
+                assertEquals(HttpStatusCode.OK, status)
+                return@get body<CaseNotion>()
+            }
+            assertTrue { relationshipGraph.classes.isNotEmpty() }
+            assertTrue { relationshipGraph.edges.isNotEmpty() }
+            val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
+                assertEquals(HttpStatusCode.OK, status)
+                return@get body<Array<CaseNotion>>()
+            }
+            assertTrue { caseNotions.isNotEmpty() }
+
+            val expectedCaseNotions = listOf(
+                Triple(setOf("store", "address", "staff"), setOf("store" to "address", "store" to "staff"), 2),
+                Triple(
+                    setOf("film_category", "inventory", "film"),
+                    setOf("film_category" to "film", "inventory" to "film"),
+                    30
+                )
+            )
+
+            caseNotions.forEach(::println)
+
+            val relevantCaseNotions = expectedCaseNotions.map { (expectedClasses, expectedEdges, _) ->
+                caseNotions.single { caseNotion ->
+                    if (caseNotion.classes.values.toSet() != expectedClasses)
+                        return@single false
+                    if (caseNotion.edges.size != expectedEdges.size)
+                        return@single false
+                    return@single caseNotion.edges.all { edge ->
+                        val namedEdge1 =
+                            caseNotion.classes[edge.sourceClassId] to caseNotion.classes[edge.targetClassId]
+                        val namedEdge2 = namedEdge1.second to namedEdge1.first
+                        return@all namedEdge1 in expectedEdges || namedEdge2 in expectedEdges
+                    }
+                }
+            }
+
+            val etlProcesses = relevantCaseNotions.map { caseNotion ->
+                post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
+                    AbstractEtlProcess(
+                        name = "autosakila",
+                        dataConnectorId = currentDataConnector?.id,
+                        isActive = true,
+                        type = EtlProcessType.automatic,
+                        caseNotion = caseNotion
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.Created, status)
+                    return@post body<AbstractEtlProcess>()
+                }
+            }
+
+            // A delay for Debezium to kick in and start monitoring the DB
+            Thread.sleep(5_000)
+
+            sakila.populate()
+
+            // A delay for Debezium to report the changes
+            Thread.sleep(55_000)
+
+            for (etlProcess in etlProcesses) {
+                currentEtlProcess = etlProcess
+                post<Paths.EtlProcessLog, Unit> {
+                    assertEquals(HttpStatusCode.NoContent, status)
+                }
+                currentEtlProcess = null
+            }
+
+            for ((etlProcess, expectedCaseNotion) in etlProcesses zip expectedCaseNotions) {
+                val info = runBlocking {
+                    for (i in 0..10_000) {
+                        currentEtlProcess = etlProcess
+                        val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                            return@get body<EtlProcessInfo>()
+                        }
+                        currentEtlProcess = null
+                        if (info.lastExecutionTime !== null)
+                            return@runBlocking info
+                        delay(1000)
+                    }
+                    error("The log was not generated in the prescribed amount of time")
+                }
+                assertTrue { info.errors.isNullOrEmpty() }
+                val logIdentityId = info.logIdentityId
+
+                val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
+
+                assertEquals(1, logs.size)
+
+                with(ducktyping) {
+                    val log = logs[0]
+                    assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
+                    val traces = log["log"]["trace"] as List<*>?
+                    assertEquals(expectedCaseNotion.third, traces?.size ?: 0)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `complete workflow for multiple automatic ETL processes with Sakila on Postgres`(): Unit =
+        PostgreSQLEnvironment(
+            "sakila",
+            "postgres",
+            "sakila_password",
+            PostgreSQLEnvironment.SAKILA_SCHEMA_SCRIPT,
+            null
+        ).use { sakila ->
+            `complete workflow for multiple automatic ETL processes with Sakila`(sakila) {
+                connect().use { connection ->
+                    connection.autoCommit = false
+                    connection.createStatement().use { s ->
+                        s.execute(
+                            File(
+                                DBMSEnvironment.TEST_DATABASES_PATH,
+                                PostgreSQLEnvironment.SAKILA_INSERT_SCRIPT
+                            ).readText()
+                        )
+                    }
+                    connection.commit()
+                }
+            }
+        }
+
+    @Test
+    fun `two complete workflows for automatic ETL process with Sakila on the same datastore - Postgres and MySQL`() {
+        PostgreSQLEnvironment(
+            "sakila",
+            "postgres",
+            "sakila_password",
+            PostgreSQLEnvironment.SAKILA_SCHEMA_SCRIPT,
+            null
+        ).use { postgresSakila ->
+            val container = MySQLEnvironment.createContainer()
+            Startables.deepStart(listOf(container)).join()
+            MySQLEnvironment(container, "sakila").use { mysqlSakila ->
+                mysqlSakila.configure(listOf(MySQLEnvironment.SAKILA_SCHEMA_SCRIPT))
+                ProcessMTestingEnvironment().withTemporaryDebeziumStorage().withFreshDatabase().run {
+                    registerUser("test@example.com", "some organization")
+                    login("test@example.com", "P@ssw0rd!")
+                    currentOrganizationId = organizations.single().id
+                    currentDataStore = createDataStore("datastore")
+                    val postgresDC = createDataConnector("dc1", postgresSakila.connectionProperties)
+                    val mysqlDC = createDataConnector("dc1", mysqlSakila.connectionProperties)
+                    fun prepare(dc: DataConnector): AbstractEtlProcess {
+                        currentDataConnector = dc
+                        val caseNotion = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
+                            assertEquals(HttpStatusCode.OK, status)
+                            return@get body<Array<CaseNotion>>()
+                        }.single { caseNotion ->
+                            if (caseNotion.classes.values.toSet() != setOf("store", "address", "staff"))
+                                return@single false
+                            val nameToId = caseNotion.classes.inverse()
+                            val storeId = nameToId["store"]
+                            val addressId = nameToId["address"]
+                            val staffId = nameToId["staff"]
+                            return@single caseNotion.edges.size == 2 &&
+                                    caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
+                                    caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == staffId }
+                        }
+
+                        return post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
+                            AbstractEtlProcess(
+                                name = "autosakila",
+                                dataConnectorId = dc.id,
+                                isActive = true,
+                                type = EtlProcessType.automatic,
+                                caseNotion = caseNotion
+                            )
+                        ) {
+                            assertEquals(HttpStatusCode.Created, status)
+                            return@post body<AbstractEtlProcess>()
+                        }
+                    }
+
+                    val etlProcesses = listOf(prepare(postgresDC), prepare(mysqlDC))
+                    currentDataConnector = null
+
+                    // A delay for Debezium to kick in and start monitoring the DB
+                    Thread.sleep(5_000)
+
+                    postgresSakila.connect().use { connection ->
+                        connection.autoCommit = false
+                        connection.createStatement().use { s ->
+                            s.execute(
+                                File(
+                                    DBMSEnvironment.TEST_DATABASES_PATH,
+                                    PostgreSQLEnvironment.SAKILA_INSERT_SCRIPT
+                                ).readText()
+                            )
+                        }
+                        connection.commit()
+                    }
+                    mysqlSakila.configure(listOf(MySQLEnvironment.SAKILA_INSERT_SCRIPT))
+
+                    // A delay for Debezium to report the changes
+                    Thread.sleep(30_000)
+
+                    for (etlProcess in etlProcesses) {
+                        currentEtlProcess = etlProcess
+                        post<Paths.EtlProcessLog, Unit> {
+                            assertEquals(HttpStatusCode.NoContent, status)
+                        }
+                    }
+
+                    val infos = etlProcesses.map {
+                        return@map runBlocking {
+                            for (i in 0..10) {
+                                currentEtlProcess = it
+                                val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                                    return@get body<EtlProcessInfo>()
+                                }
+                                if (info.lastExecutionTime !== null) {
+                                    return@runBlocking info
+                                }
+                                delay(1000)
+                            }
+                            error("The log was not generated in the prescribed amount of time")
+                        }
+                    }
+                    assertEquals(2, infos.size)
+                    assertNotEquals(infos[0].logIdentityId, infos[1].logIdentityId)
+                    for (info in infos) {
+                        assertTrue { info.errors.isNullOrEmpty() }
+
+                        val logIdentityId = info.logIdentityId
+
+                        val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
+
+                        assertEquals(1, logs.size)
+
+                        with(ducktyping) {
+                            val log = logs[0]
+                            assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
+                            val traces = log["log"]["trace"] as List<*>
+                            assertEquals(2, traces.size)
+                            assertEquals(3, (traces[0]["event"] as List<*>).size)
+                            assertEquals(3, (traces[1]["event"] as List<*>).size)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }

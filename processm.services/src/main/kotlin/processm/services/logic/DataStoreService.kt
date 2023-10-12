@@ -239,7 +239,7 @@ class DataStoreService(private val producer: Producer) {
             val metaModelReader = MetaModelReader(dataModelId.value)
             val businessPerspectiveExplorer = DAGBusinessPerspectiveExplorer("$dataStoreId", metaModelReader)
             val classNames = metaModelReader.getClassNames()
-            val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph(false)
+            val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
             val relations = relationshipGraph.edgeSet()
                 .map { edgeName -> relationshipGraph.getEdgeSource(edgeName) to relationshipGraph.getEdgeTarget(edgeName) }
 
