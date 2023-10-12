@@ -4,21 +4,18 @@
       {
         text: $t('users.group'),
         value: 'name',
-        filterable: true
+        filterable: true,
+        focus: false
       },
       {
-        text: $t('users.implicit'),
+        text: '',
         value: 'isImplicit',
-        filterable: true
-      },
-      {
-        text: $t('users.shared'),
-        value: 'isShared',
-        filterable: true
+        filterable: false,
+        sortable: false
       },
       {
         text: $t('users.organization'),
-        value: 'organizationId', // TODO: replace with organization name
+        value: 'organizationId',
         filterable: true
       },
       {
@@ -64,14 +61,71 @@
       </v-toolbar>
     </template>
 
+    <template v-slot:item.name="{ item }">
+      <v-text-field
+        v-model="item.name"
+        :readonly="item.isImplicit || item.isShared"
+        background-color="transparent"
+        flat
+        hide-details
+        solo
+        @blur="item.focus = false"
+        @change="item.dirty = true"
+        @focus="item.focus = true"
+      >
+        <template v-slot:append>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                :disabled="!item.dirty && (!item.focus || item.isImplicit || item.isShared)"
+                color="primary"
+                dark
+                icon
+                v-bind="attrs"
+                @click="editGroup(item)"
+                v-on="on"
+                @keyup.enter.native="editGroup(item)"
+              >
+                <v-icon v-show="item.dirty || (item.focus && !item.isImplicit && !item.isShared)" small>edit</v-icon>
+              </v-btn>
+            </template>
+            {{ $t("common.edit") }}
+          </v-tooltip>
+        </template>
+      </v-text-field>
+    </template>
+
+    <template v-slot:item.isImplicit="{ item }">
+      <v-chip v-if="item.isImplicit" color="primary" small>
+        {{ $t("users.implicit") }}
+      </v-chip>
+      <v-chip v-if="item.isShared" color="secondary" small>
+        {{ $t("users.shared") }}
+      </v-chip>
+    </template>
+
+    <template v-slot:item.organizationId="{ item }">
+      {{ organizations.find((o) => o.id === item.organizationId)?.name ?? item.organizationId }}
+    </template>
+
     <template v-slot:item.actions="{ item, index }">
+      <!--
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn :disabled="groups[index].isImplicit || groups[index].isShared" color="primary" dark icon v-bind="attrs" v-on="on">
+            <v-icon small @click="editGroup(item)">edit</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ $t("common.edit") }}</span>
+      </v-tooltip>
+      -->
       <v-tooltip bottom>
         <template v-slot:activator="{ on, attrs }">
           <v-btn :disabled="groups[index].isImplicit || groups[index].isShared" color="primary" dark icon v-bind="attrs" v-on="on">
             <v-icon small @click="removeGroup(item)">delete_forever</v-icon>
           </v-btn>
         </template>
-        <span>{{ $t("users.exclude-member") }}</span>
+        <span>{{ $t("common.remove") }}</span>
       </v-tooltip>
     </template>
   </v-data-table>
@@ -81,7 +135,7 @@
 import Vue from "vue";
 import { Component, Inject } from "vue-property-decorator";
 import OrganizationService from "@/services/OrganizationService";
-import { Group } from "@/openapi";
+import { Group, Organization } from "@/openapi";
 import ComboBoxWithSearch from "@/components/ComboBoxWithSearch.vue";
 import App from "@/App.vue";
 import GroupService from "@/services/GroupService";
@@ -96,7 +150,8 @@ export default class UserGroupList extends Vue {
 
   loading = true;
 
-  groups: Array<Group> = [];
+  groups: Array<{ focus: boolean; dirty: boolean } & Group> = [];
+  organizations: Array<Organization> = [];
   organization = this.$sessionStorage.currentOrganization;
 
   newDialog = false;
@@ -104,13 +159,15 @@ export default class UserGroupList extends Vue {
   isNewValid = false;
 
   async mounted() {
+    this.organizations = await this.organizationService.getOrganizations();
     this.refreshGroups();
   }
 
   async refreshGroups() {
     try {
       this.loading = true;
-      this.groups = await this.groupService.getUserGroups(this.organization.id!);
+      const groups = await this.groupService.getUserGroups(this.organization.id!);
+      this.groups = groups.map((g) => Object.assign({ focus: false, dirty: false }, g));
     } catch (e) {
       this.app.error(e);
     } finally {
@@ -125,7 +182,6 @@ export default class UserGroupList extends Vue {
   async addGroup() {
     try {
       console.assert(this.newName != "", "newName: " + this.newName);
-      console.debug("adding group ", this.newName);
       await this.groupService.createGroup(this.organization.id!, this.newName);
       this.refreshGroups();
       this.newDialog = false;
@@ -136,10 +192,12 @@ export default class UserGroupList extends Vue {
     }
   }
 
-  async updateGroup() {
+  async editGroup(group: Group & { dirty: boolean }) {
     try {
-      // TODO
-
+      console.assert(group.organizationId !== undefined);
+      console.assert(group.id !== undefined);
+      await this.groupService.updateGroup(group.organizationId!, group.id!, group.name);
+      group.dirty = false;
       this.app.info(this.$t("users.group-updated").toString());
     } catch (e) {
       this.app.error(e);

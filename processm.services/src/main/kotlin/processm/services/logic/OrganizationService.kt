@@ -192,6 +192,15 @@ class OrganizationService(
         getOrganization(organizationId)
     }
 
+    /**
+     * Gets all organizations.
+     */
+    fun getAll(publicOnly: Boolean): List<Organization> = transactionMain {
+        val result = if (!publicOnly) Organization.all()
+        else Organization.find { Organizations.isPrivate eq false }
+        result.toList()
+    }
+
     private fun Transaction.getOrganization(organizationId: UUID): Organization =
         Organization
             .findById(organizationId)

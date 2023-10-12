@@ -25,10 +25,23 @@ fun Route.OrganizationsApi() {
     authenticate {
         // region Organizations
         get<Paths.Organizations> { _ ->
-            val principal = call.authentication.principal<ApiUser>()!!
-            // TODO: access control: who can see organizations? What can see a particular user?
+            val principal = call.authentication.principal<ApiUser>()
+            // This method is available to authorized users only
+            // Access control: only non-private organizations are available to every authorized user
+            principal.validateNotNull(Reason.Unauthorized)
 
-            call.respond(HttpStatusCode.NotImplemented)
+            val rawOrganizations = organizationService.getAll(true) +
+                    principal!!.organizations.keys.map { organizationService.get(it) }
+            val organizations = rawOrganizations.map { org ->
+                assert(!org.isPrivate)
+                ApiOrganization(
+                    id = org.id.value,
+                    name = org.name,
+                    isPrivate = org.isPrivate
+                )
+            }
+
+            call.respond(organizations)
         }
 
         post<Paths.Organizations> { _ ->

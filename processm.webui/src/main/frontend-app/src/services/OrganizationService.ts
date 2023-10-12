@@ -1,5 +1,5 @@
 import BaseService from "./BaseService";
-import { OrganizationMember, OrganizationRole } from "@/openapi/api";
+import { Organization, OrganizationMember, OrganizationRole } from "@/openapi/api";
 
 export default class OrganizationService extends BaseService {
   public async getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
@@ -19,5 +19,10 @@ export default class OrganizationService extends BaseService {
 
   public async removeMember(organizationId: string, userId: string): Promise<void> {
     await this.organizationsApi.removeOrganizationMember(organizationId, userId);
+  }
+
+  public async getOrganizations(): Promise<Array<Organization>> {
+    const response = await this.organizationsApi.getOrganizations();
+    return response.data;
   }
 }
