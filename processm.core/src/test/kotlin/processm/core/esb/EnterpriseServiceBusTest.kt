@@ -1,6 +1,8 @@
 package processm.core.esb
 
+import io.mockk.*
 import java.lang.management.ManagementFactory
+import javax.management.MBeanServer
 import javax.management.MXBean
 import javax.management.ObjectName
 import kotlin.reflect.KClass
@@ -179,6 +181,58 @@ class EnterpriseServiceBusTest {
         esb.autoRegister()
         assertTrue(esb.services.any { it is Artemis })
         assertTrue(esb.services.any { it is Hawtio })
+    }
+
+    /**
+     * This test repeats construction and destruction of the ESB multiple times running gc between the repetitions.
+     * It should execute quickly and without noticeable memory consumption. Unfortunately, it not always does.
+     */
+    @Test
+    fun memoryConsumption() {
+        fun s(name: String, vararg deps: Service) = mockk<Service> {
+            var status = ServiceStatus.Stopped
+            every { this@mockk.name } returns name
+            val slot = slot<Service>()
+            every { dependencies } returns deps.map { dep ->
+                mockk<KClass<out Service>> {
+                    every { isInstance(capture(slot)) } answers { slot.captured === dep }
+                }
+            }
+            every { register() } just Runs
+            every { this@mockk.status } answers { status }
+            every { start() } answers { status = ServiceStatus.Started }
+            every { stop() } answers { status = ServiceStatus.Stopped }
+        }
+
+        val artemis = s("Artemis")
+        val services = listOf(
+            s("Causal net", artemis),
+            s("MetaModel to XES conversion", artemis),
+            s("Hawtio"),
+            s("JDBC-based ETL", artemis),
+            s("MetaModel ETL", artemis),
+            s("e-mail", artemis),
+            s("WebServicesHost"),
+            s("Directly-follows graph", artemis),
+            s("Aligner-based KPI", artemis),
+            artemis,
+            s("Petri net", artemis),
+            s("Log-based KPI", artemis)
+        )
+        try {
+            val mBean = mockk<MBeanServer>(relaxed = true)
+            mockkStatic(ManagementFactory::class)
+            every { ManagementFactory.getPlatformMBeanServer() } returns mBean
+            for (i in 1..100) {
+                System.gc()
+                EnterpriseServiceBus().use { esb ->
+                    esb.register(*services.toTypedArray())
+                    esb.startAll()
+                }
+            }
+        } finally {
+            clearStaticMockk(ManagementFactory::class)
+        }
     }
 }
 

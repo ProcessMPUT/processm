@@ -220,7 +220,7 @@ class EnterpriseServiceBus : Closeable {
                     SearchState(
                         marking = petriNetInstance.currentState,
                         activity = activity,
-                        cost = state.cost + (if ((activity as ServiceTransition).service == toPlace.service) 0 else 1),
+                        cost = state.cost + (if ((activity as ServiceTransition).service === toPlace.service) 0 else 1),
                         previousState = state
                     )
                 )
