@@ -2,16 +2,14 @@ package processm.etl.tracker
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jgrapht.graph.DefaultDirectedGraph
-import org.jgroups.util.UUID
 import processm.core.helpers.mapToSet
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.transaction
 import processm.etl.discovery.SchemaCrawlerExplorer
-import processm.etl.metamodel.DAGBusinessPerspectiveDefinition
-import processm.etl.metamodel.MetaModel
-import processm.etl.metamodel.MetaModelAppender
-import processm.etl.metamodel.MetaModelReader
+import processm.etl.metamodel.*
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -22,8 +20,34 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@OptIn(InMemoryXESProcessing::class)
 class DebeziumChangeTrackerTest {
 
+    private val queries1 = listOf(
+        """insert into EBAN VALUES(1, 'be1'); 
+                        insert into EKET VALUES(1, 1, 'ae1');""",
+        """ 
+                        update EBAN set text='be2' where id=1;
+                        update EKET set text='ae2' where id=1;
+                        insert into EKKO VALUES(1, 1, 'ce1'); 
+                        insert into EKPO VALUES(1, 1, 'de1');
+                        insert into EKPO VALUES(2, 1, 'de2');
+                    """,
+        """
+                       insert into EKKO VALUES(2, 1, 'ce2');
+                       insert into EKPO VALUES(3, 2, 'de3');
+                    """,
+        """
+                       insert into EBAN VALUES(2, 'be3'); 
+                       insert into EKET VALUES(2, 2, 'ae3');
+                       insert into EKKO VALUES(3, 2, 'ce3');
+                       insert into EKPO VALUES(4, 3, 'de4');
+                    """
+    )
+
+    private val queries2 = queries1.flatMap { it.split("\n") }.map { it.trim() }.filter { it.isNotEmpty() }
+
+    private lateinit var dataStoreId: UUID
     private lateinit var targetDBname: String
     private lateinit var dataStoreDBName: String
     private lateinit var tempDir: File
@@ -31,7 +55,8 @@ class DebeziumChangeTrackerTest {
     @BeforeTest
     fun setup() {
         targetDBname = UUID.randomUUID().toString()
-        dataStoreDBName = UUID.randomUUID().toString()
+        dataStoreId = UUID.randomUUID()
+        dataStoreDBName = dataStoreId.toString()
         tempDir = Files.createTempDirectory("processm").toFile()
         DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
             connection.prepareStatement("CREATE DATABASE \"$targetDBname\"").use {
@@ -85,48 +110,92 @@ class DebeziumChangeTrackerTest {
 
 
     @Test
-    fun `table 2 id a`() {
+    fun `v1 table 2 id a`() {
         testBase(
             setOf("eban", "eket"), listOf(
                 emptySet(),
-                setOf(setOf(1, 2, 3, 4, 5, 6, 7)),
-                setOf(setOf(1, 2, 3, 4, 5, 6, 7, 8, 9)),
-                setOf(setOf(1, 2, 3, 4, 5, 6, 7, 8, 9), setOf(10, 11, 12, 13)),
-            )
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")),
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"),
+                    setOf("ae3", "be3", "ce3", "de4")
+                ),
+            ), queries1
         )
     }
 
     @Test
-    fun `table 2 id b`() {
+    fun `v1 table 2 id b`() {
         testBase(
             setOf("eban", "eket", "ekko"), listOf(
                 emptySet(),
-                setOf(setOf(1, 2, 3, 4, 5, 6, 7)),
-                setOf(setOf(1, 2, 3, 4, 5, 6, 7), setOf(1, 2, 3, 4, 8, 9)),
-                setOf(setOf(1, 2, 3, 4, 5, 6, 7), setOf(1, 2, 3, 4, 8, 9), setOf(10, 11, 12, 13)),
-            )
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce2", "de3")
+                ),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                    setOf("ae3", "be3", "ce3", "de4")
+                ),
+            ), queries1
         )
     }
 
     @Test
-    fun `table 2 id c`() {
+    fun `v1 table 2 id c`() {
         testBase(
             setOf("eban", "eket", "ekko", "ekpo"), listOf(
                 emptySet(),
-                setOf(setOf(1, 2, 3, 4, 5, 6), setOf(1, 2, 3, 4, 5, 7)),
-                setOf(setOf(1, 2, 3, 4, 5, 6), setOf(1, 2, 3, 4, 5, 7), setOf(1, 2, 3, 4, 8, 9)),
-                setOf(setOf(1, 2, 3, 4, 5, 6), setOf(1, 2, 3, 4, 5, 7), setOf(1, 2, 3, 4, 8, 9), setOf(10, 11, 12, 13)),
-            )
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"), setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce2", "de3")
+                ),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                    setOf("ae3", "be3", "ce3", "de4")
+                ),
+            ), queries1
+        )
+    }
+
+    @Test
+    fun `v2 table 2 id a`() {
+        testBase(
+            setOf("eban", "eket"), listOf(
+                emptySet(), //be1
+                emptySet(), //ae1
+                emptySet(), //be2
+                emptySet(), //ae2
+                emptySet(), //ce1
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1")), //de1
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), //de2
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), //ce2
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //de3
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //be3
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //ae3
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //ce3
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"),
+                    setOf("ae3", "be3", "ce3", "de4")
+                ), //de4
+            ), queries2
         )
     }
 
     /**
      * Based on Tables 1 and 2 in https://doi.org/10.1007/s10115-019-01430-6
-     *
-     * Tests calling this function are brittle, as they hardcode database IDs related to events generated by Debezium.
-     * It is assumed the IDs start from 1 and are assigned in consecutive order.
      */
-    private fun testBase(identifyingClasses: Set<String>, expectedTraces: List<Set<Set<Int>>>) {
+    private fun testBase(
+        identifyingClasses: Set<String>,
+        expectedTraces: List<Set<Set<String>>>,
+        queries: List<String>
+    ) {
         DriverManager.getConnection(DatabaseChecker.switchDatabaseURL(targetDBname)).use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute("create table EBAN (id int primary key, text text)")
@@ -156,31 +225,9 @@ class DebeziumChangeTrackerTest {
             DebeziumChangeTracker(
                 debeziumConfiguration,
                 metaModel,
-                java.util.UUID.randomUUID(),
-                java.util.UUID.randomUUID()
+                dataStoreId,
+                UUID.randomUUID()
             ).use { tracker ->
-
-                val queries = listOf(
-                    """insert into EBAN VALUES(1, 'be1'); 
-                        insert into EKET VALUES(1, 1, 'ae1');""",
-                    """ 
-                        update EBAN set text='be2' where id=1;
-                        update EKET set text='ae2' where id=1;
-                        insert into EKKO VALUES(1, 1, 'ce1'); 
-                        insert into EKPO VALUES(1, 1, 'de1');
-                        insert into EKPO VALUES(2, 1, 'de2');
-                    """,
-                    """
-                       insert into EKKO VALUES(2, 1, 'ce2');
-                       insert into EKPO VALUES(3, 2, 'de3');
-                    """,
-                    """
-                       insert into EBAN VALUES(2, 'be3'); 
-                       insert into EKET VALUES(2, 2, 'ae3');
-                       insert into EKKO VALUES(3, 2, 'ce3');
-                       insert into EKPO VALUES(4, 3, 'de4');
-                    """
-                )
                 tracker.start()
                 connection.autoCommit = false
                 for ((query, expected) in queries zip expectedTraces) {
@@ -189,7 +236,14 @@ class DebeziumChangeTrackerTest {
                     }
                     connection.commit()
                     Thread.sleep(1_000)
-                    assertEquals(expected, metaModel.buildTracesForBusinessPerspective(bussinessPerspective).toSet())
+                    val intermediate = metaModel.buildTracesForBusinessPerspective(bussinessPerspective)
+                    val flatXES = MetaModelXESInputStream(intermediate, dataStoreDBName, dataModelId.value)
+                    val xes = HoneyBadgerHierarchicalXESInputStream(flatXES)
+                    val log = xes.single()
+                    val actual: Set<Set<String>> =
+                        log.traces.mapToSet { trace -> trace.events.mapToSet { it["db:text"].toString().trim('"') } }
+                    assertEquals(expected.size, actual.size)
+                    assertEquals(expected, actual)
                 }
             }
         }

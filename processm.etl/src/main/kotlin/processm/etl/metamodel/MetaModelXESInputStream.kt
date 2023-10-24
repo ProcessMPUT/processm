@@ -22,6 +22,9 @@ class MetaModelXESInputStream(
     private val dataStoreDBName: String,
     dataModelId: Int
 ) : XESInputStream {
+
+    val DB_ATTR_NS = "db"
+
     private val metaModelReader = MetaModelReader(dataModelId)
 
     override fun iterator() =
@@ -33,18 +36,19 @@ class MetaModelXESInputStream(
 
                 yield(Trace())
                 traceEvents.forEach { (timestamp, eventData) ->
-                    val dataChanges = eventData.changes.orEmpty().map { "${it.key}: ${it.value}" }.joinToString()
                     yield(
                         Event(
                             mutableAttributeMapOf(
                                 ORG_RESOURCE to eventData.objectId,
                                 CONCEPT_NAME to "${eventData.changeType} ${eventData.className}",
                                 LIFECYCLE_TRANSITION to eventData.changeType,
-                                "Activity" to "${eventData.changeType} $dataChanges",
+                                "Activity" to eventData.changeType,
                                 TIME_TIMESTAMP to if (timestamp != null)
                                     Instant.ofEpochMilli(timestamp)
                                 else null
-                            )
+                            ).apply {
+                                eventData.changes?.forEach { (k, v) -> set("$DB_ATTR_NS:$k", v) }
+                            }
                         )
                     )
                 }
