@@ -47,19 +47,63 @@ class DebeziumChangeTrackerTest {
 
     private val queries2 = queries1.flatMap { it.split("\n") }.map { it.trim() }.filter { it.isNotEmpty() }
 
+    private val queries3 = listOf(
+        """insert into EBAN VALUES(1, 'be1'); 
+                        insert into EKET VALUES(1, 1, 'ae1');""",
+        """                         
+                        insert into EKKO VALUES(1, 1, 'ce1'); 
+                        insert into EKPO VALUES(1, 1, 'de1');
+                        insert into EKPO VALUES(2, 1, 'de2');
+                        update EBAN set text='be2' where id=1;
+                        update EKET set text='ae2' where id=1;
+                    """,
+        """
+                       insert into EKKO VALUES(2, 1, 'ce2');
+                       insert into EKPO VALUES(3, 2, 'de3');
+                    """,
+        """
+                       insert into EBAN VALUES(2, 'be3'); 
+                       insert into EKET VALUES(2, 2, 'ae3');
+                       insert into EKKO VALUES(3, 2, 'ce3');
+                       insert into EKPO VALUES(4, 3, 'de4');
+                    """
+    )
+
+    private val queries4 = listOf(
+        """insert into EBAN VALUES(1, 'be1'); 
+                        insert into EKET VALUES(1, 1, 'ae1');""",
+        """                         
+                        insert into EKKO VALUES(1, 1, 'ce1'); 
+                        insert into EKPO VALUES(1, 1, 'de1');
+                        insert into EKPO VALUES(2, 1, 'de2');                        
+                    """,
+        """                       
+                       insert into EKKO VALUES(2, 1, 'ce2');
+                       insert into EKPO VALUES(3, 2, 'de3');
+                       insert into EBAN VALUES(2, 'be3');
+                    """,
+        """                                           
+                       insert into EKET VALUES(2, 2, 'ae3');
+                       insert into EKKO VALUES(3, 2, 'ce3');
+                       insert into EKPO VALUES(4, 3, 'de4');
+                    """,
+        """update EBAN set text='be2' where id=1; 
+                       update EKET set text='ae2' where id=1;"""
+    )
+
     private lateinit var dataStoreId: UUID
-    private lateinit var targetDBname: String
+    private lateinit var targetDBName: String
     private lateinit var dataStoreDBName: String
     private lateinit var tempDir: File
 
     @BeforeTest
     fun setup() {
-        targetDBname = UUID.randomUUID().toString()
+        targetDBName = UUID.randomUUID().toString()
         dataStoreId = UUID.randomUUID()
         dataStoreDBName = dataStoreId.toString()
         tempDir = Files.createTempDirectory("processm").toFile()
         DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
-            connection.prepareStatement("CREATE DATABASE \"$targetDBname\"").use {
+            connection.prepareStatement("CREATE DATABASE \"$targetDBName\"").use {
                 it.execute()
             }
         }
@@ -69,7 +113,7 @@ class DebeziumChangeTrackerTest {
     @AfterTest
     fun cleanup() {
         DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
-            connection.prepareStatement("DROP DATABASE \"$targetDBname\"").use {
+            connection.prepareStatement("DROP DATABASE \"$targetDBName\"").use {
                 it.execute()
             }
             // TODO I wanna drop that DB, but something keeps using it
@@ -102,7 +146,7 @@ class DebeziumChangeTrackerTest {
             setProperty("database.port", databaseURL.port.toString())
             setProperty("database.user", query["user"])
             setProperty("database.password", query["password"])
-            setProperty("database.dbname", targetDBname)
+            setProperty("database.dbname", targetDBName)
             // properties for the testing environment; in particular the doc says that "slot.drop.on.stop" should be set on true only in test/development envs
             setProperty("slot.drop.on.stop", "true")
             setProperty("slot.name", UUID.randomUUID().toString().replace("-", "").lowercase())
@@ -188,6 +232,57 @@ class DebeziumChangeTrackerTest {
         )
     }
 
+    @Test
+    fun `v3 table 2 id c`() {
+        testBase(
+            setOf("eban", "eket", "ekko", "ekpo"), listOf(
+                emptySet(),
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"), setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce2", "de3")
+                ),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                    setOf("ae3", "be3", "ce3", "de4")
+                ),
+            ), queries3
+        )
+    }
+
+    /**
+     * A trace can get extended even after a completely new trace is created
+     */
+    @Test
+    fun `v4 table 2 id c`() {
+        testBase(
+            setOf("eban", "eket", "ekko", "ekpo"), listOf(
+                emptySet(),
+                setOf(setOf("ae1", "be1", "ce1", "de1"), setOf("ae1", "be1", "ce1", "de2")),
+                setOf(
+                    setOf("ae1", "be1", "ce1", "de1"),
+                    setOf("ae1", "be1", "ce1", "de2"),
+                    setOf("ae1", "be1", "ce2", "de3")
+                ),
+                setOf(
+                    setOf("ae1", "be1", "ce1", "de1"),
+                    setOf("ae1", "be1", "ce1", "de2"),
+                    setOf("ae1", "be1", "ce2", "de3"),
+                    setOf("ae3", "be3", "ce3", "de4")
+                ),
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                    setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                    setOf("ae3", "be3", "ce3", "de4")
+                ),
+            ), queries4
+        )
+    }
+
     /**
      * Based on Tables 1 and 2 in https://doi.org/10.1007/s10115-019-01430-6
      */
@@ -196,7 +291,7 @@ class DebeziumChangeTrackerTest {
         expectedTraces: List<Set<Set<String>>>,
         queries: List<String>
     ) {
-        DriverManager.getConnection(DatabaseChecker.switchDatabaseURL(targetDBname)).use { connection ->
+        DriverManager.getConnection(DatabaseChecker.switchDatabaseURL(targetDBName)).use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute("create table EBAN (id int primary key, text text)")
                 stmt.execute("create table EKET (id int primary key, eban int references EBAN(id), text text)")
