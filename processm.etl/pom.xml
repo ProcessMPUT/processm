@@ -171,7 +171,6 @@
     <build>
         <plugins>
             <plugin>
-                <!--Commented plugin if compile will not work-->
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
                 <version>${io.fabric8.docker-maven-plugin.version}</version>

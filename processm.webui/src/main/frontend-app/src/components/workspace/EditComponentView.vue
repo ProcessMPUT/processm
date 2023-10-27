@@ -20,7 +20,7 @@
           @edit="$emit('edit', componentDetails.id)"
           @remove="$emit('remove', componentDetails.id)"
         />
-        <v-alert v-if="componentDetails.lastError !== undefined" type="error">{{ componentDetails.lastError }} </v-alert>
+        <v-alert v-if="componentDetails.lastError !== undefined" type="error">{{ componentDetails.lastError }}</v-alert>
         <v-list subheader>
           <v-list-item>
             <v-list-item-content>
@@ -36,11 +36,11 @@
             <v-list-item-content>
               <v-select v-model="component.type" :label="$t('workspace.component.edit.type')" :items="availableComponents">
                 <template slot="item" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component </v-icon>
+                  <v-icon>${{ componentType.item }}Component</v-icon>
                   {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
                 </template>
                 <template slot="selection" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component </v-icon>
+                  <v-icon>${{ componentType.item }}Component</v-icon>
                   {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
                 </template>
               </v-select>
