@@ -38,9 +38,6 @@ export default new Vuetify({
       CNetComponent:{
         component: CausalNetIcon
       },
-      causalNetComponent: {
-        component: CausalNetIcon
-      },
       petriNetComponent: {
         component: PetriNetIcon
       },

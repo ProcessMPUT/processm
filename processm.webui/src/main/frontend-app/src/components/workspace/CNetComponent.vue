@@ -76,8 +76,8 @@ export default class CNetComponent extends Vue {
       edges: this.data.data.edges.map((edge) => {
         return {
           id: `${edge.sourceNodeId}->${edge.targetNodeId}`,
-          source: edge.sourceNodeId,
-          target: edge.targetNodeId,
+          source: edge.sourceNodeId as string,
+          target: edge.targetNodeId as string,
           support: edge.support
         };
       })

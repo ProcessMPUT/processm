@@ -1,6 +1,7 @@
-import { DataLink, DataNode } from "@/components/workspace/causal-net/CausalNet";
 // TODO add PetriNet = "petriNet" to ComponentType
 import { AbstractComponent, AlignerKpiReport, ComponentType } from "@/openapi";
+import { CNetNodeConfig } from "@/components/Graph.vue";
+import { EdgeConfig } from "@antv/g6-core/lib/types";
 
 export abstract class CustomizationData {
   constructor(init: Partial<CustomizationData>) {
@@ -23,8 +24,8 @@ export abstract class ComponentData {
 }
 
 export class CNetComponentData extends ComponentData {
-  nodes!: Array<DataNode>;
-  edges!: Array<DataLink>;
+  nodes!: Array<CNetNodeConfig>;
+  edges!: Array<EdgeConfig>;
 
   get isDisplayable() {
     return this.nodes != null && this.edges != null && this.nodes.length > 0;
