@@ -125,7 +125,7 @@ class MetaModelToXesConversionService : Service {
                 transaction(DBCache.get(dataStoreName).database) {
                     val metaModelReader = MetaModelReader(metaModelId)
                     val metaModelAppender = MetaModelAppender(metaModelReader)
-                    val metaModel = MetaModel(dataStoreName, metaModelReader, metaModelAppender)
+                    val metaModel = MetaModel(dataStoreName, metaModelReader, metaModelAppender, TODO())
                     val relations: Graph<EntityID<Int>, String> = DefaultDirectedGraph(String::class.java)
                     getProcessRelations(etlProcessId)
                         .forEachIndexed { i, (sourceNodeId, targetNodeId) ->

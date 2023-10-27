@@ -7,7 +7,7 @@ import processm.dbmodels.models.*
 /**
  * Reads meta model data from the database.
  */
-class MetaModelReader(private val dataModelId: Int) {
+class MetaModelReader(val dataModelId: Int) {
     private fun SqlExpressionBuilder.relatedToDataModel(): Op<Boolean> =
         Classes.dataModelId eq dataModelId
 

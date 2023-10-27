@@ -1,13 +1,22 @@
 package processm.etl.tracker
 
+import com.google.common.collect.HashBiMap
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
+import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.helpers.mapToSet
-import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.Log
+import processm.core.log.Trace
+import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.persistence.connection.transaction
+import processm.core.querylanguage.Query
+import processm.dbmodels.models.Relationship
+import processm.dbmodels.models.Relationships
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.metamodel.*
 import java.io.File
@@ -15,6 +24,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.sql.DriverManager
 import java.util.*
+import kotlin.collections.HashMap
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -157,7 +167,7 @@ class DebeziumChangeTrackerTest {
     fun `v1 table 2 id a`() {
         testBase(
             setOf("eban", "eket"), listOf(
-                emptySet(),
+                setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")),
                 setOf(
@@ -172,7 +182,7 @@ class DebeziumChangeTrackerTest {
     fun `v1 table 2 id b`() {
         testBase(
             setOf("eban", "eket", "ekko"), listOf(
-                emptySet(),
+                setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")),
                 setOf(
                     setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2"),
@@ -191,7 +201,7 @@ class DebeziumChangeTrackerTest {
     fun `v1 table 2 id c`() {
         testBase(
             setOf("eban", "eket", "ekko", "ekpo"), listOf(
-                emptySet(),
+                setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"), setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")),
                 setOf(
                     setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
@@ -212,18 +222,21 @@ class DebeziumChangeTrackerTest {
     fun `v2 table 2 id a`() {
         testBase(
             setOf("eban", "eket"), listOf(
-                emptySet(), //be1
-                emptySet(), //ae1
-                emptySet(), //be2
-                emptySet(), //ae2
-                emptySet(), //ce1
+                setOf(setOf("be1")), //be1
+                setOf(setOf("be1", "ae1")), //ae1
+                setOf(setOf("be1", "ae1", "be2")), //be2
+                setOf(setOf("be1", "ae1", "be2", "ae2")), //ae2
+                setOf(setOf("be1", "ae1", "be2", "ae2", "ce1")), //ce1
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1")), //de1
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), //de2
-                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), //ce2
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2", "ce2")), //ce2
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //de3
-                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //be3
-                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //ae3
-                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), //ce3
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"), setOf("be3")), //be3
+                setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"), setOf("ae3", "be3")), //ae3
+                setOf(
+                    setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"),
+                    setOf("ae3", "be3", "ce3")
+                ), //ce3
                 setOf(
                     setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"),
                     setOf("ae3", "be3", "ce3", "de4")
@@ -234,9 +247,10 @@ class DebeziumChangeTrackerTest {
 
     @Test
     fun `v3 table 2 id c`() {
+        //TODO this test makes no sense taking queries3 into account
         testBase(
             setOf("eban", "eket", "ekko", "ekpo"), listOf(
-                emptySet(),
+                setOf(setOf("ae1", "ae2", "be1", "be2")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"), setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")),
                 setOf(
                     setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
@@ -301,21 +315,69 @@ class DebeziumChangeTrackerTest {
             val dataModelId = MetaModel.build(dataStoreDBName, "metaModelName", SchemaCrawlerExplorer(connection))
             val metaModelReader = MetaModelReader(dataModelId.value)
 
-            val bussinessPerspective = transaction(dataStoreDBName) {
+            val etlProcessId = UUID.randomUUID()
+
+
+            val provider = transaction(dataStoreDBName) {
                 val classes = metaModelReader.getClassNames()
-                val classesGraph = DefaultDirectedGraph<EntityID<Int>, String>(String::class.java).apply {
-                    metaModelReader.getClassNames().keys.forEach(this::addVertex)
-                    metaModelReader.getRelationships().forEach { r ->
-                        addEdge(r.value.first, r.value.second, r.key)
+                val stub = object : ETLProcessStub {
+
+                    val traces = HashBiMap.create<Set<RemoteObjectID>, UUID>()
+                    val objects = HashMap<RemoteObjectID, HashSet<UUID>>()
+                    override val processId: UUID
+                        get() = etlProcessId
+                    override val identifyingClasses: Set<EntityID<Int>>
+                        get() = classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }
+                    override val relevantClasses: Set<EntityID<Int>>
+                        get() = classes.keys
+
+//                    override fun getTrace(caseIdentifier: Set<RemoteObjectID>): UUID? = traces[caseIdentifier]
+//
+//                    override fun updateTrace(traceId: UUID, newCaseIdentifier: Set<RemoteObjectID>) {
+//                        traces.inverse()[traceId] = newCaseIdentifier
+//                        for (o in newCaseIdentifier)
+//                            addObjectToTrace(traceId, o)
+//                    }
+//
+//                    override fun createTrace(caseIdentifier: Set<RemoteObjectID>): UUID =
+//                        UUID.randomUUID().also { updateTrace(it, caseIdentifier) }
+//
+//                    override fun getTracesWithObject(obj: RemoteObjectID): Sequence<UUID> =
+//                        objects[obj].orEmpty().asSequence()
+//
+//                    override fun addObjectToTrace(traceId: UUID, obj: RemoteObjectID) {
+//                        objects.computeIfAbsent(obj) { HashSet() }.add(traceId)
+//                    }
+//
+//                    override fun createAnonymousTrace(): UUID = UUID.randomUUID()
+
+                    override fun getRelevanceGraph(): Graph<EntityID<Int>, ETLProcessStub.Arc> {
+                        val result =
+                            DefaultDirectedGraph<EntityID<Int>, ETLProcessStub.Arc>(ETLProcessStub.Arc::class.java)
+                        Relationships
+                            .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
+                            .forEach {
+                                val r = Relationship.wrapRow(it)
+                                result.addVertex(r.sourceClass.id)
+                                result.addVertex(r.targetClass.id)
+                                val arc = ETLProcessStub.Arc(
+                                    r.sourceClass.id,
+                                    r.referencingAttributesName.name,
+                                    r.targetClass.id
+                                )
+                                result.addEdge(r.sourceClass.id, r.targetClass.id, arc)
+                            }
+                        return result
                     }
+
                 }
-                DAGBusinessPerspectiveDefinition(classesGraph) {
-                    classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }.also { println(it) }
+                object : ETLProcessProvider {
+                    override fun getProcessesForClass(className: String): List<ETLProcessStub> = listOf(stub)
                 }
             }
 
             val metaModelAppender = MetaModelAppender(metaModelReader)
-            val metaModel = MetaModel(dataStoreDBName, metaModelReader, metaModelAppender)
+            val metaModel = MetaModel(dataStoreDBName, metaModelReader, metaModelAppender, provider)
 
             DebeziumChangeTracker(
                 debeziumConfiguration,
@@ -331,14 +393,41 @@ class DebeziumChangeTrackerTest {
                     }
                     connection.commit()
                     Thread.sleep(1_000)
-                    val intermediate = metaModel.buildTracesForBusinessPerspective(bussinessPerspective)
-                    val flatXES = MetaModelXESInputStream(intermediate, dataStoreDBName, dataModelId.value)
-                    val xes = HoneyBadgerHierarchicalXESInputStream(flatXES)
-                    val log = xes.single()
-                    val actual: Set<Set<String>> =
-                        log.traces.mapToSet { trace -> trace.events.mapToSet { it["db:text"].toString().trim('"') } }
-                    assertEquals(expected.size, actual.size)
-                    assertEquals(expected, actual)
+//                    val intermediate = metaModel.buildTracesForBusinessPerspective(bussinessPerspective)
+//                    val flatXES = MetaModelXESInputStream(intermediate, dataStoreDBName, dataModelId.value)
+//                    val xes = HoneyBadgerHierarchicalXESInputStream(flatXES)
+                    val xes = DBHierarchicalXESInputStream(
+                        dataStoreDBName,
+                        Query("where l:id = $etlProcessId")
+                    )
+//                    val log = xes.single()
+//                    log.traces.forEach { trace ->
+//                        println(trace.events.map { event ->
+//                            event.attributes.entries.joinToString(
+//                                prefix = "(",
+//                                postfix = ")"
+//                            ) { "${it.key}=`${it.value}`" }
+//                        }.toList())
+//                    }
+                    val actual = HashMap<UUID, HashMap<UUID, HashSet<String>>>()
+                    for (log in xes) {
+                        val logMap = actual.computeIfAbsent(log.identityId!!) { HashMap() }
+                        for (trace in log.traces) {
+                            val traceSet = logMap.computeIfAbsent(trace.identityId!!) { HashSet() }
+                            trace.events.mapTo(traceSet) { it["db:text"].toString().trim('"') }
+                        }
+                    }
+                    for ((logId, log) in actual.entries) {
+                        println(logId)
+                        for ((traceId, trace) in log.entries) {
+                            println("\t$traceId")
+                            println("\t\t$trace")
+                        }
+                    }
+                    assertEquals(1, actual.size)
+                    val traces = actual.values.single()
+                    assertEquals(expected.size, traces.size)
+                    assertEquals(expected, traces.values.toSet())
                 }
             }
         }

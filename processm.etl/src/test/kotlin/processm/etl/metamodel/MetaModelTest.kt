@@ -1,16 +1,24 @@
 package processm.etl.metamodel
 
+import com.google.common.collect.HashBiMap
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
-import org.jgroups.util.UUID
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import processm.core.helpers.toLocalDateTime
+import processm.core.log.hierarchical.DBHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.persistence.connection.DBCache
+import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
+import processm.etl.tracker.DatabaseChangeApplier
 import java.time.Instant
+import java.util.*
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -18,38 +26,27 @@ import kotlin.test.assertEquals
  * Test based on https://link.springer.com/article/10.1007/s10115-019-01430-6, in particular Fig. 9, Tables 1 and 2
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@OptIn(InMemoryXESProcessing::class)
 class MetaModelTest {
 
+    private var metaModelId: Int? = null
     private lateinit var eket: Class
     private lateinit var eban: Class
     private lateinit var ekko: Class
     private lateinit var ekpo: Class
-    private lateinit var graph: DefaultDirectedGraph<EntityID<Int>, String>
-    private lateinit var metaModel: MetaModel
-    private lateinit var av1: ObjectVersion
-    private lateinit var av2: ObjectVersion
-    private lateinit var av3: ObjectVersion
-    private lateinit var bv1: ObjectVersion
-    private lateinit var bv2: ObjectVersion
-    private lateinit var bv3: ObjectVersion
-    private lateinit var cv1: ObjectVersion
-    private lateinit var cv2: ObjectVersion
-    private lateinit var cv3: ObjectVersion
-    private lateinit var dv1: ObjectVersion
-    private lateinit var dv2: ObjectVersion
-    private lateinit var dv3: ObjectVersion
-    private lateinit var dv4: ObjectVersion
     private val temporaryDB = UUID.randomUUID().toString()
+    private lateinit var etlProcessId: UUID
 
-    @BeforeAll
+    @BeforeTest
     fun setup() {
+        etlProcessId = UUID.randomUUID()
         transaction(DBCache.get(temporaryDB).database) {
             // DataModel from Fig 9 and Table 1 in https://doi.org/10.1007/s10115-019-01430-6
             val dataModel = DataModel.new {
                 name = "test"
                 versionDate = Instant.now().toLocalDateTime()
             }
-            val metaModelId = dataModel.id.value
+            metaModelId = dataModel.id.value
             eket = Class.new {
                 this.dataModel = dataModel
                 this.name = "EKET"
@@ -66,482 +63,307 @@ class MetaModelTest {
                 this.dataModel = dataModel
                 this.name = "EKPO"
             }
-            val eket2eban = Relationship.new {
+            Relationship.new {
                 name = "eket2eban"
                 sourceClass = eket
                 targetClass = eban
                 referencingAttributesName = AttributesName.new {
-                    name = "attr1"
+                    name = "eban"
                     type = "type1"
                     attributeClass = eban
                     isReferencingAttribute = true
                 }
             }
-            val ekko2eban = Relationship.new {
+            Relationship.new {
                 name = "ekko2eban"
                 sourceClass = ekko
                 targetClass = eban
                 referencingAttributesName = AttributesName.new {
-                    name = "attr2"
+                    name = "eban"
                     type = "type2"
                     attributeClass = eban
                     isReferencingAttribute = true
                 }
             }
-            val ekpo2ekko = Relationship.new {
+            Relationship.new {
                 name = "ekpo2ekko"
                 sourceClass = ekpo
                 targetClass = ekko
                 referencingAttributesName = AttributesName.new {
-                    name = "attr3"
+                    name = "ekko"
                     type = "type3"
                     attributeClass = ekko
                     isReferencingAttribute = true
                 }
             }
-            av1 = ObjectVersion.new { versionClass = eket; originalId = "a1" }
-            av2 = ObjectVersion.new { versionClass = eket; originalId = "a1" }
-            av3 = ObjectVersion.new { versionClass = eket; originalId = "a2" }
-            bv1 = ObjectVersion.new { versionClass = eban; originalId = "b1" }
-            bv2 = ObjectVersion.new { versionClass = eban; originalId = "b1" }
-            bv3 = ObjectVersion.new { versionClass = eban; originalId = "b2" }
-            cv1 = ObjectVersion.new { versionClass = ekko; originalId = "c1" }
-            cv2 = ObjectVersion.new { versionClass = ekko; originalId = "c2" }
-            cv3 = ObjectVersion.new { versionClass = ekko; originalId = "c3" }
-            dv1 = ObjectVersion.new { versionClass = ekpo; originalId = "d1" }
-            dv2 = ObjectVersion.new { versionClass = ekpo; originalId = "d2" }
-            dv3 = ObjectVersion.new { versionClass = ekpo; originalId = "d3" }
-            dv4 = ObjectVersion.new { versionClass = ekpo; originalId = "d4" }
-            Relation.new { relationship = eket2eban; sourceObjectVersion = av1;targetObjectVersion = bv1 }
-            Relation.new { relationship = eket2eban; sourceObjectVersion = av2;targetObjectVersion = bv2 }
-            Relation.new { relationship = eket2eban; sourceObjectVersion = av3;targetObjectVersion = bv3 }
-            Relation.new { relationship = ekko2eban; sourceObjectVersion = cv1;targetObjectVersion = bv2 }
-            Relation.new { relationship = ekko2eban; sourceObjectVersion = cv2;targetObjectVersion = bv2 }
-            Relation.new { relationship = ekko2eban; sourceObjectVersion = cv3;targetObjectVersion = bv3 }
-            Relation.new { relationship = ekpo2ekko; sourceObjectVersion = dv1;targetObjectVersion = cv1 }
-            Relation.new { relationship = ekpo2ekko; sourceObjectVersion = dv2;targetObjectVersion = cv1 }
-            Relation.new { relationship = ekpo2ekko; sourceObjectVersion = dv3;targetObjectVersion = cv2 }
-            Relation.new { relationship = ekpo2ekko; sourceObjectVersion = dv4;targetObjectVersion = cv3 }
-            graph = DefaultDirectedGraph<EntityID<Int>, String>(String::class.java)
-            graph.addVertex(eket.id)
-            graph.addVertex(eban.id)
-            graph.addVertex(ekko.id)
-            graph.addVertex(ekpo.id)
-            graph.addEdge(eket.id, eban.id, "eket->eban")
-            graph.addEdge(ekko.id, eban.id, "ekko->eban")
-            graph.addEdge(ekpo.id, ekko.id, "ekpo->ekko")
 
-            println(graph)
-            val metaModelReader = MetaModelReader(metaModelId)
-            val metaModelAppender = MetaModelAppender(metaModelReader)
-            metaModel = MetaModel(temporaryDB, metaModelReader, metaModelAppender)
         }
     }
 
 
     @AfterAll
     fun cleanup() {
-        DBCache.get(temporaryDB).close()
-        DBCache.getMainDBPool().getConnection().use {
-            it.prepareStatement("drop database \"$temporaryDB\" ").execute()
-        }
+//        DBCache.get(temporaryDB).close()
+//        DBCache.getMainDBPool().getConnection().use {
+//            it.prepareStatement("drop database \"$temporaryDB\" ").execute()
+//        }
+        println(temporaryDB)
     }
 
-    @Test
-    fun `Table 2 row a`() {
-        with(DAGBusinessPerspectiveDefinition(graph) { setOf(eket.id, eban.id) }) {
-            val flatTraces = metaModel.buildTracesForBusinessPerspective(this).toList()
-            assertEquals(
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv1.id.value,
-                    cv2.id.value,
-                    dv1.id.value,
-                    dv2.id.value,
-                    dv3.id.value
-                ),
-                flatTraces[0]
-            )
-            assertEquals(setOf(av3.id.value, bv3.id.value, cv3.id.value, dv4.id.value), flatTraces[1])
-        }
+
+    private fun dbEvent(
+        entityId: String,
+        entityTable: String,
+        eventName: String,
+        vararg args: Pair<String, String>
+    ): DatabaseChangeApplier.DatabaseChangeEvent {
+        val attrs = mutableMapOf("text" to eventName)
+        attrs.putAll(args)
+        return DatabaseChangeApplier.DatabaseChangeEvent(
+            "id",
+            entityId,
+            entityTable,
+            null,
+            null,
+            DatabaseChangeApplier.EventType.Update,
+            false,
+            attrs
+        )
     }
 
-    @Test
-    fun `Table 2 row b`() {
-        with(DAGBusinessPerspectiveDefinition(graph) { setOf(eket.id, eban.id, ekko.id) }) {
-            val flatTraces = metaModel.buildTracesForBusinessPerspective(this).toSet()
-            assertEquals(
-                setOf(
-                    setOf(
-                        av1.id.value,
-                        av2.id.value,
-                        bv1.id.value,
-                        bv2.id.value,
-                        cv1.id.value,
-                        dv1.id.value,
-                        dv2.id.value
-                    ),
-                    setOf(av1.id.value, av2.id.value, bv1.id.value, bv2.id.value, cv2.id.value, dv3.id.value),
-                    setOf(av3.id.value, bv3.id.value, cv3.id.value, dv4.id.value)
-                ),
-                flatTraces
-            )
-        }
-    }
+    private fun getMetaModel(identifyingClasses: Set<EntityID<Int>>): MetaModel {
 
-    @Test
-    fun `Table 2 row c`() {
-        with(DAGBusinessPerspectiveDefinition(graph)) {
-            val flatTraces = metaModel.buildTracesForBusinessPerspective(this).toSet()
-            assertEquals(
-                setOf(
-                    setOf(av1.id.value, av2.id.value, bv1.id.value, bv2.id.value, cv1.id.value, dv1.id.value),
-                    setOf(av1.id.value, av2.id.value, bv1.id.value, bv2.id.value, cv1.id.value, dv2.id.value),
-                    setOf(av1.id.value, av2.id.value, bv1.id.value, bv2.id.value, cv2.id.value, dv3.id.value),
-                    setOf(av3.id.value, bv3.id.value, cv3.id.value, dv4.id.value)
-                ), flatTraces
-            )
-        }
-    }
+        val metaModelReader = MetaModelReader(metaModelId!!)
+        val metaModelAppender = MetaModelAppender(metaModelReader)
 
-    @Test
-    fun `hardcoded SQL query for Table 2 row b`() {
-        DBCache.get(temporaryDB).getConnection().use { connection ->
-            val query = """
-                WITH case_identifiers(ci) AS (
-                SELECT DISTINCT ARRAY_CAT(ARRAY[ARRAY[c1.class_id::TEXT, c1.object_id], ARRAY[c2.class_id::TEXT, c2.object_id], ARRAY[c3.class_id::TEXT, c3.object_id]], 
-                ARRAY_AGG(ARRAY[c4.class_id::TEXT, c4.object_id]))
-                FROM 
-                object_versions AS c1,
-                object_versions AS c2,
-                object_versions AS c3,
-                relations as r12,
-                relations as r13
-                ,object_versions c4, relations as r34
-                WHERE
-                c1.class_id = ${eban.id.value} AND c2.class_id = ${eket.id.value} AND c3.class_id = ${ekko.id.value} AND
-                r12.source_object_version_id = c2.id AND r12.target_object_version_id = c1.id AND
-                r13.source_object_version_id = c3.id AND r13.target_object_version_id = c1.id
-                AND c4.class_id = ${ekpo.id.value} AND r34.source_object_version_id = c4.id AND r34.target_object_version_id = c3.id
-                GROUP BY c1.class_id::TEXT, c1.object_id, c2.class_id::TEXT, c2.object_id, c3.class_id::TEXT, c3.object_id                
-                )
-                SELECT case_identifiers.ci, ARRAY_AGG(ovs.id)
-                FROM  case_identifiers, object_versions AS ovs
-                WHERE
-                ARRAY[ovs.class_id::TEXT, ovs.object_id] = ANY((SELECT * FROM unnest_2d_1d(case_identifiers.ci)))
-                GROUP BY case_identifiers.ci
-            """.trimIndent()
-            val result = connection.prepareStatement(query).executeQuery().use { rs ->
-                val result = HashSet<Pair<Set<Pair<Int, String>>, Set<Int>>>()
-                while (rs.next()) {
-                    val caseIdentifier = (rs.getArray(1).array as Array<Array<String>>).mapTo(HashSet()) {
-                        assertEquals(2, it.size)
-                        it[0].toInt() to it[1]
-                    }
-                    val trace = (rs.getArray(2).array as Array<Int>).toSet()
-                    result.add(caseIdentifier to trace)
+
+        val provider = processm.core.persistence.connection.transaction(temporaryDB) {
+            val classes = metaModelReader.getClassNames()
+            val stub = object : ETLProcessStub {
+
+                val traces = HashBiMap.create<Set<RemoteObjectID>, UUID>()
+                val objects = HashMap<RemoteObjectID, java.util.HashSet<UUID>>()
+                override val processId: UUID
+                    get() = etlProcessId
+                override val identifyingClasses: Set<EntityID<Int>> = identifyingClasses
+                override val relevantClasses: Set<EntityID<Int>>
+                    get() = classes.keys
+
+//                override fun getTrace(caseIdentifier: Set<RemoteObjectID>): UUID? = traces[caseIdentifier]
+//
+//                override fun updateTrace(traceId: UUID, newCaseIdentifier: Set<RemoteObjectID>) {
+//                    traces.inverse()[traceId] = newCaseIdentifier
+//                    for (o in newCaseIdentifier)
+//                        addObjectToTrace(traceId, o)
+//                }
+//
+//                override fun createTrace(caseIdentifier: Set<RemoteObjectID>): UUID =
+//                    UUID.randomUUID().also { updateTrace(it, caseIdentifier) }
+//
+//                override fun getTracesWithObject(obj: RemoteObjectID): Sequence<UUID> =
+//                    objects[obj].orEmpty().asSequence()
+//
+//                override fun addObjectToTrace(traceId: UUID, obj: RemoteObjectID) {
+//                    objects.computeIfAbsent(obj) { java.util.HashSet() }.add(traceId)
+//                }
+//
+//                override fun createAnonymousTrace(): UUID = UUID.randomUUID()
+
+                override fun getRelevanceGraph(): Graph<EntityID<Int>, ETLProcessStub.Arc> {
+                    val result =
+                        DefaultDirectedGraph<EntityID<Int>, ETLProcessStub.Arc>(ETLProcessStub.Arc::class.java)
+                    Relationships
+                        .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
+                        .forEach {
+                            val r = Relationship.wrapRow(it)
+                            result.addVertex(r.sourceClass.id)
+                            result.addVertex(r.targetClass.id)
+                            val arc = ETLProcessStub.Arc(
+                                r.sourceClass.id,
+                                r.referencingAttributesName.name,
+                                r.targetClass.id
+                            )
+                            result.addEdge(r.sourceClass.id, r.targetClass.id, arc)
+                        }
+                    return result
                 }
-                return@use result
+
             }
-            val expected = setOf(
-                setOf(
-                    eket.id.value to "a1",
-                    eban.id.value to "b1",
-                    ekko.id.value to "c1",
-                    ekpo.id.value to "d1",
-                    ekpo.id.value to "d2"
-                ) to
-                        setOf(
-                            av1.id.value,
-                            av2.id.value,
-                            bv1.id.value,
-                            bv2.id.value,
-                            cv1.id.value,
-                            dv1.id.value,
-                            dv2.id.value
-                        ),
-                setOf(
-                    eket.id.value to "a1",
-                    eban.id.value to "b1",
-                    ekko.id.value to "c2",
-                    ekpo.id.value to "d3"
-                ) to
-                        setOf(
-                            av1.id.value,
-                            av2.id.value,
-                            bv1.id.value,
-                            bv2.id.value,
-                            cv2.id.value,
-                            dv3.id.value
-                        ),
-                setOf(
-                    eket.id.value to "a2",
-                    eban.id.value to "b2",
-                    ekko.id.value to "c3",
-                    ekpo.id.value to "d4"
-                ) to
-                        setOf(
-                            av3.id.value,
-                            bv3.id.value,
-                            cv3.id.value,
-                            dv4.id.value
-                        ),
-            )
-            assertEquals(expected, result)
+            object : ETLProcessProvider {
+                override fun getProcessesForClass(className: String): List<ETLProcessStub> = listOf(stub)
+            }
         }
+
+        return MetaModel(temporaryDB, metaModelReader, metaModelAppender, provider)
+    }
+
+    private fun readLog(logId: UUID): Set<Set<String>> {
+        val xes = DBHierarchicalXESInputStream(temporaryDB, Query("where l:id = $logId"))
+        val actual = HashMap<UUID, HashMap<UUID, HashSet<String>>>()
+        for (log in xes) {
+            val logMap = actual.computeIfAbsent(log.identityId!!) { HashMap() }
+            for (trace in log.traces) {
+                val traceSet = logMap.computeIfAbsent(trace.identityId!!) { HashSet() }
+                trace.events.mapTo(traceSet) { it["db:text"].toString().trim('"') }
+            }
+        }
+        for ((logId, log) in actual.entries) {
+            println(logId)
+            for ((traceId, trace) in log.entries) {
+                println("\t$traceId")
+                println("\t\t$trace")
+            }
+        }
+        return actual.values.flatMap { it.values }.toSet()
     }
 
     @Test
-    fun `hardcoded SQL query v2 for Table 2 row b`() {
-        DBCache.get(temporaryDB).getConnection().use { connection ->
-            val query = """                
-                WITH case_identifiers(ci) AS (
-                    SELECT DISTINCT ARRAY_CAT(ARRAY[ROW(c1.class_id, c1.object_id)::remote_object_identifier, 
-                    ROW(c2.class_id, c2.object_id)::remote_object_identifier, ROW(c3.class_id, c3.object_id)::remote_object_identifier], 
-                    ARRAY_AGG(ROW(c4.class_id, c4.object_id)::remote_object_identifier))
-                    FROM 
-                    object_versions AS c1,
-                    object_versions AS c2,
-                    object_versions AS c3,
-                    relations as r12,
-                    relations as r13
-                    ,object_versions c4, relations as r34
-                    WHERE
-                    c1.class_id = ${eban.id.value} AND c2.class_id = ${eket.id.value} AND c3.class_id = ${ekko.id.value} AND
-                    r12.source_object_version_id = c2.id AND r12.target_object_version_id = c1.id AND
-                    r13.source_object_version_id = c3.id AND r13.target_object_version_id = c1.id
-                    AND c4.class_id = ${ekpo.id.value} AND r34.source_object_version_id = c4.id AND r34.target_object_version_id = c3.id
-                    GROUP BY c1.class_id, c1.object_id, c2.class_id, c2.object_id, c3.class_id, c3.object_id
-                )                
-                SELECT ARRAY_AGG(ovs.id)
-                FROM  case_identifiers, object_versions AS ovs
-                WHERE
-                ROW(ovs.class_id, ovs.object_id)::remote_object_identifier = ANY((SELECT * FROM unnest(case_identifiers.ci)))
-                GROUP BY case_identifiers.ci
-            """.trimIndent()
-            // JDBC returns objects of user-defined types as strings (via the PGobject type) for the user to parse. Not gonna bother with testing the case identifiers
-            val result = connection.prepareStatement(query).executeQuery().use { rs ->
-                val result = HashSet<Set<Int>>()
-                while (rs.next()) {
-                    val trace = (rs.getArray(1).array as Array<Int>).toSet()
-                    result.add(trace)
-                }
-                return@use result
-            }
-            val expected = setOf(
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv1.id.value,
-                    dv1.id.value,
-                    dv2.id.value
-                ),
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv2.id.value,
-                    dv3.id.value
-                ),
-                setOf(
-                    av3.id.value,
-                    bv3.id.value,
-                    cv3.id.value,
-                    dv4.id.value
-                ),
+    fun `v1 table 2 id b`() {
+        val metaModel = getMetaModel(setOf(eket.id, eban.id, ekko.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
             )
-            assertEquals(expected, result)
-        }
+        )
+        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be2"),
+                dbEvent("a1", "EKET", "ae2"),
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
+            )
+        )
+        assertEquals(setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), readLog(etlProcessId))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
+                dbEvent("d3", "EKPO", "de3", "ekko" to "c2")
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2"),
+                setOf("ae1", "ae2", "be1", "be2", "ce2", "de3")
+            ), readLog(etlProcessId)
+        )
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b2", "EBAN", "be3"),
+                dbEvent("a2", "EKET", "ae3", "eban" to "b2"),
+                dbEvent("c3", "EKKO", "ce3", "eban" to "b2"),
+                dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2"),
+                setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                setOf("ae3", "be3", "ce3", "de4")
+            ), readLog(etlProcessId)
+        )
     }
 
     @Test
-    fun `generated SQL query v2 for Table 2 row c`() {
-        DBCache.get(temporaryDB).getConnection().use { connection ->
-            val query = DAGBusinessPerspectiveDefinition(graph).generateSQLquery()
-            val result = connection.prepareStatement(query).executeQuery().use { rs ->
-                val result = HashSet<Set<Int>>()
-                while (rs.next()) {
-                    val trace = (rs.getArray(1).array as Array<Int>).toSet()
-                    result.add(trace)
-                }
-                return@use result
-            }
-            val expected = setOf(
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv1.id.value,
-                    dv1.id.value
-                ),
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv1.id.value,
-                    dv2.id.value
-                ),
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv2.id.value,
-                    dv3.id.value
-                ),
-                setOf(
-                    av3.id.value,
-                    bv3.id.value,
-                    cv3.id.value,
-                    dv4.id.value
-                ),
+    fun `v1 table 2 id a`() {
+        val metaModel = getMetaModel(setOf(eket.id, eban.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
             )
-            assertEquals(expected, result)
-        }
+        )
+        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be2"),
+                dbEvent("a1", "EKET", "ae2"),
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
+            )
+        )
+        assertEquals(setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), readLog(etlProcessId))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
+                dbEvent("d3", "EKPO", "de3", "ekko" to "c2")
+            )
+        )
+        assertEquals(
+            setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), readLog(etlProcessId)
+        )
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b2", "EBAN", "be3"),
+                dbEvent("a2", "EKET", "ae3", "eban" to "b2"),
+                dbEvent("c3", "EKKO", "ce3", "eban" to "b2"),
+                dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"),
+                setOf("ae3", "be3", "ce3", "de4")
+            ), readLog(etlProcessId)
+        )
     }
 
     @Test
-    fun `generated SQL query v2 for Table 2 row b`() {
-        DBCache.get(temporaryDB).getConnection().use { connection ->
-            val query = DAGBusinessPerspectiveDefinition(graph) { setOf(eket.id, eban.id, ekko.id) }.generateSQLquery()
-            val result = connection.prepareStatement(query).executeQuery().use { rs ->
-                val result = HashSet<Set<Int>>()
-                while (rs.next()) {
-                    val trace = (rs.getArray(1).array as Array<Int>).toSet()
-                    result.add(trace)
-                }
-                return@use result
-            }
-            val expected = setOf(
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv1.id.value,
-                    dv1.id.value,
-                    dv2.id.value
-                ),
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv2.id.value,
-                    dv3.id.value
-                ),
-                setOf(
-                    av3.id.value,
-                    bv3.id.value,
-                    cv3.id.value,
-                    dv4.id.value
-                ),
+    fun `v1 table 2 id c`() {
+        val metaModel = getMetaModel(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
             )
-            assertEquals(expected, result)
-        }
-    }
-
-    @Test
-    fun `generated SQL query v2 for Table 2 row a`() {
-        DBCache.get(temporaryDB).getConnection().use { connection ->
-            val query = DAGBusinessPerspectiveDefinition(graph) { setOf(eket.id, eban.id) }.generateSQLquery()
-            val result = connection.prepareStatement(query).executeQuery().use { rs ->
-                val result = HashSet<Set<Int>>()
-                while (rs.next()) {
-                    val trace = (rs.getArray(1).array as Array<Int>).toSet()
-                    result.add(trace)
-                }
-                return@use result
-            }
-            val expected = setOf(
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv1.id.value,
-                    cv2.id.value,
-                    dv1.id.value,
-                    dv2.id.value,
-                    dv3.id.value
-                ),
-                setOf(
-                    av3.id.value,
-                    bv3.id.value,
-                    cv3.id.value,
-                    dv4.id.value
-                ),
+        )
+        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be2"),
+                dbEvent("a1", "EKET", "ae2"),
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
             )
-            assertEquals(expected, result)
-        }
-    }
-
-
-    @Test
-    fun `hardcoded SQL query v2 for Table 2 row a`() {
-        DBCache.get(temporaryDB).getConnection().use { connection ->
-            val query = """                
-                WITH case_identifiers(ci) AS (
-                    SELECT DISTINCT ARRAY[ROW(c1.class_id, c1.object_id)::remote_object_identifier, 
-                    ROW(c2.class_id, c2.object_id)::remote_object_identifier] || 
-                    ARRAY_AGG(ROW(c4.class_id, c4.object_id)::remote_object_identifier) || ARRAY_AGG(ROW(c3.class_id, c3.object_id)::remote_object_identifier)
-                    FROM 
-                    object_versions AS c1,
-                    object_versions AS c2,
-                    object_versions AS c3,
-                    relations as r12,
-                    relations as r13
-                    ,object_versions c4, relations as r34
-                    WHERE
-                    c1.class_id = ${eban.id.value} AND c2.class_id = ${eket.id.value} AND c3.class_id = ${ekko.id.value} AND
-                    r12.source_object_version_id = c2.id AND r12.target_object_version_id = c1.id AND
-                    r13.source_object_version_id = c3.id AND r13.target_object_version_id = c1.id
-                    AND c4.class_id = ${ekpo.id.value} AND r34.source_object_version_id = c4.id AND r34.target_object_version_id = c3.id
-                    GROUP BY c1.class_id, c1.object_id, c2.class_id, c2.object_id
-                )                
-                SELECT ARRAY_AGG(ovs.id)
-                FROM  case_identifiers, object_versions AS ovs
-                WHERE
-                ROW(ovs.class_id, ovs.object_id)::remote_object_identifier = ANY((SELECT * FROM unnest(case_identifiers.ci)))
-                GROUP BY case_identifiers.ci
-            """.trimIndent()
-            // JDBC returns objects of user-defined types as strings (via the PGobject type) for the user to parse. Not gonna bother with testing the case identifiers
-            val result = connection.prepareStatement(query).executeQuery().use { rs ->
-                val result = HashSet<Set<Int>>()
-                while (rs.next()) {
-                    val trace = (rs.getArray(1).array as Array<Int>).toSet()
-                    result.add(trace)
-                }
-                return@use result
-            }
-            val expected = setOf(
-                setOf(
-                    av1.id.value,
-                    av2.id.value,
-                    bv1.id.value,
-                    bv2.id.value,
-                    cv1.id.value,
-                    cv2.id.value,
-                    dv1.id.value,
-                    dv2.id.value,
-                    dv3.id.value
-                ),
-                setOf(
-                    av3.id.value,
-                    bv3.id.value,
-                    cv3.id.value,
-                    dv4.id.value
-                ),
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")
+            ), readLog(etlProcessId)
+        )
+        metaModel.applyChange(
+            listOf(
+                dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
+                dbEvent("d3", "EKPO", "de3", "ekko" to "c2")
             )
-            assertEquals(expected, result)
-        }
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                setOf("ae1", "ae2", "be1", "be2", "ce2", "de3")
+            ), readLog(etlProcessId)
+        )
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b2", "EBAN", "be3"),
+                dbEvent("a2", "EKET", "ae3", "eban" to "b2"),
+                dbEvent("c3", "EKKO", "ce3", "eban" to "b2"),
+                dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                setOf("ae3", "be3", "ce3", "de4")
+            ), readLog(etlProcessId)
+        )
     }
 }

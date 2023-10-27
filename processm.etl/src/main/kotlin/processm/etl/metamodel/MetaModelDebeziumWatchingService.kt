@@ -247,7 +247,7 @@ class MetaModelDebeziumWatchingService : Service {
         val metaModelReader = MetaModelReader(dataModelId)
         return DebeziumChangeTracker(
             properties,
-            MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader)),
+            MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader), TODO()),
             dataStoreId,
             dataConnector.id.value
         )
