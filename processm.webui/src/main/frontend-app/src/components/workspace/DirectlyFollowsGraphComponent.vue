@@ -59,6 +59,7 @@ export default class DirectlyFollowsGraphComponent extends Vue {
   support: number = 1;
 
   mounted() {
+    if (this.data.data.edges === undefined) return;
     const supports = this.data.data.edges.map((edge) => edge.support as number).sort((a, b) => a - b);
     this.minSupport = Math.min(...supports);
     this.maxSupport = Math.max(...supports);

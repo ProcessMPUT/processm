@@ -103,7 +103,7 @@ import { WorkspaceComponent as WorkspaceComponentModel } from "@/models/Workspac
 import TreeLogViewComponent from "@/components/workspace/TreeLogViewComponent.vue";
 import FlatLogViewComponent from "@/components/workspace/FlatLogViewComponent.vue";
 import DirectlyFollowsGraphComponent from "@/components/workspace/DirectlyFollowsGraphComponent.vue";
-import CNetComponent from "@/components/workspace/cnet/CNetComponent.vue";
+import CNetComponent from "@/components/workspace/CNetComponent.vue";
 
 export enum ComponentMode {
   Static,

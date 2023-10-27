@@ -4,7 +4,7 @@
       <td>
         <graph :data="graphData" :filter-edge="filterEdge" :refresh="support"></graph>
       </td>
-      <td>
+      <td v-show="componentMode != ComponentMode.Static">
         <v-card>
           <v-card-title>{{ $t("common.filter") }}</v-card-title>
           <v-card-text>
@@ -34,13 +34,17 @@ table td:last-child {
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
-//import { DirectlyFollowsGraphComponentData } from "@/openapi";
-import Graph, {CNetGraphData} from "@/components/Graph.vue";
+import Graph, { CNetGraphData } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
 import { CNetComponentData } from "@/models/WorkspaceComponent";
-import {GraphData, NodeConfig} from "@antv/g6";
+import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 
 @Component({
+  computed: {
+    ComponentMode() {
+      return ComponentMode;
+    }
+  },
   components: { Graph }
 })
 export default class CNetComponent extends Vue {
@@ -50,6 +54,9 @@ export default class CNetComponent extends Vue {
     nodes: [],
     edges: []
   };
+
+  @Prop({ default: null })
+  readonly componentMode?: ComponentMode;
 
   minSupport: number = 0;
   maxSupport: number = 1;
@@ -64,14 +71,6 @@ export default class CNetComponent extends Vue {
           label: node.id,
           joins: node.joins,
           splits: node.splits
-          // label: node.label,
-          // x: node.x,
-          // y: node.y,
-          // size: node.size,
-          // style: {
-          //   fill: node.color,
-          //   stroke: node.color
-          //}
         };
       }),
       edges: this.data.data.edges.map((edge) => {
@@ -79,10 +78,6 @@ export default class CNetComponent extends Vue {
           id: `${edge.sourceNodeId}->${edge.targetNodeId}`,
           source: edge.sourceNodeId,
           target: edge.targetNodeId,
-          // label: edge.label,
-          // style: {
-          //   stroke: edge.color
-          // },
           support: edge.support
         };
       })
