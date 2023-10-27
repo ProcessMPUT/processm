@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Tag
 import processm.core.DBTestHelper
 import processm.core.DBTestHelper.dbName
 import processm.core.helpers.parseISO8601
+import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.Attribute.LIFECYCLE_TRANSITION
 import processm.core.log.attribute.Attribute.ORG_GROUP
 import processm.core.log.attribute.Attribute.TIME_TIMESTAMP
 import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.log.hierarchical.toFlatSequence
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
@@ -303,6 +305,31 @@ internal class DBXESInputStreamTest {
 
             return response.getInt("id")
         }
+    }
+
+    @Ignore("This is an interesting case which does not work. Left here as an example.")
+    @Test
+    fun `querying for a trace with two events, each satisfying one condition`() {
+        val logId = UUID.randomUUID()
+        val tracesId = (1..10).map { UUID.randomUUID() }
+        val eventsId = (1..10).map { UUID.randomUUID() }
+        DBXESOutputStream(DBCache.get(dbName).getConnection()).use { output ->
+            output.write(
+                sequenceOf(
+                    Log(mutableAttributeMapOf(IDENTITY_ID to logId)),
+                    Trace(mutableAttributeMapOf(IDENTITY_ID to tracesId[0])),
+                    Event(mutableAttributeMapOf(IDENTITY_ID to eventsId[0], "a" to "1")),
+                    Event(mutableAttributeMapOf(IDENTITY_ID to eventsId[1], "a" to "2")),
+                    Trace(mutableAttributeMapOf(IDENTITY_ID to tracesId[1])),
+                    Event(mutableAttributeMapOf(IDENTITY_ID to eventsId[2], "a" to "3")),
+                    Event(mutableAttributeMapOf(IDENTITY_ID to eventsId[3], "a" to "2")),
+                )
+            )
+        }
+        val query = "select t:identity:id where l:identity:id = $logId and [^e:a] = '2' and [^e:a] = '1'"
+        val result = DBXESInputStream(dbName, Query(query)).filterIsInstance<Trace>().toList()
+        assertEquals(1, result.size)
+        assertEquals(tracesId[0], result[0].identityId)
     }
 
     private fun loadIntoDB() {
