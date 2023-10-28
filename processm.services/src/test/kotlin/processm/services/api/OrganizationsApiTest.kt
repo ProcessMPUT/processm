@@ -33,9 +33,7 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
     )
 
-    override fun endpointsWithNoImplementation() = Stream.of(
-        HttpMethod.Get to "/api/organizations"
-    )
+    override fun endpointsWithNoImplementation() = Stream.empty<Pair<HttpMethod, String>>()
 
     @Test
     fun `responds to organization members request with 200 and members list`() = withConfiguredTestApplication {
@@ -321,6 +319,49 @@ class OrganizationsApiTest : BaseApiTest() {
 
         verify(exactly = 0) {
             organizationService.updateMember(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `responds with 200 to the get of organization list`() = withConfiguredTestApplication {
+        val orgIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+        val organizationService = declareMock<OrganizationService> {
+            every { getAll(true) } returns listOf(
+                mockk<Organization> {
+                    every { id } returns EntityID(orgIds[0], Organizations)
+                    every { name } returns "OrgA"
+                    every { isPrivate } returns false
+                },
+                mockk<Organization> {
+                    every { id } returns EntityID(orgIds[1], Organizations)
+                    every { name } returns "OrgB"
+                    every { isPrivate } returns false
+                }
+            )
+
+            every { get(orgIds[0]) } returns mockk {
+                every { id } returns EntityID(orgIds[0], Organizations)
+                every { name } returns "OrgA"
+                every { isPrivate } returns false
+            }
+        }
+        withAuthentication(role = OrganizationRole.owner to orgIds[0]) {
+            with(handleRequest(HttpMethod.Get, "/api/organizations")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+
+                val orgs = response.deserializeContent<List<ApiOrganization>>()
+                assertEquals(2, orgs.size)
+
+                assertEquals(orgIds[0], orgs[0].id)
+                assertEquals("OrgA", orgs[0].name)
+                assertEquals(false, orgs[0].isPrivate)
+
+                assertEquals(orgIds[1], orgs[1].id)
+                assertEquals("OrgB", orgs[1].name)
+                assertEquals(false, orgs[1].isPrivate)
+
+                verify(exactly = 1) { organizationService.getAll(true) }
+            }
         }
     }
 

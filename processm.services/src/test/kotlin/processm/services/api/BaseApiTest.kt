@@ -36,10 +36,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
 import kotlin.reflect.KClass
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BaseApiTest : KoinTest {
@@ -86,6 +83,7 @@ abstract class BaseApiTest : KoinTest {
 
     @ParameterizedTest
     @MethodSource("endpointsWithNoImplementation")
+    @Ignore("No not implemented endpoints")
     fun `responds to not implemented requests with 501`(requestEndpoint: Pair<HttpMethod, String>?) =
         withConfiguredTestApplication {
             if (requestEndpoint == null) {
