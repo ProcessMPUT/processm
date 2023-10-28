@@ -140,34 +140,11 @@ class MetaModelTest {
         val provider = processm.core.persistence.connection.transaction(temporaryDB) {
             val classes = metaModelReader.getClassNames()
             val stub = object : ETLProcessStub {
-
-                val traces = HashBiMap.create<Set<RemoteObjectID>, UUID>()
-                val objects = HashMap<RemoteObjectID, java.util.HashSet<UUID>>()
                 override val processId: UUID
                     get() = etlProcessId
                 override val identifyingClasses: Set<EntityID<Int>> = identifyingClasses
                 override val relevantClasses: Set<EntityID<Int>>
                     get() = classes.keys
-
-//                override fun getTrace(caseIdentifier: Set<RemoteObjectID>): UUID? = traces[caseIdentifier]
-//
-//                override fun updateTrace(traceId: UUID, newCaseIdentifier: Set<RemoteObjectID>) {
-//                    traces.inverse()[traceId] = newCaseIdentifier
-//                    for (o in newCaseIdentifier)
-//                        addObjectToTrace(traceId, o)
-//                }
-//
-//                override fun createTrace(caseIdentifier: Set<RemoteObjectID>): UUID =
-//                    UUID.randomUUID().also { updateTrace(it, caseIdentifier) }
-//
-//                override fun getTracesWithObject(obj: RemoteObjectID): Sequence<UUID> =
-//                    objects[obj].orEmpty().asSequence()
-//
-//                override fun addObjectToTrace(traceId: UUID, obj: RemoteObjectID) {
-//                    objects.computeIfAbsent(obj) { java.util.HashSet() }.add(traceId)
-//                }
-//
-//                override fun createAnonymousTrace(): UUID = UUID.randomUUID()
 
                 override fun getRelevanceGraph(): Graph<EntityID<Int>, ETLProcessStub.Arc> {
                     val result =

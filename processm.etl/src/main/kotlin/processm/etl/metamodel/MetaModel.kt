@@ -5,32 +5,32 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.statements.BatchInsertStatement
-import org.jetbrains.exposed.sql.statements.jdbc.JdbcConnectionImpl
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.postgresql.jdbc.PgArray
+import org.jgrapht.Graph
 import org.postgresql.util.PGobject
 import processm.core.Brand
+import processm.core.helpers.mapToArray
 import processm.core.helpers.mapToSet
 import processm.core.helpers.toUUID
 import processm.core.log.*
-import processm.core.log.Event
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import processm.dbmodels.models.*
+import processm.dbmodels.models.AttributesNames
+import processm.dbmodels.models.Classes
+import processm.dbmodels.models.DataModels
+import processm.dbmodels.models.Relationships
 import processm.etl.discovery.DatabaseExplorer
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
-import java.lang.Class
 import java.sql.Connection
+import java.sql.JDBCType
 import java.sql.ResultSet
 import java.time.Instant
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 class MetaModel(
     private val dataStoreDBName: String,
@@ -39,94 +39,174 @@ class MetaModel(
     private val etlProcessProvider: ETLProcessProvider
 ) : DatabaseChangeApplier {
 
-    // TODO This is a placeholder!
-    // TODO Eventually the graph should be transformed into a query and the problem of computing relevant objects should be moved to the db
-    private fun Connection.retrieveKnownObjects(logId: UUID): HashMap<RemoteObjectID, HashMap<String, String>> {
-        val query = """
-            select event_id, key, string_value, int_value from 
-            events_attributes,events,traces,logs where event_id=events.id and trace_id=traces.id and log_id=logs.id and 
-            logs."identity:id"=?::uuid and 
-            ((key like '$DB_ATTR_NS:%') or key='${Attribute.ORG_RESOURCE}' or key='$CLASSID_ATTR')
-            order by "time:timestamp"
-        """.trimIndent()
+    private fun Connection.retrieveRelatedObjectsUpwards(
+        start: RemoteObjectID,
+        path: List<ETLProcessStub.Arc>
+    ): ArrayList<RemoteObjectID> {
+        /**
+         * select distinct r1.string_value as ekko, r2.string_value as eban
+         * from objects_in_events as o1, events_attributes r1,
+         * objects_in_events as o2, events_attributes r2
+         * where
+         * o1.objectId='d1' and o1.classId=12 and o1.event_id=r1.event_id and r1.key='db:ekko'
+         * and o2.objectId=r1.string_value and o2.classId=11 and r2.event_id=o2.event_id and r2.key='db:eban';
+         *
+         * select distinct r0.string_value,r1.string_value from objects_in_events o0, events_attributes r0,objects_in_events o1, events_attributes r1 where
+         * o0.object_id=? and o0.class_id=? and r0.key=? and r0.event_id=o0.event_id and o1.class_id=? and r1.key=? and r1.event_id=o1.event_id and o1.object_id=r0.string_value
+         */
+        //TODO log_id!!
+        val query = buildString {
+            append("select distinct ")
+            for (i in path.indices) {
+                append("r")
+                append(i)
+                append(".string_value,")
+            }
+            deleteCharAt(length - 1)
+            append(" from ")
+            for (i in path.indices) {
+                append("objects_in_events o")
+                append(i)
+                append(", events_attributes r")
+                append(i)
+                append(",")
+            }
+            deleteCharAt(length - 1)
+            append(" where o0.object_id=?")
+            for (i in path.indices) {
+                append(" and o")
+                append(i)
+                append(".class_id=?")
+                append(" and r")
+                append(i)
+                append(".key=? and r")
+                append(i)
+                append(".event_id=o")
+                append(i)
+                append(".event_id")
+            }
+            for (i in 1 until path.size) {
+                append(" and o")
+                append(i)
+                append(".object_id=r")
+                append(i - 1)
+                append(".string_value")
+            }
+        }
         return prepareStatement(query).use { stmt ->
-            stmt.setString(1, logId.toString())
-            stmt.executeQuery().use { rs ->
-                val attributes = HashMap<Int, HashMap<String, String>>()
-                val classIds = HashMap<Int, Int>()
-                val objectIds = HashMap<Int, String>()
+            var ctr = 1
+            stmt.setString(ctr++, start.objectId)
+            stmt.setInt(ctr++, start.classId.value)
+            for (i in path.indices)
+                stmt.setString(ctr + 2 * i, "$DB_ATTR_NS:${path[i].attributeName}")
+            for (i in 0 until path.size - 1)
+                stmt.setInt(ctr + 2 * i + 1, path[i].targetClass.value)
+            return@use stmt.executeQuery().use { rs ->
+                val result = ArrayList<RemoteObjectID>()
                 while (rs.next()) {
-                    val eventId = rs.getInt(1)
-                    when (val key = rs.getString(2)) {
-                        Attribute.ORG_RESOURCE -> objectIds[eventId] = rs.getString(3)
-                        CLASSID_ATTR -> classIds[eventId] = rs.getInt(4)
-                        else -> attributes.computeIfAbsent(eventId) { HashMap() }[key.substring(3, key.length)] =
-                            rs.getString(3)
-                    }
-                }
-                val result = HashMap<RemoteObjectID, HashMap<String, String>>()
-                for (e in attributes) {
-                    val key = RemoteObjectID(objectIds[e.key]!!, EntityID(classIds[e.key]!!, Classes))
-                    result.computeIfAbsent(key) { HashMap() }.putAll(e.value)
+                    val objects =
+                        path.mapIndexed { idx, arc -> RemoteObjectID(rs.getString(idx + 1), arc.targetClass) }
+                    result.addAll(objects)
                 }
                 return@use result
             }
         }
     }
 
-    //TODO this is an abomination. It requries:
-    //TODO a) careful rethinking what exactly should be returned by this function, i.e., what constitutes a related object
-    //TODO b) moving it, at least to some extent, to the DB instead of first loading all the objects and filtering here
-    //TODO ideally this will boil down to yet another SQL query generator
+    //TODO I'd rather have a single query and a non-recursive function
+    private fun Connection.retrieveRelatedObjectsDownward(
+        roots: List<RemoteObjectID>,
+        graph: Graph<EntityID<Int>, ETLProcessStub.Arc>,
+        accept: Set<EntityID<Int>>
+    ): List<RemoteObjectID> {
+        //TODO log_id!!
+        /**
+         * select distinct o1.objectid from
+         * objects_in_events as o1, events_attributes r1, objects_in_events as o2
+         * where o1.event_id=r1.event_id and r1.key='db:eban' and r1.string_value=o2.objectid and o2.classid=10 and o1.classid=11;
+         */
+        assert(roots.isNotEmpty())
+        assert(roots.all { it.classId == roots[0].classId })
+        val relations = graph.incomingEdgesOf(roots[0].classId).filter { it.sourceClass in accept }
+        if (relations.isNotEmpty()) {
+            val query = buildString {
+                append(
+                    """select distinct child.object_id, child.class_id 
+                |from objects_in_events parent, events_attributes r, objects_in_events child 
+                |where child.event_id=r.event_id and r.string_value=parent.object_id and parent.class_id=? and parent.object_id=ANY(?) and (""".trimMargin()
+                )
+                for (r in relations)
+                    append("(r.key=? and child.class_id=?) or ")
+                delete(length - 3, length)
+                append(")")
+            }
+            val relevant = prepareStatement(query).use { stmt ->
+                var ctr = 1
+                stmt.setInt(ctr++, roots[0].classId.value)
+                stmt.setArray(ctr++, createArrayOf(JDBCType.VARCHAR.name, roots.mapToArray { it.objectId }))
+                for (r in relations) {
+                    stmt.setString(ctr++, "$DB_ATTR_NS:${r.attributeName}")
+                    stmt.setInt(ctr++, r.sourceClass.value)
+                }
+                return@use stmt.executeQuery().use { rs ->
+                    val result = ArrayList<RemoteObjectID>()
+                    while (rs.next()) {
+                        result.add(RemoteObjectID(rs.getString(1), EntityID(rs.getInt(2), Classes)))
+                    }
+                    return@use result
+                }
+            }
+            if (relevant.isNotEmpty()) {
+                for (sameClassObjects in relevant.groupBy { it.classId }.values)
+                    relevant.addAll(retrieveRelatedObjectsDownward(sameClassObjects, graph, accept))
+            }
+            return relevant
+        } else
+            return emptyList()
+    }
+
     fun ETLProcessStub.getRelatedObjects(
         start: RemoteObjectID,
         relevantClasses: Set<EntityID<Int>>,
         newAttributes: Map<String, String>
     ): Set<RemoteObjectID> {
-        val knownObjects = DBCache.get(dataStoreDBName).getConnection().use { connection ->
-            connection.retrieveKnownObjects(processId)
-        }
-        knownObjects.computeIfAbsent(start) { HashMap() }.putAll(newAttributes)
-        println(knownObjects)
-        val graph = getRelevanceGraph()
-        val queue = ArrayDeque<RemoteObjectID>()
-        queue.add(start)
-        val result = mutableSetOf(start)
-        // going up to find a path to the root - other objects of these classes are irrelevant, because either
-        // they are of converging classes (and thus are defined by the identifying classes), or are necessary for the graph to remain connected
-        // TODO revisit the former with DAGs, not trees
-        while (queue.isNotEmpty()) {
-            val obj = queue.poll()
-            for (arc in graph.outgoingEdgesOf(obj.classId)) {
-                if (arc.targetClass in relevantClasses) {
-                    val targetId = knownObjects[obj]?.get(arc.attributeName)
-                    checkNotNull(targetId)
-                    val target = RemoteObjectID(targetId, arc.targetClass)
-                    if (result.add(target)) {
-                        queue.add(target)
+        val result = HashSet<RemoteObjectID>()
+        result.addAll(DBCache.get(dataStoreDBName).getConnection().use { connection ->
+            val graph = getRelevanceGraph()
+            var current = start.classId
+            val path = ArrayList<ETLProcessStub.Arc>()
+            while (true) {
+                val arcs = graph.outgoingEdgesOf(current).filter { it.targetClass in relevantClasses }
+                if (arcs.isEmpty())
+                    break
+                check(arcs.size == 1) { "Currently we support only tree-shaped business perspectives. Generalizing to arbitrary DAGs is TODO" }
+                val arc = arcs.single()
+                path.add(arc)
+                current = arc.targetClass
+            }
+            val upward = if (path.isNotEmpty()) {
+                val related = connection.retrieveRelatedObjectsUpwards(start, path)
+                newAttributes[path[0].attributeName]?.let { parentId ->
+                    val parent = RemoteObjectID(parentId, path[0].targetClass)
+                    related.add(parent)
+                    if (path.size > 1) {
+                        val pathFromParent = path.subList(1, path.size)
+                        related.addAll(connection.retrieveRelatedObjectsUpwards(parent, pathFromParent))
                     }
                 }
+                related
+            } else emptyList()
+            if (upward.isEmpty())
+                return@use upward
+            //FIXME I am not sure this is right, as it ignores the distinction between identifying and converging classes
+            val accept = relevantClasses - upward.mapToSet { it.classId } - setOf(start.classId)
+            //In upward, every object is of different class, so it is sufficient to visit them one by one
+            val downward = upward.flatMap {
+                connection.retrieveRelatedObjectsDownward(listOf(it), getRelevanceGraph(), accept)
             }
-        }
-        assert(queue.isEmpty())
-        val stillRelevantClasses = relevantClasses - result.mapToSet { it.classId }
-        queue.addAll(result)
-        while (queue.isNotEmpty()) {
-            val obj = queue.poll()
-            for (arc in graph.incomingEdgesOf(obj.classId)) {
-                if (arc.sourceClass in stillRelevantClasses) {
-                    for (e in knownObjects.entries) {
-                        if (e.key.classId == arc.sourceClass && e.value[arc.attributeName] == obj.objectId) {
-                            if (result.add(e.key)) {
-                                queue.add(e.key)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        result.remove(start)
-        return result
+            return@use upward + downward
+        })
+        return result - setOf(start)
     }
 
     private fun isKnownObject(logId: UUID, obj: RemoteObjectID): Boolean =
@@ -173,15 +253,7 @@ class MetaModel(
     }
 
     private fun identifyingRelatedObjectsToPossibleCaseIdentifiers(objects: Collection<RemoteObjectID>) =
-        /*if (objects.isEmpty()) emptyList()
-        else*/ Lists.cartesianProduct(objects.groupBy { it.classId }.values.toList()).map { it.toSet() }
-
-//    private fun createOrUpdateTrace(identityId: UUID? = null, objects: Set<RemoteObjectID>): Trace =
-//        Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to (identityId ?: UUID.randomUUID())).apply {
-//            for (o in objects)
-//                set("$INTERNAL_NS:${o.classId.value}", o.objectId)
-//        })
-
+        Lists.cartesianProduct(objects.groupBy { it.classId }.values.toList()).map { it.toSet() }
 
     /**
      * Returns all the traces referring to all given objects (jointly - all objects in every trace).
@@ -278,7 +350,6 @@ class MetaModel(
         result.add(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to processId)))
         val remoteObject = RemoteObjectID(dbEvent.entityId, metaModelReader.getClassId(dbEvent.entityTable))
         val isKnown = isKnownObject(processId, remoteObject)
-//        updateObject(remoteObject, dbEvent)
         val relatedObjects = getRelatedObjects(remoteObject, relevantClasses, dbEvent.objectData)
         val (identifyingRelatedObjects, convergingRelatedObjects) = relatedObjects
             .partition { it.classId in identifyingClasses }
@@ -287,8 +358,6 @@ class MetaModel(
         assert(remoteObject !in convergingRelatedObjects)
         val event = dbEvent.toXES(remoteObject.classId)
         if (isKnown) {
-            // a preexisting object - append the event to all preexisting traces related to that object
-//            val relevantTraces = getTracesWithObject(remoteObject)
             val relevantTraces = retrievePastTraces(processId, setOf(remoteObject))
             for (traceId in relevantTraces) {
                 result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
@@ -301,8 +370,6 @@ class MetaModel(
                 //TODO the following line should be an assert I think
                 identifyingRelatedObjects.removeIf { it.classId == remoteObject.classId }
                 val possibleCIs = identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects)
-                println(possibleCIs)
-//                val existingTraceIds = possibleCIs.mapNotNull { ci -> getTrace(ci)?.let { it to ci } }
                 val existingTraceIds = ArrayList<UUID>()
                 for (ci in possibleCIs) {
                     if (ci.isNotEmpty()) {
@@ -313,9 +380,6 @@ class MetaModel(
                     }
                 }
                 if (existingTraceIds.isNotEmpty()) {
-                    //a new object suitable for completing a preexisting trace
-//                    for ((traceId, ci) in existingTraceIds) {
-//                        updateTrace(traceId, ci + setOf(remoteObject))
                     for (traceId in existingTraceIds) {
                         result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
                         result.add(event)
@@ -323,7 +387,6 @@ class MetaModel(
                 } else {
                     for (ci in possibleCIs) {
                         val traceId = UUID.randomUUID()
-//                        val traceId = createTrace(ci + setOf(remoteObject))
                         result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
                         if (ci.isNotEmpty())
                             result.addAll(retrievePastEvents(processId, ci))
@@ -331,10 +394,6 @@ class MetaModel(
                     }
                 }
             } else {
-//                val existingTraceIds =
-//                    identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects).mapNotNull {
-//                        getTrace(it)
-//                    }
                 val existingTraceIds =
                     identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects).flatMap { ci ->
                         retrievePastTraces(processId, ci)
@@ -345,13 +404,17 @@ class MetaModel(
                 for (traceId in existingTraceIds) {
                     result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
                     result.add(event)
-//                    addObjectToTrace(traceId, remoteObject)
                 }
             }
         }
         return result
     }
 
+    /**
+     * Saves data from change events to meta model data storage.
+     *
+     * @param databaseChangeEvents List of database events to process.
+     */
     override fun applyChange(databaseChangeEvents: List<DatabaseChangeEvent>) =
         loggedScope { logger ->
             for (dbEvent in databaseChangeEvents) {
@@ -370,193 +433,13 @@ class MetaModel(
         }
 
     /**
-     * Saves data from change events to meta model data storage.
-     *
-     * @param databaseChangeEvents List of database events to process.
-     */
-//    override fun applyChange(databaseChangeEvents: List<DatabaseChangeEvent>) =
-//        transaction(DBCache.get(dataStoreDBName).database) {
-//            loggedScope { logger ->
-//                val now = Instant.now().toEpochMilli()
-//                // Update timestamps of old object versions
-//                databaseChangeEvents.filter { it.eventType == DatabaseChangeApplier.EventType.Update || it.eventType == DatabaseChangeApplier.EventType.Delete }
-//                    .forEach { event ->
-//                        metaModelAppender.updateObjectVersionEndTimestamp(
-//                            event.entityId,
-//                            metaModelReader.getClassId(event.entityTable),
-//                            event.timestamp ?: now
-//                        )
-//                    }
-//                // Insert the new object versions
-//                databaseChangeEvents.forEach { event ->
-//                    val classId = metaModelReader.getClassId(event.entityTable)
-//                    val objectVersionFields = event.objectData.mapKeys { (attributeName) ->
-//                        metaModelReader.getAttributeId(
-//                            classId,
-//                            attributeName
-//                        )
-//                    }
-//
-//                    metaModelAppender.addObjectVersion(
-//                        event.entityId,
-//                        classId,
-//                        event.eventType,
-//                        event.timestamp,
-//                        objectVersionFields
-//                    )
-//                }
-//
-//
-//                databaseChangeEvents.forEach { event ->
-//                    for (etlProcess in etlProcessProvider.getProcessesForClass(event.entityTable)) {
-//                        // DO NOT call output.close(), as it would commit transaction and close connection. Instead, we are
-//                        // just attaching extra data to the exposed-managed database connection.
-//                        val output = AppendingDBXESOutputStream((connection as JdbcConnectionImpl).connection)
-//
-//                        output.write(
-//                            Log(
-//                                mutableAttributeMapOf(
-//                                    Attribute.LIFECYCLE_MODEL to "custom",
-//                                    Attribute.IDENTITY_ID to etlProcess
-//                                )
-//                            )
-//                        )
-//                        //TODO identify trace correctly - this may be tricky
-//                        // TODO znalezc najnowsze wersje obiektow powiazanych z event.entityId zgodnie z tym co jest w relations
-//                        //TODO przywolac zdarzenia, ktore sa relevant do tego trace, a byly juz w przeszlosci
-//                        //TODO chyba trzeba to wszystko opisac w issue i zaorac, w tym momencie szkoda czasu
-//
-////                        val traceIdQuery = getTraceId(event.entityTable, etlProcess)
-////
-////                        println(traceIdQuery)
-////
-////                        val traceIds =
-////                            (connection as JdbcConnectionImpl).connection.prepareStatement(traceIdQuery).use { stmt ->
-////                                stmt.setString(1, event.entityId)
-////                                return@use stmt.executeQuery().use { rs ->
-////                                    val nColumns = rs.metaData.columnCount
-////                                    assert(nColumns % 2 == 0)
-////                                    val result = ArrayList<Set<Pair<Int, Int>>>()
-////                                    while (rs.next()) {
-////                                        result.add(
-////                                            (0 until nColumns / 2).mapToSet { rs.getInt(2 * it + 1) to rs.getInt(2 * it + 1 + 1) })
-////                                    }
-////                                    return@use result
-////                                }
-////                            }
-////
-////                        println("Event: ${event.entityId}/${event.entityTable}")
-////                        println("Trace ID: $traceIds")
-////
-////                        val event = Event(
-////                            mutableAttributeMapOf(
-////                                Attribute.ORG_RESOURCE to event.entityId,
-////                                Attribute.CONCEPT_NAME to "${event.eventType.name} ${event.entityTable}",
-////                                Attribute.LIFECYCLE_TRANSITION to event.eventType.name,
-////                                "Activity" to event.eventType.name,
-////                                Attribute.TIME_TIMESTAMP to event.timestamp?.let(Instant::ofEpochMilli)
-////                            ).apply {
-////                                event.objectData.forEach { (k, v) -> set("$DB_ATTR_NS:$k", v) }
-////                            }
-////                        )
-////
-////                        for (traceId in traceIds) {
-////                            output.write(Trace(mutableAttributeMapOf(
-////                                Attribute.IDENTITY_ID to ci2traceId.computeIfAbsent(traceId) {
-////                                    println("Creating new trace")
-////                                    UUID.randomUUID()
-////                                }
-////                            )))
-////                            output.write(event)
-////                        }
-////                        output.flush()
-//                    }
-//                }
-//
-//                logger.info("Successfully handled ${databaseChangeEvents.count()} DB change events")
-//            }
-//        }
-
-//    private fun getTraceId(entityTable: String, etlProcessId: UUID): String {
-//        val relations = etlProcessProvider.getRelationsForProcess(etlProcessId)
-//        val classes = relations.fold(HashSet<Int>()) { list, relation ->
-//            list.add(relation.first.value)
-//            list.add(relation.second.value)
-//            list
-//        }
-//        val entityClassId = metaModelReader.getClassId(entityTable)
-//        // TODO wbrew artykulowi tu chyba powinny byc same identifying classes
-////        val identifyingClasses = etlProcessProvider.getIdentifyingClasses(etlProcessId) //- setOf(entityClassId)
-//        return buildString {
-//            append("SELECT DISTINCT ")
-//            classes.forEach {
-//                append("c")
-//                append(it)
-//                append(".class_id,")
-//                append("c")
-//                append(it)
-//                append(".object_id,")
-//            }
-//            deleteCharAt(length - 1)
-//            append(" FROM ")
-//            classes.forEach {
-//                append("object_versions as c")
-//                append(it)
-//                append(",")
-//            }
-//            relations.forEach {
-//                append("relations as r_")
-//                append(it.first.value)
-//                append("_")
-//                append(it.second.value)
-//                append(",")
-//            }
-//            deleteCharAt(length - 1)
-//            append(" WHERE ")
-//            classes.forEach {
-//                append("c")
-//                append(it)
-//                append(".class_id = ")
-//                append(it)
-//                append(" AND ")
-//            }
-//            relations.forEach {
-//                val r = "r_${it.first.value}_${it.second.value}"
-//                append(r)
-//                append(".source_object_version_id = ")
-//                append("c")
-//                append(it.first.value)
-//                append(".id AND ")
-//                append(r)
-//                append(".target_object_version_id = ")
-//                append("c")
-//                append(it.second.value)
-//                append(".id AND ")
-//            }
-//            append("c")
-//            append(entityClassId)
-//            //TODO sortowac po czasie nie po ID!!
-//            append(".id = (SELECT MAX(c.id) FROM object_versions as c WHERE c.object_id = ? AND c.class_id = ${entityClassId.value})")
-//        }
-//    }
-
-    /**
      * Returns a collection of traces built according to the provided business perspective definition. Each trace is a set
      * of IDs for the table [processm.dbmodels.models.ObjectVersions]
      *
      * @param businessPerspectiveDefinition An object containing business perspective details.
      */
     fun buildTracesForBusinessPerspective(businessPerspectiveDefinition: DAGBusinessPerspectiveDefinition): Sequence<Set<Int>> =
-        sequence {
-            val query = businessPerspectiveDefinition.generateSQLquery()
-            DBCache.get(dataStoreDBName).getConnection().use { connection ->
-                connection.prepareStatement(query).executeQuery().use { rs ->
-                    while (rs.next()) {
-                        yield((rs.getArray(1).array as Array<Int>).toSet())
-                    }
-                }
-            }
-        }
+        error("This function is no longer relevant and is to be removed")
 
     companion object {
         val DB_ATTR_NS = "db"
