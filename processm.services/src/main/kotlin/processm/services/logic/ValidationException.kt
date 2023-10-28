@@ -27,7 +27,6 @@ inline fun Boolean.validate(
         returns(true)
     }
 
-    @Suppress("KotlinConstantConditions")
     return this || throw ValidationException(reason, lazyMessage().toString())
 }
 

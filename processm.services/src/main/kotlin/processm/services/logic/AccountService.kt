@@ -5,6 +5,7 @@ import jakarta.mail.Message
 import jakarta.mail.Session
 import jakarta.mail.internet.MimeMessage
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import processm.core.communication.Producer
 import processm.core.communication.email.EMAIL_ID
 import processm.core.communication.email.EMAIL_TOPIC

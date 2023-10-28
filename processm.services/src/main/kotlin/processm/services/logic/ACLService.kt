@@ -1,6 +1,7 @@
 package processm.services.logic
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import processm.core.models.metadata.URN
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
