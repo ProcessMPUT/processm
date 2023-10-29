@@ -113,56 +113,108 @@ class MetaModel(
         }
     }
 
-    //TODO I'd rather have a single query and a non-recursive function
     private fun Connection.retrieveRelatedObjectsDownward(
+        logId: UUID,
         roots: List<RemoteObjectID>,
         graph: Graph<EntityID<Int>, ETLProcessStub.Arc>,
         accept: Set<EntityID<Int>>
     ): List<RemoteObjectID> {
-        //TODO log_id!!
-        /**
-         * select distinct o1.objectid from
-         * objects_in_events as o1, events_attributes r1, objects_in_events as o2
-         * where o1.event_id=r1.event_id and r1.key='db:eban' and r1.string_value=o2.objectid and o2.classid=10 and o1.classid=11;
-         */
         assert(roots.isNotEmpty())
-        assert(roots.all { it.classId == roots[0].classId })
-        val relations = graph.incomingEdgesOf(roots[0].classId).filter { it.sourceClass in accept }
-        if (relations.isNotEmpty()) {
-            val query = buildString {
-                append(
-                    """select distinct child.object_id, child.class_id 
-                |from objects_in_events parent, events_attributes r, objects_in_events child 
-                |where child.event_id=r.event_id and r.string_value=parent.object_id and parent.class_id=? and parent.object_id=ANY(?) and (""".trimMargin()
-                )
-                for (r in relations)
-                    append("(r.key=? and child.class_id=?) or ")
-                delete(length - 3, length)
-                append(")")
-            }
-            val relevant = prepareStatement(query).use { stmt ->
-                var ctr = 1
-                stmt.setInt(ctr++, roots[0].classId.value)
-                stmt.setArray(ctr++, createArrayOf(JDBCType.VARCHAR.name, roots.mapToArray { it.objectId }))
-                for (r in relations) {
-                    stmt.setString(ctr++, "$DB_ATTR_NS:${r.attributeName}")
-                    stmt.setInt(ctr++, r.sourceClass.value)
-                }
-                return@use stmt.executeQuery().use { rs ->
-                    val result = ArrayList<RemoteObjectID>()
-                    while (rs.next()) {
-                        result.add(RemoteObjectID(rs.getString(1), EntityID(rs.getInt(2), Classes)))
+        val variables = ArrayList<Any>()
+        var isValid = false
+        val query = buildString {
+            append(
+                """
+                with L1 as (select distinct parent.object_id as parent_object_id, parent.class_id as parent_class_id,
+                child.object_id, child.class_id
+                from objects_in_events parent, events_attributes r, objects_in_events child, events, traces, logs
+                where child.event_id = r.event_id and r.string_value = parent.object_id and
+                r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
+                logs."identity:id"=?::uuid and (
+            """
+            )
+            variables.add(logId)
+            var nextTier = HashSet<ETLProcessStub.Arc>()
+            for ((classId, sameClassRoots) in roots.groupBy { it.classId }) {
+                val relations = graph.incomingEdgesOf(classId).filter { it.sourceClass in accept }
+                if (relations.isNotEmpty()) {
+                    nextTier.addAll(relations)
+                    append("(parent.class_id=? and parent.object_id=ANY(?) and (")
+                    variables.add(classId.value)
+                    variables.add(sameClassRoots.mapToArray { it.objectId })
+                    for (r in relations) {
+                        append("(r.key=? and child.class_id=?) or ")
+                        variables.add("$DB_ATTR_NS:${r.attributeName}")
+                        variables.add(r.sourceClass.value)
+                        isValid = true
                     }
-                    return@use result
+                    delete(length - 3, length)
+                    append(")) or ")
                 }
             }
-            if (relevant.isNotEmpty()) {
-                for (sameClassObjects in relevant.groupBy { it.classId }.values)
-                    relevant.addAll(retrieveRelatedObjectsDownward(sameClassObjects, graph, accept))
+            delete(length - 3, length)
+            append("))")
+            var tier = 2
+            var currentTier = HashSet<ETLProcessStub.Arc>()
+            while (nextTier.isNotEmpty()) {
+                currentTier = nextTier.apply { nextTier = currentTier }
+                assert(currentTier.isNotEmpty())
+                nextTier.clear()
+                append(", L")
+                append(tier)
+                append(
+                    """ as (select distinct parent.object_id as parent_object_id, parent.class_id as parent_class_id, 
+                    child.object_id, child.class_id from L"""
+                )
+                append(tier - 1)
+                tier++
+                append(
+                    """ parent, events_attributes r, objects_in_events child, events, traces, logs
+                        where child.event_id = r.event_id and r.string_value = parent.object_id and
+                        r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
+                        logs."identity:id"=?::uuid and ("""
+                )
+                variables.add(logId)
+                for (r in currentTier) {
+                    append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
+                    variables.add("$DB_ATTR_NS:${r.attributeName}")
+                    variables.add(r.sourceClass.value)
+                    variables.add(r.targetClass.value)
+                    nextTier.addAll(graph.incomingEdgesOf(r.sourceClass).filter { it.sourceClass in accept })
+                }
+                delete(length - 3, length)
+                append("))")
             }
-            return relevant
-        } else
+            append(" select distinct object_id, class_id from (")
+            for (t in 1 until tier - 1) {
+                append("select * from L")
+                append(t)
+                append(" union ")
+            }
+            append("select * from L")
+            append(tier - 1)
+            append(") as x")
+        }
+        if (!isValid)
             return emptyList()
+        return prepareStatement(query).use { stmt ->
+            for ((i, v) in variables.withIndex()) {
+                when (v) {
+                    is String -> stmt.setString(i + 1, v)
+                    is Int -> stmt.setInt(i + 1, v)
+                    is Array<*> -> stmt.setArray(i + 1, createArrayOf(JDBCType.VARCHAR.name, v))
+                    is UUID -> stmt.setString(i + 1, v.toString())
+                    else -> TODO("Unsupported type: ${v::class}")
+                }
+            }
+            return@use stmt.executeQuery().use { rs ->
+                val result = ArrayList<RemoteObjectID>()
+                while (rs.next()) {
+                    result.add(RemoteObjectID(rs.getString(1), EntityID(rs.getInt(2), Classes)))
+                }
+                return@use result
+            }
+        }
     }
 
     fun ETLProcessStub.getRelatedObjects(
@@ -200,10 +252,7 @@ class MetaModel(
                 return@use upward
             //FIXME I am not sure this is right, as it ignores the distinction between identifying and converging classes
             val accept = relevantClasses - upward.mapToSet { it.classId } - setOf(start.classId)
-            //In upward, every object is of different class, so it is sufficient to visit them one by one
-            val downward = upward.flatMap {
-                connection.retrieveRelatedObjectsDownward(listOf(it), getRelevanceGraph(), accept)
-            }
+            val downward = connection.retrieveRelatedObjectsDownward(processId, upward, getRelevanceGraph(), accept)
             return@use upward + downward
         })
         return result - setOf(start)
