@@ -258,13 +258,6 @@ class MetaModel(
         return result - setOf(start)
     }
 
-    private fun isKnownObject(logId: UUID, obj: RemoteObjectID): Boolean =
-        DBCache.get(dataStoreDBName).getConnection().use { connection ->
-            connection.queryObjectsInTrace(logId, listOf(obj), "1") { rs ->
-                return@queryObjectsInTrace rs.next()
-            }
-        }
-
     private fun DatabaseChangeEvent.toXES(classId: EntityID<Int>) = Event(
         mutableAttributeMapOf(
             Attribute.IDENTITY_ID to UUID.randomUUID(),
@@ -398,7 +391,7 @@ class MetaModel(
         val result = ArrayList<XESComponent>()
         result.add(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to processId)))
         val remoteObject = RemoteObjectID(dbEvent.entityId, metaModelReader.getClassId(dbEvent.entityTable))
-        val isKnown = isKnownObject(processId, remoteObject)
+        val relevantTraces = retrievePastTraces(processId, setOf(remoteObject))
         val relatedObjects = getRelatedObjects(remoteObject, relevantClasses, dbEvent.objectData)
         val (identifyingRelatedObjects, convergingRelatedObjects) = relatedObjects
             .partition { it.classId in identifyingClasses }
@@ -406,8 +399,10 @@ class MetaModel(
         assert(remoteObject !in identifyingRelatedObjects)
         assert(remoteObject !in convergingRelatedObjects)
         val event = dbEvent.toXES(remoteObject.classId)
-        if (isKnown) {
-            val relevantTraces = retrievePastTraces(processId, setOf(remoteObject))
+        if (relevantTraces.isNotEmpty()) {
+            //This is an update to a preexisting object
+            //It is not sufficient to rely on the event type in dbEvent, as what is a new object for the log is not
+            //necessarily a new object for the replica
             for (traceId in relevantTraces) {
                 result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
                 result.add(event)
