@@ -9,7 +9,7 @@ data class RemoteObjectID(val objectId: String, val classId: EntityID<Int>)
 interface ETLProcessStub {
     val processId: UUID
     val identifyingClasses: Set<EntityID<Int>>
-    val relevantClasses: Set<EntityID<Int>>
+//    val relevantClasses: Set<EntityID<Int>>
 
 //    fun getTrace(caseIdentifier: Set<RemoteObjectID>): UUID?
 //
@@ -25,6 +25,9 @@ interface ETLProcessStub {
 
     data class Arc(val sourceClass: EntityID<Int>, val attributeName: String, val targetClass: EntityID<Int>)
 
+    /**
+     * Graph related to this process - not the complete metamodel!
+     */
     fun getRelevanceGraph(): Graph<EntityID<Int>, Arc>
 }
 

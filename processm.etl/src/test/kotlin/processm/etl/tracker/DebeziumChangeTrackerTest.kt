@@ -328,8 +328,8 @@ class DebeziumChangeTrackerTest {
                         get() = etlProcessId
                     override val identifyingClasses: Set<EntityID<Int>>
                         get() = classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }
-                    override val relevantClasses: Set<EntityID<Int>>
-                        get() = classes.keys
+//                    override val relevantClasses: Set<EntityID<Int>>
+//                        get() = classes.keys
 
 //                    override fun getTrace(caseIdentifier: Set<RemoteObjectID>): UUID? = traces[caseIdentifier]
 //

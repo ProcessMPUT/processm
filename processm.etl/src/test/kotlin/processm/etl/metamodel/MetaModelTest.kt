@@ -143,8 +143,6 @@ class MetaModelTest {
                 override val processId: UUID
                     get() = etlProcessId
                 override val identifyingClasses: Set<EntityID<Int>> = identifyingClasses
-                override val relevantClasses: Set<EntityID<Int>>
-                    get() = classes.keys
 
                 override fun getRelevanceGraph(): Graph<EntityID<Int>, ETLProcessStub.Arc> {
                     val result =

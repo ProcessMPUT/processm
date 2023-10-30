@@ -42,8 +42,7 @@ class MetaModel(
     private fun Connection.retrieveRelatedObjectsUpwards(
         logId: UUID,
         leafs: List<RemoteObjectID>,
-        graph: Graph<EntityID<Int>, ETLProcessStub.Arc>,
-        accept: Set<EntityID<Int>>
+        graph: Graph<EntityID<Int>, ETLProcessStub.Arc>
     ): List<RemoteObjectID> {
         assert(leafs.isNotEmpty())
         val variables = ArrayList<Any>()
@@ -61,7 +60,7 @@ class MetaModel(
             variables.add(logId)
             var nextTier = HashSet<EntityID<Int>>()
             for ((classId, sameClassLeafs) in leafs.groupBy { it.classId }) {
-                val relations = graph.outgoingEdgesOf(classId).filter { it.targetClass in accept }
+                val relations = graph.outgoingEdgesOf(classId)
                 if (relations.isNotEmpty()) {
                     append("(child.class_id=? and child.object_id=ANY(?) and (")
                     variables.add(classId.value)
@@ -87,7 +86,7 @@ class MetaModel(
                 currentTier = nextTier.apply { nextTier = currentTier }
                 assert(currentTier.isNotEmpty())
                 val relations = currentTier.flatMapTo(HashSet()) { childClassId ->
-                    graph.outgoingEdgesOf(childClassId).filter { it.targetClass in accept }
+                    graph.outgoingEdgesOf(childClassId)
                 }
                 if (relations.isEmpty())
                     break
@@ -150,7 +149,7 @@ class MetaModel(
         logId: UUID,
         roots: List<RemoteObjectID>,
         graph: Graph<EntityID<Int>, ETLProcessStub.Arc>,
-        accept: Set<EntityID<Int>>
+        reject: Set<EntityID<Int>>
     ): List<RemoteObjectID> {
         assert(roots.isNotEmpty())
         val variables = ArrayList<Any>()
@@ -169,7 +168,7 @@ class MetaModel(
             variables.add(logId)
             var nextTier = HashSet<ETLProcessStub.Arc>()
             for ((classId, sameClassRoots) in roots.groupBy { it.classId }) {
-                val relations = graph.incomingEdgesOf(classId).filter { it.sourceClass in accept }
+                val relations = graph.incomingEdgesOf(classId).filter { it.sourceClass !in reject }
                 if (relations.isNotEmpty()) {
                     nextTier.addAll(relations)
                     append("(parent.class_id=? and parent.object_id=ANY(?) and (")
@@ -213,7 +212,7 @@ class MetaModel(
                     variables.add("$DB_ATTR_NS:${r.attributeName}")
                     variables.add(r.sourceClass.value)
                     variables.add(r.targetClass.value)
-                    nextTier.addAll(graph.incomingEdgesOf(r.sourceClass).filter { it.sourceClass in accept })
+                    nextTier.addAll(graph.incomingEdgesOf(r.sourceClass).filter { it.sourceClass !in reject })
                 }
                 delete(length - 3, length)
                 append("))")
@@ -252,7 +251,6 @@ class MetaModel(
 
     private fun ETLProcessStub.getRelatedObjects(
         start: RemoteObjectID,
-        relevantClasses: Set<EntityID<Int>>,
         newAttributes: Map<String, String>
     ): Set<RemoteObjectID> {
         val result = HashSet<RemoteObjectID>()
@@ -261,22 +259,20 @@ class MetaModel(
         graph
             .outgoingEdgesOf(start.classId)
             .mapNotNullTo(leafs) { arc ->
-                if (arc.targetClass in relevantClasses) {
-                    newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
-                } else null
+                newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
             }
         result.addAll(DBCache.get(dataStoreDBName).getConnection().use { connection ->
             val upward = connection.retrieveRelatedObjectsUpwards(
                 processId,
                 leafs,
-                graph,
-                relevantClasses
+                graph
             ) + leafs - setOf(start)
             if (upward.isEmpty())
                 return@use upward
             //FIXME I am not sure this is right, as it ignores the distinction between identifying and converging classes
-            val accept = relevantClasses - upward.mapToSet { it.classId } - setOf(start.classId)
-            val downward = connection.retrieveRelatedObjectsDownward(processId, upward, getRelevanceGraph(), accept)
+            val reject = mutableSetOf(start.classId)
+            upward.mapTo(reject) { it.classId }
+            val downward = connection.retrieveRelatedObjectsDownward(processId, upward, graph, reject)
             return@use upward + downward
         })
         return result - setOf(start)
@@ -416,7 +412,7 @@ class MetaModel(
         result.add(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to processId)))
         val remoteObject = RemoteObjectID(dbEvent.entityId, metaModelReader.getClassId(dbEvent.entityTable))
         val relevantTraces = retrievePastTraces(processId, setOf(remoteObject))
-        val relatedObjects = getRelatedObjects(remoteObject, relevantClasses, dbEvent.objectData)
+        val relatedObjects = getRelatedObjects(remoteObject, dbEvent.objectData)
         val (identifyingRelatedObjects, convergingRelatedObjects) = relatedObjects
             .partition { it.classId in identifyingClasses }
             .let { it.first.toMutableSet() to it.second.toSet() }  //TODO that is inefficient
