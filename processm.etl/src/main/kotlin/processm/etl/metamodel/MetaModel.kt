@@ -40,73 +40,106 @@ class MetaModel(
 ) : DatabaseChangeApplier {
 
     private fun Connection.retrieveRelatedObjectsUpwards(
-        start: RemoteObjectID,
-        path: List<ETLProcessStub.Arc>
-    ): ArrayList<RemoteObjectID> {
-        /**
-         * select distinct r1.string_value as ekko, r2.string_value as eban
-         * from objects_in_events as o1, events_attributes r1,
-         * objects_in_events as o2, events_attributes r2
-         * where
-         * o1.objectId='d1' and o1.classId=12 and o1.event_id=r1.event_id and r1.key='db:ekko'
-         * and o2.objectId=r1.string_value and o2.classId=11 and r2.event_id=o2.event_id and r2.key='db:eban';
-         *
-         * select distinct r0.string_value,r1.string_value from objects_in_events o0, events_attributes r0,objects_in_events o1, events_attributes r1 where
-         * o0.object_id=? and o0.class_id=? and r0.key=? and r0.event_id=o0.event_id and o1.class_id=? and r1.key=? and r1.event_id=o1.event_id and o1.object_id=r0.string_value
-         */
-        //TODO log_id!!
+        logId: UUID,
+        leafs: List<RemoteObjectID>,
+        graph: Graph<EntityID<Int>, ETLProcessStub.Arc>,
+        accept: Set<EntityID<Int>>
+    ): List<RemoteObjectID> {
+        assert(leafs.isNotEmpty())
+        val variables = ArrayList<Any>()
+        var isValid = false
         val query = buildString {
-            append("select distinct ")
-            for (i in path.indices) {
-                append("r")
-                append(i)
-                append(".string_value,")
+            append(
+                """
+                with L1 as (select distinct parent.event_id, parent.object_id, parent.class_id
+                from objects_in_events parent, events_attributes r, objects_in_events child, events, traces, logs
+                where child.event_id = r.event_id and r.string_value = parent.object_id and
+                r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
+                logs."identity:id"=?::uuid and (
+            """
+            )
+            variables.add(logId)
+            var nextTier = HashSet<EntityID<Int>>()
+            for ((classId, sameClassLeafs) in leafs.groupBy { it.classId }) {
+                val relations = graph.outgoingEdgesOf(classId).filter { it.targetClass in accept }
+                if (relations.isNotEmpty()) {
+                    append("(child.class_id=? and child.object_id=ANY(?) and (")
+                    variables.add(classId.value)
+                    variables.add(sameClassLeafs.mapToArray { it.objectId })
+                    for (r in relations) {
+                        nextTier.add(r.targetClass)
+                        append("(r.key=? and parent.class_id=?) or ")
+                        variables.add("$DB_ATTR_NS:${r.attributeName}")
+                        variables.add(r.targetClass.value)
+                        isValid = true
+                    }
+                    delete(length - 3, length)
+                    append(")) or ")
+                }
             }
-            deleteCharAt(length - 1)
-            append(" from ")
-            for (i in path.indices) {
-                append("objects_in_events o")
-                append(i)
-                append(", events_attributes r")
-                append(i)
-                append(",")
+            if (!isValid)
+                return emptyList()
+            delete(length - 3, length)
+            append("))")
+            var tier = 2
+            var currentTier = HashSet<EntityID<Int>>()
+            while (nextTier.isNotEmpty()) {
+                currentTier = nextTier.apply { nextTier = currentTier }
+                assert(currentTier.isNotEmpty())
+                val relations = currentTier.flatMapTo(HashSet()) { childClassId ->
+                    graph.outgoingEdgesOf(childClassId).filter { it.targetClass in accept }
+                }
+                if (relations.isEmpty())
+                    break
+                nextTier.clear()
+                append(", L")
+                append(tier)
+                append(
+                    """ as (select distinct parent.event_id, parent.object_id, parent.class_id from L"""
+                )
+                append(tier - 1)
+                tier++
+                append(
+                    """ child, events_attributes r, objects_in_events parent, events, traces, logs
+                        where child.event_id = r.event_id and r.string_value = parent.object_id and
+                        r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
+                        logs."identity:id"=?::uuid and ("""
+                )
+                variables.add(logId)
+                for (r in relations) {
+                    append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
+                    variables.add("$DB_ATTR_NS:${r.attributeName}")
+                    variables.add(r.sourceClass.value)
+                    variables.add(r.targetClass.value)
+                    nextTier.add(r.targetClass)
+                }
+                delete(length - 3, length)
+                append("))")
             }
-            deleteCharAt(length - 1)
-            append(" where o0.object_id=?")
-            for (i in path.indices) {
-                append(" and o")
-                append(i)
-                append(".class_id=?")
-                append(" and r")
-                append(i)
-                append(".key=? and r")
-                append(i)
-                append(".event_id=o")
-                append(i)
-                append(".event_id")
+            append(" select distinct object_id, class_id from (")
+            for (t in 1 until tier - 1) {
+                append("select * from L")
+                append(t)
+                append(" union ")
             }
-            for (i in 1 until path.size) {
-                append(" and o")
-                append(i)
-                append(".object_id=r")
-                append(i - 1)
-                append(".string_value")
-            }
+            append("select * from L")
+            append(tier - 1)
+            append(") as x")
         }
         return prepareStatement(query).use { stmt ->
-            var ctr = 1
-            stmt.setString(ctr++, start.objectId)
-            stmt.setInt(ctr++, start.classId.value)
-            for (i in path.indices)
-                stmt.setString(ctr + 2 * i, "$DB_ATTR_NS:${path[i].attributeName}")
-            for (i in 0 until path.size - 1)
-                stmt.setInt(ctr + 2 * i + 1, path[i].targetClass.value)
+            for ((i, v) in variables.withIndex()) {
+                when (v) {
+                    is String -> stmt.setString(i + 1, v)
+                    is Int -> stmt.setInt(i + 1, v)
+                    is Array<*> -> stmt.setArray(i + 1, createArrayOf(JDBCType.VARCHAR.name, v))
+                    is UUID -> stmt.setString(i + 1, v.toString())
+                    else -> TODO("Unsupported type: ${v::class}")
+                }
+            }
             return@use stmt.executeQuery().use { rs ->
                 val result = ArrayList<RemoteObjectID>()
                 while (rs.next()) {
-                    val objects =
-                        path.mapIndexed { idx, arc -> RemoteObjectID(rs.getString(idx + 1), arc.targetClass) }
-                    result.addAll(objects)
+                    result.add(RemoteObjectID(rs.getString(1), EntityID(rs.getInt(2), Classes)))
                 }
                 return@use result
             }
@@ -217,37 +250,28 @@ class MetaModel(
         }
     }
 
-    fun ETLProcessStub.getRelatedObjects(
+    private fun ETLProcessStub.getRelatedObjects(
         start: RemoteObjectID,
         relevantClasses: Set<EntityID<Int>>,
         newAttributes: Map<String, String>
     ): Set<RemoteObjectID> {
         val result = HashSet<RemoteObjectID>()
-        result.addAll(DBCache.get(dataStoreDBName).getConnection().use { connection ->
-            val graph = getRelevanceGraph()
-            var current = start.classId
-            val path = ArrayList<ETLProcessStub.Arc>()
-            while (true) {
-                val arcs = graph.outgoingEdgesOf(current).filter { it.targetClass in relevantClasses }
-                if (arcs.isEmpty())
-                    break
-                check(arcs.size == 1) { "Currently we support only tree-shaped business perspectives. Generalizing to arbitrary DAGs is TODO" }
-                val arc = arcs.single()
-                path.add(arc)
-                current = arc.targetClass
+        val graph = getRelevanceGraph()
+        val leafs = mutableListOf(start)
+        graph
+            .outgoingEdgesOf(start.classId)
+            .mapNotNullTo(leafs) { arc ->
+                if (arc.targetClass in relevantClasses) {
+                    newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
+                } else null
             }
-            val upward = if (path.isNotEmpty()) {
-                val related = connection.retrieveRelatedObjectsUpwards(start, path)
-                newAttributes[path[0].attributeName]?.let { parentId ->
-                    val parent = RemoteObjectID(parentId, path[0].targetClass)
-                    related.add(parent)
-                    if (path.size > 1) {
-                        val pathFromParent = path.subList(1, path.size)
-                        related.addAll(connection.retrieveRelatedObjectsUpwards(parent, pathFromParent))
-                    }
-                }
-                related
-            } else emptyList()
+        result.addAll(DBCache.get(dataStoreDBName).getConnection().use { connection ->
+            val upward = connection.retrieveRelatedObjectsUpwards(
+                processId,
+                leafs,
+                graph,
+                relevantClasses
+            ) + leafs - setOf(start)
             if (upward.isEmpty())
                 return@use upward
             //FIXME I am not sure this is right, as it ignores the distinction between identifying and converging classes
