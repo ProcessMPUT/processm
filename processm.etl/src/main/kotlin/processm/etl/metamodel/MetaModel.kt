@@ -10,7 +10,6 @@ import org.jgrapht.Graph
 import org.postgresql.util.PGobject
 import processm.core.Brand
 import processm.core.helpers.mapToArray
-import processm.core.helpers.mapToSet
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.Attribute
@@ -28,6 +27,7 @@ import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
 import java.sql.Connection
 import java.sql.JDBCType
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.Instant
 import java.util.*
@@ -39,15 +39,55 @@ class MetaModel(
     private val etlProcessProvider: ETLProcessProvider
 ) : DatabaseChangeApplier {
 
+    class SQLQueryBuilder {
+        val queryBuilder = StringBuilder()
+        val variables = ArrayList<Any>()
+
+        val length: Int
+            get() = queryBuilder.length
+
+        fun <T> append(argument: T) {
+            queryBuilder.append(argument)
+        }
+
+        fun deleteCharAt(index: Int) {
+            queryBuilder.deleteCharAt(index)
+        }
+
+        fun delete(start: Int, end: Int) {
+            queryBuilder.delete(start, end)
+        }
+
+        fun <T : Any> bind(argument: T) {
+            variables.add(argument)
+        }
+    }
+
+    private inline fun buildSQLQuery(block: SQLQueryBuilder.() -> Unit): SQLQueryBuilder =
+        SQLQueryBuilder().apply(block)
+
+    private fun Connection.prepareStatement(query: SQLQueryBuilder): PreparedStatement {
+        val stmt = prepareStatement(query.queryBuilder.toString())
+        for ((i, v) in query.variables.withIndex()) {
+            when (v) {
+                is String -> stmt.setString(i + 1, v)
+                is Int -> stmt.setInt(i + 1, v)
+                is Array<*> -> stmt.setArray(i + 1, createArrayOf(JDBCType.VARCHAR.name, v))
+                is UUID -> stmt.setString(i + 1, v.toString())
+                else -> TODO("Unsupported type: ${v::class}")
+            }
+        }
+        return stmt
+    }
+
     private fun Connection.retrieveRelatedObjectsUpwards(
         logId: UUID,
         leafs: List<RemoteObjectID>,
         graph: Graph<EntityID<Int>, ETLProcessStub.Arc>
     ): List<RemoteObjectID> {
         assert(leafs.isNotEmpty())
-        val variables = ArrayList<Any>()
         var isValid = false
-        val query = buildString {
+        val query = buildSQLQuery {
             append(
                 """
                 with L1 as (select distinct parent.event_id, parent.object_id, parent.class_id
@@ -57,19 +97,19 @@ class MetaModel(
                 logs."identity:id"=?::uuid and (
             """
             )
-            variables.add(logId)
+            bind(logId)
             var nextTier = HashSet<EntityID<Int>>()
             for ((classId, sameClassLeafs) in leafs.groupBy { it.classId }) {
                 val relations = graph.outgoingEdgesOf(classId)
                 if (relations.isNotEmpty()) {
                     append("(child.class_id=? and child.object_id=ANY(?) and (")
-                    variables.add(classId.value)
-                    variables.add(sameClassLeafs.mapToArray { it.objectId })
+                    bind(classId.value)
+                    bind(sameClassLeafs.mapToArray { it.objectId })
                     for (r in relations) {
                         nextTier.add(r.targetClass)
                         append("(r.key=? and parent.class_id=?) or ")
-                        variables.add("$DB_ATTR_NS:${r.attributeName}")
-                        variables.add(r.targetClass.value)
+                        bind("$DB_ATTR_NS:${r.attributeName}")
+                        bind(r.targetClass.value)
                         isValid = true
                     }
                     delete(length - 3, length)
@@ -104,12 +144,12 @@ class MetaModel(
                         r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
                         logs."identity:id"=?::uuid and ("""
                 )
-                variables.add(logId)
+                bind(logId)
                 for (r in relations) {
                     append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
-                    variables.add("$DB_ATTR_NS:${r.attributeName}")
-                    variables.add(r.sourceClass.value)
-                    variables.add(r.targetClass.value)
+                    bind("$DB_ATTR_NS:${r.attributeName}")
+                    bind(r.sourceClass.value)
+                    bind(r.targetClass.value)
                     nextTier.add(r.targetClass)
                 }
                 delete(length - 3, length)
@@ -126,15 +166,6 @@ class MetaModel(
             append(") as x")
         }
         return prepareStatement(query).use { stmt ->
-            for ((i, v) in variables.withIndex()) {
-                when (v) {
-                    is String -> stmt.setString(i + 1, v)
-                    is Int -> stmt.setInt(i + 1, v)
-                    is Array<*> -> stmt.setArray(i + 1, createArrayOf(JDBCType.VARCHAR.name, v))
-                    is UUID -> stmt.setString(i + 1, v.toString())
-                    else -> TODO("Unsupported type: ${v::class}")
-                }
-            }
             return@use stmt.executeQuery().use { rs ->
                 val result = ArrayList<RemoteObjectID>()
                 while (rs.next()) {
@@ -152,9 +183,8 @@ class MetaModel(
         reject: Set<EntityID<Int>>
     ): List<RemoteObjectID> {
         assert(roots.isNotEmpty())
-        val variables = ArrayList<Any>()
         var isValid = false
-        val query = buildString {
+        val query = buildSQLQuery {
             append(
                 """
                 with L1 as (select distinct parent.object_id as parent_object_id, parent.class_id as parent_class_id,
@@ -165,19 +195,19 @@ class MetaModel(
                 logs."identity:id"=?::uuid and (
             """
             )
-            variables.add(logId)
+            bind(logId)
             var nextTier = HashSet<ETLProcessStub.Arc>()
             for ((classId, sameClassRoots) in roots.groupBy { it.classId }) {
                 val relations = graph.incomingEdgesOf(classId).filter { it.sourceClass !in reject }
                 if (relations.isNotEmpty()) {
                     nextTier.addAll(relations)
                     append("(parent.class_id=? and parent.object_id=ANY(?) and (")
-                    variables.add(classId.value)
-                    variables.add(sameClassRoots.mapToArray { it.objectId })
+                    bind(classId.value)
+                    bind(sameClassRoots.mapToArray { it.objectId })
                     for (r in relations) {
                         append("(r.key=? and child.class_id=?) or ")
-                        variables.add("$DB_ATTR_NS:${r.attributeName}")
-                        variables.add(r.sourceClass.value)
+                        bind("$DB_ATTR_NS:${r.attributeName}")
+                        bind(r.sourceClass.value)
                         isValid = true
                     }
                     delete(length - 3, length)
@@ -206,12 +236,12 @@ class MetaModel(
                         r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
                         logs."identity:id"=?::uuid and ("""
                 )
-                variables.add(logId)
+                bind(logId)
                 for (r in currentTier) {
                     append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
-                    variables.add("$DB_ATTR_NS:${r.attributeName}")
-                    variables.add(r.sourceClass.value)
-                    variables.add(r.targetClass.value)
+                    bind("$DB_ATTR_NS:${r.attributeName}")
+                    bind(r.sourceClass.value)
+                    bind(r.targetClass.value)
                     nextTier.addAll(graph.incomingEdgesOf(r.sourceClass).filter { it.sourceClass !in reject })
                 }
                 delete(length - 3, length)
@@ -230,15 +260,6 @@ class MetaModel(
         if (!isValid)
             return emptyList()
         return prepareStatement(query).use { stmt ->
-            for ((i, v) in variables.withIndex()) {
-                when (v) {
-                    is String -> stmt.setString(i + 1, v)
-                    is Int -> stmt.setInt(i + 1, v)
-                    is Array<*> -> stmt.setArray(i + 1, createArrayOf(JDBCType.VARCHAR.name, v))
-                    is UUID -> stmt.setString(i + 1, v.toString())
-                    else -> TODO("Unsupported type: ${v::class}")
-                }
-            }
             return@use stmt.executeQuery().use { rs ->
                 val result = ArrayList<RemoteObjectID>()
                 while (rs.next()) {
@@ -341,24 +362,21 @@ class MetaModel(
         projection: String,
         handler: (ResultSet) -> R
     ): R {
-        val query = buildString {
+        val query = buildSQLQuery {
             append("Select ")
             append(projection)
             append(" from objects_in_trace,traces,logs")
             append(""" where objects_in_trace.trace_id=traces.id and traces.log_id=logs.id and logs."identity:id"=?::uuid and ARRAY[""")
-            for (o in objects)
+            bind(logId)
+            for (o in objects) {
                 append("ROW(?, ?)::remote_object_identifier,")
+                bind(o.classId.value)
+                bind(o.objectId)
+            }
             deleteCharAt(length - 1)
             append("] <@ objects_in_trace.objects")
         }
-        println(query)
         prepareStatement(query).use { stmt ->
-            var ctr = 1
-            stmt.setString(ctr++, logId.toString())
-            for (o in objects) {
-                stmt.setInt(ctr++, o.classId.value)
-                stmt.setString(ctr++, o.objectId)
-            }
             return stmt.executeQuery().use(handler)
         }
     }
