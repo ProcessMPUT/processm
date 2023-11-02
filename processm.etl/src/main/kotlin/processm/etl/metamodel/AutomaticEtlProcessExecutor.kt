@@ -452,9 +452,9 @@ class AutomaticEtlProcessExecutor(
             val graph = DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
             for (relation in relations) {
                 //TODO buggy and ugly. Add attributename to AutomaticEtlProcessRelation or replace AutomaticEtlProcessRelation with references to Relationships
-                val attributeName = Relationships.slice(Relationships.referencingAttributeNameId).select {
+                val attributeName = (Relationships innerJoin AttributesNames).slice(AttributesNames.name).select {
                     (Relationships.sourceClassId eq relation.sourceClassId) and (Relationships.targetClassId eq relation.targetClassId)
-                }.single().let { it[Relationships.name] }
+                }.single().let { it[AttributesNames.name] }
                 val arc = Arc(relation.sourceClassId, attributeName, relation.targetClassId)
                 graph.addVertex(relation.sourceClassId)
                 graph.addVertex(relation.targetClassId)
