@@ -256,8 +256,7 @@ class AutomaticEtlProcessExecutor(
             Attribute.LIFECYCLE_TRANSITION to eventType.name,
             "Activity" to eventType.name,
             Attribute.TIME_TIMESTAMP to (timestamp?.let(Instant::ofEpochMilli) ?: Instant.now()),
-            CLASSID_ATTR to classId.value,
-            KEY_ATTR to "${classId.value}_$entityId"
+            CLASSID_ATTR to classId.value
         ).apply {
             objectData.forEach { (k, v) -> set("${DB_ATTR_NS}:$k", v) }
         })
@@ -440,7 +439,6 @@ class AutomaticEtlProcessExecutor(
         val DB_ATTR_NS = "db"
         val INTERNAL_NS = "${Brand.mainDBInternalName}:internal"
         val CLASSID_ATTR = "$INTERNAL_NS:classId"
-        val KEY_ATTR = "$INTERNAL_NS:key"
 
         val logger = logger()
 
