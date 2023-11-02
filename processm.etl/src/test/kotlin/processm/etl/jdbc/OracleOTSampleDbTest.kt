@@ -81,7 +81,7 @@ class OracleOTSampleDbTest {
         transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
-                    processType = "Jdbc"
+                    processType = "jdbc"
                     name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }

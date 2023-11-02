@@ -417,17 +417,26 @@ class DataStoreService(private val producer: Producer) {
     fun changeEtlProcessActivationState(dataStoreId: UUID, etlProcessId: UUID, isActive: Boolean) {
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
-            val dataConnectorId = getDataConnectorIdForEtlProcess(etlProcessId)
+            val etlProcess = EtlProcessMetadata.findById(etlProcessId).validateNotNull(Reason.ResourceNotFound)
+            etlProcess.isActive = isActive
 
-            (EtlProcessesMetadata
-                .update({ EtlProcessesMetadata.id eq etlProcessId }) {
-                    it[EtlProcessesMetadata.isActive] = isActive
-                } > 0).let { updateStatus ->
-                if (updateStatus && dataConnectorId != null) {
-                    if (isActive) notifyActivated(dataStoreId, dataConnectorId)
-                    else notifyModified(dataStoreId, dataConnectorId)
-                }
-                return@transaction updateStatus
+            when (etlProcess.processType) {
+                ProcessTypeDto.Automatic.processTypeName ->
+                    if (isActive) notifyActivated(dataStoreId, etlProcess.dataConnector.id.value)
+                    else notifyModified(dataStoreId, etlProcess.dataConnector.id.value)
+
+                ProcessTypeDto.JDBC.processTypeName ->
+                    ETLConfiguration
+                        .find { ETLConfigurations.metadata eq etlProcess.id }
+                        .first()
+                        .apply {
+                            afterCommit {
+                                this as ETLConfiguration
+                                notifyUsers()
+                            }
+                        }
+
+                else -> throw IllegalArgumentException("Unknown ETL process type: ${etlProcess.processType}.")
             }
         }
     }
@@ -450,13 +459,29 @@ class DataStoreService(private val producer: Producer) {
     fun removeEtlProcess(dataStoreId: UUID, etlProcessId: UUID) {
         assertDataStoreExists(dataStoreId)
         transaction(DBCache.get("$dataStoreId").database) {
-            val dataConnectorId = getDataConnectorIdForEtlProcess(etlProcessId)
+            val etlProcess = EtlProcessMetadata.findById(etlProcessId).validateNotNull(Reason.ResourceNotFound)
 
-            (EtlProcessesMetadata.deleteWhere {
-                EtlProcessesMetadata.id eq etlProcessId
-            } > 0).let { removalStatus ->
-                if (removalStatus && dataConnectorId != null) notifyModified(dataStoreId, dataConnectorId)
-                return@transaction removalStatus
+            when (etlProcess.processType) {
+                ProcessTypeDto.Automatic.processTypeName -> {
+                    etlProcess.delete()
+                    notifyModified(dataStoreId, etlProcess.dataConnector.id.value)
+                }
+
+                ProcessTypeDto.JDBC.processTypeName -> {
+                    ETLConfiguration
+                        .find { ETLConfigurations.metadata eq etlProcess.id }
+                        .first()
+                        .apply {
+                            delete() // FIXME: do we really need delete() here? ETLConfiguration has foreign key constraint with ON DELETE CASCADE, so Exposed should be informed that ETLConfiguration is deleted
+                            afterCommit {
+                                this as ETLConfiguration
+                                notifyUsers()
+                            }
+                        }
+                    etlProcess.delete()
+                }
+
+                else -> throw IllegalArgumentException("Unknown ETL process type: ${etlProcess.processType}.")
             }
         }
     }
@@ -528,15 +553,6 @@ class DataStoreService(private val producer: Producer) {
     private fun DataConnector.getConnection(): Connection {
         return if (connectionProperties.startsWith("jdbc")) DriverManager.getConnection(connectionProperties)
         else getDataSource(Json.decodeFromString(connectionProperties)).connection
-    }
-
-    private fun getDataConnectorIdForEtlProcess(etlProcessId: UUID): UUID? {
-        return EtlProcessesMetadata
-            .slice(EtlProcessesMetadata.dataConnectorId)
-            .select { EtlProcessesMetadata.id eq etlProcessId }
-            .firstOrNull()
-            ?.get(EtlProcessesMetadata.dataConnectorId)
-            ?.value
     }
 
     fun createSamplingJdbcEtlProcess(

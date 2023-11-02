@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
+import org.jetbrains.exposed.sql.ReferenceOption
 import processm.dbmodels.models.EtlProcessMetadata
 import processm.dbmodels.models.EtlProcessesMetadata
 import java.util.*
@@ -16,7 +17,7 @@ const val DEACTIVATE = "deactivate"
 const val ID = "id"
 
 object ETLConfigurations : UUIDTable("etl_configurations") {
-    val metadata = reference("metadata", EtlProcessesMetadata)
+    val metadata = reference("metadata", EtlProcessesMetadata, onDelete = ReferenceOption.CASCADE)
     val query = text("query")
     val refresh = long("refresh").nullable()
     val enabled = bool("enabled").default(true)

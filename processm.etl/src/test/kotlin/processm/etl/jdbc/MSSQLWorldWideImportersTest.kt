@@ -79,7 +79,7 @@ select 'delivered' as "concept:name", i.InvoiceID as "concept:instance", i.Order
         return transaction(DBCache.get(dataStoreName).database) {
             val config = ETLConfiguration.new {
                 metadata = EtlProcessMetadata.new {
-                    processType = "Jdbc"
+                    processType = "jdbc"
                     name = etlConfigurationName
                     dataConnector = externalDB.dataConnector
                 }
