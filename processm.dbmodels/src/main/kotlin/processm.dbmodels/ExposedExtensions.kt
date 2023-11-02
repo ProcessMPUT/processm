@@ -33,7 +33,7 @@ infix fun <T : String?> Expression<T>.ieq(other: T): Op<Boolean> =
  */
 fun <T : Comparable<T>> Entity<T>.afterCommit(action: Entity<T>.() -> Unit) {
     TransactionManager.current().registerInterceptor(object : StatementInterceptor {
-        override fun afterCommit() {
+        override fun afterCommit(transaction: Transaction) {
             action()
         }
     })
