@@ -11,16 +11,13 @@ import processm.core.Brand
 import processm.core.helpers.mapToArray
 import processm.core.helpers.toUUID
 import processm.core.log.*
+import processm.core.log.Event
 import processm.core.log.attribute.Attribute
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
-import processm.dbmodels.models.AutomaticEtlProcessRelation
-import processm.dbmodels.models.AutomaticEtlProcessRelations
-import processm.dbmodels.models.Class
-import processm.dbmodels.models.Classes
-import processm.dbmodels.models.Relationships
+import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
 import java.sql.Connection
 import java.sql.ResultSet
@@ -139,7 +136,7 @@ class AutomaticEtlProcessExecutor(
     }
 
     private fun Connection.retrieveRelatedObjectsDownward(
-        roots: List<RemoteObjectID>,
+        roots: Collection<RemoteObjectID>,
         reject: Set<EntityID<Int>>
     ): List<RemoteObjectID> {
         assert(roots.isNotEmpty())
@@ -230,28 +227,25 @@ class AutomaticEtlProcessExecutor(
         }
     }
 
-    private fun getRelatedObjects(
+    private fun Connection.getRelatedObjects(
         start: RemoteObjectID,
         newAttributes: Map<String, String>
     ): Set<RemoteObjectID> {
-        val result = HashSet<RemoteObjectID>()
         val leafs = mutableListOf(start)
         graph
             .outgoingEdgesOf(start.classId)
             .mapNotNullTo(leafs) { arc ->
                 newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
             }
-        result.addAll(DBCache.get(dataStoreDBName).getConnection().use { connection ->
-            val upward = connection.retrieveRelatedObjectsUpwards(leafs) + leafs - setOf(start)
-            if (upward.isEmpty())
-                return@use upward
-            //FIXME I am not sure this is right, as it ignores the distinction between identifying and converging classes
-            val reject = mutableSetOf(start.classId)
-            upward.mapTo(reject) { it.classId }
-            val downward = connection.retrieveRelatedObjectsDownward(upward, reject)
-            return@use upward + downward
-        })
-        return result - setOf(start)
+
+        val upward = retrieveRelatedObjectsUpwards(leafs).toSet() + leafs - setOf(start)
+        if (upward.isEmpty())
+            return upward
+        //FIXME I am not sure this is right, as it ignores the distinction between identifying and converging classes
+        val reject = mutableSetOf(start.classId)
+        upward.mapTo(reject) { it.classId }
+        val downward = retrieveRelatedObjectsDownward(upward, reject)
+        return upward + downward - setOf(start)
     }
 
     private fun DatabaseChangeApplier.DatabaseChangeEvent.toXES(classId: EntityID<Int>) = Event(
@@ -298,16 +292,14 @@ class AutomaticEtlProcessExecutor(
      * A trace can relate to more objects.
      * Turns out PQL cannot do it, so raw SQL it is.
      */
-    private fun retrievePastTraces(objects: Collection<RemoteObjectID>): Set<UUID> {
+    private fun Connection.retrievePastTraces(objects: Collection<RemoteObjectID>): Set<UUID> {
         assert(objects.isNotEmpty())
-        return DBCache.get(dataStoreDBName).getConnection().use { connection ->
-            connection.queryObjectsInTrace(objects, """traces."identity:id"""") { rs ->
-                val result = HashSet<UUID>()
-                while (rs.next()) {
-                    rs.getString(1).toUUID()?.let { result.add(it) }
-                }
-                return@queryObjectsInTrace result
+        return queryObjectsInTrace(objects, """traces."identity:id"""") { rs ->
+            val result = HashSet<UUID>()
+            while (rs.next()) {
+                rs.getString(1).toUUID()?.let { result.add(it) }
             }
+            return@queryObjectsInTrace result
         }
     }
 
@@ -339,27 +331,25 @@ class AutomaticEtlProcessExecutor(
     /**
      * Returns all traces in the given log containing the given objects along with all the containted objects.
      */
-    private fun retrievePastTracesWithObjects(objects: Collection<RemoteObjectID>): Map<UUID, Set<RemoteObjectID>> {
+    private fun Connection.retrievePastTracesWithObjects(objects: Collection<RemoteObjectID>): Map<UUID, Set<RemoteObjectID>> {
         assert(objects.isNotEmpty())
         assert(objects.isNotEmpty())
-        return DBCache.get(dataStoreDBName).getConnection().use { connection ->
-            connection.queryObjectsInTrace(objects, """traces."identity:id", objects""") { rs ->
-                val result = HashMap<UUID, Set<RemoteObjectID>>()
-                while (rs.next()) {
-                    val traceId = checkNotNull(rs.getString(1).toUUID())
-                    val objectsOfTrace = HashSet<RemoteObjectID>()
-                    result[traceId] = objectsOfTrace
-                    (rs.getArray(2).array as Array<*>).forEach { o ->
-                        //TODO Nie podoba mi sie to, moze mozna miec tablice?
-                        o as PGobject
-                        assert(o.type == "remote_object_identifier")
-                        val v = checkNotNull(o.value)
-                        val (classId, objectId) = v.substring(1, v.length - 1).split(',', limit = 2)
-                        objectsOfTrace.add(RemoteObjectID(objectId, EntityID(classId.toInt(), Classes)))
-                    }
+        return queryObjectsInTrace(objects, """traces."identity:id", objects""") { rs ->
+            val result = HashMap<UUID, Set<RemoteObjectID>>()
+            while (rs.next()) {
+                val traceId = checkNotNull(rs.getString(1).toUUID())
+                val objectsOfTrace = HashSet<RemoteObjectID>()
+                result[traceId] = objectsOfTrace
+                (rs.getArray(2).array as Array<*>).forEach { o ->
+                    //TODO Nie podoba mi sie to, moze mozna miec tablice?
+                    o as PGobject
+                    assert(o.type == "remote_object_identifier")
+                    val v = checkNotNull(o.value)
+                    val (classId, objectId) = v.substring(1, v.length - 1).split(',', limit = 2)
+                    objectsOfTrace.add(RemoteObjectID(objectId, EntityID(classId.toInt(), Classes)))
                 }
-                return@queryObjectsInTrace result
             }
+            return@queryObjectsInTrace result
         }
     }
 
@@ -378,65 +368,67 @@ class AutomaticEtlProcessExecutor(
      */
     fun processEvent(dbEvent: DatabaseChangeApplier.DatabaseChangeEvent): List<XESComponent> {
         val result = ArrayList<XESComponent>()
-        result.add(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to logId)))
-        val remoteObject = RemoteObjectID(dbEvent.entityId, getClassId(dbEvent.entityTable))
-        val relevantTraces = retrievePastTraces(setOf(remoteObject))
-        val relatedObjects = getRelatedObjects(remoteObject, dbEvent.objectData)
-        val (identifyingRelatedObjects, convergingRelatedObjects) = relatedObjects
-            .partition { it.classId in identifyingClasses }
-            .let { it.first.toMutableSet() to it.second.toSet() }  //TODO that is inefficient
-        assert(remoteObject !in identifyingRelatedObjects)
-        assert(remoteObject !in convergingRelatedObjects)
-        val event = dbEvent.toXES(remoteObject.classId)
-        if (relevantTraces.isNotEmpty()) {
-            //This is an update to a preexisting object
-            //It is not sufficient to rely on the event type in dbEvent, as what is a new object for the log is not
-            //necessarily a new object for the replica
-            for (traceId in relevantTraces) {
-                result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
-                result.add(event)
-            }
+        DBCache.get(dataStoreDBName).getConnection().use { connection ->
+            result.add(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to logId)))
+            val remoteObject = RemoteObjectID(dbEvent.entityId, getClassId(dbEvent.entityTable))
+            val relevantTraces = connection.retrievePastTraces(setOf(remoteObject))
+            val relatedObjects = connection.getRelatedObjects(remoteObject, dbEvent.objectData)
+            val (identifyingRelatedObjects, convergingRelatedObjects) = relatedObjects
+                .partition { it.classId in identifyingClasses }
+                .let { it.first.toMutableSet() to it.second.toSet() }  //TODO that is inefficient
+            assert(remoteObject !in identifyingRelatedObjects)
+            assert(remoteObject !in convergingRelatedObjects)
+            val event = dbEvent.toXES(remoteObject.classId)
+            if (relevantTraces.isNotEmpty()) {
+                //This is an update to a preexisting object
+                //It is not sufficient to rely on the event type in dbEvent, as what is a new object for the log is not
+                //necessarily a new object for the replica
+                for (traceId in relevantTraces) {
+                    result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
+                    result.add(event)
+                }
 
-        } else {
-            // a new object
-            if (remoteObject.classId in identifyingClasses) {
-                //TODO the following line should be an assert I think
-                identifyingRelatedObjects.removeIf { it.classId == remoteObject.classId }
-                val possibleCIs = identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects)
-                val existingTraceIds = ArrayList<UUID>()
-                for (ci in possibleCIs) {
-                    if (ci.isNotEmpty()) {
-                        for ((traceId, objs) in retrievePastTracesWithObjects(ci)) {
-                            if (objs.filterTo(HashSet()) { it.classId in identifyingClasses } == ci)
-                                existingTraceIds.add(traceId)
+            } else {
+                // a new object
+                if (remoteObject.classId in identifyingClasses) {
+                    //TODO the following line should be an assert I think
+                    identifyingRelatedObjects.removeIf { it.classId == remoteObject.classId }
+                    val possibleCIs = identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects)
+                    val existingTraceIds = ArrayList<UUID>()
+                    for (ci in possibleCIs) {
+                        if (ci.isNotEmpty()) {
+                            for ((traceId, objs) in connection.retrievePastTracesWithObjects(ci)) {
+                                if (objs.filterTo(HashSet()) { it.classId in identifyingClasses } == ci)
+                                    existingTraceIds.add(traceId)
+                            }
                         }
                     }
-                }
-                if (existingTraceIds.isNotEmpty()) {
+                    if (existingTraceIds.isNotEmpty()) {
+                        for (traceId in existingTraceIds) {
+                            result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
+                            result.add(event)
+                        }
+                    } else {
+                        for (ci in possibleCIs) {
+                            val traceId = UUID.randomUUID()
+                            result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
+                            if (ci.isNotEmpty())
+                                result.addAll(retrievePastEvents(ci))
+                            result.add(event)
+                        }
+                    }
+                } else {
+                    val existingTraceIds =
+                        identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects).flatMap { ci ->
+                            connection.retrievePastTraces(ci)
+                        }
+                    if (existingTraceIds.isEmpty()) {
+                        logger.warn("A new object from a converging class without a preexisting trace. This should be not possible unless the DB went haywire, e.g., constraints are disabled. Skipping this event.")
+                    }
                     for (traceId in existingTraceIds) {
                         result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
                         result.add(event)
                     }
-                } else {
-                    for (ci in possibleCIs) {
-                        val traceId = UUID.randomUUID()
-                        result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
-                        if (ci.isNotEmpty())
-                            result.addAll(retrievePastEvents(ci))
-                        result.add(event)
-                    }
-                }
-            } else {
-                val existingTraceIds =
-                    identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects).flatMap { ci ->
-                        retrievePastTraces(ci)
-                    }
-                if (existingTraceIds.isEmpty()) {
-                    LogGeneratingDatabaseChangeApplier.logger.warn("A new object from a converging class without a preexisting trace. This should be not possible unless the DB went haywire, e.g., constraints are disabled. Skipping this event.")
-                }
-                for (traceId in existingTraceIds) {
-                    result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
-                    result.add(event)
                 }
             }
         }
