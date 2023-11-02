@@ -250,7 +250,7 @@ class DebeziumChangeTrackerTest {
         //TODO this test makes no sense taking queries3 into account
         testBase(
             setOf("eban", "eket", "ekko", "ekpo"), listOf(
-                setOf(setOf("ae1", "ae2", "be1", "be2")),
+                setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"), setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")),
                 setOf(
                     setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
@@ -274,12 +274,13 @@ class DebeziumChangeTrackerTest {
     fun `v4 table 2 id c`() {
         testBase(
             setOf("eban", "eket", "ekko", "ekpo"), listOf(
-                emptySet(),
+                setOf(setOf("ae1", "be1")),
                 setOf(setOf("ae1", "be1", "ce1", "de1"), setOf("ae1", "be1", "ce1", "de2")),
                 setOf(
                     setOf("ae1", "be1", "ce1", "de1"),
                     setOf("ae1", "be1", "ce1", "de2"),
-                    setOf("ae1", "be1", "ce2", "de3")
+                    setOf("ae1", "be1", "ce2", "de3"),
+                    setOf("be3")
                 ),
                 setOf(
                     setOf("ae1", "be1", "ce1", "de1"),
