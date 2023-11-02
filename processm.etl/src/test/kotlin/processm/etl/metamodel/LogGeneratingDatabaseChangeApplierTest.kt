@@ -1,6 +1,7 @@
 package processm.etl.metamodel
 
-import com.google.common.collect.HashBiMap
+import io.mockk.every
+import io.mockk.mockk
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
@@ -27,7 +28,7 @@ import kotlin.test.assertEquals
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @OptIn(InMemoryXESProcessing::class)
-class MetaModelTest {
+class LogGeneratingDatabaseChangeApplierTest {
 
     private var metaModelId: Int? = null
     private lateinit var eket: Class
@@ -131,45 +132,35 @@ class MetaModelTest {
         )
     }
 
-    private fun getMetaModel(identifyingClasses: Set<EntityID<Int>>): MetaModel {
-
-        val metaModelReader = MetaModelReader(metaModelId!!)
-        val metaModelAppender = MetaModelAppender(metaModelReader)
-
-
-        val provider = processm.core.persistence.connection.transaction(temporaryDB) {
-            val classes = metaModelReader.getClassNames()
-            val stub = object : ETLProcessStub {
-                override val processId: UUID
-                    get() = etlProcessId
-                override val identifyingClasses: Set<EntityID<Int>> = identifyingClasses
-
-                override fun getRelevanceGraph(): Graph<EntityID<Int>, ETLProcessStub.Arc> {
-                    val result =
-                        DefaultDirectedGraph<EntityID<Int>, ETLProcessStub.Arc>(ETLProcessStub.Arc::class.java)
-                    Relationships
-                        .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
-                        .forEach {
-                            val r = Relationship.wrapRow(it)
-                            result.addVertex(r.sourceClass.id)
-                            result.addVertex(r.targetClass.id)
-                            val arc = ETLProcessStub.Arc(
-                                r.sourceClass.id,
-                                r.referencingAttributesName.name,
-                                r.targetClass.id
-                            )
-                            result.addEdge(r.sourceClass.id, r.targetClass.id, arc)
-                        }
-                    return result
+    private fun getApplier(identifyingClasses: Set<EntityID<Int>>): LogGeneratingDatabaseChangeApplier {
+        val executor = processm.core.persistence.connection.transaction(temporaryDB) {
+            val classes = MetaModelReader(metaModelId!!).getClassNames()
+            val graph =
+                DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
+            Relationships
+                .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
+                .forEach {
+                    val r = Relationship.wrapRow(it)
+                    graph.addVertex(r.sourceClass.id)
+                    graph.addVertex(r.targetClass.id)
+                    val arc = Arc(
+                        r.sourceClass.id,
+                        r.referencingAttributesName.name,
+                        r.targetClass.id
+                    )
+                    graph.addEdge(r.sourceClass.id, r.targetClass.id, arc)
                 }
-
-            }
-            object : ETLProcessProvider {
-                override fun getProcessesForClass(className: String): List<ETLProcessStub> = listOf(stub)
-            }
+            AutomaticEtlProcessExecutor(temporaryDB, etlProcessId, graph, identifyingClasses)
         }
 
-        return MetaModel(temporaryDB, metaModelReader, metaModelAppender, provider)
+        val applier = mockk<LogGeneratingDatabaseChangeApplier> {
+            every { dataStoreDBName } returns temporaryDB
+            every { this@mockk.metaModelId } returns this@LogGeneratingDatabaseChangeApplierTest.metaModelId!!
+            every { applyChange(any()) } answers { callOriginal() }
+            every { getExecutorsForClass(any()) } returns listOf(executor)
+        }
+
+        return applier
     }
 
     private fun readLog(logId: UUID): Set<Set<String>> {
@@ -194,7 +185,7 @@ class MetaModelTest {
 
     @Test
     fun `v1 table 2 id b`() {
-        val metaModel = getMetaModel(setOf(eket.id, eban.id, ekko.id))
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id))
         metaModel.applyChange(
             listOf(
                 dbEvent("b1", "EBAN", "be1"),
@@ -243,7 +234,7 @@ class MetaModelTest {
 
     @Test
     fun `v1 table 2 id a`() {
-        val metaModel = getMetaModel(setOf(eket.id, eban.id))
+        val metaModel = getApplier(setOf(eket.id, eban.id))
         metaModel.applyChange(
             listOf(
                 dbEvent("b1", "EBAN", "be1"),
@@ -288,7 +279,7 @@ class MetaModelTest {
 
     @Test
     fun `v1 table 2 id c`() {
-        val metaModel = getMetaModel(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
         metaModel.applyChange(
             listOf(
                 dbEvent("b1", "EBAN", "be1"),

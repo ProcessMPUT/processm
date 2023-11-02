@@ -1,19 +1,16 @@
 package processm.etl.tracker
 
-import com.google.common.collect.HashBiMap
+import io.mockk.every
+import io.mockk.mockk
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
-import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.helpers.mapToSet
-import processm.core.log.Log
-import processm.core.log.Trace
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DatabaseChecker
-import processm.core.persistence.connection.transaction
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.Relationship
 import processm.dbmodels.models.Relationships
@@ -247,7 +244,6 @@ class DebeziumChangeTrackerTest {
 
     @Test
     fun `v3 table 2 id c`() {
-        //TODO this test makes no sense taking queries3 into account
         testBase(
             setOf("eban", "eket", "ekko", "ekpo"), listOf(
                 setOf(setOf("ae1", "be1")),
@@ -313,76 +309,42 @@ class DebeziumChangeTrackerTest {
                 stmt.execute("create table EKKO (id int primary key, eban int references EBAN(id), text text)")
                 stmt.execute("create table EKPO (id int primary key, ekko int references EKKO(id), text text)")
             }
-            val dataModelId = MetaModel.build(dataStoreDBName, "metaModelName", SchemaCrawlerExplorer(connection))
-            val metaModelReader = MetaModelReader(dataModelId.value)
-
+            val metaModelId = buildMetaModel(dataStoreDBName, "metaModelName", SchemaCrawlerExplorer(connection))
+            
             val etlProcessId = UUID.randomUUID()
 
-
-            val provider = transaction(dataStoreDBName) {
-                val classes = metaModelReader.getClassNames()
-                val stub = object : ETLProcessStub {
-
-                    val traces = HashBiMap.create<Set<RemoteObjectID>, UUID>()
-                    val objects = HashMap<RemoteObjectID, HashSet<UUID>>()
-                    override val processId: UUID
-                        get() = etlProcessId
-                    override val identifyingClasses: Set<EntityID<Int>>
-                        get() = classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }
-//                    override val relevantClasses: Set<EntityID<Int>>
-//                        get() = classes.keys
-
-//                    override fun getTrace(caseIdentifier: Set<RemoteObjectID>): UUID? = traces[caseIdentifier]
-//
-//                    override fun updateTrace(traceId: UUID, newCaseIdentifier: Set<RemoteObjectID>) {
-//                        traces.inverse()[traceId] = newCaseIdentifier
-//                        for (o in newCaseIdentifier)
-//                            addObjectToTrace(traceId, o)
-//                    }
-//
-//                    override fun createTrace(caseIdentifier: Set<RemoteObjectID>): UUID =
-//                        UUID.randomUUID().also { updateTrace(it, caseIdentifier) }
-//
-//                    override fun getTracesWithObject(obj: RemoteObjectID): Sequence<UUID> =
-//                        objects[obj].orEmpty().asSequence()
-//
-//                    override fun addObjectToTrace(traceId: UUID, obj: RemoteObjectID) {
-//                        objects.computeIfAbsent(obj) { HashSet() }.add(traceId)
-//                    }
-//
-//                    override fun createAnonymousTrace(): UUID = UUID.randomUUID()
-
-                    override fun getRelevanceGraph(): Graph<EntityID<Int>, ETLProcessStub.Arc> {
-                        val result =
-                            DefaultDirectedGraph<EntityID<Int>, ETLProcessStub.Arc>(ETLProcessStub.Arc::class.java)
-                        Relationships
-                            .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
-                            .forEach {
-                                val r = Relationship.wrapRow(it)
-                                result.addVertex(r.sourceClass.id)
-                                result.addVertex(r.targetClass.id)
-                                val arc = ETLProcessStub.Arc(
-                                    r.sourceClass.id,
-                                    r.referencingAttributesName.name,
-                                    r.targetClass.id
-                                )
-                                result.addEdge(r.sourceClass.id, r.targetClass.id, arc)
-                            }
-                        return result
+            val executor = processm.core.persistence.connection.transaction(dataStoreDBName) {
+                val classes = MetaModelReader(metaModelId.value).getClassNames()
+                val graph =
+                    DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
+                Relationships
+                    .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
+                    .forEach {
+                        val r = Relationship.wrapRow(it)
+                        graph.addVertex(r.sourceClass.id)
+                        graph.addVertex(r.targetClass.id)
+                        val arc = Arc(
+                            r.sourceClass.id,
+                            r.referencingAttributesName.name,
+                            r.targetClass.id
+                        )
+                        graph.addEdge(r.sourceClass.id, r.targetClass.id, arc)
                     }
-
-                }
-                object : ETLProcessProvider {
-                    override fun getProcessesForClass(className: String): List<ETLProcessStub> = listOf(stub)
-                }
+                val identifyingClassesIds =
+                    classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }
+                AutomaticEtlProcessExecutor(dataStoreDBName, etlProcessId, graph, identifyingClassesIds)
             }
 
-            val metaModelAppender = MetaModelAppender(metaModelReader)
-            val metaModel = MetaModel(dataStoreDBName, metaModelReader, metaModelAppender, provider)
+            val applier = mockk<LogGeneratingDatabaseChangeApplier> {
+                every { this@mockk.dataStoreDBName } returns this@DebeziumChangeTrackerTest.dataStoreDBName
+                every { this@mockk.metaModelId } returns metaModelId.value
+                every { applyChange(any()) } answers { callOriginal() }
+                every { getExecutorsForClass(any()) } returns listOf(executor)
+            }
 
             DebeziumChangeTracker(
                 debeziumConfiguration,
-                metaModel,
+                applier,
                 dataStoreId,
                 UUID.randomUUID()
             ).use { tracker ->

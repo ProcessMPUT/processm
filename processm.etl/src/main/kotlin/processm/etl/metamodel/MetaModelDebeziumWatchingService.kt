@@ -244,10 +244,9 @@ class MetaModelDebeziumWatchingService : Service {
             .setConnectionProperties(dataConnector.id.value, connectionProperties)
             .setTemporaryFiles(dataConnector.id.value)
             .setTrackedEntities(trackedEntities)
-        val metaModelReader = MetaModelReader(dataModelId)
         return DebeziumChangeTracker(
             properties,
-            MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader), TODO()),
+            LogGeneratingDatabaseChangeApplier("$dataStoreId", dataModelId),
             dataStoreId,
             dataConnector.id.value
         )

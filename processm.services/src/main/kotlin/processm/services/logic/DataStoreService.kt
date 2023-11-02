@@ -25,9 +25,8 @@ import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
-import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
-import processm.services.api.models.EtlProcess
+import processm.etl.metamodel.buildMetaModel
 import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
 import processm.services.api.models.OrganizationRole
@@ -522,7 +521,7 @@ class DataStoreService(private val producer: Producer) {
         if (dataConnector.dataModel?.id != null) return dataConnector.dataModel!!.id
 
         dataConnector.getConnection().use { connection ->
-            val dataModelId = MetaModel.build("$dataStoreId", metaModelName = "", SchemaCrawlerExplorer(connection))
+            val dataModelId = buildMetaModel("$dataStoreId", metaModelName = "", SchemaCrawlerExplorer(connection))
 
             DataConnectors.update({ DataConnectors.id eq dataConnectorId }) {
                 it[DataConnectors.dataModelId] = dataModelId
