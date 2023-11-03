@@ -4,20 +4,23 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
-import processm.core.log.AppendingDBXESOutputStream
+import org.jetbrains.exposed.sql.update
 import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.AutomaticEtlProcessRelations
 import processm.dbmodels.models.Classes
+import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
+import java.time.Instant
 
 class LogGeneratingDatabaseChangeApplier(
     val dataStoreDBName: String,
     val metaModelId: Int
 ) : DatabaseChangeApplier {
 
+    //TODO split into retrieving process IDs and into creating executors, as the same executor will be reused by different classes
     internal fun getExecutorsForClass(className: String): List<AutomaticEtlProcessExecutor> {
         val classId =
             Classes.slice(Classes.id).select { (Classes.name eq className) and (Classes.dataModelId eq metaModelId) }
@@ -42,15 +45,17 @@ class LogGeneratingDatabaseChangeApplier(
      */
     override fun applyChange(databaseChangeEvents: List<DatabaseChangeEvent>) =
         loggedScope { logger ->
+            val executors = HashMap<String, List<AutomaticEtlProcessExecutor>>()
             for (dbEvent in databaseChangeEvents) {
-                AppendingDBXESOutputStream(DBCache.get(dataStoreDBName).getConnection()).use { output ->
-                    transaction(DBCache.get(dataStoreDBName).database) {
-                        for (executor in getExecutorsForClass(dbEvent.entityTable)) {
-                            //TODO since there's a transaction going on, we could reuse the connection here
-                            val components = executor.processEvent(dbEvent).toList()
-                            for (c in components)
-                                println("${c::class}: ${c.attributes.toList()}")
-                            output.write(components.asSequence())
+                transaction(DBCache.get(dataStoreDBName).database) {
+                    val executorsForClass =
+                        executors.computeIfAbsent(dbEvent.entityTable) { getExecutorsForClass(dbEvent.entityTable) }
+                    for (executor in executorsForClass) {
+                        if (executor.processEvent(dbEvent)) {
+                            //TODO ugly!!
+                            EtlProcessesMetadata.update({ EtlProcessesMetadata.id eq executor.logId }) {
+                                it[lastExecutionTime] = Instant.now()
+                            }
                         }
                     }
                 }

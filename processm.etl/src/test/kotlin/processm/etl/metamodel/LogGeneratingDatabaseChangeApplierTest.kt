@@ -6,7 +6,6 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
@@ -104,11 +103,10 @@ class LogGeneratingDatabaseChangeApplierTest {
 
     @AfterAll
     fun cleanup() {
-//        DBCache.get(temporaryDB).close()
-//        DBCache.getMainDBPool().getConnection().use {
-//            it.prepareStatement("drop database \"$temporaryDB\" ").execute()
-//        }
-        println(temporaryDB)
+        DBCache.get(temporaryDB).close()
+        DBCache.getMainDBPool().getConnection().use {
+            it.prepareStatement("drop database \"$temporaryDB\" ").execute()
+        }
     }
 
 
@@ -331,5 +329,174 @@ class LogGeneratingDatabaseChangeApplierTest {
                 setOf("ae3", "be3", "ce3", "de4")
             ), readLog(etlProcessId)
         )
+    }
+
+    @Test
+    fun `v4 table 2 id c`() {
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
+            )
+        )
+        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "be1", "ce1", "de1"),
+                setOf("ae1", "be1", "ce1", "de2")
+            ), readLog(etlProcessId)
+        )
+        metaModel.applyChange(
+            listOf(
+                dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
+                dbEvent("d3", "EKPO", "de3", "ekko" to "c2"),
+                dbEvent("b2", "EBAN", "be3"),
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "be1", "ce1", "de1"),
+                setOf("ae1", "be1", "ce1", "de2"),
+                setOf("ae1", "be1", "ce2", "de3"),
+                setOf("be3")
+            ), readLog(etlProcessId)
+        )
+        metaModel.applyChange(
+            listOf(
+                dbEvent("a2", "EKET", "ae3", "eban" to "b2"),
+                dbEvent("c3", "EKKO", "ce3", "eban" to "b2"),
+                dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "be1", "ce1", "de1"),
+                setOf("ae1", "be1", "ce1", "de2"),
+                setOf("ae1", "be1", "ce2", "de3"),
+                setOf("ae3", "be3", "ce3", "de4")
+            ), readLog(etlProcessId)
+        )
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be2"),
+                dbEvent("a1", "EKET", "ae2"),
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                setOf("ae3", "be3", "ce3", "de4")
+            ), readLog(etlProcessId)
+        )
+    }
+
+    @Test
+    fun `batch insert table 2 id c`() {
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("b1", "EBAN", "be1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
+                dbEvent("b1", "EBAN", "be2"),
+                dbEvent("a1", "EKET", "ae2"),
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
+                dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
+                dbEvent("d3", "EKPO", "de3", "ekko" to "c2"),
+                dbEvent("b2", "EBAN", "be3"),
+                dbEvent("a2", "EKET", "ae3", "eban" to "b2"),
+                dbEvent("c3", "EKKO", "ce3", "eban" to "b2"),
+                dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                setOf("ae3", "be3", "ce3", "de4")
+            ), readLog(etlProcessId)
+        )
+    }
+
+    @Test
+    fun `batch insert with disabled constraints table 2 id c`() {
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("d4", "EKPO", "de4", "ekko" to "c3"),
+                dbEvent("d3", "EKPO", "de3", "ekko" to "c2"),
+                dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("c3", "EKKO", "ce3", "eban" to "b2"),
+                dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
+                dbEvent("a1", "EKET", "ae2"),
+                dbEvent("a2", "EKET", "ae3", "eban" to "b2"),
+                dbEvent("b1", "EBAN", "be1"),
+                dbEvent("b1", "EBAN", "be2"),
+                dbEvent("b2", "EBAN", "be3"),
+            )
+        )
+        assertEquals(
+            setOf(
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
+                setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
+                setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
+                setOf("ae3", "be3", "ce3", "de4")
+            ), readLog(etlProcessId)
+        )
+    }
+
+    //    @Ignore(
+//        """
+//        This case cannot be handled in an on-line manner. After the second event there necessarily will be
+//        two separate traces, as a1 and d1 cannot be connected without knowledge about future events.
+//        This could be solved by introducing a queue of pending events that reference a non-existing object.
+//    """
+//    )
+    @Test
+    fun `batch insert with disabled constraints simplified`() {
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("b1", "EBAN", "be1"),
+            )
+        )
+        assertEquals(setOf(setOf("ae1", "be1", "ce1", "de1")), readLog(etlProcessId))
+    }
+
+    @Test
+    fun `batch insert with disabled constraints simplified with multiple events per entity`() {
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        metaModel.applyChange(
+            listOf(
+                dbEvent("d1", "EKPO", "de1", "ekko" to "c1"),
+                dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
+                dbEvent("a1", "EKET", "ae2"),
+                //Processing be3 succeeds and causes processing of the postponed events
+                dbEvent("b2", "EBAN", "be3"),
+                dbEvent("a1", "EKET", "ae3"),
+                dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
+                dbEvent("b1", "EBAN", "be1"),
+                dbEvent("b1", "EBAN", "be2"),
+            )
+        )
+        assertEquals(setOf(setOf("ae1", "ae2", "ae3", "be1", "be2", "ce1", "de1"), setOf("be3")), readLog(etlProcessId))
     }
 }

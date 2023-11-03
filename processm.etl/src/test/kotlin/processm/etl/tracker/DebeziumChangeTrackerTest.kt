@@ -10,6 +10,7 @@ import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.persistence.Migrator
+import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.DatabaseChecker
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.Relationship
@@ -21,7 +22,6 @@ import java.net.URI
 import java.nio.file.Files
 import java.sql.DriverManager
 import java.util.*
-import kotlin.collections.HashMap
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -123,10 +123,10 @@ class DebeziumChangeTrackerTest {
             connection.prepareStatement("DROP DATABASE \"$targetDBName\"").use {
                 it.execute()
             }
-            // TODO I wanna drop that DB, but something keeps using it
-//            connection.prepareStatement("DROP DATABASE \"$dataStoreDBName\"").use {
-//                it.execute()
-//            }
+            DBCache.get(dataStoreDBName).close()
+            connection.prepareStatement("DROP DATABASE \"$dataStoreDBName\"").use {
+                it.execute()
+            }
         }
         tempDir.deleteRecursively()
     }
@@ -310,7 +310,7 @@ class DebeziumChangeTrackerTest {
                 stmt.execute("create table EKPO (id int primary key, ekko int references EKKO(id), text text)")
             }
             val metaModelId = buildMetaModel(dataStoreDBName, "metaModelName", SchemaCrawlerExplorer(connection))
-            
+
             val etlProcessId = UUID.randomUUID()
 
             val executor = processm.core.persistence.connection.transaction(dataStoreDBName) {
@@ -361,7 +361,7 @@ class DebeziumChangeTrackerTest {
 //                    val xes = HoneyBadgerHierarchicalXESInputStream(flatXES)
                     val xes = DBHierarchicalXESInputStream(
                         dataStoreDBName,
-                        Query("where l:id = $etlProcessId")
+                        Query("where l:identity:id = $etlProcessId")
                     )
 //                    val log = xes.single()
 //                    log.traces.forEach { trace ->
