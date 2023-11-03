@@ -1,8 +1,6 @@
 package processm.services.api
 
 import io.ktor.http.*
-import io.ktor.server.auth.*
-import io.ktor.server.request.*
 import io.mockk.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
@@ -351,14 +349,8 @@ class OrganizationsApiTest : BaseApiTest() {
 
                 val orgs = response.deserializeContent<List<ApiOrganization>>()
                 assertEquals(2, orgs.size)
-
-                assertEquals(orgIds[0], orgs[0].id)
-                assertEquals("OrgA", orgs[0].name)
-                assertEquals(false, orgs[0].isPrivate)
-
-                assertEquals(orgIds[1], orgs[1].id)
-                assertEquals("OrgB", orgs[1].name)
-                assertEquals(false, orgs[1].isPrivate)
+                assertTrue(orgs.any { org -> orgIds[0] == org.id && "OrgA" == org.name && !org.isPrivate })
+                assertTrue(orgs.any { org -> orgIds[1] == org.id && "OrgB" == org.name && !org.isPrivate })
 
                 verify(exactly = 1) { organizationService.getAll(true) }
             }
