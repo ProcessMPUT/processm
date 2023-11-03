@@ -64,12 +64,12 @@
         <com.microsoft.sqlserver.version>10.2.1.jre11</com.microsoft.sqlserver.version>
         <com.oracle.database.jdbc.version>21.6.0.0.1</com.oracle.database.jdbc.version>
         <com.ibm.db2.version>11.5.7.0</com.ibm.db2.version>
-        <maven.dependency.plugin.version>3.3.0</maven.dependency.plugin.version>
+        <maven.dependency.plugin.version>3.6.1</maven.dependency.plugin.version>
         <maven.jar.plugin.version>3.2.2</maven.jar.plugin.version>
         <maven.shade.plugin.version>3.3.0</maven.shade.plugin.version>
         <testcontainers.version>1.17.3</testcontainers.version>
         <org.apache.commons.math.version>3.6.1</org.apache.commons.math.version>
-        <io.fabric8.docker-maven-plugin.version>0.42.1</io.fabric8.docker-maven-plugin.version>
+        <io.fabric8.docker-maven-plugin.version>0.43.4</io.fabric8.docker-maven-plugin.version>
         <pooled-jms.version>3.0.0</pooled-jms.version>
         <org.slf4j.version>1.7.36</org.slf4j.version>
         <debezium.version>1.9.4.Final</debezium.version>
@@ -205,7 +205,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.11.0</version>
                 <executions>
                     <!-- Replacing default-compile as it is treated specially by maven -->
                     <execution>
