@@ -2,7 +2,7 @@
   <table>
     <tr>
       <td>
-        <graph :data="data.data" :filter-edge="filterEdge" :refresh="support"></graph>
+        <graph :data="graphData" :filter-edge="filterEdge" :refresh="support"></graph>
       </td>
       <td v-show="componentMode != ComponentMode.Static">
         <v-card>
@@ -34,9 +34,9 @@ table td:last-child {
 <script lang="ts">
 import Vue from "vue";
 import { Component, Prop } from "vue-property-decorator";
-import { DirectlyFollowsGraphComponentData } from "@/openapi";
-import Graph from "@/components/Graph.vue";
+import Graph, { CNetGraphData } from "@/components/Graph.vue";
 import { EdgeConfig } from "@antv/g6-core/lib/types";
+import { CNetComponentData } from "@/models/WorkspaceComponent";
 import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
 
 @Component({
@@ -47,9 +47,13 @@ import { ComponentMode } from "@/components/workspace/WorkspaceComponent.vue";
   },
   components: { Graph }
 })
-export default class DirectlyFollowsGraphComponent extends Vue {
+export default class CNetComponent extends Vue {
   @Prop({ default: {} })
-  readonly data!: { data: DirectlyFollowsGraphComponentData };
+  readonly data!: { data: CNetComponentData };
+  graphData: CNetGraphData = {
+    nodes: [],
+    edges: []
+  };
 
   @Prop({ default: null })
   readonly componentMode?: ComponentMode;
@@ -59,7 +63,25 @@ export default class DirectlyFollowsGraphComponent extends Vue {
   support: number = 1;
 
   mounted() {
-    if (this.data.data.edges === undefined) return;
+    //convert cnetdata to graphdata
+    this.graphData = {
+      nodes: this.data.data.nodes.map((node) => {
+        return {
+          id: node.id,
+          label: node.id,
+          joins: node.joins,
+          splits: node.splits
+        };
+      }),
+      edges: this.data.data.edges.map((edge) => {
+        return {
+          id: `${edge.sourceNodeId}->${edge.targetNodeId}`,
+          source: edge.sourceNodeId as string,
+          target: edge.targetNodeId as string,
+          support: edge.support
+        };
+      })
+    };
     const supports = this.data.data.edges.map((edge) => edge.support as number).sort((a, b) => a - b);
     this.minSupport = Math.min(...supports);
     this.maxSupport = Math.max(...supports);

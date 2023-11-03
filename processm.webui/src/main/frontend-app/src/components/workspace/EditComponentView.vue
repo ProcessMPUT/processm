@@ -20,41 +20,28 @@
           @edit="$emit('edit', componentDetails.id)"
           @remove="$emit('remove', componentDetails.id)"
         />
-        <v-alert v-if="componentDetails.lastError !== undefined" type="error"
-          >{{ componentDetails.lastError }}
-        </v-alert>
+        <v-alert v-if="componentDetails.lastError !== undefined" type="error">{{ componentDetails.lastError }}</v-alert>
         <v-list subheader>
           <v-list-item>
             <v-list-item-content>
               <v-text-field
                 v-model="component.name"
                 :label="$t('workspace.component.edit.name')"
-                :rules="[
-                  (v) =>
-                    !!v || $t('workspace.component.edit.validation.name-empty')
-                ]"
+                :rules="[(v) => !!v || $t('workspace.component.edit.validation.name-empty')]"
                 required
               />
             </v-list-item-content>
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-select
-                v-model="component.type"
-                :label="$t('workspace.component.edit.type')"
-                :items="availableComponents"
-              >
+              <v-select v-model="component.type" :label="$t('workspace.component.edit.type')" :items="availableComponents">
                 <template slot="item" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component </v-icon>
-                  {{
-                    $t(`workspace.component.${kebabize(componentType.item)}`)
-                  }}
+                  <v-icon>${{ componentType.item }}Component</v-icon>
+                  {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
                 </template>
                 <template slot="selection" slot-scope="componentType">
-                  <v-icon>${{ componentType.item }}Component </v-icon>
-                  {{
-                    $t(`workspace.component.${kebabize(componentType.item)}`)
-                  }}
+                  <v-icon>${{ componentType.item }}Component</v-icon>
+                  {{ $t(`workspace.component.${kebabize(componentType.item)}`) }}
                 </template>
               </v-select>
             </v-list-item-content>
@@ -64,10 +51,7 @@
               <v-text-field
                 v-model="component.query"
                 :label="$t('workspace.component.edit.query')"
-                :rules="[
-                  (v) =>
-                    !!v || $t('workspace.component.edit.validation.query-empty')
-                ]"
+                :rules="[(v) => !!v || $t('workspace.component.edit.validation.query-empty')]"
                 required
               />
             </v-list-item-content>
@@ -145,8 +129,7 @@ export default class EditComponentView extends Vue {
 
   async mounted() {
     this.dataStores = await this.dataStoreService.getAll();
-    if ((this.component.dataStore ?? "") == "" && this.dataStores.length > 0)
-      this.component.dataStore = this.dataStores[0].id;
+    if ((this.component.dataStore ?? "") == "" && this.dataStores.length > 0) this.component.dataStore = this.dataStores[0].id;
     this.isMounted = true;
   }
 
@@ -158,11 +141,7 @@ export default class EditComponentView extends Vue {
       this.updateData = true;
       await waitForRepaint(() => 0);
 
-      await this.workspaceService.updateComponent(
-        this.workspaceId,
-        this.componentDetails.id,
-        this.component
-      );
+      await this.workspaceService.updateComponent(this.workspaceId, this.componentDetails.id, this.component);
 
       this.$emit("component-updated", this.component);
       this.app.success(`${this.$t("common.saving.success")}`);
