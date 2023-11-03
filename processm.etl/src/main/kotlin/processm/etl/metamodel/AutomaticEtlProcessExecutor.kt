@@ -13,10 +13,11 @@ import processm.core.helpers.mapToSet
 import processm.core.helpers.toUUID
 import processm.core.log.*
 import processm.core.log.attribute.Attribute
+import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.MutableAttributeMap
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
-import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
 import java.sql.Connection
@@ -266,26 +267,63 @@ class AutomaticEtlProcessExecutor(
             objectData.forEach { (k, v) -> set("${DB_ATTR_NS}:$k", v) }
         })
 
-    private fun retrievePastEvents(objects: Collection<RemoteObjectID>): Sequence<Event> {
-        assert(objects.isNotEmpty())
-        val query = buildString {
-            append("select e:* where l:identity:id=")
-            append(logId)
-            append(" and (")
-            for (o in objects) {
-                append("(e:")
-                append(Attribute.ORG_RESOURCE)
-                append("='")
-                append(o.objectId)  //TODO binding variables? escaping?
-                append("' and [e:${CLASSID_ATTR}]='") //TODO I suspect a bug in the PQL implementation since '' here should not be needed.
-                append(o.classId.value)
-                append("') or ")
+    //FIXME A copy from DBHierarchicalXESInputStream. I'd rather share it somehow
+    private fun attributeFromRecord(record: ResultSet): Any {
+        with(record) {
+            val type = getString("type")!!
+            assert(type.length >= 2)
+            return when (type[0]) {
+                's' -> getString("string_value")
+                'f' -> getDouble("real_value")
+                'i' -> when (type[1]) {
+                    'n' -> getLong("int_value")
+                    'd' -> getString("uuid_value").toUUID()!!
+                    else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
+                }
+
+                'd' -> getTimestamp("date_value", gmtCalendar).toInstant()
+                'b' -> getBoolean("bool_value")
+                'l' -> AttributeMap.LIST_TAG
+                else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
             }
-            deleteRange(length - 3, length)
-            append(")")
         }
-        //TODO what about duplicates? are they possible?
-        return DBXESInputStream(dataStoreDBName, Query(query)).filterIsInstance<Event>()
+    }
+
+    private fun Connection.retrievePastEvents(objects: Collection<RemoteObjectID>): List<Event> {
+        assert(objects.isNotEmpty())
+        // This seems to be more efficient than using PQL
+        // TODO Consider moving the actual copying to the DB
+        val query = buildSQLQuery {
+            append(
+                """select * from events_attributes where event_id in (
+                select objects_in_events.event_id
+                from objects_in_events, events, traces, logs
+                where objects_in_events.event_id = events.id
+                and events.trace_id = traces.id
+                and traces.log_id = logs.id
+                and logs."identity:id"=?::uuid and ("""
+            )
+            bind(logId)
+            for (o in objects) {
+                append("(object_id=? and class_id=?) or")
+                bind(o.objectId)
+                bind(o.classId.value)
+            }
+            delete(length - 3, length)
+            append("))")
+        }
+        val events = HashMap<Int, MutableAttributeMap>()
+        prepareStatement(query).use { stmt ->
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    val eventId = rs.getInt("event_id")
+                    val key = rs.getString("key")
+                    val value = attributeFromRecord(rs)
+                    events.computeIfAbsent(eventId) { MutableAttributeMap() }.putFlat(key, value)
+                }
+            }
+        }
+        return events.values.map { Event(it) }
     }
 
     private fun identifyingRelatedObjectsToPossibleCaseIdentifiers(objects: Collection<RemoteObjectID>) =
@@ -508,6 +546,8 @@ class AutomaticEtlProcessExecutor(
 
 
     companion object {
+        private val gmtCalendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"))
+
         val DB_ATTR_NS = "db"
         val INTERNAL_NS = "${Brand.mainDBInternalName}:internal"
         val CLASSID_ATTR = "$INTERNAL_NS:classId"
