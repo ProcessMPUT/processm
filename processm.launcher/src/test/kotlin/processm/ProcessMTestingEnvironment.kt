@@ -10,12 +10,14 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.gson.*
 import io.ktor.server.locations.*
+import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.runBlocking
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
+import processm.core.log.XMLXESInputStream
 import processm.core.persistence.Migrator
 import processm.etl.PostgreSQLEnvironment
 import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
@@ -23,11 +25,13 @@ import processm.services.LocalDateTimeTypeAdapter
 import processm.services.NonNullableTypeAdapterFactory
 import processm.services.api.Paths
 import processm.services.api.models.*
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
+import java.util.zip.ZipInputStream
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
@@ -278,6 +282,16 @@ class ProcessMTestingEnvironment {
         parameter("query", query)
     }) {
         return@get body<Array<Any>>()
+    }
+
+    fun pqlQueryXES(query: String) = get<Paths.Logs, XMLXESInputStream>({
+        parameter("query", query)
+        header("Accept", "application/zip")
+    }) {
+        return@get ZipInputStream(bodyAsChannel().toInputStream()).use { zipStream ->
+            checkNotNull(zipStream.nextEntry)
+            return@use XMLXESInputStream(ByteArrayInputStream(zipStream.readAllBytes()))
+        }
     }
 
     fun deleteLog(logIdentityId: UUID) =
