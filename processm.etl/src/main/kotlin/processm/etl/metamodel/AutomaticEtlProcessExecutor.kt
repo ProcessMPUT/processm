@@ -31,6 +31,11 @@ class AutomaticEtlProcessExecutor(
     val identifyingClasses: Set<EntityID<Int>>
 ) {
 
+    init {
+        val nRoots = graph.vertexSet().count { graph.outDegreeOf(it) == 0 }
+        require(nRoots == 1) { "The graph must have a single distinguished root (i.e., a node with an out-degree equal to 0)" }
+    }
+
     private val metaModelId =
         checkNotNull(Class.findById(graph.vertexSet().first())?.dataModel?.id) { "The DB is broken" }
 

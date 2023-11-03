@@ -162,7 +162,10 @@ private fun Graph<EntityID<Int>, String>.searchForOptimumBottomUp(
 
         supergraphQueue.addAll(derivedGraphs)
 
-        if (parentGraph.vertexSet().size + 1 in acceptableSize && derivedGraphs.isEmpty()) bestSolutions.add(parentGraph to parentScore)
+        if (parentGraph.vertexSet().size + 1 in acceptableSize &&
+            derivedGraphs.isEmpty() &&
+            parentGraph.vertexSet().count { parentGraph.outDegreeOf(it) == 0 } == 1 //a single, distinguished root
+        ) bestSolutions.add(parentGraph to parentScore)
     }
 
     return bestSolutions.sortedWith(
