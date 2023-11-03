@@ -164,7 +164,7 @@ OFFSET ?::bigint
             val config = transaction(DBCache.get(dataStoreId).database) {
                 val config = ETLConfiguration.new {
                     metadata = EtlProcessMetadata.new {
-                        processType = "Jdbc"
+                        processType = "jdbc"
                         name = _name
                         dataConnector = externalDB.dataConnector
                     }

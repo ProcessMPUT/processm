@@ -76,7 +76,10 @@ class DBConnectionPool(databaseName: String) {
         // Prevent repeating the code inside transaction { }
         // The default in kotlin/exposed is to repeat 3 times before throwing an exception outside transaction.
         // If the transaction block has side effects, the default may lead to an undesirable state.
-        Database.connect(getDataStore(), databaseConfig = DatabaseConfig.invoke { defaultRepetitionAttempts = 1 })
+        Database.connect(getDataStore(), databaseConfig = DatabaseConfig {
+            defaultRepetitionAttempts = 1
+            keepLoadedReferencesOutOfTransaction = true
+        })
     }
 
     companion object {

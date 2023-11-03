@@ -90,4 +90,35 @@ class OrganizationServiceTest : ServiceTestBase() {
 
         assertEquals(Reason.ResourceNotFound, exception.reason)
     }
+
+    @Test
+    fun `returns public organizations only if public organizations requested`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val public = createOrganization(name = "public", isPrivate = false)
+        val private = createOrganization(name = "private", isPrivate = true)
+
+        val response = organizationService.getAll(true)
+        assertEquals(response.size, 1)
+        assertEquals(public.id, response[0].id)
+        assertEquals("public", response[0].name)
+        assertEquals(false, response[0].isPrivate)
+    }
+
+    @Test
+    fun `returns all organizations only if public and private organizations requested`(): Unit = withCleanTables(
+        AccessControlList, Groups, Organizations
+    ) {
+        val public = createOrganization(name = "public", isPrivate = false)
+        val private = createOrganization(name = "private", isPrivate = true)
+
+        val response = organizationService.getAll(false)
+        assertEquals(response.size, 2)
+        assertEquals(public.id, response[0].id)
+        assertEquals("public", response[0].name)
+        assertEquals(false, response[0].isPrivate)
+        assertEquals(private.id, response[1].id)
+        assertEquals("private", response[1].name)
+        assertEquals(true, response[1].isPrivate)
+    }
 }

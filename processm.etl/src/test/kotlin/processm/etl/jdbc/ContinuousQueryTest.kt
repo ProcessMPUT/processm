@@ -366,7 +366,7 @@ SELECT ${columnQuot}concept:name${columnQuot}, ${columnQuot}lifecycle:transition
         }
 
         // simulate new rental
-        val rentalId: Int
+        var rentalId: Int = -1
         try {
             externalDB.connect().use { conn ->
                 conn.autoCommit = true

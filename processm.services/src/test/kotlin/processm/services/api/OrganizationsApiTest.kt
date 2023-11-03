@@ -1,8 +1,6 @@
 package processm.services.api
 
 import io.ktor.http.*
-import io.ktor.server.auth.*
-import io.ktor.server.request.*
 import io.mockk.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.TestInstance
@@ -33,9 +31,7 @@ class OrganizationsApiTest : BaseApiTest() {
         HttpMethod.Patch to "/api/organizations/${UUID.randomUUID()}/members/${UUID.randomUUID()}"
     )
 
-    override fun endpointsWithNoImplementation() = Stream.of(
-        HttpMethod.Get to "/api/organizations"
-    )
+    override fun endpointsWithNoImplementation() = Stream.empty<Pair<HttpMethod, String>>()
 
     @Test
     fun `responds to organization members request with 200 and members list`() = withConfiguredTestApplication {
@@ -321,6 +317,43 @@ class OrganizationsApiTest : BaseApiTest() {
 
         verify(exactly = 0) {
             organizationService.updateMember(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `responds with 200 to the get of organization list`() = withConfiguredTestApplication {
+        val orgIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+        val organizationService = declareMock<OrganizationService> {
+            every { getAll(true) } returns listOf(
+                mockk<Organization> {
+                    every { id } returns EntityID(orgIds[0], Organizations)
+                    every { name } returns "OrgA"
+                    every { isPrivate } returns false
+                },
+                mockk<Organization> {
+                    every { id } returns EntityID(orgIds[1], Organizations)
+                    every { name } returns "OrgB"
+                    every { isPrivate } returns false
+                }
+            )
+
+            every { get(orgIds[0]) } returns mockk {
+                every { id } returns EntityID(orgIds[0], Organizations)
+                every { name } returns "OrgA"
+                every { isPrivate } returns false
+            }
+        }
+        withAuthentication(role = OrganizationRole.owner to orgIds[0]) {
+            with(handleRequest(HttpMethod.Get, "/api/organizations")) {
+                assertEquals(HttpStatusCode.OK, response.status())
+
+                val orgs = response.deserializeContent<List<ApiOrganization>>()
+                assertEquals(2, orgs.size)
+                assertTrue(orgs.any { org -> orgIds[0] == org.id && "OrgA" == org.name && !org.isPrivate })
+                assertTrue(orgs.any { org -> orgIds[1] == org.id && "OrgB" == org.name && !org.isPrivate })
+
+                verify(exactly = 1) { organizationService.getAll(true) }
+            }
         }
     }
 
