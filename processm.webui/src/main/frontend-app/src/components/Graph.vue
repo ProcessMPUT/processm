@@ -104,30 +104,28 @@ export default class Graph extends Vue {
               function drawArc(group: IGroup, pts: { x: number; y: number }[], color: string) {
                 if (pts.length <= 1) return;
 
-                pts.sort((p1, p2) => p1.x - p2.x)[0];
+                pts.sort((p1, p2) => p1.x - p2.x);
                 let candidates = pts.slice(1);
                 const ltr = Array.of(pts[0]);
                 let last = pts[0];
                 while (candidates.length > 0) {
                   candidates.sort((p1, p2) => Math.hypot(last.x - p1.x, last.y - p1.y) - Math.hypot(last.x - p2.x, last.y - p2.y));
-                  ltr.push(candidates[0]);
-                  last = candidates[0];
-                  candidates = candidates.slice(1);
+                  last = candidates.shift()!;
+                  ltr.push(last);
                 }
 
-                pts.sort((p1, p2) => p1.y - p2.y)[0];
+                pts.sort((p1, p2) => p1.y - p2.y);
                 candidates = pts.slice(1);
                 const ttb = Array.of(pts[0]);
                 last = pts[0];
                 while (candidates.length > 0) {
                   candidates.sort((p1, p2) => Math.hypot(last.x - p1.x, last.y - p1.y) - Math.hypot(last.x - p2.x, last.y - p2.y));
-                  ttb.push(candidates[0]);
-                  last = candidates[0];
-                  candidates = candidates.slice(1);
+                  last = candidates.shift()!;
+                  ttb.push(last);
                 }
 
-                const distanceLTR = ltr.reduce((distance, p) => distance + Math.hypot(ltr[0].x - p.x, ltr[0].y - p.y), 0);
-                const distanceTTB = ttb.reduce((distance, p) => distance + Math.hypot(ttb[0].x - p.x, ttb[0].y - p.y), 0);
+                const distanceLTR = ltr.reduce((distance, p, i) => distance + (i > 0 ? Math.hypot(ltr[i - 1].x - p.x, ltr[i - 1].y - p.y) : 0), 0);
+                const distanceTTB = ttb.reduce((distance, p, i) => distance + (i > 0 ? Math.hypot(ttb[i - 1].x - p.x, ttb[i - 1].y - p.y) : 0), 0);
 
                 const drawPts = distanceLTR < distanceTTB ? ltr : ttb;
 
@@ -215,6 +213,7 @@ export default class Graph extends Vue {
                 const allPts = visibleEdges.map((edge) => edge._cfg?.group?.get("children")[0].getPoint(splitPos));
                 drawArc(group, allPts, rainbow[index % rainbow.length]);
                 drawPoints(group, allPts, rainbow[index % rainbow.length]);
+                group.setZIndex(index);
               }
 
               // we start further from the end of edge due to the arrow sign
@@ -233,6 +232,7 @@ export default class Graph extends Vue {
                 const allPts = visibleEdges.map((edge) => edge._cfg?.group?.get("children")[0].getPoint(joinPos));
                 drawArc(group, allPts, rainbow[index % rainbow.length]);
                 drawPoints(group, allPts, rainbow[index % rainbow.length]);
+                group.setZIndex(index);
               }
             }, 0);
           },
@@ -246,7 +246,6 @@ export default class Graph extends Vue {
       this.calcSize(self.data);
       this.calcLayers(self.data);
 
-      console.log(self.data);
       this.graph.data(self.data); // Load the data
       this.graph.render(); // Render the graph
 

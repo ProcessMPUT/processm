@@ -35,7 +35,7 @@ export default new Vuetify({
       alignerKpiComponent: {
         component: KpiIcon
       },
-      CNetComponent:{
+      causalNetComponent: {
         component: CausalNetIcon
       },
       petriNetComponent: {
