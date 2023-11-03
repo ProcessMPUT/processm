@@ -359,6 +359,9 @@ class Db2SalesTest {
             externalDB.connect().use { conn ->
                 conn.autoCommit = false
                 conn.createStatement().use { stmt ->
+                    // the order of locking must be the same as in the insert transaction to prevent deadlock
+                    stmt.execute("lock table GOSALES.ORDER_HEADER in exclusive mode")
+                    stmt.execute("lock table GOSALES.ORDER_DETAILS in exclusive mode")
                     stmt.execute("delete from GOSALES.RETURNED_ITEM where ORDER_DETAIL_CODE >= $newOrderDetailsId")
                     stmt.execute("delete from GOSALES.ORDER_DETAILS where ORDER_NUMBER >= $newOrderId")
                     stmt.execute("delete from GOSALES.ORDER_HEADER where ORDER_NUMBER >= $newOrderId")
