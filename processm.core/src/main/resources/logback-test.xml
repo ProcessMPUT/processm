@@ -51,6 +51,11 @@
     <!-- Level for our classes -->
     <logger name="processm" level="DEBUG"/>
     <logger name="processm.core.log.hierarchical.SQLQuery" level="TRACE"/>
+    <logger name="processm.core.models.bpmn.BPMNActivity" level="INFO"/>
+    <logger name="processm.conformance.measures.precision.AbstractPrecision" level="INFO"/>
+    <logger name="processm.conformance.measures.precision.causalnet.CNetAlignmentsBasedApproximatePrecision"
+            level="INFO"/>
+    <logger name="processm.conformance.models.alignments.CausalNetAsPetriNetAligner" level="INFO"/>
     <logger name="processm.conformance.models.alignments.petrinet.DecompositionAligner" level="INFO"/>
     <logger name="kotlin.sequences" level="DEBUG"/>
 
