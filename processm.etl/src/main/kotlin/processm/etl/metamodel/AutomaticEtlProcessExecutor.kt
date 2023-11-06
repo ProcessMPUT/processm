@@ -55,14 +55,22 @@ class AutomaticEtlProcessExecutor(
         val query = buildSQLQuery {
             append(
                 """
-                with L1 as (select distinct parent.event_id, parent.object_id, parent.class_id
-                from objects_in_events parent, events_attributes r, objects_in_events child, events, traces, logs
-                where child.event_id = r.event_id and r.string_value = parent.object_id and
-                r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
-                logs."identity:id"=?::uuid and (
-            """
+                with relevant as (select objects_in_events.*
+                from objects_in_events, events, traces, logs
+                where objects_in_events.event_id = events.id
+                and events.trace_id = traces.id
+                and traces.log_id = logs.id
+                and logs."identity:id" = ?::uuid),
+                """
             )
             bind(logId)
+            append(
+                """
+                L1 as (select distinct parent.event_id, parent.object_id, parent.class_id
+                from relevant parent, events_attributes r, relevant child
+                where child.event_id = r.event_id and r.string_value = parent.object_id and (
+            """
+            )
             var nextTier = HashSet<EntityID<Int>>()
             for ((classId, sameClassLeafs) in leafs.groupBy { it.classId }) {
                 val relations = graph.outgoingEdgesOf(classId)
@@ -104,12 +112,9 @@ class AutomaticEtlProcessExecutor(
                 append(tier - 1)
                 tier++
                 append(
-                    """ child, events_attributes r, objects_in_events parent, events, traces, logs
-                        where child.event_id = r.event_id and r.string_value = parent.object_id and
-                        r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
-                        logs."identity:id"=?::uuid and ("""
+                    """ child, events_attributes r, relevant parent
+                        where child.event_id = r.event_id and r.string_value = parent.object_id and ("""
                 )
-                bind(logId)
                 for (r in relations) {
                     append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
                     bind("${DB_ATTR_NS}:${r.attributeName}")
@@ -120,15 +125,13 @@ class AutomaticEtlProcessExecutor(
                 delete(length - 3, length)
                 append("))")
             }
-            append(" select distinct object_id, class_id from (")
             for (t in 1 until tier - 1) {
-                append("select * from L")
+                append("select distinct object_id, class_id from L")
                 append(t)
                 append(" union ")
             }
-            append("select * from L")
+            append("select distinct object_id, class_id from L")
             append(tier - 1)
-            append(") as x")
         }
         return prepareStatement(query).use { stmt ->
             return@use stmt.executeQuery().use { rs ->
@@ -150,24 +153,32 @@ class AutomaticEtlProcessExecutor(
         val query = buildSQLQuery {
             append(
                 """
-                with L1 as (select distinct parent.object_id as parent_object_id, parent.class_id as parent_class_id,
-                child.object_id, child.class_id
-                from objects_in_events parent, events_attributes r, objects_in_events child, events, traces, logs
-                where child.event_id = r.event_id and r.string_value = parent.object_id and
-                r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
-                logs."identity:id"=?::uuid and (
-            """
+                with relevant as (select objects_in_events.*
+                from objects_in_events, events, traces, logs
+                where objects_in_events.event_id = events.id
+                and events.trace_id = traces.id
+                and traces.log_id = logs.id
+                and logs."identity:id" = ?::uuid),
+                """
             )
             bind(logId)
+            append(
+                """
+                L1 as (select distinct 
+                child.object_id, child.class_id
+                from relevant parent, events_attributes r, relevant child
+                where child.event_id = r.event_id and r.string_value = parent.object_id and (
+            """
+            )
             var nextTier = HashSet<Arc>()
             for ((classId, sameClassRoots) in roots.groupBy { it.classId }) {
                 val relations = graph.incomingEdgesOf(classId).filter { it.sourceClass !in reject }
                 if (relations.isNotEmpty()) {
-                    nextTier.addAll(relations)
                     append("(parent.class_id=? and parent.object_id=ANY(?) and (")
                     bind(classId.value)
                     bind(sameClassRoots.mapToArray { it.objectId })
                     for (r in relations) {
+                        nextTier.addAll(graph.incomingEdgesOf(r.sourceClass).filter { it.sourceClass !in reject })
                         append("(r.key=? and child.class_id=?) or ")
                         bind("${DB_ATTR_NS}:${r.attributeName}")
                         bind(r.sourceClass.value)
@@ -188,18 +199,15 @@ class AutomaticEtlProcessExecutor(
                 append(", L")
                 append(tier)
                 append(
-                    """ as (select distinct parent.object_id as parent_object_id, parent.class_id as parent_class_id, 
+                    """ as (select distinct 
                     child.object_id, child.class_id from L"""
                 )
                 append(tier - 1)
                 tier++
                 append(
-                    """ parent, events_attributes r, objects_in_events child, events, traces, logs
-                        where child.event_id = r.event_id and r.string_value = parent.object_id and
-                        r.event_id = events.id and events.trace_id = traces.id and traces.log_id = logs.id and
-                        logs."identity:id"=?::uuid and ("""
+                    """ parent, events_attributes r, relevant child
+                        where child.event_id = r.event_id and r.string_value = parent.object_id and ("""
                 )
-                bind(logId)
                 for (r in currentTier) {
                     append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
                     bind("${DB_ATTR_NS}:${r.attributeName}")
@@ -210,15 +218,13 @@ class AutomaticEtlProcessExecutor(
                 delete(length - 3, length)
                 append("))")
             }
-            append(" select distinct object_id, class_id from (")
             for (t in 1 until tier - 1) {
-                append("select * from L")
+                append("select distinct object_id, class_id from L")
                 append(t)
                 append(" union ")
             }
-            append("select * from L")
+            append("select distinct object_id, class_id from L")
             append(tier - 1)
-            append(") as x")
         }
         if (!isValid)
             return emptyList()
@@ -296,7 +302,7 @@ class AutomaticEtlProcessExecutor(
         val query = buildSQLQuery {
             append(
                 """select * from events_attributes where event_id in (
-                select objects_in_events.event_id
+                select min(objects_in_events.event_id)
                 from objects_in_events, events, traces, logs
                 where objects_in_events.event_id = events.id
                 and events.trace_id = traces.id
@@ -310,7 +316,7 @@ class AutomaticEtlProcessExecutor(
                 bind(o.classId.value)
             }
             delete(length - 3, length)
-            append("))")
+            append(""")group by events."identity:id")""")
         }
         val events = HashMap<Int, MutableAttributeMap>()
         prepareStatement(query).use { stmt ->
@@ -353,16 +359,15 @@ class AutomaticEtlProcessExecutor(
         val query = buildSQLQuery {
             append("select ")
             append(projection)
-            append(" from objects_in_trace,traces,logs")
-            append(""" where objects_in_trace.trace_id=traces.id and traces.log_id=logs.id and logs."identity:id"=?::uuid and ARRAY[""")
+            append(" from objects_in_traces,traces,logs")
+            append(""" where objects_in_traces.trace_id=traces.id and traces.log_id=logs.id and logs."identity:id"=?::uuid and ARRAY[""")
             bind(logId)
             for (o in objects) {
-                append("ROW(?, ?)::remote_object_identifier,")
-                bind(o.classId.value)
-                bind(o.objectId)
+                append("?::text,")
+                bind("${o.classId.value}_${o.objectId}")
             }
             deleteCharAt(length - 1)
-            append("] <@ objects_in_trace.objects")
+            append("] <@ objects_in_traces.objects")
         }
         prepareStatement(query).use { stmt ->
             return stmt.executeQuery().use(handler)
@@ -383,11 +388,8 @@ class AutomaticEtlProcessExecutor(
                 val objectsOfTrace = HashSet<RemoteObjectID>()
                 result[traceId] = objectsOfTrace
                 (rs.getArray(2).array as Array<*>).forEach { o ->
-                    //TODO Nie podoba mi sie to, moze mozna miec tablice?
-                    o as PGobject
-                    assert(o.type == "remote_object_identifier")
-                    val v = checkNotNull(o.value)
-                    val (classId, objectId) = v.substring(1, v.length - 1).split(',', limit = 2)
+                    val v = checkNotNull(o as String?)
+                    val (classId, objectId) = v.split('_', limit = 2)
                     objectsOfTrace.add(RemoteObjectID(objectId, EntityID(classId.toInt(), Classes)))
                 }
             }
