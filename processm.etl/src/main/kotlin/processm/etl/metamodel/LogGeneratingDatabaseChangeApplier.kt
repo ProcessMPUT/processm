@@ -1,41 +1,53 @@
 package processm.etl.metamodel
 
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
 import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.AutomaticEtlProcessRelations
+import processm.dbmodels.models.AutomaticEtlProcesses
 import processm.dbmodels.models.Classes
 import processm.dbmodels.models.EtlProcessesMetadata
 import processm.etl.tracker.DatabaseChangeApplier
 import processm.etl.tracker.DatabaseChangeApplier.DatabaseChangeEvent
 import java.time.Instant
+import java.time.LocalDateTime
+import java.util.*
 
 class LogGeneratingDatabaseChangeApplier(
     val dataStoreDBName: String,
     val metaModelId: Int
 ) : DatabaseChangeApplier {
-
-    //TODO split into retrieving process IDs and into creating executors, as the same executor will be reused by different classes
-    internal fun getExecutorsForClass(className: String): List<AutomaticEtlProcessExecutor> {
+    internal fun getProcessesForClass(className: String): List<Pair<UUID, LocalDateTime?>> {
         val classId =
             Classes.slice(Classes.id).select { (Classes.name eq className) and (Classes.dataModelId eq metaModelId) }
         return AutomaticEtlProcessRelations
-            .slice(AutomaticEtlProcessRelations.automaticEtlProcessId)
+            .join(AutomaticEtlProcesses, JoinType.INNER)
+            .join(EtlProcessesMetadata, JoinType.INNER, AutomaticEtlProcesses.id, EtlProcessesMetadata.id)
+            .slice(AutomaticEtlProcessRelations.automaticEtlProcessId, EtlProcessesMetadata.lastUpdatedDate)
             .select {
                 (AutomaticEtlProcessRelations.sourceClassId inSubQuery classId) or (AutomaticEtlProcessRelations.targetClassId inSubQuery classId)
             }
             .distinct()
-            .map {
-                AutomaticEtlProcessExecutor.fromDB(
-                    dataStoreDBName,
-                    it[AutomaticEtlProcessRelations.automaticEtlProcessId].value
-                )
-            }
+            .map { it[AutomaticEtlProcessRelations.automaticEtlProcessId].value to it[EtlProcessesMetadata.lastUpdatedDate] }
+    }
+
+    private val executorsCache = HashMap<UUID, Pair<LocalDateTime?, AutomaticEtlProcessExecutor>>()
+
+    internal fun getExecutorsForClass(className: String): List<AutomaticEtlProcessExecutor> {
+        return getProcessesForClass(className).map { (processId, lastModificationTime) ->
+            executorsCache.compute(processId) { _, current ->
+                // Create a new executor if:
+                // 1. The current one does not exist
+                // 2. The current one exists and has null LMT whereas the process has non-null LMT
+                // 2. The current one exists, has non-null LMT, the process has non-null LMT and the process' LMT is more recent
+                return@compute if (current === null || (lastModificationTime !== null && (current.first === null || lastModificationTime > current.first)))
+                    lastModificationTime to AutomaticEtlProcessExecutor.fromDB(dataStoreDBName, processId)
+                else
+                    current
+            }!!.second
+        }
     }
 
     /**
