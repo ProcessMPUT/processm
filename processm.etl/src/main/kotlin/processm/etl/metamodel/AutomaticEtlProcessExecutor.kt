@@ -29,7 +29,13 @@ import java.sql.ResultSet
 import java.time.Instant
 import java.util.*
 import kotlin.collections.ArrayDeque
-import kotlin.collections.HashSet
+
+private inline fun RemoteObjectID.toDB() = "${classId}_$objectId"
+
+private inline fun remoteObjectFromDB(text: String): RemoteObjectID {
+    val a = text.split('_', limit = 2)
+    return RemoteObjectID(a[1], EntityID(a[0].toInt(), Classes))
+}
 
 class AutomaticEtlProcessExecutor(
     val dataStoreDBName: String,
@@ -79,7 +85,7 @@ class AutomaticEtlProcessExecutor(
             """.trimIndent()
         ).use { stmt ->
             stmt.setString(1, logId.toString())
-            stmt.setArray(2, createArrayOf(JDBCType.VARCHAR.name, leafs.mapToArray { "${it.classId}_${it.objectId}" }))
+            stmt.setArray(2, createArrayOf(JDBCType.VARCHAR.name, leafs.mapToArray(RemoteObjectID::toDB)))
             stmt.executeQuery().use { rs ->
                 while (rs.next()) {
                     val objectGraph = (Json.parseToJsonElement(rs.getString(1)) as JsonObject)
@@ -92,52 +98,54 @@ class AutomaticEtlProcessExecutor(
                 }
             }
         }
-        println("++++++ $leafs")
         val upward = HashSet<RemoteObjectID>()
         val downward = HashSet<RemoteObjectID>()
         for (objectGraph in objectGraphs) {
-            println(objectGraph)
             val localUpward = HashSet<RemoteObjectID>()
             val queue = ArrayDeque<RemoteObjectID>()
             queue.addAll(leafs)
             while (queue.isNotEmpty()) {
                 val item = queue.removeFirst()
+                val key = item.toDB()
                 localUpward.add(item)
                 for (r in graph.outgoingEdgesOf(item.classId)) {
-                    val candidates = objectGraph["${item.classId}_${item.objectId}"]?.get(r.attributeName) ?: continue
+                    val candidates = objectGraph[key]?.get(r.attributeName) ?: continue
                     val prefix = "${r.targetClass.value}_"
                     for (c in candidates)
                         if (c.startsWith(prefix)) {
-                            val a = c.split('_', limit = 2)
-                            queue.add(RemoteObjectID(a[1], r.targetClass))
+                            queue.add(remoteObjectFromDB(c))
                         }
                 }
             }
             upward.addAll(localUpward)
             queue.addAll(localUpward)
             val reject = mutableSetOf(start.classId)
-            upward.mapTo(reject) { it.classId }
+            localUpward.mapTo(reject) { it.classId }
             reject.addAll(convergingClasses)
-            reject.add(start.classId)
+            val reversedObjectGraph = run {
+                val result = HashMap<String, HashMap<String, HashSet<String>>>()
+                for ((source, attributes) in objectGraph) {
+                    for ((attribute, targets) in attributes)
+                        for (target in targets)
+                            result.computeIfAbsent(target) { HashMap() }.computeIfAbsent(attribute) { HashSet() }
+                                .add(source)
+                }
+                return@run result
+            }
             while (queue.isNotEmpty()) {
                 val item = queue.removeFirst()
-
-                val target = "${item.classId}_${item.objectId}"
-
+                val target = item.toDB()
                 for (r in graph.incomingEdgesOf(item.classId)) {
                     if (r.sourceClass in reject)
                         continue
+                    val sources = reversedObjectGraph[target]?.get(r.attributeName) ?: continue
                     val prefix = "${r.sourceClass.value}_"
-                    for ((source, attributes) in objectGraph) {
+                    for (source in sources) {
                         if (!source.startsWith(prefix))
                             continue
-                        val candidates = attributes[r.attributeName] ?: continue
-                        if (target in candidates) {
-                            val a = source.split('_', limit = 2)
-                            val newItem = RemoteObjectID(a[1], r.sourceClass)
-                            queue.add(newItem)
-                            downward.add(newItem)
-                        }
+                        val newItem = remoteObjectFromDB(source)
+                        queue.add(newItem)
+                        downward.add(newItem)
                     }
                 }
             }
@@ -145,15 +153,7 @@ class AutomaticEtlProcessExecutor(
         upward.removeAll { it.classId !in identifyingClasses }
         upward.addAll(leafs)
         upward.remove(start)
-        if (upward.isEmpty())
-            return upward
-        val reject = mutableSetOf(start.classId)
-        upward.mapTo(reject) { it.classId }
-        reject.addAll(convergingClasses)
-        reject.add(start.classId)
-        downward.removeAll { it.classId in reject }
         upward.addAll(downward)
-        assert(start !in downward)
         return upward
     }
 
@@ -390,70 +390,72 @@ class AutomaticEtlProcessExecutor(
             output.write(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to logId)))
             output.write(asSequence())
             output.flush()
+            // Add object described by an event to the objects column of the event's trace
             connection.prepareStatement(
                 """
                 update traces
                 set objects = jsonb_build_object(?::text, '{}'::jsonb) || objects
-                where "identity:id"=?::uuid
+                where "identity:id"=?::uuid and not (objects ?? ?::text)
             """.trimIndent()
             ).use { stmt ->
-                var currentTrace: Trace? = null
+                var currentTraceIdentityId: String? = null
                 for (component in this) {
                     if (component is Trace)
-                        currentTrace = component
+                        currentTraceIdentityId = component.identityId?.toString()
                     else if (component is Event) {
-                        val remoteObjectId = component.getObject() ?: continue
-                        val traceIdentityId = checkNotNull(currentTrace?.identityId)
-                        stmt.setString(1, "${remoteObjectId.classId}_${remoteObjectId.objectId}")
-                        stmt.setString(2, traceIdentityId.toString())
+                        val dbId = component.getObject()?.toDB() ?: continue
+                        stmt.setString(1, dbId)
+                        stmt.setString(2, checkNotNull(currentTraceIdentityId))
+                        stmt.setString(3, dbId)
                         stmt.executeUpdate()
                     }
                 }
-                connection.prepareStatement(
-                    """
+            }
+            // Add attribute values relevant according to the relation graph
+            connection.prepareStatement(
+                """
                     update traces 
                     set objects=
                     jsonb_set(
                         objects, 
-                        ARRAY[?, ?]::text[], 
-                        jsonb_build_array(?::text) || coalesce((objects #> ARRAY[?, ?]::text[]), '[]'::jsonb), 
+                        ?::text[], 
+                        jsonb_build_array(?::text) || coalesce((objects #> ?::text[]), '[]'::jsonb), 
                         true
                     ) 
                     where not (
                         jsonb_build_object(?::text, jsonb_build_object(?::text, jsonb_build_array(?::text))) 
                         <@ objects
                     ) and "identity:id"=?::uuid""".trimIndent()
-                )
-                    .use { stmt ->
-                        var currentTrace: Trace? = null
-                        for (component in this) {
-                            if (component is Trace)
-                                currentTrace = component
-                            else if (component is Event) {
-                                val remoteObjectId = component.getObject() ?: continue
-                                val traceIdentityId = checkNotNull(currentTrace?.identityId)
-                                val source = "${remoteObjectId.classId}_${remoteObjectId.objectId}"
-                                for (r in graph.outgoingEdgesOf(remoteObjectId.classId)) {
-                                    val targetObjectId =
-                                        component.attributes.getOrNull("$DB_ATTR_NS:${r.attributeName}")?.toString()
-                                            ?: continue
-                                    val target = "${r.targetClass.value}_${targetObjectId}"
-                                    stmt.setString(1, source)
-                                    stmt.setString(2, r.attributeName)
-                                    stmt.setString(3, target)
-                                    stmt.setString(4, source)
-                                    stmt.setString(5, r.attributeName)
-                                    stmt.setString(6, source)
-                                    stmt.setString(7, r.attributeName)
-                                    stmt.setString(8, target)
-                                    stmt.setString(9, traceIdentityId.toString())
-                                    stmt.executeUpdate()
-                                }
+            )
+                .use { stmt ->
+                    var currentTraceIdentityId: String? = null
+                    for (component in this) {
+                        if (component is Trace)
+                            currentTraceIdentityId = component.identityId?.toString()
+                        else if (component is Event) {
+                            val remoteObjectId = component.getObject() ?: continue
+                            val source = remoteObjectId.toDB()
+                            for (r in graph.outgoingEdgesOf(remoteObjectId.classId)) {
+                                val targetObjectId =
+                                    component.attributes.getOrNull("$DB_ATTR_NS:${r.attributeName}")?.toString()
+                                        ?: continue
+                                val target = "${r.targetClass.value}_${targetObjectId}"
+                                val path =
+                                    connection.createArrayOf(JDBCType.VARCHAR.name, arrayOf(source, r.attributeName))
+                                stmt.setArray(1, path)
+                                stmt.setString(2, target)
+                                stmt.setArray(3, path)
+                                stmt.setString(4, source)
+                                stmt.setString(5, r.attributeName)
+                                stmt.setString(6, target)
+                                stmt.setString(7, checkNotNull(currentTraceIdentityId))
+                                stmt.executeUpdate()
                             }
                         }
+
                     }
-                connection.commit()
-            }
+                    connection.commit()
+                }
         }
     }
 
