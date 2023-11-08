@@ -6,7 +6,6 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultDirectedGraph
-import org.postgresql.util.PGobject
 import processm.core.Brand
 import processm.core.helpers.mapToArray
 import processm.core.helpers.mapToSet
@@ -403,8 +402,7 @@ class AutomaticEtlProcessExecutor(
         return RemoteObjectID(resource, EntityID(classId.toInt(), Classes))
     }
 
-    //TODO add persistence
-    private val queue = LinkedList<DatabaseChangeApplier.DatabaseChangeEvent>()
+    private val queue = PersistentPostponedEventsQueue(logId)
 
     /**
      * Trace (case identifier) = po jednym obiekcie z identifying classes
@@ -504,18 +502,16 @@ class AutomaticEtlProcessExecutor(
     private fun processQueue(connection: Connection) {
         while (queue.isNotEmpty()) {
             var modified = false
-            val i = queue.iterator()
             // Events related to the same object must be processed in order
             val unprocessedObjects = HashSet<RemoteObjectID>()
-            while (i.hasNext()) {
-                val event = i.next()
-                val obj = event.getObject()
+            for (event in queue) {
+                val obj = event.objectId
                 if (obj !in unprocessedObjects) {
-                    val result = connection.processEvent(event)
+                    val result = connection.processEvent(event.dbEvent)
                     if (result.any { it is Event }) {
                         logger.trace("Successfully processed {}", event)
                         result.writeToDB()
-                        i.remove()
+                        queue.remove(event)
                         modified = true
                     } else
                         unprocessedObjects.add(obj)
@@ -532,7 +528,7 @@ class AutomaticEtlProcessExecutor(
             val objectOfEvent = dbEvent.getObject()
             // Process an event only if there are no unprocessed events related to this object
             val result =
-                if (queue.all { it.getObject() != objectOfEvent }) connection.processEvent(dbEvent)
+                if (!queue.hasObject(objectOfEvent)) connection.processEvent(dbEvent)
                 else emptyList()
             if (result.any { it is Event }) {
                 result.writeToDB()
@@ -540,7 +536,7 @@ class AutomaticEtlProcessExecutor(
                 return true
             } else {
                 logger.trace("Postponing {}", dbEvent)
-                queue.add(dbEvent)
+                queue.add(dbEvent, objectOfEvent)
                 return false
             }
         }

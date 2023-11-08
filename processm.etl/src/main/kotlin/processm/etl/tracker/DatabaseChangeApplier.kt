@@ -1,5 +1,7 @@
 package processm.etl.tracker
 
+import kotlinx.serialization.Serializable
+
 interface DatabaseChangeApplier {
 
     /**
@@ -9,6 +11,7 @@ interface DatabaseChangeApplier {
      */
     fun applyChange(databaseChangeEvents: List<DatabaseChangeEvent>)
 
+    @Serializable
     data class DatabaseChangeEvent(
         val entityKey: String,
         val entityId: String,
