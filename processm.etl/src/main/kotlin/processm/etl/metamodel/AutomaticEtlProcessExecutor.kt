@@ -31,6 +31,8 @@ class AutomaticEtlProcessExecutor(
     val identifyingClasses: Set<EntityID<Int>>
 ) {
 
+    private val convergingClasses = graph.vertexSet() - identifyingClasses
+
     init {
         val nRoots = graph.vertexSet().count { graph.outDegreeOf(it) == 0 }
         require(nRoots == 1) { "The graph must have a single distinguished root (i.e., a node with an out-degree equal to 0)" }
@@ -238,7 +240,7 @@ class AutomaticEtlProcessExecutor(
         }
     }
 
-    private fun Connection.getRelatedObjects(
+    private fun Connection.getRelatedIdentifyingObjects(
         start: RemoteObjectID,
         newAttributes: Map<String, String>
     ): Set<RemoteObjectID> {
@@ -249,14 +251,18 @@ class AutomaticEtlProcessExecutor(
                 newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
             }
 
-        val upward = retrieveRelatedObjectsUpwards(leafs).toSet() + leafs - setOf(start)
+        val upward = retrieveRelatedObjectsUpwards(leafs).filterTo(HashSet()) { it.classId in identifyingClasses }
+        upward.addAll(leafs)
+        upward.remove(start)
         if (upward.isEmpty())
             return upward
-        //FIXME I am not sure this is right, as it ignores the distinction between identifying and converging classes
         val reject = mutableSetOf(start.classId)
         upward.mapTo(reject) { it.classId }
+        reject.addAll(convergingClasses)
         val downward = retrieveRelatedObjectsDownward(upward, reject)
-        return upward + downward - setOf(start)
+        upward.addAll(downward)
+        assert(start !in downward)
+        return upward
     }
 
     private fun DatabaseChangeApplier.DatabaseChangeEvent.toXES(classId: EntityID<Int>) = Event(
@@ -421,12 +427,8 @@ class AutomaticEtlProcessExecutor(
         val result = ArrayList<XESComponent>()
         val remoteObject = dbEvent.getObject()
         val relevantTraces = retrievePastTraces(setOf(remoteObject))
-        val relatedObjects = getRelatedObjects(remoteObject, dbEvent.objectData)
-        val (identifyingRelatedObjects, convergingRelatedObjects) = relatedObjects
-            .partition { it.classId in identifyingClasses }
-            .let { it.first.toMutableSet() to it.second.toSet() }  //TODO that is inefficient
+        val identifyingRelatedObjects = getRelatedIdentifyingObjects(remoteObject, dbEvent.objectData)
         assert(remoteObject !in identifyingRelatedObjects)
-        assert(remoteObject !in convergingRelatedObjects)
         val event = dbEvent.toXES(remoteObject.classId)
         if (relevantTraces.isNotEmpty()) {
             //This is an update to a preexisting object
@@ -440,8 +442,7 @@ class AutomaticEtlProcessExecutor(
         } else {
             // a new object
             if (remoteObject.classId in identifyingClasses) {
-                //TODO the following line should be an assert I think
-                identifyingRelatedObjects.removeIf { it.classId == remoteObject.classId }
+                assert(identifyingRelatedObjects.none { it.classId == remoteObject.classId })
                 val possibleCIs = identifyingRelatedObjectsToPossibleCaseIdentifiers(identifyingRelatedObjects)
                 val existingTraceIds = ArrayList<UUID>()
                 for (ci in possibleCIs) {
