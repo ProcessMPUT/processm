@@ -1,6 +1,10 @@
 package processm.etl.metamodel
 
 import com.google.common.collect.Lists
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
@@ -20,9 +24,12 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
 import java.sql.Connection
+import java.sql.JDBCType
 import java.sql.ResultSet
 import java.time.Instant
 import java.util.*
+import kotlin.collections.ArrayDeque
+import kotlin.collections.HashSet
 
 class AutomaticEtlProcessExecutor(
     val dataStoreDBName: String,
@@ -50,196 +57,6 @@ class AutomaticEtlProcessExecutor(
                 ?: throw NoSuchElementException("A class with the specified name $className does not exist")
         }
 
-    private fun Connection.retrieveRelatedObjectsUpwards(leafs: List<RemoteObjectID>): List<RemoteObjectID> {
-        assert(leafs.isNotEmpty())
-        var isValid = false
-        val query = buildSQLQuery {
-            append(
-                """
-                with relevant as (select objects_in_events.*
-                from objects_in_events, events, traces, logs
-                where objects_in_events.event_id = events.id
-                and events.trace_id = traces.id
-                and traces.log_id = logs.id
-                and logs."identity:id" = ?::uuid),
-                """
-            )
-            bind(logId)
-            append(
-                """
-                L1 as (select distinct parent.event_id, parent.object_id, parent.class_id
-                from relevant parent, events_attributes r, relevant child
-                where child.event_id = r.event_id and r.string_value = parent.object_id and (
-            """
-            )
-            var nextTier = HashSet<EntityID<Int>>()
-            for ((classId, sameClassLeafs) in leafs.groupBy { it.classId }) {
-                val relations = graph.outgoingEdgesOf(classId)
-                if (relations.isNotEmpty()) {
-                    append("(child.class_id=? and child.object_id=ANY(?) and (")
-                    bind(classId.value)
-                    bind(sameClassLeafs.mapToArray { it.objectId })
-                    for (r in relations) {
-                        nextTier.add(r.targetClass)
-                        append("(r.key=? and parent.class_id=?) or ")
-                        bind("${DB_ATTR_NS}:${r.attributeName}")
-                        bind(r.targetClass.value)
-                        isValid = true
-                    }
-                    delete(length - 3, length)
-                    append(")) or ")
-                }
-            }
-            if (!isValid)
-                return emptyList()
-            delete(length - 3, length)
-            append("))")
-            var tier = 2
-            var currentTier = HashSet<EntityID<Int>>()
-            while (nextTier.isNotEmpty()) {
-                currentTier = nextTier.apply { nextTier = currentTier }
-                assert(currentTier.isNotEmpty())
-                val relations = currentTier.flatMapTo(HashSet()) { childClassId ->
-                    graph.outgoingEdgesOf(childClassId)
-                }
-                if (relations.isEmpty())
-                    break
-                nextTier.clear()
-                append(", L")
-                append(tier)
-                append(
-                    """ as (select distinct parent.event_id, parent.object_id, parent.class_id from L"""
-                )
-                append(tier - 1)
-                tier++
-                append(
-                    """ child, events_attributes r, relevant parent
-                        where child.event_id = r.event_id and r.string_value = parent.object_id and ("""
-                )
-                for (r in relations) {
-                    append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
-                    bind("${DB_ATTR_NS}:${r.attributeName}")
-                    bind(r.sourceClass.value)
-                    bind(r.targetClass.value)
-                    nextTier.add(r.targetClass)
-                }
-                delete(length - 3, length)
-                append("))")
-            }
-            for (t in 1 until tier - 1) {
-                append("select distinct object_id, class_id from L")
-                append(t)
-                append(" union ")
-            }
-            append("select distinct object_id, class_id from L")
-            append(tier - 1)
-        }
-        return prepareStatement(query).use { stmt ->
-            return@use stmt.executeQuery().use { rs ->
-                val result = ArrayList<RemoteObjectID>()
-                while (rs.next()) {
-                    result.add(RemoteObjectID(rs.getString(1), EntityID(rs.getInt(2), Classes)))
-                }
-                return@use result
-            }
-        }
-    }
-
-    private fun Connection.retrieveRelatedObjectsDownward(
-        roots: Collection<RemoteObjectID>,
-        reject: Set<EntityID<Int>>
-    ): List<RemoteObjectID> {
-        assert(roots.isNotEmpty())
-        var isValid = false
-        val query = buildSQLQuery {
-            append(
-                """
-                with relevant as (select objects_in_events.*
-                from objects_in_events, events, traces, logs
-                where objects_in_events.event_id = events.id
-                and events.trace_id = traces.id
-                and traces.log_id = logs.id
-                and logs."identity:id" = ?::uuid),
-                """
-            )
-            bind(logId)
-            append(
-                """
-                L1 as (select distinct 
-                child.object_id, child.class_id
-                from relevant parent, events_attributes r, relevant child
-                where child.event_id = r.event_id and r.string_value = parent.object_id and (
-            """
-            )
-            var nextTier = HashSet<Arc>()
-            for ((classId, sameClassRoots) in roots.groupBy { it.classId }) {
-                val relations = graph.incomingEdgesOf(classId).filter { it.sourceClass !in reject }
-                if (relations.isNotEmpty()) {
-                    append("(parent.class_id=? and parent.object_id=ANY(?) and (")
-                    bind(classId.value)
-                    bind(sameClassRoots.mapToArray { it.objectId })
-                    for (r in relations) {
-                        nextTier.addAll(graph.incomingEdgesOf(r.sourceClass).filter { it.sourceClass !in reject })
-                        append("(r.key=? and child.class_id=?) or ")
-                        bind("${DB_ATTR_NS}:${r.attributeName}")
-                        bind(r.sourceClass.value)
-                        isValid = true
-                    }
-                    delete(length - 3, length)
-                    append(")) or ")
-                }
-            }
-            delete(length - 3, length)
-            append("))")
-            var tier = 2
-            var currentTier = HashSet<Arc>()
-            while (nextTier.isNotEmpty()) {
-                currentTier = nextTier.apply { nextTier = currentTier }
-                assert(currentTier.isNotEmpty())
-                nextTier.clear()
-                append(", L")
-                append(tier)
-                append(
-                    """ as (select distinct 
-                    child.object_id, child.class_id from L"""
-                )
-                append(tier - 1)
-                tier++
-                append(
-                    """ parent, events_attributes r, relevant child
-                        where child.event_id = r.event_id and r.string_value = parent.object_id and ("""
-                )
-                for (r in currentTier) {
-                    append("(r.key=? and child.class_id=? and parent.class_id=?) or ")
-                    bind("${DB_ATTR_NS}:${r.attributeName}")
-                    bind(r.sourceClass.value)
-                    bind(r.targetClass.value)
-                    nextTier.addAll(graph.incomingEdgesOf(r.sourceClass).filter { it.sourceClass !in reject })
-                }
-                delete(length - 3, length)
-                append("))")
-            }
-            for (t in 1 until tier - 1) {
-                append("select distinct object_id, class_id from L")
-                append(t)
-                append(" union ")
-            }
-            append("select distinct object_id, class_id from L")
-            append(tier - 1)
-        }
-        if (!isValid)
-            return emptyList()
-        return prepareStatement(query).use { stmt ->
-            return@use stmt.executeQuery().use { rs ->
-                val result = ArrayList<RemoteObjectID>()
-                while (rs.next()) {
-                    result.add(RemoteObjectID(rs.getString(1), EntityID(rs.getInt(2), Classes)))
-                }
-                return@use result
-            }
-        }
-    }
-
     private fun Connection.getRelatedIdentifyingObjects(
         start: RemoteObjectID,
         newAttributes: Map<String, String>
@@ -251,7 +68,81 @@ class AutomaticEtlProcessExecutor(
                 newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
             }
 
-        val upward = retrieveRelatedObjectsUpwards(leafs).filterTo(HashSet()) { it.classId in identifyingClasses }
+        val objectGraphs = ArrayList<Map<String, Map<String, List<String>>>>()
+        prepareStatement(
+            """
+            select distinct objects::text 
+            from traces join logs on traces.log_id=logs.id 
+            where              
+            logs."identity:id"=?::uuid 
+            and objects ??| ?::text[]
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setString(1, logId.toString())
+            stmt.setArray(2, createArrayOf(JDBCType.VARCHAR.name, leafs.mapToArray { "${it.classId}_${it.objectId}" }))
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    val objectGraph = (Json.parseToJsonElement(rs.getString(1)) as JsonObject)
+                        .mapValues { (_, attributeToTarget) ->
+                            (attributeToTarget as JsonObject).mapValues { (_, targets) ->
+                                (targets as JsonArray).map { (it as JsonPrimitive).content }
+                            }
+                        }
+                    objectGraphs.add(objectGraph)
+                }
+            }
+        }
+        println("++++++ $leafs")
+        val upward = HashSet<RemoteObjectID>()
+        val downward = HashSet<RemoteObjectID>()
+        for (objectGraph in objectGraphs) {
+            println(objectGraph)
+            val localUpward = HashSet<RemoteObjectID>()
+            val queue = ArrayDeque<RemoteObjectID>()
+            queue.addAll(leafs)
+            while (queue.isNotEmpty()) {
+                val item = queue.removeFirst()
+                localUpward.add(item)
+                for (r in graph.outgoingEdgesOf(item.classId)) {
+                    val candidates = objectGraph["${item.classId}_${item.objectId}"]?.get(r.attributeName) ?: continue
+                    val prefix = "${r.targetClass.value}_"
+                    for (c in candidates)
+                        if (c.startsWith(prefix)) {
+                            val a = c.split('_', limit = 2)
+                            queue.add(RemoteObjectID(a[1], r.targetClass))
+                        }
+                }
+            }
+            upward.addAll(localUpward)
+            queue.addAll(localUpward)
+            val reject = mutableSetOf(start.classId)
+            upward.mapTo(reject) { it.classId }
+            reject.addAll(convergingClasses)
+            reject.add(start.classId)
+            while (queue.isNotEmpty()) {
+                val item = queue.removeFirst()
+
+                val target = "${item.classId}_${item.objectId}"
+
+                for (r in graph.incomingEdgesOf(item.classId)) {
+                    if (r.sourceClass in reject)
+                        continue
+                    val prefix = "${r.sourceClass.value}_"
+                    for ((source, attributes) in objectGraph) {
+                        if (!source.startsWith(prefix))
+                            continue
+                        val candidates = attributes[r.attributeName] ?: continue
+                        if (target in candidates) {
+                            val a = source.split('_', limit = 2)
+                            val newItem = RemoteObjectID(a[1], r.sourceClass)
+                            queue.add(newItem)
+                            downward.add(newItem)
+                        }
+                    }
+                }
+            }
+        }
+        upward.removeAll { it.classId !in identifyingClasses }
         upward.addAll(leafs)
         upward.remove(start)
         if (upward.isEmpty())
@@ -259,7 +150,8 @@ class AutomaticEtlProcessExecutor(
         val reject = mutableSetOf(start.classId)
         upward.mapTo(reject) { it.classId }
         reject.addAll(convergingClasses)
-        val downward = retrieveRelatedObjectsDownward(upward, reject)
+        reject.add(start.classId)
+        downward.removeAll { it.classId in reject }
         upward.addAll(downward)
         assert(start !in downward)
         return upward
@@ -364,15 +256,15 @@ class AutomaticEtlProcessExecutor(
         val query = buildSQLQuery {
             append("select ")
             append(projection)
-            append(" from objects_in_traces,traces,logs")
-            append(""" where objects_in_traces.trace_id=traces.id and traces.log_id=logs.id and logs."identity:id"=?::uuid and ARRAY[""")
+            append(" from traces,logs")
+            append(""" where traces.log_id=logs.id and logs."identity:id"=?::uuid and objects ??& ARRAY[""")
             bind(logId)
             for (o in objects) {
                 append("?::text,")
                 bind("${o.classId.value}_${o.objectId}")
             }
             deleteCharAt(length - 1)
-            append("] <@ objects_in_traces.objects")
+            append("]")
         }
         prepareStatement(query).use { stmt ->
             return stmt.executeQuery().use(handler)
@@ -386,13 +278,14 @@ class AutomaticEtlProcessExecutor(
     private fun Connection.retrievePastTracesWithObjects(objects: Collection<RemoteObjectID>): Map<UUID, Set<RemoteObjectID>> {
         assert(objects.isNotEmpty())
         assert(objects.isNotEmpty())
-        return queryObjectsInTrace(objects, """traces."identity:id", objects""") { rs ->
+        return queryObjectsInTrace(objects, """traces."identity:id", traces.objects::text""") { rs ->
             val result = HashMap<UUID, Set<RemoteObjectID>>()
             while (rs.next()) {
                 val traceId = checkNotNull(rs.getString(1).toUUID())
                 val objectsOfTrace = HashSet<RemoteObjectID>()
                 result[traceId] = objectsOfTrace
-                (rs.getArray(2).array as Array<*>).forEach { o ->
+                // TODO move keys extraction to the DB
+                (Json.parseToJsonElement(rs.getString(2)) as JsonObject).keys.forEach { o ->
                     val v = checkNotNull(o as String?)
                     val (classId, objectId) = v.split('_', limit = 2)
                     objectsOfTrace.add(RemoteObjectID(objectId, EntityID(classId.toInt(), Classes)))
@@ -491,9 +384,76 @@ class AutomaticEtlProcessExecutor(
 
     private fun List<XESComponent>.writeToDB() {
         assert(any { it is Event })
-        AppendingDBXESOutputStream(DBCache.get(dataStoreDBName).getConnection()).use { output ->
+        DBCache.get(dataStoreDBName).getConnection().use { connection ->
+            //No use on AppendingDBXESOutputStream to avoid closing the connection
+            val output = AppendingDBXESOutputStream(connection)
             output.write(Log(mutableAttributeMapOf(Attribute.IDENTITY_ID to logId)))
             output.write(asSequence())
+            output.flush()
+            connection.prepareStatement(
+                """
+                update traces
+                set objects = jsonb_build_object(?::text, '{}'::jsonb) || objects
+                where "identity:id"=?::uuid
+            """.trimIndent()
+            ).use { stmt ->
+                var currentTrace: Trace? = null
+                for (component in this) {
+                    if (component is Trace)
+                        currentTrace = component
+                    else if (component is Event) {
+                        val remoteObjectId = component.getObject() ?: continue
+                        val traceIdentityId = checkNotNull(currentTrace?.identityId)
+                        stmt.setString(1, "${remoteObjectId.classId}_${remoteObjectId.objectId}")
+                        stmt.setString(2, traceIdentityId.toString())
+                        stmt.executeUpdate()
+                    }
+                }
+                connection.prepareStatement(
+                    """
+                    update traces 
+                    set objects=
+                    jsonb_set(
+                        objects, 
+                        ARRAY[?, ?]::text[], 
+                        jsonb_build_array(?::text) || coalesce((objects #> ARRAY[?, ?]::text[]), '[]'::jsonb), 
+                        true
+                    ) 
+                    where not (
+                        jsonb_build_object(?::text, jsonb_build_object(?::text, jsonb_build_array(?::text))) 
+                        <@ objects
+                    ) and "identity:id"=?::uuid""".trimIndent()
+                )
+                    .use { stmt ->
+                        var currentTrace: Trace? = null
+                        for (component in this) {
+                            if (component is Trace)
+                                currentTrace = component
+                            else if (component is Event) {
+                                val remoteObjectId = component.getObject() ?: continue
+                                val traceIdentityId = checkNotNull(currentTrace?.identityId)
+                                val source = "${remoteObjectId.classId}_${remoteObjectId.objectId}"
+                                for (r in graph.outgoingEdgesOf(remoteObjectId.classId)) {
+                                    val targetObjectId =
+                                        component.attributes.getOrNull("$DB_ATTR_NS:${r.attributeName}")?.toString()
+                                            ?: continue
+                                    val target = "${r.targetClass.value}_${targetObjectId}"
+                                    stmt.setString(1, source)
+                                    stmt.setString(2, r.attributeName)
+                                    stmt.setString(3, target)
+                                    stmt.setString(4, source)
+                                    stmt.setString(5, r.attributeName)
+                                    stmt.setString(6, source)
+                                    stmt.setString(7, r.attributeName)
+                                    stmt.setString(8, target)
+                                    stmt.setString(9, traceIdentityId.toString())
+                                    stmt.executeUpdate()
+                                }
+                            }
+                        }
+                    }
+                connection.commit()
+            }
         }
     }
 
