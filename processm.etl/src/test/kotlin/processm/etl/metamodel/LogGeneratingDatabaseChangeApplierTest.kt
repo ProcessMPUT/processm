@@ -18,15 +18,34 @@ import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
 import java.time.Instant
 import java.util.*
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
+
+fun <E, A> traceEquals(expected: Collection<E>, actual: Collection<A>) =
+    expected.size == actual.size && expected.toSet() == actual.toSet()
+
+fun <T> assertLogEquals(expected: Collection<Collection<T>>, actual: Collection<Collection<T>>) {
+    assertEquals(expected.size, actual.size)
+    val tmp = LinkedList(actual)
+    for (e in expected) {
+        val i = tmp.iterator()
+        var hit = false
+        while (i.hasNext()) {
+            val current = i.next()
+            if (traceEquals(e, current)) {
+                hit = true
+                i.remove()
+                break
+            }
+        }
+        assertTrue { hit }
+    }
+    assertTrue { tmp.isEmpty() }
+}
 
 /**
  * Test based on https://link.springer.com/article/10.1007/s10115-019-01430-6, in particular Fig. 9, Tables 1 and 2
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@OptIn(InMemoryXESProcessing::class)
 class LogGeneratingDatabaseChangeApplierTest {
 
     private var metaModelId: Int? = null
@@ -161,24 +180,17 @@ class LogGeneratingDatabaseChangeApplierTest {
         return applier
     }
 
-    private fun readLog(logId: UUID): Set<Set<String>> {
+    private fun readLog(logId: UUID): List<List<String>> {
         val xes = DBHierarchicalXESInputStream(temporaryDB, Query("where l:id = $logId"))
-        val actual = HashMap<UUID, HashMap<UUID, HashSet<String>>>()
+        val actual = HashMap<UUID, HashMap<UUID, ArrayList<String>>>()
         for (log in xes) {
-            val logMap = actual.computeIfAbsent(log.identityId!!) { HashMap() }
+            val traces = actual.computeIfAbsent(log.identityId!!) { HashMap() }
             for (trace in log.traces) {
-                val traceSet = logMap.computeIfAbsent(trace.identityId!!) { HashSet() }
-                trace.events.mapTo(traceSet) { it["db:text"].toString().trim('"') }
+                val events = traces.computeIfAbsent(trace.identityId!!) { ArrayList() }
+                trace.events.mapTo(events) { it["db:text"].toString().trim('"') }
             }
         }
-        for ((logId, log) in actual.entries) {
-            println(logId)
-            for ((traceId, trace) in log.entries) {
-                println("\t$traceId")
-                println("\t\t$trace")
-            }
-        }
-        return actual.values.flatMap { it.values }.toSet()
+        return actual.values.flatMap { it.values }
     }
 
     @Test
@@ -190,7 +202,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        assertLogEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
         metaModel.applyChange(
             listOf(
                 dbEvent("b1", "EBAN", "be2"),
@@ -200,14 +212,14 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), readLog(etlProcessId))
+        assertLogEquals(setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), readLog(etlProcessId))
         metaModel.applyChange(
             listOf(
                 dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
                 dbEvent("d3", "EKPO", "de3", "ekko" to "c2")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2"),
                 setOf("ae1", "ae2", "be1", "be2", "ce2", "de3")
@@ -221,7 +233,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2"),
                 setOf("ae1", "ae2", "be1", "be2", "ce2", "de3"),
@@ -239,7 +251,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        assertLogEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
         metaModel.applyChange(
             listOf(
                 dbEvent("b1", "EBAN", "be2"),
@@ -249,14 +261,14 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), readLog(etlProcessId))
+        assertLogEquals(setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "de1", "de2")), readLog(etlProcessId))
         metaModel.applyChange(
             listOf(
                 dbEvent("c2", "EKKO", "ce2", "eban" to "b1"),
                 dbEvent("d3", "EKPO", "de3", "ekko" to "c2")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3")), readLog(etlProcessId)
         )
         metaModel.applyChange(
@@ -267,7 +279,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "ce2", "de1", "de2", "de3"),
                 setOf("ae3", "be3", "ce3", "de4")
@@ -284,7 +296,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        assertLogEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
         metaModel.applyChange(
             listOf(
                 dbEvent("b1", "EBAN", "be2"),
@@ -294,7 +306,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de2")
@@ -306,7 +318,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d3", "EKPO", "de3", "ekko" to "c2")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
@@ -321,7 +333,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
@@ -340,7 +352,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("a1", "EKET", "ae1", "eban" to "b1"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
+        assertLogEquals(setOf(setOf("ae1", "be1")), readLog(etlProcessId))
         metaModel.applyChange(
             listOf(
                 dbEvent("c1", "EKKO", "ce1", "eban" to "b1"),
@@ -348,7 +360,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d2", "EKPO", "de2", "ekko" to "c1"),
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "be1", "ce1", "de1"),
                 setOf("ae1", "be1", "ce1", "de2")
@@ -361,7 +373,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("b2", "EBAN", "be3"),
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "be1", "ce1", "de1"),
                 setOf("ae1", "be1", "ce1", "de2"),
@@ -376,7 +388,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "be1", "ce1", "de1"),
                 setOf("ae1", "be1", "ce1", "de2"),
@@ -390,7 +402,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("a1", "EKET", "ae2"),
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
@@ -420,7 +432,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("d4", "EKPO", "de4", "ekko" to "c3")
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
@@ -450,7 +462,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("b2", "EBAN", "be3"),
             )
         )
-        assertEquals(
+        assertLogEquals(
             setOf(
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de1"),
                 setOf("ae1", "ae2", "be1", "be2", "ce1", "de2"),
@@ -460,13 +472,6 @@ class LogGeneratingDatabaseChangeApplierTest {
         )
     }
 
-    //    @Ignore(
-//        """
-//        This case cannot be handled in an on-line manner. After the second event there necessarily will be
-//        two separate traces, as a1 and d1 cannot be connected without knowledge about future events.
-//        This could be solved by introducing a queue of pending events that reference a non-existing object.
-//    """
-//    )
     @Test
     fun `batch insert with disabled constraints simplified`() {
         val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
@@ -478,7 +483,7 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("b1", "EBAN", "be1"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "be1", "ce1", "de1")), readLog(etlProcessId))
+        assertLogEquals(setOf(setOf("ae1", "be1", "ce1", "de1")), readLog(etlProcessId))
     }
 
     @Test
@@ -497,6 +502,50 @@ class LogGeneratingDatabaseChangeApplierTest {
                 dbEvent("b1", "EBAN", "be2"),
             )
         )
-        assertEquals(setOf(setOf("ae1", "ae2", "ae3", "be1", "be2", "ce1", "de1"), setOf("be3")), readLog(etlProcessId))
+        assertLogEquals(
+            setOf(setOf("ae1", "ae2", "ae3", "be1", "be2", "ce1", "de1"), setOf("be3")),
+            readLog(etlProcessId)
+        )
+    }
+
+    @Test
+    fun `test getProcessesForClass`() {
+
+    }
+
+
+    //    @Ignore("Not a test")
+    @Test
+    fun `performance test`() {
+        val n = 50
+        val na = 3
+        val nc = 2
+        val nd = 4
+        // Generates n*(na+nc*nd) events
+        var aSeq = 1
+        var cSeq = 1
+        var dSeq = 1
+        val metaModel = getApplier(setOf(eket.id, eban.id, ekko.id, ekpo.id))
+        for (bId in 1..n) {
+            val events = ArrayList<DatabaseChangeApplier.DatabaseChangeEvent>()
+            with(events) {
+                val bDbId = "b$bId"
+                add(dbEvent(bDbId, "EBAN", "be$bId"))
+                for (a in 1..na) {
+                    val aId = aSeq++
+                    add(dbEvent("a$aId", "EKET", "ae$aId", "eban" to bDbId))
+                }
+                for (c in 1..nc) {
+                    val cId = cSeq++
+                    val cDbId = "c$cId"
+                    add(dbEvent(cDbId, "EKKO", "ce$cId", "eban" to bDbId))
+                    for (d in 1..nd) {
+                        val dId = dSeq++
+                        add(dbEvent("d$dId", "EKPO", "de$dId", "ekko" to cDbId))
+                    }
+                }
+            }
+            metaModel.applyChange(events)
+        }
     }
 }
