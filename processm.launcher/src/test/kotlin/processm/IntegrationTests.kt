@@ -10,6 +10,10 @@ import org.junit.jupiter.api.Assumptions
 import org.testcontainers.lifecycle.Startables
 import processm.core.Brand
 import processm.core.helpers.inverse
+import processm.core.log.Event
+import processm.core.log.XMLXESInputStream
+import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
+import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.etl.DBMSEnvironment
 import processm.etl.MSSQLEnvironment
 import processm.etl.MySQLEnvironment
@@ -265,101 +269,123 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             }
     }
 
+    @OptIn(InMemoryXESProcessing::class)
     private fun <T : DBMSEnvironment<*>> `complete workflow for automatic ETL process with Sakila`(
         sakila: T,
         populate: T.() -> Unit
     ) {
-        ProcessMTestingEnvironment().withTemporaryDebeziumStorage().withFreshDatabase().run {
-            registerUser("test@example.com", "some organization")
-            login("test@example.com", "P@ssw0rd!")
-            currentOrganizationId = organizations.single().id
-            currentDataStore = createDataStore("datastore")
-            post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
-                assertEquals(HttpStatusCode.NoContent, status)
-            }
-            currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
-            val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
-                assertEquals(HttpStatusCode.OK, status)
-                return@get body<CaseNotion>()
-            }
-            // Originally, the test was supposed to verify the number of items to detect unexpected changes.
-            // Turns out, the numbers differ from DB to DB, i.e., they are not very meaningful
-            // For example, there are 21 classes in Postgres, 17 in MySQL and 168 in MSSQL (preliminary)
-            // Similarily, there are 354 case notions in Postgres and 52 in MySQL
-            assertTrue { relationshipGraph.classes.isNotEmpty() }
-            assertTrue { relationshipGraph.edges.isNotEmpty() }
-            val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
-                assertEquals(HttpStatusCode.OK, status)
-                return@get body<Array<CaseNotion>>()
-            }
-            assertTrue { caseNotions.isNotEmpty() }
-
-            //Find the following CaseNotion to ensure the rest of the test works correctly
-            //CaseNotion(classes={21=store, 4=address, 7=staff}, edges=[CaseNotionEdgesInner(sourceClassId=21, targetClassId=4), CaseNotionEdgesInner(sourceClassId=21, targetClassId=7)])
-            val caseNotion = caseNotions.single { caseNotion ->
-                if (caseNotion.classes.values.toSet() != setOf("store", "address", "staff"))
-                    return@single false
-                val nameToId = caseNotion.classes.inverse()
-                val storeId = nameToId["store"]
-                val addressId = nameToId["address"]
-                val staffId = nameToId["staff"]
-                return@single caseNotion.edges.size == 2 &&
-                        caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
-                        caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == staffId }
-            }
-
-            currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
-                AbstractEtlProcess(
-                    name = "autosakila",
-                    dataConnectorId = currentDataConnector?.id,
-                    isActive = true,
-                    type = EtlProcessType.automatic,
-                    caseNotion = caseNotion
-                )
-            ) {
-                assertEquals(HttpStatusCode.Created, status)
-                return@post body<AbstractEtlProcess>()
-            }
-
-            // A delay for Debezium to kick in and start monitoring the DB
-            Thread.sleep(5_000)
-
-            sakila.populate()
-
-            // A delay for Debezium to report the changes
-            Thread.sleep(30_000)
-
-            post<Paths.EtlProcessLog, Unit> {
-                assertEquals(HttpStatusCode.NoContent, status)
-            }
-
-            val info = runBlocking {
-                for (i in 0..10) {
-                    val info = get<Paths.EtlProcess, EtlProcessInfo> {
-                        return@get body<EtlProcessInfo>()
-                    }
-                    if (info.lastExecutionTime !== null)
-                        return@runBlocking info
-                    delay(1000)
+        ProcessMTestingEnvironment()
+            .withTemporaryDebeziumStorage()
+            .withFreshDatabase()
+            .withProperty("processm.logs.limit.trace", "3000")
+            .run {
+                println("jdbcURL=$jdbcUrl")
+                registerUser("test@example.com", "some organization")
+                login("test@example.com", "P@ssw0rd!")
+                currentOrganizationId = organizations.single().id
+                currentDataStore = createDataStore("datastore")
+                post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
+                    assertEquals(HttpStatusCode.NoContent, status)
                 }
-                error("The log was not generated in the prescribed amount of time")
+                currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
+                val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
+                    assertEquals(HttpStatusCode.OK, status)
+                    return@get body<CaseNotion>()
+                }
+                // Originally, the test was supposed to verify the number of items to detect unexpected changes.
+                // Turns out, the numbers differ from DB to DB, i.e., they are not very meaningful
+                // For example, there are 21 classes in Postgres, 17 in MySQL and 168 in MSSQL (preliminary)
+                // Similarily, there are 354 case notions in Postgres and 52 in MySQL
+                assertTrue { relationshipGraph.classes.isNotEmpty() }
+                assertTrue { relationshipGraph.edges.isNotEmpty() }
+                val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
+                    assertEquals(HttpStatusCode.OK, status)
+                    return@get body<Array<CaseNotion>>()
+                }
+                assertTrue { caseNotions.isNotEmpty() }
+
+                //Find the following CaseNotion to ensure the rest of the test works correctly
+                //CaseNotion(classes={11=city, 5=country, 4=address, 21=store}, edges=[CaseNotionEdgesInner(sourceClassId=11, targetClassId=5), CaseNotionEdgesInner(sourceClassId=4, targetClassId=11), CaseNotionEdgesInner(sourceClassId=21, targetClassId=4)])
+                val caseNotion = caseNotions.single { caseNotion ->
+                    if (caseNotion.classes.values.toSet() != setOf("city", "country", "address", "store"))
+                        return@single false
+                    val nameToId = caseNotion.classes.inverse()
+                    val storeId = nameToId["store"]
+                    val addressId = nameToId["address"]
+                    val cityId = nameToId["city"]
+                    val countryId = nameToId["country"]
+                    return@single caseNotion.edges.size == 3 &&
+                            caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
+                            caseNotion.edges.any { edge -> edge.sourceClassId == addressId && edge.targetClassId == cityId } &&
+                            caseNotion.edges.any { edge -> edge.sourceClassId == cityId && edge.targetClassId == countryId }
+                }
+
+                currentEtlProcess = post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
+                    AbstractEtlProcess(
+                        name = "autosakila",
+                        dataConnectorId = currentDataConnector?.id,
+                        isActive = true,
+                        type = EtlProcessType.automatic,
+                        caseNotion = caseNotion
+                    )
+                ) {
+                    assertEquals(HttpStatusCode.Created, status)
+                    return@post body<AbstractEtlProcess>()
+                }
+
+                // A delay for Debezium to kick in and start monitoring the DB
+                Thread.sleep(5_000)
+
+                sakila.populate()
+
+                val info = runBlocking {
+                    for (i in 0..30) {
+                        val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                            return@get body<EtlProcessInfo>()
+                        }
+                        if (info.lastExecutionTime !== null)
+                            return@runBlocking info
+                        delay(1000)
+                    }
+                    error("The log was not generated in the prescribed amount of time")
+                }
+                assertTrue { info.errors.isNullOrEmpty() }
+                val logIdentityId = info.logIdentityId
+
+                val logs = runBlocking {
+                    var previousNEvents = -1
+                    for (i in 0..60) {
+                        val stream: XMLXESInputStream = pqlQueryXES("where log:identity:id=$logIdentityId")
+                        val logs = HoneyBadgerHierarchicalXESInputStream(stream)
+                        val nEvents = logs.sumOf { log -> log.traces.sumOf { trace -> trace.events.count() } }
+                        if (previousNEvents == nEvents)
+                            return@runBlocking logs
+                        previousNEvents = nEvents
+                        delay(1_000)
+                    }
+                    error("The number of components in the log did not stabilize in the prescribed amount of time")
+                }
+
+                assertEquals(1, logs.count())
+                val traces = logs.single().traces.toList()
+                // There are 603 addresses in the DB + the city of London in Canada, which has no address assigned to it
+                assertEquals(603 + 1, traces.size)
+                for (t in traces) {
+                    val events: List<Event> = t.events.toList()
+                    assertEquals(1, events.count { "db:country" in it.attributes })
+                    val country = events.firstNotNullOf { it.attributes.getOrNull("db:country") }.toString()
+                    assertEquals(1, events.count { "db:city" in it.attributes })
+                    val city = events.firstNotNullOf { it.attributes.getOrNull("db:city") }.toString()
+                    val nAddresses = if (country == "\"Canada\"" && city == "\"London\"") 0 else 1
+                    assertEquals(nAddresses, events.count { "db:address" in it.attributes })
+                    val nStores = if (nAddresses > 0) {
+                        val address = events.firstNotNullOf { it.attributes.getOrNull("db:address") }.toString()
+                        if (address == "\"47 MySakila Drive\"" || address == "\"28 MySQL Boulevard\"") 1 else 0
+                    } else 0
+                    assertEquals(nStores, events.count { "db:store_id" in it.attributes })
+                    assertEquals(2 + nAddresses + nStores, events.size)
+                }
             }
-            assertTrue { info.errors.isNullOrEmpty() }
-            val logIdentityId = info.logIdentityId
-
-            val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
-
-            assertEquals(1, logs.size)
-
-            with(ducktyping) {
-                val log = logs[0]
-                assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
-                val traces = log["log"]["trace"] as List<*>
-                assertEquals(2, traces.size)
-                assertEquals(3, (traces[0]["event"] as List<*>).size)
-                assertEquals(3, (traces[1]["event"] as List<*>).size)
-            }
-        }
     }
 
     @Test
