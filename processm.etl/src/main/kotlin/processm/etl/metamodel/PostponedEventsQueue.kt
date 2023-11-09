@@ -41,6 +41,8 @@ class DBPostponedEvent(id: EntityID<Int>) : processm.dbmodels.models.PostponedEv
         }
 }
 
+// TODO make sure the queue entries are removed when the corresponding ETL process is removed
+
 class PersistentPostponedEventsQueue(val logIdentityId: UUID) : PostponedEventsQueue {
 
     override fun add(dbEvent: DatabaseChangeApplier.DatabaseChangeEvent, objectId: RemoteObjectID): PostponedEvent =

@@ -37,6 +37,8 @@ private inline fun remoteObjectFromDB(text: String): RemoteObjectID {
     return RemoteObjectID(a[1], EntityID(a[0].toInt(), Classes))
 }
 
+typealias ObjectGraph = Map<RemoteObjectID, Map<String, Map<EntityID<Int>, Set<RemoteObjectID>>>>
+
 class AutomaticEtlProcessExecutor(
     val dataStoreDBName: String,
     val logId: UUID,
@@ -63,6 +65,91 @@ class AutomaticEtlProcessExecutor(
                 ?: throw NoSuchElementException("A class with the specified name $className does not exist")
         }
 
+    private fun Connection.retrieveObjectGraphs(leafs: Collection<RemoteObjectID>): Sequence<ObjectGraph> =
+        sequence {
+            prepareStatement(
+                """
+            select distinct objects::text 
+            from traces join logs on traces.log_id=logs.id 
+            where              
+            logs."identity:id"=?::uuid 
+            and objects ??| ?::text[]
+            """.trimIndent()
+            ).use { stmt ->
+                stmt.setString(1, logId.toString())
+                stmt.setArray(2, createArrayOf(JDBCType.VARCHAR.name, leafs.mapToArray(RemoteObjectID::toDB)))
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        val objectGraph =
+                            HashMap<RemoteObjectID, Map<String, Map<EntityID<Int>, Set<RemoteObjectID>>>>()
+                        for ((sourceDB, attributeToTarget) in Json.parseToJsonElement(rs.getString(1)) as JsonObject) {
+                            val source = remoteObjectFromDB(sourceDB)
+                            objectGraph[source] =
+                                (attributeToTarget as JsonObject).mapValues { (_, targets) ->
+                                    val result = HashMap<EntityID<Int>, HashSet<RemoteObjectID>>()
+                                    for (targetDB in targets as JsonArray) {
+                                        val target = remoteObjectFromDB((targetDB as JsonPrimitive).content)
+                                        result.computeIfAbsent(target.classId) { HashSet() }.add(target)
+                                    }
+                                    return@mapValues result
+                                }
+
+                        }
+                        yield(objectGraph)
+                    }
+                }
+            }
+        }
+
+    private fun ObjectGraph.reverse(): ObjectGraph {
+        val result = HashMap<RemoteObjectID, HashMap<String, HashMap<EntityID<Int>, HashSet<RemoteObjectID>>>>()
+        for ((source, attributes) in this) {
+            for ((attribute, targets) in attributes)
+                for (target in targets.values.flatten())
+                    result
+                        .computeIfAbsent(target) { HashMap() }
+                        .computeIfAbsent(attribute) { HashMap() }
+                        .computeIfAbsent(source.classId) { HashSet() }
+                        .add(source)
+        }
+        return result
+    }
+
+    private fun ObjectGraph.upwards(start: Collection<RemoteObjectID>): Set<RemoteObjectID> {
+        val localUpward = HashSet<RemoteObjectID>()
+        val queue = ArrayDeque<RemoteObjectID>()
+        queue.addAll(start)
+        while (queue.isNotEmpty()) {
+            val item = queue.removeFirst()
+            if (item.classId in identifyingClasses)
+                localUpward.add(item)
+            for (r in graph.outgoingEdgesOf(item.classId)) {
+                val candidates = this[item]?.get(r.attributeName)?.get(r.targetClass) ?: continue
+                queue.addAll(candidates)
+            }
+        }
+        return localUpward
+    }
+
+    private fun ObjectGraph.downwards(
+        localUpward: Collection<RemoteObjectID>
+    ): Sequence<RemoteObjectID> = sequence {
+        val reject = localUpward.mapTo(HashSet()) { it.classId }
+        reject.addAll(convergingClasses)
+        val queue = ArrayDeque<RemoteObjectID>()
+        queue.addAll(localUpward)
+        while (queue.isNotEmpty()) {
+            val item = queue.removeFirst()
+            for (r in graph.incomingEdgesOf(item.classId)) {
+                if (r.sourceClass in reject)
+                    continue
+                val sources = this@downwards[item]?.get(r.attributeName)?.get(r.sourceClass) ?: continue
+                queue.addAll(sources)
+                yieldAll(sources)
+            }
+        }
+    }
+
     private fun Connection.getRelatedIdentifyingObjects(
         start: RemoteObjectID,
         newAttributes: Map<String, String>
@@ -74,87 +161,15 @@ class AutomaticEtlProcessExecutor(
                 newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
             }
 
-        val objectGraphs = ArrayList<Map<String, Map<String, List<String>>>>()
-        prepareStatement(
-            """
-            select distinct objects::text 
-            from traces join logs on traces.log_id=logs.id 
-            where              
-            logs."identity:id"=?::uuid 
-            and objects ??| ?::text[]
-            """.trimIndent()
-        ).use { stmt ->
-            stmt.setString(1, logId.toString())
-            stmt.setArray(2, createArrayOf(JDBCType.VARCHAR.name, leafs.mapToArray(RemoteObjectID::toDB)))
-            stmt.executeQuery().use { rs ->
-                while (rs.next()) {
-                    val objectGraph = (Json.parseToJsonElement(rs.getString(1)) as JsonObject)
-                        .mapValues { (_, attributeToTarget) ->
-                            (attributeToTarget as JsonObject).mapValues { (_, targets) ->
-                                (targets as JsonArray).map { (it as JsonPrimitive).content }
-                            }
-                        }
-                    objectGraphs.add(objectGraph)
-                }
-            }
+        val result = HashSet<RemoteObjectID>()
+        for (objectGraph in retrieveObjectGraphs(leafs)) {
+            val upwards = objectGraph.upwards(leafs)
+            result.addAll(upwards)
+            result.addAll(objectGraph.reverse().downwards(upwards))
         }
-        val upward = HashSet<RemoteObjectID>()
-        val downward = HashSet<RemoteObjectID>()
-        for (objectGraph in objectGraphs) {
-            val localUpward = HashSet<RemoteObjectID>()
-            val queue = ArrayDeque<RemoteObjectID>()
-            queue.addAll(leafs)
-            while (queue.isNotEmpty()) {
-                val item = queue.removeFirst()
-                val key = item.toDB()
-                localUpward.add(item)
-                for (r in graph.outgoingEdgesOf(item.classId)) {
-                    val candidates = objectGraph[key]?.get(r.attributeName) ?: continue
-                    val prefix = "${r.targetClass.value}_"
-                    for (c in candidates)
-                        if (c.startsWith(prefix)) {
-                            queue.add(remoteObjectFromDB(c))
-                        }
-                }
-            }
-            upward.addAll(localUpward)
-            queue.addAll(localUpward)
-            val reject = mutableSetOf(start.classId)
-            localUpward.mapTo(reject) { it.classId }
-            reject.addAll(convergingClasses)
-            val reversedObjectGraph = run {
-                val result = HashMap<String, HashMap<String, HashSet<String>>>()
-                for ((source, attributes) in objectGraph) {
-                    for ((attribute, targets) in attributes)
-                        for (target in targets)
-                            result.computeIfAbsent(target) { HashMap() }.computeIfAbsent(attribute) { HashSet() }
-                                .add(source)
-                }
-                return@run result
-            }
-            while (queue.isNotEmpty()) {
-                val item = queue.removeFirst()
-                val target = item.toDB()
-                for (r in graph.incomingEdgesOf(item.classId)) {
-                    if (r.sourceClass in reject)
-                        continue
-                    val sources = reversedObjectGraph[target]?.get(r.attributeName) ?: continue
-                    val prefix = "${r.sourceClass.value}_"
-                    for (source in sources) {
-                        if (!source.startsWith(prefix))
-                            continue
-                        val newItem = remoteObjectFromDB(source)
-                        queue.add(newItem)
-                        downward.add(newItem)
-                    }
-                }
-            }
-        }
-        upward.removeAll { it.classId !in identifyingClasses }
-        upward.addAll(leafs)
-        upward.remove(start)
-        upward.addAll(downward)
-        return upward
+        result.addAll(leafs)
+        result.remove(start)
+        return result
     }
 
     private fun DatabaseChangeApplier.DatabaseChangeEvent.toXES(classId: EntityID<Int>) = Event(
