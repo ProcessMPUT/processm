@@ -2,6 +2,7 @@ package processm.etl.metamodel
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import processm.core.helpers.mapToSet
 import processm.core.logging.loggedScope
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
@@ -29,7 +30,7 @@ class LogGeneratingDatabaseChangeApplier(
             .select {
                 (AutomaticEtlProcessRelations.sourceClassId inSubQuery classId) or (AutomaticEtlProcessRelations.targetClassId inSubQuery classId)
             }
-            .distinct()
+            .withDistinct()
             .map { it[AutomaticEtlProcessRelations.automaticEtlProcessId].value to it[EtlProcessesMetadata.lastUpdatedDate] }
     }
 
@@ -62,6 +63,7 @@ class LogGeneratingDatabaseChangeApplier(
                 transaction(DBCache.get(dataStoreDBName).database) {
                     val executorsForClass =
                         executors.computeIfAbsent(dbEvent.entityTable) { getExecutorsForClass(dbEvent.entityTable) }
+                    assert(executorsForClass.mapToSet { it.logId }.size == executorsForClass.size)
                     for (executor in executorsForClass) {
                         if (executor.processEvent(dbEvent)) {
                             //TODO ugly!!
