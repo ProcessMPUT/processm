@@ -1,5 +1,6 @@
 package processm.etl.metamodel
 
+import processm.core.helpers.mapToArray
 import java.sql.Connection
 import java.sql.JDBCType
 import java.sql.PreparedStatement
@@ -38,8 +39,22 @@ internal fun Connection.prepareStatement(query: SQLQueryBuilder): PreparedStatem
         when (v) {
             is String -> stmt.setString(i + 1, v)
             is Int -> stmt.setInt(i + 1, v)
-            is Array<*> -> stmt.setArray(i + 1, createArrayOf(JDBCType.VARCHAR.name, v))
+            is RemoteObjectID -> stmt.setString(i + 1, v.toDB())
             is UUID -> stmt.setString(i + 1, v.toString())
+            is Collection<*> -> {
+                val first = requireNotNull(v.first())
+                when (v.first()) {
+                    is String -> stmt.setArray(i + 1, createArrayOf(JDBCType.VARCHAR.name, v.toTypedArray()))
+                    is Int -> stmt.setArray(i + 1, createArrayOf(JDBCType.INTEGER.name, v.toTypedArray()))
+                    is RemoteObjectID ->
+                        stmt.setArray(i + 1,
+                            createArrayOf(JDBCType.VARCHAR.name, v.mapToArray { (it as RemoteObjectID).toDB() })
+                        )
+                    else -> TODO("Unsupported type in array: ${first::class}")
+                }
+
+            }
+
             else -> TODO("Unsupported type: ${v::class}")
         }
     }

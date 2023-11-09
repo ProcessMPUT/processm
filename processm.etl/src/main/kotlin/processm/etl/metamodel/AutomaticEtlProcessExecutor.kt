@@ -30,12 +30,6 @@ import java.time.Instant
 import java.util.*
 import kotlin.collections.ArrayDeque
 
-private inline fun RemoteObjectID.toDB() = "${classId}_$objectId"
-
-private inline fun remoteObjectFromDB(text: String): RemoteObjectID {
-    val a = text.split('_', limit = 2)
-    return RemoteObjectID(a[1], EntityID(a[0].toInt(), Classes))
-}
 
 typealias ObjectGraph = Map<RemoteObjectID, Map<String, Map<EntityID<Int>, Set<RemoteObjectID>>>>
 
@@ -83,12 +77,12 @@ class AutomaticEtlProcessExecutor(
                         val objectGraph =
                             HashMap<RemoteObjectID, Map<String, Map<EntityID<Int>, Set<RemoteObjectID>>>>()
                         for ((sourceDB, attributeToTarget) in Json.parseToJsonElement(rs.getString(1)) as JsonObject) {
-                            val source = remoteObjectFromDB(sourceDB)
+                            val source = sourceDB.parseAsRemoteObjectID()
                             objectGraph[source] =
                                 (attributeToTarget as JsonObject).mapValues { (_, targets) ->
                                     val result = HashMap<EntityID<Int>, HashSet<RemoteObjectID>>()
                                     for (targetDB in targets as JsonArray) {
-                                        val target = remoteObjectFromDB((targetDB as JsonPrimitive).content)
+                                        val target = (targetDB as JsonPrimitive).content.parseAsRemoteObjectID()
                                         result.computeIfAbsent(target.classId) { HashSet() }.add(target)
                                     }
                                     return@mapValues result
@@ -254,59 +248,52 @@ class AutomaticEtlProcessExecutor(
      */
     private fun Connection.retrievePastTraces(objects: Collection<RemoteObjectID>): Set<UUID> {
         assert(objects.isNotEmpty())
-        return queryObjectsInTrace(objects, """traces."identity:id"""") { rs ->
-            val result = HashSet<UUID>()
-            while (rs.next()) {
-                rs.getString(1).toUUID()?.let { result.add(it) }
-            }
-            return@queryObjectsInTrace result
-        }
-    }
-
-    private fun <R> Connection.queryObjectsInTrace(
-        objects: Collection<RemoteObjectID>,
-        projection: String,
-        handler: (ResultSet) -> R
-    ): R {
         val query = buildSQLQuery {
-            append("select ")
-            append(projection)
-            append(" from traces,logs")
-            append(""" where traces.log_id=logs.id and logs."identity:id"=?::uuid and objects ??& ARRAY[""")
+            append(
+                """select distinct traces."identity:id"
+             from traces,logs
+             where traces.log_id=logs.id and logs."identity:id"=?::uuid and objects ??& ?::text[]"""
+            )
             bind(logId)
-            for (o in objects) {
-                append("?::text,")
-                bind("${o.classId.value}_${o.objectId}")
-            }
-            deleteCharAt(length - 1)
-            append("]")
+            bind(objects)
         }
-        prepareStatement(query).use { stmt ->
-            return stmt.executeQuery().use(handler)
+        return prepareStatement(query).use { stmt ->
+            return@use stmt.executeQuery().use { rs ->
+                val result = HashSet<UUID>()
+                while (rs.next()) {
+                    rs.getString(1).toUUID()?.let { result.add(it) }
+                }
+                return@use result
+            }
         }
     }
-
 
     /**
      * Returns all traces in the given log containing the given objects along with all the containted objects.
      */
     private fun Connection.retrievePastTracesWithObjects(objects: Collection<RemoteObjectID>): Map<UUID, Set<RemoteObjectID>> {
         assert(objects.isNotEmpty())
-        assert(objects.isNotEmpty())
-        return queryObjectsInTrace(objects, """traces."identity:id", traces.objects::text""") { rs ->
-            val result = HashMap<UUID, Set<RemoteObjectID>>()
-            while (rs.next()) {
-                val traceId = checkNotNull(rs.getString(1).toUUID())
-                val objectsOfTrace = HashSet<RemoteObjectID>()
-                result[traceId] = objectsOfTrace
-                // TODO move keys extraction to the DB
-                (Json.parseToJsonElement(rs.getString(2)) as JsonObject).keys.forEach { o ->
-                    val v = checkNotNull(o as String?)
-                    val (classId, objectId) = v.split('_', limit = 2)
-                    objectsOfTrace.add(RemoteObjectID(objectId, EntityID(classId.toInt(), Classes)))
+        val query = buildSQLQuery {
+            append(
+                """select "identity:id", array_agg(object) as objects from (
+                select traces."identity:id", jsonb_object_keys(traces.objects) as object  from traces,logs
+                where traces.log_id=logs.id and logs."identity:id"=?::uuid and objects ??& ?::text[]
+                ) x group by "identity:id"
+                """
+            )
+            bind(logId)
+            bind(objects)
+        }
+        return prepareStatement(query).use { stmt ->
+            return@use stmt.executeQuery().use { rs ->
+                val result = HashMap<UUID, HashSet<RemoteObjectID>>()
+                while (rs.next()) {
+                    val traceId = checkNotNull(rs.getString(1).toUUID())
+                    result[traceId] =
+                        (rs.getArray(2).array as Array<*>).mapTo(HashSet()) { (it as String).parseAsRemoteObjectID() }
                 }
+                return@use result
             }
-            return@queryObjectsInTrace result
         }
     }
 
@@ -346,7 +333,6 @@ class AutomaticEtlProcessExecutor(
                 result.add(Trace(mutableAttributeMapOf(Attribute.IDENTITY_ID to traceId)))
                 result.add(event)
             }
-
         } else {
             // a new object
             if (remoteObject.classId in identifyingClasses) {
@@ -454,7 +440,7 @@ class AutomaticEtlProcessExecutor(
                                 val targetObjectId =
                                     component.attributes.getOrNull("$DB_ATTR_NS:${r.attributeName}")?.toString()
                                         ?: continue
-                                val target = "${r.targetClass.value}_${targetObjectId}"
+                                val target = "${r.targetClass.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
                                 val path =
                                     connection.createArrayOf(JDBCType.VARCHAR.name, arrayOf(source, r.attributeName))
                                 stmt.setArray(1, path)
