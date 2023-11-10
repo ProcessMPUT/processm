@@ -543,13 +543,9 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
                 val infos = etlProcesses.parallelMap { etlProcess ->
                     for (i in 0..60) {
-                        //TODO race condition
-                        currentEtlProcess = etlProcess
-                        val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                        val info = get<Paths.EtlProcess, EtlProcessInfo>(etlProcess) {
                             return@get body<EtlProcessInfo>()
                         }
-                        //TODO race condition
-                        currentEtlProcess = null
                         if (info.lastExecutionTime !== null)
                             return@parallelMap info
                         delay(1000)
@@ -686,9 +682,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
                         val infos = etlProcesses.parallelMap {
                             for (i in 0..10) {
-                                // TODO race condition
-                                currentEtlProcess = it
-                                val info = get<Paths.EtlProcess, EtlProcessInfo> {
+                                val info = get<Paths.EtlProcess, EtlProcessInfo>(it) {
                                     return@get body<EtlProcessInfo>()
                                 }
                                 if (info.lastExecutionTime !== null) {

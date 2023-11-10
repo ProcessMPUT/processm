@@ -161,7 +161,7 @@ class ProcessMTestingEnvironment {
     //TODO at the very least port should not be hardcoded
     fun apiUrl(endpoint: String): String = "http://localhost:2080/api/${endpoint}"
 
-    inline fun <reified Endpoint> format(vararg args: Pair<String, String>): String = format<Endpoint>(args.toMap())
+    inline fun <reified Endpoint> format(vararg args: Pair<String, String?>): String = format<Endpoint>(args.toMap())
 
     // must be public as long as get/post with Location are public, because they're inline, because reified
     fun <T> String.ktorLocationSpecificReplace(key: String, value: T?): String {
@@ -171,11 +171,12 @@ class ProcessMTestingEnvironment {
             this
     }
 
-    inline fun <reified Endpoint> format(args: Map<String, String>): String {
+    inline fun <reified Endpoint> format(args: Map<String, String?>): String {
         var result =
             requireNotNull(Endpoint::class.findAnnotation<Location>()?.path) //StringBuilder doesn't handle replacing substrings too well
         for ((name, value) in args)
-            result = result.replace("{$name}", value)
+            if (value !== null)
+                result = result.replace("{$name}", value)
         result = result.ktorLocationSpecificReplace("organizationId", currentOrganizationId)
         result = result.ktorLocationSpecificReplace("dataStoreId", currentDataStore?.id)
         result = result.ktorLocationSpecificReplace("dataConnectorId", currentDataConnector?.id)
@@ -183,8 +184,11 @@ class ProcessMTestingEnvironment {
         return result
     }
 
-    inline fun <reified Endpoint, R> get(noinline block: suspend HttpResponse.() -> R): R =
-        get(format<Endpoint>(), null, block)
+    inline fun <reified Endpoint, R> get(
+        etlProcessId: AbstractEtlProcess? = null,
+        noinline block: suspend HttpResponse.() -> R
+    ): R =
+        get(format<Endpoint>("etlProcessId" to etlProcessId?.id?.toString()), null, block)
 
     inline fun <reified Endpoint, R> get(
         noinline prepare: (suspend HttpRequestBuilder.() -> Unit)?,
