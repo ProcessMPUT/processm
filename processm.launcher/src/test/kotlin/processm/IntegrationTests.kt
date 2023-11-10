@@ -460,117 +460,128 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
     /**
      * The numbers in the test are computed by the test itself and are supposed only to prevent regressions/unexpected changes
      */
+    @OptIn(InMemoryXESProcessing::class)
     private fun <T : DBMSEnvironment<*>> `complete workflow for multiple automatic ETL processes with Sakila`(
         sakila: T,
         populate: T.() -> Unit
     ) {
-        ProcessMTestingEnvironment().withTemporaryDebeziumStorage().withFreshDatabase().run {
-            registerUser("test@example.com", "some organization")
-            login("test@example.com", "P@ssw0rd!")
-            currentOrganizationId = organizations.single().id
-            currentDataStore = createDataStore("datastore")
-            post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
-                assertEquals(HttpStatusCode.NoContent, status)
-            }
-            currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
-            val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
-                assertEquals(HttpStatusCode.OK, status)
-                return@get body<CaseNotion>()
-            }
-            assertTrue { relationshipGraph.classes.isNotEmpty() }
-            assertTrue { relationshipGraph.edges.isNotEmpty() }
-            val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
-                assertEquals(HttpStatusCode.OK, status)
-                return@get body<Array<CaseNotion>>()
-            }
-            assertTrue { caseNotions.isNotEmpty() }
-
-            val expectedCaseNotions = listOf(
-                Triple(setOf("store", "address", "staff"), setOf("store" to "address", "store" to "staff"), 2),
-                Triple(
-                    setOf("film_category", "inventory", "film"),
-                    setOf("film_category" to "film", "inventory" to "film"),
-                    30
-                )
-            )
-
-            caseNotions.forEach(::println)
-
-            val relevantCaseNotions = expectedCaseNotions.map { (expectedClasses, expectedEdges, _) ->
-                caseNotions.single { caseNotion ->
-                    if (caseNotion.classes.values.toSet() != expectedClasses)
-                        return@single false
-                    if (caseNotion.edges.size != expectedEdges.size)
-                        return@single false
-                    return@single caseNotion.edges.all { edge ->
-                        val namedEdge1 =
-                            caseNotion.classes[edge.sourceClassId] to caseNotion.classes[edge.targetClassId]
-                        val namedEdge2 = namedEdge1.second to namedEdge1.first
-                        return@all namedEdge1 in expectedEdges || namedEdge2 in expectedEdges
-                    }
-                }
-            }
-
-            val etlProcesses = relevantCaseNotions.map { caseNotion ->
-                post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
-                    AbstractEtlProcess(
-                        name = "autosakila",
-                        dataConnectorId = currentDataConnector?.id,
-                        isActive = true,
-                        type = EtlProcessType.automatic,
-                        caseNotion = caseNotion
-                    )
-                ) {
-                    assertEquals(HttpStatusCode.Created, status)
-                    return@post body<AbstractEtlProcess>()
-                }
-            }
-
-            // A delay for Debezium to kick in and start monitoring the DB
-            Thread.sleep(5_000)
-
-            sakila.populate()
-
-            // A delay for Debezium to report the changes
-            Thread.sleep(55_000)
-
-            for (etlProcess in etlProcesses) {
-                currentEtlProcess = etlProcess
-                post<Paths.EtlProcessLog, Unit> {
+        ProcessMTestingEnvironment().withTemporaryDebeziumStorage().withFreshDatabase()
+            .withProperty("processm.logs.limit.trace", "3000").run {
+                registerUser("test@example.com", "some organization")
+                login("test@example.com", "P@ssw0rd!")
+                currentOrganizationId = organizations.single().id
+                currentDataStore = createDataStore("datastore")
+                post<Paths.ConnectionTest, DataConnector, Unit>(DataConnector(properties = sakila.connectionProperties)) {
                     assertEquals(HttpStatusCode.NoContent, status)
                 }
-                currentEtlProcess = null
-            }
+                currentDataConnector = createDataConnector("dc1", sakila.connectionProperties)
+                val relationshipGraph = get<Paths.RelationshipGraph, CaseNotion> {
+                    assertEquals(HttpStatusCode.OK, status)
+                    return@get body<CaseNotion>()
+                }
+                assertTrue { relationshipGraph.classes.isNotEmpty() }
+                assertTrue { relationshipGraph.edges.isNotEmpty() }
+                val caseNotions = get<Paths.CaseNotionSuggestions, Array<CaseNotion>> {
+                    assertEquals(HttpStatusCode.OK, status)
+                    return@get body<Array<CaseNotion>>()
+                }
+                assertTrue { caseNotions.isNotEmpty() }
 
-            for ((etlProcess, expectedCaseNotion) in etlProcesses zip expectedCaseNotions) {
-                val info = runBlocking {
-                    for (i in 0..10_000) {
+                // The selection of tables is pretty boring, but other (e.g., film, rental, payment) are too big and the process takes unreasonably long for a test
+                val expectedCaseNotions = listOf(
+                    Triple(
+                        setOf("city", "country", "address", "customer"),
+                        setOf("city" to "country", "address" to "city", "customer" to "address"),
+                        604
+                    ),
+                    Triple(
+                        setOf("city", "country", "address", "store"),
+                        setOf("city" to "country", "address" to "city", "store" to "address"),
+                        604
+                    ),
+                    Triple(
+                        setOf("staff", "store", "customer"),
+                        setOf("staff" to "store", "customer" to "store"),
+                        599
+                    ),
+                )
+
+                val relevantCaseNotions = expectedCaseNotions.map { (expectedClasses, expectedEdges, _) ->
+                    caseNotions.single { caseNotion ->
+                        if (caseNotion.classes.values.toSet() != expectedClasses)
+                            return@single false
+                        if (caseNotion.edges.size != expectedEdges.size)
+                            return@single false
+                        return@single caseNotion.edges.all { edge ->
+                            val namedEdge1 =
+                                caseNotion.classes[edge.sourceClassId] to caseNotion.classes[edge.targetClassId]
+                            val namedEdge2 = namedEdge1.second to namedEdge1.first
+                            return@all namedEdge1 in expectedEdges || namedEdge2 in expectedEdges
+                        }
+                    }
+                }
+
+                val etlProcesses = relevantCaseNotions.map { caseNotion ->
+                    post<Paths.EtlProcesses, AbstractEtlProcess, AbstractEtlProcess>(
+                        AbstractEtlProcess(
+                            name = "autosakila",
+                            dataConnectorId = currentDataConnector?.id,
+                            isActive = true,
+                            type = EtlProcessType.automatic,
+                            caseNotion = caseNotion
+                        )
+                    ) {
+                        assertEquals(HttpStatusCode.Created, status)
+                        return@post body<AbstractEtlProcess>()
+                    }
+                }
+
+                // A delay for Debezium to kick in and start monitoring the DB
+                Thread.sleep(5_000)
+
+                sakila.populate()
+
+                val infos = etlProcesses.parallelMap { etlProcess ->
+                    for (i in 0..60) {
+                        //TODO race condition
                         currentEtlProcess = etlProcess
                         val info = get<Paths.EtlProcess, EtlProcessInfo> {
                             return@get body<EtlProcessInfo>()
                         }
+                        //TODO race condition
                         currentEtlProcess = null
                         if (info.lastExecutionTime !== null)
-                            return@runBlocking info
+                            return@parallelMap info
                         delay(1000)
                     }
                     error("The log was not generated in the prescribed amount of time")
                 }
-                assertTrue { info.errors.isNullOrEmpty() }
-                val logIdentityId = info.logIdentityId
 
-                val logs: Array<Any> = pqlQuery("where log:identity:id=$logIdentityId")
+                for (info in infos)
+                    assertTrue { info.errors.isNullOrEmpty() }
 
-                assertEquals(1, logs.size)
+                assertEquals(etlProcesses.size, infos.size)
+                for (i in 1 until etlProcesses.size)
+                    assertNotEquals(infos[0].logIdentityId, infos[i].logIdentityId)
 
-                with(ducktyping) {
-                    val log = logs[0]
-                    assertEquals(logIdentityId.toString(), log["log"]["id"]["@value"])
-                    val traces = log["log"]["trace"] as List<*>?
-                    assertEquals(expectedCaseNotion.third, traces?.size ?: 0)
+                val logs = infos.parallelMap { info ->
+                    var previousNEvents = -1
+                    for (i in 0..60) {
+                        val stream = pqlQueryXES("where log:identity:id=${info.logIdentityId}")
+                        val logs = HoneyBadgerHierarchicalXESInputStream(stream)
+                        val nEvents = logs.sumOf { log -> log.traces.sumOf { trace -> trace.events.count() } }
+                        if (previousNEvents == nEvents)
+                            return@parallelMap logs.toList()
+                        previousNEvents = nEvents
+                        delay(1_000)
+                    }
+                    error("The number of components in the log did not stabilize in the prescribed amount of time")
+                }.flatten()
+
+                for ((log, expectedCaseNotion) in logs zip expectedCaseNotions) {
+                    assertEquals(log.traces.count(), expectedCaseNotion.third)
                 }
             }
-        }
     }
 
     @Test
@@ -675,6 +686,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
 
                         val infos = etlProcesses.parallelMap {
                             for (i in 0..10) {
+                                // TODO race condition
                                 currentEtlProcess = it
                                 val info = get<Paths.EtlProcess, EtlProcessInfo> {
                                     return@get body<EtlProcessInfo>()
