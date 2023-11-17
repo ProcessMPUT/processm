@@ -1,12 +1,12 @@
 package processm.conformance.models.footprint
 
-import processm.conformance.ProcessTrees.azFlower
-import processm.conformance.ProcessTrees.fig727
-import processm.conformance.ProcessTrees.fig729
-import processm.conformance.ProcessTrees.parallelDecisionsInLoop
-import processm.conformance.ProcessTrees.parallelFlowers
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.toFlatSequence
+import processm.core.models.processtree.ProcessTrees.azFlower
+import processm.core.models.processtree.ProcessTrees.fig727
+import processm.core.models.processtree.ProcessTrees.fig729
+import processm.core.models.processtree.ProcessTrees.parallelDecisionsInLoop
+import processm.core.models.processtree.ProcessTrees.parallelFlowers
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

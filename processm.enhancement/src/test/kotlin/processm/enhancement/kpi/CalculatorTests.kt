@@ -1,6 +1,5 @@
 package processm.enhancement.kpi
 
-import processm.conformance.ProcessTrees
 import processm.conformance.measures.precision.causalnet.times
 import processm.core.DBTestHelper
 import processm.core.log.Helpers.assertDoubleEquals
@@ -13,6 +12,7 @@ import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.commons.ProcessModel
 import processm.core.models.petrinet.petrinet
+import processm.core.models.processtree.ProcessTrees
 import processm.core.querylanguage.Query
 import java.util.*
 import kotlin.test.Ignore

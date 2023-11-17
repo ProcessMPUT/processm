@@ -15,6 +15,26 @@ class MutableCausalNet(
     MutableMetadataHandler by metadataHandler {
 
     /**
+     * Replaces the [start] activity with the given one.
+     * @return The previous start node.
+     */
+    fun setStart(start: Node): Node {
+        val prev = this.start
+        this.start = start
+        return prev
+    }
+
+    /**
+     * Replaces the [end] activity with the given one.
+     * @return The previous end node.
+     */
+    fun setEnd(end: Node): Node {
+        val prev = this.end
+        this.end = end
+        return prev
+    }
+
+    /**
      * Adds a (set of) new activity instance(s) to the model
      */
     fun addInstance(vararg a: Node) {
@@ -73,6 +93,17 @@ class MutableCausalNet(
      * Creates an instance of this model with the same [metadataHandler]
      */
     override fun createInstance() = MutableCausalNetInstance(this, metadataHandler)
+
+    /**
+     * Removes the given [node] from this Causal net and drops all related bindings and dependencies.
+     */
+    fun removeInstance(node: Node) {
+        _splits.remove(node)?.forEach { s -> s.targets.forEach { _joins[it]?.removeIf { j -> node in j.sources } } }
+        _joins.remove(node)?.forEach { j -> j.sources.forEach { _splits[it]?.removeIf { s -> node in s.targets } } }
+        _outgoing.remove(node)?.forEach { dep -> _incoming[dep.target]?.removeIf { it.source == node } }
+        _incoming.remove(node)?.forEach { dep -> _outgoing[dep.source]?.removeIf { it.target == node } }
+        _instances.remove(node)
+    }
 
     /**
      * Removes the given split.
