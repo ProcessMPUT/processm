@@ -50,6 +50,11 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
     val query = text("query")
 
     /**
+     * The algorithm used to calculate data. The interpretation of this property is component-specific.
+     */
+    val algorithm = text("algorithm").nullable()
+
+    /**
      * The type of the model associated with this component (the configuration parameter).
      */
     val modelType = text("model_type").nullable()
@@ -109,6 +114,7 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var name by WorkspaceComponents.name
     var workspace by Workspace referencedOn WorkspaceComponents.workspaceId
     var query by WorkspaceComponents.query
+    var algorithm by WorkspaceComponents.algorithm
     var modelType by WorkspaceComponents.modelType.transform(
         { it?.typeName },
         { ModelTypeDto.byTypeNameInDatabase(it) }

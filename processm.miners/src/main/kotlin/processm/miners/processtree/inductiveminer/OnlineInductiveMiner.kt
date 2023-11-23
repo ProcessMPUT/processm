@@ -51,8 +51,8 @@ class OnlineInductiveMiner : InductiveMiner() {
      *
      * Runs in: O(|traces| * |activities|^2)
      */
-    override fun processLog(logsCollection: LogInputStream): ProcessTree {
-        discover(logsCollection)
+    override fun processLog(log: LogInputStream): ProcessTree {
+        discover(log)
 
         // Check - apply statistics?
         if (changedStatistics) propagateStatistics()

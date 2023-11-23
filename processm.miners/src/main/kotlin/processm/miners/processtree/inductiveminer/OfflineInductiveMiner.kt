@@ -15,10 +15,10 @@ class OfflineInductiveMiner : InductiveMiner() {
      *
      * Runs in: O(|traces| * |activities|)
      */
-    override fun processLog(logsCollection: LogInputStream): ProcessTree {
+    override fun processLog(log: LogInputStream): ProcessTree {
         // Build directly follows graph
         val dfg = DirectlyFollowsGraph()
-        dfg.discover(logsCollection)
+        dfg.discover(log)
 
         // DFG without activities - return empty process tree model
         if (dfg.initialActivities.isEmpty() || dfg.finalActivities.isEmpty()) return ProcessTree()

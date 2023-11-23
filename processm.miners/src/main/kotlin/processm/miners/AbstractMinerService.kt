@@ -23,7 +23,7 @@ import java.util.*
 
 abstract class CalcJob<T : ProcessModel> : ServiceJob {
 
-    abstract fun mine(stream: DBHierarchicalXESInputStream): T
+    abstract fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): T
     abstract fun store(database: Database, model: T): String
 
     override fun execute(context: JobExecutionContext): Unit = loggedScope { logger ->
@@ -51,7 +51,8 @@ abstract class CalcJob<T : ProcessModel> : ServiceJob {
                     false
                 )
 
-                component.data = store(DBCache.get(component.dataStoreId.toString()).database, mine(stream))
+                val model = mine(component, stream)
+                component.data = store(DBCache.get(component.dataStoreId.toString()).database, model)
                 component.dataLastModified = Instant.now()
                 component.lastError = null
             } catch (e: Exception) {
@@ -96,6 +97,12 @@ abstract class DeleteJob : ServiceJob {
 
 }
 
+/**
+ * Base class for all miner services for process models.
+ * @property componentType The type of the workspace component that the miner service corresponds to.
+ * @property calcJob The class that performs actual mining in a miner-specific way.
+ * @property deleteJob The class that deletes all permanently stored data corresponding to the component that is deleted.
+ */
 abstract class AbstractMinerService(
     schedulerConfig: String,
     private val componentType: ComponentTypeDto,
@@ -132,6 +139,10 @@ abstract class AbstractMinerService(
         }
     }
 
+    /**
+     * @param id of the workspace component
+     * @param klass implementing the [Job] to run
+     */
     private fun createJob(id: UUID, klass: java.lang.Class<out Job>): Pair<JobDetail, Trigger> = loggedScope {
         val job = JobBuilder
             .newJob(klass)

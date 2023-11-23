@@ -135,6 +135,7 @@ class WorkspaceService(
         organizationId: UUID,
         name: String?,
         query: String?,
+        algorithm: String?,
         dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
@@ -154,6 +155,7 @@ class WorkspaceService(
                 workspaceId,
                 name,
                 query,
+                algorithm,
                 dataStore,
                 componentType,
                 customizationData,
@@ -173,6 +175,7 @@ class WorkspaceService(
             workspaceId,
             name!!,
             query!!,
+            algorithm,
             dataStore,
             componentType,
             customizationData,
@@ -222,6 +225,7 @@ class WorkspaceService(
         workspaceId: UUID,
         name: String,
         query: String,
+        algorithm: String?,
         dataStore: UUID,
         componentType: ComponentTypeDto,
         customizationData: String? = null,
@@ -230,6 +234,7 @@ class WorkspaceService(
         WorkspaceComponent.new(workspaceComponentId) {
             this.name = name
             this.query = query
+            this.algorithm = algorithm
             this.dataStoreId = dataStore
             this.componentType = ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)
             this.customizationData = customizationData
@@ -247,6 +252,7 @@ class WorkspaceService(
         workspaceId: UUID?,
         name: String?,
         query: String?,
+        algorithm: String?,
         dataStore: UUID?,
         componentType: ComponentTypeDto?,
         customizationData: String? = null,
@@ -257,6 +263,7 @@ class WorkspaceService(
             if (workspaceId != null) this.workspace = Workspace[workspaceId]
             if (name != null) this.name = name
             if (query != null) this.query = query
+            if (algorithm != null) this.algorithm = algorithm
             if (dataStore != null) this.dataStoreId = dataStore
             if (componentType != null) this.componentType =
                 ComponentTypeDto.byTypeNameInDatabase(componentType.typeName)

@@ -396,6 +396,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         organizationId,
                         componentName,
                         dataQuery,
+                        any(),
                         dataStore,
                         ComponentTypeDto.CausalNet,
                         customizationData = null
@@ -442,6 +443,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     organizationId,
                     componentName,
                     dataQuery,
+                    any(),
                     dataStore,
                     ComponentTypeDto.CausalNet,
                     customizationData = """{"layout":[{"id":"id1","x":10.0,"y":10.0}]}"""
