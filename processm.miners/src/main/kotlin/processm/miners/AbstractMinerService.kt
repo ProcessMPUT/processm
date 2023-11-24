@@ -90,7 +90,12 @@ abstract class DeleteJob : ServiceJob {
 
             } catch (e: Exception) {
                 component.lastError = e.message
-                logger.warn("Error deleting C-Net for component with id $id.")
+                logger.warn("Error deleting model for component with id $id.")
+            }
+
+            if (component.deleted) {
+                logger.debug("Deleting component $id...")
+                component.delete()
             }
         }
     }

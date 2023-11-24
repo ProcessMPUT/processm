@@ -2,7 +2,6 @@ package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import processm.core.communication.Producer
 import processm.core.logging.loggedScope
@@ -35,7 +34,8 @@ class WorkspaceService(
                                     stringLiteral("urn:processm:db/${Workspaces.tableName}/"),
                                     Workspaces.id
                                 )) and
-                                (AccessControlList.role_id neq RoleType.None.role.id)
+                                (AccessControlList.role_id neq RoleType.None.role.id) and
+                                (Workspaces.deleted eq false)
 
                     }
             ).toList()
@@ -84,13 +84,18 @@ class WorkspaceService(
         transactionMain {
             aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Owner)
 
-            WorkspaceComponents.deleteWhere {
-                WorkspaceComponents.workspaceId eq workspaceId
-            }
+            Workspace.findById(workspaceId)
+                .validateNotNull(Reason.ResourceNotFound) { "Workspace $workspaceId is not found." }
+                .deleted = true
 
-            Workspaces.deleteWhere {
-                Workspaces.id eq workspaceId
-            }.validate(1, Reason.ResourceNotFound) { "Workspace is not found." }
+            WorkspaceComponent.find {
+                WorkspaceComponents.workspaceId eq workspaceId
+            }.forEach { component ->
+                component.deleted = true
+                component.afterCommit {
+                    component.triggerEvent(producer, DELETE)
+                }
+            }
 
             try {
                 aclService.removeEntries(Workspaces, workspaceId)
@@ -108,7 +113,7 @@ class WorkspaceService(
             aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
 
             WorkspaceComponent.find {
-                WorkspaceComponents.id eq componentId
+                (WorkspaceComponents.id eq componentId) and (WorkspaceComponents.deleted eq false)
             }.single()
         }
 
@@ -120,7 +125,7 @@ class WorkspaceService(
             aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Reader)
 
             WorkspaceComponent.find {
-                WorkspaceComponents.workspaceId eq workspaceId
+                (WorkspaceComponents.workspaceId eq workspaceId) and (WorkspaceComponents.deleted eq false)
             }.toList()
         }
 
@@ -145,7 +150,7 @@ class WorkspaceService(
         aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
 
         val componentAlreadyExists = WorkspaceComponents
-            .select { WorkspaceComponents.id eq workspaceComponentId }
+            .select { (WorkspaceComponents.id eq workspaceComponentId) and (WorkspaceComponents.deleted eq false) }
             .limit(1)
             .any()
 
@@ -195,9 +200,10 @@ class WorkspaceService(
     ): Unit = transactionMain {
         aclService.checkAccess(userId, organizationId, Workspaces, workspaceId, RoleType.Writer)
 
-        WorkspaceComponents.deleteWhere {
-            WorkspaceComponents.id eq workspaceComponentId
-        }.validate(1, Reason.ResourceNotFound) { "Workspace is not found." }
+        WorkspaceComponent.findById(workspaceComponentId)
+            .validateNotNull(Reason.ResourceNotFound) { "Workspace component is not found." }
+            .apply { triggerEvent(producer, DELETE) }
+            .deleted = true
     }
 
     /**

@@ -104,6 +104,11 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
      * The description of the last error that occurred for this component (the computed value).
      */
     val lastError = text("last_error").nullable()
+
+    /**
+     * True marks components marked for deletion.
+     */
+    val deleted = bool("deleted").default(false)
 }
 
 class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -130,6 +135,7 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var userLastModified by WorkspaceComponents.userLastModified
     var dataLastModified by WorkspaceComponents.dataLastModified
     var lastError by WorkspaceComponents.lastError
+    var deleted by WorkspaceComponents.deleted
 }
 
 enum class ComponentTypeDto(val typeName: String) {

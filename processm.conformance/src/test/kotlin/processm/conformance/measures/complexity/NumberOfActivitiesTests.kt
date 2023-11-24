@@ -1,8 +1,8 @@
 package processm.conformance.measures.complexity
 
-import processm.conformance.CausalNets
 import processm.conformance.PetriNets
 import processm.core.log.StandardLifecycle
+import processm.core.models.causalnet.CausalNets
 import processm.core.models.processtree.ProcessTrees
 import kotlin.test.Test
 import kotlin.test.assertEquals

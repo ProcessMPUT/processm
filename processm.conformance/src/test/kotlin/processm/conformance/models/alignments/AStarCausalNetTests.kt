@@ -1,11 +1,11 @@
 package processm.conformance.models.alignments
 
-import processm.conformance.CausalNets.azFlower
-import processm.conformance.CausalNets.fig312
-import processm.conformance.CausalNets.fig316
-import processm.conformance.CausalNets.parallelDecisionsInLoop
 import processm.core.helpers.allSubsets
 import processm.core.log.Helpers
+import processm.core.models.causalnet.CausalNets.azFlower
+import processm.core.models.causalnet.CausalNets.fig312
+import processm.core.models.causalnet.CausalNets.fig316
+import processm.core.models.causalnet.CausalNets.parallelDecisionsInLoop
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import kotlin.test.Ignore

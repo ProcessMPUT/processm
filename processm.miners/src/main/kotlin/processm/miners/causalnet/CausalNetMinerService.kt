@@ -14,8 +14,8 @@ import processm.miners.DeleteJob
 import processm.miners.causalnet.onlineminer.OnlineMiner
 import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 
-private const val ALGORITHM_HEURISTIC_MINER = "OnlineHeuristicMiner"
-private const val ALGORITHM_INDUCTIVE_MINER = "OnlineInductiveMiner"
+const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
+const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
 
 /**
  * The service that discovers Causal net from the event log.
@@ -38,8 +38,8 @@ class CausalNetMinerService : AbstractMinerService(
 
             val miner = when (component.algorithm) {
                 ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
-                ALGORITHM_HEURISTIC_MINER -> OnlineMiner()
-                else -> OnlineMiner()
+                ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner()
+                else -> throw IllegalArgumentException("Unexpected type of miner: ${component.algorithm}.")
             }
 
             val model = miner.processLog(stream)

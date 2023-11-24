@@ -1,6 +1,4 @@
-package processm.conformance
-
-import processm.core.models.causalnet.*
+package processm.core.models.causalnet
 
 /**
  * Causal nets for tests.
