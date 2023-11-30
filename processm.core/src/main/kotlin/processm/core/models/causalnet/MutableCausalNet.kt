@@ -98,6 +98,7 @@ class MutableCausalNet(
      * Removes the given [node] from this Causal net and drops all related bindings and dependencies.
      */
     fun removeInstance(node: Node) {
+        assert(node in _instances)
         _splits.remove(node)?.forEach { s -> s.targets.forEach { _joins[it]?.removeIf { j -> node in j.sources } } }
         _joins.remove(node)?.forEach { j -> j.sources.forEach { _splits[it]?.removeIf { s -> node in s.targets } } }
         _outgoing.remove(node)?.forEach { dep -> _incoming[dep.target]?.removeIf { it.source == node } }

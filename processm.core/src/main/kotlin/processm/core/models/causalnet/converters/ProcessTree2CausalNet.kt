@@ -4,6 +4,8 @@ import processm.core.helpers.mapToSet
 import processm.core.models.causalnet.*
 import processm.core.models.metadata.DefaultMutableMetadataHandler
 import processm.core.models.processtree.*
+import processm.core.verifiers.CausalNetVerifier
+import java.util.*
 import processm.core.models.processtree.Node as TNode
 
 /**
@@ -12,7 +14,20 @@ import processm.core.models.processtree.Node as TNode
  */
 private class ProcessTree2CausalNet(private val tree: ProcessTree) {
 
-    private val activities = tree.activities.associateWith { Node(activity = it.name, isSilent = it.isSilent) }
+    private val activities = IdentityHashMap<ProcessTreeActivity, Node>().apply {
+        val unique = HashMap<String, Int>()
+        for (activity in tree.activities) {
+            val name = if (activity.name.isEmpty()) activity.symbol else activity.name
+            val id = unique.compute(name) { _, old -> old?.let { it + 1 } ?: 0 }
+            val node = Node(
+                activity = name,
+                instanceId = if (id == 0) "" else id.toString(),
+                isSilent = activity.isSilent
+            )
+            val old = put(activity, node)
+            check(old === null) { "Duplicate activity identity $activity in process tree $tree" }
+        }
+    }
     private val metadataHandler = DefaultMutableMetadataHandler()
     private var instanceCounter = 1
 
@@ -160,6 +175,9 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
             val prevActivity = silentJoin.sources.first()
             val prevSplits = cnet.splits[prevActivity].orEmpty().filter { silent in it.targets }
 
+            if (silent === cnet.end && cnet.outgoing[prevActivity]!!.size > 1)
+                continue // the new end activity must not allow exiting
+
             for (silentSplit in silentSplits) {
                 val newDeps = silentSplit.targets.mapToSet { cnet.addDependency(prevActivity, it) }
                 for (dep in newDeps) {
@@ -175,6 +193,9 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                 }
             }
 
+            if (silent === cnet.end)
+                cnet.setEnd(prevActivity)
+
             // remove old structures
             cnet.removeInstance(silent)
         }
@@ -187,6 +208,8 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
             val nextActivity = silentSplit.targets.first()
             val nextJoins = cnet.joins[nextActivity].orEmpty().filter { silent in it.sources }
 
+            if (silent === cnet.start && cnet.incoming[nextActivity]!!.size > 1)
+                continue // the new start activity must not be revisited
 
             for (silentJoin in silentJoins) {
                 val newDeps = silentJoin.sources.mapToSet { cnet.addDependency(it, nextActivity) }
@@ -203,29 +226,51 @@ private class ProcessTree2CausalNet(private val tree: ProcessTree) {
                 }
             }
 
+            if (silent === cnet.start)
+                cnet.setStart(nextActivity)
+
             // remove old structures
             cnet.removeInstance(silent)
         }
 
         // replace silent start activity
-        val startSplits = cnet.splits[cnet.start]!!
-        if (cnet.start.isSilent && startSplits.size == 1 && startSplits.first().size == 1) {
-            val prev = cnet.setStart(startSplits.first().targets.first())
-            cnet.removeInstance(prev)
-        }
+        do {
+            val startSplits = cnet.splits[cnet.start]!!
+            if (cnet.start.isSilent &&
+                startSplits.size == 1 &&
+                startSplits.first().size == 1 &&
+                cnet.incoming[startSplits.first().targets.first()]!!.size == 1
+            ) {
+                val prev = cnet.setStart(startSplits.first().targets.first())
+                cnet.removeInstance(prev)
+            } else break
+        } while (true)
 
         // replace silent end activity
-        val endJoins = cnet.joins[cnet.end]!!
-        if (cnet.end.isSilent && endJoins.size == 1 && endJoins.first().size == 1) {
-            val prev = cnet.setEnd(endJoins.first().sources.first())
-            cnet.removeInstance(prev)
-        }
+        do {
+            val endJoins = cnet.joins[cnet.end]!!
+            if (cnet.end.isSilent &&
+                endJoins.size == 1 &&
+                endJoins.first().size == 1 &&
+                cnet.outgoing[endJoins.first().sources.first()]!!.size == 1
+            ) {
+                val prev = cnet.setEnd(endJoins.first().sources.first())
+                cnet.removeInstance(prev)
+            } else break
+        } while (true)
     }
 
     fun toCausalNet(): CausalNet {
         requireNotNull(tree.root) { "Tree root must not be null." }
 
         val cnet = convert(tree.root!!)
+
+        assert({
+            val verifier = CausalNetVerifier()
+            val report = verifier.verify(cnet)
+            report.isSound
+        }())
+
         simplify(cnet)
 
         return cnet
