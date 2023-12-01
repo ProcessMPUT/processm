@@ -335,6 +335,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val userId = createUser().id.value
         val workspaceId = createWorkspace("Workspace1", userId, organizationId)
         val componentId = createWorkspaceComponent(workspaceId = workspaceId)
+        every { producer.produce(any(), any()) } just runs
 
         workspaceService.removeComponent(
             componentId.value,
@@ -344,9 +345,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
         )
 
         assertTrue {
-            WorkspaceComponents.select {
+            WorkspaceComponent.find {
                 WorkspaceComponents.id eq componentId
-            }.empty()
+            }.all { it.deleted }
         }
     }
 
