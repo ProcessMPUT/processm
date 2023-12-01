@@ -2,6 +2,7 @@ package processm.services.api
 
 import com.google.gson.Gson
 import io.ktor.http.*
+import io.ktor.server.engine.*
 import io.ktor.server.request.*
 import io.ktor.server.testing.*
 import io.ktor.utils.io.*
@@ -736,7 +737,6 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     @Timeout(10L, unit = TimeUnit.SECONDS)
-    @Ignore("This test fails randomly")
     fun `five subscriptions from a single client`() {
         val result = ConcurrentLinkedDeque<UUID>()
         val n = 5
@@ -771,7 +771,6 @@ class WorkspacesApiTest : BaseApiTest() {
 
     @Test
     @Timeout(60L, unit = TimeUnit.SECONDS)
-    @Ignore("This test fails randomly")
     fun `five subscriptions from different clients`() {
         val result = ConcurrentLinkedDeque<UUID>()
         val workspaceId = UUID.randomUUID()
