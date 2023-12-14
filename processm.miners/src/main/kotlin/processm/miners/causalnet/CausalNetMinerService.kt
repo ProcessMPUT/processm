@@ -4,12 +4,22 @@ import org.jetbrains.exposed.sql.Database
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.models.causalnet.CausalNet
 import processm.core.models.causalnet.DBSerializer
+import processm.core.models.causalnet.converters.toCausalNet
+import processm.core.models.processtree.ProcessTree
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.WorkspaceComponent
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
 import processm.miners.causalnet.onlineminer.OnlineMiner
+import processm.miners.processtree.inductiveminer.OnlineInductiveMiner
 
+const val ALGORITHM_HEURISTIC_MINER = "urn:processm:miners/OnlineHeuristicMiner"
+const val ALGORITHM_INDUCTIVE_MINER = "urn:processm:miners/OnlineInductiveMiner"
+
+/**
+ * The service that discovers Causal net from the event log.
+ */
 class CausalNetMinerService : AbstractMinerService(
     QUARTZ_CONFIG,
     ComponentTypeDto.CausalNet,
@@ -24,12 +34,20 @@ class CausalNetMinerService : AbstractMinerService(
         get() = "Causal net"
 
     class CalcCNetJob : CalcJob<CausalNet>() {
-        override fun mine(stream: DBHierarchicalXESInputStream): CausalNet {
-            val miner = OnlineMiner()
-            for (log in stream) {
-                miner.processLog(log)
+        override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): CausalNet {
+
+            val miner = when (component.algorithm) {
+                ALGORITHM_INDUCTIVE_MINER -> OnlineInductiveMiner()
+                ALGORITHM_HEURISTIC_MINER, null -> OnlineMiner()
+                else -> throw IllegalArgumentException("Unexpected type of miner: ${component.algorithm}.")
             }
-            return miner.result
+
+            val model = miner.processLog(stream)
+            return when (model) {
+                is ProcessTree -> model.toCausalNet()
+                is CausalNet -> model
+                else -> throw IllegalStateException("Unexpected type of process model: ${model.javaClass.name}")
+            }
         }
 
         override fun store(database: Database, model: CausalNet): String =

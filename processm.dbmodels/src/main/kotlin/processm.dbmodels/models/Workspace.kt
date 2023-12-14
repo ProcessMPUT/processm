@@ -8,10 +8,12 @@ import java.util.*
 
 object Workspaces : UUIDTable("workspaces") {
     val name = text("name")
+    val deleted = bool("deleted").default(false)
 }
 
 class Workspace(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<Workspace>(Workspaces)
 
     var name by Workspaces.name
+    var deleted by Workspaces.deleted
 }

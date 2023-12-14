@@ -1,7 +1,5 @@
 package processm.core.models.causalnet
 
-import processm.core.helpers.mapToSet
-import processm.core.models.commons.Activity
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.MetadataHandler
 import java.util.*
@@ -10,18 +8,8 @@ import java.util.*
  * A read-only causal net model
  */
 abstract class CausalNet(
-    /**
-     * A unique start activity instance, either real or artificial.
-     *
-     * If artificial, it is up to the user to populate [outgoing] and [incoming]
-     */
-    val start: Node,
-    /**
-     * A unique end activity instance, either real or artificial.
-     *
-     * If artificial, it is up to the user to populate [outgoing] and [incoming]
-     */
-    val end: Node,
+    start: Node,
+    end: Node,
     metadataHandler: MetadataHandler
 ) :
     ProcessModel,
@@ -30,6 +18,23 @@ abstract class CausalNet(
     companion object {
         private val setOfNull = setOf(null)
     }
+
+    /**
+     * A unique start activity instance, either real or artificial.
+     *
+     * If artificial, it is up to the user to populate [outgoing] and [incoming]
+     */
+    var start: Node = start
+        protected set
+
+    /**
+     * A unique end activity instance, either real or artificial.
+     *
+     * If artificial, it is up to the user to populate [outgoing] and [incoming]
+     */
+    var end: Node = end
+        protected set
+
 
     protected val _instances = HashSet(listOf(start, end))
 

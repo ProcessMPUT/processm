@@ -5,6 +5,7 @@ import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import processm.core.logging.enter
 import processm.core.logging.exit
 import processm.core.logging.logger
+import java.util.concurrent.Semaphore
 import javax.naming.Context
 
 /**
@@ -19,6 +20,15 @@ fun Context.getTopicConnectionFactory(): TopicConnectionFactory =
     this.lookup(TOPIC_CONNECTION_FACTORY_NAME) as TopicConnectionFactory
 
 class Artemis : Service {
+    companion object {
+        /**
+         * Mutex for preventing running of multiple instance of Artemis concurrently.
+         * It is the case in concurrent tests, where some tests create own instances of Artemis.
+         * Since all instances share the same configuration (and data directories), it may lead to random test fails.
+         */
+        private val runMutex = Semaphore(1)
+    }
+
     private lateinit var broker: EmbeddedActiveMQ
 
     override val name = "Artemis"
@@ -38,6 +48,8 @@ class Artemis : Service {
     override fun start() {
         logger().enter()
 
+        runMutex.acquire()
+
         logger().info("Staring Apache ActiveMQ Artemis broker")
         broker.start()
         status = ServiceStatus.Started
@@ -54,6 +66,8 @@ class Artemis : Service {
         broker.stop()
         status = ServiceStatus.Stopped
         logger().info("Apache ActiveMQ Artemis broker stopped")
+
+        runMutex.release()
 
         logger().exit()
     }

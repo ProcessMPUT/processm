@@ -2,6 +2,7 @@ package processm.miners.processtree.inductiveminer
 
 import processm.core.log.hierarchical.LogInputStream
 import processm.core.models.processtree.*
+import processm.miners.Miner
 import java.util.*
 
 /**
@@ -11,11 +12,11 @@ import java.util.*
  * - [OnlineInductiveMiner]
  * as code-base reduces. You should use [InductiveMiner] instead of duplicating code.
  */
-abstract class InductiveMiner {
+abstract class InductiveMiner : Miner {
     /**
      * Perform mining on a given log.
      */
-    abstract fun processLog(logsCollection: LogInputStream): ProcessTree
+    abstract override fun processLog(log: LogInputStream): ProcessTree
 
     companion object {
         /**

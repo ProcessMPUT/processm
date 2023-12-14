@@ -1,6 +1,4 @@
-package processm.conformance
-
-import processm.core.models.processtree.ProcessTree
+package processm.core.models.processtree
 
 /**
  * Process tress for tests.

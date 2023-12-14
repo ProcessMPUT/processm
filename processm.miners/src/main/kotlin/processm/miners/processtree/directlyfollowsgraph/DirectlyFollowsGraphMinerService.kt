@@ -6,6 +6,7 @@ import processm.core.log.hierarchical.DBHierarchicalXESInputStream
 import processm.core.models.dfg.DirectlyFollowsGraph
 import processm.dbmodels.models.ComponentTypeDto
 import processm.dbmodels.models.DFG
+import processm.dbmodels.models.WorkspaceComponent
 import processm.dbmodels.models.store
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
@@ -29,7 +30,7 @@ class DirectlyFollowsGraphMinerService : AbstractMinerService(
         get() = "Directly-follows graph"
 
     class CalcDFGJob : CalcJob<DirectlyFollowsGraph>() {
-        override fun mine(stream: DBHierarchicalXESInputStream): DirectlyFollowsGraph {
+        override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): DirectlyFollowsGraph {
             val dfg = DirectlyFollowsGraph()
             dfg.discover(stream)
             return dfg;

@@ -2,12 +2,12 @@ package processm.conformance.models.alignments.processtree
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import processm.conformance.ProcessTrees
 import processm.conformance.models.alignments.AStar
 import processm.conformance.models.alignments.CompositeAligner
 import processm.core.log.Helpers
 import processm.core.log.hierarchical.Log
 import processm.core.models.processtree.ProcessTree
+import processm.core.models.processtree.ProcessTrees
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Ignore

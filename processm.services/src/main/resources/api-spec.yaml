@@ -2060,6 +2060,8 @@ components:
         dataStore:
           type: string
           format: uuid
+        algorithm:
+          type: string
         type:
           $ref: '#/components/schemas/ComponentType'
         layout:
