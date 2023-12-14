@@ -27,7 +27,13 @@ import java.sql.JDBCType
 import java.time.Instant
 import java.util.*
 
-
+/**
+ * The logic of processing events in automatic ETL
+ *
+ * @param dataStoreDBName A data store where the log is to be created
+ * @param logId An identifier of the ETL process and the resulting log
+ * @param descriptor A mapping from the remote DB to the log
+ */
 class AutomaticEtlProcessExecutor(
     val dataStoreDBName: String, val logId: UUID, val descriptor: AutomaticEtlProcessDescriptor
 ) {
@@ -476,6 +482,9 @@ class AutomaticEtlProcessExecutor(
 
         val logger = logger()
 
+        /**
+         * Read the definition of the automatic ETL process identified by [automaticEtlProcessId] from the datastore [dataStoreDBName]
+         */
         fun fromDB(
             dataStoreDBName: String, automaticEtlProcessId: UUID
         ): AutomaticEtlProcessExecutor {
