@@ -50,6 +50,11 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
     val query = text("query")
 
     /**
+     * The algorithm used to calculate data. The interpretation of this property is component-specific.
+     */
+    val algorithm = text("algorithm").nullable()
+
+    /**
      * The type of the model associated with this component (the configuration parameter).
      */
     val modelType = text("model_type").nullable()
@@ -99,6 +104,11 @@ object WorkspaceComponents : UUIDTable("workspace_components") {
      * The description of the last error that occurred for this component (the computed value).
      */
     val lastError = text("last_error").nullable()
+
+    /**
+     * True marks components marked for deletion.
+     */
+    val deleted = bool("deleted").default(false)
 }
 
 class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
@@ -109,6 +119,7 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var name by WorkspaceComponents.name
     var workspace by Workspace referencedOn WorkspaceComponents.workspaceId
     var query by WorkspaceComponents.query
+    var algorithm by WorkspaceComponents.algorithm
     var modelType by WorkspaceComponents.modelType.transform(
         { it?.typeName },
         { ModelTypeDto.byTypeNameInDatabase(it) }
@@ -124,6 +135,7 @@ class WorkspaceComponent(id: EntityID<UUID>) : UUIDEntity(id) {
     var userLastModified by WorkspaceComponents.userLastModified
     var dataLastModified by WorkspaceComponents.dataLastModified
     var lastError by WorkspaceComponents.lastError
+    var deleted by WorkspaceComponents.deleted
 }
 
 enum class ComponentTypeDto(val typeName: String) {

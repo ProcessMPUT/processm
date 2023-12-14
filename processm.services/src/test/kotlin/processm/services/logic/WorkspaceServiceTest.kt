@@ -184,6 +184,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId,
             newComponentName,
             newDataQuery,
+            null,
             newDataStore,
             newComponentType,
             newComponentCustomizationData
@@ -228,6 +229,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId,
             name = null,
             query = null,
+            algorithm = null,
             dataStore = null,
             componentType = null,
             customizationData = null
@@ -275,6 +277,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
                     organizationId,
                     name = null,
                     query = null,
+                    algorithm = null,
                     dataStore = null,
                     componentType = null,
                     customizationData = null
@@ -306,6 +309,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
             organizationId,
             name = componentName,
             query = dataQuery,
+            algorithm = null,
             dataStore = dataStore,
             componentType = componentType,
             customizationData = componentCustomizationData
@@ -331,6 +335,7 @@ class WorkspaceServiceTest : ServiceTestBase() {
         val userId = createUser().id.value
         val workspaceId = createWorkspace("Workspace1", userId, organizationId)
         val componentId = createWorkspaceComponent(workspaceId = workspaceId)
+        every { producer.produce(any(), any()) } just runs
 
         workspaceService.removeComponent(
             componentId.value,
@@ -340,9 +345,9 @@ class WorkspaceServiceTest : ServiceTestBase() {
         )
 
         assertTrue {
-            WorkspaceComponents.select {
+            WorkspaceComponent.find {
                 WorkspaceComponents.id eq componentId
-            }.empty()
+            }.all { it.deleted }
         }
     }
 

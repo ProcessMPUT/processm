@@ -123,6 +123,7 @@ fun Route.WorkspacesApi() {
                     component.organizationId,
                     name,
                     query,
+                    algorithm,
                     dataStore,
                     ComponentTypeDto.byTypeNameInDatabase(type.toString()),
                     // TODO: replace the dependency on Gson with kotlinx/serialization

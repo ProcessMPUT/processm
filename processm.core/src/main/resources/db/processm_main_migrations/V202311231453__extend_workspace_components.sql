@@ -1,0 +1,6 @@
+ALTER TABLE workspace_components
+    ADD COLUMN algorithm TEXT    NULL,
+    ADD COLUMN deleted   BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE workspaces
+    ADD COLUMN deleted BOOLEAN NOT NULL DEFAULT FALSE;

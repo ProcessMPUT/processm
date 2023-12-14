@@ -2,6 +2,7 @@ package processm.services.api
 
 import com.google.gson.Gson
 import io.ktor.http.*
+import io.ktor.server.engine.*
 import io.ktor.server.request.*
 import io.ktor.server.testing.*
 import io.ktor.utils.io.*
@@ -9,8 +10,6 @@ import io.ktor.websocket.*
 import io.mockk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.trySendBlocking
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.dao.id.EntityID
 import org.junit.jupiter.api.AfterAll
@@ -398,6 +397,7 @@ class WorkspacesApiTest : BaseApiTest() {
                         organizationId,
                         componentName,
                         dataQuery,
+                        any(),
                         dataStore,
                         ComponentTypeDto.CausalNet,
                         customizationData = null
@@ -444,6 +444,7 @@ class WorkspacesApiTest : BaseApiTest() {
                     organizationId,
                     componentName,
                     dataQuery,
+                    any(),
                     dataStore,
                     ComponentTypeDto.CausalNet,
                     customizationData = """{"layout":[{"id":"id1","x":10.0,"y":10.0}]}"""

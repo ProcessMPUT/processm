@@ -2,15 +2,15 @@ package processm.enhancement.simulation
 
 import org.apache.commons.math3.distribution.ExponentialDistribution
 import org.apache.commons.math3.distribution.NormalDistribution
-import processm.conformance.CausalNets
 import processm.conformance.PetriNets
-import processm.conformance.ProcessTrees
 import processm.core.log.InferTimes
 import processm.core.log.hierarchical.HoneyBadgerHierarchicalXESInputStream
 import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.log.takeTraces
+import processm.core.models.causalnet.CausalNets
 import processm.core.models.commons.ProcessModel
 import processm.core.models.metadata.BasicMetadata.LEAD_TIME
+import processm.core.models.processtree.ProcessTrees
 import processm.enhancement.resources.ApplyResourceBasedScheduling
 import processm.enhancement.resources.BasicResource
 import java.time.Duration

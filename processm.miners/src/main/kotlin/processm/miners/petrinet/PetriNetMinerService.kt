@@ -6,6 +6,7 @@ import processm.core.models.petrinet.DBSerializer
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.converters.toPetriNet
 import processm.dbmodels.models.ComponentTypeDto
+import processm.dbmodels.models.WorkspaceComponent
 import processm.miners.AbstractMinerService
 import processm.miners.CalcJob
 import processm.miners.DeleteJob
@@ -26,7 +27,7 @@ class PetriNetMinerService : AbstractMinerService(
         get() = "Petri net"
 
     class CalcPetriNetJob : CalcJob<PetriNet>() {
-        override fun mine(stream: DBHierarchicalXESInputStream): PetriNet {
+        override fun mine(component: WorkspaceComponent, stream: DBHierarchicalXESInputStream): PetriNet {
             val miner = OnlineMiner()
             for (log in stream) {
                 miner.processLog(log)

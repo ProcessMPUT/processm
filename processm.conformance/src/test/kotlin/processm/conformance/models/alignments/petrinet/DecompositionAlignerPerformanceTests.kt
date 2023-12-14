@@ -2,10 +2,6 @@ package processm.conformance.models.alignments.petrinet
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import processm.conformance.CausalNets
-import processm.conformance.CausalNets.fig312
-import processm.conformance.CausalNets.fig316
-import processm.conformance.CausalNets.parallelDecisionsInLoop
 import processm.conformance.PetriNets.azFlower
 import processm.conformance.PetriNets.fig314
 import processm.conformance.PetriNets.fig32
@@ -20,6 +16,10 @@ import processm.core.log.Helpers
 import processm.core.log.hierarchical.Log
 import processm.core.log.hierarchical.Trace
 import processm.core.logging.logger
+import processm.core.models.causalnet.CausalNets
+import processm.core.models.causalnet.CausalNets.fig312
+import processm.core.models.causalnet.CausalNets.fig316
+import processm.core.models.causalnet.CausalNets.parallelDecisionsInLoop
 import processm.core.models.causalnet.Node
 import processm.core.models.causalnet.causalnet
 import processm.core.models.petrinet.PetriNet

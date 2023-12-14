@@ -27,6 +27,7 @@ fun WorkspaceComponent.toAbstractComponent(): AbstractComponent =
     AbstractComponent(
         id = id.value,
         query = query,
+        algorithm = algorithm,
         dataStore = dataStoreId,
         type = componentType.toComponentType(),
         name = name,
