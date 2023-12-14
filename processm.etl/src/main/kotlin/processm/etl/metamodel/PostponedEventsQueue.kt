@@ -41,6 +41,10 @@ class DBPostponedEvent(id: EntityID<Int>) : processm.dbmodels.models.PostponedEv
         }
 }
 
+/**
+ * An interface to the DB to handle queueing events to be eventually appended to the log [logIdentityId]
+ * in the context of the corresponding ETL process.
+ */
 class PersistentPostponedEventsQueue(val logIdentityId: UUID) : PostponedEventsQueue {
 
     override fun add(dbEvent: DatabaseChangeApplier.DatabaseChangeEvent, objectId: RemoteObjectID): PostponedEvent =
