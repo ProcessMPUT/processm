@@ -11,14 +11,16 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
 import processm.core.helpers.toLocalDateTime
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.persistence.connection.DBCache
 import processm.core.querylanguage.Query
 import processm.dbmodels.models.*
 import processm.etl.tracker.DatabaseChangeApplier
 import java.time.Instant
 import java.util.*
-import kotlin.test.*
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 fun <E, A> traceEquals(expected: Collection<E>, actual: Collection<A>) =
     expected.size == actual.size && expected.toSet() == actual.toSet()
@@ -58,8 +60,15 @@ class LogGeneratingDatabaseChangeApplierTest {
 
     @BeforeTest
     fun setup() {
-        etlProcessId = UUID.randomUUID()
         transaction(DBCache.get(temporaryDB).database) {
+            etlProcessId = EtlProcessMetadata.new {
+                name = "test"
+                processType = "automatic"
+                dataConnector = DataConnector.new {
+                    name = "test"
+                    connectionProperties = ""
+                }
+            }.id.value
             // DataModel from Fig 9 and Table 1 in https://doi.org/10.1007/s10115-019-01430-6
             val dataModel = DataModel.new {
                 name = "test"
