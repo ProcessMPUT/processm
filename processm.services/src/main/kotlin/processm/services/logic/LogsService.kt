@@ -32,13 +32,14 @@ import javax.xml.stream.XMLOutputFactory
 class LogsService(private val producer: Producer) {
     companion object {
         private const val xesFileInputSizeLimit = 5_000_000L
-        private val logLimit = getPropertyIgnoreCase("processm.logs.limit.log")?.toLongOrNull() ?: 10L
-        private val traceLimit = getPropertyIgnoreCase("processm.logs.limit.trace")?.toLongOrNull() ?: 30L
-        private val eventLimit = getPropertyIgnoreCase("processm.logs.limit.event")?.toLongOrNull() ?: 90L
-        private val downloadLimitFactor =
-            getPropertyIgnoreCase("processm.logs.limit.downloadLimitFactor")?.toLongOrNull() ?: 10L
         private const val identityIdAttributeName = IDENTITY_ID
     }
+
+    private val logLimit = getPropertyIgnoreCase("processm.logs.limit.log")?.toLongOrNull() ?: 10L
+    private val traceLimit = getPropertyIgnoreCase("processm.logs.limit.trace")?.toLongOrNull() ?: 30L
+    private val eventLimit = getPropertyIgnoreCase("processm.logs.limit.event")?.toLongOrNull() ?: 90L
+    private val downloadLimitFactor =
+        getPropertyIgnoreCase("processm.logs.limit.downloadLimitFactor")?.toLongOrNull() ?: 10L
 
     private fun InputStream.boundStreamSize(streamSizeLimit: Long) =
         BufferedInputStream(BoundedInputStream(this, streamSizeLimit))
