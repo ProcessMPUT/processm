@@ -2,6 +2,7 @@ package processm.services.logic
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import processm.core.communication.Producer
 import processm.core.logging.loggedScope

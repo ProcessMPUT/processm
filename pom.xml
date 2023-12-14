@@ -28,7 +28,7 @@
 
     <issueManagement>
         <system>GitLab</system>
-        <url>https://git.processtom.com</url>
+        <url>https://git.processm.cs.put.poznan.pl</url>
     </issueManagement>
 
     <modules>
@@ -48,13 +48,13 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <kotlin.version>1.7.0</kotlin.version>
-        <kotlinx.coroutines.version>1.6.3</kotlinx.coroutines.version>
-        <kotlinx.serialization.version>1.3.3</kotlinx.serialization.version>
-        <org.jetbrains.exposed.version>0.38.2</org.jetbrains.exposed.version>
+        <kotlin.version>1.8.20</kotlin.version>
+        <kotlinx.coroutines.version>1.7.3</kotlinx.coroutines.version>
+        <kotlinx.serialization.version>1.6.0</kotlinx.serialization.version>
+        <org.jetbrains.exposed.version>0.44.0</org.jetbrains.exposed.version>
         <kotlin.code.style>official</kotlin.code.style>
-        <junit.jupiter.version>5.8.2</junit.jupiter.version>
-        <mockk.version>1.12.4</mockk.version>
+        <junit.jupiter.version>5.10.0</junit.jupiter.version>
+        <mockk.version>1.13.8</mockk.version>
         <!-- cannot update ANTLR4 because of the version conflict with spark-catalyst and the runtime version check in ANTLR4 lib -->
         <antlr4.version>4.8-1</antlr4.version>
         <com.github.ben-manes.caffeine.version>3.1.1</com.github.ben-manes.caffeine.version>
@@ -64,12 +64,12 @@
         <com.microsoft.sqlserver.version>10.2.1.jre11</com.microsoft.sqlserver.version>
         <com.oracle.database.jdbc.version>21.6.0.0.1</com.oracle.database.jdbc.version>
         <com.ibm.db2.version>11.5.7.0</com.ibm.db2.version>
-        <maven.dependency.plugin.version>3.3.0</maven.dependency.plugin.version>
+        <maven.dependency.plugin.version>3.6.1</maven.dependency.plugin.version>
         <maven.jar.plugin.version>3.2.2</maven.jar.plugin.version>
         <maven.shade.plugin.version>3.3.0</maven.shade.plugin.version>
         <testcontainers.version>1.17.3</testcontainers.version>
         <org.apache.commons.math.version>3.6.1</org.apache.commons.math.version>
-        <io.fabric8.docker-maven-plugin.version>0.42.1</io.fabric8.docker-maven-plugin.version>
+        <io.fabric8.docker-maven-plugin.version>0.43.4</io.fabric8.docker-maven-plugin.version>
         <pooled-jms.version>3.0.0</pooled-jms.version>
         <org.slf4j.version>1.7.36</org.slf4j.version>
         <debezium.version>1.9.4.Final</debezium.version>
@@ -89,7 +89,7 @@
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <artifactId>kotlin-stdlib</artifactId>
             <version>${kotlin.version}</version>
         </dependency>
         <dependency>
@@ -119,12 +119,6 @@
             <version>${kotlinx.serialization.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <version>${junit.jupiter.version}</version>
@@ -144,7 +138,7 @@
         </dependency>
         <dependency>
             <groupId>io.mockk</groupId>
-            <artifactId>mockk</artifactId>
+            <artifactId>mockk-jvm</artifactId>
             <version>${mockk.version}</version>
             <scope>test</scope>
         </dependency>
@@ -205,7 +199,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.11.0</version>
                 <executions>
                     <!-- Replacing default-compile as it is treated specially by maven -->
                     <execution>

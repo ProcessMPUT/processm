@@ -38,7 +38,7 @@ object SparkHelpers {
             }
             return@map StructField(it.name, dt, true, Metadata.empty())
         }
-        val schema = StructType(*fields.toTypedArray())
+        val schema = StructType(fields.toTypedArray())
         val df = spark.createDataFrame(rows, schema)
 
         val col = df.col(Label.name)

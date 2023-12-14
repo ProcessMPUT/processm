@@ -24,6 +24,7 @@ import processm.services.api.Paths
 import processm.services.api.defaultSampleSize
 import processm.services.api.models.*
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import kotlin.test.*
 
@@ -278,9 +279,18 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                     assertEquals(HttpStatusCode.Accepted, status)
                 }
                 //wait for the email
-                Thread.sleep(100L)
                 val re = Regex("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", RegexOption.IGNORE_CASE)
-                val token = re.find(sendmail.lastEmailBody)?.value
+                val token = runBlocking {
+                    for (i in 1..10) {
+                        try {
+                            re.find(sendmail.lastEmailBody)?.value?.let { return@runBlocking it }
+                        } catch (e: IOException) {
+                            delay(100L)
+                        }
+                    }
+                    error("Mail was not sent in time limit.")
+                }
+
                 assertNotNull(token)
                 post("/reset-password/$token", PasswordChange("", "newPassword")) {
                     assertEquals(HttpStatusCode.OK, status)

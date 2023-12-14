@@ -40,10 +40,16 @@ open class L2DependencyGraphProvider(
         return (x + y) / (x + y + 1)
     }
 
-    override fun computeDependencyGraph() =
-        super.computeDependencyGraph() + l2Loops
-            .keys
-            .filter { (a, b) -> dependency2(a, b) >= minL2 }
-            .flatMap { listOf(it, Dependency(it.target, it.source)) }
+    override fun computeDependencyGraph(): MutableMap<Dependency, Double> {
+        val result = super.computeDependencyGraph()
+        for (dep in l2Loops.keys) {
+            val measure = dependency2(dep.source, dep.target)
+            if (measure >= minL2) {
+                result[dep] = measure
+                result[Dependency(dep.target, dep.source)] = measure
+            }
+        }
+        return result
+    }
 
 }

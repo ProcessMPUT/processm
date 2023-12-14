@@ -2,7 +2,7 @@ import Vue from "vue";
 import Router from "@/router";
 import { BaseAPI } from "@/openapi/base";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { ConfigApi, Configuration, DataStoresApi, LogsApi, OrganizationsApi, UsersApi, WorkspacesApi } from "@/openapi";
+import { ConfigApi, Configuration, DataStoresApi, GroupsApi, LogsApi, OrganizationsApi, UsersApi, WorkspacesApi } from "@/openapi";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 
 export default abstract class BaseService {
@@ -36,6 +36,10 @@ export default abstract class BaseService {
     return this.getGenericClient(UsersApi);
   }
 
+  protected get groupsApi() {
+    return this.getGenericClient(GroupsApi);
+  }
+
   protected get organizationsApi() {
     return this.getGenericClient(OrganizationsApi);
   }
@@ -52,7 +56,7 @@ export default abstract class BaseService {
     return this.getGenericClient(LogsApi);
   }
 
-  protected prolongExistingSession(failedRequest: AxiosError<object>|undefined, api: UsersApi): Promise<void> {
+  protected prolongExistingSession(failedRequest: AxiosError<object> | undefined, api: UsersApi): Promise<void> {
     const expiredToken = Vue.prototype.$sessionStorage.sessionToken;
     const getAuthorizationHeaderValue = (token: string) => `Bearer ${token}`;
 

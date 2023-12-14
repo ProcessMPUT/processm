@@ -3,7 +3,6 @@ import App from "@/App.vue";
 import router from "@/router";
 import store from "@/store";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import Vuetify from "vuetify";
 import vuetify from "@/plugins/vuetify";
 import "material-design-icons-iconfont/dist/material-design-icons.css";
 import "typeface-roboto";
@@ -18,6 +17,7 @@ import LogsService from "./services/LogsService";
 import ConfigService from "@/services/ConfigService";
 import VuetifyConfirm from "vuetify-confirm";
 import ACLService from "@/services/ACLService";
+import GroupService from "@/services/GroupService";
 
 Vue.config.productionTip = false;
 Vue.use(SessionStorage, { persist: true });
@@ -33,6 +33,7 @@ new Vue({
     workspaceService: new WorkspaceService(),
     dataStoreService: new DataStoreService(),
     accountService: new AccountService(),
+    groupService: new GroupService(),
     organizationService: new OrganizationService(),
     logsService: new LogsService(),
     aclService: new ACLService()

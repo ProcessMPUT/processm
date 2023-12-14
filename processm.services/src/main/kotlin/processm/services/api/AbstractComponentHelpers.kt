@@ -7,6 +7,8 @@ import processm.core.logging.loggedScope
 import processm.core.models.causalnet.DBSerializer
 import processm.core.models.causalnet.Node
 import processm.core.models.dfg.DirectlyFollowsGraph
+import processm.core.models.metadata.BasicMetadata
+import processm.core.models.metadata.SingleDoubleMetadata
 import processm.core.models.petrinet.Marking
 import processm.core.models.petrinet.PetriNet
 import processm.core.models.petrinet.Place
@@ -99,10 +101,16 @@ private fun WorkspaceComponent.getData(): Any? = loggedScope { logger ->
                         cnet.joins[it].orEmpty().mapToArray { join -> join.sources.mapToArray { s -> s.name } }
                     )
                 }
+                val hasDependencyMeasure = BasicMetadata.DEPENDENCY_MEASURE in cnet.availableMetadata
                 val edges = cnet.dependencies.mapToArray {
+                    val dependencyMeasure = if (hasDependencyMeasure)
+                        (cnet.getMetadata(it, BasicMetadata.DEPENDENCY_MEASURE) as SingleDoubleMetadata).value
+                    else
+                        Double.NaN
                     CausalNetComponentDataAllOfEdges(
                         it.source.name,
-                        it.target.name
+                        it.target.name,
+                        dependencyMeasure
                     )
                 }
 

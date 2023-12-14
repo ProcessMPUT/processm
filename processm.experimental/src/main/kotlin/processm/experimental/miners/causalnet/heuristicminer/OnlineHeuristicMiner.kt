@@ -62,7 +62,7 @@ class OnlineHeuristicMiner(
         model.addInstance(*dependencyGraphProvider.nodes.toTypedArray())
 //        model.addInstance(*(nodeTrace.toSet() - model.instances).toTypedArray())
         model.clearDependencies()
-        for (dep in dependencyGraphProvider.computeDependencyGraph())
+        for (dep in dependencyGraphProvider.computeDependencyGraph().keys)
             model.addDependency(dep)
 
         val nodeTraceWithLimits = listOf(model.start) + nodeTrace + listOf(model.end)

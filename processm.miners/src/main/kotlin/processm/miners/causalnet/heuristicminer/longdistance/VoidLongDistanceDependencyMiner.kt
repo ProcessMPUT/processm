@@ -11,7 +11,5 @@ class VoidLongDistanceDependencyMiner : LongDistanceDependencyMiner {
     override fun processTrace(trace: List<Node>) {
     }
 
-    override fun mine(currentModel: CausalNet): Collection<Dependency> {
-        return emptyList()
-    }
+    override fun mine(currentModel: CausalNet): Map<Dependency, Double> = emptyMap()
 }

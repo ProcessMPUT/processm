@@ -31,4 +31,10 @@ object BasicMetadata {
      * The set of [LEAD_TIME], [SERVICE_TIME], [WAITING_TIME], [SYNCHRONIZATION_TIME].
      */
     val BASIC_TIME_STATISTICS: Set<URN> = setOf(LEAD_TIME, SERVICE_TIME, WAITING_TIME, SYNCHRONIZATION_TIME)
+
+    /**
+     * The value of a dependency measure associated with dependencies in Causal Nets obtained from mining services.
+     * The details of the measure are implementation-specific.
+     */
+    val DEPENDENCY_MEASURE: URN = URN("urn:processm:mining/dependency_measure")
 }

@@ -22,6 +22,18 @@ open class DefaultDependencyGraphProvider(
         }
 
 
-    override fun computeDependencyGraph() =
-        super.computeDependencyGraph().filter { (a, b) -> dependency(a, b) >= minDependency }
+    override fun computeDependencyGraph(): MutableMap<Dependency, Double> {
+        val result = super.computeDependencyGraph()
+        val i = result.iterator()
+        while (i.hasNext()) {
+            val e = i.next()
+            val k = e.key
+            val v = dependency(k.source, k.target)
+            if (v >= minDependency)
+                e.setValue(v)
+            else
+                i.remove()
+        }
+        return result
+    }
 }

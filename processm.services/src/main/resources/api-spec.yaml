@@ -2238,12 +2238,15 @@ components:
               type: array
               items:
                 type: object
-                required: [ sourceNodeId, targetNodeId ]
+                required: [ sourceNodeId, targetNodeId, support ]
                 properties:
                   sourceNodeId:
                     type: string
                   targetNodeId:
                     type: string
+                  support:
+                    type: number
+                    format: double
     ProcessModelCustomizationData:
       type: object
       properties:

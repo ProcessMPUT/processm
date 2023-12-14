@@ -289,8 +289,6 @@ export default class JdbcEtlProcessDialog extends Vue {
     const etl = this.initialConfig;
     const cfg = etl?.configuration;
 
-    console.log(etl);
-
     this.processName = etl?.name || "";
     this.selectedDataConnectorId = etl?.dataConnectorId || "";
     this.query = cfg?.query || this.query;

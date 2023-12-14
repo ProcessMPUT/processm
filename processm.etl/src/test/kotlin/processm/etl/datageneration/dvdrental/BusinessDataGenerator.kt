@@ -2,6 +2,7 @@ package processm.etl.datageneration.dvdrental
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.logging.loggedScope
@@ -374,5 +375,5 @@ class BusinessDataGenerator {
             .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     }
 
-    private fun getCurrentTime() = CurrentDateTime()
+    private fun getCurrentTime() = CurrentDateTime
 }

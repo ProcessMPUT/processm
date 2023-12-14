@@ -672,7 +672,7 @@ class WorkspacesApiTest : BaseApiTest() {
             }
             val sync = Channel<Int>(Channel.UNLIMITED)
             withAuthentication {
-                launch {
+                launch(context = Dispatchers.IO) {
                     sync.receive()
                     repeat(5) {
                         delay(200L)
@@ -717,7 +717,7 @@ class WorkspacesApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             val sync = Channel<Int>(Channel.UNLIMITED)
             withAuthentication {
-                launch {
+                launch(context = Dispatchers.IO) {
                     sync.receive()
                     component1.triggerEvent(Producer(), DATA_CHANGE)
                     component2.triggerEvent(Producer(), DATA_CHANGE)
@@ -750,7 +750,7 @@ class WorkspacesApiTest : BaseApiTest() {
             val sync = Channel<Int>()
             withAuthentication {
                 val jobs = (0 until n).map {
-                    launch {
+                    launch(context = Dispatchers.IO) {
                         handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
                             sync.send(1)
                             result.add(channel.readSSE().asUpdateEvent())
@@ -769,8 +769,7 @@ class WorkspacesApiTest : BaseApiTest() {
     }
 
     @Test
-    @Timeout(20L, unit = TimeUnit.SECONDS)
-    @Ignore("Unstable test; see #170")
+    @Timeout(60L, unit = TimeUnit.SECONDS)
     fun `five subscriptions from different clients`() {
         val result = ConcurrentLinkedDeque<UUID>()
         val workspaceId = UUID.randomUUID()
@@ -784,10 +783,10 @@ class WorkspacesApiTest : BaseApiTest() {
         withConfiguredTestApplication {
             val sync = Channel<Int>(Channel.UNLIMITED)
             val jobs = (0 until n).map { ctr ->
-                launch {
+                launch(context = Dispatchers.IO) {
                     withAuthentication(login = "user${ctr}@example.com") {
                         handleSse("/api/organizations/${UUID.randomUUID()}/workspaces/${workspaceId}") { channel ->
-                            sync.trySendBlocking(ctr)
+                            sync.send(ctr)
                             result.add(channel.readSSE().asUpdateEvent())
                         }
                     }
