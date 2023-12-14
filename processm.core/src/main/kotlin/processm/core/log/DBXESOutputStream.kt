@@ -2,6 +2,7 @@ package processm.core.log
 
 import processm.core.helpers.toUUID
 import processm.core.log.attribute.AttributeMap
+import processm.core.log.attribute.xesTag
 import processm.core.logging.loggedScope
 import processm.core.persistence.copy.Copy
 import processm.core.persistence.copy.EagerCopy
@@ -13,7 +14,6 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
-import kotlin.reflect.KClass
 
 open class DBXESOutputStream protected constructor(protected val connection: Connection, val isAppending: Boolean) :
     XESOutputStream {

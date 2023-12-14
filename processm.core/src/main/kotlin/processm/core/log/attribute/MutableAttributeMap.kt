@@ -8,7 +8,6 @@ import processm.core.log.attribute.AttributeMap.Companion.INT_MARKER
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR
 import processm.core.log.attribute.AttributeMap.Companion.SEPARATOR_CHAR
 import processm.core.log.attribute.AttributeMap.Companion.STRING_MARKER
-import processm.core.log.isAllowedAttributeValue
 import java.time.Instant
 import java.util.*
 
