@@ -66,7 +66,6 @@ class LogGeneratingDatabaseChangeApplier(
                     assert(executorsForClass.mapToSet { it.logId }.size == executorsForClass.size)
                     for (executor in executorsForClass) {
                         if (executor.processEvent(dbEvent)) {
-                            //TODO ugly!!
                             EtlProcessesMetadata.update({ EtlProcessesMetadata.id eq executor.logId }) {
                                 it[lastExecutionTime] = Instant.now()
                             }

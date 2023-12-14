@@ -502,7 +502,7 @@ class AutomaticEtlProcessExecutor(
             check(!relations.empty()) { "An automatic ETL process must refer to some relations " }
             val graph = DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
             for (relation in relations) {
-                //TODO buggy and ugly. Add attributename to AutomaticEtlProcessRelation or replace AutomaticEtlProcessRelation with references to Relationships
+                //FIXME This is potentially buggy, as there may be more than one attribute with the same source and target class.
                 val attributeName = (Relationships innerJoin AttributesNames).slice(AttributesNames.name).select {
                     (Relationships.sourceClassId eq relation.sourceClassId) and (Relationships.targetClassId eq relation.targetClassId)
                 }.single().let { it[AttributesNames.name] }

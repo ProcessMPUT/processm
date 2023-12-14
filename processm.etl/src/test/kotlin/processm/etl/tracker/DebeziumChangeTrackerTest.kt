@@ -140,7 +140,7 @@ class DebeziumChangeTrackerTest {
                 list[0].lowercase() to list[1]
             }
             setProperty("name", "engine")
-            setProperty("plugin.name", "pgoutput")  // TODO I think this should be the default in the main code as well
+            setProperty("plugin.name", "pgoutput")
             setProperty("connector.class", "io.debezium.connector.postgresql.PostgresConnector")
             setProperty("offset.storage", "org.apache.kafka.connect.storage.FileOffsetBackingStore")
             setProperty("offset.storage.file.filename", File(tempDir, "storage").absolutePath)
