@@ -182,7 +182,7 @@ class AutomaticEtlProcessExecutor(
     private fun Connection.retrievePastEvents(objects: Collection<RemoteObjectID>): List<Event> {
         assert(objects.isNotEmpty())
         // This seems to be more efficient than using PQL
-        // TODO Consider moving the actual copying to the DB
+        // TODO Consider moving the actual copying to the DB - see #185
         val query = buildSQLQuery {
             append(
                 """select * from events_attributes where event_id in (
