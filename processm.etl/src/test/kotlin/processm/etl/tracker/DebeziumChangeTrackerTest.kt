@@ -22,11 +22,9 @@ import java.net.URI
 import java.nio.file.Files
 import java.sql.DriverManager
 import java.util.*
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
+@Ignore("The test is temporarily disabled as to avoid reconfiguring the DB backing the TeamCity. It should be migrated to testcontainers.")
 @OptIn(InMemoryXESProcessing::class)
 class DebeziumChangeTrackerTest {
 
