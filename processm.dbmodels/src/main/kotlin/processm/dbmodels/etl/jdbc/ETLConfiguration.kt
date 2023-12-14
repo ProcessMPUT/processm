@@ -79,10 +79,6 @@ class ETLConfiguration(id: EntityID<UUID>) : UUIDEntity(id) {
      */
     val columnToAttributeMap by ETLColumnToAttributeMap referrersOn ETLColumnToAttributeMaps.configuration
 
-    /**
-     * The log of errors that occurred during executing the ETL process associated with this configuration.
-     */
-    val errors by ETLError referrersOn ETLErrors.configuration
 
     /**
      * The maximal size of the final log, as the number of components. Used while testing an ETL process configuration.

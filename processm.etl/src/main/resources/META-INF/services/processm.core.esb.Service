@@ -1,3 +1,2 @@
 processm.etl.jdbc.ETLService
 processm.etl.metamodel.MetaModelDebeziumWatchingService
-processm.etl.metamodel.MetaModelToXesConversionService

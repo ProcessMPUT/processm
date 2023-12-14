@@ -112,6 +112,21 @@ class AppendingDBXESOutputStreamTest {
         expect(sequenceOf(log, trace1) + events1 + sequenceOf(trace2) + events2.take(4))
     }
 
+    @Test
+    fun `save everything at once`() {
+        save(part1 + part2 + part3 + part4)
+        expect(sequenceOf(log, trace1) + events1 + sequenceOf(trace2) + events2 + sequenceOf(trace3) + events3)
+    }
+
+    @Test
+    fun `prepend every event with log and trace`() {
+        save(events1.flatMap { sequenceOf(log, trace1, it) }
+                + events2.flatMap { sequenceOf(log, trace2, it) }
+                + events3.flatMap { sequenceOf(log, trace3, it) }
+        )
+        expect(sequenceOf(log, trace1) + events1 + sequenceOf(trace2) + events2 + sequenceOf(trace3) + events3)
+    }
+
     private fun save(part: Sequence<XESComponent>) {
         AppendingDBXESOutputStream(DBCache.get(dbName).getConnection()).use { stream ->
             stream.write(part)

@@ -8,6 +8,7 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import processm.core.Brand
 import processm.core.communication.Producer
+import processm.core.helpers.getPropertyIgnoreCase
 import processm.core.log.*
 import processm.core.log.attribute.Attribute.IDENTITY_ID
 import processm.core.log.attribute.toMutableAttributeMap
@@ -31,12 +32,14 @@ import javax.xml.stream.XMLOutputFactory
 class LogsService(private val producer: Producer) {
     companion object {
         private const val xesFileInputSizeLimit = 5_000_000L
-        private const val logLimit = 10L
-        private const val traceLimit = 30L
-        private const val eventLimit = 90L
-        private const val downloadLimitFactor = 10L
         private const val identityIdAttributeName = IDENTITY_ID
     }
+
+    private val logLimit = getPropertyIgnoreCase("processm.logs.limit.log")?.toLongOrNull() ?: 10L
+    private val traceLimit = getPropertyIgnoreCase("processm.logs.limit.trace")?.toLongOrNull() ?: 30L
+    private val eventLimit = getPropertyIgnoreCase("processm.logs.limit.event")?.toLongOrNull() ?: 90L
+    private val downloadLimitFactor =
+        getPropertyIgnoreCase("processm.logs.limit.downloadLimitFactor")?.toLongOrNull() ?: 10L
 
     private fun InputStream.boundStreamSize(streamSizeLimit: Long) =
         BufferedInputStream(BoundedInputStream(this, streamSizeLimit))

@@ -34,7 +34,27 @@ class DataConnector(id: EntityID<UUID>) : UUIDEntity(id) {
     var connectionProperties by DataConnectors.connectionProperties
     var dataModel by DataModel optionalReferencedOn DataConnectors.dataModelId
 
-    fun toDto() = DataConnectorDto(id.value, name, lastConnectionStatus, lastConnectionStatusTimestamp, dataModel?.id?.value)
+    fun toDto() =
+        DataConnectorDto(id.value, name, lastConnectionStatus, lastConnectionStatusTimestamp, dataModel?.id?.value)
 }
 
-data class DataConnectorDto(val id: UUID, val name: String, val lastConnectionStatus: Boolean?, val lastConnectionStatusTimestamp: LocalDateTime?, val dataModelId: Int?, var connectionProperties: Map<String, String>? = null)
+/**
+ * Intended to represent "connection-type" in [DataConnector.connectionProperties] for non-URL-based connectors
+ * It should be kept consistent with `ConnectionType` in `DataStore.ts`
+ */
+enum class ConnectionType {
+    PostgreSql,
+    SqlServer,
+    MySql,
+    OracleDatabase,
+    Db2
+}
+
+data class DataConnectorDto(
+    val id: UUID,
+    val name: String,
+    val lastConnectionStatus: Boolean?,
+    val lastConnectionStatusTimestamp: LocalDateTime?,
+    val dataModelId: Int?,
+    var connectionProperties: Map<String, String>? = null
+)

@@ -55,6 +55,34 @@
                                     </excludes>
                                 </filter>
                             </filters>
+                            <artifactSet>
+                                <excludes>
+                                    <!-- This is a dependency brought by schemacrawler via processm.etl.
+                                    Its maven directory contains a DLL file (mssql-jdbc_auth-10.2.1.x86.dll).
+                                    The shade plugin treats it as a JAR file, tries to open it as a ZIP archive and fails,
+                                    breaking the build. This exclusion is put here to repair the build process,
+                                    but its consequences are of yet unknown. Investigate in #186. -->
+                                    <exclude>com.microsoft.sqlserver:mssql-jdbc_auth:dll:</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven.dependency.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <includeArtifactIds>mssql-jdbc_auth</includeArtifactIds>
                         </configuration>
                     </execution>
                 </executions>
@@ -130,6 +158,18 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mssqlserver</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>

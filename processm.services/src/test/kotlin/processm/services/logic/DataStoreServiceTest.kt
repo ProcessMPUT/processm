@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.select
 import processm.core.log.Helpers.logFromString
 import processm.core.log.hierarchical.toFlatSequence
+import processm.core.persistence.connection.DatabaseChecker
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.models.AccessControlList
 import processm.dbmodels.models.DataStores
@@ -154,6 +155,23 @@ internal class DataStoreServiceTest : ServiceTestBase() {
     @Test
     fun `getting relationship graph throws if nonexistent data store`(): Unit = withCleanTables(DataStores) {
         assertDataStoreExistence { getRelationshipGraph(UUID.randomUUID(), UUID.randomUUID()) }
+    }
+
+    @Test
+    fun `getting relationship graph does not throw with Postgres`(): Unit = withCleanTables(DataStores) {
+        val org = createOrganization().id.value
+        assertTrue(dataStoreService.allByOrganizationId(org).isEmpty())
+
+        val dataStore = dataStoreService.createDataStore(organizationId = org, name = "New data store")
+
+        val dataConnectorId =
+            dataStoreService.createDataConnector(
+                dataStore.id.value,
+                "Data connector",
+                DatabaseChecker.baseConnectionURL
+            )
+
+        dataStoreService.getRelationshipGraph(dataStore.id.value, dataConnectorId)
     }
 
     @Test

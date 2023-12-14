@@ -25,8 +25,8 @@ import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
-import processm.etl.metamodel.MetaModel
 import processm.etl.metamodel.MetaModelReader
+import processm.etl.metamodel.buildMetaModel
 import processm.services.api.models.JdbcEtlColumnConfiguration
 import processm.services.api.models.JdbcEtlProcessConfiguration
 import processm.services.api.models.OrganizationRole
@@ -445,11 +445,18 @@ class DataStoreService(private val producer: Producer) {
 
     fun getEtlProcessInfo(dataStoreId: UUID, etlProcessId: UUID) =
         transaction(DBCache.get("$dataStoreId").database) {
-            val etlProcess = ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }.first()
+            val etlProcessMetadata = EtlProcessMetadata.findById(etlProcessId)
+                ?: throw NoSuchElementException("Cannot find ETL process with metadata ID `$etlProcessId'")
+            val logIdentityId = when (ProcessTypeDto.byNameInDatabase(etlProcessMetadata.processType)) {
+                ProcessTypeDto.JDBC -> ETLConfiguration.find { ETLConfigurations.metadata eq etlProcessId }
+                    .first().logIdentityId
+
+                ProcessTypeDto.Automatic -> etlProcessId
+            }
             return@transaction EtlProcessInfo(
-                etlProcess.logIdentityId,
-                etlProcess.errors.map(ETLError::toDto),
-                etlProcess.metadata.lastExecutionTime
+                logIdentityId,
+                etlProcessMetadata.errors.map(ETLError::toDto),
+                etlProcessMetadata.lastExecutionTime
             )
         }
 
@@ -539,7 +546,7 @@ class DataStoreService(private val producer: Producer) {
         if (dataConnector.dataModel?.id != null) return dataConnector.dataModel!!.id
 
         dataConnector.getConnection().use { connection ->
-            val dataModelId = MetaModel.build("$dataStoreId", metaModelName = "", SchemaCrawlerExplorer(connection))
+            val dataModelId = buildMetaModel("$dataStoreId", metaModelName = "", SchemaCrawlerExplorer(connection))
 
             DataConnectors.update({ DataConnectors.id eq dataConnectorId }) {
                 it[DataConnectors.dataModelId] = dataModelId

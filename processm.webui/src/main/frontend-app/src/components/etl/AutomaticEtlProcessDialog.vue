@@ -12,14 +12,15 @@
             v-model="selectedDataConnectorId"
             item-text="name"
             item-value="id"
-            :items="dataConnectors"
+            item-disabled="disabled"
+            :items="availableDataConnectors"
             :label="$t('data-stores.etl.data-connector')"
             :rules="notEmptyRule"
             @change="reloadSuggestedBusinessPerspectives"
             required
           >
             <template v-slot:item="{ item, on, attrs }">
-              <v-list-item v-if="Object.keys(item.properties).length > 0" v-bind="attrs" v-on="on">
+              <v-list-item v-if="!item.disabled" v-bind="attrs" v-on="on">
                 <v-list-item-content>
                   <v-list-item-title>{{ item.name }}</v-list-item-title>
                 </v-list-item-content>
@@ -54,13 +55,13 @@
                 >
                   <template v-slot:item="{ item }">
                     <v-list-item-content>
-                      <v-list-item-title>{{ Array.from(item.classes.values()).join(", ") }}</v-list-item-title>
+                      <v-list-item-title>{{ Object.values(item.classes).join(", ") }}</v-list-item-title>
                       <v-list-item-subtitle class="case-notion-description">{{ getCaseNotionDescription(item) }} </v-list-item-subtitle>
                     </v-list-item-content>
                   </template>
                   <template v-slot:selection="{ item }">
                     <span v-if="!isCaseNotionManuallyModified">
-                      {{ Array.from(item.classes.values()).join(", ") }}
+                      {{ Object.values(item.classes).join(", ") }}
                     </span>
                     <span v-else> {{ $t("data-stores.etl.custom-case-notion") }} item </span>
                   </template>
@@ -146,6 +147,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
   readonly initialConfig: AutomaticEtlProcess | null = null;
 
   processName = "";
+  availableDataConnectors: Array<{name: string, id: string, disabled: boolean}> = [];
   selectedDataConnectorId: string | null = null;
   selectedCaseNotion: CaseNotion | null = null;
   availableCaseNotions: CaseNotion[] = [];
@@ -159,6 +161,13 @@ export default class AutomaticEtlProcessDialog extends Vue {
   }> = [];
   relationshipGraph: CaseNotion | null = null;
   notEmptyRule = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
+
+  @Watch("dataConnectors")
+  updateAvailableDataConnectors() {
+    this.availableDataConnectors =  this.dataConnectors?.map((item:DataConnector) => {
+      return {name: item.name, id: item.id, disabled: Object.keys(item.properties).length ==0}
+    }) ?? [];
+  }
 
   @Watch("initialConfig")
   setInitialConfig() {

@@ -159,6 +159,9 @@ class Db2Environment(
         return container
     }
 
+    override val connectionProperties: Map<String, String>
+        get() = TODO("Not yet implemented")
+
     override fun initContainer(): Db2Container {
         val imageName = DockerImageName
             .parse("processm/db2:latest")

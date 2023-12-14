@@ -17,6 +17,11 @@ interface DBMSEnvironment<Container : JdbcDatabaseContainer<*>> : AutoCloseable 
     val user: String
     val password: String
     val jdbcUrl: String
+
+    /**
+     * Properties in a format suitable for [processm.etl.helpers.getDataSource]
+     */
+    val connectionProperties: Map<String, String>
     fun connect(): Connection
 
     val dataConnector: DataConnector
@@ -38,7 +43,7 @@ abstract class AbstractDBMSEnvironment<Container : JdbcDatabaseContainer<*>>(
 ) : DBMSEnvironment<Container> {
 
     private val containerDelegate = lazy { initAndRun() }
-    private val container: Container
+    protected val container: Container
         get() = containerDelegate.value
 
     protected abstract fun initContainer(): Container

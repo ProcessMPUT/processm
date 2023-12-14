@@ -3,28 +3,35 @@ package processm
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.gson.*
 import io.ktor.server.locations.*
+import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.runBlocking
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.lifecycle.Startables
 import org.testcontainers.utility.DockerImageName
 import processm.core.esb.EnterpriseServiceBus
 import processm.core.helpers.loadConfiguration
+import processm.core.log.XMLXESInputStream
 import processm.core.persistence.Migrator
 import processm.etl.PostgreSQLEnvironment
+import processm.etl.metamodel.MetaModelDebeziumWatchingService.Companion.DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY
 import processm.services.LocalDateTimeTypeAdapter
 import processm.services.NonNullableTypeAdapterFactory
 import processm.services.api.Paths
 import processm.services.api.models.*
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.nio.file.Files
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ForkJoinPool
-import kotlin.collections.HashMap
+import java.util.zip.ZipInputStream
 import kotlin.reflect.full.findAnnotation
 import kotlin.test.assertEquals
 
@@ -50,6 +57,9 @@ class ProcessMTestingEnvironment {
                 registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeTypeAdapter())
                 registerTypeAdapterFactory(NonNullableTypeAdapterFactory())
             }
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 300_000
         }
     }
 
@@ -91,6 +101,7 @@ class ProcessMTestingEnvironment {
     }
 
     private val sakilaEnv = lazy { PostgreSQLEnvironment.getSakila() }
+    private var temporaryDebeziumDirectory: File? = null
 
     val sakilaJdbcUrl: String
         get() = with(sakilaEnv.value) {
@@ -114,6 +125,13 @@ class ProcessMTestingEnvironment {
         return this
     }
 
+    fun withTemporaryDebeziumStorage(): ProcessMTestingEnvironment {
+        val dir = Files.createTempDirectory("processm_debezium").toFile()
+        withProperty(DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY, dir.absolutePath)
+        temporaryDebeziumDirectory = dir
+        return this
+    }
+
     fun <T> run(block: ProcessMTestingEnvironment.() -> T) {
         try {
             loadConfiguration(true)
@@ -132,6 +150,7 @@ class ProcessMTestingEnvironment {
             client.close()
             if (sakilaEnv.isInitialized())
                 sakilaEnv.value.close()
+            temporaryDebeziumDirectory?.deleteRecursively()
         }
     }
 
@@ -142,7 +161,7 @@ class ProcessMTestingEnvironment {
     //TODO at the very least port should not be hardcoded
     fun apiUrl(endpoint: String): String = "http://localhost:2080/api/${endpoint}"
 
-    inline fun <reified Endpoint> format(vararg args: Pair<String, String>): String = format<Endpoint>(args.toMap())
+    inline fun <reified Endpoint> format(vararg args: Pair<String, String?>): String = format<Endpoint>(args.toMap())
 
     // must be public as long as get/post with Location are public, because they're inline, because reified
     fun <T> String.ktorLocationSpecificReplace(key: String, value: T?): String {
@@ -152,11 +171,12 @@ class ProcessMTestingEnvironment {
             this
     }
 
-    inline fun <reified Endpoint> format(args: Map<String, String>): String {
+    inline fun <reified Endpoint> format(args: Map<String, String?>): String {
         var result =
             requireNotNull(Endpoint::class.findAnnotation<Location>()?.path) //StringBuilder doesn't handle replacing substrings too well
         for ((name, value) in args)
-            result = result.replace("{$name}", value)
+            if (value !== null)
+                result = result.replace("{$name}", value)
         result = result.ktorLocationSpecificReplace("organizationId", currentOrganizationId)
         result = result.ktorLocationSpecificReplace("dataStoreId", currentDataStore?.id)
         result = result.ktorLocationSpecificReplace("dataConnectorId", currentDataConnector?.id)
@@ -164,8 +184,11 @@ class ProcessMTestingEnvironment {
         return result
     }
 
-    inline fun <reified Endpoint, R> get(noinline block: suspend HttpResponse.() -> R): R =
-        get(format<Endpoint>(), null, block)
+    inline fun <reified Endpoint, R> get(
+        etlProcessId: AbstractEtlProcess? = null,
+        noinline block: suspend HttpResponse.() -> R
+    ): R =
+        get(format<Endpoint>("etlProcessId" to etlProcessId?.id?.toString()), null, block)
 
     inline fun <reified Endpoint, R> get(
         noinline prepare: (suspend HttpRequestBuilder.() -> Unit)?,
@@ -263,6 +286,16 @@ class ProcessMTestingEnvironment {
         parameter("query", query)
     }) {
         return@get body<Array<Any>>()
+    }
+
+    fun pqlQueryXES(query: String) = get<Paths.Logs, XMLXESInputStream>({
+        parameter("query", query)
+        header("Accept", "application/zip")
+    }) {
+        return@get ZipInputStream(bodyAsChannel().toInputStream()).use { zipStream ->
+            checkNotNull(zipStream.nextEntry)
+            return@use XMLXESInputStream(ByteArrayInputStream(zipStream.readAllBytes()))
+        }
     }
 
     fun deleteLog(logIdentityId: UUID) =

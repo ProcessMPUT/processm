@@ -89,13 +89,13 @@ export default class CaseNotionEditor extends Vue {
     this.nodes = new Map<string, shapes.standard.Rectangle>();
     this.links = new Map<[shapes.standard.Rectangle, shapes.standard.Rectangle], shapes.standard.Link>();
 
-    for (let className in relationshipGraph.classes) {
-      let classId = relationshipGraph.classes[className];
+    for (let classId in relationshipGraph.classes) {
+      const className = relationshipGraph.classes[classId];
       const nodeWidth = 100 + className.length;
       const nodeHeight = 50;
       const rect = new shapes.standard.Rectangle();
       rect.resize(nodeWidth, nodeHeight);
-      rect.idAttribute = classId;
+      rect.id = classId;
       rect.attr({
         label: {
           text: util.breakText(className, {

@@ -13,10 +13,14 @@ class AppendingDBXESOutputStream(connection: Connection) : DBXESOutputStream(con
     override fun write(component: XESComponent) {
         if (component is Log) {
             val existingLogId = getLogId(component)
-            if (existingLogId !== null && existingLogId != this.logId) {
-                flushQueue(true) // flush events and traces from the previous log
-                sawTrace = false // we must not refer to a trace from the previous log
-                this.logId = existingLogId
+            if (existingLogId !== null) {
+                if (existingLogId != this.logId) {
+                    flushQueue(true) // flush events and traces from the previous log
+                    sawTrace = false // we must not refer to a trace from the previous log
+                    this.logId = existingLogId
+                }
+                //Don't write the component if this log is already known
+                //FIXME Possibly this leads to data loss if `component` contains new values for some attributes of the log
             } else {
                 super.write(component)
             }

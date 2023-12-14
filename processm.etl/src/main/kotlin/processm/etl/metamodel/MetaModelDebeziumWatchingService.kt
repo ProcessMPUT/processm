@@ -11,13 +11,16 @@ import processm.core.communication.Consumer
 import processm.core.esb.Artemis
 import processm.core.esb.Service
 import processm.core.esb.ServiceStatus
+import processm.core.helpers.getPropertyIgnoreCase
 import processm.core.helpers.mapToSet
 import processm.core.helpers.toUUID
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.models.*
+import processm.etl.helpers.getConnection
 import processm.etl.tracker.DebeziumChangeTracker
+import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
@@ -29,13 +32,10 @@ import kotlin.reflect.KClass
 class MetaModelDebeziumWatchingService : Service {
     companion object {
         private val logger = logger()
+        const val DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY = "processm.etl.debezium.persistence.directory"
     }
+
     private val defaultSlotName = "processm"
-    private val serverProperty = "server"
-    private val portProperty = "port"
-    private val usernameProperty = "username"
-    private val passwordProperty = "password"
-    private val databaseNameProperty = "database"
     private val connectionTypeProperty = "connection-type"
     private val connectionRefreshingPeriod = 30_000L
 
@@ -89,7 +89,8 @@ class MetaModelDebeziumWatchingService : Service {
     private fun updateDebeziumConnectionState(message: MapMessage): Boolean {
         try {
             val type = message.getString(TYPE)
-            val dataStoreId = requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
+            val dataStoreId =
+                requireNotNull(message.getString(DATA_STORE_ID)?.toUUID()) { "Missing field: $DATA_STORE_ID." }
             val dataConnectorId =
                 requireNotNull(message.getString(DATA_CONNECTOR_ID)?.toUUID()) { "Missing field: $DATA_CONNECTOR_ID." }
 
@@ -124,35 +125,47 @@ class MetaModelDebeziumWatchingService : Service {
                         val dataConnectorId = dataConnectorResultRow[DataConnectors.id].value
 
                         try {
-                            val dataConnector = getDataConnector(dataConnectorId)
                             val trackedEntities = getEntitiesToBeTracked(dataConnectorId)
 
                             if (trackedEntities.isEmpty()) {
                                 logger.debug("No connection attempt will be made for the data connector $dataConnectorId due to no entities to be tracked")
                                 return@dataConnectorsLoop
                             }
+                            val dataConnector = DataConnector.wrapRow(dataConnectorResultRow)
 
                             val tracker = createDebeziumTracker(dataStoreId, dataConnector, trackedEntities)
                             debeziumTrackers[dataConnectorId] = tracker
                             tracker.start()
                         } catch (e: IllegalArgumentException) {
-                            logger.warn("Failed to create a connection for data connector $dataConnectorId due to invalid configuration", e)
+                            logger.warn(
+                                "Failed to create a connection for data connector $dataConnectorId due to invalid configuration",
+                                e
+                            )
                         } catch (e: Exception) {
-                            logger.warn("An unknown exception occurred while creating connection for data connector $dataConnectorId", e)
+                            logger.warn(
+                                "An unknown exception occurred while creating connection for data connector $dataConnectorId",
+                                e
+                            )
                         }
                     }
             }
         }
     }
 
-    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String>  {
+    private fun getEntitiesToBeTracked(dataConnectorId: UUID): Set<String> {
         val sourceClassAlias = Classes.alias("c1")
         val targetClassAlias = Classes.alias("c2")
         return EtlProcessesMetadata
             .innerJoin(AutomaticEtlProcesses)
             .innerJoin(AutomaticEtlProcessRelations)
-            .innerJoin(sourceClassAlias, { AutomaticEtlProcessRelations.sourceClassId }, { sourceClassAlias[Classes.id] })
-            .innerJoin(targetClassAlias, { AutomaticEtlProcessRelations.targetClassId }, { targetClassAlias[Classes.id] })
+            .innerJoin(
+                sourceClassAlias,
+                { AutomaticEtlProcessRelations.sourceClassId },
+                { sourceClassAlias[Classes.id] })
+            .innerJoin(
+                targetClassAlias,
+                { AutomaticEtlProcessRelations.targetClassId },
+                { targetClassAlias[Classes.id] })
             .slice(sourceClassAlias[Classes.name], targetClassAlias[Classes.name])
             .select { EtlProcessesMetadata.dataConnectorId eq dataConnectorId and (EtlProcessesMetadata.isActive) }
             .fold(mutableSetOf()) { entities, relation ->
@@ -164,22 +177,8 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    private fun getDataConnector(dataConnectorId: UUID): DataConnectorDto {
-        return requireNotNull(DataConnectors.select { DataConnectors.id eq dataConnectorId }.firstOrNull()?.let {
-            try {
-                val dataConnector = DataConnector.wrapRow(it)
-                val dataConnectorDto = dataConnector.toDto()
-                // the below logic misses extracting connection properties from connection string so connectors defined that way are not supported at the moment
-                // the limitations is due to Debezium requiring connection configuration in the form of Properties instance
-                dataConnectorDto.connectionProperties = Json.decodeFromString<MutableMap<String, String>>(
-                    dataConnector.connectionProperties
-                )
-                return@let dataConnectorDto
-            } catch (e: SerializationException) {
-                throw IllegalArgumentException("Failed to load connection properties. Connection string based configuration is not yet supported.")
-            }
-        }) { "No data connector found with the provided ID" }
-    }
+    private fun getDataConnector(dataConnectorId: UUID): DataConnector =
+        requireNotNull(DataConnector.findById(dataConnectorId)) { "No data connector found with the provided ID" }
 
     private fun activate(dataStoreId: UUID, dataConnectorId: UUID) {
         debeziumTrackers[dataConnectorId]?.close()
@@ -208,57 +207,95 @@ class MetaModelDebeziumWatchingService : Service {
         activate(dataStoreId, dataConnectorId)
     }
 
-    private fun createDebeziumTracker(dataStoreId: UUID, dataConnector: DataConnectorDto, trackedEntities: Set<String>): DebeziumChangeTracker {
-        val dataModelId = requireNotNull(dataConnector.dataModelId) { "Automatic ETL process has no data model assigned and cannot be tracked" }
-        val connectionProperties = requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
-        val connectorType = requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" }
+    private fun createDebeziumTracker(
+        dataStoreId: UUID,
+        dataConnector: DataConnector,
+        trackedEntities: Set<String>
+    ): DebeziumChangeTracker {
+        val dataModelId =
+            requireNotNull(dataConnector.dataModel?.id?.value) { "Automatic ETL process has no data model assigned and cannot be tracked" }
+        val connectionProperties = try {
+            Json.decodeFromString<MutableMap<String, String>>(
+                requireNotNull(dataConnector.connectionProperties) { "Data connector properties are missing" }
+            )
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException("Failed to load connection properties. Connection string based configuration is not yet supported.")
+        }
+        val connectorType =
+            ConnectionType.valueOf(requireNotNull(connectionProperties[connectionTypeProperty]) { "Unknown connection type" })
+        if (connectorType == ConnectionType.SqlServer) {
+            // enable CDC as per https://debezium.io/documentation/reference/stable/connectors/sqlserver.html#_enabling_cdc_on_the_sql_server_database
+            dataConnector.getConnection().use { connection ->
+                connection.prepareCall("{call sys.sp_cdc_enable_db}").use { call ->
+                    call.execute()
+                }
+                connection.prepareCall("{call sys.sp_cdc_enable_table(N'dbo', ?, @role_name =?)}").use { call ->
+                    for (e in trackedEntities) {
+                        call.setString(1, e)
+                        call.setString(2, connectionProperties["username"])
+                        call.execute()
+                    }
+                }
+            }
+        }
         val properties = Properties()
             .setDefaults()
             .setConnectorSpecificDefaults(connectorType)
-            .setConnectionProperties(dataConnector.id, connectionProperties)
-            .setTemporaryFiles(dataConnector.id)
+            .setConnectionProperties(dataConnector.id.value, connectionProperties)
+            .setTemporaryFiles(dataConnector.id.value)
             .setTrackedEntities(trackedEntities)
-        val metaModelReader = MetaModelReader(dataModelId)
         return DebeziumChangeTracker(
             properties,
-            MetaModel("$dataStoreId", metaModelReader, MetaModelAppender(metaModelReader))
+            LogGeneratingDatabaseChangeApplier("$dataStoreId", dataModelId),
+            dataStoreId,
+            dataConnector.id.value
         )
     }
 
-    private fun Properties.setConnectionProperties(dataConnectorId: UUID, connectionProperties: Map<String, String>): Properties {
+    private val processmToDebezium = mapOf(
+        "server" to "hostname",
+        "username" to "user",
+        "database" to "dbname"
+    )
+
+    private fun Properties.setConnectionProperties(
+        dataConnectorId: UUID,
+        connectionProperties: Map<String, String>
+    ): Properties {
         if (connectionProperties.isEmpty()) throw IllegalArgumentException("Unknown connection properties")
 
         setProperty("database.server.name", "$dataConnectorId")
-        setProperty("database.hostname", connectionProperties[serverProperty])
-        setProperty("database.port", connectionProperties[portProperty])
-        setProperty("database.dbname", connectionProperties[databaseNameProperty])
-        setProperty("database.user", connectionProperties[usernameProperty])
-        setProperty("database.password", connectionProperties[passwordProperty])
-        setProperty("database.sslmode", "disable") //TODO: use user-provided value if available
-
+        for ((processmKey, value) in connectionProperties) {
+            val debeziumKey = processmToDebezium[processmKey] ?: processmKey
+            setProperty("database.$debeziumKey", value)
+        }
         return this
     }
 
-    private fun Properties.setConnectorSpecificDefaults(connectorType: String): Properties {
+    private fun Properties.setConnectorSpecificDefaults(connectorType: ConnectionType): Properties {
         when (connectorType) {
-            "PostgreSql" -> {
+            ConnectionType.PostgreSql -> {
                 setProperty("connector.class", "io.debezium.connector.postgresql.PostgresConnector")
                 setProperty("slot.name", defaultSlotName)
                 setProperty("slot.drop.on.stop", "false")
                 setProperty("plugin.name", "pgoutput")
                 setProperty("snapshot.mode", "never")
             }
-            "SqlServer" -> {
+
+            ConnectionType.SqlServer -> {
                 setProperty("connector.class", "io.debezium.connector.sqlserver.SqlServerConnector")
                 setProperty("snapshot.mode", "schema_only")
             }
-            "MySql" -> {
+
+            ConnectionType.MySql -> {
                 setProperty("connector.class", "io.debezium.connector.mysql.MySqlConnector")
             }
-            "OracleDatabase" -> {
+
+            ConnectionType.OracleDatabase -> {
                 setProperty("connector.class", "io.debezium.connector.oracle.OracleConnector")
             }
-            "Db2" -> {
+
+            ConnectionType.Db2 -> {
                 setProperty("connector.class", "io.debezium.connector.db2.Db2Connector")
             }
         }
@@ -277,14 +314,18 @@ class MetaModelDebeziumWatchingService : Service {
     }
 
     private fun Properties.setTemporaryFiles(dataConnectorId: UUID): Properties {
+        val directory = File(getPropertyIgnoreCase(DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY) ?: ".")
+        if (!directory.exists())
+            directory.mkdirs()
+        check(directory.exists() && directory.isDirectory) { "The property `$DEBEZIUM_PERSISTENCE_DIRECTORY_PROPERTY' points to a path that either is not a directory or does not exists and cannot be created, e.g., due to insufficient privileges." }
         setProperty("name", "$dataConnectorId")
         setProperty(
             "offset.storage.file.filename",
-            "debezium_offset_${dataConnectorId}.dat"
+            File(directory, "debezium_offset_${dataConnectorId}.dat").absolutePath
         )
         setProperty(
             "database.history.file.filename",
-            "debezium_dbhistory_${dataConnectorId}.dat"
+            File(directory, "debezium_dbhistory_${dataConnectorId}.dat").absolutePath
         )
 
         return this

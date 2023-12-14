@@ -215,6 +215,7 @@ object Paths {
      * @param etlProcessId Data connector ID
      */
     @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}/logs")
+    @Deprecated("This API is defunct and to be removed")
     class EtlProcessLog(val organizationId: UUID, val dataStoreId: UUID, val etlProcessId: UUID)
     
     @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/sampling-etl-processes/")

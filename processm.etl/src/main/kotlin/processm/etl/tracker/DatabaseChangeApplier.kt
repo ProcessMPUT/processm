@@ -1,6 +1,6 @@
 package processm.etl.tracker
 
-import java.lang.Exception
+import kotlinx.serialization.Serializable
 
 interface DatabaseChangeApplier {
 
@@ -9,8 +9,9 @@ interface DatabaseChangeApplier {
      *
      * @param databaseChangeEvents List of database events to process.
      */
-    fun ApplyChange(databaseChangeEvents: List<DatabaseChangeEvent>, )
+    fun applyChange(databaseChangeEvents: List<DatabaseChangeEvent>)
 
+    @Serializable
     data class DatabaseChangeEvent(
         val entityKey: String,
         val entityId: String,
@@ -19,7 +20,8 @@ interface DatabaseChangeApplier {
         val timestamp: Long?,
         val eventType: EventType,
         val isSnapshot: Boolean,
-        val objectData: Map<String, String>)
+        val objectData: Map<String, String>
+    )
 
     enum class EventType {
         Unknown,

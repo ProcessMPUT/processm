@@ -159,6 +159,8 @@ $sqlplus '@mksample.sql' '${container.password}' '${container.password}' hrpw oe
 
     override val jdbcUrl: String
         get() = container.withSid(sid).jdbcUrl
+    override val connectionProperties: Map<String, String>
+        get() = TODO("Not yet implemented")
 
     override val dataConnector: DataConnector
         get() = DataConnector.new {

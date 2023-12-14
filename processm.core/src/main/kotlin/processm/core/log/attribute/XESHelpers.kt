@@ -1,8 +1,6 @@
-package processm.core.log
+package processm.core.log.attribute
 
-import processm.core.log.attribute.AttributeMap
 import processm.core.log.attribute.AttributeMap.Companion.LIST_TAG
-import processm.core.log.attribute.Tag
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter

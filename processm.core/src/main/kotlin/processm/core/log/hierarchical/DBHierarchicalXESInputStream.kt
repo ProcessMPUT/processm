@@ -449,27 +449,6 @@ class DBHierarchicalXESInputStream(
         resultSet.next()
     }
 
-    private fun attributeFromRecord(record: ResultSet): Any {
-        with(record) {
-            val type = getString("type")!!
-            assert(type.length >= 2)
-            return when (type[0]) {
-                's' -> getString("string_value")
-                'f' -> getDouble("real_value")
-                'i' -> when (type[1]) {
-                    'n' -> getLong("int_value")
-                    'd' -> getString("uuid_value").toUUID()!!
-                    else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
-                }
-
-                'd' -> getTimestamp("date_value", gmtCalendar).toInstant()
-                'b' -> getBoolean("bool_value")
-                'l' -> LIST_TAG
-                else -> throw IllegalStateException("Invalid attribute type ${getString("type")} in the database.")
-            }
-        }
-    }
-
     private val ResultSet.isEnded
         // https://stackoverflow.com/a/15750832
         get() = this.isAfterLast || !this.isBeforeFirst && this.row == 0

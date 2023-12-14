@@ -2,7 +2,6 @@ package processm.core.log.attribute
 
 import processm.core.log.attribute.AttributeMap.Companion.BEFORE_INT
 import processm.core.log.attribute.AttributeMap.Companion.BEFORE_STRING
-import processm.core.log.isAllowedAttributeValue
 import java.time.Instant
 import java.util.*
 
