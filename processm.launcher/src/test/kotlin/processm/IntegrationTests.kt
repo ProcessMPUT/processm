@@ -299,7 +299,6 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
             .withFreshDatabase()
             .withProperty("processm.logs.limit.trace", "3000")
             .run {
-                println("jdbcURL=$jdbcUrl")
                 registerUser("test@example.com", "some organization")
                 login("test@example.com", "P@ssw0rd!")
                 currentOrganizationId = organizations.single().id
