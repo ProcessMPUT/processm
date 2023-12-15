@@ -155,10 +155,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
   isLoadingCaseNotions = false;
   isCaseNotionManuallyModified = false;
   selectedClasses: string[] = [];
-  selectedLinks: Array<{
-    sourceNodeId: string;
-    targetNodeId: string;
-  }> = [];
+  selectedLinks: Array<CaseNotionEdges> = [];
   relationshipGraph: CaseNotion | null = null;
   notEmptyRule = [(v: string) => notEmptyRule(v, this.$t("add-data-connector-dialog.validation.non-empty-field").toString())];
 
@@ -218,10 +215,7 @@ export default class AutomaticEtlProcessDialog extends Vue {
                 }),
                 {}
               ),
-              edges: this.selectedLinks.map(({ sourceNodeId, targetNodeId }) => ({
-                sourceClassId: sourceNodeId,
-                targetClassId: targetNodeId
-              }))
+              edges: this.selectedLinks
             };
       this.isSubmitting = true;
       const etlProcess = await this.dataStoreService.saveEtlProcess(
@@ -252,8 +246,8 @@ export default class AutomaticEtlProcessDialog extends Vue {
       caseNotion.edges
         .map((relation) =>
           this.$t("data-stores.automatic-etl-process.case-notion-description", {
-            source: caseNotion.classes[relation.sourceClassId],
-            target: caseNotion.classes[relation.targetClassId]
+            source: caseNotion.classes[relation.sourceClassId!.toString()],
+            target: caseNotion.classes[relation.targetClassId!.toString()]
           })
         )
         .join(", ") + "."
@@ -301,12 +295,11 @@ export default class AutomaticEtlProcessDialog extends Vue {
 
     const selectedClassesSet = new Set(selectedClasses);
 
-    return this.relationshipGraph.edges.reduce((selectedRelations: Array<{ sourceNodeId: string; targetNodeId: string }>, relation: CaseNotionEdges) => {
-      if (selectedClassesSet.has(relation.sourceClassId) && selectedClassesSet.has(relation.targetClassId)) {
-        selectedRelations.push({
-          sourceNodeId: relation.sourceClassId,
-          targetNodeId: relation.targetClassId
-        });
+    return this.relationshipGraph.edges.reduce((selectedRelations: Array<CaseNotionEdges>, relation: CaseNotionEdges) => {
+      const sourceClassId = relation.sourceClassId?.toString();
+      const targetClassId = relation.targetClassId?.toString();
+      if (sourceClassId !== undefined && targetClassId !== undefined && selectedClassesSet.has(sourceClassId) && selectedClassesSet.has(targetClassId)) {
+        selectedRelations.push(relation);
       }
       return selectedRelations;
     }, []);

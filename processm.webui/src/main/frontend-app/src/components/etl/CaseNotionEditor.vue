@@ -41,26 +41,23 @@ svg > defs > marker > path[selected="true"] {
 
 <script lang="ts">
 import Vue from "vue";
-import { Component, Prop, Watch } from "vue-property-decorator";
-import { dia, layout, shapes, util } from "jointjs";
+import {Component, Prop, Watch} from "vue-property-decorator";
+import {dia, layout, shapes, util} from "jointjs";
 import dagre from "dagre";
 import graphlib from "graphlib";
-import { CaseNotion } from "@/openapi";
+import {CaseNotion, CaseNotionEdges} from "@/openapi";
 
 @Component
 export default class CaseNotionEditor extends Vue {
-  @Prop({ default: false })
+  @Prop({default: false})
   readonly value!: boolean;
-  @Prop({ default: null })
+  @Prop({default: null})
   readonly selectedNodes?: string[] | null;
-  @Prop({ default: null })
-  readonly selectedLinks?: Array<{
-    sourceNodeId: string;
-    targetNodeId: string;
-  }> | null;
-  @Prop({ default: null })
+  @Prop({default: null})
+  readonly selectedLinks?: Array<CaseNotionEdges> | null;
+  @Prop({default: null})
   readonly relationshipGraph?: CaseNotion | null;
-  @Prop({ default: "network-simplex" })
+  @Prop({default: "network-simplex"})
   readonly layoutAlgorithm?: "network-simplex" | "tight-tree" | "longest-path";
 
   private graph = new dia.Graph();
@@ -111,7 +108,10 @@ export default class CaseNotionEditor extends Vue {
       node.addTo(this.graph);
     });
 
-    relationshipGraph.edges.forEach(({ sourceClassId, targetClassId }) => {
+    relationshipGraph.edges.forEach(edge => {
+      const sourceClassId = edge.sourceClassId?.toString();
+      const targetClassId = edge.targetClassId?.toString();
+      if (sourceClassId === undefined || targetClassId === undefined) return;
       const sourceNode = this.nodes.get(sourceClassId);
       const targetNode = this.nodes.get(targetClassId);
 
@@ -170,7 +170,7 @@ export default class CaseNotionEditor extends Vue {
   updateLinksSelection() {
     if (this.selectedLinks == null) return;
 
-    const selectedLinks = new Set(this.selectedLinks.map((link) => `${link.sourceNodeId}_${link.targetNodeId}`));
+    const selectedLinks = new Set(this.selectedLinks.map((link) => `${link.sourceClassId}_${link.targetClassId}`));
 
     this.links.forEach((link, [sourceNode, targetNode]) => {
       const areBothNodesSelected = selectedLinks.has(`${sourceNode.idAttribute}_${targetNode.idAttribute}`);
