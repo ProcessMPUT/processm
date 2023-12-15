@@ -16,8 +16,4 @@ class AutomaticEtlProcess(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var etlProcessMetadata by EtlProcessMetadata referencedOn AutomaticEtlProcesses.id
     val relations by AutomaticEtlProcessRelation referrersOn AutomaticEtlProcessRelations.automaticEtlProcessId
-
-    fun toDto() = AutomaticEtlProcessDto(id.value, etlProcessMetadata.toDto(), relations.map { it.toDto() })
 }
-
-data class AutomaticEtlProcessDto(val id: UUID, val metadata: EtlProcessMetadataDto, val relations: List<AutomaticEtlProcessRelationDto>)

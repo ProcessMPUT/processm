@@ -19,8 +19,4 @@ class AutomaticEtlProcessRelation(id: EntityID<UUID>) : UUIDEntity(id) {
     var automaticEtlProcessRelation by AutomaticEtlProcess referencedOn AutomaticEtlProcessRelations.automaticEtlProcessId
     var sourceClassId by AutomaticEtlProcessRelations.sourceClassId
     var targetClassId by AutomaticEtlProcessRelations.targetClassId
-
-    fun toDto() = AutomaticEtlProcessRelationDto(id.value, automaticEtlProcessRelation.id.value, sourceClassId.value, targetClassId.value)
 }
-
-data class AutomaticEtlProcessRelationDto(val id: UUID, val automaticEtlProcessId: UUID, val sourceClassId: Int, val targetClassId: Int)
