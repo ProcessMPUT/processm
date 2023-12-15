@@ -20,7 +20,9 @@ import processm.core.log.attribute.MutableAttributeMap
 import processm.core.log.attribute.mutableAttributeMapOf
 import processm.core.logging.logger
 import processm.core.persistence.connection.DBCache
-import processm.dbmodels.models.*
+import processm.dbmodels.models.AutomaticEtlProcess
+import processm.dbmodels.models.Class
+import processm.dbmodels.models.Classes
 import processm.etl.tracker.DatabaseChangeApplier
 import java.sql.Connection
 import java.sql.JDBCType
@@ -488,19 +490,14 @@ class AutomaticEtlProcessExecutor(
         fun fromDB(
             dataStoreDBName: String, automaticEtlProcessId: UUID
         ): AutomaticEtlProcessExecutor {
-            val relations =
-                AutomaticEtlProcessRelation.wrapRows(AutomaticEtlProcessRelations.select { AutomaticEtlProcessRelations.automaticEtlProcessId eq automaticEtlProcessId })
+            val relations = AutomaticEtlProcess.findById(automaticEtlProcessId)?.relations ?: error("Process not found")
             check(!relations.empty()) { "An automatic ETL process must refer to some relations " }
             val graph = DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
             for (relation in relations) {
-                //FIXME This is potentially buggy, as there may be more than one attribute with the same source and target class.
-                val attributeName = (Relationships innerJoin AttributesNames).slice(AttributesNames.name).select {
-                    (Relationships.sourceClassId eq relation.sourceClassId) and (Relationships.targetClassId eq relation.targetClassId)
-                }.single().let { it[AttributesNames.name] }
-                val arc = Arc(relation.sourceClassId, attributeName, relation.targetClassId)
-                graph.addVertex(relation.sourceClassId)
-                graph.addVertex(relation.targetClassId)
-                graph.addEdge(relation.sourceClassId, relation.targetClassId, arc)
+                val arc = Arc(relation.sourceClass.id, relation.referencingAttributesName.name, relation.targetClass.id)
+                graph.addVertex(relation.sourceClass.id)
+                graph.addVertex(relation.targetClass.id)
+                graph.addEdge(relation.sourceClass.id, relation.targetClass.id, arc)
             }
             return AutomaticEtlProcessExecutor(
                 dataStoreDBName, automaticEtlProcessId,

@@ -16,11 +16,11 @@ import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.transactionMain
 import processm.dbmodels.afterCommit
-import processm.dbmodels.etl.jdbc.*
+import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMap
+import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMaps
+import processm.dbmodels.etl.jdbc.ETLConfiguration
+import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.*
-import processm.dbmodels.models.ACTIVATE
-import processm.dbmodels.models.DEACTIVATE
-import processm.dbmodels.models.TYPE
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
@@ -280,8 +280,10 @@ class DataStoreService(private val producer: Producer) {
                         val targetClassId = relation.second.toInt()
 
                         this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadata.id.value
-                        this[AutomaticEtlProcessRelations.sourceClassId] = sourceClassId
-                        this[AutomaticEtlProcessRelations.targetClassId] = targetClassId
+                        // TODO it'd be better to simply get the id from the user
+                        this[AutomaticEtlProcessRelations.relationship] = Relationships
+                            .slice(Relationships.id)
+                            .select { (Relationships.sourceClassId eq sourceClassId) and (Relationships.targetClassId eq targetClassId) }
                     } catch (e: NumberFormatException) {
                         logger.info("Incorrect data format detected while ")
                     }
