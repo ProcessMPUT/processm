@@ -363,7 +363,7 @@ class DebeziumChangeTrackerTest {
                 AutomaticEtlProcessExecutor(
                     dataStoreDBName,
                     etlProcessId,
-                    AutomaticEtlProcessDescriptor(graph, identifyingClassesIds)
+                    DAGBusinessPerspectiveDefinition(graph, identifyingClassesIds)
                 )
             }
 

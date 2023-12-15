@@ -35,13 +35,13 @@ import java.util.*
  * @param descriptor A mapping from the remote DB to the log
  */
 class AutomaticEtlProcessExecutor(
-    val dataStoreDBName: String, val logId: UUID, val descriptor: AutomaticEtlProcessDescriptor
+    val dataStoreDBName: String, val logId: UUID, val descriptor: DAGBusinessPerspectiveDefinition
 ) {
 
     @Deprecated(message = "Use the primary constructor instead")
     constructor(
         dataStoreDBName: String, logId: UUID, graph: Graph<EntityID<Int>, Arc>, identifyingClasses: Set<EntityID<Int>>
-    ) : this(dataStoreDBName, logId, AutomaticEtlProcessDescriptor(graph, identifyingClasses))
+    ) : this(dataStoreDBName, logId, DAGBusinessPerspectiveDefinition(graph, identifyingClasses))
 
     private val metaModelId =
         checkNotNull(Class.findById(descriptor.graph.vertexSet().first())?.dataModel?.id) { "The DB is broken" }
@@ -503,7 +503,8 @@ class AutomaticEtlProcessExecutor(
                 graph.addEdge(relation.sourceClassId, relation.targetClassId, arc)
             }
             return AutomaticEtlProcessExecutor(
-                dataStoreDBName, automaticEtlProcessId, AutomaticEtlProcessDescriptor(graph, graph.vertexSet())
+                dataStoreDBName, automaticEtlProcessId,
+                DAGBusinessPerspectiveDefinition(graph, graph.vertexSet())
             )
 
         }

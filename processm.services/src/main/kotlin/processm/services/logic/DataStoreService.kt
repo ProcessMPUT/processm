@@ -216,11 +216,11 @@ class DataStoreService(private val producer: Producer) {
             return@transaction businessPerspectiveExplorer.discoverBusinessPerspectives(true)
                 .sortedBy { (_, score) -> score }
                 .map { (businessPerspective, _) ->
-                    val relations = businessPerspective.caseNotionClasses
+                    val relations = businessPerspective.identifyingClasses
                         .flatMap { classId ->
                             businessPerspective.getSuccessors(classId).map { classId.value to it.value }
                         }
-                    businessPerspective.caseNotionClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations
+                    businessPerspective.identifyingClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations
                 }
         }
     }

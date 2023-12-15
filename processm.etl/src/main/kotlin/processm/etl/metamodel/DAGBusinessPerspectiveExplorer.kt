@@ -38,11 +38,11 @@ class DAGBusinessPerspectiveExplorer(
         goodEnoughScore: Double = 0.0
     ): List<Pair<DAGBusinessPerspectiveDefinition, Double>> =
         transaction(DBCache.get(dataStoreDBName).database) {
-            val relationshipGraph: Graph<EntityID<Int>, String> = getRelationshipGraph()
+            val relationshipGraph: Graph<EntityID<Int>, Arc> = getRelationshipGraph()
             // Acyclic copy is created only for calculateVertexWeights to work correctly
             // TODO This is an ugly solution. It'd be better to assign weights in a more robust fashion, but currently I don't understand their purpose and expected properties
-            val acyclicRelationshipGraph: Graph<EntityID<Int>, String> =
-                (relationshipGraph as AbstractBaseGraph<EntityID<Int>, String>).clone() as Graph<EntityID<Int>, String>
+            val acyclicRelationshipGraph: Graph<EntityID<Int>, Arc> =
+                (relationshipGraph as AbstractBaseGraph<EntityID<Int>, Arc>).clone() as Graph<EntityID<Int>, Arc>
             acyclicRelationshipGraph.breakCycles()
             val weights = acyclicRelationshipGraph.calculateVertexWeights()
 
@@ -50,9 +50,9 @@ class DAGBusinessPerspectiveExplorer(
                 .map { DAGBusinessPerspectiveDefinition(it.first) to it.second }
         }
 
-    fun getRelationshipGraph(): Graph<EntityID<Int>, String> =
+    fun getRelationshipGraph(): Graph<EntityID<Int>, Arc> =
         transaction(DBCache.get(dataStoreDBName).database) {
-            val relationshipGraph: Graph<EntityID<Int>, String> = DefaultDirectedGraph(String::class.java)
+            val relationshipGraph: Graph<EntityID<Int>, Arc> = DefaultDirectedGraph(Arc::class.java)
 
             metaModelReader.getRelationships()
                 .forEach { (relationshipName, relationship) ->
@@ -63,7 +63,11 @@ class DAGBusinessPerspectiveExplorer(
 
                     // self-loop, not supported at the moment
                     if (referencingClassId != referencedClassId) {
-                        relationshipGraph.addEdge(referencingClassId, referencedClassId, relationshipName)
+                        relationshipGraph.addEdge(
+                            referencingClassId,
+                            referencedClassId,
+                            Arc(referencingClassId, relationshipName, referencedClassId)
+                        )
                     }
                 }
 
@@ -122,12 +126,12 @@ private fun Graph<EntityID<Int>, String>.searchForOptimumTopDown(
         ))
 }
 
-private fun Graph<EntityID<Int>, String>.searchForOptimumBottomUp(
+private fun <T> Graph<EntityID<Int>, T>.searchForOptimumBottomUp(
     vertexWeights: Map<EntityID<Int>, Double>,
     performFullSearch: Boolean,
     goodEnoughScore: Double
-): List<Pair<Graph<EntityID<Int>, String>, Double>> {
-    val bestSolutions = mutableSetOf<Pair<Graph<EntityID<Int>, String>, Double>>()
+): List<Pair<Graph<EntityID<Int>, T>, Double>> {
+    val bestSolutions = mutableSetOf<Pair<Graph<EntityID<Int>, T>, Double>>()
     val edgeOrder = getEdgeOrderingByDistance()
     val acceptableSize = 4..10
     val supergraphQueue = ArrayDeque(
@@ -176,21 +180,21 @@ private fun Graph<EntityID<Int>, String>.searchForOptimumBottomUp(
         ))
 }
 
-private fun Graph<EntityID<Int>, String>.getEdgesWithCommonVertex(edge: String): Set<String> {
+private fun <T> Graph<EntityID<Int>, T>.getEdgesWithCommonVertex(edge: T): Set<T> {
     return edgesOf(getEdgeSource(edge)).union(edgesOf(getEdgeTarget(edge))) - edge
 }
 
-private fun Graph<EntityID<Int>, String>.getEdgeOrdering(): Map<String, Int> {
+private fun <T> Graph<EntityID<Int>, T>.getEdgeOrdering(): Map<T, Int> {
     return edgeSet().zip(1..edgeSet().size).toMap()
 }
 
 // this produces good results much faster than getEdgeOrdering()
-private fun Graph<EntityID<Int>, String>.getEdgeOrderingByDistance(): Map<String, Int> {
-    val edges = edgeSet().toTypedArray()
-    val edgeDistance = mutableMapOf<String, Double>()
+private fun <T> Graph<EntityID<Int>, T>.getEdgeOrderingByDistance(): Map<T, Int> {
+    val edges = edgeSet().toList()
+    val edgeDistance = mutableMapOf<T, Double>()
 
     for (i in edges.indices) {
-        for (j in (i + 1)..(edges.size - 1)) {
+        for (j in (i + 1) until edges.size) {
             val distance = calculateDistanceBetweenTwoEdgesL1(edges[i], edges[j])
             edgeDistance.merge(edges[i], distance, Double::plus)
             edgeDistance.merge(edges[j], distance, Double::plus)
@@ -245,12 +249,12 @@ internal fun <Vertex, Edge> Graph<Vertex, Edge>.calculateVertexWeights(): Map<Ve
     return vertexWeights
 }
 
-private fun Graph<EntityID<Int>, String>.calculateEdgeHeterogeneity(): Double {
-    val edges = edgeSet().toTypedArray()
+private fun <T> Graph<EntityID<Int>, T>.calculateEdgeHeterogeneity(): Double {
+    val edges = edgeSet().toList()
     var graphHeterogeneity = 0.0
 
     for (i in edges.indices) {
-        for (j in (i + 1)..(edges.size - 1)) {
+        for (j in (i + 1) until edges.size) {
             graphHeterogeneity += calculateDistanceBetweenTwoEdgesL1(edges[i], edges[j])
         }
     }
@@ -258,21 +262,21 @@ private fun Graph<EntityID<Int>, String>.calculateEdgeHeterogeneity(): Double {
     return graphHeterogeneity / (edges.size.toDouble().pow(3.0) / 4.0)
 }
 
-private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL1(edge1: String, edge2: String): Double {
+private fun <T> Graph<EntityID<Int>, T>.calculateDistanceBetweenTwoEdgesL1(edge1: T, edge2: T): Double {
     val outDegreeDiff = outDegreeOf(getEdgeSource(edge1)) - outDegreeOf(getEdgeSource(edge2))
     val inDegreeDiff = inDegreeOf(getEdgeTarget(edge1)) - inDegreeOf(getEdgeTarget(edge2))
 
     return abs(outDegreeDiff).plus(abs(inDegreeDiff)).toDouble()
 }
 
-private fun Graph<EntityID<Int>, String>.calculateDistanceBetweenTwoEdgesL2(edge1: String, edge2: String): Double {
+private fun <T> Graph<EntityID<Int>, T>.calculateDistanceBetweenTwoEdgesL2(edge1: T, edge2: T): Double {
     val outDegreeDiff = outDegreeOf(getEdgeSource(edge1)) - outDegreeOf(getEdgeSource(edge2))
     val inDegreeDiff = inDegreeOf(getEdgeTarget(edge1)) - inDegreeOf(getEdgeTarget(edge2))
 
     return hypot(outDegreeDiff.toDouble(), inDegreeDiff.toDouble())
 }
 
-private fun AsSubgraph<EntityID<Int>, String>.calculateHomogeneity(): Double {
+private fun <T> AsSubgraph<EntityID<Int>, T>.calculateHomogeneity(): Double {
     return edgeSet()
         .map { edgeName -> outDegreeOf(getEdgeSource(edgeName)).toDouble() to inDegreeOf(getEdgeTarget(edgeName)).toDouble() }
         .sumOf { (outDegree, inDegree) ->
@@ -280,7 +284,7 @@ private fun AsSubgraph<EntityID<Int>, String>.calculateHomogeneity(): Double {
         }
 }
 
-private fun AsSubgraph<EntityID<Int>, String>.calculateNormalizedHomogeneity(): Double {
+private fun <T> AsSubgraph<EntityID<Int>, T>.calculateNormalizedHomogeneity(): Double {
     val vertexCount = vertexSet().count()
     val homogeneity = calculateHomogeneity()
 

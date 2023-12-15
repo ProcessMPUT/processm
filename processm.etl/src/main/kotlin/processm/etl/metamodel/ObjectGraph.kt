@@ -29,7 +29,7 @@ internal fun ObjectGraph.reverse(): ObjectGraph {
  */
 internal fun ObjectGraph.upwards(
     start: Collection<RemoteObjectID>,
-    descriptor: AutomaticEtlProcessDescriptor
+    descriptor: DAGBusinessPerspectiveDefinition
 ): Set<RemoteObjectID> {
     val localUpward = HashSet<RemoteObjectID>()
     val queue = ArrayDeque<RemoteObjectID>()
@@ -51,7 +51,7 @@ internal fun ObjectGraph.upwards(
  */
 internal fun ObjectGraph.downwards(
     localUpward: Collection<RemoteObjectID>,
-    descriptor: AutomaticEtlProcessDescriptor
+    descriptor: DAGBusinessPerspectiveDefinition
 ): Sequence<RemoteObjectID> = sequence {
     val reject = localUpward.mapTo(HashSet()) { it.classId }
     reject.addAll(descriptor.convergingClasses)
