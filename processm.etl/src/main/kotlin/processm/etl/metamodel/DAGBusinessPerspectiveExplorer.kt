@@ -10,6 +10,7 @@ import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.graph.DefaultDirectedGraph
 import processm.core.helpers.mapToSet
 import processm.core.persistence.connection.DBCache
+import processm.dbmodels.models.Relationship
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.pow
@@ -38,11 +39,11 @@ class DAGBusinessPerspectiveExplorer(
         goodEnoughScore: Double = 0.0
     ): List<Pair<DAGBusinessPerspectiveDefinition, Double>> =
         transaction(DBCache.get(dataStoreDBName).database) {
-            val relationshipGraph: Graph<EntityID<Int>, Arc> = getRelationshipGraph()
+            val relationshipGraph: Graph<EntityID<Int>, Relationship> = getRelationshipGraph()
             // Acyclic copy is created only for calculateVertexWeights to work correctly
             // TODO This is an ugly solution. It'd be better to assign weights in a more robust fashion, but currently I don't understand their purpose and expected properties
-            val acyclicRelationshipGraph: Graph<EntityID<Int>, Arc> =
-                (relationshipGraph as AbstractBaseGraph<EntityID<Int>, Arc>).clone() as Graph<EntityID<Int>, Arc>
+            val acyclicRelationshipGraph: Graph<EntityID<Int>, Relationship> =
+                (relationshipGraph as AbstractBaseGraph<EntityID<Int>, Relationship>).clone() as Graph<EntityID<Int>, Relationship>
             acyclicRelationshipGraph.breakCycles()
             val weights = acyclicRelationshipGraph.calculateVertexWeights()
 
@@ -50,13 +51,14 @@ class DAGBusinessPerspectiveExplorer(
                 .map { DAGBusinessPerspectiveDefinition(it.first) to it.second }
         }
 
-    fun getRelationshipGraph(): Graph<EntityID<Int>, Arc> =
+    fun getRelationshipGraph(): Graph<EntityID<Int>, Relationship> =
         transaction(DBCache.get(dataStoreDBName).database) {
-            val relationshipGraph: Graph<EntityID<Int>, Arc> = DefaultDirectedGraph(Arc::class.java)
+            val relationshipGraph: Graph<EntityID<Int>, Relationship> = DefaultDirectedGraph(Relationship::class.java)
 
             metaModelReader.getRelationships()
-                .forEach { (relationshipName, relationship) ->
-                    val (referencingClassId, referencedClassId) = relationship
+                .forEach {relationship ->
+                    val referencingClassId = relationship.sourceClass.id
+                    val referencedClassId = relationship.targetClass.id
 
                     relationshipGraph.addVertex(referencingClassId)
                     relationshipGraph.addVertex(referencedClassId)
@@ -66,7 +68,7 @@ class DAGBusinessPerspectiveExplorer(
                         relationshipGraph.addEdge(
                             referencingClassId,
                             referencedClassId,
-                            Arc(referencingClassId, relationshipName, referencedClassId)
+                            relationship
                         )
                     }
                 }

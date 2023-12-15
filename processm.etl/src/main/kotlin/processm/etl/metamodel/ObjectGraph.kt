@@ -39,7 +39,7 @@ internal fun ObjectGraph.upwards(
         if (item.classId in descriptor.identifyingClasses)
             localUpward.add(item)
         for (r in descriptor.graph.outgoingEdgesOf(item.classId)) {
-            val candidates = this[item]?.get(r.attributeName)?.get(r.targetClass) ?: continue
+            val candidates = this[item]?.get(r.referencingAttributesName.name)?.get(r.targetClass.id) ?: continue
             queue.addAll(candidates)
         }
     }
@@ -60,9 +60,9 @@ internal fun ObjectGraph.downwards(
     while (queue.isNotEmpty()) {
         val item = queue.removeFirst()
         for (r in descriptor.graph.incomingEdgesOf(item.classId)) {
-            if (r.sourceClass in reject)
+            if (r.sourceClass.id in reject)
                 continue
-            val sources = this@downwards[item]?.get(r.attributeName)?.get(r.sourceClass) ?: continue
+            val sources = this@downwards[item]?.get(r.referencingAttributesName.name)?.get(r.sourceClass.id) ?: continue
             queue.addAll(sources)
             yieldAll(sources)
         }

@@ -344,19 +344,14 @@ class DebeziumChangeTrackerTest {
             val executor = processm.core.persistence.connection.transaction(dataStoreDBName) {
                 val classes = MetaModelReader(metaModelId.value).getClassNames()
                 val graph =
-                    DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
+                    DefaultDirectedGraph<EntityID<Int>, Relationship>(Relationship::class.java)
                 Relationships
                     .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
                     .forEach {
                         val r = Relationship.wrapRow(it)
                         graph.addVertex(r.sourceClass.id)
                         graph.addVertex(r.targetClass.id)
-                        val arc = Arc(
-                            r.sourceClass.id,
-                            r.referencingAttributesName.name,
-                            r.targetClass.id
-                        )
-                        graph.addEdge(r.sourceClass.id, r.targetClass.id, arc)
+                        graph.addEdge(r.sourceClass.id, r.targetClass.id, r)
                     }
                 val identifyingClassesIds =
                     classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }

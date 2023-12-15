@@ -23,6 +23,7 @@ import processm.core.persistence.connection.DBCache
 import processm.dbmodels.models.AutomaticEtlProcess
 import processm.dbmodels.models.Class
 import processm.dbmodels.models.Classes
+import processm.dbmodels.models.Relationship
 import processm.etl.tracker.DatabaseChangeApplier
 import java.sql.Connection
 import java.sql.JDBCType
@@ -42,7 +43,7 @@ class AutomaticEtlProcessExecutor(
 
     @Deprecated(message = "Use the primary constructor instead")
     constructor(
-        dataStoreDBName: String, logId: UUID, graph: Graph<EntityID<Int>, Arc>, identifyingClasses: Set<EntityID<Int>>
+        dataStoreDBName: String, logId: UUID, graph: Graph<EntityID<Int>, Relationship>, identifyingClasses: Set<EntityID<Int>>
     ) : this(dataStoreDBName, logId, DAGBusinessPerspectiveDefinition(graph, identifyingClasses))
 
     private val metaModelId =
@@ -94,7 +95,7 @@ class AutomaticEtlProcessExecutor(
     ): Set<RemoteObjectID> {
         val leafs = mutableListOf(start)
         descriptor.graph.outgoingEdgesOf(start.classId).mapNotNullTo(leafs) { arc ->
-            newAttributes[arc.attributeName]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass) }
+            newAttributes[arc.referencingAttributesName.name]?.let { parentId -> RemoteObjectID(parentId, arc.targetClass.id) }
         }
 
         val result = HashSet<RemoteObjectID>()
@@ -395,16 +396,16 @@ class AutomaticEtlProcessExecutor(
                         val source = remoteObjectId.toDB()
                         for (r in descriptor.graph.outgoingEdgesOf(remoteObjectId.classId)) {
                             val targetObjectId =
-                                component.attributes.getOrNull("$DB_ATTR_NS:${r.attributeName}")?.toString()
+                                component.attributes.getOrNull("$DB_ATTR_NS:${r.referencingAttributesName.name}")?.toString()
                                     ?: continue
-                            val target = "${r.targetClass.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
+                            val target = "${r.targetClass.id.value}${RemoteObjectID.DELIMITER}${targetObjectId}"
                             val path =
-                                connection.createArrayOf(JDBCType.VARCHAR.name, arrayOf(source, r.attributeName))
+                                connection.createArrayOf(JDBCType.VARCHAR.name, arrayOf(source, r.referencingAttributesName.name))
                             stmt.setArray(1, path)
                             stmt.setString(2, target)
                             stmt.setArray(3, path)
                             stmt.setString(4, source)
-                            stmt.setString(5, r.attributeName)
+                            stmt.setString(5, r.referencingAttributesName.name)
                             stmt.setString(6, target)
                             stmt.setString(7, checkNotNull(currentTraceIdentityId))
                             stmt.executeUpdate()
@@ -492,12 +493,11 @@ class AutomaticEtlProcessExecutor(
         ): AutomaticEtlProcessExecutor {
             val relations = AutomaticEtlProcess.findById(automaticEtlProcessId)?.relations ?: error("Process not found")
             check(!relations.empty()) { "An automatic ETL process must refer to some relations " }
-            val graph = DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
+            val graph = DefaultDirectedGraph<EntityID<Int>, Relationship>(Relationship::class.java)
             for (relation in relations) {
-                val arc = Arc(relation.sourceClass.id, relation.referencingAttributesName.name, relation.targetClass.id)
                 graph.addVertex(relation.sourceClass.id)
                 graph.addVertex(relation.targetClass.id)
-                graph.addEdge(relation.sourceClass.id, relation.targetClass.id, arc)
+                graph.addEdge(relation.sourceClass.id, relation.targetClass.id, relation)
             }
             return AutomaticEtlProcessExecutor(
                 dataStoreDBName, automaticEtlProcessId,

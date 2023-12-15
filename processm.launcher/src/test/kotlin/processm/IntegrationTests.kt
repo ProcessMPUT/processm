@@ -339,10 +339,10 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                     if (caseNotion.classes.values.toSet() != setOf("city", "country", "address", "store"))
                         return@single false
                     val nameToId = caseNotion.classes.inverse()
-                    val storeId = nameToId["store"]
-                    val addressId = nameToId["address"]
-                    val cityId = nameToId["city"]
-                    val countryId = nameToId["country"]
+                    val storeId = nameToId["store"]?.toInt()
+                    val addressId = nameToId["address"]?.toInt()
+                    val cityId = nameToId["city"]?.toInt()
+                    val countryId = nameToId["country"]?.toInt()
                     return@single caseNotion.edges.size == 3 &&
                             caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
                             caseNotion.edges.any { edge -> edge.sourceClassId == addressId && edge.targetClassId == cityId } &&
@@ -523,7 +523,7 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                             return@single false
                         return@single caseNotion.edges.all { edge ->
                             val namedEdge1 =
-                                caseNotion.classes[edge.sourceClassId] to caseNotion.classes[edge.targetClassId]
+                                caseNotion.classes[edge.sourceClassId.toString()] to caseNotion.classes[edge.targetClassId.toString()]
                             val namedEdge2 = namedEdge1.second to namedEdge1.first
                             return@all namedEdge1 in expectedEdges || namedEdge2 in expectedEdges
                         }
@@ -645,10 +645,10 @@ SELECT "concept:name", "lifecycle:transition", "concept:instance", "time:timesta
                                 if (caseNotion.classes.values.toSet() != setOf("city", "country", "address", "store"))
                                     return@single false
                                 val nameToId = caseNotion.classes.inverse()
-                                val storeId = nameToId["store"]
-                                val addressId = nameToId["address"]
-                                val cityId = nameToId["city"]
-                                val countryId = nameToId["country"]
+                                val storeId = nameToId["store"]?.toInt()
+                                val addressId = nameToId["address"]?.toInt()
+                                val cityId = nameToId["city"]?.toInt()
+                                val countryId = nameToId["country"]?.toInt()
                                 return@single caseNotion.edges.size == 3 &&
                                         caseNotion.edges.any { edge -> edge.sourceClassId == storeId && edge.targetClassId == addressId } &&
                                         caseNotion.edges.any { edge -> edge.sourceClassId == addressId && edge.targetClassId == cityId } &&

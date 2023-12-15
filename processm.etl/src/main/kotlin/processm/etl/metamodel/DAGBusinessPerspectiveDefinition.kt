@@ -2,6 +2,7 @@ package processm.etl.metamodel
 
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jgrapht.Graph
+import processm.dbmodels.models.Relationship
 
 /**
  * Represents business perspective as a DAG consisting of business entities' classes.
@@ -12,7 +13,7 @@ import org.jgrapht.Graph
  *  * i.e., a new object of these classes will create a new trace in the log. Identifying classes as per [https://doi.org/10.1007/s10115-019-01430-6]
  */
 data class DAGBusinessPerspectiveDefinition(
-    val graph: Graph<EntityID<Int>, Arc>,
+    val graph: Graph<EntityID<Int>, Relationship>,
     val identifyingClasses: Set<EntityID<Int>> = graph.vertexSet()
 ) {
     /**

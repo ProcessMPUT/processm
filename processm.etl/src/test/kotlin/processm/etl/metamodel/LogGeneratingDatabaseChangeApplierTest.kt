@@ -92,7 +92,8 @@ class LogGeneratingDatabaseChangeApplierTest {
                 this.name = "EKPO"
             }
             Relationship.new {
-                name = "eket2eban"
+                this.dataModel = dataModel
+                relationshipName = "eket2eban"
                 sourceClass = eket
                 targetClass = eban
                 referencingAttributesName = AttributesName.new {
@@ -103,7 +104,8 @@ class LogGeneratingDatabaseChangeApplierTest {
                 }
             }
             Relationship.new {
-                name = "ekko2eban"
+                this.dataModel = dataModel
+                relationshipName = "ekko2eban"
                 sourceClass = ekko
                 targetClass = eban
                 referencingAttributesName = AttributesName.new {
@@ -114,7 +116,8 @@ class LogGeneratingDatabaseChangeApplierTest {
                 }
             }
             Relationship.new {
-                name = "ekpo2ekko"
+                this.dataModel = dataModel
+                relationshipName = "ekpo2ekko"
                 sourceClass = ekpo
                 targetClass = ekko
                 referencingAttributesName = AttributesName.new {
@@ -162,19 +165,14 @@ class LogGeneratingDatabaseChangeApplierTest {
         val executor = processm.core.persistence.connection.transaction(temporaryDB) {
             val classes = MetaModelReader(metaModelId!!).getClassNames()
             val graph =
-                DefaultDirectedGraph<EntityID<Int>, Arc>(Arc::class.java)
+                DefaultDirectedGraph<EntityID<Int>, Relationship>(Relationship::class.java)
             Relationships
                 .select { (Relationships.sourceClassId inList classes.keys) and (Relationships.targetClassId inList classes.keys) }
                 .forEach {
                     val r = Relationship.wrapRow(it)
                     graph.addVertex(r.sourceClass.id)
                     graph.addVertex(r.targetClass.id)
-                    val arc = Arc(
-                        r.sourceClass.id,
-                        r.referencingAttributesName.name,
-                        r.targetClass.id
-                    )
-                    graph.addEdge(r.sourceClass.id, r.targetClass.id, arc)
+                    graph.addEdge(r.sourceClass.id, r.targetClass.id, r)
                 }
             AutomaticEtlProcessExecutor(temporaryDB, etlProcessId, graph, identifyingClasses)
         }

@@ -46,9 +46,11 @@ class DataModel(id: EntityID<Int>) : IntEntity(id) {
     var name by DataModels.name
     var versionDate by DataModels.versionDate
     val classes by Class referrersOn Classes.dataModelId
+    val relationships by Relationship referrersOn Relationships.dataModelId
 }
 
 object Relationships : IntIdTable("relationships") {
+    val dataModelId = reference("data_model_id", DataModels)
     val name = text("name")
     val sourceClassId = reference("source_class_id", Classes)
     val targetClassId = reference("target_class_id", Classes)
@@ -58,7 +60,8 @@ object Relationships : IntIdTable("relationships") {
 class Relationship(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Relationship>(Relationships)
 
-    var name by Relationships.name
+    var dataModel by DataModel referencedOn Relationships.dataModelId
+    var relationshipName by Relationships.name
     var sourceClass by Class referencedOn Relationships.sourceClassId
     var targetClass by Class referencedOn Relationships.targetClassId
     var referencingAttributesName by AttributesName referencedOn Relationships.referencingAttributeNameId

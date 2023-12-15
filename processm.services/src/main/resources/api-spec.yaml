@@ -2439,12 +2439,16 @@ components:
           type: array
           items:
             type: object
-            required: [ sourceClassId, targetClassId ]
+            required: [ id ]
             properties:
+              id:
+                type: integer
+              attributeName:
+                type: string
               sourceClassId:
-                type: string
+                type: integer
               targetClassId:
-                type: string
+                type: integer
     JdbcEtlProcessConfiguration:
       type: object
       required: [ query, enabled, batch, traceId, eventId, attributes ]

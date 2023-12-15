@@ -206,7 +206,7 @@ class DataStoreService(private val producer: Producer) {
     fun getCaseNotionSuggestions(
         dataStoreId: UUID,
         dataConnectorId: UUID
-    ): List<Pair<List<Pair<String, String>>, List<Pair<Int, Int>>>> {
+    ): List<Pair<List<Pair<String, String>>, Set<Relationship>>> {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
@@ -216,10 +216,7 @@ class DataStoreService(private val producer: Producer) {
             return@transaction businessPerspectiveExplorer.discoverBusinessPerspectives(true)
                 .sortedBy { (_, score) -> score }
                 .map { (businessPerspective, _) ->
-                    val relations = businessPerspective.identifyingClasses
-                        .flatMap { classId ->
-                            businessPerspective.getSuccessors(classId).map { classId.value to it.value }
-                        }
+                    val relations = businessPerspective.graph.edgeSet()
                     businessPerspective.identifyingClasses.map { classId -> "${classId.value}" to classNames[classId]!! } to relations
                 }
         }
@@ -231,7 +228,7 @@ class DataStoreService(private val producer: Producer) {
     fun getRelationshipGraph(
         dataStoreId: UUID,
         dataConnectorId: UUID
-    ): Pair<Map<String, String>, List<Pair<EntityID<Int>, EntityID<Int>>>> {
+    ): Pair<Map<String, String>, Set<Relationship>> {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
             val dataModelId = ensureDataModelExistenceForDataConnector(dataStoreId, dataConnectorId)
@@ -240,7 +237,6 @@ class DataStoreService(private val producer: Producer) {
             val classNames = metaModelReader.getClassNames()
             val relationshipGraph = businessPerspectiveExplorer.getRelationshipGraph()
             val relations = relationshipGraph.edgeSet()
-                .map { edgeName -> relationshipGraph.getEdgeSource(edgeName) to relationshipGraph.getEdgeTarget(edgeName) }
 
             return@transaction classNames.mapKeys { "${it.key}" } to relations
         }
@@ -254,7 +250,7 @@ class DataStoreService(private val producer: Producer) {
         dataStoreId: UUID,
         dataConnectorId: UUID,
         name: String,
-        relations: List<Pair<String, String>>
+        relations: List<Int>
     ): UUID {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
@@ -275,18 +271,8 @@ class DataStoreService(private val producer: Producer) {
                 }
 
                 AutomaticEtlProcessRelations.batchInsert(relations) { relation ->
-                    try {
-                        val sourceClassId = relation.first.toInt()
-                        val targetClassId = relation.second.toInt()
-
-                        this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadata.id.value
-                        // TODO it'd be better to simply get the id from the user
-                        this[AutomaticEtlProcessRelations.relationship] = Relationships
-                            .slice(Relationships.id)
-                            .select { (Relationships.sourceClassId eq sourceClassId) and (Relationships.targetClassId eq targetClassId) }
-                    } catch (e: NumberFormatException) {
-                        logger.info("Incorrect data format detected while ")
-                    }
+                    this[AutomaticEtlProcessRelations.automaticEtlProcessId] = etlProcessMetadata.id.value
+                    this[AutomaticEtlProcessRelations.relationship] = relation
                 }
                 notifyActivated(dataStoreId, dataConnectorId)
 

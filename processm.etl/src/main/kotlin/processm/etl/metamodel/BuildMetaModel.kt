@@ -55,6 +55,7 @@ fun buildMetaModel(dataStoreDBName: String, metaModelName: String, databaseExplo
                     classIds[relationship.targetClass.name]?.let { targetClassId ->
                         referencingAttributeIds[sourceClassId to relationship.sourceColumnName]?.let { referencingAttributeId ->
                             addBatch()
+                            this[Relationships.dataModelId] = dataModelId
                             this[Relationships.name] = relationship.name
                             this[Relationships.sourceClassId] = sourceClassId
                             this[Relationships.targetClassId] = targetClassId

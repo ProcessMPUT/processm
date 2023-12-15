@@ -278,8 +278,13 @@ fun Route.DataStoresApi() {
                     .mapToArray { (classes, relations) ->
                         CaseNotion(
                             classes.toMap(),
-                            relations.mapToArray { (sourceClass, targetClass) ->
-                                CaseNotionEdgesInner("$sourceClass", "$targetClass")
+                            relations.mapToArray { relationship ->
+                                CaseNotionEdgesInner(
+                                    relationship.id.value,
+                                    relationship.referencingAttributesName.name,
+                                    relationship.sourceClass.id.value,
+                                    relationship.targetClass.id.value
+                                )
                             })
                     }
 
@@ -299,8 +304,13 @@ fun Route.DataStoresApi() {
             )
             val caseNotionWithAllClasses = CaseNotion(
                 classes.toMap(),
-                relations.mapToArray { (sourceClass, targetClass) ->
-                    CaseNotionEdgesInner("$sourceClass", "$targetClass")
+                relations.mapToArray { relationship ->
+                    CaseNotionEdgesInner(
+                        relationship.id.value,
+                        relationship.referencingAttributesName.name,
+                        relationship.sourceClass.id.value,
+                        relationship.targetClass.id.value
+                    )
                 })
 
             call.respond(
@@ -353,7 +363,7 @@ fun Route.DataStoresApi() {
             val etlProcessId = when (etlProcessData.type) {
                 EtlProcessType.automatic -> {
                     val relations = etlProcessData.caseNotion?.edges.orEmpty().map { edge ->
-                        edge.sourceClassId to edge.targetClassId
+                        edge.id
                     }
                     dataStoreService.saveAutomaticEtlProcess(
                         null,
@@ -431,7 +441,7 @@ fun Route.DataStoresApi() {
             val etlProcessId = when (etlProcessData.type) {
                 EtlProcessType.automatic -> {
                     val relations = etlProcessData.caseNotion?.edges.orEmpty().map { edge ->
-                        edge.sourceClassId to edge.targetClassId
+                        edge.id
                     }
                     dataStoreService.saveAutomaticEtlProcess(
                         etlProcessData.id,
