@@ -6,9 +6,14 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jgrapht.graph.DefaultDirectedGraph
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.TestInstance
+import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.lifecycle.Startables
+import org.testcontainers.utility.DockerImageName
 import processm.core.helpers.mapToSet
 import processm.core.log.hierarchical.DBHierarchicalXESInputStream
-import processm.core.log.hierarchical.InMemoryXESProcessing
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
 import processm.core.persistence.connection.DatabaseChecker
@@ -22,10 +27,12 @@ import java.net.URI
 import java.nio.file.Files
 import java.sql.DriverManager
 import java.util.*
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@Ignore("The test is temporarily disabled as to avoid reconfiguring the DB backing the TeamCity. It should be migrated to testcontainers.")
-@OptIn(InMemoryXESProcessing::class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DebeziumChangeTrackerTest {
 
     private val queries1 = listOf(
@@ -96,10 +103,31 @@ class DebeziumChangeTrackerTest {
                        update EKET set text='ae2' where id=1;"""
     )
 
+    private lateinit var container: PostgreSQLContainer<*>
+    private lateinit var containerJdbcURL: String
     private lateinit var dataStoreId: UUID
     private lateinit var targetDBName: String
     private lateinit var dataStoreDBName: String
     private lateinit var tempDir: File
+
+    @BeforeAll
+    fun setupDB() {
+        val image =
+            DockerImageName.parse("debezium/postgres:12").asCompatibleSubstituteFor("postgres")
+        val user = "postgres"
+        val password = "postgres"
+        container = PostgreSQLContainer(image)
+            .withDatabaseName("processm")
+            .withUsername(user)
+            .withPassword(password)
+            .withReuse(false)
+        Startables.deepStart(listOf(container)).join()
+    }
+
+    @AfterAll
+    fun takeDownDB() {
+        container.close()
+    }
 
     @BeforeTest
     fun setup() {
@@ -107,20 +135,26 @@ class DebeziumChangeTrackerTest {
         dataStoreId = UUID.randomUUID()
         dataStoreDBName = dataStoreId.toString()
         tempDir = Files.createTempDirectory("processm").toFile()
-        DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
+        container.createConnection("").use { connection ->
             connection.prepareStatement("CREATE DATABASE \"$targetDBName\"").use {
                 it.execute()
             }
         }
+        containerJdbcURL = container.jdbcUrl.replace(
+            Regex("/[^/]*$"),
+            "/$targetDBName?user=${container.username}&password=${container.password}"
+        )
         Migrator.migrate(dataStoreDBName)
     }
 
     @AfterTest
     fun cleanup() {
-        DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
+        container.createConnection("").use { connection ->
             connection.prepareStatement("DROP DATABASE \"$targetDBName\"").use {
                 it.execute()
             }
+        }
+        DriverManager.getConnection(DatabaseChecker.baseConnectionURL).use { connection ->
             DBCache.get(dataStoreDBName).close()
             connection.prepareStatement("DROP DATABASE \"$dataStoreDBName\"").use {
                 it.execute()
@@ -132,11 +166,7 @@ class DebeziumChangeTrackerTest {
     private val debeziumConfiguration: Properties
         get() = Properties().apply {
             val databaseURL =
-                URI(DatabaseChecker.baseConnectionURL.substring(5))   //skip jdbc: as URI seems to break on a protocol with multiple colons
-            val query = databaseURL.query.split('&').associate {
-                val list = it.split('=', limit = 2)
-                list[0].lowercase() to list[1]
-            }
+                URI(containerJdbcURL.substring(5))   //skip jdbc: as URI seems to break on a protocol with multiple colons
             setProperty("name", "engine")
             setProperty("plugin.name", "pgoutput")
             setProperty("connector.class", "io.debezium.connector.postgresql.PostgresConnector")
@@ -149,8 +179,8 @@ class DebeziumChangeTrackerTest {
             setProperty("database.server.name", "my-app-connector")
             setProperty("database.hostname", databaseURL.host)
             setProperty("database.port", databaseURL.port.toString())
-            setProperty("database.user", query["user"])
-            setProperty("database.password", query["password"])
+            setProperty("database.user", container.username)
+            setProperty("database.password", container.password)
             setProperty("database.dbname", targetDBName)
             // properties for the testing environment; in particular the doc says that "slot.drop.on.stop" should be set on true only in test/development envs
             setProperty("slot.drop.on.stop", "true")
@@ -300,7 +330,7 @@ class DebeziumChangeTrackerTest {
         expectedTraces: List<Set<Set<String>>>,
         queries: List<String>
     ) {
-        DriverManager.getConnection(DatabaseChecker.switchDatabaseURL(targetDBName)).use { connection ->
+        DriverManager.getConnection(containerJdbcURL).use { connection ->
             connection.createStatement().use { stmt ->
                 stmt.execute("create table EBAN (id int primary key, text text)")
                 stmt.execute("create table EKET (id int primary key, eban int references EBAN(id), text text)")
@@ -330,7 +360,11 @@ class DebeziumChangeTrackerTest {
                     }
                 val identifyingClassesIds =
                     classes.entries.filter { it.value in identifyingClasses }.mapToSet { it.key }
-                AutomaticEtlProcessExecutor(dataStoreDBName, etlProcessId, graph, identifyingClassesIds)
+                AutomaticEtlProcessExecutor(
+                    dataStoreDBName,
+                    etlProcessId,
+                    AutomaticEtlProcessDescriptor(graph, identifyingClassesIds)
+                )
             }
 
             val applier = mockk<LogGeneratingDatabaseChangeApplier> {
@@ -354,35 +388,16 @@ class DebeziumChangeTrackerTest {
                     }
                     connection.commit()
                     Thread.sleep(1_000)
-//                    val intermediate = metaModel.buildTracesForBusinessPerspective(bussinessPerspective)
-//                    val flatXES = MetaModelXESInputStream(intermediate, dataStoreDBName, dataModelId.value)
-//                    val xes = HoneyBadgerHierarchicalXESInputStream(flatXES)
                     val xes = DBHierarchicalXESInputStream(
                         dataStoreDBName,
                         Query("where l:identity:id = $etlProcessId")
                     )
-//                    val log = xes.single()
-//                    log.traces.forEach { trace ->
-//                        println(trace.events.map { event ->
-//                            event.attributes.entries.joinToString(
-//                                prefix = "(",
-//                                postfix = ")"
-//                            ) { "${it.key}=`${it.value}`" }
-//                        }.toList())
-//                    }
                     val actual = HashMap<UUID, HashMap<UUID, HashSet<String>>>()
                     for (log in xes) {
                         val logMap = actual.computeIfAbsent(log.identityId!!) { HashMap() }
                         for (trace in log.traces) {
                             val traceSet = logMap.computeIfAbsent(trace.identityId!!) { HashSet() }
                             trace.events.mapTo(traceSet) { it["db:text"].toString().trim('"') }
-                        }
-                    }
-                    for ((logId, log) in actual.entries) {
-                        println(logId)
-                        for ((traceId, trace) in log.entries) {
-                            println("\t$traceId")
-                            println("\t\t$trace")
                         }
                     }
                     assertEquals(1, actual.size)
