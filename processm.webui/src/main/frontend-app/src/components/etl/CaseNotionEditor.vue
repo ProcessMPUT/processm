@@ -122,7 +122,6 @@ export default class CaseNotionEditor extends Vue {
       const link = new shapes.standard.Link();
       link.source(sourceNode);
       link.target(targetNode);
-      link.router("orthogonal");
       link.connector("rounded");
       link.attr({
         annotations: {relationship: edge}
