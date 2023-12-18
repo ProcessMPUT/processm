@@ -92,8 +92,10 @@ export default class CaseNotionEditor extends Vue {
       const nodeHeight = 50;
       const rect = new shapes.standard.Rectangle();
       rect.resize(nodeWidth, nodeHeight);
-      rect.id = classId;
+      // FIXME Documentation for JointJS is poor and I am not sure whether annotations has some special meaning or not.
+      // FIXME By the name and the fact it accepts any object, I infer it is intended to store user-defined data, but I may be misguided.
       rect.attr({
+        annotations: {classId: classId},
         label: {
           text: util.breakText(className, {
             width: nodeWidth,
@@ -115,13 +117,16 @@ export default class CaseNotionEditor extends Vue {
       const sourceNode = this.nodes.get(sourceClassId);
       const targetNode = this.nodes.get(targetClassId);
 
-      if (sourceNode == null || targetNode == null) return;
+      if (sourceNode == undefined || targetNode == undefined) return;
 
       const link = new shapes.standard.Link();
       link.source(sourceNode);
       link.target(targetNode);
       link.router("orthogonal");
       link.connector("rounded");
+      link.attr({
+        annotations: {relationship: edge}
+      });
       this.links.set([sourceNode, targetNode], link);
     });
 
@@ -147,17 +152,15 @@ export default class CaseNotionEditor extends Vue {
     });
 
     this.paper.on("element:pointerdblclick", this.nodeSelected);
-    this.paper.on("link:pointerdblclick", this.linkSelected);
     this.selectedNodesChanged();
     this.selectedLinksChanged();
   }
 
   nodeSelected(node: dia.ElementView) {
-    this.$emit("node-selected", node.model.idAttribute);
-  }
-
-  linkSelected(link: dia.LinkView) {
-    this.$emit("link-selected", link.model.idAttribute);
+    const classId = node.model.attr('annotations')?.classId;
+    if (classId !== undefined) {
+      this.$emit("node-selected", classId);
+    }
   }
 
   updateNodesSelection() {
@@ -170,15 +173,16 @@ export default class CaseNotionEditor extends Vue {
   updateLinksSelection() {
     if (this.selectedLinks == null) return;
 
-    const selectedLinks = new Set(this.selectedLinks.map((link) => `${link.sourceClassId}_${link.targetClassId}`));
+    const selectedLinks = new Set(this.selectedLinks.map((link) => link.id));
 
     this.links.forEach((link, [sourceNode, targetNode]) => {
-      const areBothNodesSelected = selectedLinks.has(`${sourceNode.idAttribute}_${targetNode.idAttribute}`);
+      const relationshipId = link.attr('annotations')?.relationship?.id;
+      const isSelected = selectedLinks.has(relationshipId);
       link.attr({
         line: {
-          selected: areBothNodesSelected,
+          selected: isSelected,
           targetMarker: {
-            selected: areBothNodesSelected
+            selected: isSelected
           }
         }
       });
