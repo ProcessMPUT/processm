@@ -244,10 +244,6 @@ export default class DataStoreService extends BaseService {
     });
   }
 
-  public async recreateXesLogFromEtlProcess(dataStoreId: string, etlProcessId: string): Promise<void> {
-    await this.dataStoresApi.recreateLogFromEtlProcess(DataStoreService.currentOrganizationId, dataStoreId, etlProcessId);
-  }
-
   public async removeLog(dataStoreId: string, logIdentityId: string): Promise<void> {
     await this.dataStoresApi.removeLog(dataStoreId, logIdentityId, {
       validateStatus: (status: number) => [204, 404].indexOf(status) >= 0

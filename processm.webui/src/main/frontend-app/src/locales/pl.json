@@ -94,8 +94,7 @@
       "removal-confirmation": "Czy potwierdzasz nieodwracalne usunięcie procesu ETL {etlProcessName} i powiązanych danych?",
       "custom-case-notion": "Własny wybór",
       "deactivation-confirmation": "Czy chcesz przestać śledzić zmiany dla procesu ETL {etlProcessName}?",
-      "recreate-log": "Odtwórz logi XES",
-      "log-recreation-confirmation": "Czy chcesz odtworzyć log XES dla procesu ETL {etlProcessName}? Operacja nadpisuje istniejący log XES."
+      "last-execution-time": "Czas ostatniego wykonania"
     }
   },
   "automatic-etl-process-dialog": {

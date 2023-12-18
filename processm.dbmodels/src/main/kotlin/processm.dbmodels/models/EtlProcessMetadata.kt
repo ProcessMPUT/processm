@@ -10,10 +10,6 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.util.*
 
-const val ETL_PROCESS_CONVERSION_TOPIC = "etl_process_conversion"
-const val ETL_PROCESS_ID = "etl_process_id"
-const val ETL_PROCESS_NAME = "etl_process_name"
-
 object EtlProcessesMetadata : UUIDTable("etl_processes_metadata") {
     val name = text("name")
     val processType = text("process_type")

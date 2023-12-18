@@ -494,21 +494,6 @@ fun Route.DataStoresApi() {
             call.respond(HttpStatusCode.NoContent)
         }
 
-        post<Paths.EtlProcessLog> { pathParams ->
-            val principal = call.authentication.principal<ApiUser>()!!
-            principal.ensureUserBelongsToOrganization(pathParams.organizationId)
-            dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
-            dataStoreService.assertUserHasSufficientPermissionToDataStore(
-                principal.userId,
-                pathParams.dataStoreId,
-                OrganizationRole.owner,
-                OrganizationRole.writer
-            )
-            logsService.enqueueXesExtractionFromMetaModel(pathParams.dataStoreId, pathParams.etlProcessId)
-
-            call.respond(HttpStatusCode.NoContent)
-        }
-
         post<Paths.SamplingEtlProcess> { pathParams ->
             val principal = call.authentication.principal<ApiUser>()!!
             principal.ensureUserBelongsToOrganization(pathParams.organizationId)

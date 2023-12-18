@@ -15,7 +15,6 @@ const val DEACTIVATE = "deactivate"
 const val RELOAD = "reload"
 const val DATA_CONNECTOR_ID = "data_connector_id"
 const val DATA_STORE_ID = "data_store_id"
-const val DATA_MODEL_ID = "data_model_id"
 
 object DataConnectors : UUIDTable("data_connectors") {
     val name = text("name")

@@ -280,14 +280,6 @@
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
-                      <v-icon small @click="recreateLog(item)">refresh</v-icon>
-                    </v-btn>
-                  </template>
-                  <span>{{ $t("data-stores.etl.recreate-log") }}</span>
-                </v-tooltip>
-                <v-tooltip bottom>
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon color="primary" dark v-bind="attrs" v-on="on">
                       <v-icon small @click="changeEtlActivationStatus(item)">
                         {{ item.isActive ? "pause_circle_outline" : "play_circle_outline" }}
                       </v-icon>
@@ -699,28 +691,6 @@ export default class DataStoreConfiguration extends Vue {
 
   get dataStoreName() {
     return this.dataStore?.name ?? "";
-  }
-
-  async recreateLog(etlProcess: EtlProcess) {
-    if (this.dataStoreId == null) return;
-
-    const isConfirmed = await this.$confirm(
-      `${this.$t("data-stores.etl.log-recreation-confirmation", {
-        etlProcessName: etlProcess.name
-      })}`,
-      {
-        title: `${this.$t("common.warning")}`
-      }
-    );
-
-    if (!isConfirmed) return;
-
-    try {
-      await this.dataStoreService.recreateXesLogFromEtlProcess(this.dataStoreId, etlProcess.id!);
-      this.app.success(`${this.$t("common.operation-successful")}`);
-    } catch (error) {
-      this.app.error(`${this.$t("common.operation-error")}`);
-    }
   }
 
   getDataConnectorName(dataConnectorId: string) {

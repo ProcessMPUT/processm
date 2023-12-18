@@ -207,19 +207,8 @@ object Paths {
     class EtlProcess(val organizationId: UUID, val dataStoreId: UUID, val etlProcessId: UUID)
 
 
-    /**
-     * XES log obtained from ETL process specified by [etlProcessId] and assigned to [dataStoreId].
-     *
-     * @param organizationId Organization ID
-     * @param dataStoreId Data store ID
-     * @param etlProcessId Data connector ID
-     */
-    @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/etl-processes/{etlProcessId}/logs")
-    @Deprecated("This API is defunct and to be removed")
-    class EtlProcessLog(val organizationId: UUID, val dataStoreId: UUID, val etlProcessId: UUID)
-    
     @Location("/organizations/{organizationId}/data-stores/{dataStoreId}/sampling-etl-processes/")
-    class SamplingEtlProcess(val organizationId: UUID, val dataStoreId: UUID, val nComponents: Int?=null)
+    class SamplingEtlProcess(val organizationId: UUID, val dataStoreId: UUID, val nComponents: Int? = null)
 
     /**
      * Get details about current user
