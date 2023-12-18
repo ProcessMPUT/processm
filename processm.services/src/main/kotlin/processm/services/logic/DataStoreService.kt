@@ -11,6 +11,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.simple.JSONObject
 import processm.core.communication.Producer
 import processm.core.helpers.mapToArray
+import processm.core.helpers.toLocalDateTime
 import processm.core.logging.loggedScope
 import processm.core.persistence.Migrator
 import processm.core.persistence.connection.DBCache
@@ -21,15 +22,16 @@ import processm.dbmodels.etl.jdbc.ETLColumnToAttributeMaps
 import processm.dbmodels.etl.jdbc.ETLConfiguration
 import processm.dbmodels.etl.jdbc.ETLConfigurations
 import processm.dbmodels.models.*
+import processm.dbmodels.models.AutomaticEtlProcess
+import processm.dbmodels.models.DataConnector
+import processm.dbmodels.models.DataStore
 import processm.etl.discovery.SchemaCrawlerExplorer
 import processm.etl.helpers.getDataSource
 import processm.etl.jdbc.notifyUsers
 import processm.etl.metamodel.DAGBusinessPerspectiveExplorer
 import processm.etl.metamodel.MetaModelReader
 import processm.etl.metamodel.buildMetaModel
-import processm.services.api.models.JdbcEtlColumnConfiguration
-import processm.services.api.models.JdbcEtlProcessConfiguration
-import processm.services.api.models.OrganizationRole
+import processm.services.api.models.*
 import java.math.BigDecimal
 import java.sql.Connection
 import java.sql.DriverManager
@@ -361,18 +363,20 @@ class DataStoreService(private val producer: Producer) {
         return@transaction saveJdbcEtl(etlId, dataConnectorId, name, configuration)
     }
 
-    /**
-     * Reads the configuration of the JDBC ETL process. Returns an API type.
-     */
-    fun getJdbcEtlProcessConfiguration(
-        dataStoreId: UUID,
-        etlProcessId: UUID
-    ): JdbcEtlProcessConfiguration = transaction(DBCache.get("$dataStoreId").database) {
-        val cfg = ETLConfiguration.find {
-            ETLConfigurations.metadata eq etlProcessId
-        }.first()
+    private fun SizedIterable<Relationship>.toCaseNotion():CaseNotion {
+        val classes = HashMap<String, String>()
+        val edges = ArrayList<CaseNotionEdgesInner>()
+        for(r in this) {
+            classes[r.sourceClass.id.value.toString()] = r.sourceClass.name
+            classes[r.targetClass.id.value.toString()] = r.targetClass.name
+            edges.add(CaseNotionEdgesInner(r.id.value, r.referencingAttributesName.name, r.sourceClass.id.value, r.targetClass.id.value))
+        }
+        return CaseNotion(classes, edges.toTypedArray())
+    }
 
-        return@transaction JdbcEtlProcessConfiguration(
+    private fun ETLConfiguration.toJdbcEtlProcessConfiguration(): JdbcEtlProcessConfiguration {
+        val cfg=this
+        return JdbcEtlProcessConfiguration(
             query = cfg.query,
             enabled = cfg.enabled,
             batch = cfg.batch,
@@ -392,10 +396,32 @@ class DataStoreService(private val producer: Producer) {
     /**
      * Returns all ETL processes stored in the specified [dataStoreId].
      */
-    fun getEtlProcesses(dataStoreId: UUID): List<EtlProcessMetadataDto> {
+    fun getEtlProcesses(dataStoreId: UUID): List<AbstractEtlProcess> {
         assertDataStoreExists(dataStoreId)
         return transaction(DBCache.get("$dataStoreId").database) {
-            return@transaction EtlProcessMetadata.wrapRows(EtlProcessesMetadata.selectAll()).map { it.toDto() }
+            val result = ArrayList<AbstractEtlProcess>()
+            AutomaticEtlProcess.all().mapTo(result) {
+                AbstractEtlProcess(
+                    id=it.id.value,
+                    name=it.etlProcessMetadata.name,
+                    dataConnectorId = it.etlProcessMetadata.dataConnector.id.value,
+                    isActive =  it.etlProcessMetadata.isActive,
+                    lastExecutionTime = it.etlProcessMetadata.lastExecutionTime?.toLocalDateTime(),
+                    type = EtlProcessType.automatic,
+                    caseNotion = it.relations.toCaseNotion()
+                )
+            }
+            ETLConfiguration.all().mapTo(result) {
+                AbstractEtlProcess(
+                    id=it.metadata.id.value,
+                    name = it.metadata.name,
+                    isActive =  it.metadata.isActive,
+                    lastExecutionTime = it.metadata.lastExecutionTime?.toLocalDateTime(),
+                    type = EtlProcessType.jdbc,
+                    configuration = it.toJdbcEtlProcessConfiguration()
+                )
+            }
+            return@transaction result
         }
     }
 

@@ -14,7 +14,6 @@ import org.antlr.v4.runtime.RecognitionException
 import org.koin.ktor.ext.inject
 import processm.core.helpers.mapToArray
 import processm.core.helpers.toLocalDateTime
-import processm.dbmodels.models.ProcessTypeDto
 import processm.services.api.models.*
 import processm.services.logic.DataStoreService
 import processm.services.logic.LogsService
@@ -325,19 +324,6 @@ fun Route.DataStoresApi() {
             dataStoreService.assertDataStoreBelongsToOrganization(pathParams.organizationId, pathParams.dataStoreId)
 
             val etlProcesses = dataStoreService.getEtlProcesses(pathParams.dataStoreId)
-                .mapToArray {
-                    AbstractEtlProcess(
-                        it.id,
-                        it.name,
-                        it.dataConnectorId,
-                        it.isActive,
-                        it.lastExecutionTime?.toLocalDateTime(),
-                        EtlProcessType.valueOf(it.processType.processTypeName),
-                        configuration = if (it.processType == ProcessTypeDto.JDBC)
-                            dataStoreService.getJdbcEtlProcessConfiguration(pathParams.dataStoreId, it.id)
-                        else null
-                    )
-                }
 
             call.respond(
                 HttpStatusCode.OK,
